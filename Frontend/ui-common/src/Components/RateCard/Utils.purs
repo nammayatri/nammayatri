@@ -59,12 +59,16 @@ getFareBreakupList fareBreakup maxTip =
   }
   where
   fareBreakupConstructed = 
-    [ { key: getString $ MIN_FARE_UPTO $ (EHU.formatNumber (baseDistance.amount / 1000.0) Nothing) <> " km", val: baseFare } ]
+     (if baseDistance.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance.amount / 1000) <> "km", val: baseFare } ] 
+     else if baseDistance0AndAbove.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance0AndAbove.amount / 1000) <> "km", val: baseFare0AndAbove }] 
+     else [])
     <> (map constructExtraFareBreakup extraFareBreakup)
     <> (if congestionCharges.amount > 0.0 then [ { key: getString CONGESTION_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
-    <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
-    <> (if waitingCharge.amount  > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" }] else [{ key: getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE, val: "" } ] )
+    <> (if pickupCharges /= "₹0" then [{ key: getString PICKUP_CHARGE, val: pickupCharges }] else [])
+    <> if waitingCharge.amount > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" }] 
+    else if waitingCharge0AndAbove.amount > 0.0 then [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime0AndAbove.amount Nothing, val: priceToBeDisplayed waitingCharge0AndAbove <> "/min" }] 
+    else [{ key: getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE, val: "" } ]
     <> (if parkingCharge.amount > 0.0 then [{ key: getString PARKING_CHARGE <> "^", val: priceToBeDisplayed parkingCharge }] else [])
 
 
@@ -77,7 +81,10 @@ getFareBreakupList fareBreakup maxTip =
 
   -- Base fare calculation
   baseDistance = fetchSpecificFare fareBreakup "BASE_DISTANCE"
+  baseDistance0AndAbove = fetchSpecificFare fareBreakup "BASE_STEP_DISTANCE0_Above"
+
   baseFare = priceToBeDisplayed $ fetchSpecificFare fareBreakup "BASE_FARE"
+  baseFare0AndAbove = priceToBeDisplayed $ fetchSpecificFare fareBreakup "BASE_STEP_FARE0_Above"
 
   -- Step fare calculation
   extraFareBreakup =
@@ -126,8 +133,10 @@ getFareBreakupList fareBreakup maxTip =
 
   -- Waiting charges
   freeWaitingTime = fetchSpecificFare fareBreakup "FREE_WAITING_TIME_IN_MINUTES"
+  freeWaitingTime0AndAbove = fetchSpecificFare fareBreakup "FREE_WAITING_TIME_STEP_MINUTES0_Above"
 
   waitingCharge = fetchSpecificFare fareBreakup "WAITING_CHARGE_RATE_PER_MIN"
+  waitingCharge0AndAbove = fetchSpecificFare fareBreakup "WAITING_CHARGE_PER_MIN_STEP_FARE0_Above"
 
   parseStepFare :: EstimateFares -> String -> Number -> StepFare
   parseStepFare item prefixString fareMultiplier =

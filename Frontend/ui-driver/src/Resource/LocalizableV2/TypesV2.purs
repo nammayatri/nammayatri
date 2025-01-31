@@ -1799,6 +1799,9 @@ newtype Keymap
   , search :: String
   , bus__ :: String 
   , driver_unsubscribed :: String
+  , canceling_this_booking_may_affect_the_emergency_medical :: String
+  , drivers_are_permitted_to_cancel_ambulance_bookings :: String
+
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7144,3 +7147,9 @@ bus__ = Proxy
 
 driver_unsubscribed :: Proxy "driver_unsubscribed"
 driver_unsubscribed = Proxy
+
+drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
+drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
+
+canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
+canceling_this_booking_may_affect_the_emergency_medical = Proxy

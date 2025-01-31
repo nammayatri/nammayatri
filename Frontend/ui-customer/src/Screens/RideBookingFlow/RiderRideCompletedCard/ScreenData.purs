@@ -193,6 +193,7 @@ dummyDriverInfo =
   , senderDetails : Nothing
   , receiverDetails : Nothing
   , estimatedTimeToReachDestination : Nothing
+  , isAirConditioned : Nothing
   }
 
 dummyRentalBookingConfig :: CT.RentalBookingConfig
@@ -251,8 +252,7 @@ dummyRideBooking = RideBookingRes
   specialLocationTag : Nothing,
   hasDisability : Nothing,
   sosStatus: Nothing,
-  serviceTierName : Nothing, 
-  airConditioned : Nothing,
+  serviceTierName : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing,
   estimatedDistance : Nothing,
@@ -270,7 +270,8 @@ dummyRideBooking = RideBookingRes
   isScheduled : false,
   vehicleServiceTierAirConditioned : Nothing,
   vehicleServiceTierSeatingCapacity : Nothing,
-  returnTime : Nothing
+  returnTime : Nothing,
+  isAirConditioned : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
