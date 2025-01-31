@@ -213,7 +213,12 @@ postWmbTripStart ::
     API.Types.UI.WMB.TripStartReq ->
     Flow APISuccess
   )
-postWmbTripStart (_, _, _) tripTransactionId req = do
+postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
+  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  WMB.findNextActiveTripTransaction driverId
+    >>= \case
+      Nothing -> pure ()
+      Just _ -> throwError AlreadyOnActiveTrip
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
