@@ -45,3 +45,9 @@ ALTER TABLE atlas_app.journey_leg ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.journey_leg ADD COLUMN to_stop_platform_code text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN from_stop_platform_code text ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN is_skipped boolean ;

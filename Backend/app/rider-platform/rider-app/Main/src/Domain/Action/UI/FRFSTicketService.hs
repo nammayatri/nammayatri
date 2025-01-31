@@ -526,6 +526,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 startTime = Just now, -- TODO
                 googleWalletJWTUrl = Nothing,
                 isDeleted = Just False,
+                isSkipped = Just False,
                 ..
               }
       QFRFSTicketBooking.create booking

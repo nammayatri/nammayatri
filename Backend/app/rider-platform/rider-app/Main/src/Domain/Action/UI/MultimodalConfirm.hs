@@ -197,7 +197,7 @@ postMultimodalSwitch (_, _) journeyId req = do
           isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
           if not isExtendLeg
             then do
-              JM.cancelLeg legData (SCR.CancellationReasonCode "")
+              JM.cancelLeg legData (SCR.CancellationReasonCode "") False
               newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
               QJourneyLeg.create newJourneyLeg
               resp <- addAllLegs journeyId

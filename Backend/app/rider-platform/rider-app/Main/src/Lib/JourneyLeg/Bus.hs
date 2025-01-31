@@ -27,7 +27,7 @@ instance JT.JourneyLeg BusLegRequest m where
     throwError (InternalError "Not supported")
   update _ = throwError (InternalError "Not supported")
 
-  cancel (BusLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType
+  cancel (BusLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType legData.isSkipped
   cancel _ = throwError (InternalError "Not supported")
 
   isCancellable (BusLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId

@@ -30,6 +30,7 @@ data JourneyLegT f = JourneyLegT
     fromStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f Kernel.Prelude.Text,
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,

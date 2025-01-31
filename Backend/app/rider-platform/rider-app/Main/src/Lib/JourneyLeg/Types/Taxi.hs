@@ -55,7 +55,8 @@ data TaxiLegRequestCancelData = TaxiLegRequestCancelData
     additionalInfo :: Maybe Text,
     reallocate :: Maybe Bool,
     blockOnCancellationRate :: Maybe Bool,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: SBCR.CancellationSource,
+    isSkipped :: Bool
   }
 
 data TaxiLegRequestIsCancellableData = TaxiLegRequestIsCancellableData

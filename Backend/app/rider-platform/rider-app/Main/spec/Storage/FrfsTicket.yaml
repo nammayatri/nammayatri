@@ -271,6 +271,7 @@ FRFSTicketBooking:
     startTime: Maybe UTCTime
     journeyLegStatus: Maybe JourneyLegStatus
     isDeleted : Maybe Bool
+    isSkipped: Maybe Bool
 
   default:
     customerCancelled: "false"

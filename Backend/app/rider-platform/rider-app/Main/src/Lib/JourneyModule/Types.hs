@@ -320,24 +320,26 @@ mapTaxiBookingStatusToJourneyLegStatus status = case status of
 
 getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m (JourneyLegStatus, Maybe LatLong)
 getTaxiLegStatusFromBooking booking mRide = do
-  case mRide of
-    Just ride -> do
-      driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
-      case driverLocationResp of
-        Left err -> do
-          logError $ "location fetch failed: " <> show err
-          return $ (mapTaxiRideStatusToJourneyLegStatus ride.status, Nothing)
-        Right driverLocation -> do
-          let journeyStatus =
-                case (ride.status, driverLocation.pickupStage) of
-                  (DRide.NEW, Just stage) -> do
-                    case stage of
-                      DARide.OnTheWay -> OnTheWay
-                      DARide.Reached -> Arrived
-                      DARide.Reaching -> Arriving
-                  _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
-          return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
-    Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)
+  if (fromMaybe False booking.isSkipped)
+    then return (Skipped, Nothing)
+    else case mRide of
+      Just ride -> do
+        driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
+        case driverLocationResp of
+          Left err -> do
+            logError $ "location fetch failed: " <> show err
+            return $ (mapTaxiRideStatusToJourneyLegStatus ride.status, Nothing)
+          Right driverLocation -> do
+            let journeyStatus =
+                  case (ride.status, driverLocation.pickupStage) of
+                    (DRide.NEW, Just stage) -> do
+                      case stage of
+                        DARide.OnTheWay -> OnTheWay
+                        DARide.Reached -> Arrived
+                        DARide.Reaching -> Arriving
+                    _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
+            return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
+      Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)
 
 getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> JourneyLegStatus
 getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
@@ -353,10 +355,11 @@ getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
 mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m LegInfo
 mkLegInfoFromBookingAndRide booking mRide = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
+  let skipBooking = fromMaybe False booking.isSkipped
   (status, _) <- getTaxiLegStatusFromBooking booking mRide
   return $
     LegInfo
-      { skipBooking = False,
+      { skipBooking,
         bookingAllowed = True,
         searchId = booking.transactionId,
         pricingId = Just booking.id.getId,
@@ -491,9 +494,10 @@ mkLegInfoFromFrfsBooking booking = do
           Nothing -> getFRFSLegStatusFromBooking booking
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
+  let skipBooking = fromMaybe False booking.isSkipped
   return $
     LegInfo
-      { skipBooking = False,
+      { skipBooking,
         bookingAllowed = True,
         searchId = booking.searchId.getId,
         pricingId = Just booking.id.getId,
@@ -702,7 +706,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         createdAt = now,
         updatedAt = now,
         legSearchId = Nothing,
-        isDeleted = Just False
+        isDeleted = Just False,
+        isSkipped = Just False
       }
 
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney

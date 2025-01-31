@@ -64,6 +64,9 @@ updateDistanceAndDuration distance duration id = do
 updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateIsDeleted isDeleted legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isDeleted isDeleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 
+updateIsSkipped :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateIsSkipped isSkipped legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isSkipped isSkipped, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
+
 updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legSearchId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -93,6 +96,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
       Se.Set Beam.fromStopPlatformCode (fromStopDetails >>= (.platformCode)),
       Se.Set Beam.isDeleted isDeleted,
+      Se.Set Beam.isSkipped isSkipped,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.legId legSearchId,
       Se.Set Beam.mode mode,
@@ -134,6 +138,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId fromStopPlatformCode,
             id = Kernel.Types.Id.Id id,
             isDeleted = isDeleted,
+            isSkipped = isSkipped,
             journeyId = Kernel.Types.Id.Id journeyId,
             legSearchId = legId,
             mode = mode,
@@ -169,6 +174,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.fromStopPlatformCode = fromStopDetails >>= (.platformCode),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDeleted = isDeleted,
+        Beam.isSkipped = isSkipped,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.legId = legSearchId,
         Beam.mode = mode,
