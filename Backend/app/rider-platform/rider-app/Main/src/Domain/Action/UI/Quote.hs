@@ -392,7 +392,7 @@ getJourneys searchRequest = do
               { totalMinFare = estimatedMinFare,
                 totalMaxFare = estimatedMaxFare,
                 modes = journey.modes,
-                journeyLegs,
+                journeyLegs = sortBy (comparing (.journeyLegOrder)) journeyLegs,
                 startTime = journey.startTime,
                 endTime = journey.endTime,
                 journeyId = journey.id,

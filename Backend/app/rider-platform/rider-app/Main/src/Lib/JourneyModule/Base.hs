@@ -314,8 +314,11 @@ getRemainingLegs ::
   m [JL.LegInfo]
 getRemainingLegs journeyId = do
   journeyLegs <- getAllLegsInfo journeyId
-  let remainingLegs = filter (\leg -> if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)) journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
+  let remainingLegs = filter cancellableStatus journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
+
+cancellableStatus :: JL.LegInfo -> Bool
+cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)
 
 getUnifiedQR :: [JL.LegInfo] -> UTCTime -> Maybe JL.UnifiedTicketQR
 getUnifiedQR legs now = do
@@ -374,8 +377,9 @@ cancelLeg ::
   SCR.CancellationReasonCode ->
   m ()
 cancelLeg journeyLeg cancellationReasonCode = do
-  when (journeyLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
-    throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show journeyLeg.status
+  isCancellable <- checkIfCancellable journeyLeg
+  unless isCancellable $
+    throwError $ InvalidRequest $ "Cannot cancel leg for: " <> show journeyLeg.travelMode
   case journeyLeg.travelMode of
     DTrip.Taxi ->
       JL.cancel $
@@ -418,14 +422,8 @@ cancelRemainingLegs ::
 cancelRemainingLegs journeyId = do
   remainingLegs <- getRemainingLegs journeyId
   forM_ remainingLegs $ \leg -> do
-    isCancellable <-
-      case leg.travelMode of
-        DTrip.Taxi -> JL.isCancellable $ TaxiLegRequestIsCancellable TaxiLegRequestIsCancellableData {searchId = (Id leg.searchId)}
-        DTrip.Walk -> JL.isCancellable $ WalkLegRequestIsCancellable WalkLegRequestIsCancellableData {walkLegId = (Id leg.searchId)}
-        DTrip.Metro -> JL.isCancellable $ MetroLegRequestIsCancellable MetroLegRequestIsCancellableData {searchId = (Id leg.searchId)}
-        DTrip.Subway -> JL.isCancellable $ SubwayLegRequestIsCancellable SubwayLegRequestIsCancellableData
-        DTrip.Bus -> JL.isCancellable $ BusLegRequestIsCancellable BusLegRequestIsCancellableData {searchId = (Id leg.searchId)}
-    when (not isCancellable.canCancel) $
+    isCancellable <- checkIfCancellable leg
+    unless isCancellable $
       throwError $ InvalidRequest $ "Cannot cancel leg for leg order: " <> show leg.order
   results <-
     forM remainingLegs $ \leg -> do
@@ -442,7 +440,7 @@ skipLeg ::
 skipLeg journeyId legOrder = do
   allLegs <- getAllLegsInfo journeyId
   skippingLeg <- find (\leg -> leg.order == legOrder) allLegs & fromMaybeM (InvalidRequest $ "Leg not found: " <> show legOrder)
-  when (skippingLeg.status `elem` [JL.Ongoing, JL.Finishing, JL.Cancelled, JL.Completed]) $
+  unless (cancellableStatus skippingLeg) $
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
 
   cancelLeg skippingLeg (SCR.CancellationReasonCode "")
@@ -511,9 +509,10 @@ canBeSwitched legToBeSwitched newMode = do
     (DTrip.Taxi, DTrip.Walk) -> do
       case legToBeSwitched.estimatedDistance of
         Just distance ->
-          return $ getMeters (distanceToMeters distance) <= 1000
-        Nothing ->
-          throwError $ InvalidRequest "Leg Data NotPresent"
+          if getMeters (distanceToMeters distance) <= 2000
+            then do return True
+            else do throwError $ InvalidRequest "Can't switch to walk if distance is more than 2km, skip the ride instead"
+        Nothing -> return True
     _ -> return False
 
 isExtendable ::
