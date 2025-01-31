@@ -36,7 +36,8 @@ data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    cancellationType :: Spec.CancellationType
+    cancellationType :: Spec.CancellationType,
+    isSkipped :: Bool
   }
 
 data BusLegRequestIsCancellableData = BusLegRequestIsCancellableData

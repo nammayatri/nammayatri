@@ -165,3 +165,23 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN google_wallet_jwt_url text 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN platform_number text ;
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_skipped boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

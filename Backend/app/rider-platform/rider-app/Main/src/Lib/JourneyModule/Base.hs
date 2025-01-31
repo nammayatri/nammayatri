@@ -389,8 +389,9 @@ cancelLeg ::
   ) =>
   JL.LegInfo ->
   SCR.CancellationReasonCode ->
+  Bool ->
   m ()
-cancelLeg journeyLeg cancellationReasonCode = do
+cancelLeg journeyLeg cancellationReasonCode isSkipped = do
   isCancellable <- checkIfCancellable journeyLeg
   unless isCancellable $
     throwError $ InvalidRequest $ "Cannot cancel leg for: " <> show journeyLeg.travelMode
@@ -404,7 +405,8 @@ cancelLeg journeyLeg cancellationReasonCode = do
               additionalInfo = Nothing,
               reallocate = Nothing,
               blockOnCancellationRate = Nothing,
-              cancellationSource = SBCR.ByUser
+              cancellationSource = SBCR.ByUser,
+              isSkipped
             }
     DTrip.Walk ->
       JL.cancel $
@@ -417,7 +419,8 @@ cancelLeg journeyLeg cancellationReasonCode = do
         MetroLegRequestCancel
           MetroLegRequestCancelData
             { searchId = Id journeyLeg.searchId,
-              cancellationType = Spec.CONFIRM_CANCEL
+              cancellationType = Spec.CONFIRM_CANCEL,
+              isSkipped
             }
     DTrip.Subway -> JL.cancel $ SubwayLegRequestCancel SubwayLegRequestCancelData
     DTrip.Bus ->
@@ -425,7 +428,8 @@ cancelLeg journeyLeg cancellationReasonCode = do
         BusLegRequestCancel
           BusLegRequestCancelData
             { searchId = Id journeyLeg.searchId,
-              cancellationType = Spec.CONFIRM_CANCEL
+              cancellationType = Spec.CONFIRM_CANCEL,
+              isSkipped
             }
   return ()
 
@@ -441,7 +445,7 @@ cancelRemainingLegs journeyId = do
       throwError $ InvalidRequest $ "Cannot cancel leg for leg: " <> show leg.travelMode
   results <-
     forM remainingLegs $ \leg -> do
-      try @_ @SomeException (cancelLeg leg (SCR.CancellationReasonCode ""))
+      try @_ @SomeException (if leg.skipBooking then return () else cancelLeg leg (SCR.CancellationReasonCode "") False)
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
@@ -457,7 +461,7 @@ skipLeg journeyId legOrder = do
   unless (cancellableStatus skippingLeg) $
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
 
-  cancelLeg skippingLeg (SCR.CancellationReasonCode "")
+  cancelLeg skippingLeg (SCR.CancellationReasonCode "") True
 
 checkIfCancellable ::
   ( CacheFlow m r,
@@ -604,7 +608,8 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLoc = do
         createdAt = now,
         updatedAt = now,
         isDeleted = Just False,
-        legSearchId = Nothing
+        legSearchId = Nothing,
+        isSkipped = Just False
       }
 
 extendLeg ::
@@ -631,7 +636,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           Nothing -> return $ filter (\leg -> leg.order >= startLegOrder) allLegs
       checkIfRemainingLegsAreCancellable legsToCancel
       forM_ legsToCancel $ \leg -> do
-        cancelLeg leg (SCR.CancellationReasonCode "")
+        cancelLeg leg (SCR.CancellationReasonCode "") False
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
       let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
@@ -672,7 +677,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           remainingLegs <- getRemainingLegs journeyId
           let legsToCancel = filter (\leg -> leg.order < endLegOrder) remainingLegs
           checkIfRemainingLegsAreCancellable legsToCancel
-          mapM_ (\leg -> cancelLeg leg (SCR.CancellationReasonCode "")) legsToCancel
+          mapM_ (\leg -> cancelLeg leg (SCR.CancellationReasonCode "") False) legsToCancel
     getNewOriginLatLon legExtraInfo =
       case legExtraInfo of
         JL.Walk info -> return (info.origin.lat, info.origin.lon)

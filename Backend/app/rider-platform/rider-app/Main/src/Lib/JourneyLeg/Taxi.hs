@@ -3,6 +3,7 @@
 module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
+import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
@@ -152,17 +153,20 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 }
         dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
         void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
-        QBooking.updateIsCancelled booking.id (Just True)
+        if legData.isSkipped then QBooking.updateisSkipped booking.id (Just True) else QBooking.updateIsCancelled booking.id (Just True)
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
         case journeySearchData.pricingId of
           Just pricingId -> do
-            cancelReq <- mkDomainCancelSearch searchReq.riderId (Id pricingId)
-            DCancel.cancelSearch searchReq.riderId cancelReq
+            cancelResponse <- Select.cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
+            case cancelResponse of
+              DSelect.Success -> return ()
+              DSelect.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show searchReq.id.getId)
+              DSelect.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show searchReq.id.getId)
           Nothing -> return ()
-        QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
-    QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
+        if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
+    if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
   cancel _ = throwError (InternalError "Not Supported")
 
   isCancellable ((TaxiLegRequestIsCancellable legData)) = do

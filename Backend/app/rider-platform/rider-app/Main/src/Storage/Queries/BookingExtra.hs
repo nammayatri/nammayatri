@@ -346,3 +346,9 @@ updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV
     [Se.Set BeamB.isDeleted isDeleted]
     [Se.Is BeamB.id (Se.Eq reqId)]
+
+updateisSkipped :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
+updateisSkipped (Id reqId) isSkipped = do
+  updateOneWithKV
+    [Se.Set BeamB.isSkipped isSkipped]
+    [Se.Is BeamB.id (Se.Eq reqId)]

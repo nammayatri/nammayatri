@@ -229,6 +229,7 @@ JourneyLeg:
     sequenceNumber: Int
     legSearchId: Maybe Text
     isDeleted: Maybe Bool
+    isSkipped: Maybe Bool
 
   beamFields:
     distance:
@@ -278,6 +279,10 @@ JourneyLeg:
     updateIsDeleted:
       kvFunction: updateOneWithKV
       params: [isDeleted]
+      where: legSearchId
+    updateIsSkipped:
+      kvFunction: updateOneWithKV
+      params: [isSkipped]
       where: legSearchId
     updateDistanceAndDuration:
       kvFunction: updateWithKV

@@ -147,8 +147,8 @@ confirm personId merchantId searchId mbQuoteId skipBooking bookingAllowed = do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     void $ FRFSTicketService.postFrfsQuoteConfirm (Just personId, merchantId) quoteId
 
-cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
-cancel searchId cancellationType = do
+cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
+cancel searchId cancellationType isSkipped = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   case mbMetroBooking of
     Just metroBooking -> do
@@ -156,10 +156,10 @@ cancel searchId cancellationType = do
       merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
       bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
       CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
-      QTBooking.updateIsCancelled metroBooking.id (Just True)
+      if isSkipped then QTBooking.updateIsSkipped metroBooking.id (Just True) else QTBooking.updateIsCancelled metroBooking.id (Just True)
     Nothing -> do
-      QFRFSSearch.updateIsCancelled searchId (Just True)
-  QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
+      if isSkipped then QFRFSSearch.updateSkipBooking searchId (Just True) else QFRFSSearch.updateIsCancelled searchId (Just True)
+  if isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just searchId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
 
 isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> m JT.IsCancellableResponse
 isCancellable searchId = do
