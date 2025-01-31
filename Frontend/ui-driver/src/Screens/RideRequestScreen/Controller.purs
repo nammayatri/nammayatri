@@ -267,7 +267,7 @@ myRideListTransformerProp listres =
           vehicleType = booking.vehicleServiceTierName 
 
           image = case booking.vehicleServiceTier of
-            AUTO_RICKSHAW -> "ny_ic_auto_side_view"
+            _ | DA.elem booking.vehicleServiceTier [AUTO_RICKSHAW, EV_AUTO_RICKSHAW]-> "ny_ic_auto_side_view"
             SEDAN_TIER -> "ny_ic_sedan"
             COMFY -> "ny_ic_sedan_ac"
             ECO -> "ny_ic_ac_mini"

@@ -124,7 +124,7 @@ referenceList state =
       bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
       ambulanceWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.ambulance else cityConfig.waitingChargeConfig.ambulance
       waitingCharges = 
-        if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then
+        if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.AUTO_RICKSHAW, Just VV.EV_AUTO_RICKSHAW] then
             autoWaitingCharges
         else if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.BIKE, Just VV.DELIVERY_BIKE] then
             bikeWaitingCharges

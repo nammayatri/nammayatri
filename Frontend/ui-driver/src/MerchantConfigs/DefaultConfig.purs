@@ -1163,7 +1163,7 @@ defWaitingChargesConfig = {
   ambulance : {
     freeSeconds : 480,
     perMinCharges : 2.0
-}
+  }
 }
 
 defRentalWaitingChargesConfig :: WaitingChargesConfig
@@ -1358,11 +1358,11 @@ ysDefaultCityConfig =
       , bike {
           freeSeconds = 180
         , perMinCharges = 2.0
-        },
-    ambulance {
-      freeSeconds = 480,
-      perMinCharges = 2.0
-    }
+        }
+      , ambulance {
+        freeSeconds = 480,
+        perMinCharges = 2.0
+        }
       }
     , rentalWaitingChargesConfig {
         cab {

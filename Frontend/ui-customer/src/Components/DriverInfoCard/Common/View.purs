@@ -259,7 +259,7 @@ getVehicleImage :: String -> String -> City -> String
 getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $
-    if variant == "AUTO_RICKSHAW" then mkAutoImage city
+    if Array.any (_ == variant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then mkAutoImage city
     else if variant == "TAXI" then mkTaxiImage (getMerchant FunctionCall)
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"

@@ -143,6 +143,7 @@ defaultTipConfig = {
   suv : [0, 20, 30, 50],
   hatchback : [0, 20, 30, 50],
   autoRickshaw : [0, 10, 20, 30],
+  evAutoRickshaw : [0, 10, 20, 30],
   taxi : [0, 20, 30, 50],
   taxiPlus : [0, 20, 30, 50],
   bike : [0, 20, 30, 50],
@@ -212,6 +213,7 @@ defaultVariantBasedBoostSearchConfig = {
   suv : defaultBoostSearchConfig,
   hatchback : defaultBoostSearchConfig,
   autoRickshaw : defaultBoostSearchConfig,
+  evAutoRickshaw : defaultBoostSearchConfig,
   taxi : defaultBoostSearchConfig,
   taxiPlus : defaultBoostSearchConfig,
   bike : defaultBoostSearchConfig,
@@ -235,6 +237,7 @@ getBoostSearchConfig city variant =
         "TAXI_PLUS" -> cityConfig.taxiPlus
         "BOOK_ANY" -> cityConfig.bookAny
         "DELIVERY_BIKE" -> cityConfig.bike
+        "EV_AUTO_RICKSHAW" -> cityConfig.evAutoRickshaw
         _ -> cityConfig.default
 
 
