@@ -92,7 +92,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
 
   confirm (TaxiLegRequestConfirm req) = do
     now <- getCurrentTime
-    let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 -- 5 minutes buffer
+    let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 || req.forcedBooked -- 5 minutes buffer
     unless shouldSkipBooking $ do
       mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
       estimate <- mbEstimate & fromMaybeM (InvalidRequest "You can't confrim taxi before getting the fare")

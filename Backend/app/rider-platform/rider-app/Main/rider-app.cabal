@@ -410,6 +410,7 @@ library
       Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
+      Storage.Queries.JourneyExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
@@ -872,6 +873,7 @@ library
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.Issue
+      Storage.Queries.OrphanInstances.Journey
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantPaymentMethod

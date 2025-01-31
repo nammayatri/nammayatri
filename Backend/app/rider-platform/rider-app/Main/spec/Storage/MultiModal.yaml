@@ -19,16 +19,25 @@ imports:
 Journey:
   tableName: journey
 
+  types:
+    JourneyStatus:
+      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED"
+
   fields:
     id: Id Journey
     searchRequestId: Id SearchRequest
+    riderId: Id Person
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
     estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     modes: "[MultimodalTravelMode]"
     convenienceCost: Int
+    status: JourneyStatus
     totalLegs: Int
+
+  beamType:
+    status: Maybe JourneyStatus
 
   beamFields:
     fare:
@@ -40,22 +49,35 @@ Journey:
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+    status: (fromMaybe Domain.Types.Journey.NEW status)|E
 
   toTType:
     estimatedDistance: ((.value))|I
     distanceUnit: ((.unit))|I
+    status: (Just status)|E
 
   constraints:
     id: PrimaryKey
     searchRequestId: "!SecondaryKey"
+    riderId: "!SecondaryKey"
 
   queries:
     findBySearchId:
         kvFunction: findAllWithKV
         where: searchRequestId
+    updateStatus:
+        kvFunction: updateOneWithKV
+        params: [status]
+        where: id
 
   sqlType:
     modes: "text[]"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  default:
+    riderId: '""' # default value for backward compatibility
 
 #passenger details
 JourneyBooking:
@@ -268,8 +290,6 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [duration, distance, endLocation]
       where: id
-
-
 
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E

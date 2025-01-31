@@ -178,6 +178,7 @@ data JourneyInitData = JourneyInitData
   { legs :: [EMInterface.MultiModalLeg],
     parentSearchId :: Id DSR.SearchRequest,
     merchantId :: Id DM.Merchant,
+    personId :: Id DP.Person,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     estimatedDistance :: Distance,
     estimatedDuration :: Seconds,
@@ -647,8 +648,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> m DJ.Journey
-mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) legs
   now <- getCurrentTime
@@ -662,6 +663,8 @@ mkJourney startTime endTime estimatedDistance estiamtedDuration journeyId parent
         modes = modes,
         searchRequestId = parentSearchId,
         merchantId = Just merchantId,
+        status = DJ.NEW,
+        riderId,
         startTime,
         endTime,
         merchantOperatingCityId = Just merchantOperatingCityId,

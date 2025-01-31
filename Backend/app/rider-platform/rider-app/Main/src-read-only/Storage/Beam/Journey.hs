@@ -6,6 +6,7 @@ module Storage.Beam.Journey where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.Journey
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -20,8 +21,10 @@ data JourneyT f = JourneyT
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     id :: B.C f Kernel.Prelude.Text,
     modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
+    riderId :: B.C f Kernel.Prelude.Text,
     searchRequestId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    status :: B.C f (Kernel.Prelude.Maybe Domain.Types.Journey.JourneyStatus),
     totalLegs :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -36,6 +39,6 @@ instance B.Table JourneyT where
 
 type Journey = JourneyT Identity
 
-$(enableKVPG ''JourneyT ['id] [['searchRequestId]])
+$(enableKVPG ''JourneyT ['id] [['riderId], ['searchRequestId]])
 
 $(mkTableInstances ''JourneyT "journey")

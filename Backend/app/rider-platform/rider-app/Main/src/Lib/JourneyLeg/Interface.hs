@@ -94,8 +94,8 @@ getFare merchantId merchantOperatingCityId leg = \case
       return $
         (WalkLegRequestGetFare WalkLegRequestGetFareData)
 
-confirm :: JL.ConfirmFlow m r c => JL.LegInfo -> m ()
-confirm JL.LegInfo {..} =
+confirm :: JL.ConfirmFlow m r c => Bool -> JL.LegInfo -> m ()
+confirm forcedBooked JL.LegInfo {..} =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -119,6 +119,7 @@ confirm JL.LegInfo {..} =
         TaxiLegRequestConfirm $
           TaxiLegRequestConfirmData
             { skipBooking = skipBooking,
+              forcedBooked,
               estimateId = Id <$> pricingId,
               startTime,
               personId,

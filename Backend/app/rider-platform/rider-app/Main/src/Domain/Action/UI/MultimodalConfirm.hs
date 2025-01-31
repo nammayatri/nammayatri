@@ -12,19 +12,16 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalJourneyStatus,
     postMultimodalExtendLegGetfare,
     postMultimodalJourneyFeedback,
+    getActiveJourneyIds,
   )
 where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
--- import Domain.Types.Estimate
-
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
--- import Domain.Types.SearchRequest
-
 import qualified Domain.Types.JourneyFeedback as JFB
 import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
@@ -44,6 +41,7 @@ import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
@@ -61,6 +59,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
     addAllLegs journeyId
     journey <- JM.getJourney journeyId
+    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId
     now <- getCurrentTime
     return $ generateJourneyInfoResponse journey legs now
@@ -72,11 +71,13 @@ postMultimodalConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm (_, _) journeyId = do
+postMultimodalConfirm (_, _) journeyId forcedBookLegOrder = do
   journey <- JM.getJourney journeyId
-  void $ JM.startJourney journey.id
+  void $ JM.startJourney forcedBookLegOrder journey.id
+  JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalBookingInfo ::
@@ -90,6 +91,7 @@ getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
   now <- getCurrentTime
+  JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
   return $ generateJourneyInfoResponse journey legs now
 
 getMultimodalBookingPaymentStatus ::
@@ -143,9 +145,21 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   whenJust mbEstimate $ \estimate -> do
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm journeyLegInfo{pricingId = Just req.estimateId.getId}
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
   return $ generateJourneyInfoResponse journey updatedLegs now
+
+getActiveJourneyIds ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    Monad m
+  ) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  m [Kernel.Types.Id.Id Domain.Types.Journey.Journey]
+getActiveJourneyIds riderId = do
+  activeJourneys <- QJourney.findAllActiveByRiderId riderId
+  return $ activeJourneys <&> (.id)
 
 generateJourneyInfoResponse :: Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> ApiTypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs now = do
@@ -188,7 +202,7 @@ postMultimodalSwitch (_, _) journeyId req = do
               QJourneyLeg.create newJourneyLeg
               resp <- addAllLegs journeyId
               when (legData.status /= JL.InPlan) $
-                startJourney journeyId
+                startJourney Nothing journeyId
               return resp
             else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
         else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
@@ -213,7 +227,9 @@ postMultimodalJourneyCancel ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyCancel (_, _) journeyId = do
-  _ <- JM.cancelRemainingLegs journeyId
+  journey <- JM.getJourney journeyId
+  void $ JM.cancelRemainingLegs journeyId
+  JM.updateJourneyStatus journey Domain.Types.Journey.CANCELLED
   pure Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLeg ::
@@ -298,4 +314,5 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
 
   SQJFB.create mkJourneyfeedbackForm
   SQJLFB.createMany $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
+  JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
   pure Kernel.Types.APISuccess.Success

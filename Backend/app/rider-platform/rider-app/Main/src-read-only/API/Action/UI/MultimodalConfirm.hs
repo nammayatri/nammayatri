@@ -34,6 +34,9 @@ type API =
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "confirm"
+      :> QueryParam
+           "forceBookLegOrder"
+           Kernel.Prelude.Int
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -190,9 +193,10 @@ postMultimodalConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalConfirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

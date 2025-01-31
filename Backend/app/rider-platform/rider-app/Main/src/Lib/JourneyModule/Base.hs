@@ -76,7 +76,7 @@ init journeyReq = do
   if any isNothing mbTotalFares
     then do return Nothing
     else do
-      journey <- JL.mkJourney journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -115,9 +115,12 @@ getAllLegsStatus ::
   Id DJourney.Journey ->
   m [JL.JourneyLegState]
 getAllLegsStatus journeyId = do
+  journey <- getJourney journeyId
   allLegsRawData <- getJourneyLegs journeyId
   riderLastPoints <- getLastThreePoints journeyId
   (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
+  when (all (\st -> st.status == JL.Completed) allLegsState) $ do
+    updateJourneyStatus journey DJourney.FEEDBACK_PENDING
   return allLegsState
   where
     processLeg ::
@@ -142,11 +145,12 @@ getAllLegsStatus journeyId = do
 
 startJourney ::
   (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Maybe Int ->
   Id DJourney.Journey ->
   m ()
-startJourney journeyId = do
+startJourney forcedBookedLegOrder journeyId = do
   allLegs <- getAllLegsInfo journeyId
-  mapM_ JLI.confirm allLegs
+  mapM_ (\leg -> JLI.confirm (Just leg.order == forcedBookedLegOrder) leg) allLegs
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c
@@ -434,13 +438,13 @@ cancelRemainingLegs journeyId = do
   forM_ remainingLegs $ \leg -> do
     isCancellable <- checkIfCancellable leg
     unless isCancellable $
-      throwError $ InvalidRequest $ "Cannot cancel leg for leg order: " <> show leg.order
+      throwError $ InvalidRequest $ "Cannot cancel leg for leg: " <> show leg.travelMode
   results <-
     forM remainingLegs $ \leg -> do
       try @_ @SomeException (cancelLeg leg (SCR.CancellationReasonCode ""))
   let failures = [e | Left e <- results]
   unless (null failures) $
-    throwError $ InternalError $ "Failed to cancel some legs: " <> show failures
+    throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
 
 skipLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -499,11 +503,7 @@ canBeSwitched ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    MonadFlow m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    MonadFlow m
   ) =>
   JL.LegInfo ->
   DTrip.MultimodalTravelMode ->
@@ -525,16 +525,26 @@ canBeSwitched legToBeSwitched newMode = do
         Nothing -> return True
     _ -> return False
 
+updateJourneyStatus ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m
+  ) =>
+  DJourney.Journey ->
+  DJourney.JourneyStatus ->
+  m ()
+updateJourneyStatus journey newStatus = do
+  when (newStatus > journey.status) $
+    QJourney.updateStatus newStatus journey.id
+
 isExtendable ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    Monad m
   ) =>
   [JL.LegInfo] ->
   JL.LegInfo ->
@@ -558,11 +568,7 @@ createJourneyLegFromCancelledLeg ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Monad m,
-    JL.JourneyLeg TaxiLegRequest m,
-    JL.JourneyLeg BusLegRequest m,
-    JL.JourneyLeg MetroLegRequest m,
-    JL.JourneyLeg WalkLegRequest m
+    Monad m
   ) =>
   DJourneyLeg.JourneyLeg ->
   DTrip.MultimodalTravelMode ->

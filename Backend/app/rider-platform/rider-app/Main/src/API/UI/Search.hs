@@ -192,6 +192,7 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
             { parentSearchId = searchRequest.id,
               merchantId = searchRequest.merchantId,
               merchantOperatingCityId,
+              personId = searchRequest.riderId,
               legs = r.legs,
               estimatedDistance = r.distance,
               estimatedDuration = r.duration,

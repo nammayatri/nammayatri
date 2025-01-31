@@ -23,9 +23,11 @@ module Domain.Action.UI.Frontend
 where
 
 import Domain.Action.UI.Booking
+import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CancellationReason
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -39,6 +41,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Ride as QR
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -73,19 +76,23 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
     checkForActiveBooking = do
       if isJust pollActiveBooking
         then do
-          activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing Nothing Nothing []
-          if not (null activeBookings.list)
-            then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
+          activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
+          if not (null activeJourneyIds)
+            then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeyIds = activeJourneyIds}) Nothing
             else do
-              pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing []
-              case pendingFeedbackBookings.list of
-                [booking] -> do
-                  let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
-                  let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
-                  if isRated || isSkipped
-                    then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
-                    else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
-                _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+              activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing Nothing Nothing []
+              if not (null activeBookings.list)
+                then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
+                else do
+                  pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing []
+                  case pendingFeedbackBookings.list of
+                    [booking] -> do
+                      let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
+                      let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
+                      if isRated || isSkipped
+                        then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+                        else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
+                    _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
         else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
 
     findValueAddNP personStatus providerId = do
@@ -111,6 +118,8 @@ notifyEvent personId merchantId req = do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
+      activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
+      mapM_ (QJourney.updateStatus DJ.COMPLETED) activeJourneyIds
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch

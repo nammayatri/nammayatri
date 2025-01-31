@@ -98,6 +98,8 @@ apis:
       endpoint: /multimodal/{journeyId}/confirm
       params:
         journeyId: Id Journey
+      query:
+        forceBookLegOrder: Int
       response:
         type: Kernel.Types.APISuccess.APISuccess
   - GET:
