@@ -68,22 +68,17 @@ logBusRideStart = do
 
 updateRecentBusRide :: API.TripTransactionDetails -> FlowBT String Unit
 updateRecentBusRide tripDetails = do
-  let _ = spy "updateRecentBusRide:tripDetails" tripDetails
   void $ pure $ setValueToCache (show RECENT_BUS_TRIPS) (HU.tripDetailsToRecentTrip tripDetails) (stringifyJSON <<< encode)
 
 updateRecentBusView :: FlowBT String Unit
 updateRecentBusView = do
   (GlobalState globalState) <- getState
-  let _ = spy "updateRecentBusView" globalState.homeScreen
   when (shouldUpdateRecentBus globalState.homeScreen) do
-    let _ = spy "shouldUpdateRecentBus" "true"
     processRecentBusTrip
 
 shouldUpdateRecentBus :: HomeScreenState ->  Boolean
 shouldUpdateRecentBus state = 
   let noActiveTrip = isNothing state.data.whereIsMyBusData.trip
-      _ = spy "shouldUpdateRecentBus:state" state
-      _ = spy "shouldUpdateRecentBus:localStage" $ getValueToLocalStore LOCAL_STAGE
       allowQRStartRide = maybe true (\fleetConfig -> 
           fleetConfig ^. _allowStartRideFromQR
         ) state.data.whereIsMyBusData.fleetConfig
@@ -91,11 +86,8 @@ shouldUpdateRecentBus state =
 
 processRecentBusTrip :: FlowBT String Unit
 processRecentBusTrip = do
-  let _ = spy "recentTrip" "1"
-      tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
-      _ = spy "recentTrip" "2" 
+  let tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
       (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
-      _ = spy "recentTrip" recentTrip 
   whenJust recentTrip \tripDetails -> do
     availableRoutes <- fetchAvailableRoutes tripDetails
     whenRight availableRoutes \routes -> do
@@ -104,8 +96,6 @@ processRecentBusTrip = do
 updateStateWithRoutes :: API.AvailableRoutesList -> JB.RecentBusTrip -> FlowBT String Unit
 updateStateWithRoutes (AvailableRoutesList availableRoutesList) tripDetails = do
   let selectedRoute = findMatchingRoute tripDetails availableRoutesList
-      _ = spy "updateStateWithRoutes:availableRoutesList" availableRoutesList
-      _ = spy "updateStateWithRoutes:selectedRoute" selectedRoute
   
   modifyScreenState $ HomeScreenStateType \homeScreen -> homeScreen
     { data {

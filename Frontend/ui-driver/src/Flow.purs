@@ -362,6 +362,7 @@ checkRideAndInitiate event driverInfoResponse = do
           Just (TripTransactionDetails tripTransactionDetails) -> do
             let _ = spy "processBusDriverInfoResponse: TripTransactionDetails tripTransactionDetails" tripTransactionDetails
             let busActiveRide = tripTransactionDetails.status == API.IN_PROGRESS || tripTransactionDetails.status == API.PAUSED || tripTransactionDetails.status == API.TRIP_ASSIGNED
+            when busActiveRide $ changeDriverStatus Online -- Even if the driver is offline in such cases making it online
             pure {mbRideListResponse : Nothing, activeRide : false, mbActiveBusTrip : activeTrip.tripTransactionDetails, busActiveRide : busActiveRide }
           Nothing -> pure {mbRideListResponse : Nothing, activeRide : false, mbActiveBusTrip : Nothing, busActiveRide : false }
         _ -> pure {mbRideListResponse : Nothing, activeRide : false, mbActiveBusTrip : Nothing, busActiveRide : false }
@@ -598,6 +599,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                 else do
                   setValueToLocalStore IS_DRIVER_VERIFIED "false"
                   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
+          let _ = spy "event-deeplinks" event
           maybe (onBoardingFlow) (\e -> updateFleetConsent e) event
         Left errorPayload -> do
           if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
@@ -618,6 +620,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
       in void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
 
     updateFleetConsent event = do
+      let _ = spy "updateFleetConsent" event
       when (event.data == "wmb_fleet_consent") do
         fleetConsentResp <- lift $ lift $ Remote.postFleetConsent ""
         case fleetConsentResp of
@@ -698,6 +701,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide isBusRideActive = do
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
             "wmb_fleet_consent" -> do
+              let _ = spy "handleDeepLinksFlow:updateFleetConsent" event
               fleetConsentResp <- lift $ lift $ Remote.postFleetConsent ""
               case fleetConsentResp of
                 Right _ -> hideSplashAndCallFlow homeScreenFlow
@@ -3394,16 +3398,7 @@ homeScreenFlow = do
           setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{endRidePopUp = false}})
           homeScreenFlow
-    WMB_ACTIVE_RIDE state (TripTransactionDetails tripDetails) -> do
-        void $ pure $ updateRecentBusRide (API.TripTransactionDetails tripDetails)
-        void $ pure $ setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
-        if tripDetails.status == API.TRIP_ASSIGNED then do
-          updateStage $ HomeScreenStage TripAssigned
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
-        else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
-          updateStage $ HomeScreenStage ST.RideTracking
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
-        else (pure unit)
+    WMB_ACTIVE_RIDE state (TripTransactionDetails tripDetails) -> currentRideFlow Nothing Nothing Nothing Nothing
     WMB_TRIP_REFRESH state -> do
       deleteValueFromLocalStore WMB_END_TRIP_STATUS
       deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
