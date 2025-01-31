@@ -16,6 +16,8 @@ imports:
   UnifiedTicketQR: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
+  ExtendLegStartPoint: Lib.JourneyModule.Types
+  GetFareResponse: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -39,11 +41,20 @@ types:
     legs: "[LegStatus]"
 
   ExtendLegReq:
-    legId: Id JourneyLeg
-    startLeg : Id JourneyLeg
-    endLeg: Id JourneyLeg
-    startLocation: Maybe LatLong
-    endLocation: Maybe LatLong                          # if some other dest outside of journey
+    distance: Distance
+    duration : Seconds
+    fare: GetFareResponse
+    startLocation: ExtendLegStartPoint
+    endLocation: Maybe Location
+
+  ExtendLegGetFareReq:
+    startLocation: ExtendLegStartPoint
+    endLocation: Maybe Location
+
+  ExtendLegGetFareResp:
+    totalFare : Maybe GetFareResponse
+    distance : Distance
+    duration : Seconds
 
   RiderLocationReq:
     latLong: LatLong
@@ -124,10 +135,18 @@ apis:
       request:
         type: ExtendLegReq
       params:
-        legId: Text
         journeyId: Id Journey
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/extend/{journeyId}/leg/getfare                    # only applicable for current leg
+      request:
+        type: ExtendLegGetFareReq
+      params:
+        journeyId: Id Journey
+      response:
+        type: ExtendLegGetFareResp
 
   - GET:
       endpoint: /multimodal/journey/{journeyId}/status

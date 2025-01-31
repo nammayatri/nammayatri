@@ -261,6 +261,13 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [distance, duration]
       where: id
+    findByLegSearchId:
+      kvFunction: findOneWithKV
+      where: legSearchId
+    updateAfterEditLocation:
+      kvFunction: updateWithKV
+      params: [duration, distance, endLocation]
+      where: id
 
 
 
