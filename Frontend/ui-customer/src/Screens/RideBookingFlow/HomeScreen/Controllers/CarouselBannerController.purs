@@ -95,6 +95,7 @@ handleDynamicBannerAC action state =
       CRT.Profile ->  exit $ GoToMyProfile state false
       CRT.UpdateProfile -> exit $ GoToMyProfile state true
       CRT.MetroBooking -> exit $ GoToMetroTicketBookingFlow state
+      CRT.AmbulanceBooking -> continueWithCmd state { data { fareProductType = AMBULANCE} , props {firstTimeAmbulanceSearch = true , searchType = Just "hospital"} } [pure WhereToClick]
       CRT.ZooBooking -> exit $ GoToTicketBookingFlow state
       CRT.Safety -> exit $ GoToSafetyEducation state
       CRT.WebLink (CRT.WebLinkParams param) -> do

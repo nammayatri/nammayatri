@@ -9,21 +9,22 @@ import Screens.Types (City, SearchResultType, FareProductType, PersonDeliveryDet
 
 type DriverDetailsType
   = { fareProductType :: FareProductType
-      , rating :: Number
-      , driverName :: String
-      , vehicleDetails :: String
-      , vehicleVariant :: String
-      , merchantCity :: City
-      , registrationNumber :: String
-      , config :: AppConfig
-      , rideStarted :: Boolean
-      , enablePaddingBottom :: Boolean
-      , vehicleModel :: String
-      , vehicleColor :: String
-      , serviceTierName :: Maybe String
-      , providerType :: CTP.ProviderType
-      , showAcView :: Boolean
-      , isOtpRideFlow :: Boolean
+    , rating :: Number
+    , driverName :: String
+    , vehicleDetails :: String
+    , vehicleVariant :: String
+    , merchantCity :: City
+    , registrationNumber :: String
+    , config :: AppConfig
+    , rideStarted :: Boolean
+    , enablePaddingBottom :: Boolean
+    , vehicleModel :: String
+    , vehicleColor :: String
+    , serviceTierName :: Maybe String
+    , providerType :: CTP.ProviderType
+    , showAcView :: Boolean
+    , isAirConditioned :: Maybe Boolean
+    , isOtpRideFlow :: Boolean
     }
 
 type TripDetails a

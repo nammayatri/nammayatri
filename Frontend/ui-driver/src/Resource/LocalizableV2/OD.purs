@@ -1784,4 +1784,6 @@ getOd =
     , we_are_not_able_to_fetch_your_current_location : "ଆମେ ଆପଣଙ୍କର ବର୍ତ୍ତମାନ ସ୍ଥାନ ଅନ୍ଧାର କରିପାରୁ ନାହିଁ।"
     , bus__ : "ବସ୍"
     , driver_unsubscribed : "ଡ୍ରାଇଭର ପ୍ଲାଟଫର୍ମ ଥିବା ଅନାବନ୍ଧିତ କରାଯାଇଛି। ପୁନଃ ସବସ୍କ୍ରାଇବ୍ କରିବା ପାଇଁ ବକି ଅଛି ପେଣ୍ଡିଂ ରାଶି।"  
+    , canceling_this_booking_may_affect_the_emergency_medical : "ଏହି ବୁକିଂ ରଦ୍ଦ କରିବାରୁ ରୋଗୀଙ୍କର ଆତିକ୍ରମିକ ଚିକିତ୍ସା ସେବାଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରିପାରେ"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ଡ୍ରାଇଭର୍ମାନେ ସେମାନଙ୍କର ଚିକିତ୍ସା କାରଣ କିମ୍ବା ଗାଡ଼ିର ତ୍ରୁଟି ଦ୍ୱାରା ପରିବାହନ ବୁକିଂ ରଦ୍ଦ କରିବାକୁ ଅନୁମତି ଦିଆଯାଇଛି"
   }

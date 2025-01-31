@@ -1817,4 +1817,6 @@ getProxy str =
     EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES arg1 -> \a -> (a @~ experience_our_pilot_launch_for_bus_ticketing_in_prime_routes) arg1
     NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
+    AMBULANCE_ -> \a -> a @~ ambulance_
+
 

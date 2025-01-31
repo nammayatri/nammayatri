@@ -69,6 +69,8 @@ import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import Components.RequestInfoCard as RequestInfoCard
 import Engineering.Helpers.Events as EHE
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -471,11 +473,11 @@ vehicleRegistrationNumber state push =
                     , color Color.greyTextColor
                     , text state.props.input_data
                     , textFromHtml $ if state.props.isvariant == "" then (getString SELECT_ONE) else case  state.props.isvariant of
-                                                                                                      "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
-                                                                                                      "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
-                                                                                                      "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
-                                                                                                      "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
-                                                                                                      "AMBULANCE_VENTILATOR" -> getString VENTILATOR
+                                                                                                      "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getStringV2 no_oxygen
+                                                                                                      "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getStringV2 oxygen
+                                                                                                      "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getStringV2 no_oxygen
+                                                                                                      "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getStringV2 oxygen
+                                                                                                      "AMBULANCE_VENTILATOR" -> getStringV2 ventilator
                                                                                                       _ -> "Other" 
                     , weight 4.0
                     , cornerRadius 6.0
@@ -534,11 +536,11 @@ facilityListView state push  =
             ][  textView $
                 [ accessibilityHint $ show variant <> " : Button"
                 , textFromHtml $ case variant of
-                                    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
-                                    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
-                                    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
-                                    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
-                                    "AMBULANCE_VENTILATOR" -> getString VENTILATOR
+                                    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getStringV2 no_oxygen
+                                    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getStringV2 oxygen
+                                    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getStringV2 no_oxygen
+                                    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getStringV2 oxygen
+                                    "AMBULANCE_VENTILATOR" -> getStringV2 ventilator
                                     _ -> "Other" 
 
                 , color Color.darkCharcoal

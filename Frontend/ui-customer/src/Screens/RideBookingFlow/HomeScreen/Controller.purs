@@ -94,7 +94,7 @@ import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 
-import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, cancelReasons, dummyCancelReason,  emergencyContactInitialChatSuggestionId, DecodeAddress(..), mailToLink)
+import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, cancelReasons, dummyCancelReason,  emergencyContactInitialChatSuggestionId, DecodeAddress(..), mailToLink, whiteListedInputString)
 import Constants (defaultDensity)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
@@ -328,7 +328,7 @@ eval GoToFollowRide state = exit $ ExitToFollowRide state{props{chatcallbackInit
 eval (UpdateRepeatTrips rideList) state = do
   void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
   let listResp = rideList ^._list
-      filteredList = filter (\(RideBookingRes item) -> getFareProductType (item.bookingDetails ^._fareProductType) /= FPT.RENTAL &&  getFareProductType (item.bookingDetails ^._fareProductType) /= FPT.INTER_CITY) listResp
+      filteredList = filter (\(RideBookingRes item) -> not $ getFareProductType (item.bookingDetails ^._fareProductType) `DA.elem` [FPT.RENTAL, FPT.INTER_CITY, FPT.AMBULANCE]) listResp
       list = rideListToTripsTransformer filteredList
   if not (null list) then do
     let updatedMap = updateMapWithPastTrips list state
@@ -1777,8 +1777,11 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
-  if textType == "D" then
-    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+  let newState = state{ props { isSource = if state.props.currentStage == ConfirmingLocation && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+  if state.data.fareProductType == FPT.AMBULANCE && textType == "D" && state.props.firstTimeAmbulanceSearch then
+   validateSearchInput newState "Hospital"
+  else if textType == "D" then
+    continue newState
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 
@@ -2636,6 +2639,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVe
 
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+ let agreeTermsModalValue = state.data.fareProductType == FPT.AMBULANCE
+ if agreeTermsModalValue then continue state { props { bookAmbulanceModal = agreeTermsModalValue }}
+ else do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
       (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject
   void $ pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
@@ -2964,6 +2970,11 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
           void $ pure $ EHU.showToast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
+    "AMBULANCE" ->
+      let
+        updatedState = state { data { fareProductType = FPT.AMBULANCE} , props {firstTimeAmbulanceSearch = true , searchType = Just "hospital"} }
+      in
+        continueWithCmd updatedState [ pure $ WhereToClick]
     "DELIVERY" -> exit $ GoToParcelInstructions state
     "INTERCITY_BUS" -> do
       let hasPhoneNumberPermission = getValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION
@@ -3282,6 +3293,24 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
         void $ pure $ hideKeyboardOnNavigation true
         pure $ BackPressed
     ]
+eval AmbulanceAgreeClick state = do
+    let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
+        (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
+    _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
+    void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
+    void $ pure $ cacheRateCard state
+    let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
+        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
+                          else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
+                          else state.props.tipViewProps
+        updatedState = state{props{ searchExpire = (getSearchExpiryTime true), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
+    void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
+    exit $ SelectEstimateAndQuotes updatedState
+
+eval (AgreePopUp (PopUpModal.OnButton2Click)) state = continue $ (state {props {bookAmbulanceModal= false}})
+
+eval (AgreePopUp (PopUpModal.OnButton1Click)) state = continueWithCmd state{props{ bookAmbulanceModal = false}} [pure $ AmbulanceAgreeClick]
+
 
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
@@ -3437,6 +3466,11 @@ eval (ServicesOnClick service) state = do
       updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO -> exit $ GoToMetroTicketBookingFlow state
     RC.METRO_OFFER -> exit $ GoToMetroTicketBookingFlow state
+    RC.AMBULANCE_SERVICE ->
+      let
+        updatedState = state { data { fareProductType = FPT.AMBULANCE} , props {firstTimeAmbulanceSearch = true , searchType = Just "hospital"} }
+      in
+        continueWithCmd updatedState [ pure $ WhereToClick]
     _ -> continue state
 eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"
@@ -3486,7 +3520,8 @@ validateSearchInput state searchString =
   autoCompleteType = if state.props.isSource == Just true then Just ST.PICKUP else Just ST.DROP
   sourceManuallyMoved = if state.props.isSource == Just true then false else state.props.rideSearchProps.sourceManuallyMoved
   destManuallyMoved = if state.props.isSource == Just false then false else state.props.rideSearchProps.destManuallyMoved
-  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true}}} $ SearchPlace searchString state{ props{ rideSearchProps{ autoCompleteType = autoCompleteType, sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved } } }
+  cacheInput =  any (_ == searchString) whiteListedInputString
+  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true}}} $ SearchPlace searchString state{ props{ rideSearchProps{ autoCompleteType = autoCompleteType, sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved } } } cacheInput
 
 constructLatLong :: Number -> Number -> String -> JB.Location
 constructLatLong lat lng _ =
