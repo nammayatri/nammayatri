@@ -10,6 +10,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalExtendLeg,
     postMultimodalJourneyLegSkip,
     getMultimodalJourneyStatus,
+    postMultimodalExtendLegGetfare,
     postMultimodalJourneyFeedback,
   )
 where
@@ -222,7 +223,19 @@ postMultimodalExtendLeg ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.ExtendLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalExtendLeg = do error "Logic yet to be decided"
+postMultimodalExtendLeg (_, _) journeyId req = do
+  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration
+  pure Kernel.Types.APISuccess.Success
+
+postMultimodalExtendLegGetfare ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  ApiTypes.ExtendLegGetFareReq ->
+  Environment.Flow ApiTypes.ExtendLegGetFareResp
+postMultimodalExtendLegGetfare (_, _) journeyId req = do
+  JM.extendLegEstimatedFare journeyId req.startLocation req.endLocation Nothing
 
 postMultimodalJourneyLegSkip ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
