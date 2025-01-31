@@ -369,11 +369,7 @@ screen initialState (GlobalState globalState) =
                                 pure unit
 
                                 when (HU.specialVariantsForTracking FunctionCall && (not $ initialState.props.whereIsMyBusConfig.showSelectAvailableBusRoutes) && (isNothing initialState.data.whereIsMyBusData.lastCompletedTrip)) do
-                                    let _ = spy "initialState-codex" "shouldUpdateRecentBus"
                                     void $ launchAff $ EHC.flowRunner defaultGlobalState $ updateRecentBusView push 
-                                  -- let tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
-                                  --     (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
-                                  --     _ = spy "recentTrip" recentTrip 
 
           runEffectFn1 consumeBP unit
           pure $ pure unit
@@ -400,15 +396,11 @@ screen initialState (GlobalState globalState) =
               fleetConfig ^. _allowStartRideFromQR
             ) initialState.data.whereIsMyBusData.fleetConfig
       when (allowQRStartRide) do
-        let _ = spy "shouldUpdateRecentBus" "true"
         processRecentBusTrip push
 
     processRecentBusTrip push = do
-      let _ = spy "recentTrip" "1"
-          tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
-          _ = spy "recentTrip" "2" 
+      let tripsStr = getValueToLocalStore RECENT_BUS_TRIPS
           (recentTrip :: Maybe (JB.RecentBusTrip)) = (decodeForeignAny (parseJSON tripsStr) Nothing)
-          _ = spy "recentTrip" recentTrip 
       whenJust recentTrip \tripDetails -> do
         availableRoutes <- Remote.getAvailableRoutes $ getValueToLocalStore BUS_VEHICLE_NUMBER_HASH
         whenRight availableRoutes \routes ->
@@ -782,7 +774,7 @@ driverMapsHeaderView push state =
                 onRideScreenBannerView state push 
                 ]
             <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView ((DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) && (not $ HU.specialVariantsForTracking FunctionCall)) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes && state.props.currentStage == HomeScreen then [ recentBusRideView push state ] else []
+            <> if state.props.driverStatusSet == ST.Online && not state.props.whereIsMyBusConfig.showSelectAvailableBusRoutes && state.props.currentStage `DA.elem` [HomeScreen, TripAssigned] then [ recentBusRideView push state ] else []
         , linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT

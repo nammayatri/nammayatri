@@ -1908,8 +1908,6 @@ eval (WMBTripActiveAction (API.TripTransactionDetails tripDetails)) state = do
 
 eval (UpdateSuggestedRoute (API.AvailableRoutesList availableRoutesList) tripDetails) state =
   let selectedRoute = findMatchingRoute tripDetails availableRoutesList
-      _ = spy "updateStateWithRoutes:availableRoutesList" availableRoutesList
-      _ = spy "updateStateWithRoutes:selectedRoute" selectedRoute
   in continue state 
     { data {
         whereIsMyBusData { 
