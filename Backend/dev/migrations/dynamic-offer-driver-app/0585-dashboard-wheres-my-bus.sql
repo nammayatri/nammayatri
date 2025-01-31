@@ -1,5 +1,5 @@
 WITH MerchantMessages AS (
-  SELECT T1.merchant_id, 'FLEET_CONSENT_DEEPLINK_MESSAGE', CAST ('{"var1" : "https://yatrisathi.in/p/?vp=wmb_fleet_consent"}' AS json),
+  SELECT T1.merchant_id, 'FLEET_CONSENT_DEEPLINK_MESSAGE', CAST ('{"var1" : "https://yatrisathi.in/p?vp=wmb_fleet_consent"}' AS json),
 'Dear User,
 Welcome to {#fleetOwnerName#}! Please confirm your onboarding by clicking this link: {#var1#} -Namma Yatri' -- change merchant name as per requirement
   , 'YTRISI', T1.id

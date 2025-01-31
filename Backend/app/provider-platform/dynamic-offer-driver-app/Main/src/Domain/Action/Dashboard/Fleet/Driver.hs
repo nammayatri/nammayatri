@@ -385,9 +385,10 @@ postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo
       unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
+  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ QDriverInfo.updateEnabledVerifiedState driverId False (Just False) -- TODO :: Is it required for Normal Fleet ?
   rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
@@ -543,7 +544,7 @@ postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
     rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just fleetOwnerId
-    when (isJust rc && assoc.isRcActive) $ throwError (InvalidRequest "Driver is actively linked to fleet Vehicle, first unlink then try")
+    when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
   FDV.endFleetDriverAssociation fleetOwnerId personId
   pure Success
 
@@ -1293,11 +1294,15 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
       )
       []
       trips
-  QTT.createMany allTransactions
-  whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
-    route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-    (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-    WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
+  WMB.findNextActiveTripTransaction (cast driverId)
+    >>= \case
+      Just _ -> QTT.createMany allTransactions
+      Nothing -> do
+        QTT.createMany allTransactions
+        whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
+          route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+          (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
+          WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
     makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
     makeTripTransactions trip = do
