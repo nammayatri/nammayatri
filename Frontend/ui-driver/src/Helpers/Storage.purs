@@ -173,6 +173,7 @@ data KeyStore = USER_NAME
                 | WMB_END_TRIP_REQUEST_ID
                 | ONBOARDING_VEHICLE_CATEGORY
                 | TRACKING_ID
+                | RECENT_BUS_TRIPS
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

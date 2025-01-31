@@ -241,5 +241,6 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ WMB_CANCEL_END_TRIP state)
     GoToWMBActiveRide state tripDetails -> 
       App.BackT $ App.BackPoint <$> (pure $ WMB_ACTIVE_RIDE state tripDetails)
-    WMBTripRefresh state -> 
-      App.BackT $ App.BackPoint <$> (pure $ WMB_TRIP_REFRESH state)
+    WMBTripRefresh updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ WMB_TRIP_REFRESH updatedState)

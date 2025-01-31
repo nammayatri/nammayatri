@@ -598,7 +598,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                 else do
                   setValueToLocalStore IS_DRIVER_VERIFIED "false"
                   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
-          onBoardingFlow
+          maybe (onBoardingFlow) (\e -> updateFleetConsent e) event
         Left errorPayload -> do
           if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
             then onBoardingFlow
@@ -616,6 +616,16 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
       let initialData = Remote.mkUpdateDriverInfoReq ""
           requiredData = initialData{deviceToken = Just token}
       in void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
+
+    updateFleetConsent event = do
+      when (event.data == "wmb_fleet_consent") do
+        fleetConsentResp <- lift $ lift $ Remote.postFleetConsent ""
+        case fleetConsentResp of
+          Right _ -> onBoardingFlow
+          _ -> do
+            void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            onBoardingFlow
+      onBoardingFlow
 
 updateSubscriptionForVehicleVariant :: GetDriverInfoResp -> AppConfig -> FlowBT String Unit
 updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appConfig = do
@@ -687,7 +697,11 @@ handleDeepLinksFlow event activeRideResp isActiveRide isBusRideActive = do
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
-            "wmb_fleet_consent" -> void $ pure $ giveFleetConsent
+            "wmb_fleet_consent" -> do
+              fleetConsentResp <- lift $ lift $ Remote.postFleetConsent ""
+              case fleetConsentResp of
+                Right _ -> hideSplashAndCallFlow homeScreenFlow
+                _ -> void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
@@ -2477,25 +2491,24 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
         void $ liftFlowBT $ startLocationPollingAPI
         setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
         setValueToLocalStore VEHICLE_CATEGORY "BusCategory"
+        if (isJust tripDetails.endRideApprovalRequestId) 
+            then void $ pure $ setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripDetails.endRideApprovalRequestId
+            else do
+              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
+              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS
         when (not allState.homeScreen.props.statusOnline) $ changeDriverStatus Online
         if tripDetails.status == API.TRIP_ASSIGNED then do
           updateStage $ HomeScreenStage TripAssigned
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
         else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
-          updateStage $ HomeScreenStage ST.RideTracking
-          if (isJust tripDetails.endRideApprovalRequestId) 
-            then void $ pure $ setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripDetails.endRideApprovalRequestId
-            else do
-              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS
-              void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
+          updateStage $ HomeScreenStage ST.RideTracking              
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
           when (getValueToLocalStore WMB_END_TRIP_STATUS == "AWAITING_APPROVAL") do modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{endRidePopUp = true}})
         else (pure unit)
     noActiveBusRidePatch = do
-      -- deleteValueFromLocalStore WMB_END_TRIP_STATUS -- TODO@max-keviv: this is creating issue at app reload
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Nothing, endTripStatus = Nothing } }, props { endRidePopUp = false, currentStage = ST.HomeScreen}})
-      void $ pure $ updateLocalStage ST.HomeScreen
+      deleteValueFromLocalStore WMB_END_TRIP_STATUS -- TODO@max-keviv: this is creating issue at app reload
+      modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      updateStage $ HomeScreenStage HomeScreen
       homeScreenFlow
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
@@ -2595,13 +2608,15 @@ homeScreenFlow = do
       else do 
         pure unit
     (GlobalState globalState) <- getState  
+    let globalHomeScreenState = globalState.homeScreen
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
-    when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
-    when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-    if (HU.specialVariantsForTracking FunctionCall) then do 
-        updateBusFleetConfig globalState.homeScreen
-        updateRecentBusView 
-      else do updateBannerAndPopupFlags
+    when globalHomeScreenState.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
+    when globalHomeScreenState.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
+    when (HU.specialVariantsForTracking FunctionCall && (not $ globalHomeScreenState.props.whereIsMyBusConfig.showSelectAvailableBusRoutes)) do
+      let _ = spy "updateBusFleetConfig" globalHomeScreenState
+      updateBusFleetConfig globalHomeScreenState
+      -- updateRecentBusView 
+    when (not $ HU.specialVariantsForTracking FunctionCall) $ updateBannerAndPopupFlags
 
     void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
@@ -2979,8 +2994,7 @@ homeScreenFlow = do
         "WMB_TRIP_FINISHED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
           void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "ACCEPTED"
-          modifyScreenState $ HomeScreenStateType (\state -> state {props {endRidePopUp = true}})
-          homeScreenFlow
+          currentRideFlow Nothing Nothing Nothing Nothing
         "DRIVER_REQUEST_REJECTED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
           void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
@@ -3390,14 +3404,20 @@ homeScreenFlow = do
           updateStage $ HomeScreenStage ST.RideTracking
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
         else (pure unit)
-    WMB_TRIP_REFRESH _ -> do
+    WMB_TRIP_REFRESH state -> do
       deleteValueFromLocalStore WMB_END_TRIP_STATUS
       deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
       void $ pure $ removeAllMarkers ""
       void $ pure $ removeAllPolylines ""
+      -- case state.data.whereIsMyBusData.trip of
+      --   Just (ST.CURRENT_TRIP tripDetails) -> do
+      --     let _ = spy "Coming to WMB_TRIP_REFRESH" tripDetails
+      --     void $ pure $ updateRecentBusRide tripDetails
+      --     currentRideFlow Nothing Nothing Nothing Nothing
+      --   _ -> currentRideFlow Nothing Nothing Nothing Nothing
       currentRideFlow Nothing Nothing Nothing Nothing
+      
   homeScreenFlow
-
 
 scanBusQrCode :: HomeScreenState -> FlowBT String Unit
 scanBusQrCode state = do
@@ -3406,7 +3426,7 @@ scanBusQrCode state = do
       let response = EHC.atobImpl qrData
       void $ pure $ setValueToLocalNativeStore BUS_VEHICLE_NUMBER_HASH response
       availableRoutes <- Remote.getAvailableRoutesBT response
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props { whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { availableRoutes = Just $ availableRoutes }}, props {whereIsMyBusConfig { showSelectAvailableBusRoutes = true, selectedRoute = Nothing }}})
       homeScreenFlow
     )
 
@@ -4308,7 +4328,7 @@ logoutFlow = do
   deleteValueFromLocalStore VEHICLE_CATEGORY
   deleteValueFromLocalStore ENTERED_RC
   deleteValueFromLocalStore GULLAK_TOKEN
-  pure $ JB.removeRecentBusTrip
+  deleteValueFromLocalStore RECENT_BUS_TRIPS
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit

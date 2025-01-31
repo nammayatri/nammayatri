@@ -94,7 +94,7 @@ import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideT
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
-import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
+import Services.Accessor (_lat, _lon, _area, _extras, _instructions, _routeCode)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -144,6 +144,7 @@ import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
 import Constants.Configs (getPolylineAnimationConfig)
 import Components.SelectRouteButton as RouteDisplayController
+import Control.Alt ((<|>))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -515,6 +516,7 @@ data Action = NoAction
             | WMBTripActiveAction API.TripTransactionDetails
             | WMBEndTripModalAC PopUpModal.Action
             | WMBEndTripAC String
+            | UpdateSuggestedRoute API.AvailableRoutesList JB.RecentBusTrip
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1295,7 +1297,9 @@ eval (WMBEndTripModalAC action) state = do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID 
           continue state {props{endRidePopUp = false}}
         "AWAITING_APPROVAL" -> exit $ WMBCancelEndTrip state
-        _ | endTripStatus `Array.elem` ["SUCCESS", "ACCEPTED"] -> exit $ WMBTripRefresh state
+        _ | endTripStatus `Array.elem` ["SUCCESS", "ACCEPTED"] -> do
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS 
+          exit $ WMBTripRefresh state {props{endRidePopUp = false}}
         _ -> exit $ WMBEndTrip state
     PopUpModal.OnButton2Click -> continue state {props{endRidePopUp = false}}
     _ -> continue state
@@ -1902,6 +1906,24 @@ eval (WMBTripActiveAction (API.TripTransactionDetails tripDetails)) state = do
     exit $ GoToWMBActiveRide state (API.TripTransactionDetails tripDetails)
   else continue state
 
+eval (UpdateSuggestedRoute (API.AvailableRoutesList availableRoutesList) tripDetails) state =
+  let selectedRoute = findMatchingRoute tripDetails availableRoutesList
+      _ = spy "updateStateWithRoutes:availableRoutesList" availableRoutesList
+      _ = spy "updateStateWithRoutes:selectedRoute" selectedRoute
+  in continue state 
+    { data {
+        whereIsMyBusData { 
+          availableRoutes = Just (API.AvailableRoutesList availableRoutesList)
+        , lastCompletedTrip = Just $ HU.recentTripToTripDetails tripDetails
+        }
+      }
+    , props {
+        whereIsMyBusConfig {
+          selectedRoute = selectedRoute
+        }
+      }
+    }
+
 eval _ state = update state 
 
 checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
@@ -2304,3 +2326,16 @@ showMarkerOnMap markerName lat lng = do
   let markerConfig = defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
   void $ pure $ JB.removeMarker markerName
   void $ showMarker markerConfig lat lng 160 0.5 0.9 (getNewIDWithTag "DriverTrackingHomeScreenMap")
+
+findMatchingRoute :: JB.RecentBusTrip -> Array API.AvailableRoutes -> Maybe API.AvailableRoutes
+findMatchingRoute tripDetails availableRoutesList = 
+  findRoundRoute <|> findDirectRoute
+  where
+    findRoundRoute = Array.find isMatchingRoundRoute availableRoutesList
+    findDirectRoute = Array.find isMatchingDirectRoute availableRoutesList
+    
+    isMatchingRoundRoute (API.AvailableRoutes route) = 
+      maybe false (_ == tripDetails.routeCode) route.roundRouteCode
+    
+    isMatchingDirectRoute (API.AvailableRoutes route) = 
+      (route.routeInfo ^. _routeCode) == tripDetails.routeCode
