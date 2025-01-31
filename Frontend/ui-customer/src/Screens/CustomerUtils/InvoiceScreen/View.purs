@@ -123,7 +123,7 @@ referenceList state =
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
       waitingCharges = 
-        if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then
+        if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.AUTO_RICKSHAW, Just VV.EV_AUTO_RICKSHAW] then
             autoWaitingCharges
         else if state.data.selectedItem.vehicleVariant == Just VV.BIKE then
             bikeWaitingCharges

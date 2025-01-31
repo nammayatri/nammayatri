@@ -103,10 +103,10 @@ feedbackPillDataWithRating3 vehicalVariant =
     ]
   , [ { id: "3", text: getString LT.FELT_UNSAFE }
     , { id: "8", text: getString LT.RASH_DRIVING }
-    , { id: "3", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: if DA.elem vehicalVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
     ]
   , [ { id: "3", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: if DA.elem vehicalVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
     ]
   ]
 
@@ -117,10 +117,10 @@ feedbackPillDataWithRating4 vehicalVariant =
     , { id: "4", text: getString LT.SAFE_RIDE }
     ]
   , [ { id: "9", text: getString LT.ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: if DA.elem vehicalVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
     ]
   , [ { id: "4", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "3", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: if DA.elem vehicalVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
     ]
   ]
 

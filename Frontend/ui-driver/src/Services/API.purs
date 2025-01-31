@@ -803,7 +803,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR_ | SUV_PLUS | EV_AUTO_VARIANT
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -820,9 +820,9 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode AMBULANCE_TAXI_OXY = standardEncode {}
  standardEncode AMBULANCE_AC = standardEncode {}
  standardEncode AMBULANCE_AC_OXY = standardEncode {}
- standardEncode AMBULANCE_VENTILATOR = standardEncode {}
+ standardEncode AMBULANCE_VENTILATOR_ = standardEncode {}
  standardEncode SUV_PLUS = standardEncode {}
-
+ standardEncode EV_AUTO_VARIANT = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
@@ -4352,6 +4352,7 @@ data ServiceTierType
   | INTERCITY
   | BIKE_TIER
   | SUV_PLUS_TIER
+  | EV_AUTO_RICKSHAW
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4412,6 +4413,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
                   "BIKE"         -> except $ Right BIKE_TIER
+                  "EV_AUTO_RICKSHAW" -> except $ Right EV_AUTO_RICKSHAW
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
@@ -4430,6 +4432,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode BIKE_TIER = standardEncode "BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
+    standardEncode EV_AUTO_RICKSHAW = standardEncode "EV_AUTO_RICKSHAW"
     standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _

@@ -311,6 +311,7 @@ fetchVehicleVariant variant =
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
     "BIKE"          -> Just ST.BIKE
     "SUV_PLUS"      -> Just ST.SUV_PLUS
+    "EV_AUTO_RICKSHAW" -> Just ST.EV_AUTO_RICKSHAW
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
@@ -320,6 +321,7 @@ getVehicleCapacity variant =
     Just ST.SUV_PLUS -> "6"
     Just ST.AUTO_RICKSHAW -> "3"
     Just ST.BIKE -> "1"
+    Just ST.EV_AUTO_RICKSHAW -> "3"
     _ -> "4"
 
 intMax :: Int

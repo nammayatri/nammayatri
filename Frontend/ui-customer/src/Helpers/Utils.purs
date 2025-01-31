@@ -705,7 +705,7 @@ getVehicleVariantImage variant viewType =
           "ECO"           -> variantConfig.hatchback.leftViewImage
           "COMFY"         -> variantConfig.sedan.leftViewImage
           "PREMIUM"       -> variantConfig.sedan.leftViewImage
-          "AUTO_RICKSHAW" -> case city of 
+          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of 
                               _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                               _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
@@ -732,7 +732,7 @@ getVehicleVariantImage variant viewType =
           "ECO"           -> variantConfig.hatchback.image
           "COMFY"         -> variantConfig.sedan.image
           "PREMIUM"       -> variantConfig.sedan.image
-          "AUTO_RICKSHAW" -> case city of 
+          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of 
                               _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
                               _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
@@ -767,7 +767,7 @@ getTitleConfig vehicleVariant =
   case vehicleVariant of
         "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
         "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
-        "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
         _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
@@ -1197,7 +1197,7 @@ mkSrcMarker city variant currentStage =
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
 getCitySpecificMarker city variant currentStage = 
     case variant of
-        "AUTO_RICKSHAW" -> getAutoImage city
+        _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getAutoImage city
         "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
