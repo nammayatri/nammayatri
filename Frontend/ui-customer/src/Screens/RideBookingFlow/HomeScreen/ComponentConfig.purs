@@ -953,7 +953,7 @@ waitTimeInfoCardConfig state = let
                           cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
                           ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
                           waitingCharges = 
-                            if state.data.vehicleVariant == "AUTO_RICKSHAW" then
+                            if any (_ == state.data.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then
                                 autoWaitingCharges
                             else if rideType == FPT.AMBULANCE then 
                                 ambulanceWaitingCharges
@@ -1099,6 +1099,7 @@ getVehicleTitle vehicle =
       "BIKE" -> "Bike Taxi"
       "SUV_PLUS" -> "XL Plus"
       "DELIVERY_BIKE" -> "2 Wheeler"
+      "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
       _ -> ""
   )
     <> " - "

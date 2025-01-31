@@ -3094,7 +3094,7 @@ updateRecentTrips action push response = do
 driverLocationTracking :: (Action -> Effect Unit) -> (String -> RideBookingRes -> Action) -> (String -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction driverReachedDestinationAction updateState duration trackingId state routeState expCounter = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  let hideMarkerCallback = not (state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall)
+  let hideMarkerCallback = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
   (GlobalState gbState) <- getState
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     let bookingId = if state.props.bookingId == "" then gbState.homeScreen.props.bookingId else state.props.bookingId

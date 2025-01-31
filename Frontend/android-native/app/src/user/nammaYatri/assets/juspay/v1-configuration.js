@@ -285,7 +285,7 @@ const nammaYatriConfig = function () {
     ]
     , "estimateAndQuoteConfig":
     {
-      "variantTypes": [["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"]]
+      "variantTypes": [["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"], ["EV_AUTO_RICKSHAW"]]
       , "variantOrder": ["AUTO_RICKSHAW", "BOOK_ANY"]
       , "variantInfo": {
         "hatchback": {
@@ -315,6 +315,11 @@ const nammaYatriConfig = function () {
         },
         "autoRickshaw": {
           "name": "Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
           "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
@@ -685,6 +690,11 @@ const odishaYatriConfig = function () {
           "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
         "bookAny" : {
           "name" : "Book Any",
           "image" : "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
@@ -1044,6 +1054,11 @@ const manaYatriConfig = function () {
         },
         "autoRickshaw": {
           "name": "Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
           "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
