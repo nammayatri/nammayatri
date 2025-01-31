@@ -71,6 +71,7 @@ jobs:
           fi
   build:
     needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
     if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
     strategy:
       matrix:
@@ -78,11 +79,15 @@ jobs:
           - system: x86_64-linux
             host: x86_64-linux
             arch: amd64
+            continue-on-error: false
           - system: aarch64-darwin
             host: aarch64-darwin
+            continue-on-error: false
           - system: aarch64-linux
             host: aarch64-darwin
             arch: arm64
+            continue-on-error: ${{ github.event.pull_request.merged == 'true' && github.ref == 'refs/heads/backend/ci/add-fail-fast-check' }}
+      fail-fast: false
     runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
