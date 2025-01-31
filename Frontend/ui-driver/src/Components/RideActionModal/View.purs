@@ -36,7 +36,6 @@ import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoIS
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
-import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
 import Helpers.Utils (getRideTypeColor, getVariantRideType)
 import Helpers.Utils as HU
 import JBridge (getVersionCode)

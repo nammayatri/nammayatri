@@ -374,6 +374,7 @@ getVehicleType vehicleType =
     "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     "SUV_PLUS" -> getString XL_PLUS
+    "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -572,6 +573,7 @@ getCategorizedVariant variant = case variant of
                 "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
                 "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
                 "SUV_PLUS" -> "XL Plus"
+                "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
                 _ -> var
   Nothing -> ""
 
@@ -619,7 +621,7 @@ getVehicleVariantImage variant =
       "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      "AUTO_RICKSHAW" -> 
+      _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> 
         case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
           "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
@@ -900,13 +902,13 @@ getChargesOb tripType cityConfig driverVehicle =
     getRentalChargesOb cityConfig driverVehicle
   else
     case driverVehicle of
-      "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+      _ | DA.elem driverVehicle ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> cityConfig.waitingChargesConfig.auto
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
 getRentalChargesOb cityConfig driverVehicle = 
   case driverVehicle of
-    "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
+    _ | DA.elem driverVehicle ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> cityConfig.rentalWaitingChargesConfig.auto
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 
@@ -955,10 +957,11 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
+  SA.EV_AUTO_RICKSHAW -> "EV_AUTO_RICKSHAW"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
 getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
-  SA.AUTO_RICKSHAW -> "ny_ic_auto_side_view"
+  _ | DA.elem vehicleServiceTier [SA.AUTO_RICKSHAW, SA.EV_AUTO_RICKSHAW] -> "ny_ic_auto_side_view"
   SA.SEDAN_TIER -> "ny_ic_sedan"
   SA.COMFY -> "ny_ic_sedan_ac"
   SA.ECO -> "ic_hatchback_ac"
@@ -1071,6 +1074,7 @@ vehicleVariantImage vehicle =
     case vehicle of 
                   "SEDAN" ->  "ny_ic_sedan_left_view"
                   "AUTO"  ->  "ny_ic_auto_left_view"
+                  "EV_AUTO_RICKSAW"  ->  "ny_ic_auto_left_view"
                   "TAXI"  ->  "ny_ic_taxi_left_view"
                   "SUV" ->     "ny_ic_suv_left_view"
                   _       ->  "ny_ic_auto_left_view"

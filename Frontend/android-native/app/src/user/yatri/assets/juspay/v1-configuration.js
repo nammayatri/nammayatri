@@ -315,6 +315,11 @@ window.getMerchantConfig = function () {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png"
         },
+        "evAutoRickshaw" : {
+          "name" : "EV Auto Rickshaw",
+          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
         "bookAny" : {
           "name" : "Book Any",
           "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"

@@ -264,6 +264,7 @@ defaultMetroWarriorConfig =
   , taxi: Nothing
   , taxiPlus: Nothing
   , bookAny: Nothing
+  , evAutoRickshaw: Nothing
   , deliveryBike: Nothing
   , default: Nothing
   }

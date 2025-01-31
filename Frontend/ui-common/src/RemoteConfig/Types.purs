@@ -76,6 +76,7 @@ type VariantLevelRemoteConfig a
     , taxiPlus :: a
     , default :: a
     , deliveryBike :: a
+    , evAutoRickshaw :: a
     }
 
 newtype RCCarousel
@@ -152,6 +153,7 @@ type TipsConfig
     , bookAny :: Maybe (Array Int)
     , taxi :: Maybe (Array Int)
     , taxiPlus :: Maybe (Array Int)
+    , evAutoRickshaw :: Maybe (Array Int)
     , bike :: Maybe (Array Int)
     , default :: Maybe (Array Int)
     }

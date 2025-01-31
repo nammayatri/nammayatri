@@ -229,7 +229,7 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus 
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus | EV_Auto
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {

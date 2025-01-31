@@ -742,6 +742,7 @@ mapServiceTierName vehicleVariant isValueAddNP serviceTierName =
                 "AUTO_RICKSHAW" -> Just "Auto"
                 "BIKE" -> Just "Bike Taxi"
                 "SUV_PLUS" -> Just "XL Plus"
+                "EV_AUTO_RICKSHAW" -> Just "EV Auto"
                 _ -> serviceTierName
 
 mapServiceTierShortDesc :: String -> Maybe Boolean -> Maybe String -> Maybe String
@@ -773,7 +774,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
       waitingCharges = 
-        if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
+        if DA.any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then
             autoWaitingCharges
         else if rideDetails.vehicleVariant == "BIKE" then
             bikeWaitingCharges
@@ -781,7 +782,7 @@ getTripDetailsState (RideBookingRes ride) state = do
             cabsWaitingCharges
       nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
-      nightCharges = if rideDetails.vehicleVariant == "AUTO_RICKSHAW" 
+      nightCharges = if DA.any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] 
                           then 1.5 
                           else 1.1
       endTime = fromMaybe "" rideDetails.rideEndTime

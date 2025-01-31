@@ -497,7 +497,7 @@ type IndividualRideCardState =
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS | EV_AUTO_RICKSHAW
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq

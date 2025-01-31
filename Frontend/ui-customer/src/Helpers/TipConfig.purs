@@ -33,6 +33,7 @@ type TipVehicleConfig = {
   taxi :: TipConfig,
   taxiPlus :: TipConfig,
   bike :: TipConfig,
+  evAutoRickshaw :: TipConfig,
   suvPlus :: TipConfig
 }
 
@@ -46,6 +47,7 @@ getTipConfig variant = do
     "SUV" -> mkTipConfig tipsConfig.suv
     "HATCHBACK" -> mkTipConfig tipsConfig.hatchback
     "AUTO_RICKSHAW" -> mkTipConfig tipsConfig.autoRickshaw
+    "EV_AUTO_RICKSHAW" -> mkTipConfig tipsConfig.evAutoRickshaw
     "TAXI" -> mkTipConfig tipsConfig.taxi
     "TAXI_PLUS" -> mkTipConfig tipsConfig.taxiPlus
     "BOOK_ANY" -> mkTipConfig tipsConfig.bookAny
