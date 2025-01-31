@@ -952,10 +952,13 @@ waitTimeInfoCardConfig state = let
                           cityConfig = state.data.currentCityConfig
                           autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
                           cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+                          ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
                           waitingCharges = 
                             if state.data.vehicleVariant == "AUTO_RICKSHAW" then
                                 autoWaitingCharges
-                            else 
+                            else if rideType == FPT.AMBULANCE then 
+                                ambulanceWaitingCharges
+                            else
                                 cabsWaitingCharges
                           isIntercity = state.data.fareProductType == FPT.INTER_CITY
                       in 
@@ -1279,6 +1282,7 @@ driverInfoTransformer state =
     , receiverDetails : cardState.receiverDetails
     , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
     , requestorPartyRoles : state.data.requestorPartyRoles
+    , isAirConditioned : cardState.isAirConditioned
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1995,13 +1999,14 @@ locationTagBarConfig state =
             }
         )
         ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+         , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
           ]
             <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
             <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
             <> if state.data.currentCityConfig.enableIntercityBus then [ { image: "ny_ic_intercity_bus", text: getString INTERCITY_BUS, id: "INTERCITY_BUS", background: Color.blue600', showBanner: GONE } ] else []
             <> ([{image: "ny_ic_bus_icon", text: "Bus", id: "BUS", background: Color.amber, showBanner: GONE }])
             <> ([{image: "ny_ic_metro_icon", text: "Metro", id: "METRO_RIDE", background: Color.mutedRed, showBanner: GONE }])
+            <> ([{image: "ny_ic_ambulance", text: "Ambulance" , id: "AMBULANCE_SERVICE" , background: "#fdf3ec" , showBanner: GONE}])
         )
   in
     { tagList: locTagList }
@@ -2467,6 +2472,7 @@ getAllServices dummy =
     , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec", preferredEstimateOrder : []}
     , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"]}
     , {type: RemoteConfig.METRO_RIDE, image: fetchImage COMMON_ASSET "ny_ic_metro_icon", name: METRO_RIDE, backgroundColor: "#faeeee" , preferredEstimateOrder : ["METRO_RIDE"]}
+    , {type: RemoteConfig.AMBULANCE_SERVICE, image: fetchImage COMMON_ASSET "ny_ic_ambulance", name: AMBULANCE_, backgroundColor: "#fdf3ec", preferredEstimateOrder : []}
     ] <> if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : []}] else []
       <> if enableBusBooking then [{type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}] else []
 

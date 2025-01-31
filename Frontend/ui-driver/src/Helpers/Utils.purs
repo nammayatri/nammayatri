@@ -109,9 +109,13 @@ import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
+import Debug (spy)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import JBridge as JB
+import Resource.Localizable.TypesV2
+import Resource.Localizable.StringsV2 (getStringV2)
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -369,11 +373,11 @@ getVehicleType vehicleType =
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     "BIKE" -> (getString BIKE_TAXI)
-    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
-    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
-    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
-    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
-    "AMBULANCE_VENTILATOR" -> getString VENTILATOR
+    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getStringV2 no_oxygen
+    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getStringV2 oxygen
+    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getStringV2 no_oxygen
+    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getStringV2 oxygen
+    "AMBULANCE_VENTILATOR" -> getStringV2 ventilator
     "SUV_PLUS" -> getString XL_PLUS
     _ -> ""
 
@@ -627,11 +631,11 @@ getVehicleVariantImage variant =
           "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           _           -> fetchImage FF_ASSET "ic_vehicle_front"
       "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-      "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+      "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+      "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+      "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+      "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilator," <> commonUrl <> "ny_ic_ambulance_ventilator.png"
       "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
@@ -903,12 +907,22 @@ getChargesOb tripType cityConfig driverVehicle =
   else
     case driverVehicle of
       "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+      "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_AC" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
 getRentalChargesOb cityConfig driverVehicle = 
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
+    "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_AC" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 
@@ -956,6 +970,11 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+  SA.AMBULANCE_TAXI_TIER -> "AMBULANCE_TAXI"
+  SA.AMBULANCE_TAXI_OXY_TIER -> "AMBULANCE_TAXI_OXY"
+  SA.AMBULANCE_AC_TIER -> "AMBULANCE_AC"
+  SA.AMBULANCE_AC_OXY_TIER -> "AMBULANCE_AC_OXY"
+  SA.AMBULANCE_VENTILATOR_TIER -> "AMBULANCE_VENTILATOR"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
   SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
 
@@ -1194,3 +1213,6 @@ getHvErrorMsg errorCode =
     Just "140" -> getString REMOVE_EYEWERE
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
     _ -> getString UNKNOWN_ERROR
+
+isAmbulance :: String -> Boolean
+isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]

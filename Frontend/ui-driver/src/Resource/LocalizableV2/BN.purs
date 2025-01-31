@@ -1764,4 +1764,6 @@ getBn =
     , warning : "সতর্কতা!"
     , you_have_been_blocked_for_n_days: "অতিরিক্ত ভাড়া নিয়ে একাধিক গ্রাহক অভিযোগের কারণে আপনাকে দিনের জন্য ব্লক করা হয়েছে।"
     , do_not_ask_customers_for_extra_payment: "গ্রাহকদের কাছে অতিরিক্ত অর্থ চাইবেন না। এটি চালিয়ে গেলে আপনি ব্লক হতে পারেন।"
+    , canceling_this_booking_may_affect_the_emergency_medical : "এই বুকিং বাতিল করলে রোগীর জরুরি চিকিৎসা সেবাগুলিতে প্রভাব পড়তে পারে"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ড্রাইভারদের শুধুমাত্র তাদের চিকিৎসা সংক্রান্ত কারণ বা যানবাহন সমস্যার জন্যই বাতিল করার অনুমতি রয়েছে"
     }

@@ -1712,4 +1712,12 @@ getEn = Keymap {
 , we_are_sorry_to_hear_this_please_click_on_need_help : "We sincerely apologize for the inconvenience."
 , driver_asked_extra_money : "Driver asked for extra money"
 , driver_is_asking_for_extra_fare : "Driver is asking for extra fare"
+,a_c : "Agree & Continue" 
+,no_oxygen :  "No Oxygen"
+,oxygen  : "Oxygen"
+,ventilator : "Ventilator"
+,ambulance_ : "Ambulance"
+,uncomfortable_ambulance : "Uncomfortable Ambulance"
+,clean_ambulance : "Clean Ambulance"
+,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
 }

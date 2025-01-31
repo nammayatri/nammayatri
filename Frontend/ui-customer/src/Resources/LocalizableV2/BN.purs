@@ -1712,4 +1712,12 @@ getBn = Keymap {
 , we_are_sorry_to_hear_this_please_click_on_need_help : "আমরা অসুবিধার জন্য অন্তঃপুরে দুঃখিত"
 , driver_asked_extra_money : "ড্রাইভার অতিরিক্ত টাকা চেয়েছে"
 , driver_is_asking_for_extra_fare : "ড্রাইভার অতিরিক্ত ভাড়া চাইছে।"
+,a_c : "সম্মত এবং চালিয়ে যান"
+,no_oxygen :  "অক্সিজেন নেই"
+,oxygen  : "অক্সিজেন"
+,ventilator : "ভেন্টিলেটর"
+,ambulance_ : "অ্যাম্বুলেন্স"
+,uncomfortable_ambulance : "অস্বস্তিকর অ্যাম্বুলেন্স"
+,clean_ambulance : "পরিষ্কার অ্যাম্বুলেন্স"
+,ambulance_booking_disclaimer : "যাত্রী সাথী শুধুমাত্র একটি প্ল্যাটফর্ম যা অ্যাম্বুলেন্স সেবা প্রদানকারীদের গ্রাহকদের সাথে সংযুক্ত করে। আমরা অ্যাম্বুলেন্স পার্টির দ্বারা প্রদত্ত তথ্যের জন্য দায়ী নই।"
 }

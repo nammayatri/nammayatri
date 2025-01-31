@@ -1712,4 +1712,12 @@ getKn = Keymap {
 , we_are_sorry_to_hear_this_please_click_on_need_help : "ನಾವು ಅಸೌಕರ್ಯಕ್ಕಾಗಿ ನಿಮ್ಮಲ್ಲಿ ಕ್ಷಮೆ ಕೇಳುತ್ತೇವೆ"
 , driver_asked_extra_money : "ಚಾಲಕ ಹೆಚ್ಚುವರಿ ಹಣ ಕೇಳಿದ್ದಾರೆ"
 , driver_is_asking_for_extra_fare : "ಚಾಲಕ ಹೆಚ್ಚುವರಿ ಭಾಡಿ ಕೇಳುತ್ತಿದ್ದಾರೆ"
+, a_c : "ಒಪ್ಪಿಗೆ ಮಾಡು & ಮುಂದುವರಿಸು"
+, no_oxygen : "ಆಕ್ಸಿಜನ್ ಇಲ್ಲ"
+, oxygen : "ಆಕ್ಸಿಜನ್"
+, ventilator : "ವೆಂಟಿಲೇಟರ್"
+, ambulance_ : "ಆಂಬುಲೆನ್ಸ್"
+, uncomfortable_ambulance : "ಅಸೌಕರ್ಯದ ಆಂಬುಲೆನ್ಸ್"
+, clean_ambulance : "ಸ್ವಚ್ಛವಾದ ಆಂಬುಲೆನ್ಸ್"
+, ambulance_booking_disclaimer : "ಯಾತ್ರಿ ಸಹಚರಿ ಒಂದು ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಮಾತ್ರ, ಇದು ಆಂಬ್ಯುಲೆನ್ಸ್ ಸೇವಾ ಪೂರೈಕೆದಾರರನ್ನು ಗ್ರಾಹಕರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸುತ್ತದೆ. ನಾವು ಆಂಬ್ಯುಲೆನ್ಸ್ ಪಕ್ಷದಿಂದ ನೀಡಲಾಗುವ ಮಾಹಿತಿಗೆ ಜವಾಬ್ದಾರಿಯಿಲ್ಲ"
 }

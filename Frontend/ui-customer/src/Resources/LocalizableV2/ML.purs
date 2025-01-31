@@ -1713,4 +1713,12 @@ getMl = Keymap {
 , we_are_sorry_to_hear_this_please_click_on_need_help : "ഞങ്ങൾ അസൗകര്യത്തിനായി ഹൃദയപൂർവ്വം മാപ്പ് അഭ്യർത്ഥിക്കുന്നു"
 , driver_asked_extra_money : "ഡ്രൈവർ അധിക പണം ചോദിച്ചു"
 , driver_is_asking_for_extra_fare : "ഡ്രൈവർ അധിക നിരക്ക് ആവശ്യപ്പെടുന്നു"
+,a_c : "അംഗീകരിക്കുക & തുടരുക"
+,no_oxygen :  "ആക്സിജൻ ഇല്ല"
+,oxygen  : "ആക്സിജൻ"
+,ventilator : "വെന്റിലേറ്റർ"
+,ambulance_ : "ആംബുലൻസ്"
+,uncomfortable_ambulance : "അസുഖകരമായ ആംബുലൻസ്"
+,clean_ambulance : "ശുചിത്വമായ ആംബുലൻസ്"
+,ambulance_booking_disclaimer : "യാത്രി സഹായി എംബുലൻസ് സേവാ പ്രദാതാക്കളെ ഉപഭോക്താക്കളുമായി ബന്ധിപ്പിക്കുന്ന ഒരു പ്ലാറ്റ്‌ഫോം മാത്രമാണ്. എംബുലൻസ് പാർട്ടി നൽകിയ വിവരങ്ങൾക്ക് ഞങ്ങൾ ഉത്തരവാദികളല്ല."
 }

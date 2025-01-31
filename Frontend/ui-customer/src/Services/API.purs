@@ -258,6 +258,7 @@ newtype SearchLocationReq = SearchLocationReq {
   location :: String,
   radius :: Int,
   input :: String,
+  searchType :: Maybe String,
   language :: String,
   strictbounds :: Maybe Boolean,
   origin :: LatLong,
@@ -471,7 +472,7 @@ newtype SearchReq = SearchReq {
   fareProductType :: String
 }
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | RoundTripSearchRequest RoundTripSearchReq | DeliverySearchRequest OneWaySearchReq
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | RoundTripSearchRequest RoundTripSearchReq | DeliverySearchRequest OneWaySearchReq | AmbulanceSearchRequest OneWaySearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -543,6 +544,7 @@ instance standardEncodeContentType :: StandardEncode ContentType where
   standardEncode (RentalSearchRequest body) = standardEncode body
   standardEncode (RoundTripSearchRequest body) = standardEncode body
   standardEncode (DeliverySearchRequest body) = standardEncode body
+  standardEncode (AmbulanceSearchRequest body) = standardEncode body
 instance showContentType :: Show ContentType where show = genericShow
 instance decodeContentType :: Decode ContentType
   where
@@ -552,6 +554,7 @@ instance encodeContentType  :: Encode ContentType where
   encode (RentalSearchRequest body) = encode body
   encode (RoundTripSearchRequest body) = encode body
   encode (DeliverySearchRequest body) = encode body
+  encode (AmbulanceSearchRequest body) = encode body
 
 derive instance genericRoundTripSearchReq :: Generic RoundTripSearchReq _
 derive instance newtypeRoundTripSearchReq :: Newtype RoundTripSearchReq _
@@ -696,15 +699,10 @@ data QuoteAPIDetails
   = ONE_WAY OneWayQuoteAPIDetails
   | RENTAL RentalQuoteAPIDetails
   | DRIVER_OFFER DriverOfferAPIEntity
-  | AMBULANCE AmbulanceBookingAPIDetails
   | INTER_CITY IntercityQuoteAPIDetails
   | DELIVERY DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIDetails
-
-
-newtype AmbulanceBookingAPIDetails = AmbulanceBookingAPIDetails { 
-  toLocation :: LocationAPIEntity
-}
+  | AMBULANCE AmbulanceDetailsAPIEntity
 
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
   distanceToNearestDriver :: String
@@ -763,6 +761,18 @@ newtype DeadKmFare = DeadKmFare {
 }
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
   quoteId :: String
+}
+
+newtype AmbulanceDetailsAPIEntity = AmbulanceDetailsAPIEntity {
+  minEstimatedFare :: Int,
+  maxEstimatedFare :: Int,
+  ambulanceQuoteBreakupList :: Array AmbulanceQuoteBreakupAPIEntity,
+  tollCharges :: Maybe Number
+}
+
+newtype AmbulanceQuoteBreakupAPIEntity = AmbulanceQuoteBreakupAPIEntity {
+  title :: String,
+  price :: Int
 }
 
 newtype DriverOfferAPIEntity = DriverOfferAPIEntity
@@ -890,12 +900,19 @@ instance showIntercityQuoteAPIDetails :: Show IntercityQuoteAPIDetails where sho
 instance decodeIntercityQuoteAPIDetails :: Decode IntercityQuoteAPIDetails where decode = defaultDecode
 instance encodeIntercityQuoteAPIDetails  :: Encode IntercityQuoteAPIDetails where encode = defaultEncode
 
-derive instance genericAmbulanceBookingAPIDetails :: Generic AmbulanceBookingAPIDetails _
-derive instance newtypeAmbulanceBookingAPIDetails :: Newtype AmbulanceBookingAPIDetails _
-instance standardEncodeAmbulanceBookingAPIDetails :: StandardEncode AmbulanceBookingAPIDetails where standardEncode (AmbulanceBookingAPIDetails body) = standardEncode body
-instance showAmbulanceBookingAPIDetails :: Show AmbulanceBookingAPIDetails where show = genericShow
-instance decodeAmbulanceBookingAPIDetails :: Decode AmbulanceBookingAPIDetails where decode = defaultDecode
-instance encodeAmbulanceBookingAPIDetails  :: Encode AmbulanceBookingAPIDetails where encode = defaultEncode
+derive instance genericAmbulanceDetailsAPIEntity :: Generic AmbulanceDetailsAPIEntity _
+derive instance newtypeAmbulanceDetailsAPIEntity :: Newtype AmbulanceDetailsAPIEntity _
+instance standardEncodeAmbulanceDetailsAPIEntity :: StandardEncode AmbulanceDetailsAPIEntity where standardEncode (AmbulanceDetailsAPIEntity body) = standardEncode body
+instance showAmbulanceDetailsAPIEntity :: Show AmbulanceDetailsAPIEntity where show = genericShow
+instance decodeAmbulanceDetailsAPIEntity :: Decode AmbulanceDetailsAPIEntity where decode = defaultDecode
+instance encodeAmbulanceDetailsAPIEntity  :: Encode AmbulanceDetailsAPIEntity where encode = defaultEncode
+
+derive instance genericAmbulanceQuoteBreakupAPIEntity :: Generic AmbulanceQuoteBreakupAPIEntity _
+derive instance newtypeAmbulanceQuoteBreakupAPIEntity :: Newtype AmbulanceQuoteBreakupAPIEntity _
+instance standardEncodeAmbulanceQuoteBreakupAPIEntity :: StandardEncode AmbulanceQuoteBreakupAPIEntity where standardEncode (AmbulanceQuoteBreakupAPIEntity body) = standardEncode body
+instance showAmbulanceQuoteBreakupAPIEntity :: Show AmbulanceQuoteBreakupAPIEntity where show = genericShow
+instance decodeAmbulanceQuoteBreakupAPIEntity :: Decode AmbulanceQuoteBreakupAPIEntity where decode = defaultDecode
+instance encodeAmbulanceQuoteBreakupAPIEntity  :: Encode AmbulanceQuoteBreakupAPIEntity where encode = defaultEncode
 
 
 derive instance genericOfferRes :: Generic OfferRes _
@@ -1083,7 +1100,6 @@ newtype RideBookingRes = RideBookingRes {
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
   serviceTierName :: Maybe String,
-  airConditioned :: Maybe Boolean,
   isValueAddNP :: Maybe Boolean,
   providerName :: Maybe String,
   id :: String,
@@ -1108,7 +1124,8 @@ newtype RideBookingRes = RideBookingRes {
   rideDuration :: Maybe Int,
   vehicleServiceTierSeatingCapacity :: Maybe Int,
   vehicleServiceTierAirConditioned :: Maybe Number,
-  returnTime :: Maybe String
+  returnTime :: Maybe String,
+  isAirConditioned :: Maybe Boolean
 }
 
 newtype RideBookingStatusRes = RideBookingStatusRes {

@@ -1778,6 +1778,8 @@ newtype Keymap
   , warning :: String
   , you_have_been_blocked_for_n_days :: String
   , do_not_ask_customers_for_extra_payment :: String
+  , canceling_this_booking_may_affect_the_emergency_medical :: String
+  , drivers_are_permitted_to_cancel_ambulance_bookings :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7060,3 +7062,9 @@ you_have_been_blocked_for_n_days = a
 
 do_not_ask_customers_for_extra_payment :: Proxy "do_not_ask_customers_for_extra_payment"
 do_not_ask_customers_for_extra_payment = a
+
+drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
+drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
+
+canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
+canceling_this_booking_may_affect_the_emergency_medical = Proxy

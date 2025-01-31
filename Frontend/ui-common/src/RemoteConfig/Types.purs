@@ -142,7 +142,12 @@ type TipsConfig
       taxiPlus :: Maybe (Array Int),
       bike :: Maybe (Array Int),
       default :: Maybe (Array Int),
-      deliveryBike :: Maybe (Array Int)
+      deliveryBike :: Maybe (Array Int),
+      ambulanceTaxi :: Maybe (Array Int),
+      ambulanceTaxiOxy ::  Maybe (Array Int),
+      ambulanceAc ::  Maybe (Array Int),
+      ambulanceAcOxy ::  Maybe (Array Int),
+      ambulanceVentilator :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 
@@ -154,7 +159,12 @@ type SubscriptionConfigVariantLevel
       taxi :: Maybe SubscriptionConfigVariantLevelEntity,
       taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
       default :: Maybe SubscriptionConfigVariantLevelEntity,
-      deliveryBike :: Maybe SubscriptionConfigVariantLevelEntity
+      deliveryBike :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceTaxi :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceTaxiOxy :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceAc :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceAcOxy :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceVentilator :: Maybe SubscriptionConfigVariantLevelEntity
     }
 
 
@@ -206,7 +216,7 @@ type RCSubscriptionDues = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus | AmbulanceBooking
 
 instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
 instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson

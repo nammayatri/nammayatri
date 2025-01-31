@@ -348,13 +348,6 @@ let staticSubscriptionConfig = [
   {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
 ]
 
-let defaultStartAudioConfig = {
-  "acCab" : {},
-  "nonAcCab" : {},
-  "auto" : {},
-  "bike" : {}
-}
-
 let getAllCityConfig = () => {
   let baseCityConfig = {
     "cityName" : "",
@@ -405,6 +398,10 @@ let getAllCityConfig = () => {
       "bike" : {
         "freeSeconds" : 300,
         "perMinCharges" : 1.0
+      },
+      "ambulance": {
+        "freeSeconds": 480,
+        "perMinCharges": 2.0
       }
     },
     "rateCardConfig" : defRateCardConfig,
@@ -421,9 +418,14 @@ let getAllCityConfig = () => {
       "bike" : {
         "freeSeconds" : 180,
         "perMinCharges" : 2.0
+      },
+      "ambulance": {
+        "freeSeconds": 480,
+        "perMinCharges": 2.0
       }
     },
-    "assets" :{
+     "rideStartAudio" : defaultStartAudioConfig
+   , "assets" :{
       "auto_image" : "ny_ic_auto_side_view",
       "onboarding_auto_image" : "ny_ic_auto_side",
       "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
@@ -450,7 +452,6 @@ let getAllCityConfig = () => {
         "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
       }
     }
-  , "rideStartAudio" : defaultStartAudioConfig
   };
   
   let cityConfigs = [
@@ -478,6 +479,10 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
+          perMinCharges: 1.0
+        },
+        ambulance: {
+          freeSeconds: 480,
           perMinCharges: 2.0
         }
       },
@@ -492,6 +497,10 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
+          perMinCharges: 2.0
+        },
+        ambulance: {
+          freeSeconds: 480,
           perMinCharges: 2.0
         }
       }
@@ -516,6 +525,10 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
+          perMinCharges: 1.0
+        },
+        ambulance: {
+          freeSeconds: 480,
           perMinCharges: 2.0
         }
       },
@@ -531,7 +544,17 @@ let getAllCityConfig = () => {
         bike: {
           freeSeconds: 180,
           perMinCharges: 2.0
+        },
+        ambulance: {
+          freeSeconds: 480,
+          perMinCharges: 2.0
         }
+      }
+      , rideStartAudio : {
+        acCab : {},
+        nonAcCab : {},
+        auto : {},
+        bike : {}
       }
     }),
     Object.assign({}, baseCityConfig, {
@@ -562,4 +585,11 @@ let getAllCityConfig = () => {
     })
   ];
   return cityConfigs;
+}
+
+let defaultStartAudioConfig = {
+  "acCab" : {},
+  "nonAcCab" : {},
+  "auto" : {},
+  "bike" : {}
 }

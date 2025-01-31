@@ -135,6 +135,11 @@ defaultTipConfig = {
   taxiPlus : [0, 20, 30, 50],
   bike : [0, 20, 30, 50],
   suvPlus : [0, 20, 30, 50],
+  ambulanceTaxi : [],
+  ambulanceTaxiOxy : [],
+  ambulanceAc : [],
+  ambulanceAcOxy : [],
+  ambulanceVentilator : [],
   default : [0, 10, 20, 30],
   bookAny : [0, 10, 20, 30]
 }
