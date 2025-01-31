@@ -562,7 +562,7 @@ quotesView state push =
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 findingRidesView state push =
-  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else if any (_ == getValueToLocalStore SELECTED_VARIANT) ["BIKE", "DELIVERY_BIKE"] then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_bike.json" else if isAmbulance (getValueToLocalStore SELECTED_VARIANT) then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_ambulance.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
+  let lottieRawJson = if (state.appConfig.autoVariantEnabled && any (_ == getValueToLocalStore SELECTED_VARIANT) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"]) then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else if any (_ == getValueToLocalStore SELECTED_VARIANT) ["BIKE", "DELIVERY_BIKE"] then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_bike.json" else if isAmbulance (getValueToLocalStore SELECTED_VARIANT) then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_ambulance.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
   in
     linearLayout
     [ height MATCH_PARENT

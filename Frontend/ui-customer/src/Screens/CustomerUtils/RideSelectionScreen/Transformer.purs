@@ -139,7 +139,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
               ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
               waitingCharges = 
-                if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
+                if any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then
                     autoWaitingCharges
                 else if any (_ == rideDetails.vehicleVariant) ["BIKE", "DELIVERY_BIKE"] then
                     bikeWaitingCharges

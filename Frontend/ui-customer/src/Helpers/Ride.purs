@@ -101,15 +101,15 @@ acNotWorkingPill (RideBookingRes state) =
 feedBack :: String -> String -> String 
 feedBack id vehicleVariant  = case id of 
                               "3" -> case vehicleVariant of 
-                                      "AUTO_RICKSHAW" -> getString LT.DIFFERENT_AUTO
+                                      _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getString LT.DIFFERENT_AUTO
                                       "BIKE" -> getString LT.DIFFERENT_BIKE
                                       _ -> getString LT.DIFFERENT_CAB
                               "11" -> case vehicleVariant of 
-                                      "AUTO_RICKSHAW" -> getString LT.UNCOMFORTABLE_AUTO
+                                      _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getString LT.UNCOMFORTABLE_AUTO
                                       "BIKE" -> getString LT.UNCOMFORTABLE_BIKE
                                       _ -> if isAmbulance vehicleVariant then getStringV2 uncomfortable_ambulance else  getString LT.UNCOMFORTABLE_CAB
                               "12" -> case vehicleVariant of 
-                                      "AUTO_RICKSHAW" -> getString CLEAN_AUTO
+                                      _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getString CLEAN_AUTO
                                       "BIKE" -> getString CLEAN_BIKE
                                       _ -> if isAmbulance vehicleVariant then getStringV2 clean_ambulance else getString CLEAN_CAB
                               _ -> ""

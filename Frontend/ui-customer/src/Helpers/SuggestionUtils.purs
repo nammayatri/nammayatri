@@ -506,6 +506,7 @@ getVariant :: Maybe String -> Maybe String -> Maybe String
 getVariant serviceTier variant = 
   case serviceTier of
     Just "Auto" -> Just "AUTO_RICKSHAW"
+    Just "EV Auto" -> Just "EV_AUTO_RICKSHAW"
     Just "Sedan" -> Just "SEDAN"
     Just "AC Mini" -> Just "HATCHBACK"
     Just "XL Cab" -> Just "SUV"

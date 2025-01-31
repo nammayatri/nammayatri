@@ -226,6 +226,7 @@ tipConfigData city variant = do
         "SUV" -> config.suv
         "HATCHBACK" -> config.hatchback
         "AUTO_RICKSHAW" -> config.autoRickshaw
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BIKE" -> config.bike
@@ -255,6 +256,7 @@ defaultTipsConfig =
   , ambulanceAc : Nothing
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }
 
@@ -274,6 +276,7 @@ defaultSubscriptionsConfigVariantLevel =
   , ambulanceAc : Nothing
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }
 
@@ -361,6 +364,7 @@ subscriptionsConfigVariantLevel city variant = do
         "SUV" -> config.suv
         "HATCHBACK" -> config.hatchback
         "AUTO_RICKSHAW" -> config.autoRickshaw
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BOOK_ANY" -> config.bookAny
@@ -471,6 +475,7 @@ getConfigForVariant variant config =
     "SUV" -> config.suv
     "HATCHBACK" -> config.hatchback
     "AUTO_RICKSHAW" -> config.autoRickshaw
+    "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
     "TAXI" -> config.taxi
     "TAXI_PLUS" -> config.taxiPlus
     "BOOK_ANY" -> config.bookAny
@@ -508,5 +513,6 @@ defaultInvoiceVariantConfig =
   , ambulanceAc : Nothing
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }

@@ -396,6 +396,7 @@ type VariantConfig = {
   sedan :: VariantInfo,
   suv :: VariantInfo,
   autoRickshaw :: VariantInfo,
+  evAutoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
   taxiPlus :: VariantInfo,
   bookAny :: VariantInfo,
