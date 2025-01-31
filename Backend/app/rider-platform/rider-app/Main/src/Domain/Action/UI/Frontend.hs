@@ -63,36 +63,36 @@ type NotifyEventResp = APISuccess
 
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
-  personStatus' <- QPFS.getStatus personId
-  case personStatus' of
-    Just personStatus -> do
-      case personStatus of
-        DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
-        DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-        _ -> checkForActiveBooking
-    Nothing -> checkForActiveBooking
+  activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
+  if not (null activeJourneyIds)
+    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeyIds = activeJourneyIds}) Nothing
+    else do
+      personStatus' <- QPFS.getStatus personId
+      case personStatus' of
+        Just personStatus -> do
+          case personStatus of
+            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
+            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
+            _ -> checkForActiveBooking
+        Nothing -> checkForActiveBooking
   where
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
       if isJust pollActiveBooking
         then do
-          activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
-          if not (null activeJourneyIds)
-            then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeyIds = activeJourneyIds}) Nothing
+          activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing Nothing Nothing []
+          if not (null activeBookings.list)
+            then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
             else do
-              activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing Nothing Nothing []
-              if not (null activeBookings.list)
-                then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
-                else do
-                  pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing []
-                  case pendingFeedbackBookings.list of
-                    [booking] -> do
-                      let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
-                      let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
-                      if isRated || isSkipped
-                        then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
-                        else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
-                    _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+              pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing []
+              case pendingFeedbackBookings.list of
+                [booking] -> do
+                  let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
+                  let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
+                  if isRated || isSkipped
+                    then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+                    else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
+                _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
         else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
 
     findValueAddNP personStatus providerId = do
