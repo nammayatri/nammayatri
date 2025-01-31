@@ -429,7 +429,6 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
-  TM.notifyMarketingEvents (TM.PersonEntity person) TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
   pure person
 
 verify ::
@@ -437,7 +436,8 @@ verify ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -455,6 +455,8 @@ verify tokenId req = do
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
+  when (isNothing person.deviceToken) $ do
+    TM.notifyMarketingEvents person.id deviceToken TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId (Id merchantOperatingCityId)) [TM.FIREBASE]
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified True tokenId
