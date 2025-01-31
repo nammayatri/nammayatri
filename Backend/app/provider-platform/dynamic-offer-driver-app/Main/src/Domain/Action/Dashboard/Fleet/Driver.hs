@@ -759,6 +759,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
                       status = Just $ castDriverStatus driverInfo'.mode,
                       driverId = Just driverId.getId,
                       verificationDocsStatus = Nothing,
+                      isDriverOnRide = Nothing,
                       ..
                     }
             pure listItem
@@ -810,7 +811,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
   where
-    createFleetDriverAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> m [Common.DriveVehicleAssociationListItem]
+    createFleetDriverAssociationListItem :: [FleetDriverAssociation] -> Flow [Common.DriveVehicleAssociationListItem]
     createFleetDriverAssociationListItem fdaList = do
       let driverList = map (\fda -> fda.driverId) fdaList
       driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverList
@@ -844,6 +845,12 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
             pure (rides, earnings)
           _ -> pure (0, 0)
         let driverStatus = Just $ castDriverStatus driverInfo'.mode -- if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
+        isDriverOnRide <-
+          if driverInfo'.onRide
+            then do
+              currentTripTransaction <- WMB.findNextEligibleTripTransactionByDriverIdStatus driver.id IN_PROGRESS
+              return $ isJust currentTripTransaction
+            else pure False
         let isRcAssociated = isJust vehicleNo
         let isDriverActive = fda.isActive
         let driverId = Just $ driver.id.getId
@@ -852,6 +859,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
                 { vehicleNo = vehicleNo,
                   status = driverStatus,
                   isDriverActive = isDriverActive,
+                  isDriverOnRide = Just isDriverOnRide,
                   verificationDocsStatus =
                     Just
                       Common.VerificationDocsStatus
@@ -927,6 +935,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
               Common.DriveVehicleAssociationListItem
                 { vehicleNo = Just decryptedVehicleRC,
                   status = Just $ castDriverStatus driverStatus,
+                  isDriverOnRide = Nothing,
                   isDriverActive = isDriverActive,
                   earning = snd stats,
                   completedRides = fst stats,

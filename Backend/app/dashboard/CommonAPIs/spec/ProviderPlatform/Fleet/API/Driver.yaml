@@ -828,6 +828,7 @@ types:
     - completedRides: Int # will remove this
     - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
+    - isDriverOnRide: Maybe Bool
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
