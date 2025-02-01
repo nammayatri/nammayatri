@@ -172,6 +172,7 @@ generateJourneyInfoResponse journey legs now = do
       estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
       estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
       estimatedDistance = journey.estimatedDistance,
+      journeyStatus = journey.status,
       legs,
       unifiedQR
     }
@@ -272,8 +273,9 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatus
 getMultimodalJourneyStatus (_, _) journeyId = do
-  legs <- JM.getAllLegsStatus journeyId
-  return $ ApiTypes.JourneyStatus {legs = map transformLeg legs}
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsStatus journey
+  return $ ApiTypes.JourneyStatus {legs = map transformLeg legs, journeyStatus = journey.status}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =

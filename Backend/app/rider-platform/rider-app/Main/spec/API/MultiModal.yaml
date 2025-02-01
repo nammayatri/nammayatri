@@ -27,6 +27,7 @@ types:
     estimatedMinFare: PriceAPIEntity
     estimatedMaxFare: PriceAPIEntity
     estimatedDistance: Distance
+    journeyStatus: Domain.Types.Journey.JourneyStatus
     unifiedQR: Maybe UnifiedTicketQR
     legs: [LegInfo]
 
@@ -37,7 +38,7 @@ types:
     userPosition: Maybe LatLong
 
   JourneyStatus:
-    recordType: NewType
+    journeyStatus: Domain.Types.Journey.JourneyStatus
     legs: "[LegStatus]"
 
   ExtendLegReq:

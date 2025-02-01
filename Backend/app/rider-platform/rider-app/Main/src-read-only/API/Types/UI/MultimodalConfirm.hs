@@ -52,13 +52,14 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
+    journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
     unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype JourneyStatus = JourneyStatus {legs :: [LegStatus]}
+data JourneyStatus = JourneyStatus {journeyStatus :: Domain.Types.Journey.JourneyStatus, legs :: [LegStatus]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -112,12 +112,11 @@ getAllLegsInfo journeyId = do
 
 getAllLegsStatus ::
   JL.GetStateFlow m r c =>
-  Id DJourney.Journey ->
+  DJourney.Journey ->
   m [JL.JourneyLegState]
-getAllLegsStatus journeyId = do
-  journey <- getJourney journeyId
-  allLegsRawData <- getJourneyLegs journeyId
-  riderLastPoints <- getLastThreePoints journeyId
+getAllLegsStatus journey = do
+  allLegsRawData <- getJourneyLegs journey.id
+  riderLastPoints <- getLastThreePoints journey.id
   (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
   when (all (\st -> st.status == JL.Completed) allLegsState) $ do
     updateJourneyStatus journey DJourney.FEEDBACK_PENDING
