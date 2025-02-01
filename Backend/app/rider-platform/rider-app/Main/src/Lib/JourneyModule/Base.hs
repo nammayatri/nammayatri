@@ -118,7 +118,7 @@ getAllLegsStatus journey = do
   allLegsRawData <- getJourneyLegs journey.id
   riderLastPoints <- getLastThreePoints journey.id
   (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
-  when (all (\st -> st.status == JL.Completed) allLegsState) $ do
+  when ((all (\st -> st.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState) && journey.status /= DJourney.CANCELLED) $ do
     updateJourneyStatus journey DJourney.FEEDBACK_PENDING
   return allLegsState
   where
