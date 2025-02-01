@@ -298,8 +298,8 @@ JourneyLeg:
 
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
-    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopName fromStopGtfsId fromStopPlatformCode)|E
-    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopName toStopGtfsId toStopPlatformCode)|E
+    fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
+    toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
     routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
