@@ -27,6 +27,7 @@ import qualified Domain.Types.Cac as DTC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
@@ -63,8 +64,8 @@ getSearchDriverPoolConfig merchantOpCityId mbDist area sreq = do
       (_, _, currentDayOfWeek) = toWeekDate currentDay
       serviceTier = Nothing
       tripCategory = "All"
-  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing (Just currTimeOfDay) (Just currentDayOfWeek) sreq
-    |<|>| getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing Nothing Nothing sreq
+  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area DST.INITIAL 0 Nothing (Just currTimeOfDay) (Just currentDayOfWeek) sreq
+    |<|>| getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area DST.INITIAL 0 Nothing Nothing Nothing sreq
 
 getDriverPoolConfigFromCAC ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -108,12 +109,14 @@ getDriverPoolConfigCond ::
   String ->
   Maybe Meters ->
   SL.Area ->
+  DST.SearchRepeatType ->
+  Int ->
   Maybe CacKey ->
   Maybe Int ->
   Maybe Int ->
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey currTimeOfDay currentDayOfWeek sreq = do
+getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area searchRepeatType searchRepeatCounter stickeyKey currTimeOfDay currentDayOfWeek sreq = do
   let dist = fromMaybe 0 dist'
   getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey currTimeOfDay currentDayOfWeek
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
@@ -123,7 +126,7 @@ getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area sti
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
     |<|>| ( do
               logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show (merchantOpCityId, serviceTier, tripCategory, dist, area)
-              DPC.getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area dist' stickeyKey sreq
+              DPC.getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area dist' searchRepeatType searchRepeatCounter stickeyKey sreq
           )
 
 -- TODO :: Need To Handle `area` Properly In CAC
@@ -159,18 +162,20 @@ getDriverPoolConfig ::
   DTC.TripCategory ->
   SL.Area ->
   Maybe Meters ->
+  DST.SearchRepeatType ->
+  Int ->
   Maybe CacKey ->
   DSR.SearchRequest ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance srId sreq = do
+getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance searchRepeatType searchRepeatCounter srId sreq = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime
       (_, _, currentDayOfWeek) = toWeekDate currentDay
   config <-
-    getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId (Just currTimeOfDay) (Just currentDayOfWeek) sreq
-      |<|>| getDriverPoolConfigCond merchantOpCityId (Just serviceTier) "All" tripDistance area srId Nothing Nothing sreq
+    getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area searchRepeatType searchRepeatCounter srId (Just currTimeOfDay) (Just currentDayOfWeek) sreq
+      |<|>| getDriverPoolConfigCond merchantOpCityId (Just serviceTier) "All" tripDistance area searchRepeatType searchRepeatCounter srId Nothing Nothing sreq
   when (isNothing config) do
     logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
     throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId

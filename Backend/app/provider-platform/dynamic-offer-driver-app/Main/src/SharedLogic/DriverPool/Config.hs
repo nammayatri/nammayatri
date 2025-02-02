@@ -34,6 +34,7 @@ import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig as DDPC
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest as DSR
+import Domain.Types.SearchTry
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
@@ -157,10 +158,12 @@ getDriverPoolConfigFromDB ::
   String ->
   SL.Area ->
   Maybe Meters ->
+  SearchRepeatType ->
+  Int ->
   Maybe CacKey ->
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist stickeyKey sreq = do
+getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist searchRepeatType searchRepeatCounter stickeyKey sreq = do
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
@@ -169,7 +172,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   let dpc' = getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
   oldVersion <- getConfigVersion (getKeyValue <$> stickeyKey)
   (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion
-  let otherDimensions = A.Object $ KM.fromList [("serviceTier", toJSON serviceTier), ("tripCategory", toJSON tripCategory), ("area", toJSON area), ("tripDistance", toJSON mbDist)]
+  let otherDimensions = A.Object $ KM.fromList [("serviceTier", toJSON serviceTier), ("tripCategory", toJSON tripCategory), ("area", toJSON area), ("tripDistance", toJSON mbDist), ("searchRepeatType", toJSON searchRepeatType), ("searchRepeatCounter", toJSON searchRepeatCounter)]
   case dpc' of
     Just dpc -> do
       let config = Config dpc (Just otherDimensions)
