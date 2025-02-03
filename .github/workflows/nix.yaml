@@ -82,10 +82,6 @@ jobs:
         include:
           - system: x86_64-linux
             host: x86_64-linux
-          # - system: aarch64-darwin
-          #   host: aarch64-darwin
-          # - system: aarch64-linux
-          #   host: aarch64-darwin
     runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
@@ -107,7 +103,7 @@ jobs:
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          om ci run --systems "${{ matrix.system }}" --no-out-link -- -v
+          om ci run --systems "${{ matrix.system }}" --no-link -- -v
 
       - name: Build Docker image
         id: docker
