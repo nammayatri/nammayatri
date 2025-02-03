@@ -302,12 +302,11 @@ public class LocationUpdateService extends Service {
 
     private int getLocationPriority() {
         int priority = Priority.PRIORITY_HIGH_ACCURACY;
-        String appName = getApplicationContext().getResources().getString(R.string.app_type);
-        if(appName.equals("driver") && !Objects.equals(driverRideStatus, "ON_PICKUP")) {
-            int resId = getApplicationContext().getResources().getIdentifier(remoteConfigs.getString("driver_location_priority") , "integer", getApplicationContext().getPackageName());
-            priority = (resId != 0) ? getResources().getInteger(resId) : Priority.PRIORITY_HIGH_ACCURACY;
-        } 
-        Log.d(LOG_TAG, "Location Priority is " + priority + " for app " + appName + " and ride status " + driverRideStatus);
+        if( !driverRideStatus.equals("ON_PICKUP")) {
+            String configPriority = remoteConfigs.getString("driver_location_priority");
+            priority = Utils.getPriority(configPriority);
+        }
+        Log.d(LOG_TAG, "Location Priority is " + priority + " for driver app and ride status " + driverRideStatus);
         return priority;
     }
 

@@ -150,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
+    private ExecutorService currentLocExecuter;
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -391,6 +392,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
         onCreateTimeStamp = System.currentTimeMillis();
+        currentLocExecuter = Executors.newSingleThreadExecutor();
         ActivityLifecycleCallback.register(this.getApplication());
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
@@ -417,12 +419,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if(isPerfEnabledCustomer){
-            ExecutorService currentLocExecuter = Executors.newSingleThreadExecutor();
             String appName = getApplicationContext().getResources().getString(R.string.app_type);
             if(appName.equals("driver")){
-                int resId = getApplicationContext().getResources().getIdentifier(remoteConfigs.getString("driver_location_priority") , "integer", getApplicationContext().getPackageName());
-                int locationPriority = (resId != 0) ? getResources().getInteger(resId) : Priority.PRIORITY_HIGH_ACCURACY;
-                currentLocExecuter.execute(() -> getCurrentLocationFlow(locationPriority));
+                String configPriority = remoteConfigs.getString("driver_location_priority");
+                int priority = in.juspay.mobility.app.Utils.getPriority(configPriority);
+                currentLocExecuter.execute(() -> getCurrentLocationFlow(priority));
             }else{
                 currentLocExecuter.execute(() -> getCurrentLocationFlow(Priority.PRIORITY_HIGH_ACCURACY));
             }
@@ -1102,6 +1103,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (currentLocExecuter != null) {
+            currentLocExecuter.shutdown();
+            try {
+                if (!currentLocExecuter.awaitTermination(800, TimeUnit.MILLISECONDS)) {
+                    currentLocExecuter.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                currentLocExecuter.shutdownNow();
+            }
+        }
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onDestroy").apply();
         }
