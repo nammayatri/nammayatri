@@ -473,15 +473,14 @@ favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
 buildRideAPIEntity DRide.Ride {..} = do
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
-  let driverMobileNumber' = if status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
-      oneYearAgo = - (365 * 24 * 60 * 60)
+  let oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
   return $
     RideAPIEntity
       { shortRideId = shortId,
-        driverNumber = driverMobileNumber',
+        driverNumber = Just driverMobileNumber,
         driverRatings = driverRating',
         driverRegisteredAt = Just driverRegisteredAt',
         rideOtp = otp,
