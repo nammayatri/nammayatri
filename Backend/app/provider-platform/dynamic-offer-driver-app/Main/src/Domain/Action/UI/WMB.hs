@@ -215,11 +215,13 @@ postWmbTripStart ::
   )
 postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
-  WMB.findNextActiveTripTransaction driverId
-    >>= \case
-      Nothing -> pure ()
-      Just _ -> throwError AlreadyOnActiveTrip
-  tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+  tripTransaction <-
+    WMB.findNextActiveTripTransaction driverId
+      >>= \case
+        Nothing -> throwError $ TripTransactionNotFound tripTransactionId.getId
+        Just tripTransaction -> do
+          unless (tripTransactionId == tripTransaction.id && tripTransaction.status == TRIP_ASSIGNED) $ throwError AlreadyOnActiveTrip
+          return tripTransaction
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
