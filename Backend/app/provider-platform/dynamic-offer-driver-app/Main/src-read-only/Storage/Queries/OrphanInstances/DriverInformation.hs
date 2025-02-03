@@ -13,10 +13,12 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverInformation as Beam
+import qualified Storage.Queries.Transformers.DriverInformation
 import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverInformation where
   fromTType' (Beam.DriverInformationT {..}) = do
+    servicesEnabledForSubscription' <- Storage.Queries.Transformers.DriverInformation.backfillServiceEnabledForSubscription driverId servicesEnabledForSubscription
     pure $
       Just
         Domain.Types.DriverInformation.DriverInformation
@@ -73,6 +75,7 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             preferredSecondarySpecialLocIds = Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds,
             referralCode = referralCode,
             referredByDriverId = Kernel.Types.Id.Id <$> referredByDriverId,
+            servicesEnabledForSubscription = servicesEnabledForSubscription',
             softBlockExpiryTime = softBlockExpiryTime,
             softBlockReasonFlag = softBlockReasonFlag,
             softBlockStiers = softBlockStiers,
@@ -146,6 +149,7 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.preferredSecondarySpecialLocIds = Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds),
         Beam.referralCode = referralCode,
         Beam.referredByDriverId = Kernel.Types.Id.getId <$> referredByDriverId,
+        Beam.servicesEnabledForSubscription = Kernel.Prelude.Just servicesEnabledForSubscription,
         Beam.softBlockExpiryTime = softBlockExpiryTime,
         Beam.softBlockReasonFlag = softBlockReasonFlag,
         Beam.softBlockStiers = softBlockStiers,

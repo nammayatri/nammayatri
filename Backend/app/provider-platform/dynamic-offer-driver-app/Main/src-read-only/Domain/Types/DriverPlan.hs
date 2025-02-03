@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.DriverInformation
 import Domain.Types.Extra.DriverPlan as ReExport
 import qualified Domain.Types.Extra.DriverPlan
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Mandate
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -27,6 +28,7 @@ data DriverPlan = DriverPlan
     enableServiceUsageCharge :: Kernel.Prelude.Bool,
     isCategoryLevelSubscriptionEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isOnFreeTrial :: Kernel.Prelude.Bool,
+    lastBillGeneratedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastPaymentLinkSentAtIstDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mandateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate),
     mandateSetupDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -35,8 +37,9 @@ data DriverPlan = DriverPlan
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     planId :: Kernel.Types.Id.Id Domain.Types.Plan.Plan,
     planType :: Domain.Types.Plan.PaymentMode,
-    serviceName :: Domain.Types.Plan.ServiceNames,
+    serviceName :: Domain.Types.Extra.Plan.ServiceNames,
     subscriptionServiceRelatedData :: Domain.Types.Extra.DriverPlan.SubscriptionServiceRelatedData,
+    totalAmountChargedForService :: Kernel.Prelude.Int,
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
