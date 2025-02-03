@@ -28,6 +28,8 @@ import Presto.Core.Utils.Encoding (defaultDecode)
 import RemoteConfig.Types
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Common.RemoteConfig (defaultVoipConfig)
+import Common.RemoteConfig.Types as CT
 import Common.RemoteConfig.Utils
 import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
@@ -231,18 +233,6 @@ defaultCoinsConfig = {
   coinsValidTill : 150
 }
 
-defaultVoipConfig :: VoipConfig
-defaultVoipConfig = {
-  customer : {
-    enableVoipFeature : false,
-    enableVoipCalling : false
-  },
-  driver : {
-    enableVoipFeature : false,
-    enableVoipCalling : false
-  }
-}
-
 defaultLocationUpdateServiceConfig :: LocationUpdateServiceConfig
 defaultLocationUpdateServiceConfig = {
   minDisplacement : "25.0",
@@ -258,7 +248,7 @@ getCoinsConfigData city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
     getCityBasedConfig value $ toLower city
 
-getDriverVoipConfig :: String -> VoipConfig
+getDriverVoipConfig :: String -> CT.VoipConfig
 getDriverVoipConfig city = do
     let config = fetchRemoteConfigString "voip_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig

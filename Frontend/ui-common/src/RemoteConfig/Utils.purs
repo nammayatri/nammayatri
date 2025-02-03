@@ -455,3 +455,14 @@ getConfigForVariant variant config =
     "DELIVERY_BIKE" -> config.deliveryBike
     _ -> config.default
       
+defaultVoipConfig :: Types.VoipConfig
+defaultVoipConfig = {
+  customer : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  },
+  driver : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  }
+}

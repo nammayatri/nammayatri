@@ -2375,33 +2375,20 @@ export const cleverTapEvent = function (_event) {
   }
 }
 
-export const voipDialer = function (cuid) {
-  return function (isDriver) {
-    return function (phoneNum) {
-      return function (isMissed) {
-        return function (cb) {
-          return function (action) {
-            return function () {
-              const callback = callbackMapper.map(function (status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
-                console.log("voipDialer callback", status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId);
-                cb(action
-                  (status)       
-                  (rideId)       
-                  (errorCode)
-                  (driverFlag)
-                  (networkType)
-                  (networkQuality)
-                  (merchantId))();
-              });
-              if(JBridge.voipDialer) {
-                window.JBridge.voipDialer(cuid, isDriver, phoneNum, isMissed, callback);
-              }
-            };
-          };
-        };
-      };
-    };
-  };
+export const voipDialer = function (cuid,isDriver,phoneNum,isMissed,cb,action) {
+  const callback = callbackMapper.map(function (status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
+    cb(action
+    (status)       
+    (rideId)       
+    (errorCode)
+    (driverFlag)
+    (networkType)
+    (networkQuality)
+    (merchantId))();
+    });
+  if(JBridge.voipDialer) {
+    window.JBridge.voipDialer(cuid, isDriver, phoneNum, isMissed, callback);
+  }
 }
 
 export const isSignedCallInitialized = function () {
@@ -2412,12 +2399,16 @@ export const isSignedCallInitialized = function () {
 
 export const initSignedCall = function (cuid) {
   return function (isDriver) {
-      window.JBridge.initSignedCall(cuid,isDriver);
+    if (JBridge.initSignedCall) {
+      return JBridge.initSignedCall(cuid,isDriver);
+    } 
   }
 };
 
 export const destroySignedCall = function () {
-  return window.JBridge.destroySignedCall();
+  if (JBridge.destroySignedCall) {
+    return window.JBridge.destroySignedCall();
+  } 
 };
 
 export const getLocationNameV2 = function (lat, lon) {

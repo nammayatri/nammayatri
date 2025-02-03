@@ -52,5 +52,7 @@
     <string name="merchant_id" translatable="false">passculture</string>
     <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
     <string name="third_party_booking">"Third Party Booking"</string>
-    <string name="voip_logo" translatable="false">https://i.postimg.cc/0yrT3TSx/NY-MY-Yatri.png</string>
+    <string name="voip_logo" translatable="false">https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
+    <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
+    <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
 </resources>

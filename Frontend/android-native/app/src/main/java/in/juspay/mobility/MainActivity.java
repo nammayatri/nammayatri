@@ -452,6 +452,7 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
+        setCleverTapSignedCallCredentials();
         cleverTapSignedCall = new CleverTapSignedCall(context, activity, true);
         CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
         SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
@@ -487,6 +488,12 @@ public class MainActivity extends AppCompatActivity {
         startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
     }
 
+    private void setCleverTapSignedCallCredentials(){
+        String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
+        String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
+        sharedPref.edit().putString("CLEVERTAP_SC_API_KEY", SC_API_KEY).apply();
+        sharedPref.edit().putString("CLEVERTAP_SC_ACCOUNT_ID", SC_ACCOUNT_ID).apply();
+    }
 
     private void initiateRSIntegration() {
         String algo = BuildConfig.RS_ALGO;

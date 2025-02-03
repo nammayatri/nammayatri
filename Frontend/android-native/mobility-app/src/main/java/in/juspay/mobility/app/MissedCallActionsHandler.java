@@ -23,7 +23,6 @@ import com.clevertap.android.signedcall.init.SignedCallAPI;
 import com.clevertap.android.signedcall.interfaces.MissedCallNotificationOpenedHandler;
 import com.clevertap.android.signedcall.interfaces.OutgoingCallResponse;
 import com.clevertap.android.signedcall.models.MissedCallNotificationOpenResult;
-//import in.juspay.mobility.app.CleverTapSignedCall;
 import org.json.JSONException;
 import org.json.JSONObject;
 

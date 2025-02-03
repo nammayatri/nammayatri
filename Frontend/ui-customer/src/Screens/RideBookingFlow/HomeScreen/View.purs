@@ -335,10 +335,7 @@ screen initialState =
               PickUpFarFromCurrentLocation ->
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-                if (voipConfig.customer.enableVoipFeature) then do 
-                  void $ pure $ JB.initSignedCall initialState.data.driverInfoCardState.bppRideId false
-                else pure unit
+                initVoipIfEnabled initialState
                 when
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -406,10 +403,7 @@ screen initialState =
                   void $ rideDurationTimer (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
-                let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-                if (voipConfig.customer.enableVoipFeature) then do 
-                  void $ pure $ JB.initSignedCall initialState.data.driverInfoCardState.bppRideId false
-                else pure unit
+                initVoipIfEnabled initialState
               ChatWithDriver -> do
                 if (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION" then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
                 when ((not initialState.props.chatcallbackInitiated) && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && disableChat initialState.data.fareProductType) $ do
@@ -444,10 +438,7 @@ screen initialState =
                 push $ SearchForSelectedLocation
                 pure unit
               ReAllocated -> do
-                let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-                if (voipConfig.customer.enableVoipFeature) then do 
-                  void $ pure $ JB.initSignedCall initialState.data.driverInfoCardState.bppRideId false
-                else pure unit
+                initVoipIfEnabled initialState
                 void $ launchAff $ flowRunner defaultGlobalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
               ShortDistance -> do
                 when (initialState.props.suggestedRideFlow || initialState.props.isRepeatRide) $ push $ ShortDistanceActionController PopUpModal.OnButton2Click
@@ -483,6 +474,13 @@ screen initialState =
 
 isCurrentLocationEnabled :: Boolean
 isCurrentLocationEnabled = isLocalStageOn HomeScreen
+
+initVoipIfEnabled :: HomeScreenState -> Effect Unit
+initVoipIfEnabled state = do
+  let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+  if voipConfig.customer.enableVoipFeature 
+    then void $ pure $ JB.initSignedCall state.data.driverInfoCardState.bppRideId false
+    else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -3687,7 +3685,6 @@ homeScreenContent push state =  let
        , id $ getNewIDWithTag "homescreenContent"
       ][ mapView' push state "CustomerHomeScreenMap"
         , if (isJust state.data.rentalsInfo && (isLocalStageOn HomeScreen || state.props.currentStage == HomeScreen)) then rentalBanner push state else linearLayout[visibility GONE][]
-        -- , rateYourLastRideView state push
         , suggestionsView push state
         , servicesView push state
         , contentView state

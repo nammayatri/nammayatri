@@ -119,37 +119,42 @@ public class CleverTapSignedCall {
     }
 
     private String getNetworkType() {
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (cm != null) {
-            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
-            if (capabilities != null) {
-                if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                    return "Wi-Fi";
-                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                    return "Cellular";
-                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
-                    return "Ethernet";
-                } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)) {
-                    return "Bluetooth";
+        if(context != null){
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null) {
+                NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                if (capabilities != null) {
+                    if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        return "Wi-Fi";
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                        return "Cellular";
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                        return "Ethernet";
+                    } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)) {
+                        return "Bluetooth";
+                    }
                 }
             }
-        }
         return "No Connection";
+        }
+        return "Unknown";
     }
 
     private String getNetworkQuality() {
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (cm != null) {
-            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
-            if (capabilities != null) {
-                if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                    int downSpeed = capabilities.getLinkDownstreamBandwidthKbps();
-                    if (downSpeed > 5000) {
-                        return "Good";
-                    } else if (downSpeed > 1000) {
-                        return "Moderate";
-                    } else {
-                        return "Poor";
+        if(context != null){
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null) {
+                NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                if (capabilities != null) {
+                    if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                        int downSpeed = capabilities.getLinkDownstreamBandwidthKbps();
+                        if (downSpeed > 5000) {
+                            return "Good";
+                        } else if (downSpeed > 1000) {
+                            return "Moderate";
+                        } else {
+                            return "Poor";
+                        }
                     }
                 }
             }
@@ -164,7 +169,6 @@ public class CleverTapSignedCall {
         this.bridgeComponent = bridgeComponents;
         useFallbackDialer = sharedPrefs.getInt("USE_FALLBACK_DIALER", 0);
         callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 0);
-        sendJavaScriptCallback(callback, "CALL_VOIP", cuid, -1, isDriver, "wifi", "good", "nammayatri");
         if(useFallbackDialer > 1 || callAttempts > 3 ){
             showDialer(phone);
             return;
@@ -191,11 +195,10 @@ public class CleverTapSignedCall {
         remoteContext = isDriver
                 ? (ny_driver.isEmpty() ? "Namma Yatri Driver" : ny_driver)
                 : (ny_customer.isEmpty() ? "Namma Yatri Customer" : ny_customer);
-        
         try {
             callOptions.put("remote_context", remoteContext);
         } catch (JSONException e) {
-            e.printStackTrace();
+            Log.d("SignedCall", "JSON error when setting up VOIP call");
         }
         String tempPhone = phone;
         OutgoingCallResponse outgoingCallResponseListener = new OutgoingCallResponse() {
@@ -217,6 +220,7 @@ public class CleverTapSignedCall {
                 String finalNetworkQuality = getNetworkQuality();
                 if(callException.getErrorCode() == CallException.CanNotProcessCallRequest.getErrorCode()){
                     // Do nothing (user trying to spam call button, sdk still processing first click)
+                    sendJavaScriptCallback(callback, "MULTIPLE_VOIP_CALL_ATTEMPTS", rideId, callException.getErrorCode(), isDriver,finalNetworkType, finalNetworkQuality, merchantId);
                     return;
                 } else if(callException.getErrorCode() == CallException.MicrophonePermissionNotGrantedException.getErrorCode()) {
                     if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -273,7 +277,6 @@ public class CleverTapSignedCall {
     }
 
     public void initSignedCall(String cuid, boolean isDriver){
-
         if (activity != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
         }
@@ -288,13 +291,15 @@ public class CleverTapSignedCall {
         Bundle bundle = new Bundle();
         bundle.putString("ride_id",cuid);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        String apiKey = sharedPrefs.getString("CLEVERTAP_SC_API_KEY","");
+        String accountId = sharedPrefs.getString("CLEVERTAP_SC_ACCOUNT_ID","");
         try {
-            initOptions.put("accountId", "6715f01d5b143458ec1c1200");
-            initOptions.put("apiKey", "C82XhWtydCwnmFPRicYXcs9q6FUINbEiBCJBsUxhyB0fW1i5JOjkm2nTUwmGWV7j");
+            initOptions.put("accountId", accountId);
+            initOptions.put("apiKey", apiKey);
             initOptions.put("cuid", Cuid);
         } catch (JSONException e) {
-            e.printStackTrace();
-        }
+            Log.d("SignedCall", "JSON error at setting up VOIP data");
+        };
 
         SignedCallInitResponse signedCallInitListener = new SignedCallInitResponse() {
             @Override
@@ -321,8 +326,10 @@ public class CleverTapSignedCall {
         List<MissedCallAction> missedCallActionsList = new ArrayList<>();
         missedCallActionsList.add(new MissedCallAction("callback", "Callback"));
         missedCallActionsList.add(new MissedCallAction("dismiss", "Dismiss"));
+        int colorInt = context.getColor(R.color.colorVoipBackground);
+        String colorString = String.format("#%06X", (0xFFFFFF & colorInt));
         SignedCallScreenBranding callScreenBranding = new SignedCallScreenBranding(
-            context.getString(R.color.colorVoipBackground), "#ffffff", context.getString(R.string.voip_logo), SignedCallScreenBranding.ButtonTheme.LIGHT, "#FF453A");
+                colorString, "#ffffff", context.getString(R.string.voip_logo), SignedCallScreenBranding.ButtonTheme.LIGHT, "#FF453A");
         callScreenBranding.setShowPoweredBySignedCall(false);
 
         SignedCallInitConfiguration initConfiguration = new SignedCallInitConfiguration.Builder(initOptions, false)
@@ -330,7 +337,6 @@ public class CleverTapSignedCall {
                                                             .overrideDefaultBranding(callScreenBranding)
                                                             .setMissedCallActions(missedCallActionsList)
                                                             .setNotificationPermissionRequired(false)
-                                                            // .callScreenOnSignalling(true)
                                                             .build();
         CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
         SignedCallAPI.getInstance().init(context, initConfiguration, cleverTapAPI, signedCallInitListener);
@@ -373,7 +379,7 @@ public class CleverTapSignedCall {
 
     }
     private void updateCallAttempts(int increment) {
-        int callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 4);
+        int callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 0);
         sharedPrefs.edit().putInt("VOIP_CALL_ATTEMPTS", callAttempts + increment).apply();
         Log.d("signedcall", "Updated callAttempts: " + (callAttempts + increment));
     }
@@ -398,62 +404,76 @@ public class CleverTapSignedCall {
            showCustomBottomSheet(isDriver);
         }
     }
-    public void signedCallListener(){
+    public void signedCallListener() {
         SignedCallAPI.getInstance().registerVoIPCallStatusListener(new SCVoIPCallStatusListener() {
             @Override
             public void callStatus(final SCCallStatusDetails callStatusDetails) {
-                //App is notified on the main thread to notify the changes in the call-state
+                // App is notified on the main thread to notify the changes in the call-state
                 Log.d("signedcall", "callStatus is invoked with: " + callStatusDetails.toString());
-
+    
                 SCCallStatusDetails.CallDirection direction = callStatusDetails.getDirection();
                 VoIPCallStatus callStatus = callStatusDetails.getCallStatus();
                 CallDetails callDetails = callStatusDetails.getCallDetails();
                 boolean isDriver = callDetails.calleeCuid.contains("driver");
                 String finalNetworkType = getNetworkType();
                 String finalNetworkQuality = getNetworkQuality();
-
-                if (direction.equals(SCCallStatusDetails.CallDirection.OUTGOING)) {
-                    //Handle events for initiator of the call
-                    if (callStatus == VoIPCallStatus.CALL_CANCELLED) {
-                        updateCallAttempts(1);
-                    } else if (callStatus == VoIPCallStatus.CALL_CANCELLED_DUE_TO_RING_TIMEOUT) {
-                        sendJavaScriptCallback(callback, "CALL_CANCELLED_DUE_TO_RING_TIMEOUT", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
-                        updateCallAttempts(3);
-                    } else if (callStatus == VoIPCallStatus.CALL_DECLINED) {
-                        sendJavaScriptCallback(callback, "CALL_DECLINED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
-                        updateCallAttempts(2);
-                    } else if (callStatus == VoIPCallStatus.CALL_MISSED) {
-                        updateCallAttempts(2);
-                    } else if (callStatus == VoIPCallStatus.CALL_OVER) {
-                        sendJavaScriptCallback(callback, "CALL_OVER", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
-                    } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_LOGGED_OUT_CUID) {
-                        updateFallbackDialer();
-                        showDialer(phone);
-                    } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED) {
-                        updateFallbackDialer();
-                        sendJavaScriptCallback(callback, "CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
-                        showDialer(phone);
-                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED || callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
-                        updateFallbackDialer();
-                        sendJavaScriptCallback(callback, "CALLEE_MICROPHONE_PERMISSION_BLOCKED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
-                        showDialer(phone);
-                    } else if (callStatus == VoIPCallStatus.CALL_FAILED_DUE_TO_INTERNAL_ERROR) {
-                        updateFallbackDialer();
-                        showDialer(phone);
+    
+                if (direction == SCCallStatusDetails.CallDirection.OUTGOING) {
+                    // Handle events for initiator of the call
+                    switch (callStatus) {
+                        case CALL_CANCELLED:
+                            updateCallAttempts(1);
+                            break;
+    
+                        case CALL_CANCELLED_DUE_TO_RING_TIMEOUT:
+                            sendJavaScriptCallback(callback, "CALL_CANCELLED_DUE_TO_RING_TIMEOUT", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            updateCallAttempts(3);
+                            break;
+    
+                        case CALL_DECLINED:
+                            sendJavaScriptCallback(callback, "CALL_DECLINED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            updateCallAttempts(2);
+                            break;
+    
+                        case CALL_OVER:
+                            sendJavaScriptCallback(callback, "CALL_OVER", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            break;
+    
+                        case CALL_DECLINED_DUE_TO_LOGGED_OUT_CUID:
+                            updateFallbackDialer();
+                            showDialer(phone);
+                            break;
+    
+                        case CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED:
+                            updateFallbackDialer();
+                            sendJavaScriptCallback(callback, "CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            showDialer(phone);
+                            break;
+    
+                        case CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED:
+                        case CALLEE_MICROPHONE_PERMISSION_BLOCKED:
+                            updateFallbackDialer();
+                            sendJavaScriptCallback(callback, "CALLEE_MICROPHONE_PERMISSION_BLOCKED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            showDialer(phone);
+                            break;
+    
+                        case CALL_FAILED_DUE_TO_INTERNAL_ERROR:
+                            updateFallbackDialer();
+                            showDialer(phone);
+                            break;
                     }
-                } else if (direction.equals(SCCallStatusDetails.CallDirection.INCOMING)) {
-                        //Handle events for receiver of the call
-                    if (callStatus == VoIPCallStatus.CALL_MISSED) {
-                        handleIncomingCallPermissions(isDriver);
-                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED) {
-                        handleIncomingCallPermissions(isDriver);
-                    } else if (callStatus == VoIPCallStatus.CALLEE_MICROPHONE_PERMISSION_BLOCKED) {
-                        handleIncomingCallPermissions(isDriver);
-                    } else if (callStatus == VoIPCallStatus.CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED) {
-                        handleIncomingCallPermissions(isDriver);
+                } else if (direction == SCCallStatusDetails.CallDirection.INCOMING) {
+                    // Handle events for receiver of the call
+                    switch (callStatus) {
+                        case CALL_MISSED:
+                        case CALLEE_MICROPHONE_PERMISSION_NOT_GRANTED:
+                        case CALLEE_MICROPHONE_PERMISSION_BLOCKED:
+                        case CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED:
+                            handleIncomingCallPermissions(isDriver);
+                            break;
                     }
                 }
-             }
+            }
         });
-    }
+    }    
 }

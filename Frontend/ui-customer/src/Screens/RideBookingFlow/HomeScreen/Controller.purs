@@ -76,7 +76,7 @@ import Data.Boolean(otherwise)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2, runEffectFn6)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
@@ -2115,7 +2115,7 @@ eval (ShowCallDialer item) state = do
         if (not (STR.null driverCuid) && voipConfig.customer.enableVoipCalling)
           then continueWithCmd state [ do
             push <- getPushFn Nothing "HomeScreen"
-            JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
+            void $ runEffectFn6 JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
             pure CloseShowCallDialer
           ]
         else callDriver state "ANONYMOUS"

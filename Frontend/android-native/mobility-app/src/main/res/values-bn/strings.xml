@@ -81,5 +81,5 @@
     <string name="stops">%1$d স্টপস</string>
     <string name="round_trip">রাউন্ড ট্রিপ</string>
     <string name="namma_yatri_customer">নাম্মা যাত্রী গ্রাহক</string>
-    <string name="namma_yatri_driver">"নাম্মা যাত্রী ড্রাইভার "</string>
+    <string name="namma_yatri_driver">নাম্মা যাত্রী ড্রাইভার</string>
 </resources>

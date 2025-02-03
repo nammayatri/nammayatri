@@ -4,7 +4,8 @@ import Prelude
 import DecodeUtil (decodeForeignObject, parseJSON , decodeForeignAny)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
-import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, getAppBasedConfig, defaultCityRemoteConfig, defaultAppRemoteConfig, BundleLottieConfig, RemoteAC(..))
+import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, getAppBasedConfig, defaultCityRemoteConfig, defaultAppRemoteConfig, defaultVoipConfig, BundleLottieConfig, RemoteAC(..))
+import Common.RemoteConfig.Types as CT
 import Data.Maybe (Maybe(..), maybe)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Generic.Rep (class Generic)
@@ -289,19 +290,7 @@ customerAppInfoConfig appName = do
       value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig {website : ""}
   getAppBasedConfig value appName
 
-defaultVoipConfig :: VoipConfig
-defaultVoipConfig = {
-  customer : {
-    enableVoipFeature : false,
-    enableVoipCalling : false
-  },
-  driver : {
-    enableVoipFeature : false,
-    enableVoipCalling : false
-  }
-}
-
-getCustomerVoipConfig :: String -> VoipConfig
+getCustomerVoipConfig :: String -> CT.VoipConfig
 getCustomerVoipConfig city = do
     let config = fetchRemoteConfigString "voip_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig

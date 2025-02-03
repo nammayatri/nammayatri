@@ -292,3 +292,14 @@ type BundleLottieConfig = {
   lottieUrl :: String
 , enable :: Boolean
 }
+
+type VoipConfig = {
+  customer :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  },
+  driver :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  }
+}

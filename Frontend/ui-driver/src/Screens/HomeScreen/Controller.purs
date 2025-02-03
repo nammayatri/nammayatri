@@ -63,7 +63,7 @@ import Data.Functor
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5)
+import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
@@ -1109,13 +1109,12 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
     let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
     if (voipConfig.driver.enableVoipCalling) then do
-      let customerCuid = if not (DS.null state.data.activeRide.id) then state.data.activeRide.id else ""
-      
+      let customerCuid = state.data.activeRide.id
       continueWithCmd state [ do
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
           when (not (DS.null customerCuid)) do
             push <- liftFlow $ getPushFn Nothing "HomeScreen"
-            void $ liftFlow $ JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
+            void $ liftFlow $ runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
             pure unit
         pure NoAction
       ]
@@ -1225,12 +1224,11 @@ eval (ChatViewActionController (ChatView.Call)) state = do
   let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
   let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
   if (voipConfig.driver.enableVoipCalling) then do
-      let customerCuid = if not (DS.null state.data.activeRide.id) then state.data.activeRide.id else ""
+      let customerCuid = state.data.activeRide.id
       continueWithCmd state [ do
-      
         when (not (DS.null customerCuid)) do
           push <-  getPushFn Nothing "HomeScreen"
-          JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
+          runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
         pure NoAction
       ]
   else
