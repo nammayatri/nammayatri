@@ -34,20 +34,22 @@ import Language.Types (STR(..))
 import PaymentPage (consumeBP)
 import Prelude ((<>))
 import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.ComponentConfig (primaryButtonViewConfig, menuButtonConfig)
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
 
-screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
+screen :: ST.ChooseLanguageScreenState -> LoggableScreen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "ChooseLanguageScreen" 
   , globalEvents : [(\_ -> pure $ runEffectFn1 consumeBP unit)]
   , eval
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.chooseLanguageScreenLogWhitelist
   }
 
 view

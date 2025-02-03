@@ -15,6 +15,7 @@
 
 module Types.App where
 
+import ConfigProvider
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
@@ -153,7 +154,7 @@ newtype GlobalState = GlobalState {
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
   documentCaptureScreen : DocumentCaptureScreenData.initData
-, splashScreen : {data : { message : "WeDontTalkAnymore"}}
+, splashScreen : {data : { message : "WeDontTalkAnymore", config : getAppConfig appConfig}}
 , chooseLanguageScreen : ChooseLanguageScreenData.initData
 , driverProfileScreen : DriverProfileScreenData.initData
 , applicationStatusScreen : ApplicationStatusScreenData.initData

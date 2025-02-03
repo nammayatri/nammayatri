@@ -106,7 +106,29 @@ instance loggableAction :: Loggable Action where
     _ -> trackAppScreenEvent appId (getScreen REPORT_ISSUE_CHAT_SCREEN) "in_screen" "other_action"
 
 instance showAction :: Show Action where
-    show _ = ""
+  show (Exit _) = "Exit"
+  show (NoAction) = "NoAction"
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (SubmitIssue) = "SubmitIssue"
+  show (ShowOptions) = "ShowOptions"
+  show (AddImage) = "AddImage"
+  show (AddAudio _) = "AddAudio"
+  show (DeleteRecordedAudio) = "DeleteRecordedAudio"
+  show (DeleteSelectedImages) = "DeleteSelectedImages"
+  show (CancelCall var1) = "CancelCall_" <> show var1
+  show (ConfirmCall var1) = "ConfirmCall_" <> show var1
+  show (AddAudioModelAction var1) = "AddAudioModelAction_" <> show var1
+  show (AddImagesModelAction var1) = "AddImagesModelAction_" <> show var1
+  show (ImageUploadCallback _ _ _) = "ImageUploadCallback"
+  show (UploadMultiPartDataCallback _ _) = "UploadMultiPartDataCallback"
+  show (ViewImageModelAction var1) = "ViewImageModelAction_" <> show var1
+  show (RecordAudioModelAction var1) = "RecordAudioModelAction_" <> show var1
+  show (UpdateRecordModelPlayer _) = "UpdateRecordModelPlayer"
+  show (ChatViewActionController var1) = "ChatViewActionController_" <> show var1
+  show (SendMessage _ _) = "SendMessage"
+  show (UpdateState _) = "UpdateState"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
 
 data Action = Exit (ScreenOutput)
             | NoAction

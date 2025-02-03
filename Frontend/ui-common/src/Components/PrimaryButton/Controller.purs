@@ -17,7 +17,7 @@ module Components.PrimaryButton.Controller where
 
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import Prelude ((<>), (==))
+import Prelude ((<>), (==), class Show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Gradient(..), height, width)
 import Common.Styles.Colors as Color
 import Common.Types.App
@@ -27,6 +27,9 @@ import ConfigProvider
 
 data Action = OnClick | NoAction
 
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
+  show (NoAction) = "NoAction"
 
 type Config =
   {

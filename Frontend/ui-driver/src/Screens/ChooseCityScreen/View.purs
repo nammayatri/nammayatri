@@ -39,7 +39,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void)
-import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
@@ -54,7 +54,7 @@ import Mobility.Prelude
 import Locale.Utils
 import Common.RemoteConfig as RC
 
-screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
+screen :: ChooseCityScreenState -> LoggableScreen Action ChooseCityScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -78,6 +78,8 @@ screen initialState =
           let _ = spy "ChooseCityScreen --------action" action
           eval state action
       )
+  , parent : Mb.Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.chooseCityScreenLogWhitelist
   }
 
 

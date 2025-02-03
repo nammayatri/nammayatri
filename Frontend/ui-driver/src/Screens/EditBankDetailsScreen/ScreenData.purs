@@ -19,12 +19,12 @@ import Screens.Types(EditBankDetailsScreenState)
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-
+import ConfigProvider
 
 initData :: EditBankDetailsScreenState
 initData = {
   data:  {
-
+    config: getAppConfig appConfig
   },
 
   props: {

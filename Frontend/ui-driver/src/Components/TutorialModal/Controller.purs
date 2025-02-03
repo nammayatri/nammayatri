@@ -15,6 +15,14 @@
 
 module Components.TutorialModal.Controller where
 
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (OnCloseClick) = "OnCloseClick"
+  show (CallSupport) = "CallSupport"
+  show (Logout) = "Logout"
+
+
 data Action = OnCloseClick | CallSupport | Logout
 
 type State =

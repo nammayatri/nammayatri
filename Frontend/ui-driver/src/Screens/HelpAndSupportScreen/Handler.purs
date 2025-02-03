@@ -20,7 +20,7 @@ import Prelude (bind, pure, ($), (<$>), discard)
 import Screens.HelpAndSupportScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.HelpAndSupportScreen.View as HelpAndSupportScreen
 import Types.App (FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -28,7 +28,7 @@ import Types.ModifyScreenState (modifyScreenState)
 helpAndSupportScreen :: FlowBT String HELP_AND_SUPPORT_SCREEN_OUTPUT
 helpAndSupportScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
+  action <- lift $ lift $ runLoggableScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
   case action of
     GoBack updatedState -> do
      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)

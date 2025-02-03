@@ -21,6 +21,12 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Data.Maybe (Maybe(..))
+import Prelude (class Show, show)
+
+instance showAction :: Show Action where
+  show (Close) = "Close"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
 
 data Action = Close 
             | BackPressed 

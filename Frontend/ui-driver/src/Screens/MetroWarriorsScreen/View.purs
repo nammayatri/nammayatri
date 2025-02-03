@@ -43,8 +43,9 @@ import Control.Monad.Except (runExcept)
 import Foreign.Generic (decode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Data.Maybe (Maybe(..))
 
-screen :: ST.MetroWarriorsScreenState -> Screen Action ST.MetroWarriorsScreenState ScreenOutput
+screen :: ST.MetroWarriorsScreenState -> LoggableScreen Action ST.MetroWarriorsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -76,6 +77,8 @@ screen initialState =
             _ = spy "MetroWarriorsScreen --------action" action
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.metroWarriorsScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.MetroWarriorsScreenState -> PrestoDOM (Effect Unit) w

@@ -5,10 +5,12 @@ import Data.Maybe as Mb
 import Halogen.VDom.DOM.Prop (PropValue)
 import Services.API as API 
 import RemoteConfig as RU 
+import ConfigProvider
 
 initData :: MetroWarriorsScreenState
 initData =
   { data: {
+    config : getAppConfig appConfig,
     listItem : Mb.Nothing,
     stationList : [],
     searchString : Mb.Nothing,

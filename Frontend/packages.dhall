@@ -167,8 +167,8 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/Vignesh-772/purescript-presto-dom"
-    , version = "nammayatri"
+    , repo = "https://github.com/ShreeHarishS/purescript-presto-dom"
+    , version = "nammayatri-patch"
     }
   with halogen-vdom =
     { dependencies =

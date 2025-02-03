@@ -67,7 +67,66 @@ import Types.App
 import Engineering.Helpers.Commons as EHC
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (OptionClick _) = "OptionClick"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (GetDriverInfoResponse _) = "GetDriverInfoResponse"
+  show (DriverSummary _) = "DriverSummary"
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (AfterRender) = "AfterRender"
+  show (HideLiveDashboard _) = "HideLiveDashboard"
+  show (ChangeScreen _) = "ChangeScreen"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+  show (ManageVehicleHeaderAC var1) = "ManageVehicleHeaderAC_" <> show var1
+  show (PrimaryEditTextAC var1) = "PrimaryEditTextAC_" <> show var1
+  show (UpdateValue _) = "UpdateValue"
+  show (DriverGenericHeaderAC var1) = "DriverGenericHeaderAC_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (InAppKeyboardModalOtp var1) = "InAppKeyboardModalOtp_" <> show var1
+  show (UpdateValueAC var1) = "UpdateValueAC_" <> show var1
+  show (OpenSettings) = "OpenSettings"
+  show (SelectGender) = "SelectGender"
+  show (UpdateAlternateNumber) = "UpdateAlternateNumber"
+  show (EditNumberText) = "EditNumberText"
+  show (RemoveAlterNumber) = "RemoveAlterNumber"
+  show (RemoveAlternateNumberAC var1) = "RemoveAlternateNumberAC_" <> show var1
+  show (CheckBoxClick _) = "CheckBoxClick"
+  show (LanguageSelection var1) = "LanguageSelection_" <> show var1
+  show (UpdateButtonClicked var1) = "UpdateButtonClicked_" <> show var1
+  show (ActivateRc _ _) = "ActivateRc"
+  show (DeactivateRc _ _) = "DeactivateRc"
+  show (CloseEditRc) = "CloseEditRc"
+  show (ShowEditRcx) = "ShowEditRcx"
+  show (ChangeRcDetails _) = "ChangeRcDetails"
+  show (RegStatusResponse _) = "RegStatusResponse"
+  show (UpdateRC _ _) = "UpdateRC"
+  show (ActivateOrDeactivateRcPopUpModalAction var1) = "ActivateOrDeactivateRcPopUpModalAction_" <> show var1
+  show (PaymentInfoPopUpModalAction var1) = "PaymentInfoPopUpModalAction_" <> show var1
+  show (DeleteRcPopUpModalAction var1) = "DeleteRcPopUpModalAction_" <> show var1
+  show (CallDriverPopUpModalAction var1) = "CallDriverPopUpModalAction_" <> show var1
+  show (AddRc) = "AddRc"
+  show (CallDriver) = "CallDriver"
+  show (CallCustomerSupport) = "CallCustomerSupport"
+  show (OpenRcView _) = "OpenRcView"
+  show (AddRcButtonAC var1) = "AddRcButtonAC_" <> show var1
+  show (SkipActiveRc) = "SkipActiveRc"
+  show (RemoveEditRC) = "RemoveEditRC"
+  show (DirectActivateRc _) = "DirectActivateRc"
+  show (UpiQrRendered _) = "UpiQrRendered"
+  show (DismissQrPopup) = "DismissQrPopup"
+  show (PaymentInfo) = "PaymentInfo"
+  show (LeftKeyAction) = "LeftKeyAction"
+  show (DownloadQR var1) = "DownloadQR_" <> show var1
+  show (ShareQR var1) = "ShareQR_" <> show var1
+  show (ManageVehicleButtonAC var1) = "ManageVehicleButtonAC_" <> show var1
+  show (PendingVehicle _ _) = "PendingVehicle"
+  show (CompleteProfile) = "CompleteProfile"
+  show (OpenCancellationRateScreen) = "OpenCancellationRateScreen"
+  show (ShowDrvierBlockedPopup) = "ShowDrvierBlockedPopup"
+  show (DriverBLockedPopupAction var1) = "DriverBLockedPopupAction_" <> show var1
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_PROFILE_SCREEN)

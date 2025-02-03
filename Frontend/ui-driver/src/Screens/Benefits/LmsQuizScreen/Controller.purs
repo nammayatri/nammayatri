@@ -33,7 +33,18 @@ import Language.Types (STR(..))
 import Components.PopUpModal as PopUpModal
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (GenericHeaderActionController var1) = "GenericHeaderActionController_" <> show var1
+  show (GoToPreviousScreen) = "GoToPreviousScreen"
+  show (GoToNextQuestionAction) = "GoToNextQuestionAction"
+  show (NoAction) = "NoAction"
+  show (SelectOption var1 var2) = "SelectOption_" <> show var1 <> "_" <> show var2
+  show (QuizPrimaryButtonActionController var1 var2) = "QuizPrimaryButtonActionController_" <> show var1 <> "_" <> show var2
+  show (AfterRender) = "AfterRender"
+  show (GoToLmsVideosScreen) = "GoToLmsVideosScreen"
+  show (ChangeLanguage) = "ChangeLanguage"
+  show (ErrorOccuredAction) = "ErrorOccuredAction"
+  show (UpdateQuestionAccordingToTranslation var1) = "UpdateQuestionAccordingToTranslation_" <> show var1
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

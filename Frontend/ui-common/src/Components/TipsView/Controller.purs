@@ -15,7 +15,7 @@
 
 module Components.TipsView.Controller where
 
-import Prelude (negate)
+import Prelude (negate, class Show)
 import PrestoDOM ( Margin(..))
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
@@ -25,6 +25,12 @@ import Prelude (class Eq, class Show)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
+
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (TipBtnClick _ _) = "TipBtnClick"
+  show (AddTip) = "AddTip"
+  show (ChangeTip) = "ChangeTip"
 
 data Action
   = NoAction

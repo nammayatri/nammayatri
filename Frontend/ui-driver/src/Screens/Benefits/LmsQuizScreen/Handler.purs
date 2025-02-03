@@ -19,7 +19,7 @@ import Prelude
 import Types.App (FlowBT, LMS_QUIZ_SCREEN_OUTPUT(..), ScreenType(..), GlobalState(..))
 import Engineering.Helpers.BackTrack (getState)
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.Benefits.LmsQuizScreen.View as LmsQuizScreen
 import Types.ModifyScreenState (modifyScreenState)
 import Control.Transformers.Back.Trans as App
@@ -29,7 +29,7 @@ import Screens.Benefits.LmsQuizScreen.ScreenData as LmsQuizScreenData
 lmsQuizScreen :: FlowBT String LMS_QUIZ_SCREEN_OUTPUT
 lmsQuizScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ LmsQuizScreen.screen state.lmsQuizScreen
+  act <- lift $ lift $ runLoggableScreen $ LmsQuizScreen.screen state.lmsQuizScreen
   case act of
     GoBack updatedState -> do
       modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> updatedState)

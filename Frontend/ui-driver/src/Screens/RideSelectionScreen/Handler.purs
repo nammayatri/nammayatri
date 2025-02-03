@@ -20,7 +20,7 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>))
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import PrestoDOM.Core (getPushFn)
 import Screens.RideSelectionScreen.Controller (ScreenOutput(..))
 import Screens.Types (AnimationState(..))
@@ -35,7 +35,7 @@ rideSelection = do
   (GlobalState state) <- getState
   push         <- lift $ lift $ liftFlow $ getPushFn Nothing "RideSelectionScreen"
   rideListItem <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.selectView push
-  act          <- lift $ lift $ runScreen $ RideSelectionScreen.screen state.rideSelectionScreen{shimmerLoader = AnimatedIn} rideListItem
+  act          <- lift $ lift $ runLoggableScreen $ RideSelectionScreen.screen state.rideSelectionScreen{shimmerLoader = AnimatedIn} rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     SelectRide    updatedState -> App.BackT $ App.BackPoint <$> (pure $ SELECT_RIDE updatedState)

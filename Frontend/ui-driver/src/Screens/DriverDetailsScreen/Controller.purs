@@ -47,7 +47,22 @@ import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT, Scr
 
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction) = "NoAction"
+  show (BackPressed) = "BackPressed"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (RenderBase64Image) = "RenderBase64Image"
+  show (AfterRender) = "AfterRender"
+  show (UploadFileAction) = "UploadFileAction"
+  show (ClickAddAlternateButton) = "ClickAddAlternateButton"
+  show (InAppKeyboardModalMobile var1) = "InAppKeyboardModalMobile_" <> show var1
+  show (InAppKeyboardModalOtp var1) = "InAppKeyboardModalOtp_" <> show var1
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (GenderSelectionModalAction var1) = "GenderSelectionModalAction_" <> show var1
+  show (ClickRemoveAlternateNumber) = "ClickRemoveAlternateNumber"
+  show (ClickEditAlternateNumber) = "ClickEditAlternateNumber"
+  show (PopUpModalActions var1) = "PopUpModalActions_" <> show var1
+  show (GenderSelectionOpen) = "GenderSelectionOpen"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_DETAILS_SCREEN)
