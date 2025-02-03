@@ -16,7 +16,7 @@ import Tools.Beam.UtilsTH
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     configJSON :: B.C f Data.Aeson.Value,
     serviceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

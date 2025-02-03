@@ -135,6 +135,8 @@ data TransporterConfigT f = TransporterConfigT
     mandateNotificationRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateValidity :: B.C f Kernel.Prelude.Int,
     maxPayoutReferralForADay :: B.C f Kernel.Prelude.Int,
+    maxThresholdForSnapToRoadCall :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    maxThresholdToAccumulateDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     mediaFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,

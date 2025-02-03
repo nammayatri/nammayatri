@@ -54,6 +54,7 @@ import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id (Id)
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 
@@ -113,15 +114,47 @@ processWaypoints ::
   Bool ->
   Bool ->
   NonEmpty LatLong ->
+  Maybe Meters ->
+  Maybe Meters ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop waypoints thresholdForSnapToRoadCall thresholdToAccumulateDistance = do
   calculationFailed <- isDistanceCalculationFailed driverId
   when calculationFailed do
     logWarning "Failed to calculate actual distance for this ride, ignoring"
   wrapDistanceCalculation driverId $ do
     addEditDestinationPoints driverId waypoints
     addPoints driverId waypoints
-    recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop
+    if isJust rectifyDistantPointsFailureUsing
+      then do
+        totalWaypoints <- getAllWaypointsImplementation driverId
+        let threshold = fromMaybe 500 thresholdForSnapToRoadCall
+            thresholdForDistanceAcc = fromMaybe 4000 thresholdToAccumulateDistance
+        processWaypointsWithSnapToRoadCheck totalWaypoints threshold thresholdForDistanceAcc calculationFailed
+      else recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop
+  where
+    processWaypointsWithSnapToRoadCheck points threshold thresholdForDistanceAcc calculationFailed = do
+      case points of
+        [] -> return ()
+        [_] -> return ()
+        (initialPoint : rest) -> do
+          (finalAccDist, finalMaxGap, _) <-
+            foldM
+              ( \(accDist, accMaxGap, prevPoint) currPoint -> do
+                  let dist = highPrecMetersToMeters $ distanceBetweenInMeters prevPoint currPoint
+                      newMaxGap = max accMaxGap dist
+                      newAccDist = if dist <= thresholdForDistanceAcc then accDist + dist else accDist
+                  return (newAccDist, newMaxGap, currPoint)
+              )
+              (0, 0, initialPoint)
+              rest
+          if finalMaxGap > threshold
+            then do
+              let finalDistance = max finalAccDist estDist
+              updateDistance driverId (metersToHighPrecMeters finalDistance) 0 0 (Just 0) calculationFailed
+            else case nonEmpty points of
+              Nothing -> return ()
+              Just nonEmptyPoints ->
+                recalcDistanceBatches ih False driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications nonEmptyPoints calculationFailed passedThroughDrop
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
