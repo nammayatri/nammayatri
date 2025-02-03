@@ -56,7 +56,6 @@ public class Utils {
         callBack.remove(notificationCallback);
     }
 
-
     public static void updateLocaleResource(String languageKey, Context context) {
         Locale locale;
         switch (languageKey) {
