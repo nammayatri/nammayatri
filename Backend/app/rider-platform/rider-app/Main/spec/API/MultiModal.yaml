@@ -37,7 +37,7 @@ types:
     vehiclePosition: Maybe LatLong
     userPosition: Maybe LatLong
 
-  JourneyStatus:
+  JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
     legs: "[LegStatus]"
 
@@ -156,7 +156,7 @@ apis:
       params:
         journeyId: Id Journey
       response:
-        type: JourneyStatus
+        type: JourneyStatusResp
 
   - POST:
       endpoint: multimodal/journey/{journeyId}/cancel
@@ -172,7 +172,7 @@ apis:
       request:
         type: RiderLocationReq
       response:
-        type: JourneyStatus
+        type: JourneyStatusResp
 
   - POST:
       endpoint: multimodal/{journeyId}/order/{legOrder}/switchTaxi

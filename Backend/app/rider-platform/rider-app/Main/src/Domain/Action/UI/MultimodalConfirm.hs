@@ -216,7 +216,7 @@ postMultimodalRiderLocation ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.RiderLocationReq ->
-  Environment.Flow ApiTypes.JourneyStatus
+  Environment.Flow ApiTypes.JourneyStatusResp
 postMultimodalRiderLocation personOrMerchantId journeyId req = do
   addPoint journeyId req
   getMultimodalJourneyStatus personOrMerchantId journeyId
@@ -271,11 +271,11 @@ getMultimodalJourneyStatus ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-  Environment.Flow ApiTypes.JourneyStatus
+  Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (_, _) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  return $ ApiTypes.JourneyStatus {legs = map transformLeg legs, journeyStatus = journey.status}
+  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =

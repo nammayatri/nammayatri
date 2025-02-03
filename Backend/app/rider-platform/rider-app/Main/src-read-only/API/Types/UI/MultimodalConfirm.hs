@@ -59,7 +59,7 @@ data JourneyInfoResp = JourneyInfoResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyStatus = JourneyStatus {journeyStatus :: Domain.Types.Journey.JourneyStatus, legs :: [LegStatus]}
+data JourneyStatusResp = JourneyStatusResp {journeyStatus :: Domain.Types.Journey.JourneyStatus, legs :: [LegStatus]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
