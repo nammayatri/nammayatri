@@ -282,11 +282,11 @@ baseAppFlow baseFlow event driverInfoResponse = do
       if isTokenValid regToken then do
         checkRideAndInitiate event driverInfoResponse
       else if not config.flowConfig.chooseCity.runFlow then
-        chooseLanguageFlow
+        chooseLanguageFlow event
       else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
-        chooseCityFlow
+        chooseCityFlow event
       else do
-        authenticationFlow ""
+        authenticationFlow "" event
 
     updateNightSafetyPopup :: FlowBT String Unit
     updateNightSafetyPopup = do
@@ -310,18 +310,18 @@ baseAppFlow baseFlow event driverInfoResponse = do
           _ -> pure unit
       else pure unit
 
-authenticationFlow :: String -> FlowBT String Unit
-authenticationFlow _ = do
+authenticationFlow :: String -> Maybe Event -> FlowBT String Unit
+authenticationFlow _ mbEvent = do
   liftFlowBT $ markPerformance "AUTHENTICATION_FLOW"
-  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then  hideSplashAndCallFlow loginFlow else welcomeScreenFlow
+  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then  hideSplashAndCallFlow (loginFlow mbEvent)  else welcomeScreenFlow mbEvent
 
-chooseLanguageFlow :: FlowBT String Unit
-chooseLanguageFlow = do
+chooseLanguageFlow :: Maybe Event -> FlowBT String Unit
+chooseLanguageFlow mbEvent = do
   liftFlowBT $ markPerformance "CHOOSE_LANGUAGE_FLOW"
   hideSplashAndCallFlow $ pure unit
   action <- UI.chooseLanguage
   case action of
-    TA.LOGIN_FLOW -> loginFlow
+    TA.LOGIN_FLOW -> loginFlow mbEvent
 
 type RideInfo = { mbRideListResponse :: Maybe GetRidesHistoryResp, activeRide :: Boolean, mbActiveBusTrip :: Maybe TripTransactionDetails, busActiveRide :: Boolean }
 
@@ -479,8 +479,9 @@ ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
 isTokenValid :: String -> Boolean
 isTokenValid = (/=) "__failed"
 
-loginFlow :: FlowBT String Unit
-loginFlow = do
+loginFlow :: Maybe Event -> FlowBT String Unit
+loginFlow mbEvent = do
+  let _ = spy "loginFlow: event" mbEvent
   liftFlowBT $ markPerformance "LOGIN_FLOW"
   hideSplashAndCallFlow $ pure unit
   logField_ <- lift $ lift $ getLogFields
@@ -499,10 +500,10 @@ loginFlow = do
       latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber latLong)
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
-      enterOTPFlow
+      enterOTPFlow mbEvent
 
-enterOTPFlow :: FlowBT String Unit
-enterOTPFlow = do
+enterOTPFlow :: Maybe Event -> FlowBT String Unit
+enterOTPFlow mbEvent = do
   action <- UI.enterOTP
   logField_ <- lift $ lift $ getLogFields
   case action of
@@ -527,13 +528,14 @@ enterOTPFlow = do
       else pure unit
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ UpdateDriverInfoReq $ mkUpdateDriverInfoReq ""
       void $ lift $ lift $ toggleLoader false
-      getDriverInfoFlow Nothing Nothing Nothing true Nothing true Nothing
+      let _ = spy "enterOTPFlow: event" mbEvent
+      getDriverInfoFlow mbEvent Nothing Nothing true Nothing true Nothing
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
       (ResendOTPResp resp_resend) <- Remote.resendOTPBT updatedState.data.tokenId
       pure $ toast $ getString OTP_HAS_BEEN_RESENT
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = resp_resend.authId, attemptCount = resp_resend.attempts}})
-      enterOTPFlow
+      enterOTPFlow mbEvent
 
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean -> Maybe Boolean -> Boolean -> Maybe Boolean -> FlowBT String Unit
 getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isAdvancedBookingEnabled updateCTBasicData busActiveRide = do
@@ -2997,7 +2999,7 @@ homeScreenFlow = do
           currentRideFlow Nothing Nothing Nothing Nothing
         "WMB_TRIP_FINISHED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-          void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "ACCEPTED"
+          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS
           currentRideFlow Nothing Nothing Nothing Nothing
         "DRIVER_REQUEST_REJECTED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
@@ -4329,22 +4331,22 @@ logoutFlow = do
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
-    chooseCityFlow
-  else authenticationFlow ""
+    chooseCityFlow Nothing
+  else authenticationFlow "" Nothing
 
-chooseCityFlow :: FlowBT String Unit
-chooseCityFlow = do
+chooseCityFlow :: Maybe Event -> FlowBT String Unit
+chooseCityFlow mbEvent = do
   liftFlowBT $ markPerformance "CHOOSE_CITY_FLOW"
   hideSplashAndCallFlow $ pure unit
   (GlobalState globalstate) <- getState
   logField_ <- lift $ lift $ getLogFields
   chooseCityScreen <- UI.chooseCityScreen
   case chooseCityScreen of
-    GoToWelcomeScreen -> authenticationFlow ""
-    REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow
+    GoToWelcomeScreen -> authenticationFlow "" mbEvent
+    REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow mbEvent
     DETECT_CITY lat lon state -> do
       if state.data.config.chooseCity.straightLineDistLogic then straightLineDist lat lon state else detectCityAPI lat lon state
-      chooseCityFlow
+      chooseCityFlow mbEvent
   where 
     closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
     closestCity (Tuple cityName distance) city driverLat driverLon = do
@@ -4382,14 +4384,14 @@ chooseCityFlow = do
           liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
           straightLineDist lat lon state
 
-welcomeScreenFlow :: FlowBT String Unit
-welcomeScreenFlow = do
+welcomeScreenFlow :: Maybe Event -> FlowBT String Unit
+welcomeScreenFlow mbEvent = do
   liftFlowBT $ markPerformance "WELCOME_SCREEN_FLOW"
   hideSplashAndCallFlow $ pure unit
   logField_ <- lift $ lift $ getLogFields
   welcomeScreen <- UI.welcomeScreen
   case welcomeScreen of
-    GoToMobileNumberScreen -> loginFlow
+    GoToMobileNumberScreen -> loginFlow mbEvent
 
 benefitsScreenFlow :: FlowBT String Unit
 benefitsScreenFlow = do
