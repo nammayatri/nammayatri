@@ -46,7 +46,9 @@ data BusLegRequestIsCancellableData = BusLegRequestIsCancellableData
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    fallbackFare :: Maybe HighPrecMoney
+    fallbackFare :: Maybe HighPrecMoney,
+    distance :: Maybe Distance,
+    duration :: Maybe Seconds
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData

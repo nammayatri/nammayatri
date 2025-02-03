@@ -72,15 +72,15 @@ getState mode searchId riderLastPoints isLastCompleted = do
       let oldStatus = fromMaybe (if isLastCompleted then JPT.Ongoing else JPT.InPlan) mbOldStatus
       return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted) mbToLatLong
 
-getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> m JT.LegInfo
-getInfo searchId fallbackFare = do
+getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
+getInfo searchId fallbackFare distance duration = do
   mbBooking <- QTBooking.findBySearchId searchId
   case mbBooking of
     Just booking -> do
-      JT.mkLegInfoFromFrfsBooking booking
+      JT.mkLegInfoFromFrfsBooking booking distance duration
     Nothing -> do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-      JT.mkLegInfoFromFrfsSearchRequest searchReq fallbackFare
+      JT.mkLegInfoFromFrfsSearchRequest searchReq fallbackFare distance duration
 
 search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg = do

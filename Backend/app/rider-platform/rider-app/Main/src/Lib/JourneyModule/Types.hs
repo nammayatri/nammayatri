@@ -480,8 +480,8 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSBooking.FRFSTicketBooking -> m LegInfo
-mkLegInfoFromFrfsBooking booking = do
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> m LegInfo
+mkLegInfoFromFrfsBooking booking distance duration = do
   fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "From Station not found")
   toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError "To Station not found")
   ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
@@ -504,10 +504,10 @@ mkLegInfoFromFrfsBooking booking = do
         travelMode = castCategoryToMode booking.vehicleType,
         startTime = startTime,
         order = legOrder,
-        estimatedDuration = Nothing, -------------- TODO : Should be changed
+        estimatedDuration = duration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
         estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
-        estimatedDistance = Nothing, --------------- TODO : Should be changed
+        estimatedDistance = distance,
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
@@ -564,8 +564,8 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> m LegInfo
-mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m LegInfo
+mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   let bookingAllowed = fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
@@ -590,10 +590,10 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare = do
         travelMode = castCategoryToMode vehicleType,
         startTime = now,
         order = journeyLegInfo'.journeyLegOrder,
-        estimatedDuration = Nothing, -- check with hemant if we can store estimatedDuration in frfsSearch table  --journeyLeg.duration,
+        estimatedDuration = duration,
         estimatedMinFare = mbEstimatedFare,
         estimatedMaxFare = mbEstimatedFare,
-        estimatedDistance = Nothing, -- check with hemant if we can store estimatedDistance in frfsSearch table --journeyLeg.distance,
+        estimatedDistance = distance,
         merchantId = merchantId,
         merchantOperatingCityId,
         personId = riderId,
