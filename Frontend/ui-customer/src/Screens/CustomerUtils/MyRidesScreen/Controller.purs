@@ -306,6 +306,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     isScheduled :  (if isScheduled then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
     driverName : (rideDetails.driverName),
+    driverPhoneNumber : rideDetails.driverNumber,
     rideStartTime : (convertUTCtoISC rideStartTime "h:mm A"),
     rideEndTime : (convertUTCtoISC endTime "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),
