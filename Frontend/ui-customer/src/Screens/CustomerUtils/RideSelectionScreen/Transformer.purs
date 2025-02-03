@@ -173,6 +173,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               , isScheduled : if isScheduled then "visible" else "gone"
               , rating : fromMaybe 0 rideDetails.rideRating
               , driverName : rideDetails.driverName
+              , driverPhoneNumber : rideDetails.driverNumber
               , rideStartTime : convertUTCtoISC (fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime) "h:mm A"
               , rideEndTime : convertUTCtoISC endTime "h:mm A"
               , vehicleNumber : rideDetails.vehicleNumber

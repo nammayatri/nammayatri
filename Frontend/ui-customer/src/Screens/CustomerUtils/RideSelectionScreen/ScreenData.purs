@@ -128,6 +128,7 @@ dummyIndividualCard = {
     isScheduled : "",
     rating : 0,
     driverName : "",
+    driverPhoneNumber : Nothing,
     rideStartTime : "",
     rideEndTime : "",
     vehicleNumber : "",
