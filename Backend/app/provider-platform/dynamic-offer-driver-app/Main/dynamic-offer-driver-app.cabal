@@ -330,6 +330,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+      SharedLogic.Allocator.Jobs.Webhook.Webhook
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.IssueBreach
@@ -416,6 +417,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.Webhook
       Storage.Beam.Yudhishthira
       Storage.Cac.DriverIntelligentPoolConfig
       Storage.Cac.DriverPoolConfig
@@ -1307,6 +1309,7 @@ library
     , wai
     , wai-extra
     , warp
+    , webhook
     , xml-conduit
     , xmlbf
     , yudhishthira

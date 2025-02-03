@@ -35,6 +35,7 @@ import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -311,7 +312,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             softBlockReasonFlag = Nothing,
             softBlockStiers = Nothing,
             isBlockedForReferralPayout = Nothing,
-            onboardingVehicleCategory = Nothing
+            onboardingVehicleCategory = Nothing,
+            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION]
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

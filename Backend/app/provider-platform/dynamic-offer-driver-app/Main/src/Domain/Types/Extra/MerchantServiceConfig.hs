@@ -40,6 +40,7 @@ data ServiceName
   | CallService Call.CallService
   | PaymentService Payment.PaymentService
   | RentalPaymentService Payment.PaymentService
+  | CautioPaymentService Payment.PaymentService
   | PayoutService Payout.PayoutService
   | RentalPayoutService Payout.PayoutService
   | IssueTicketService Ticket.IssueTicketService
@@ -63,6 +64,7 @@ instance Show ServiceName where
   show (CallService s) = "Call_" <> show s
   show (PaymentService s) = "Payment_" <> show s
   show (RentalPaymentService s) = "RentalPayment_" <> show s
+  show (CautioPaymentService s) = "CautioPayment_" <> show s
   show (PayoutService s) = "Payout_" <> show s
   show (RentalPayoutService s) = "RentalPayout_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
@@ -113,6 +115,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "RentalPayment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (CautioPaymentService v1, r2)
+                 | r1 <- stripPrefix "CautioPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (PayoutService v1, r2)
                  | r1 <- stripPrefix "Payout_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -160,6 +166,7 @@ data ServiceConfigD (s :: UsageSafety)
   | CallServiceConfig !CallServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
   | RentalPaymentServiceConfig !PaymentServiceConfig
+  | CautioPaymentServiceConfig !PaymentServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
   | RentalPayoutServiceConfig !PayoutServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig

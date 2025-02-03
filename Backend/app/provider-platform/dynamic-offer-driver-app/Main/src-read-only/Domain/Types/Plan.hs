@@ -39,8 +39,9 @@ data Plan = Plan
     paymentMode :: Domain.Types.Plan.PaymentMode,
     planBaseAmount :: Domain.Types.Extra.Plan.PlanBaseAmount,
     planType :: Domain.Types.Plan.PlanType,
+    productOwnershipAmount :: Kernel.Types.Common.HighPrecMoney,
     registrationAmount :: Kernel.Types.Common.HighPrecMoney,
-    serviceName :: Domain.Types.Plan.ServiceNames,
+    serviceName :: Domain.Types.Extra.Plan.ServiceNames,
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
@@ -55,8 +56,6 @@ data Frequency = DAILY | WEEKLY | MONTHLY deriving (Show, Eq, Ord, Read, Generic
 data PaymentMode = MANUAL | AUTOPAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data PlanType = DEFAULT | SUBSCRIPTION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentMode)
 
@@ -73,7 +72,3 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PlanType)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''BasedOnEntity)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''BasedOnEntity)
-
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceNames)
-
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''ServiceNames)

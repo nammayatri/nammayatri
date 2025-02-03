@@ -187,3 +187,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN onboarding_vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN services_enabled_for_subscription text[] ;

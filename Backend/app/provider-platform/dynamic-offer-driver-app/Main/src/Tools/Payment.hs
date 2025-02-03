@@ -69,6 +69,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName re
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> func vsc req
     DMSC.RentalPaymentServiceConfig vsc -> func vsc req
+    DMSC.CautioPaymentServiceConfig vsc -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 createIndividualConnectAccount ::

@@ -111,17 +111,22 @@ findAllDriversEligibleForService ::
   DPlan.ServiceNames ->
   Id Merchant ->
   Id MOC.MerchantOperatingCity ->
+  UTCTime ->
+  Int ->
   m [DriverPlan]
-findAllDriversEligibleForService serviceName merchantId merchantOperatingCity = do
+findAllDriversEligibleForService serviceName merchantId merchantOperatingCity endTime limit = do
   -- need DSL Fix
-  findAllWithKV
+  findAllWithOptionsKV'
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq (Just merchantId.getId),
           Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOperatingCity.getId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True)
+          Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True),
+          Se.Or [Se.Is BeamDF.lastBillGeneratedAt $ Se.LessThan (Just endTime), Se.Is BeamDF.lastBillGeneratedAt $ Se.Eq Nothing]
         ]
     ]
+    (Just limit)
+    Nothing
 
 updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> Maybe VC.VehicleCategory -> Id MOC.MerchantOperatingCity -> m () -- ned DSL Fix
 updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVehicleCategory merchantOperatingCity = do
@@ -150,6 +155,21 @@ updateIsSubscriptionEnabledAtCategoryLevel driverId serviceName isSubscriptionEn
     [ Se.Set BeamDF.isCategoryLevelSubscriptionEnabled (Just isSubscriptionEnabled),
       Se.Set BeamDF.updatedAt now
     ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
+
+updateLastBillGeneratedAt ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  DPlan.ServiceNames ->
+  UTCTime ->
+  m ()
+updateLastBillGeneratedAt driverId serviceName endTime = do
+  updateOneWithKV
+    [Se.Set BeamDF.lastBillGeneratedAt (Just endTime)]
     [ Se.And
         [ Se.Is BeamDF.driverId $ Se.Eq (getId driverId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)

@@ -28,3 +28,21 @@ cacheByMerchantOpCityAndServiceName (Id merchantOpCity) serviceName config = do
 
 makeMerchantOpCityIdAndServiceKey :: Id MerchantOperatingCity.MerchantOperatingCity -> ServiceNames -> Text
 makeMerchantOpCityIdAndServiceKey merchantOpCityId serviceName = "driver-offer:CachedQueries:SubscriptionConfig:MerchantOpCityId-" <> merchantOpCityId.getId <> ":ServiceName-" <> show serviceName
+
+makeMerchantOpCityIdAndUIEnabledKey :: Id MerchantOperatingCity.MerchantOperatingCity -> Bool -> Text
+makeMerchantOpCityIdAndUIEnabledKey merchantOpCityId isUiEnabled = "driver-offer:CachedQueries:SubscriptionConfig:MerchantOpCityId-" <> merchantOpCityId.getId <> ":IsUIEnabled-" <> show isUiEnabled
+
+cacheByServicesUIEnabledByCity :: CacheFlow m r => Id MerchantOperatingCity.MerchantOperatingCity -> Bool -> [SubscriptionConfig] -> m ()
+cacheByServicesUIEnabledByCity (Id merchantOpCity) isUiEnabled configs = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantOpCityIdAndUIEnabledKey (Id merchantOpCity) isUiEnabled) configs expTime
+
+findAllServicesUIEnabledByCity ::
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
+  Id MerchantOperatingCity.MerchantOperatingCity ->
+  Bool ->
+  m [SubscriptionConfig]
+findAllServicesUIEnabledByCity (Id merchantOpCity) isUiEnabled =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdAndUIEnabledKey (Id merchantOpCity) isUiEnabled) >>= \case
+    Just a -> pure a
+    Nothing -> cacheByServicesUIEnabledByCity (Id merchantOpCity) isUiEnabled /=<< Queries.findAllServicesUIEnabledByCity (Just $ Id merchantOpCity) isUiEnabled

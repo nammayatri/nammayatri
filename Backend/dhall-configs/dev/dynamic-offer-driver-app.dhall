@@ -226,6 +226,7 @@ let AllocatorJobType =
       | QuarterlyUpdateTag
       | WeeklyUpdateTag
       | FleetAlert
+      | SendWebhookToExternal
       >
 
 let jobInfoMapx =
@@ -267,6 +268,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
+      , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
