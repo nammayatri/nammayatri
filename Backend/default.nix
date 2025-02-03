@@ -25,7 +25,7 @@
         '';
       });
       gtfstidy = with pkgs; buildGoModule rec {
-        pname = "gtfstidyy";
+        pname = "gtfstidy";
         version = "deceaaaea84c61392642bff40468ba79ef2fc9dc";
         src = pkgs.fetchFromGitHub {
           owner = "patrickbr";
