@@ -32,6 +32,7 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             enableServiceUsageCharge = Kernel.Prelude.fromMaybe False enableServiceUsageCharge,
             isCategoryLevelSubscriptionEnabled = isCategoryLevelSubscriptionEnabled',
             isOnFreeTrial = Kernel.Prelude.fromMaybe True isOnFreeTrial,
+            lastBillGeneratedAt = lastBillGeneratedAt,
             lastPaymentLinkSentAtIstDate = lastPaymentLinkSentAtIstDate,
             mandateId = Kernel.Types.Id.Id <$> mandateId,
             mandateSetupDate = mandateSetupDate,
@@ -42,6 +43,7 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             planType = planType,
             serviceName = Kernel.Prelude.fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName,
             subscriptionServiceRelatedData = subscriptionServiceRelatedData',
+            totalAmountChargedForService = Kernel.Prelude.fromMaybe 0 totalAmountChargedForService,
             totalCoinsConvertedCash = totalCoinsConvertedCash,
             updatedAt = updatedAt,
             vehicleCategory = vehicleCategory'
@@ -57,6 +59,7 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.enableServiceUsageCharge = Kernel.Prelude.Just enableServiceUsageCharge,
         Beam.isCategoryLevelSubscriptionEnabled = isCategoryLevelSubscriptionEnabled,
         Beam.isOnFreeTrial = Kernel.Prelude.Just isOnFreeTrial,
+        Beam.lastBillGeneratedAt = lastBillGeneratedAt,
         Beam.lastPaymentLinkSentAtIstDate = lastPaymentLinkSentAtIstDate,
         Beam.mandateId = Kernel.Types.Id.getId <$> mandateId,
         Beam.mandateSetupDate = mandateSetupDate,
@@ -67,6 +70,7 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.planType = planType,
         Beam.serviceName = Kernel.Prelude.Just serviceName,
         Beam.rentedVehicleNumber = Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData,
+        Beam.totalAmountChargedForService = Kernel.Prelude.Just totalAmountChargedForService,
         Beam.totalCoinsConvertedCash = totalCoinsConvertedCash,
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory

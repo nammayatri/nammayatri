@@ -116,6 +116,7 @@ backfillIsSubscriptionEnabledAtCategory mbIsSubscriptionEnabledAtCategory driver
           Nothing -> return False
           Just DPlan.YATRI_RENTAL -> return True
           Just DPlan.YATRI_SUBSCRIPTION -> return False
+          _ -> return True
       whenJust mbServiceName $ \serviceName' -> do
         updateOneWithKV
           [Se.Set BeamDF.isCategoryLevelSubscriptionEnabled (Just isEnabledForCategory), Se.Set BeamDF.updatedAt now]

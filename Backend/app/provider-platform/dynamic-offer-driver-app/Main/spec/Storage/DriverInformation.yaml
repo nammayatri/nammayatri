@@ -14,6 +14,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   Value: Data.Aeson
   VehicleCategory: Domain.Types.VehicleCategory
+  ServiceNames : Domain.Types.Extra.Plan
 
 DriverInformation:
   tableName: driver_information
@@ -109,6 +110,7 @@ DriverInformation:
     softBlockReasonFlag: Maybe Text
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
+    servicesEnabledForSubscription: "[ServiceNames]"
 
   default:
     active: "false"
@@ -152,11 +154,13 @@ DriverInformation:
     isSpecialLocWarrior: Maybe Bool
     preferredSecondarySpecialLocIds: "Maybe [Text]"
     issueBreachCooldownTimes: Maybe Value
+    servicesEnabledForSubscription: Maybe [ServiceNames]
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
     issueBreachCooldownTimes: "json"
     softBlockStiers: "text[]"
+    servicesEnabledForSubscription: "text[]"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -171,6 +175,7 @@ DriverInformation:
     preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
     issueBreachCooldownTimes: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
+    servicesEnabledForSubscription: Storage.Queries.Transformers.DriverInformation.backfillServiceEnabledForSubscription driverId servicesEnabledForSubscription| EM
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -186,6 +191,7 @@ DriverInformation:
     driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
     driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
     issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
+    servicesEnabledForSubscription: Kernel.Prelude.Just|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -342,3 +348,8 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
       where: driverId
+    updateServicesEnabledForSubscription:
+      kvFunction: updateOneWithKV
+      params: [servicesEnabledForSubscription]
+      where: driverId
+

@@ -4,6 +4,7 @@
 
 module Storage.Queries.SubscriptionConfig where
 
+import qualified Data.Aeson
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
 import qualified Domain.Types.SubscriptionConfig
@@ -24,6 +25,17 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SubscriptionConfig.SubscriptionConfig] -> m ())
 createMany = traverse_ create
+
+findAllServicesUIEnabledByCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Bool -> m [Domain.Types.SubscriptionConfig.SubscriptionConfig])
+findAllServicesUIEnabledByCity merchantOperatingCityId isUIEnabled = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.isUIEnabled $ Se.Eq (Kernel.Prelude.Just isUIEnabled)
+        ]
+    ]
 
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -58,12 +70,15 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.deepLinkExpiryTimeInMinutes deepLinkExpiryTimeInMinutes,
       Se.Set Beam.defaultCityVehicleCategory (Kernel.Prelude.Just defaultCityVehicleCategory),
       Se.Set Beam.enableCityBasedFeeSwitch (Kernel.Prelude.Just enableCityBasedFeeSwitch),
+      Se.Set Beam.eventsEnabledForWebhook (Kernel.Prelude.Just eventsEnabledForWebhook),
       Se.Set Beam.executionEnabledForVehicleCategories executionEnabledForVehicleCategories,
+      Se.Set Beam.extWebhookConfigs (Kernel.Prelude.toJSON <$> extWebhookConfigs),
       Se.Set Beam.freeTrialRidesApplicable (Kernel.Prelude.Just freeTrialRidesApplicable),
       Se.Set Beam.genericBatchSizeForJobs genericBatchSizeForJobs,
       Se.Set Beam.genericJobRescheduleTime (Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime),
       Se.Set Beam.isSubscriptionEnabledAtCategoryLevel (Kernel.Prelude.Just isSubscriptionEnabledAtCategoryLevel),
       Se.Set Beam.isTriggeredAtEndRide isTriggeredAtEndRide,
+      Se.Set Beam.isUIEnabled (Kernel.Prelude.Just isUIEnabled),
       Se.Set Beam.isVendorSplitEnabled isVendorSplitEnabled,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.numberOfFreeTrialRides numberOfFreeTrialRides,
@@ -78,6 +93,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.subscriptionDown subscriptionDown,
       Se.Set Beam.subscriptionEnabledForVehicleCategories subscriptionEnabledForVehicleCategories,
       Se.Set Beam.useOverlayService useOverlayService,
+      Se.Set Beam.webhookConfig (Kernel.Prelude.toJSON <$> webhookConfig),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -96,12 +112,15 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
             defaultCityVehicleCategory = Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY defaultCityVehicleCategory,
             enableCityBasedFeeSwitch = Kernel.Prelude.fromMaybe False enableCityBasedFeeSwitch,
+            eventsEnabledForWebhook = Kernel.Prelude.fromMaybe [] eventsEnabledForWebhook,
             executionEnabledForVehicleCategories = executionEnabledForVehicleCategories,
+            extWebhookConfigs = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< extWebhookConfigs,
             freeTrialRidesApplicable = Kernel.Prelude.fromMaybe False freeTrialRidesApplicable,
             genericBatchSizeForJobs = genericBatchSizeForJobs,
             genericJobRescheduleTime = Kernel.Utils.Common.secondsToNominalDiffTime genericJobRescheduleTime,
             isSubscriptionEnabledAtCategoryLevel = Kernel.Prelude.fromMaybe False isSubscriptionEnabledAtCategoryLevel,
             isTriggeredAtEndRide = isTriggeredAtEndRide,
+            isUIEnabled = Kernel.Prelude.fromMaybe False isUIEnabled,
             isVendorSplitEnabled = isVendorSplitEnabled,
             maxRetryCount = maxRetryCount,
             numberOfFreeTrialRides = numberOfFreeTrialRides,
@@ -117,6 +136,7 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             subscriptionDown = subscriptionDown,
             subscriptionEnabledForVehicleCategories = subscriptionEnabledForVehicleCategories,
             useOverlayService = useOverlayService,
+            webhookConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< webhookConfig,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -133,12 +153,15 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
         Beam.defaultCityVehicleCategory = Kernel.Prelude.Just defaultCityVehicleCategory,
         Beam.enableCityBasedFeeSwitch = Kernel.Prelude.Just enableCityBasedFeeSwitch,
+        Beam.eventsEnabledForWebhook = Kernel.Prelude.Just eventsEnabledForWebhook,
         Beam.executionEnabledForVehicleCategories = executionEnabledForVehicleCategories,
+        Beam.extWebhookConfigs = Kernel.Prelude.toJSON <$> extWebhookConfigs,
         Beam.freeTrialRidesApplicable = Kernel.Prelude.Just freeTrialRidesApplicable,
         Beam.genericBatchSizeForJobs = genericBatchSizeForJobs,
         Beam.genericJobRescheduleTime = Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime,
         Beam.isSubscriptionEnabledAtCategoryLevel = Kernel.Prelude.Just isSubscriptionEnabledAtCategoryLevel,
         Beam.isTriggeredAtEndRide = isTriggeredAtEndRide,
+        Beam.isUIEnabled = Kernel.Prelude.Just isUIEnabled,
         Beam.isVendorSplitEnabled = isVendorSplitEnabled,
         Beam.maxRetryCount = maxRetryCount,
         Beam.numberOfFreeTrialRides = numberOfFreeTrialRides,
@@ -154,6 +177,7 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.subscriptionDown = subscriptionDown,
         Beam.subscriptionEnabledForVehicleCategories = subscriptionEnabledForVehicleCategories,
         Beam.useOverlayService = useOverlayService,
+        Beam.webhookConfig = Kernel.Prelude.toJSON <$> webhookConfig,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

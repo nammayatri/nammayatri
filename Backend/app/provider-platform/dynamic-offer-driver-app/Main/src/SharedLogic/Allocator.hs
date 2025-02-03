@@ -18,6 +18,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
@@ -67,6 +68,7 @@ data AllocatorJobType
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
   | FleetAlert
+  | SendWebhookToExternal
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -102,6 +104,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
+  restoreAnyJobInfo SSendWebhookToExternal jobData = AnyJobInfo <$> restoreJobInfo SSendWebhookToExternal jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -360,3 +363,12 @@ data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBA
 instance JobInfoProcessor 'CheckExotelCallStatusAndNotifyBAP
 
 type instance JobContent 'CheckExotelCallStatusAndNotifyBAP = CheckExotelCallStatusAndNotifyBAPJobData
+
+data SendWebhookToExternalJobData = SendWebhookToExternalJobData
+  { webhookData :: AWebhook.WebhookJobInfo
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance JobInfoProcessor 'SendWebhookToExternal
+
+type instance JobContent 'SendWebhookToExternal = SendWebhookToExternalJobData
