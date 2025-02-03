@@ -3,18 +3,21 @@
 module Domain.Action.Dashboard.MultiModal (postMultiModalMultimodalFrfsDataPreprocess, postMultiModalMultimodalFrfsDataStatus, postMultiModalMultimodalFrfsDataVersionIsReady, postMultiModalMultimodalFrfsDataVersionApply) where
 
 import qualified API.Types.RiderPlatform.Management.MultiModal
-import Domain.Types.Extra.Rollout
 -- import qualified Domain.Types.Stage as DTS
 -- import qualified Storage.Queries.Stage as QS
 
 -- import qualified AWS.S3 as S3
+
+-- import EulerHS.Prelude hiding (id, length, map)
+
+import Data.List (nub)
+import Domain.Types.Extra.Rollout
 import Domain.Types.GTFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Rollout
 import qualified Domain.Types.Version
 import Domain.Types.VersionStageMapping
 import qualified Environment
-import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -89,8 +92,46 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
 -- _uploadGTFSData ::
 
 _convertBusGTFSToQueries :: BusGTFS -> m ()
-_convertBusGTFSToQueries _gtfs = do error "Logic yet to be decided"
-
-_convertMetroGTFSToQueries :: MetroGTFS -> m ()
-_convertMetroGTFSToQueries _gtfs = do
+_convertBusGTFSToQueries _gtfs = do
   error "Logic yet to be decided"
+
+_convertMetroGTFSToQueries :: (MonadFlow m) => MetroGTFS -> Int -> m ()
+_convertMetroGTFSToQueries gtfs versionTag = do
+  void $ bool (updateStops gtfs.mgFeed.f_stops versionTag) (logError "No stops found in the GTFS file") (length gtfs.mgFeed.f_stops == 0)
+  void $ bool (updateRoutes gtfs.mgFeed.f_routes versionTag) (logError "No routes found in the GTFS file") (length gtfs.mgFeed.f_routes == 0)
+  void $ bool (updateTrips gtfs.mgFeed.f_trips versionTag) (logError "No trips found in the GTFS file") (length gtfs.mgFeed.f_trips == 0)
+  let routeStopMapping = map (mkRouteStopMapping gtfs.mgFeed.f_trips gtfs.mgFeed.f_stops gtfs.mgFeed.f_stop_times) gtfs.mgFeed.f_routes
+  void $ bool (updateRouteStopMapping routeStopMapping versionTag) (logError "No route stop mapping found in the GTFS file") (length routeStopMapping == 0)
+  error "Logic yet to be decided"
+
+updateStops :: [Stop] -> Int -> m ()
+updateStops _stops _versionTag = do
+  error "Logic yet to be decided"
+
+updateRoutes :: [Route] -> Int -> m ()
+updateRoutes _routes _versionTag = do
+  error "Logic yet to be decided"
+
+updateTrips :: [Trip] -> Int -> m ()
+updateTrips _trips _versionTag = do
+  error "Logic yet to be decided"
+
+updateRouteStopMapping :: [RouteStopMapping] -> Int -> m ()
+updateRouteStopMapping _routeStopMapping _versionTag = do
+  error "Logic yet to be decided"
+
+data RouteStopMapping = RouteStopMapping
+  { route :: Route,
+    stops :: [Stop]
+  }
+  deriving (Show)
+
+--  stop.id -> stopTime.tripId -> trip.routeId -> route
+mkRouteStopMapping :: [Trip] -> [Stop] -> [StopTime] -> Route -> RouteStopMapping
+mkRouteStopMapping trips stops stopTimes route =
+  let routeTrips = filter (\trip -> trip.t_route_id == route.r_route_id) trips
+      tripIds = map t_trip_id routeTrips
+      routeStopTimes = filter (\st -> st.st_trip_id `elem` tripIds) stopTimes
+      routeStopIds = nub (map st_stop_id routeStopTimes)
+      routeStops = filter (\stop -> s_stop_id stop `elem` routeStopIds) stops
+   in RouteStopMapping route routeStops

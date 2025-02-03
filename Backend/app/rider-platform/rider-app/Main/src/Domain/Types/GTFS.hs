@@ -1,8 +1,7 @@
 module Domain.Types.GTFS where
 
 import qualified Data.Attoparsec.ByteString as A
-import qualified Data.Attoparsec.ByteString.Char8 as AC --(Parser, char, sepBy, double, skipSpace)
--- import Data.List (minimumBy, maximumBy)
+import qualified Data.Attoparsec.ByteString.Char8 as AC
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import Data.Csv
@@ -10,8 +9,6 @@ import qualified Data.HashMap.Lazy as HM
 import Data.List.Split
 import Data.Ord (comparing)
 import Kernel.Prelude
-
--- import Data.Aeson (Value)
 
 data LocationType
   = LocStop
@@ -168,7 +165,7 @@ timeToSeconds (Time h m s) = h * 3600 + m * 60 + s
 
 data MetroGTFS = MetroGTFS
   { mgFeed :: Feed, -- Reuse your existing Feed type
-    mgFRFSConfig :: ServiceabilityTime -- Booking window from stop_times.txt
+    mgServiceabilityTime :: ServiceabilityTime -- Booking window from stop_times.txt
   }
   deriving (Show)
 
@@ -181,12 +178,11 @@ validateBus feed = do
   Right $ BusGTFS feed (not hasStopTimes)
 
 data BusGTFS = BusGTFS
-  { bgFeed :: Feed, -- Reuse your existing Feed type
-    bgRequiresFrequencies :: Bool -- Flag to enforce frequency.txt usage
+  { bgFeed :: Feed,
+    bgRequiresFrequencies :: Bool
   }
   deriving (Show)
 
--- Example FRFS configuration
 data ServiceabilityTime = ServiceabilityTime
   { frfsStartTime :: Time,
     frfsEndTime :: Time
