@@ -452,6 +452,7 @@ type IndividualRideCardState =
     isSuccessfull :: String,
     rating :: Int,
     driverName :: String,
+    driverPhoneNumber :: Maybe String,
     rideStartTime :: String,
     rideEndTime :: String,
     vehicleNumber :: String,
