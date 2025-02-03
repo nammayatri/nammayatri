@@ -24,6 +24,24 @@
           fi
         '';
       });
+      gtfstidy = with pkgs; buildGoModule rec {
+        pname = "gtfstidyy";
+        version = "deceaaaea84c61392642bff40468ba79ef2fc9dc";
+        src = pkgs.fetchFromGitHub {
+          owner = "patrickbr";
+          repo = "gtfstidy";
+          rev = "${version}";
+          hash = "sha256-PsGENVqSelmpXkVtMy9MdJALFAv2mTW7A11QzuZ/E8w=";
+        };
+        doCheck = false;
+        vendorHash = "sha256-TH8oCyZ5ZThKwwraa/qgr0Jf4kQNOz2PZxvv1dn/yVA=";
+        meta = {
+          description = "A tool for checking, sanitizing and minimizing GTFS feeds";
+          homepage = "https://github.com/patrickbr/gtfstidy";
+          license = lib.licenses.gpl2;
+          maintainers = with lib.maintainers; [ patrickbr ];
+        };
+      };
     in
     {
       pre-commit.settings.imports = [
@@ -144,6 +162,7 @@
           postgis
           newman
           config.mission-control.wrapper
+          gtfstidy
         ];
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [
