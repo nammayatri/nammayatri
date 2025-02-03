@@ -6,6 +6,7 @@ module Storage.Beam.DriverPlan where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Plan
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
@@ -22,6 +23,7 @@ data DriverPlanT f = DriverPlanT
     enableServiceUsageCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isCategoryLevelSubscriptionEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isOnFreeTrial :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    lastBillGeneratedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     lastPaymentLinkSentAtIstDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     mandateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mandateSetupDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -30,8 +32,9 @@ data DriverPlanT f = DriverPlanT
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     planId :: B.C f Kernel.Prelude.Text,
     planType :: B.C f Domain.Types.Plan.PaymentMode,
-    serviceName :: B.C f (Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames),
+    serviceName :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Plan.ServiceNames),
     rentedVehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    totalAmountChargedForService :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalCoinsConvertedCash :: B.C f Kernel.Types.Common.HighPrecMoney,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)

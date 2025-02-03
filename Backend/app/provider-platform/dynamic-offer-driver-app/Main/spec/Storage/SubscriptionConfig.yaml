@@ -5,13 +5,24 @@ imports:
   Merchant: Domain.Types.Merchant
   Id: Kernel.Types.Id
   VehicleCategory: Domain.Types.VehicleCategory
-
+  ExternalWebhookConfigs: Domain.Types.WebhookExtra
+  WebhookDeliveryType : Domain.Types.WebhookExtra
+  WebhookEvent : Domain.Types.WebhookExtra
+  Value: Data.Aeson
 
 SubscriptionConfig:
   tableName: subscription_config
 
   derives: "Generic,Show,ToJSON,FromJSON"
 
+  types :
+    WebhookConfig:
+      webhookDeliveryMode : WebhookDeliveryType
+      retryLimit : Int
+      batchSize : Maybe Int
+      nextJobScheduleTimeThreshold : Int
+      rescheduleTimeThreshold : Int
+      derive: "Ord, Eq"
   fields:
     allowManualPaymentLinks: Bool
     useOverlayService: Bool
@@ -41,6 +52,10 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel: Bool
     enableCityBasedFeeSwitch: Bool
     partialDueClearanceMessageKey: Maybe Domain.Types.MerchantMessage.MessageKey
+    eventsEnabledForWebhook: "[WebhookEvent]"
+    extWebhookConfigs: Maybe ExternalWebhookConfigs
+    isUIEnabled : Bool
+    webhookConfig : Maybe WebhookConfig
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -49,6 +64,13 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.fromMaybe False|I
     defaultCityVehicleCategory : Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY|I
     enableCityBasedFeeSwitch: Kernel.Prelude.fromMaybe False|I
+    sendAckForMandateEvents : Kernel.Prelude.fromMaybe False|I
+    isUIEnabled : Kernel.Prelude.fromMaybe False|I
+    eventsEnabledForWebhook : Kernel.Prelude.fromMaybe []|I
+    extWebhookConfigs: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< extWebhookConfigs | E
+    webhookConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< webhookConfig | E
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -56,7 +78,11 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.Just|I
     defaultCityVehicleCategory : Kernel.Prelude.Just|I
     enableCityBasedFeeSwitch: Kernel.Prelude.Just|I
-
+    sendAckForMandateEvents: Kernel.Prelude.Just|I
+    isUIEnabled: Kernel.Prelude.Just|I
+    extWebhookConfigs: Kernel.Prelude.toJSON <$> extWebhookConfigs | E
+    webhookConfig: Kernel.Prelude.toJSON <$> webhookConfig | E
+    eventsEnabledForWebhook: Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -64,7 +90,11 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel: Maybe Bool
     defaultCityVehicleCategory : Maybe VehicleCategory
     enableCityBasedFeeSwitch : Maybe Bool
-
+    sendAckForMandateEvents : Maybe Bool
+    isUIEnabled : Maybe Bool
+    extWebhookConfigs: Maybe Value
+    webhookConfig: Maybe Value
+    eventsEnabledForWebhook: Maybe [WebhookEvent]
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -76,6 +106,10 @@ SubscriptionConfig:
       where:
         and: [merchantOperatingCityId, serviceName]
 
+    findAllServicesUIEnabledByCity:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId,isUIEnabled]
   default:
     allowManualPaymentLinks: "false"
     sendDeepLink: "false"
@@ -90,3 +124,6 @@ SubscriptionConfig:
   sqlType:
    executionEnabledForVehicleCategories: text[]
    subscriptionEnabledForVehicleCategories: text[]
+   eventsEnabledForWebhook: text[]
+   extWebhookConfigs: "json"
+   webhookConfig:  "json"

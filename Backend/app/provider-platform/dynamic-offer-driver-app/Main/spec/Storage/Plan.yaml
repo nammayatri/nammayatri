@@ -4,6 +4,7 @@ imports:
   PlanBaseAmount: Domain.Types.Extra.Plan
   VehicleVariant: Domain.Types.VehicleVariant
   VehicleCategory: Domain.Types.VehicleCategory
+  ServiceNames:  Domain.Types.Extra.Plan
 
 Plan:
   tableName: plan
@@ -26,9 +27,6 @@ Plan:
       enum: "RIDE, NONE, VEHICLE, VEHICLE_AND_RIDE"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
-    ServiceNames:
-      enum: "YATRI_SUBSCRIPTION, YATRI_RENTAL"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
 
   fields:
@@ -58,6 +56,7 @@ Plan:
     vehicleCategory : VehicleCategory|NoRelation
     listingPriority : Maybe  Int
     allowStrikeOff: Bool
+    productOwnershipAmount : HighPrecMoney
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -68,8 +67,6 @@ Plan:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PlanType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BasedOnEntity>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BasedOnEntity>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ServiceNames>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ServiceNames>
 
   constraints:
     id: PrimaryKey
@@ -88,7 +85,7 @@ Plan:
     findByMerchantOpCityIdAndTypeWithServiceName:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOpCityId, planType, serviceName]
+        and: [merchantOpCityId, planType, serviceName, vehicleCategory]
 
     findByMerchantOpCityIdTypeServiceNameVehicle:
       kvFunction: findAllWithKV
@@ -143,12 +140,15 @@ Plan:
   fromTType:
     vehicleCategory: Storage.Queries.Transformers.Plan.getCategoryFromSubscriptionConfig vehicleCategory merchantOpCityId serviceName|EM
     allowStrikeOff: Kernel.Prelude.fromMaybe True | I
+    productOwnershipAmount: Kernel.Prelude.fromMaybe 0 | I
   toTType:
     vehicleCategory: Kernel.Prelude.Just|I
     allowStrikeOff: Kernel.Prelude.Just|I
+    productOwnershipAmount: Kernel.Prelude.Just|I
   beamType:
     vehicleCategory: Maybe VehicleCategory
     allowStrikeOff : Maybe Bool
+    productOwnershipAmount: Maybe HighPrecMoney
 
   extraOperations:
     - EXTRA_QUERY_FILE

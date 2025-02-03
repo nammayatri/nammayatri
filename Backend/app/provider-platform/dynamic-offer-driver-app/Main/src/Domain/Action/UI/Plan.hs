@@ -202,6 +202,22 @@ data DriverDuesEntity = DriverDuesEntity
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
+data ServicesEntity = ServicesEntity
+  { services :: [ServiceNames]
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+planServiceLists ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m ServicesEntity
+planServiceLists (driverId, _, merchantOpCityId) = do
+  subscriptionConfigs <- CQSC.findAllServicesUIEnabledByCity merchantOpCityId True
+  driverInfo <- DI.findById (cast driverId)
+  let driverEnabledForServices = maybe [] (.servicesEnabledForSubscription) driverInfo
+  let commonServices = DL.intersect driverEnabledForServices (map (.serviceName) subscriptionConfigs)
+  return $ ServicesEntity {services = commonServices}
+
 class Subscription a where
   getSubcriptionStatusWithPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
   updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
@@ -217,34 +233,42 @@ instance Subscription ServiceNames where
     case serviceName of
       YATRI_SUBSCRIPTION -> getSubcriptionStatusWithPlanGeneric YATRI_SUBSCRIPTION driverId
       YATRI_RENTAL -> getSubcriptionStatusWithPlanGeneric YATRI_RENTAL driverId
+      DASHCAM_RENTAL _ -> getSubcriptionStatusWithPlanGeneric serviceName driverId
   createDriverPlan serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData = do
     case serviceName of
       YATRI_SUBSCRIPTION -> createDriverPlanGeneric YATRI_SUBSCRIPTION (driverId, merchantId, opCity) plan subscriptionServiceRelatedData
       YATRI_RENTAL -> createDriverPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) plan subscriptionServiceRelatedData
+      DASHCAM_RENTAL _ -> createDriverPlanGeneric serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData
   planSubscribe serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planSubscribeGeneric YATRI_SUBSCRIPTION
       YATRI_RENTAL -> planSubscribeGeneric YATRI_RENTAL
+      DASHCAM_RENTAL _ -> planSubscribeGeneric serviceName
   planSwitch serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planSwitchGeneric YATRI_SUBSCRIPTION
       YATRI_RENTAL -> planSwitchGeneric YATRI_RENTAL
+      DASHCAM_RENTAL _ -> planSwitchGeneric serviceName
   planSuspend serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planSuspendGeneric YATRI_SUBSCRIPTION
       YATRI_RENTAL -> planSuspendGeneric YATRI_RENTAL
+      DASHCAM_RENTAL _ -> planSuspendGeneric serviceName
   planResume serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planResumeGeneric YATRI_SUBSCRIPTION
       YATRI_RENTAL -> planResumeGeneric YATRI_RENTAL
+      DASHCAM_RENTAL _ -> planResumeGeneric serviceName
   updateSubscriptionStatus serviceName (driverId, merchantId, opCity) autoPayStatus mbPayerVpa = do
     case serviceName of
       YATRI_SUBSCRIPTION -> updateSubscriptionStatusGeneric YATRI_SUBSCRIPTION (driverId, merchantId, opCity) autoPayStatus mbPayerVpa
       YATRI_RENTAL -> updateSubscriptionStatusGeneric YATRI_RENTAL (driverId, merchantId, opCity) autoPayStatus mbPayerVpa
+      DASHCAM_RENTAL _ -> updateSubscriptionStatusGeneric serviceName (driverId, merchantId, opCity) autoPayStatus mbPayerVpa
   getSubscriptionConfigAndPlan serviceName (driverId, merchantId, opCity) mbDPlan = do
     case serviceName of
       YATRI_SUBSCRIPTION -> getSubsriptionConfigAndPlanSubscription YATRI_SUBSCRIPTION (driverId, merchantId, opCity) mbDPlan
       YATRI_RENTAL -> getSubsriptionConfigAndPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) mbDPlan
+      DASHCAM_RENTAL _ -> getSubsriptionConfigAndPlanGeneric serviceName (driverId, merchantId, opCity) mbDPlan
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------------- Controllers -----------------------------------------------
@@ -304,6 +328,8 @@ createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) pla
             vehicleCategory = Just plan.vehicleCategory,
             isOnFreeTrial = True,
             isCategoryLevelSubscriptionEnabled = Nothing,
+            lastBillGeneratedAt = Nothing,
+            totalAmountChargedForService = 0,
             ..
           }
   QDPlan.create dPlan
@@ -483,6 +509,8 @@ mkDriverPlan plan (driverId, merchantId, merchantOpCityId) = do
         vehicleCategory = Just plan.vehicleCategory,
         isOnFreeTrial = True,
         isCategoryLevelSubscriptionEnabled = Nothing,
+        lastBillGeneratedAt = Nothing,
+        totalAmountChargedForService = 0,
         ..
       }
 

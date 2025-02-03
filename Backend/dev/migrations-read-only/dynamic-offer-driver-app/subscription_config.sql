@@ -66,3 +66,20 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN partial_due_cl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_down boolean DEFAULT false;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN subscription_down SET DEFAULT false;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN subscription_down TYPE boolean;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN webhook_config json ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_ui_enabled boolean ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN ext_webhook_configs json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN events_enabled_for_webhook text[] ;
