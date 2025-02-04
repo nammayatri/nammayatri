@@ -73,7 +73,8 @@ initData =
             selectedPlan : Mb.Nothing
       },
       vehicleAndCityConfig : defVehicleAndCityConfig,
-      linkedVehicleVariant : ""
+      linkedVehicleVariant : "",
+      subscriptionDown : Mb.Nothing
     },
     props : {
         isSelectedLangTamil : false,

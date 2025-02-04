@@ -488,6 +488,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
     , onboardingVehicleCategory :: Maybe String
+    , subscriptionDown :: Maybe Boolean
     }
 
 
