@@ -178,7 +178,10 @@ function refreshFlow(){
     }
     window.chatMessages = undefined;
     window.JBridge.setKeysInSharedPrefs("CALL_REFRESH", "false");
-    purescript.onConnectivityEvent("REFRESH")();
+    // purescript.onConnectivityEvent("REFRESH")();
+    for(let key in window.onResumeListenersMap) {
+      window.onResumeListenersMap[key].call()
+    }
   }
 }
 
@@ -341,6 +344,7 @@ window.callUICallback = function () {
 };
 
 window.onResumeListeners = [];
+window.onResumeListenersMap = {};
 window.internetListeners = {};
 
 window.onPause = function () {
@@ -452,8 +456,6 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
       console.log("Unknown Event");
   }
 }
-
-
 
 
 if (typeof window.JOS != "undefined") {

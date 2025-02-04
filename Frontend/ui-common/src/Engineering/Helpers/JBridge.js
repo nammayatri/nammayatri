@@ -1759,6 +1759,20 @@ export const storeOnResumeCallback = function (cb, action) {
   }
 }
 
+export const refreshFlowCallback = function (key,cb) {
+  try {
+    const callback = function () {
+      cb();
+    }
+    console.log ("onResumeListenersMap",callback);
+    if (window.onResumeListenersMap) {
+      window.onResumeListenersMap[key] = callback;
+    }
+  } catch (error) {
+    console.log("Error occurred in storeOnResumeCallback ------", error);
+  }
+}
+
 export const storeOnPauseCallback = function (cb, action) {
   try {
     const callback = function () {

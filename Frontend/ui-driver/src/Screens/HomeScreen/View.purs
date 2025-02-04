@@ -337,6 +337,7 @@ screen initialState (GlobalState globalState) =
                                   void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
                                 pure unit
           runEffectFn1 consumeBP unit
+          pure $ runFn2 JB.refreshFlowCallback "HomeScreen" (\_ -> void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 1)
           pure $ pure unit
         )
   ]
