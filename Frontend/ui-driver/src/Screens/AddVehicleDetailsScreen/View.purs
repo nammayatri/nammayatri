@@ -47,7 +47,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||),show)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), adjustViewWithKeyboard,accessibility, accessibilityHint,onAnimationEnd,Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), adjustViewWithKeyboard,accessibility, accessibilityHint,onAnimationEnd,Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -72,7 +72,7 @@ import Engineering.Helpers.Events as EHE
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
 
-screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
+screen :: AddVehicleDetailsScreenState -> LoggableScreen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -93,7 +93,13 @@ screen initialState =
         let _ = spy "AddVehicleDetailsScreen --------action" action
         eval state action
     ) 
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.addVehicleDetailsScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
+
 
 view
   :: forall w

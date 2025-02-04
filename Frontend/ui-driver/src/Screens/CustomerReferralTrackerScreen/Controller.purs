@@ -49,7 +49,29 @@ import Domain.Payments as PP
 import Storage (getValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction) = "NoAction"
+  show (BackPressed) = "BackPressed"
+  show (RideSummaryAPIResponseAction _ _ _) = "RideSummaryAPIResponseAction"
+  show (AfterRender) = "AfterRender"
+  show (HeaderSuffixImgOnClick) = "HeaderSuffixImgOnClick"
+  show (CalendarAC var1) = "CalendarAC_" <> show var1
+  show (ShowCalendarPopup) = "ShowCalendarPopup"
+  show (ReferralStepsViewAction var1) = "ReferralStepsViewAction_" <> show var1
+  show (BarViewSelected _) = "BarViewSelected"
+  show (LeftChevronClicked _) = "LeftChevronClicked"
+  show (RightChevronClicked _) = "RightChevronClicked"
+  show (MenuButtonClick) = "MenuButtonClick"
+  show (ShowReferralSteps) = "ShowReferralSteps"
+  show (ShowUPIDetails) = "ShowUPIDetails"
+  show (ShowDeleteUPI) = "ShowDeleteUPI"
+  show (EmptyUPIPrimaryAction var1) = "EmptyUPIPrimaryAction_" <> show var1
+  show (Copy _) = "Copy"
+  show (SelectEarning _) = "SelectEarning"
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (CheckOrderStatus) = "CheckOrderStatus"
+  show (RetryPayment) = "RetryPayment"
+  show (AddUPIAction) = "AddUPIAction"
+  show (DeleteUPIAction var1) = "DeleteUPIAction_" <> show var1
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

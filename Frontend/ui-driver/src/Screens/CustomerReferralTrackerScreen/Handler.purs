@@ -20,7 +20,7 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.CustomerReferralTrackerScreen.Controller (ScreenOutput(..))
 import Screens.CustomerReferralTrackerScreen.View as CustomerReferralTrackerScreen
 import Screens.CustomerReferralTrackerScreen.ScreenData (initData)
@@ -31,7 +31,7 @@ import Types.ModifyScreenState (modifyScreenState)
 customerReferralTrackerScreen :: FlowBT String CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT
 customerReferralTrackerScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ CustomerReferralTrackerScreen.screen state.customerReferralTrackerScreen
+  act <- lift $ lift $ runLoggableScreen $ CustomerReferralTrackerScreen.screen state.customerReferralTrackerScreen
   case act of
     GoBack state -> do
       modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> initData)

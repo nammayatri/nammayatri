@@ -30,6 +30,10 @@ import Data.String as DS
 import Common.RemoteConfig.Types
 import Components.InfoBox as InfoBox
 
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
+  show (NoAction) = "NoAction"
+
 data Action
   = OnClick String
   | NoAction

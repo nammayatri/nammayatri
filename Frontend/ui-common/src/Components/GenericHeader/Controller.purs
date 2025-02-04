@@ -20,10 +20,14 @@ import Font.Style (Style(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), Accessiblity(..), padding)
 import Common.Styles.Colors as Color
 import Common.Types.App
-import Prelude ((<>))
+import Prelude ((<>), class Show, show)
 import ConfigProvider
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
+
+instance showAction :: Show Action where
+  show (SuffixImgOnClick) = "SuffixImgOnClick"
+  show (PrefixImgOnClick) = "PrefixImgOnClick"
 
 type Config =
   {

@@ -8,6 +8,11 @@ import PrestoDOM
 import Components.MenuButton as MenuButton
 import Components.MenuButton.Controller as MenuButtonActionController
 
+instance showAction :: Show Action where
+  show (OnClick _ _) = "OnClick"
+  show (NoAction) = "NoAction"
+  show (MenuButtonActionController var1) = "MenuButtonActionController_" <> show var1
+
 data Action = OnClick String DateTime
             | NoAction
             | MenuButtonActionController MenuButtonActionController.Action

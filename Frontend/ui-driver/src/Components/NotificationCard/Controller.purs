@@ -14,6 +14,14 @@
 -}
 
 module Components.NotificationCard.Controller where
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (Action1Click _) = "Action1Click"
+  show (Action2Click _) = "Action2Click"
+  show (IllutrationClick _) = "IllutrationClick"
+  show (NoAction) = "NoAction"
+  show (ShareClick _) = "ShareClick"
 
 data Action
   = Action1Click Int

@@ -24,7 +24,17 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Prelude (class Show, show, (<>))
 
+instance showAction :: Show Action where
+  show (HideCalendarPopup) = "HideCalendarPopup"
+  show (SelectDate var1) = "SelectDate_" <> show var1
+  show (DecrementMonth var1) = "DecrementMonth_" <> show var1
+  show (IncrementMonth var1) = "IncrementMonth_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (PrimaryButtonCancelActionController var1) = "PrimaryButtonCancelActionController_" <> show var1
+  show (NoAction) = "NoAction"
+  
 data Action =  HideCalendarPopup
             | SelectDate ModifiedCalendarObject
             | DecrementMonth ModifiedCalendarObject

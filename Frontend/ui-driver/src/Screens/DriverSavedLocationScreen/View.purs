@@ -38,7 +38,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, show, unit, void, ($), (-), (<<<), (<>), (==), (>), (/), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.DriverSavedLocationScreen.ComponentConfig (confirmDeletePopupConfig, locationListItemConfig, primaryButtonConfig)
 import Screens.DriverSavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
@@ -48,7 +48,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
-screen :: DriverSavedLocationScreenState -> Screen Action DriverSavedLocationScreenState ScreenOutput
+screen :: DriverSavedLocationScreenState -> LoggableScreen Action DriverSavedLocationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -80,6 +80,8 @@ screen initialState =
             _ = spy "DriverSavedLocationScreen --------action" action
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.driverSavedLocationScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> DriverSavedLocationScreenState -> PrestoDOM (Effect Unit) w

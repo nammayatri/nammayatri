@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.RegistrationScreen.Controller (ScreenOutput(..))
 import Screens.RegistrationScreen.View as RegistrationScreen
 import Types.App (FlowBT, GlobalState(..), REGISTRATION_SCREEN_OUTPUT(..), ScreenType(..))
@@ -29,7 +29,7 @@ import Types.ModifyScreenState (modifyScreenState)
 registration :: FlowBT String REGISTRATION_SCREEN_OUTPUT
 registration = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ RegistrationScreen.screen state.registrationScreen
+  action <- lift $ lift $ runLoggableScreen $ RegistrationScreen.screen state.registrationScreen
   case action of
     GoBack -> App.BackT $ pure App.GoBack
     GoToUploadDriverLicense updatedState -> do

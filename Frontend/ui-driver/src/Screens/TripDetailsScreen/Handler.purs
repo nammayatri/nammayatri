@@ -20,14 +20,14 @@ import Engineering.Helpers.BackTrack (getState)
 import Screens.TripDetailsScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.TripDetailsScreen.View as TripDetailsScreen
 import Types.App (FlowBT, GlobalState(..), TRIP_DETAILS_SCREEN_OUTPUT(..))
 
 tripDetailsScreen :: FlowBT String TRIP_DETAILS_SCREEN_OUTPUT
 tripDetailsScreen = do
     (GlobalState state) <- getState
-    act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
+    act <- lift $ lift $ runLoggableScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
         OnSubmit -> App.BackT $ App.BackPoint <$> (pure $ ON_SUBMIT)
         GoToEarning  -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_EARINING)

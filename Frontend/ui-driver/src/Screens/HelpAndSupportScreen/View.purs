@@ -24,7 +24,7 @@ import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void, show, not, when)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout )
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout )
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -55,7 +55,7 @@ import Debug
 import Data.String as DS
 import Mobility.Prelude (boolToVisibility)
 
-screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
+screen :: ST.HelpAndSupportScreenState -> LoggableScreen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -78,6 +78,8 @@ screen initialState =
             _ = spy "HelpAndSupportScreen state" state
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.helpAndSupportScreenLogWhitelist
   }
 
 view

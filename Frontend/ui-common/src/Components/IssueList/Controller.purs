@@ -23,6 +23,12 @@ import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
 import Screens.Types (IssueInfo(..),IssueModalType(..))
 import Components.IssueView.Controller as IssueViewController
+import Prelude (class Show, show, (<>))
+
+instance showAction :: Show Action where
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (IssueViewAction var1) = "IssueViewAction_" <> show var1
 
 data Action =  BackPressed 
               | AfterRender 

@@ -22,7 +22,20 @@ import RemoteConfig as RU
 import Components.SwitchButtonView as SwitchButtonView
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (GenericHeaderAction var1) = "GenericHeaderAction_" <> show var1
+  show (StationSearchTextChanged _) = "StationSearchTextChanged"
+  show (SetListItem _) = "SetListItem"
+  show (UpdateList _) = "UpdateList"
+  show (SwitchToListView) = "SwitchToListView"
+  show (RefreshDataWithChanges _ _ _) = "RefreshDataWithChanges"
+  show (UpdateWarriorResp _) = "UpdateWarriorResp"
+  show (NoAction) = "NoAction"
+  show (OnStationClick _) = "OnStationClick"
+  show (LearnMore) = "LearnMore"
+  show (SwitchButtonAction var1) = "SwitchButtonAction_" <> show var1
 
 instance loggableAction :: Loggable Action where
   performLog _ _ = pure unit

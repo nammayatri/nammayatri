@@ -21,6 +21,16 @@ import Components.PrimaryButton.Controller as PrimaryButton
 import Styles.Colors (black700, black900, primaryButtonColor, white900) as Color
 import PrestoDOM.Types.DomAttributes (Length(..))
 import PrestoDOM (Margin(..))
+import Prelude (show, class Show, (<>))
+
+instance showAction :: Show Action where
+  show (OnClickDone var1) = "OnClickDone_" <> show var1
+  show (OnClickCancel) = "OnClickCancel"
+  show (OnClickDelete _) = "OnClickDelete"
+  show (OnClickView _ _) = "OnClickView"
+  show (AddImage) = "AddImage"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
 
 data Action = OnClickDone PrimaryButton.Action
             | OnClickCancel

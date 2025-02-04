@@ -34,6 +34,29 @@ import Engineering.Helpers.Commons as EHC
 import Debug(spy)
 import Services.API (DriverProfileDataRes(..))
 
+instance showAction :: Show Action where
+  show (OnClickPledge _ _) = "OnClickPledge"
+  show (OnClickVehicalOffer _ _) = "OnClickVehicalOffer"
+  show (OnClickLanguages _ _) = "OnClickLanguages"
+  show (OnClickWhyNy _ _) = "OnClickWhyNy"
+  show (OnClickDone var1) = "OnClickDone_" <> show var1
+  show (TextChanged _ _) = "TextChanged"
+  show (ShowCalendarPopup) = "ShowCalendarPopup"
+  show (CalendarAC var1) = "CalendarAC_" <> show var1
+  show (DatePicker _ _ _ _ _) = "DatePicker"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (ImageUploadCallback _ _ _) = "ImageUploadCallback"
+  show (UploadMultiPartDataCallback _ _) = "UploadMultiPartDataCallback"
+  show (AddImagesModelAction var1) = "AddImagesModelAction_" <> show var1
+  show (ViewImageModelAction var1) = "ViewImageModelAction_" <> show var1
+  show (OnClickUpload) = "OnClickUpload"
+  show (OnClickDelete _) = "OnClickDelete"
+  show (GoBack) = "GoBack"
+  show (NoAction) = "NoAction"
+  show (OnDateSelect _ _) = "OnDateSelect"
+  show (InputTextAC var1) = "InputTextAC_" <> show var1
+  show (ProfileDataAPIResponseAction _) = "ProfileDataAPIResponseAction"
+
 data Action = OnClickPledge String Boolean 
             | OnClickVehicalOffer String Boolean 
             | OnClickLanguages String Boolean 
@@ -64,8 +87,6 @@ uploadFileConfig = UploadFileConfig {
   imageAspectWidth : 15
 }
 
-instance showAction :: Show Action where
-  show _ = ""
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     _ -> pure unit

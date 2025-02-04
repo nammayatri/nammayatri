@@ -16,7 +16,7 @@
 module Screens.BankDetailScreen.View where
 
 import Prelude (Unit, const, ($), (<<<),(<>))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), editText, frameLayout, linearLayout, onBackPressed, onChange, scrollView, textView, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, hint, id, margin, orientation, padding, pattern, stroke, text, textSize, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), editText, frameLayout, linearLayout, onBackPressed, onChange, scrollView, textView, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, hint, id, margin, orientation, padding, pattern, stroke, text, textSize, visibility, weight, width)
 import PrestoDOM.Properties (sheetState) as PP 
 import Effect (Effect)
 import Screens.BankDetailScreen.Controller (Action(..), eval, ScreenOutput)
@@ -33,15 +33,19 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
 import Screens.BankDetailScreen.ComponentConfig
+import Data.Maybe (Maybe(..))
 
-screen :: ST.BankDetailScreenState -> Screen Action ST.BankDetailScreenState ScreenOutput
+screen :: ST.BankDetailScreenState -> LoggableScreen Action ST.BankDetailScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "BankDetailsScreen"
   , globalEvents : []
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.bankDetailScreenLogWhitelist
   }
+
 
 view
   :: forall w

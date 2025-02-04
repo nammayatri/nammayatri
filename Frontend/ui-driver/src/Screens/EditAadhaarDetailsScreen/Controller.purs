@@ -15,7 +15,7 @@
 
 module Screens.EditAadhaarDetailsScreen.Controller where
 
-import Prelude (class Show, bind, unit, pure, discard)
+import Prelude (class Show, bind, unit, pure, discard, show, (<>))
 import PrestoDOM (Eval, update, continue, exit)
 import Screens.Types (EditAadhaarDetailsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
@@ -28,7 +28,13 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction ) = "NoAction"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (BackPressed ) = "BackPressed"
+  show (ToggleScreenMode ) = "ToggleScreenMode"
+  show (AfterRender ) = "AfterRender"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen EDIT_AADHAR_DETAILS_SCREEN)

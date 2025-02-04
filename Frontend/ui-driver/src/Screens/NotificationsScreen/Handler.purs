@@ -23,7 +23,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core (getPushFn)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (ScreenOutput(..))
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
@@ -37,7 +37,7 @@ notifications = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "NotificationsScreen"
   notificationListItem <- lift $ lift $ PrestoList.preComputeListItem $ NotificationCard.view push
-  act <- lift $ lift $ runScreen $ NotificationsScreen.screen state.notificationScreen { shimmerLoader = AnimatedIn } notificationListItem
+  act <- lift $ lift $ runLoggableScreen $ NotificationsScreen.screen state.notificationScreen { shimmerLoader = AnimatedIn } notificationListItem
   case act of
     RefreshScreen state -> App.BackT $ App.NoBack <$> pure (REFRESH_SCREEN state)
     LoaderOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ LOAD_NOTIFICATIONS updatedState)

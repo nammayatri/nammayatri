@@ -66,7 +66,7 @@ import Services.API as API
 import Data.String as DS
 import Data.Array as DA
 
-screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
+screen :: BenefitsScreenState -> LoggableScreen Action BenefitsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -104,6 +104,8 @@ screen initialState =
             _ = spy "BenefitsScreen --------action" action
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.benefitsLogWhitelist.benefitsScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w

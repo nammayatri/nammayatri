@@ -42,7 +42,17 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (ShowMap _ _ _) = "ShowMap"
+  show (AfterRender ) = "AfterRender"
+  show (BackPressed ) = "BackPressed"
+  show (BackButtonClicked ) = "BackButtonClicked"
+  show (UpdateHotspotCircles _ _ _ _) = "UpdateHotspotCircles"
+  show (CircleOnClick _ _ _) = "CircleOnClick"
+  show (RefreshHotspots _ _) = "RefreshHotspots"
+  show (DemandHotspotApiResponseAction _) = "DemandHotspotApiResponseAction"
+  show (UpdateRefreshAnimation ) = "UpdateRefreshAnimation"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (NoAction ) = "NoAction"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

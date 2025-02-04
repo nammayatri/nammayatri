@@ -15,7 +15,7 @@
 
 module Screens.SelectLanguageScreen.Controller where
 
-import Prelude (class Show, pure, unit, (==), bind, ($), discard)
+import Prelude (class Show, pure, unit, (==), bind, ($), discard, show, (<>))
 import PrestoDOM (Eval, update, continue, exit, updateAndExit)
 import Screens.Types (SelectLanguageScreenState)
 import PrestoDOM.Types.Core (class Loggable)
@@ -31,7 +31,10 @@ import Foreign (unsafeToForeign)
 import Locale.Utils
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (MenuButtonAction var1) = "MenuButtonAction_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (AfterRender ) = "AfterRender"
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen SELECT_LANGUAGE_SCREEN)

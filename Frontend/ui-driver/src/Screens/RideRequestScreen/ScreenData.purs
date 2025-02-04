@@ -10,8 +10,9 @@ import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Language.Types (STR(..)) as LType
 import Language.Strings (getString)
+import ConfigProvider
 import PrestoDOM (Length(..), Margin(..), Padding(..), Prop, toPropValue)
-
+import MerchantConfig.Types (AppConfig)
 type RideRequestScreenState = {
   data :: RideRequestScreenData,
   props :: RideRequestScreenProps
@@ -38,6 +39,7 @@ type RideRequestScreenData = {
   ,vehicleType :: String
   ,driverLat :: Maybe String
   ,driverLong :: Maybe String
+  ,config :: AppConfig
 }
 
 dummyResp = ScheduledBookingListResponse {
@@ -172,6 +174,7 @@ type PillViewConfig ={
 initData :: String -> RideRequestScreenState
 initData _ = {
     data: {
+      config : getAppConfig appConfig,
       activeRideIndex : 0,
       activeDayIndex : 0,
       shimmerLoader: ST.AnimatingIn,
