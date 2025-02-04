@@ -64,6 +64,8 @@ public class CleverTapSignedCall {
     public static final int REQUEST_MICROPHONE = 9;
     public static final int REQUEST_BLUETOOTH = 11;
     private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
+    private static String SC_API_KEY;
+    private static String SC_ACCOUNT_ID;
 
     private BottomSheetDialog bottomSheetDialog;
     private static SharedPreferences sharedPrefs;
@@ -78,13 +80,15 @@ public class CleverTapSignedCall {
         merchantId = context.getResources().getString(R.string.merchant_id);
     }
 
-    public CleverTapSignedCall(Context cxt, Activity act, boolean isListenerOn){
+    public CleverTapSignedCall(Context cxt, Activity act, boolean isListenerOn, String ctApiKey, String ctAccountId){
         context = cxt;
         activity = act;
         if(isListenerOn)signedCallListener();
         sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         remoteConfig = new MobilityRemoteConfigs(true, false);
         merchantId = context.getResources().getString(R.string.merchant_id);
+        SC_API_KEY = ctApiKey;
+        SC_ACCOUNT_ID = ctAccountId;
     }
 
     public static int useFallbackDialer;
@@ -169,18 +173,26 @@ public class CleverTapSignedCall {
         this.bridgeComponent = bridgeComponents;
         useFallbackDialer = sharedPrefs.getInt("USE_FALLBACK_DIALER", 0);
         callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 0);
-        if(useFallbackDialer > 1 || callAttempts > 3 ){
+        JSONObject voipCallConfig = null;
+        int fallBackThreshold = 1;
+        int callAttemptsThreshold = 3;
+       try {
+           voipCallConfig = new JSONObject(remoteConfig.getString("voip_call_config"));
+           fallBackThreshold = voipCallConfig.optInt("fallbackDialerThreshold",1);
+           callAttemptsThreshold = voipCallConfig.optInt("callAttemptsThreshold",3);
+       } catch (JSONException e) {
+           Log.d("SC","Failed to fetch voip call config");
+       }
+        if(useFallbackDialer > fallBackThreshold || callAttempts > callAttemptsThreshold ){
             showDialer(phone);
             return;
         }
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         String receiverCuid, callContext, remoteContext, rideId = cuid;
-        String ny_customer = context.getString(R.string.namma_yatri_customer);
-        String ny_driver = context.getString(R.string.namma_yatri_driver);
         JSONObject callOptions = new JSONObject();
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         Bundle bundle = new Bundle();
-        bundle.putString(isMissed ? "missed_voip_callback" : "ride_id", rideId);
+        bundle.putString(isMissed ? "missed_voip_callback" : "ride_id", rideId);   
         
         if (!isMissed) {
             cuid = cuid.replace("-", "");
@@ -188,13 +200,9 @@ public class CleverTapSignedCall {
             receiverCuid = (isDriver ? "customer" : "driver") + cuid;
         } else receiverCuid = cuid;
         
-        callContext = isDriver
-                ? (ny_customer.isEmpty() ? "Namma Yatri Customer" : ny_customer)
-                : (ny_driver.isEmpty() ? "Namma Yatri Driver" : ny_driver);
-        
-        remoteContext = isDriver
-                ? (ny_driver.isEmpty() ? "Namma Yatri Driver" : ny_driver)
-                : (ny_customer.isEmpty() ? "Namma Yatri Customer" : ny_customer);
+        callContext = isDriver ? "Customer" : "Driver";
+        remoteContext = isDriver ? "Driver" : "Customer";
+
         try {
             callOptions.put("remote_context", remoteContext);
         } catch (JSONException e) {
@@ -251,13 +259,8 @@ public class CleverTapSignedCall {
         };
 
         if(checkAudioPermission()){
-            if((bluetoothAdapter == null || !bluetoothAdapter.isEnabled())){
-                SignedCallAPI.getInstance().call(context, receiverCuid, callContext, callOptions, outgoingCallResponseListener);
-            } else if(checkAndAskBluetoothPermission()){
-                SignedCallAPI.getInstance().call(context, receiverCuid, callContext, callOptions, outgoingCallResponseListener);
-            } else {
-                Log.e("signed call error :", "Bluetooth Permission not given" );
-            }
+            SignedCallAPI.getInstance().call(context, receiverCuid, callContext, callOptions, outgoingCallResponseListener);
+            if(bluetoothAdapter != null)checkAndAskBluetoothPermission();
         } else {
             boolean hasAskedMicPermission = sharedPrefs.getBoolean("MIC_PERMISSION_ASKED", false);
             mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
@@ -291,11 +294,9 @@ public class CleverTapSignedCall {
         Bundle bundle = new Bundle();
         bundle.putString("ride_id",cuid);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        String apiKey = sharedPrefs.getString("CLEVERTAP_SC_API_KEY","");
-        String accountId = sharedPrefs.getString("CLEVERTAP_SC_ACCOUNT_ID","");
         try {
-            initOptions.put("accountId", accountId);
-            initOptions.put("apiKey", apiKey);
+            initOptions.put("accountId", SC_ACCOUNT_ID);
+            initOptions.put("apiKey", SC_API_KEY);
             initOptions.put("cuid", Cuid);
         } catch (JSONException e) {
             Log.d("SignedCall", "JSON error at setting up VOIP data");
