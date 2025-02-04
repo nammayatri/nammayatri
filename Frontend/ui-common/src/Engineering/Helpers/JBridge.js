@@ -1007,9 +1007,8 @@ export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon,
 
 
 export const clearFocusFunction = function (id){
-  if(window.JBridge.clearFocus){
-    return JBridge.clearFocus(id)
-  }
+  const cmd = `set_view=ctx->findViewById:i_${id};get_view->clearFocus;`;
+  return window.Android.runInUI(cmd, "");
 }
 
 

@@ -5144,10 +5144,14 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void clearFocus(String id) {
         if (bridgeComponents.getActivity() != null) {
-            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
+            ExecutorManager.runOnMainThread(() -> {
+                View v = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                if (v != null) {
+                    v.clearFocus();
+                }
+            });
         }
     }
-
     @JavascriptInterface
     public void uploadMultiPartData(String filePath, String uploadUrl, String fileType, String outputField, String formDataField) {
         try {
