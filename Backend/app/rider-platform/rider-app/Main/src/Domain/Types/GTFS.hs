@@ -84,7 +84,7 @@ addGeoJSON stop = case s_location_type stop of
   _ -> stop
 
 data GeoJSON = GeoJSON
-  { gjType :: String,
+  { gjType :: Text,
     gjCoordinates :: [(Double, Double)]
   }
   deriving (Show, Eq)
@@ -116,7 +116,7 @@ instance FromField GeoJSON where
         Right (x, y) -> Just (x, y)
         Left _ -> Nothing
 
-validateMetro :: Feed -> Either String MetroGTFS
+validateMetro :: Feed -> Either Text MetroGTFS
 validateMetro feed = do
   let routes = f_routes feed
   unless (all (isJust . r_route_color) routes) $
@@ -169,7 +169,7 @@ data MetroGTFS = MetroGTFS
   }
   deriving (Show)
 
-validateBus :: Feed -> Either String BusGTFS
+validateBus :: Feed -> Either Text BusGTFS
 validateBus feed = do
   let hasStopTimes = not (null (f_stop_times feed))
       hasFrequencies = not (null (f_frequencies feed))
@@ -191,7 +191,7 @@ data ServiceabilityTime = ServiceabilityTime
 
 data Agency = Agency
   { a_agency_id :: Maybe AgencyID,
-    a_agency_name :: String,
+    a_agency_name :: Text,
     a_agency_url :: URL,
     a_agency_timezone :: Timezone,
     a_agency_lang :: Maybe Language,
@@ -203,9 +203,9 @@ data Agency = Agency
 
 data Stop = Stop
   { s_stop_id :: StopID,
-    s_stop_code :: Maybe String,
-    s_stop_name :: String,
-    s_stop_desc :: Maybe String,
+    s_stop_code :: Maybe Text,
+    s_stop_name :: Text,
+    s_stop_desc :: Maybe Text,
     s_stop_lat :: LatLon,
     s_stop_lon :: LatLon,
     s_zone_id :: Maybe ZoneID,
@@ -221,15 +221,15 @@ data Stop = Stop
 data Route = Route
   { r_route_id :: RouteID,
     r_agency_id :: Maybe AgencyID,
-    r_route_short_name :: String,
-    r_route_long_name :: String,
-    r_route_desc :: Maybe String,
+    r_route_short_name :: Text,
+    r_route_long_name :: Text,
+    r_route_desc :: Maybe Text,
     r_route_type :: RouteType,
     r_route_url :: Maybe URL,
     r_route_color :: Maybe Color, -- Mandatory for MetroGTFS
     r_route_text_color :: Maybe Color,
     r_route_sort_order :: Maybe Integer,
-    r_polyline :: Maybe String -- Added: Optional polyline for Metro
+    r_polyline :: Maybe Text -- Added: Optional polyline for Metro
   }
   deriving (Show)
 
@@ -237,8 +237,8 @@ data Trip = Trip
   { t_route_id :: RouteID,
     t_service_id :: ServiceID,
     t_trip_id :: TripID,
-    t_trip_headsign :: Maybe String,
-    t_trip_short_name :: Maybe String,
+    t_trip_headsign :: Maybe Text,
+    t_trip_short_name :: Maybe Text,
     t_direction_id :: Maybe DirectionID,
     t_block_id :: Maybe BlockID,
     t_shape_id :: Maybe ShapeID,
@@ -253,7 +253,7 @@ data StopTime = StopTime
     st_departure_time :: Time,
     st_stop_id :: StopID,
     st_stop_sequence :: Sequence,
-    st_stop_headsign :: Maybe String,
+    st_stop_headsign :: Maybe Text,
     st_pickup_type :: Maybe OnOffType,
     st_drop_off_type :: Maybe OnOffType,
     st_shape_dist_traveled :: Maybe Distance,
@@ -329,12 +329,12 @@ data Transfer = Transfer
   deriving (Show)
 
 data FeedInfo = FeedInfo
-  { fi_feed_publisher_name :: String,
+  { fi_feed_publisher_name :: Text,
     fi_feed_publisher_url :: URL,
     fi_feed_lang :: Language,
     fi_feed_start_date :: Maybe Date,
     fi_feed_end_date :: Maybe Date,
-    fi_feed_version :: Maybe String
+    fi_feed_version :: Maybe Text
   }
   deriving (Show)
 
@@ -361,37 +361,37 @@ data Date = Date Int Int Int
 data Time = Time Int Int Int
   deriving (Show)
 
-type AgencyID = String
+type AgencyID = Text
 
-type BlockID = String
+type BlockID = Text
 
-type FareID = String
+type FareID = Text
 
-type RouteID = String
+type RouteID = Text
 
-type ServiceID = String
+type ServiceID = Text
 
-type ShapeID = String
+type ShapeID = Text
 
-type StopID = String
+type StopID = Text
 
-type TripID = String
+type TripID = Text
 
-type ZoneID = String
+type ZoneID = Text
 
-type URL = String
+type URL = Text
 
-type Email = String
+type Email = Text
 
-type Phone = String
+type Phone = Text
 
-type Timezone = String
+type Timezone = Text
 
-type Language = String
+type Language = Text
 
-type Currency = String
+type Currency = Text
 
-type Color = String
+type Color = Text
 
 type Sequence = Int
 

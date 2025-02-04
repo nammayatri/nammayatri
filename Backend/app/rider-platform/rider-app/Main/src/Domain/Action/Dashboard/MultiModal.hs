@@ -3,27 +3,30 @@
 module Domain.Action.Dashboard.MultiModal (postMultiModalMultimodalFrfsDataPreprocess, postMultiModalMultimodalFrfsDataStatus, postMultiModalMultimodalFrfsDataVersionIsReady, postMultiModalMultimodalFrfsDataVersionApply) where
 
 import qualified API.Types.RiderPlatform.Management.MultiModal
--- import qualified Domain.Types.Stage as DTS
--- import qualified Storage.Queries.Stage as QS
-
--- import qualified AWS.S3 as S3
-
--- import EulerHS.Prelude hiding (id, length, map)
-
-import Data.List (nub)
+import qualified BecknV2.FRFS.Enums
+import qualified Data.HashMap.Lazy as HM
 import Domain.Types.Extra.Rollout
 import Domain.Types.GTFS
-import qualified Domain.Types.Merchant
+import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Rollout
+import qualified Domain.Types.Route as DR
+import qualified Domain.Types.RouteStopMapping as DRSM
+import Domain.Types.Station
 import qualified Domain.Types.Version
 import Domain.Types.VersionStageMapping
 import qualified Environment
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import Kernel.Types.TimeBound
 import Kernel.Utils.Common
-import qualified Storage.Queries.Rollout as QR
+import qualified Storage.Queries.Rollout as QRollout
+import qualified Storage.Queries.Route as QR
+import qualified Storage.Queries.RouteStopMapping as QRSM
+import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Version as QV
 import qualified Storage.Queries.VersionStageMapping as QVSM
 import Tools.Error
@@ -73,7 +76,7 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
   version <- QV.findByPrimaryKey (Kernel.Types.Id.Id req.versionId) >>= fromMaybeM (InternalError $ "Version with id: " <> show req.versionId <> " not found.")
   unless version.isReadyToApply $ throwError $ InternalError $ "Version with id: " <> show req.versionId <> " is not ready to apply."
   now <- getCurrentTime
-  rolloutVersions <- QR.findAllByMerchantOperatingCityAndVehicleType (Just $ Kernel.Types.Id.Id req.cityId) req.vehicleType
+  rolloutVersions <- QRollout.findAllByMerchantOperatingCityAndVehicleType (Just $ Kernel.Types.Id.Id req.cityId) req.vehicleType
   oldRolloutVersion <- maybe (throwError $ InternalError $ "No rollout version found for city: " <> show req.cityId <> " and vehicleType: " <> show req.vehicleType) return (listToMaybe <$> filter (\v -> v.versionTag /= req.versionTag) $ rolloutVersions)
   let mbNewRolloutVersion = listToMaybe <$> filter (\v -> v.versionTag == req.versionTag) $ rolloutVersions
       updatedOldVersion = oldRolloutVersion {Domain.Types.Rollout.percentage = 100 - req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
@@ -81,11 +84,11 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
     Nothing -> do
       id <- generateGUID
       let newVersion = Domain.Types.Rollout.Rollout {id, inputDataType = version.inputDataType, vehicleType = req.vehicleType, versionTag = req.versionTag, merchantId = version.merchantId, merchantOperatingCityId = version.merchantOperatingCityId, createdAt = now, percentage = req.rolloutPercent, updatedAt = now}
-      void $ QR.create newVersion
+      void $ QRollout.create newVersion
     Just newRolloutVersion -> do
       let newVersion = newRolloutVersion {Domain.Types.Rollout.percentage = req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
-      void $ QR.updateByPrimaryKey newVersion
-  void $ if updatedOldVersion.percentage == 0 then QR.deleteByVersionId updatedOldVersion.id else QR.updateByPrimaryKey updatedOldVersion
+      void $ QRollout.updateByPrimaryKey newVersion
+  void $ if updatedOldVersion.percentage == 0 then QRollout.deleteByVersionId updatedOldVersion.id else QRollout.updateByPrimaryKey updatedOldVersion
   return Kernel.Types.APISuccess.Success
 
 -- _validateGTFSData ::
@@ -95,43 +98,116 @@ _convertBusGTFSToQueries :: BusGTFS -> m ()
 _convertBusGTFSToQueries _gtfs = do
   error "Logic yet to be decided"
 
-_convertMetroGTFSToQueries :: (MonadFlow m) => MetroGTFS -> Int -> m ()
-_convertMetroGTFSToQueries gtfs versionTag = do
-  void $ bool (updateStops gtfs.mgFeed.f_stops versionTag) (logError "No stops found in the GTFS file") (length gtfs.mgFeed.f_stops == 0)
-  void $ bool (updateRoutes gtfs.mgFeed.f_routes versionTag) (logError "No routes found in the GTFS file") (length gtfs.mgFeed.f_routes == 0)
-  void $ bool (updateTrips gtfs.mgFeed.f_trips versionTag) (logError "No trips found in the GTFS file") (length gtfs.mgFeed.f_trips == 0)
+_convertMetroGTFSToQueries :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> MetroGTFS -> Int -> m ()
+_convertMetroGTFSToQueries merchantId mocId gtfs versionTag = do
+  void $ bool (updateStops merchantId mocId gtfs.mgFeed.f_stops versionTag) (logError "No stops found in the GTFS file") (length gtfs.mgFeed.f_stops == 0)
+  void $ bool (updateRoutes merchantId mocId gtfs.mgFeed.f_routes versionTag) (logError "No routes found in the GTFS file") (length gtfs.mgFeed.f_routes == 0)
   let routeStopMapping = map (mkRouteStopMapping gtfs.mgFeed.f_trips gtfs.mgFeed.f_stops gtfs.mgFeed.f_stop_times) gtfs.mgFeed.f_routes
-  void $ bool (updateRouteStopMapping routeStopMapping versionTag) (logError "No route stop mapping found in the GTFS file") (length routeStopMapping == 0)
-  error "Logic yet to be decided"
+  void $ bool (updateRouteStopMapping merchantId mocId routeStopMapping versionTag) (logError "No route stop mapping found in the GTFS file") (length routeStopMapping == 0)
 
-updateStops :: [Stop] -> Int -> m ()
-updateStops _stops _versionTag = do
-  error "Logic yet to be decided"
+updateStops :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> [Stop] -> Int -> m ()
+updateStops merchantId mocId stops versionTag = do
+  stations <- mapM (gtfsToDomainStop merchantId mocId (Just versionTag)) stops
+  QS.createMany stations
 
-updateRoutes :: [Route] -> Int -> m ()
-updateRoutes _routes _versionTag = do
-  error "Logic yet to be decided"
+gtfsToDomainStop :: (MonadFlow m) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> Maybe Int -> Stop -> m Station
+gtfsToDomainStop merchantId merchantOperatingCityId versionTag Stop {..} = do
+  id <- generateGUID
+  now <- getCurrentTime
+  pure
+    Station
+      { address = Nothing,
+        code = s_stop_id,
+        id,
+        lat = Just s_stop_lat,
+        lon = Just s_stop_lon,
+        merchantId,
+        merchantOperatingCityId,
+        name = s_stop_name,
+        possibleTypes = Nothing,
+        timeBounds = Unbounded, -- TODO: Add time bounds
+        vehicleType = BecknV2.FRFS.Enums.METRO, -- make generic?
+        versionTag,
+        createdAt = now,
+        updatedAt = now
+      }
 
-updateTrips :: [Trip] -> Int -> m ()
-updateTrips _trips _versionTag = do
-  error "Logic yet to be decided"
+updateRoutes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> [Route] -> Int -> m ()
+updateRoutes merchantId mocId gtfsRoutes versionTag = do
+  routes <- mapM (gtfsToDomainRoute merchantId mocId (Just versionTag)) gtfsRoutes
+  QR.createMany routes
 
-updateRouteStopMapping :: [RouteStopMapping] -> Int -> m ()
-updateRouteStopMapping _routeStopMapping _versionTag = do
-  error "Logic yet to be decided"
+gtfsToDomainRoute :: (MonadFlow m) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> Maybe Int -> Route -> m DR.Route
+gtfsToDomainRoute merchantId merchantOperatingCityId versionTag Route {..} = do
+  id <- generateGUID
+  now <- getCurrentTime
+  pure
+    DR.Route
+      { code = r_route_id,
+        color = r_route_color,
+        endPoint = (LatLong 0 0), -- start and endpoint me kya daalna hai?
+        id,
+        longName = r_route_long_name,
+        merchantId,
+        merchantOperatingCityId,
+        polyline = r_polyline,
+        shortName = r_route_short_name,
+        startPoint = (LatLong 0 0),
+        timeBounds = Unbounded,
+        vehicleType = BecknV2.FRFS.Enums.METRO,
+        versionTag,
+        createdAt = now,
+        updatedAt = now
+      }
+
+updateRouteStopMapping :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> [RouteStopMapping] -> Int -> m ()
+updateRouteStopMapping merchantId mocId gtfsRouteStopMapping versionTag = do
+  domainRouteStopMappings <- concat <$> mapM processRouteStopMapping gtfsRouteStopMapping
+  QRSM.createMany domainRouteStopMappings
+  where
+    processRouteStopMapping :: (MonadFlow m) => RouteStopMapping -> m [DRSM.RouteStopMapping]
+    processRouteStopMapping routeStopMapping = do
+      let route = routeStopMapping.route
+          stops = routeStopMapping.stops
+      mapM (gtfsToDomainRouteStopMapping merchantId mocId (Just versionTag) route) stops
+
+gtfsToDomainRouteStopMapping :: (MonadFlow m) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> Maybe Int -> Route -> (Stop, StopTime) -> m DRSM.RouteStopMapping
+gtfsToDomainRouteStopMapping merchantId merchantOperatingCityId versionTag Route {..} (Stop {..}, StopTime {..}) = do
+  now <- getCurrentTime
+  pure
+    DRSM.RouteStopMapping
+      { estimatedTravelTimeFromPreviousStop = Nothing,
+        providerCode = r_route_id,
+        routeCode = r_route_id,
+        sequenceNum = st_stop_sequence,
+        stopCode = s_stop_id,
+        stopName = s_stop_name,
+        stopPoint = LatLong s_stop_lat s_stop_lon,
+        timeBounds = Unbounded,
+        vehicleType = BecknV2.FRFS.Enums.METRO, -- make generic?
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
 
 data RouteStopMapping = RouteStopMapping
   { route :: Route,
-    stops :: [Stop]
+    stops :: [(Stop, StopTime)]
   }
   deriving (Show)
 
 --  stop.id -> stopTime.tripId -> trip.routeId -> route
 mkRouteStopMapping :: [Trip] -> [Stop] -> [StopTime] -> Route -> RouteStopMapping
 mkRouteStopMapping trips stops stopTimes route =
-  let routeTrips = filter (\trip -> trip.t_route_id == route.r_route_id) trips
+  let routeTrips = filter (\trip -> t_route_id trip == r_route_id route) trips
       tripIds = map t_trip_id routeTrips
-      routeStopTimes = filter (\st -> st.st_trip_id `elem` tripIds) stopTimes
-      routeStopIds = nub (map st_stop_id routeStopTimes)
-      routeStops = filter (\stop -> s_stop_id stop `elem` routeStopIds) stops
-   in RouteStopMapping route routeStops
+      routeStopTimes = filter (\st -> st_trip_id st `elem` tripIds) stopTimes
+      stopMap = HM.fromList [(s_stop_id s, s) | s <- stops]
+      pairedStopAndTimes =
+        mapMaybe
+          ( \st -> do
+              s <- HM.lookup (st_stop_id st) stopMap
+              pure (s, st)
+          )
+          routeStopTimes
+   in RouteStopMapping route pairedStopAndTimes
