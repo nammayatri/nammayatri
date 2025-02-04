@@ -69,7 +69,7 @@ updateSupplyDemandRatio supplyDemandRatioTTLInSec (geohash', acceptanceCount, su
       key2 = mkActualQARKeyWithGeohash geohash vehicleServiceTier
       value2 :: Double = if demandCount == 0 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
   Hedis.withCrossAppRedis $ Hedis.setExp key1 value1 supplyDemandRatioTTLInSec
-  if demandCount < 10
+  if demandCount < 4
     then Hedis.withCrossAppRedis $ Hedis.del key2
     else Hedis.withCrossAppRedis $ Hedis.setExp key2 value2 supplyDemandRatioTTLInSec
 
@@ -103,5 +103,5 @@ updateCityActualQAR ::
 updateCityActualQAR supplyDemandRatioTTLInSec (cityId, acceptanceCount, demandCount, vehicleServiceTier) = do
   let city = cityId.getId
       key = mkActualQARKeyWithCity city vehicleServiceTier
-      value :: Double = if demandCount < 50 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
+      value :: Double = if demandCount < 30 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
   Hedis.withCrossAppRedis $ Hedis.setExp key value supplyDemandRatioTTLInSec
