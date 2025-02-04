@@ -1143,18 +1143,30 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           Nothing -> return Unbounded
           _ -> do
             peakTimings :: [(TimeOfDay, TimeOfDay)] <- readCSVField idx row.peakTimings "Peak Timings"
-            peakDays :: [DayOfWeek] <- readCSVField idx row.peakDays "Peak Days"
-            let bounds =
-                  BoundedPeaks
-                    { monday = if Monday `elem` peakDays then peakTimings else [],
-                      tuesday = if Tuesday `elem` peakDays then peakTimings else [],
-                      wednesday = if Wednesday `elem` peakDays then peakTimings else [],
-                      thursday = if Thursday `elem` peakDays then peakTimings else [],
-                      friday = if Friday `elem` peakDays then peakTimings else [],
-                      saturday = if Saturday `elem` peakDays then peakTimings else [],
-                      sunday = if Sunday `elem` peakDays then peakTimings else []
-                    }
-            return $ BoundedByWeekday bounds
+            peakDaysRaw :: [Text] <- readCSVField idx row.peakDays "Peak Days"
+            let parsedDays = mapMaybe parseDayOrWeekday peakDaysRaw
+                weekdays = [dow | Left dow <- parsedDays]
+                specificDays = [day | Right day <- parsedDays]
+
+            if null weekdays && null specificDays
+              then return Unbounded
+              else
+                if null specificDays
+                  then do
+                    let bounds =
+                          BoundedPeaks
+                            { monday = if Monday `elem` weekdays then peakTimings else [],
+                              tuesday = if Tuesday `elem` weekdays then peakTimings else [],
+                              wednesday = if Wednesday `elem` weekdays then peakTimings else [],
+                              thursday = if Thursday `elem` weekdays then peakTimings else [],
+                              friday = if Friday `elem` weekdays then peakTimings else [],
+                              saturday = if Saturday `elem` weekdays then peakTimings else [],
+                              sunday = if Sunday `elem` weekdays then peakTimings else []
+                            }
+                    return $ BoundedByWeekday bounds
+                  else do
+                    let bounds = map (\d -> (d, peakTimings)) specificDays
+                    return $ BoundedByDay bounds
       cancellationCharges <-
         case mbCancellationType of
           Nothing -> return Nothing
@@ -1191,3 +1203,22 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
         "flatfee" -> Just $ CancellationCharge (FlatFee fee) time
         "percentage" -> Just $ CancellationCharge (Percentage (round fee)) time
         _ -> Nothing
+
+    parseDayOrWeekday :: Text -> Maybe (Either DayOfWeek Day)
+    parseDayOrWeekday txt =
+      case parseDayOfWeek txt of
+        Just dow -> Just (Left dow)
+        Nothing -> Right <$> parseDate txt
+
+    parseDayOfWeek :: Text -> Maybe DayOfWeek
+    parseDayOfWeek "Monday" = Just Monday
+    parseDayOfWeek "Tuesday" = Just Tuesday
+    parseDayOfWeek "Wednesday" = Just Wednesday
+    parseDayOfWeek "Thursday" = Just Thursday
+    parseDayOfWeek "Friday" = Just Friday
+    parseDayOfWeek "Saturday" = Just Saturday
+    parseDayOfWeek "Sunday" = Just Sunday
+    parseDayOfWeek _ = Nothing
+
+    parseDate :: Text -> Maybe Day
+    parseDate = parseTimeM True defaultTimeLocale "%Y-%m-%d" . T.unpack
