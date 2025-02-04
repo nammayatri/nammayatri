@@ -2468,7 +2468,7 @@ homeScreenFlow = do
         pure unit
     (GlobalState globalState) <- getState  
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
-    when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
+    checkDriverBlockingStatus getDriverInfoResp globalState.homeScreen.data.config.subscriptionConfig.enableBlocking
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
     updateBannerAndPopupFlags  
     void $ lift $ lift $ toggleLoader false
@@ -3828,9 +3828,9 @@ getUpiApps = do
                                {key : "appsNotSupportMandate", value : unsafeToForeign appsNotSupportMandate}]
   void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq req{availableUpiApps = Just $ runFn1 stringifyJSON resp})
 
-checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
-checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) =
-  if joinPlanBlockerConditions then do
+checkDriverBlockingStatus :: GetDriverInfoResp -> Boolean -> FlowBT String Unit
+checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) enableJoinPlanBlocking =
+  if (joinPlanBlockerConditions && enableJoinPlanBlocking) then do
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ paymentState {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }}})
     mkDriverOffline
   else if driverCityOrVehicleChanged then do
