@@ -5,6 +5,7 @@ module Domain.Action.UI.Voip (postCallVoip) where
 import qualified API.Types.UI.Voip as Voip
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DMC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified Environment
@@ -37,12 +38,13 @@ data VOIPData = VOIPData
 
 postCallVoip ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id DMC.Merchant
+      Kernel.Types.Id.Id DMC.Merchant,
+      Kernel.Types.Id.Id DMOC.MerchantOperatingCity
     ) ->
     Voip.VoipReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postCallVoip (personId, _) req = do
+postCallVoip (personId, _, _mid) req = do
   now <- getCurrentTime
   uid <- generateGUID
   let voipCallData =

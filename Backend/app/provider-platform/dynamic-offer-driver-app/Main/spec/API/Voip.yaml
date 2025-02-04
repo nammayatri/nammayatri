@@ -28,7 +28,7 @@ types:
 apis:
   - POST:
       endpoint: /call/voip
-      auth: TokenAuth
+      auth: TokenAuth PROVIDER_TYPE
       request:
         type: VoipReq
       response:
