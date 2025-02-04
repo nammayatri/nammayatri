@@ -28,9 +28,12 @@ data FRFSConfigT f = FRFSConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     metroStationTtl :: B.C f Kernel.Prelude.Int,
     oneWayTicketLimit :: B.C f Kernel.Prelude.Int,
+    providerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     radius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     roundTripTicketLimit :: B.C f Kernel.Prelude.Int,
     straightLineDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    validTillSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

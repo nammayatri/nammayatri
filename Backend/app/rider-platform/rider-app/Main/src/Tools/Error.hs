@@ -784,3 +784,82 @@ instance IsHTTPError CancelAndSwitchLegError where
     JourneyLegCannotBeCancelled _ -> E400
 
 instance IsAPIError CancelAndSwitchLegError
+
+data FRFSQuoteError
+  = CachedFRFSQuoteAnomaly Text Text
+  | FRFSQuoteNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSQuoteError
+
+instance IsBaseError FRFSQuoteError where
+  toMessage = \case
+    CachedFRFSQuoteAnomaly quotesCreatedByCache quotesCreatedByOnSearch -> Just $ "Quotes created by cache and quotes from on_search does not match. Quotes created by Cache- " <> quotesCreatedByCache <> " Quotes created by on_search- " <> quotesCreatedByOnSearch
+    FRFSQuoteNotFound quoteId -> Just $ "FRFS Quote with quoteId " <> quoteId <> " not found."
+
+instance IsHTTPError FRFSQuoteError where
+  toErrorCode = \case
+    CachedFRFSQuoteAnomaly _ _ -> "FRFS_QUOTE_MISMATCH"
+    FRFSQuoteNotFound _ -> "FRFS_QUOTE_NOT_FOUND"
+  toHttpCode = \case
+    CachedFRFSQuoteAnomaly _ _ -> E500
+    FRFSQuoteNotFound _ -> E500
+
+instance IsAPIError FRFSQuoteError
+
+data RedisLockError
+  = RedisLockStillProcessing Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RedisLockError
+
+instance IsBaseError RedisLockError where
+  toMessage = \case
+    RedisLockStillProcessing lockKey -> Just $ "Thread is still processing. Redis Lock Key:- " <> lockKey
+
+instance IsHTTPError RedisLockError where
+  toErrorCode = \case
+    RedisLockStillProcessing _ -> "REDIS_LOCK_STILL_PROCESSING"
+
+  toHttpCode = \case
+    RedisLockStillProcessing _ -> E500
+
+instance IsAPIError RedisLockError
+
+data InvalidFormatError
+  = InvalidStationJson Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''InvalidFormatError
+
+instance IsBaseError InvalidFormatError where
+  toMessage = \case
+    InvalidStationJson stationJson -> Just $ "Invalid stations json from db . Station Json:- " <> stationJson
+
+instance IsHTTPError InvalidFormatError where
+  toErrorCode = \case
+    InvalidStationJson _ -> "INVALID_STATION_JSON"
+
+  toHttpCode = \case
+    InvalidStationJson _ -> E500
+
+instance IsAPIError InvalidFormatError
+
+data FRFSSearchError
+  = FRFSSearchNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSSearchError
+
+instance IsBaseError FRFSSearchError where
+  toMessage = \case
+    FRFSSearchNotFound lockKey -> Just $ "FRFS Search with searchId:- " <> lockKey <> " not found."
+
+instance IsHTTPError FRFSSearchError where
+  toErrorCode = \case
+    FRFSSearchNotFound _ -> "FRFS_SEARCH_NOT_FOUND"
+
+  toHttpCode = \case
+    FRFSSearchNotFound _ -> E500
+
+instance IsAPIError FRFSSearchError

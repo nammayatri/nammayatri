@@ -32,7 +32,7 @@ data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
     status :: FRFSBookingPaymentStatusAPI,
     transactionId :: Data.Maybe.Maybe Data.Text.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentStatusAPI
@@ -190,6 +190,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
+    isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
@@ -202,7 +203,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketVerifyReq = FRFSTicketVerifyReq {qrData :: Data.Text.Text}
