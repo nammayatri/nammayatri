@@ -102,6 +102,17 @@ type MapLottieConfig = {
 
 data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE
 
+type SwitchCityConfigs = {
+  cities :: Array UserCity
+}
+
+type UserCity = {
+  name :: String,
+  value :: String,
+  title :: String
+}
+
+
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq
 instance showServiceType :: Show ServiceType where show = genericShow

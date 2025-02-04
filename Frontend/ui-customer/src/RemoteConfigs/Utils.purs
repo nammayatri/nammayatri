@@ -304,3 +304,220 @@ defaultMapLottieConfig = {
     lottieUrl : "",
     visibility : false
 }
+
+getSwitchCityConfigs :: LazyCheck -> SwitchCityConfigs
+getSwitchCityConfigs _ = 
+    let config = fetchRemoteConfigString "switch_city_configs"
+        value = decodeForeignObject (parseJSON config) defaultSwitchCityConfigs
+    in value
+
+defaultSwitchCityConfigs :: SwitchCityConfigs
+defaultSwitchCityConfigs = {
+  cities: [
+    {
+        name: "Bangalore",
+        value: "Bangalore",
+        title: ""
+    },
+    {
+        name: "Kolkata",
+        value: "Kolkata",
+        title: ""
+    },
+    {
+        name: "Paris",
+        value: "Paris",
+        title: ""
+    },
+    {
+        name: "Kochi",
+        value: "Kochi",
+        title: ""
+    },
+    {
+        name: "Delhi",
+        value: "Delhi",
+        title: ""
+    },
+    {
+        name: "Hyderabad",
+        value: "Hyderabad",
+        title: ""
+    },
+    {
+        name: "Mumbai",
+        value: "Mumbai",
+        title: ""
+    },
+    {
+        name: "Chennai",
+        value: "Chennai",
+        title: ""
+    },
+    {
+        name: "Coimbatore",
+        value: "Coimbatore",
+        title: ""
+    },
+    {
+        name: "Pondicherry",
+        value: "Pondicherry",
+        title: ""
+    },
+    {
+        name: "Goa",
+        value: "Goa",
+        title: ""
+    },
+    {
+        name: "Pune",
+        value: "Pune",
+        title: ""
+    },
+    {
+        name: "Mysore",
+        value: "Mysore",
+        title: ""
+    },
+    {
+        name: "Tumakuru",
+        value: "Tumakuru",
+        title: ""
+    },
+    {
+        name: "Siliguri",
+        value: "Siliguri",
+        title: ""
+    },
+    {
+        name: "AnyCity",
+        value: "AnyCity",
+        title: ""
+    },
+    {
+        name: "Gurugram",
+        value: "Gurugram",
+        title: ""
+    },
+    {
+        name: "Noida",
+        value: "Noida",
+        title: ""
+    },
+    {
+        name: "Thrissur",
+        value: "Thrissur",
+        title: ""
+    },
+    {
+        name: "Trivandrum",
+        value: "Trivandrum",
+        title: ""
+    },
+    {
+        name: "Kozhikode",
+        value: "Kozhikode",
+        title: ""
+    },
+    {
+        name: "Vellore",
+        value: "Vellore",
+        title: ""
+    },
+    {
+        name: "Hosur",
+        value: "Hosur",
+        title: ""
+    },
+    {
+        name: "Madurai",
+        value: "Madurai",
+        title: ""
+    },
+    {
+        name: "Thanjavur",
+        value: "Thanjavur",
+        title: ""
+    },
+    {
+        name: "Tirunelveli",
+        value: "Tirunelveli",
+        title: ""
+    },
+    {
+        name: "Salem",
+        value: "Salem",
+        title: ""
+    },
+    {
+        name: "Trichy",
+        value: "Trichy",
+        title: ""
+    },
+    {
+        name: "Davanagere",
+        value: "Davanagere",
+        title: ""
+    },
+    {
+        name: "Shivamogga",
+        value: "Shivamogga",
+        title: ""
+    },
+    {
+        name: "Hubli",
+        value: "Hubli",
+        title: ""
+    },
+    {
+        name: "Mangalore",
+        value: "Mangalore",
+        title: ""
+    },
+    {
+        name: "Gulbarga",
+        value: "Gulbarga",
+        title: ""
+    },
+    {
+        name: "Udupi",
+        value: "Udupi",
+        title: ""
+    },
+    {
+        name: "Odisha",
+        value: "Odisha",
+        title: ""
+    },
+    {
+        name: "Bhubaneswar",
+        value: "Bhubaneswar",
+        title: ""
+    },
+    {
+        name: "Cuttack",
+        value: "Cuttack",
+        title: ""
+    },
+    {
+        name: "Nalgonda",
+        value: "Nalgonda",
+        title: ""
+    },
+    {
+        name: "Puri",
+        value: "Puri",
+        title: ""
+    },
+    {
+        name: "Pudukkottai",
+        value: "Pudukkottai",
+        title: ""
+    },
+    {
+        name: "Bidar",
+        value: "Bidar",
+        title: ""
+    }
+  ]
+}

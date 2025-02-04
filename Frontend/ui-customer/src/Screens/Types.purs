@@ -1472,7 +1472,13 @@ type ContactDetail = {
 -- ############################################## AboutUsScreenState #############################
 
 type AboutUsScreenState = {
-    appConfig :: AppConfig
+    appConfig :: AppConfig,
+    props :: AboutUsScreenProps
+}
+
+type AboutUsScreenProps = {
+    enableDemoModeCount :: Int,
+    demoModePopup :: Boolean
 }
 
 -- ############################################## MyProfileScreenState #############################

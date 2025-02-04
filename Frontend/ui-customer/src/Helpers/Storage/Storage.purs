@@ -125,6 +125,7 @@ data KeyStore
   | RECENT_BUS_STOPS
   | RECENT_BUS_ROUTES
   | MapViewLottie
+  | LOCATION_MANUALLY_UPDATED
 
 derive instance genericKeyStore :: Generic KeyStore _
 
@@ -136,6 +137,13 @@ setValueToLocalStore keyStore val = void $ lift $ lift $ pure $ JBridge.setKeyIn
 
 getValueToLocalStore :: KeyStore -> String
 getValueToLocalStore = JBridge.getKeyInSharedPrefKeys <<< show
+
+setUserCity :: KeyStore -> String -> FlowBT String Unit
+setUserCity keyStore newVal = do
+  let manualUpdate = getValueToLocalStore LOCATION_MANUALLY_UPDATED
+  if manualUpdate == "true"
+    then pure unit
+    else setValueToLocalStore keyStore newVal
 
 getValueFromLocalStoreMb :: KeyStore -> Maybe String
 getValueFromLocalStoreMb key = do
