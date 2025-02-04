@@ -274,6 +274,7 @@ foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean
 foreign import addCarouselWithVideoExists :: Unit -> Boolean
 foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
 foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
+foreign import refreshFlowCallback :: Fn2 String (Unit -> Effect Unit) Unit
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
