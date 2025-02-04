@@ -124,6 +124,7 @@ getConfigFromCACCommon context stickyId fromCactyp cpf = do
   config' <-
     maybe
       ( do
+          logError $ "Config not found for " <> getTableName cpf <> " in cac. Creating client through config" <> show (toJSON res)
           incrementSystemConfigsFailedCounter $ getCacMetricErrorFromCac cpf
           createThroughConfigHelper toss context cpf
       )
@@ -132,6 +133,7 @@ getConfigFromCACCommon context stickyId fromCactyp cpf = do
   config <- maybe (pure Nothing) fromCactyp config'
   maybe
     ( do
+        logError $ "Config not found for " <> getTableName cpf <> " in cac. After creating client through config" <> show (toJSON config')
         incrementSystemConfigsFailedCounter $ getCacMetricErrorFromDB cpf
         pure Nothing
     )
