@@ -4316,7 +4316,7 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
     tripId :: Maybe String,
     latitude :: Maybe Number,
     longitude :: Maybe Number,
-    speed :: Maybe String,
+    speed :: Maybe Number,
     timestamp :: Maybe String
 }
 
