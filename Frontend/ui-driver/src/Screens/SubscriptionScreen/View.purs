@@ -273,6 +273,7 @@ view push state =
       , visibility if (state.props.confirmCancel) then VISIBLE else GONE
       ][PopUpModal.view (push <<< ConfirmCancelPopup) (confirmCancelPopupConfig state)]
     , if state.data.switchPlanModalState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else linearLayout[visibility GONE][]
+    , if (state.data.subscriptionDown == Just true) then paymentUnderMaintenanceView push state else linearLayout[visibility GONE][]
   ]
 
 joinPlanView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -1896,3 +1897,12 @@ lottieJsonAccordingToLang isOnFreeTrial isIntroductory =
 
 isPaymentPending :: SubscriptionScreenState -> Boolean
 isPaymentPending state = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)
+
+paymentUnderMaintenanceView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState ->  PrestoDOM (Effect Unit) w
+paymentUnderMaintenanceView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity CENTER 
+  , background Color.blackLessTrans
+  ][ PopUpModal.view (push <<< PaymentUnderMaintenanceModalAC) (paymentUnderMaintenanceConfig state) ]

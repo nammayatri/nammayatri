@@ -2307,7 +2307,8 @@ type SubscriptionScreenData = {
   config :: AppConfig,
   switchPlanModalState :: SwitchPlanModalState,
   vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity,
-  linkedVehicleVariant :: String
+  linkedVehicleVariant :: String,
+  subscriptionDown :: Maybe Boolean
 }
 
 type SwitchPlanModalState = {

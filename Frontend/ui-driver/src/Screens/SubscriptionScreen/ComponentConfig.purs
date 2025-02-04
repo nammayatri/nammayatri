@@ -56,6 +56,9 @@ import Locale.Utils
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Components.PlanCard.Controller as PlanCard
 import Components.SelectPlansModal.Controller as SelectPlansModal
+import Components.PopUpModal as PopUpModal
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -517,3 +520,42 @@ selectPlansModalState state = SelectPlansModal.config
                   Just justPlan -> map (\plan -> plan {isSelected = plan.id == justPlan.id }) state.data.switchPlanModalState.plansList
                   Nothing -> state.data.switchPlanModalState.plansList
   }
+
+paymentUnderMaintenanceConfig :: ST.SubscriptionScreenState -> PopUpModal.Config
+paymentUnderMaintenanceConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    backgroundClickable = false,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = getStringV2 payment_under_maintenance, 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = getStringV2 payments_temporarily_unavailable,
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = (getStringV2 okay),
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = HU.fetchImage HU.GLOBAL_COMMON_ASSET "ny_ic_unavailable"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'

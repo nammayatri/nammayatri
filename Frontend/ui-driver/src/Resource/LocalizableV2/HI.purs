@@ -1786,4 +1786,6 @@ getHi =
     , driver_unsubscribed : "ड्राइवर ने प्लेटफ़ॉर्म से अनग्रहित कर दिया है। वापस सब्सक्राइब करने के लिए लंबित राशि भुगतान करें"
     , canceling_this_booking_may_affect_the_emergency_medical : "इस बुकिंग को रद्द करने से मरीज के आपातकालीन चिकित्सा सेवाओं पर प्रभाव पड़ सकता है"
     , drivers_are_permitted_to_cancel_ambulance_bookings :"ड्राइवरों को केवल उनके चिकित्सा कारणों या वाहन के खराब होने की स्थिति में ही रद्द करने की अनुमति है"
+    , payment_under_maintenance : "भुगतान रखरखाव में है"
+    , payments_temporarily_unavailable : "भुगतान अस्थायी रूप से अनुपलब्ध है और जल्द ही वापस आ जाएगा। कृपया बाद में पुनः प्रयास करें।"
     }
