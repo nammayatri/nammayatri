@@ -226,7 +226,8 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     destination :: Location,
     driverName :: Maybe Text,
     vehicleNumber :: Maybe Text,
-    otp :: Maybe Text
+    otp :: Maybe Text,
+    serviceTierName :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -381,19 +382,20 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 destination = toLocation,
                 driverName = mRide <&> (.driverName),
                 vehicleNumber = mRide <&> (.vehicleNumber),
-                otp = mRide <&> (.otp)
+                otp = mRide <&> (.otp),
+                serviceTierName = booking.serviceTierName
               }
       }
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
-  (mbFareRange, mbEstimateStatus) <-
+  (mbFareRange, mbEstimateStatus, mbEstimate) <-
     case journeyLegInfo'.pricingId of
       Just estId -> do
         mbEst <- QEstimate.findById (Id estId)
-        return $ (mbEst <&> (.totalFareRange), mbEst <&> (.status))
-      Nothing -> return (Nothing, Nothing)
+        return $ (mbEst <&> (.totalFareRange), mbEst <&> (.status), mbEst)
+      Nothing -> return (Nothing, Nothing, Nothing)
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   return $
     LegInfo
@@ -419,7 +421,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 destination = toLocation',
                 driverName = Nothing,
                 vehicleNumber = Nothing,
-                otp = Nothing
+                otp = Nothing,
+                serviceTierName = mbEstimate >>= (.serviceTierName)
               }
       }
 
