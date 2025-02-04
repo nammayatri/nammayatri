@@ -2614,7 +2614,7 @@ homeScreenFlow = do
     (GlobalState globalState) <- getState  
     let globalHomeScreenState = globalState.homeScreen
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
-    when globalHomeScreenState.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
+    checkDriverBlockingStatus getDriverInfoResp globalState.homeScreen.data.config.subscriptionConfig.enableBlocking
     when globalHomeScreenState.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
     when (HU.specialVariantsForTracking FunctionCall && (not $ globalHomeScreenState.props.whereIsMyBusConfig.showSelectAvailableBusRoutes)) do
       let _ = spy "updateBusFleetConfig" globalHomeScreenState
@@ -4113,9 +4113,9 @@ getUpiApps = do
                                {key : "appsNotSupportMandate", value : unsafeToForeign appsNotSupportMandate}]
   void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq req{availableUpiApps = Just $ runFn1 stringifyJSON resp})
 
-checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
-checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) =
-  if joinPlanBlockerConditions then do
+checkDriverBlockingStatus :: GetDriverInfoResp -> Boolean -> FlowBT String Unit
+checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) enableJoinPlanBlocking =
+  if (joinPlanBlockerConditions && enableJoinPlanBlocking) then do
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ paymentState {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }}})
     mkDriverOffline
   else if driverCityOrVehicleChanged then do
