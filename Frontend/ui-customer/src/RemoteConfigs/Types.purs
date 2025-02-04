@@ -4,8 +4,8 @@ import Prelude
 import Prelude (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
-import Foreign.Generic (class Decode)
-import Presto.Core.Utils.Encoding (defaultDecode)
+import Foreign.Generic (class Decode, class Encode)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Maybe (Maybe)
 import Language.Types(STR(..))
 import Data.Show.Generic (genericShow)
@@ -41,8 +41,10 @@ newtype DescriptionComponent = DescriptionComponent {
   fontStyle :: String
 }
 
+
 derive instance genericDescriptionComponent :: Generic DescriptionComponent _
 instance decodeDescriptionComponent :: Decode DescriptionComponent where decode = defaultDecode
+instance encodeDescriptionComponent :: Encode DescriptionComponent where encode = defaultEncode
 
 type SpecialLocationsOb = {
   locations :: Array SpecialLocation
@@ -76,6 +78,7 @@ newtype FamousDestination = FamousDestination {
 
 derive instance genericFamousDestination :: Generic FamousDestination _
 instance decodeFamousDestination :: Decode FamousDestination where decode = defaultDecode
+instance encodeFamousDestination :: Encode FamousDestination where encode = defaultEncode
 
 type Service = {
   type :: ServiceType,
