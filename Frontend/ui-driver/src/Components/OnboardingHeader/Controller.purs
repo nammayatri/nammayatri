@@ -18,8 +18,10 @@ module Components.OnboardingHeader.Controller where
 import Prelude (pure, unit, class Show)
 import PrestoDOM.Types.Core (class Loggable)
 
+
 instance showAction :: Show Action where
-  show _ = ""
+  show (TriggerRegModal) = "TriggerRegModal"
+  show (BackPressed) = "BackPressed"
 
 instance loggableAction :: Loggable Action where
    performLog _ _ = pure unit

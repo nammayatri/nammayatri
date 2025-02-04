@@ -20,7 +20,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.SubscriptionScreen.Controller (ScreenOutput(..))
 import Screens.SubscriptionScreen.View as SubscriptionScreen
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
@@ -31,7 +31,7 @@ import Debug
 subscriptionScreen :: FlowBT String SUBSCRIPTION_SCREEN_OUTPUT
 subscriptionScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ SubscriptionScreen.screen state.subscriptionScreen (GlobalState state)
+  act <- lift $ lift $ runLoggableScreen $ SubscriptionScreen.screen state.subscriptionScreen (GlobalState state)
   case act of
     HomeScreen updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)

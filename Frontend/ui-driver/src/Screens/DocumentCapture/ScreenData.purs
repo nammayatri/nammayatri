@@ -17,6 +17,7 @@ module Screens.DocumentCaptureScreen.ScreenData where
 import Screens.Types as ST
 import Data.Maybe(Maybe(..))
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import ConfigProvider
 
 initData :: ST.DocumentCaptureScreenState
 initData =
@@ -28,6 +29,7 @@ initData =
       , docId : ""
       , linkedRc : Nothing
       , cityConfig : defaultCityConfig
+      , config : getAppConfig appConfig
       }
   , props:
       { validateDocModal : false,

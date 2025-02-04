@@ -28,7 +28,7 @@ import Components.RideAllocationModal as RideAllocationModal
 import JBridge as JB
 import Screens.PopUpScreen.ComponentConfig
 
-screen :: ST.PopUpScreenState -> ScopedScreen Action ST.PopUpScreenState ScreenOutput
+screen :: ST.PopUpScreenState -> LoggableScreen Action ST.PopUpScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -38,6 +38,7 @@ screen initialState =
     pure $ pure unit)]
   , eval
   , parent : Just "PopUpScreen"
+  , logWhitelist: initialState.data.config.logWhitelistConfig.popUpScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PopUpScreenState -> PrestoDOM (Effect Unit) w

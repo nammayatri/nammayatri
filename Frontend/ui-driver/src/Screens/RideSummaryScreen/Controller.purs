@@ -41,8 +41,32 @@ import Data.Number (fromString) as Number
 import Components.DropDownCard.Controller
 
 
-instance showAction  ::  Show Action where
-  show _ = ""
+instance showAction :: Show Action where
+  show (BackPressed) = "BackPressed"
+  show (AcceptClick) = "AcceptClick"
+  show (NoAction) = "NoAction"
+  show (SourceToDestinationActionController var1) = "SourceToDestinationActionController_" <> show var1
+  show (RideSummaryCardActionController var1) = "RideSummaryCardActionController_" <> show var1
+  show (PickUp var1) = "PickUp_" <> show var1
+  show (IncludedCharges var1) = "IncludedCharges_" <> show var1
+  show (ExcludedCharges var1) = "ExcludedCharges_" <> show var1
+  show (Terms var1) = "Terms_" <> show var1
+  show (ShowMapInterCity _ _ _ _ _ _ _) = "ShowMapInterCity"
+  show (ShowMapRental _ _ _ _ _) = "ShowMapRental"
+  show (ShowMapRegular _ _ _ _ _ _ _) = "ShowMapRegular"
+  show (PopUpModalCancelConfirmationAction var1) = "PopUpModalCancelConfirmationAction_" <> show var1
+  show (CancelClicked) = "CancelClicked"
+  show (OnClick) = "OnClick"
+  show (Call) = "Call"
+  show (GoToMap _ _) = "GoToMap"
+  show (ScheduleTimer _ _ _) = "ScheduleTimer"
+  show (Back) = "Back"
+  show (DisableShimmer) = "DisableShimmer"
+  show (UpdateRoute _) = "UpdateRoute"
+  show (Notification _ _) = "Notification"
+  show (PopUpModalErrorAction var1) = "PopUpModalErrorAction_" <> show var1
+  show (ApiError) = "ApiError"
+  
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 

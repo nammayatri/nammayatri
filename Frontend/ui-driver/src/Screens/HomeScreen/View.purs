@@ -82,8 +82,8 @@ import MerchantConfig.Types (RideStartAudio(..), StartAudioUrls(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback,editText,hint,pattern,onChange,inputTypeI)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback,editText,hint,pattern,onChange,inputTypeI)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -126,7 +126,7 @@ import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 
-screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
+screen :: HomeScreenState -> GlobalState -> LoggableScreen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
   { initialState
   , view
@@ -359,6 +359,8 @@ screen initialState (GlobalState globalState) =
       let _ = spy "HomeScreen state -----" state
       let _ = spy "HomeScreen--------action" action
       eval action state)
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.homeScreenLogWhitelist
   }
 
 getActiveRideDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit

@@ -21,7 +21,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core (getPushFn)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.DriverEarningsScreen.Controller (ScreenOutput(..))
 import Screens.DriverEarningsScreen.ScreenData (initData) as DriverEarningsScreenData
 import Screens.DriverEarningsScreen.View as DriverEarningsScreen
@@ -32,7 +32,7 @@ driverEarningsScreen :: FlowBT String DRIVER_EARNINGS_SCREEN_OUTPUT
 driverEarningsScreen = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "DriverEarningsScreen"
-  act <- lift $ lift $ runScreen $ DriverEarningsScreen.screen state.driverEarningsScreen
+  act <- lift $ lift $ runLoggableScreen $ DriverEarningsScreen.screen state.driverEarningsScreen
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     HomeScreen updatedState -> do

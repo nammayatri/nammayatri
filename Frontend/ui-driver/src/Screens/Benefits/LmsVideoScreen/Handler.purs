@@ -19,7 +19,7 @@ import Prelude
 import Types.App (FlowBT, LMS_VIDEO_SCREEN_OUTPUT(..), ScreenType(..), GlobalState(..))
 import Engineering.Helpers.BackTrack (getState)
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.Benefits.LmsVideoScreen.View as LmsVideoScreen
 import Types.ModifyScreenState (modifyScreenState)
 import Control.Transformers.Back.Trans as App
@@ -29,7 +29,7 @@ import Screens.Benefits.LmsVideoScreen.ScreenData as LmsVideoScreenData
 lmsVideoScreen :: FlowBT String LMS_VIDEO_SCREEN_OUTPUT
 lmsVideoScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ LmsVideoScreen.screen state.lmsVideoScreen
+  act <- lift $ lift $ runLoggableScreen $ LmsVideoScreen.screen state.lmsVideoScreen
   case act of
     GoBack updatedState -> do
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> updatedState)

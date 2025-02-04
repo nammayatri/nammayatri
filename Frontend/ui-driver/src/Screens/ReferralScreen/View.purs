@@ -33,7 +33,7 @@ import JBridge (openUrlInApp, toast)
 import Language.Strings 
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout, layoutGravity, textFromHtml, Orientation, Length)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout, layoutGravity, textFromHtml, Orientation, Length)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -65,7 +65,7 @@ import Timers (startTimer)
 import Mobility.Prelude(boolToVisibility)
 import Common.Types.App as CT
 
-screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
+screen :: ST.ReferralScreenState -> LoggableScreen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -115,6 +115,8 @@ screen initialState =
       let _ = spy "Referral state -----" state
       let _ = spy "Referral--------action" action
       eval action state)
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.referralScreenLogWhitelist
   }
 
 

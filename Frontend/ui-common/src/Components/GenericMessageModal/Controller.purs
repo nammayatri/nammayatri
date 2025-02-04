@@ -18,6 +18,9 @@ module Components.GenericMessageModal.Controller where
 import Prelude
 import Components.PrimaryButton.Controller as PrimaryButtonController
 
+instance showAction :: Show Action where
+  show (PrimaryButtonActionController _) = "PrimaryButtonActionController"
+
 data Action = PrimaryButtonActionController PrimaryButtonController.Action
 
 type Config = {

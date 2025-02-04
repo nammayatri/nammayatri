@@ -47,7 +47,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=), (||))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, VDom, Visibility(..), afterRender, alignParentBottom, background, backgroundColor, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, VDom, Visibility(..), afterRender, alignParentBottom, background, backgroundColor, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -64,7 +64,7 @@ import Types.App (defaultGlobalState)
 import Mobility.Prelude
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
-screen :: PaymentHistoryScreenState -> Screen Action PaymentHistoryScreenState ScreenOutput
+screen :: PaymentHistoryScreenState -> LoggableScreen Action PaymentHistoryScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -91,6 +91,8 @@ screen initialState =
           let _ = spy "PaymentHistoryScreen --------action" action
           eval state action
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.paymentHistoryScreenLogWhitelist
   }
 
 

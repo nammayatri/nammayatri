@@ -16,6 +16,11 @@
 module Components.ViewImageModel.Controller where
 
 import Data.Maybe (Maybe(..))
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
 
 data Action = BackPressed | NoAction
 

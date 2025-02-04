@@ -29,7 +29,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
-import PrestoDOM (Gravity(..), textSize, Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor, rotation)
+import PrestoDOM (Gravity(..), textSize, Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor, rotation)
 import Screens.CancellationRateScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -49,13 +49,15 @@ import Locale.Utils(getLanguageLocale)
 import Constants (languageKey)
 import Debug (spy)
 
-screen :: ST.CancellationRateScreenState -> Screen Action ST.CancellationRateScreenState ScreenOutput
+screen :: ST.CancellationRateScreenState -> LoggableScreen Action ST.CancellationRateScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "CancellationRateScreen"
   , globalEvents: []
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.appConfig.logWhitelistConfig.cancellationRateScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.CancellationRateScreenState -> PrestoDOM (Effect Unit) w

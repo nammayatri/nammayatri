@@ -15,6 +15,7 @@
 module Screens.AadhaarVerificationScreen.ScreenData where
 
 import Screens.Types (AadhaarStage(..), AadhaarVerificationScreenState)
+import ConfigProvider
 
 initData :: AadhaarVerificationScreenState
 initData =
@@ -25,6 +26,7 @@ initData =
       , driverName : ""
       , driverGender : ""
       , driverDob : ""
+      , config: getAppConfig appConfig
       }
   , props:
       { btnActive: false

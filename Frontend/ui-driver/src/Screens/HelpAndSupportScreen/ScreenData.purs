@@ -22,6 +22,7 @@ import Screens.Types as ST
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Screens as Screen
+import ConfigProvider
 
 
 initData :: ST.HelpAndSupportScreenState
@@ -34,7 +35,8 @@ initData = {
           issueListType : ST.HELP_AND_SUPPORT_SCREEN_MODAL,
           timerId : "",
           goBackTo : Screen.DRIVER_PROFILE_SCREEN,
-          cityConfig : defaultCityConfig
+          cityConfig : defaultCityConfig,
+          config : getAppConfig appConfig
           },
   props: {
           isNoRides : false,

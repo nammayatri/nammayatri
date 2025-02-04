@@ -2,7 +2,7 @@ module Screens.Benefits.BenefitsScreen.Controller where
 
 import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, openUrlInApp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, ($))
+import Prelude (class Show, bind, pure, ($), show, (<>))
 import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Screens (getScreen, ScreenName(..))
@@ -45,7 +45,35 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (GenericHeaderActionController var1) = "GenericHeaderActionController_" <> show var1
+  show (ShowQRCode) = "ShowQRCode"
+  show (ShareQRLink) = "ShareQRLink"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (LearnMore) = "LearnMore"
+  show (PrimaryButtonActionController _ var1) = "PrimaryButtonActionController_" <>  show var1
+  show (ReferredDriversAPIResponseAction _) = "ReferredDriversAPIResponseAction"
+  show (ChangeTab var1) = "ChangeTab_" <> show var1
+  show (ShowReferedInfo var1) = "ShowReferedInfo_" <> show var1
+  show (GoToLeaderBoard) = "GoToLeaderBoard"
+  show (UpdateDriverPerformance var1) = "UpdateDriverPerformance_" <> show var1
+  show (UpdateLeaderBoard var1) = "UpdateLeaderBoard_" <> show var1
+  show (RenderQRCode) = "RenderQRCode"
+  show (OpenModule var1) = "OpenModule_" <> show var1
+  show (UpdateModuleList var1) = "UpdateModuleList_" <> show var1
+  show (UpdateModuleListErrorOccurred) = "UpdateModuleListErrorOccurred"
+  show (GoToCustomerReferralTracker _) = "GoToCustomerReferralTracker"
+  show (SetBannerItem _) = "SetBannerItem"
+  show (BannerCarousal var1) = "BannerCarousal_" <> show var1
+  show (UpdateBanner) = "UpdateBanner"
+  show (BannerChanged _) = "BannerChanged"
+  show (BannerStateChanged _) = "BannerStateChanged"
+  show (NoAction) = "NoAction"
+  show (GullakSDKResponse _) = "GullakSDKResponse"
+  show (GullakBannerClick) = "GullakBannerClick"
+  show (UpdateReferralCode _) = "UpdateReferralCode"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "BenefitsScreen"

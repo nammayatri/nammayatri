@@ -6,7 +6,13 @@ import Data.Eq.Generic (genericEq)
 import Prelude
 import Data.Maybe as MB
 
-
+instance showAction :: Show Action where
+  show (MakePayment) = "MakePayment"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (NoAction) = "NoAction"
+  show (Cancel) = "Cancel"
+  show (Info) = "Info"
+  
 data Action = MakePayment 
               | PrimaryButtonActionController PrimaryButton.Action
               | NoAction

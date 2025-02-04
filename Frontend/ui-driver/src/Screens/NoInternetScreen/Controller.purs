@@ -15,7 +15,7 @@
 
 module Screens.NoInternetScreen.Controller where
 
-import Prelude(class Show, bind, pure, unit, (==))
+import Prelude(class Show, bind, pure, unit, (==), show, (<>))
 import Screens.Types (NoInternetScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
@@ -25,7 +25,13 @@ import Screens(ScreenName(..), getScreen)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 
 instance showAction :: Show Action where 
-    show _ = ""
+  show (PrimaryButtonActionController _ var1) = "PrimaryButtonActionController_" <> show var1
+  show (NoAction ) = "NoAction"
+  show (Reload ) = "Reload"
+  show (BackPressed ) = "BackPressed"
+  show (LocationPermissionCallBack _) = "LocationPermissionCallBack"
+  show (InternetActionCallBack _) = "InternetActionCallBack"
+  show (AfterRender ) = "AfterRender"
   
 instance loggableAction :: Loggable Action where 
     performLog action appId = case action of

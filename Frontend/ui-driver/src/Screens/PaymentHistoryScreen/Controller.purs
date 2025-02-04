@@ -35,7 +35,20 @@ import Services.API (AutoPayInvoiceHistory(..), FeeType(..), ManualInvoiceHistor
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (AfterRender ) = "AfterRender"
+  show (NoAction ) = "NoAction"
+  show (ItemClick ) = "ItemClick"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+  show (ChangeTab _) = "ChangeTab"
+  show (ViewRideDetails ) = "ViewRideDetails"
+  show (ListItemClick _) = "ListItemClick"
+  show (UpdatePaymentHistory _) = "UpdatePaymentHistory"
+  show (DueDetailsListAction var1) = "DueDetailsListAction_" <> show var1
+  show (Copy _) = "Copy"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (LoadMore ) = "LoadMore"
+  
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "PaymentHistoryScreen"

@@ -22,7 +22,7 @@ import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import Screens.Types as ST
 import Helpers.Utils as HU
-import Prelude (negate, ($),class Eq)
+import Prelude (negate, ($),class Eq, class Show)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
@@ -34,6 +34,26 @@ import Styles.Colors as Color
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Debug
+
+instance showAction :: Show Action where
+  show (StartRide) = "StartRide"
+  show (EndRide) = "EndRide"
+  show (CancelRide) = "CancelRide"
+  show (OnNavigate) = "OnNavigate"
+  show (CallCustomer) = "CallCustomer"
+  show (LocationTracking) = "LocationTracking"
+  show (MessageCustomer) = "MessageCustomer"
+  show (TimerCallback _ _ _) = "TimerCallback"
+  show (WaitingInfo) = "WaitingInfo"
+  show (LoadMessages) = "LoadMessages"
+  show (SecondaryTextClick _) = "SecondaryTextClick"
+  show (VisuallyImpairedCustomer) = "VisuallyImpairedCustomer"
+  show (NoAction) = "NoAction"
+  show (ArrivedAtStop) = "ArrivedAtStop"
+  show (GetFare) = "GetFare"
+  show (MoreDetails) = "MoreDetails"
+  show (StopActionButton _) = "StopActionButton"
+  show (ShowEndRideWithStops) = "ShowEndRideWithStops"
 
 data Action = StartRide 
             | EndRide 

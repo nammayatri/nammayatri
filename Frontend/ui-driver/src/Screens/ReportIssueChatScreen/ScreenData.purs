@@ -21,6 +21,7 @@ import Data.Maybe (Maybe(..))
 import Screens.Types (ReportIssueChatScreenState)
 import Components.ChatView.Controller (config) as ChatView
 import Styles.Colors (black700, black800, blue600, blue800, blue900, green200, grey700, grey800, grey900, transparentGrey, white900) as Color
+import ConfigProvider
 
 initData :: ReportIssueChatScreenState
 initData = {
@@ -41,7 +42,8 @@ initData = {
         addAudioState: addAudioState',
         uploadedImagesIds: [],
         uploadedAudioId: Nothing,
-        options: []
+        options: [],
+        config : getAppConfig appConfig
     },
     props : {
       showSubmitComp: false,
