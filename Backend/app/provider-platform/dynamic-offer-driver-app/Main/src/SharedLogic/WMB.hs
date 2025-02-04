@@ -66,10 +66,7 @@ checkFleetDriverAssociation driverId fleetOwnerId = do
   mbFleetDriverAssociation <- QFDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId.getId True
   case mbFleetDriverAssociation of
     Nothing -> return False
-    Just fleetDriverAssociation -> do
-      if (isJust fleetDriverAssociation.onboardingVehicleCategory)
-        then return True
-        else return False
+    Just fleetDriverAssociation -> return (isJust fleetDriverAssociation.onboardingVehicleCategory)
 
 getSourceAndDestinationStopInfo :: Route -> Text -> Flow (StopInfo, StopInfo)
 getSourceAndDestinationStopInfo route routeCode = do
