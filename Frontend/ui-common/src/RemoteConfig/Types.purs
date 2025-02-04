@@ -131,6 +131,9 @@ derive instance genericRCCarousel :: Generic RCCarousel _
 instance decodeRCCarousel :: Decode RCCarousel where
   decode = defaultDecode
 
+instance encodeRCCarousel :: Encode RCCarousel where
+  encode = defaultEncode
+
 newtype Config
   = Config
   { randomOrder :: Boolean
@@ -140,6 +143,9 @@ derive instance genericConfig :: Generic Config _
 
 instance decodeConfig :: Decode Config where
   decode = defaultDecode
+
+instance encodeConfig :: Encode Config where
+  encode = defaultEncode
 
 
 newtype ForwardBatchConfigData = ForwardBatchConfigData
@@ -151,6 +157,9 @@ derive instance genericForwardBatchConfigData :: Generic ForwardBatchConfigData 
 
 instance decodeForwardBatchConfigData :: Decode ForwardBatchConfigData where
   decode = defaultDecode
+
+instance encodeForwardBatchConfigData :: Encode ForwardBatchConfigData where
+  encode = defaultEncode
 
 defaultForwardBatchConfigData :: ForwardBatchConfigData
 defaultForwardBatchConfigData = ForwardBatchConfigData
@@ -166,6 +175,9 @@ derive instance genericFeaturesConfigData :: Generic FeaturesConfigData _
 
 instance decodeFeaturesConfigData :: Decode FeaturesConfigData where
   decode = defaultDecode
+
+instance encodeFeaturesConfigData :: Encode FeaturesConfigData where
+  encode = defaultEncode
 
 defaultFeaturesConfigData :: FeaturesConfigData
 defaultFeaturesConfigData = FeaturesConfigData

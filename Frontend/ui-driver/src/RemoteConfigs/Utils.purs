@@ -302,7 +302,7 @@ fetchRideAssignedAudioConfig city =
 metroWarriorsConfig :: String -> String -> MetroWarriorConfigEntity
 metroWarriorsConfig city variant = do
   let remoteConfig = fetchRemoteConfigString "metro_warrior_config"
-      decodedConfig = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultMetroWarriorConfig
+      decodedConfig = decodeForeignAny (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultMetroWarriorConfig
   getVariantLevelConfig variant $ getCityBasedConfig decodedConfig $ toLower city
   where
     getVariantLevelConfig variant config = case getConfigForVariant variant config of
