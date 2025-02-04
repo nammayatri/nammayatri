@@ -34,6 +34,7 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.BatteryManager;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -167,6 +168,23 @@ public class LocationUpdateService extends Service {
 
     public static void deRegisterCallback(UpdateTimeCallback timeUpdateCallback) {
         LocationUpdateService.updateTimeCallbacks.add(timeUpdateCallback);
+    }
+
+    public class LocalBinder extends Binder
+    {
+        public LocationUpdateService getService()
+        {
+            return LocationUpdateService.this;
+        }
+    }
+
+    private final LocalBinder binder = new LocalBinder();
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent)
+    {
+        return binder;
     }
 
     @Override
@@ -457,12 +475,6 @@ public class LocationUpdateService extends Service {
         }
 
         stopSelf();
-    }
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
     }
 
 // MAIN FUNCTIONS

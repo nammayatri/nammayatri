@@ -128,7 +128,7 @@ import Screens.Types as ST
 import Screens.Types
 import Services.Backend as Remote
 import Services.Config (getBaseUrl, getSupportNumber)
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, setUserCity, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Types.App
 import Types.App (ScreenType(..), ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..), TICKET_INFO_SCREEN_OUTPUT(..), defaultGlobalState, TICKETING_SCREEN_SCREEN_OUTPUT(..), METRO_TICKET_SCREEN_OUTPUT(..), METRO_TICKET_DETAILS_SCREEN_OUTPUT(..), METRO_MY_TICKETS_SCREEN_OUTPUT(..), METRO_MY_TICKETS_SCREEN_OUTPUT(..), METRO_TICKET_STATUS_SCREEN_OUTPUT(..), SELECT_BUS_ROUTE_SCREEN_OUTPUT(..))
@@ -1639,7 +1639,7 @@ homeScreenFlow = do
             mapSpecialZoneGates desSpecialZone.gatesInfo
       let
         pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints !! 0)).place
-      setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
+      setUserCity CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
       let
         geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
 
@@ -2146,7 +2146,7 @@ homeScreenFlow = do
                       )
               Nothing -> pure unit
             void $ pure $ setCleverTapUserProp [ { key: "Customer Location", value: unsafeToForeign $ show cityName } ]
-            setValueToLocalStore CUSTOMER_LOCATION $ show cityName
+            setUserCity CUSTOMER_LOCATION $ show cityName
             modifyScreenState
               $ HomeScreenStateType
                   ( \homeScreen ->
@@ -2209,7 +2209,7 @@ homeScreenFlow = do
 
         srcServiceability = isWhitelisted || sourceServiceabilityResp.serviceable
       sourcePlaceName <- getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false
-      setValueToLocalStore CUSTOMER_LOCATION (show cityName)
+      setUserCity CUSTOMER_LOCATION (show cityName)
       void $ pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
       when (updatedState.props.currentStage == ConfirmingLocation) $ do
         checkForSpecialZoneAndHotSpots updatedState (ServiceabilityRes sourceServiceabilityResp) lat long
@@ -2279,7 +2279,7 @@ homeScreenFlow = do
             HomeScreenData.dummyLocation
           else
             fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
-      setValueToLocalStore CUSTOMER_LOCATION $ show cityName
+      setUserCity CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let
         cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
@@ -2376,7 +2376,7 @@ homeScreenFlow = do
             HomeScreenData.dummyLocation
           else
             fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
-      setValueToLocalStore CUSTOMER_LOCATION $ show cityName
+      setUserCity CUSTOMER_LOCATION $ show cityName
       checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let
         distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
@@ -2635,7 +2635,7 @@ homeScreenFlow = do
 
         pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { city = cityName, locateOnMapProps { sourceLocationName = Just srcSpecialLocation.locationName, sourceGeoJson = Just geoJson, sourceGates = Just pickUpPoints }, repeatRideServiceTierName = state.serviceTierNameV2 } })
-      setValueToLocalStore CUSTOMER_LOCATION $ show cityName
+      setUserCity CUSTOMER_LOCATION $ show cityName
       when (state.isSpecialZone)
         $ do
             modifyScreenState
@@ -2892,7 +2892,7 @@ findEstimates updatedState = do
   (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong) ORIGIN
   if (not sourceServiceabilityResp.serviceable) then do
     updateLocalStage SearchLocationModel
-    setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
+    setUserCity CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showIntercityUnserviceablePopUp = true, currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city } })
     homeScreenFlow
   else
@@ -6841,7 +6841,7 @@ enterRideSearchFLow = do
     { currLat, currLon, currAddressComponents, currPlace, currCity } = { currLat: fromMaybe 0.0 loc.lat, currLon: fromMaybe 0.0 loc.lon, currAddressComponents: loc.addressComponents, currPlace: loc.address, currCity: loc.city }
 
     { srcLat, srcLon, srcAddressComponents, srcAddress, srcCity, destLat, destLon, destAddressComponents, destAddress, destCity } = getSrcAndDestLoc slsState
-  setValueToLocalStore CUSTOMER_LOCATION $ show srcCity
+  setUserCity CUSTOMER_LOCATION $ show srcCity
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
