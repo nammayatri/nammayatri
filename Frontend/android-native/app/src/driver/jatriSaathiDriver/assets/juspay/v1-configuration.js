@@ -339,6 +339,24 @@ window.getMerchantConfig = function () {
   })
 }
 
+let defRateCardConfig = {
+    "showLearnMore" : false,
+    "learnMoreVideoLink" : ""
+  }
+
+let staticSubscriptionConfig = [
+  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]
+
+let defaultStartAudioConfig = {
+  "acCab" : {},
+  "nonAcCab" : {},
+  "auto" : {},
+  "bike" : {}
+}
+
 let getAllCityConfig = () => {
   let baseCityConfig = {
     "cityName" : "",
@@ -389,6 +407,10 @@ let getAllCityConfig = () => {
       "bike" : {
         "freeSeconds" : 180,
         "perMinCharges" : 1.0
+      },
+      "ambulance": {
+        "freeSeconds": 480,
+        "perMinCharges": 2.0
       }
     },
     "rateCardConfig" : defRateCardConfig,
@@ -405,6 +427,10 @@ let getAllCityConfig = () => {
       "bike" : {
         "freeSeconds" : 180,
         "perMinCharges" : 2.0
+      },
+      "ambulance": {
+        "freeSeconds": 480,
+        "perMinCharges": 2.0
       }
     }
   , "rideStartAudio" : defaultStartAudioConfig
@@ -468,6 +494,10 @@ let getAllCityConfig = () => {
         bike: {
           freeSeconds: 180,
           perMinCharges: 1.0
+        },
+        ambulance: {
+          freeSeconds: 480,
+          perMinCharges: 2.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -481,6 +511,10 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
+          perMinCharges: 2.0
+        },
+        ambulance: {
+          freeSeconds: 480,
           perMinCharges: 2.0
         }
       }
@@ -506,6 +540,10 @@ let getAllCityConfig = () => {
         bike: {
           freeSeconds: 180,
           perMinCharges: 1.0
+        },
+        ambulance: {
+          freeSeconds: 480,
+          perMinCharges: 2.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -520,6 +558,10 @@ let getAllCityConfig = () => {
         bike: {
           freeSeconds: 180,
           perMinCharges: 2.0
+        },
+        ambulance: {
+          freeSeconds: 480,
+          perMinCharges: 2.0
         }
       },
       variantSubscriptionConfig: {
@@ -527,6 +569,12 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
+      }
+      , rideStartAudio : {
+        acCab : {},
+        nonAcCab : {},
+        auto : {},
+        bike : {}
       }
     }),
     Object.assign({}, baseCityConfig, {
@@ -543,8 +591,7 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      },
-      enableYatriCoins : true
+      }
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
@@ -559,12 +606,6 @@ let getAllCityConfig = () => {
         enableCabsSubscriptionView: true,
         staticViewPlans: []
       },
-      rideStartAudio : {
-        acCab : {},
-        nonAcCab : {},
-        auto : {},
-        bike : {}
-      },
       enableYatriCoins : true
     }),
     Object.assign({}, baseCityConfig, {
@@ -578,21 +619,3 @@ let getAllCityConfig = () => {
   ];
   return cityConfigs;
 }
-
-let defaultStartAudioConfig = {
-  "acCab" : {},
-  "nonAcCab" : {},
-  "auto" : {},
-  "bike" : {}
-}
-
-let defRateCardConfig = {
-  "showLearnMore" : false,
-  "learnMoreVideoLink" : ""
-}
-
-let staticSubscriptionConfig = [
-{"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
-{"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
-{"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
-]

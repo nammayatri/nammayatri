@@ -319,6 +319,11 @@ defaultMetroWarriorConfig =
   , taxiPlus: Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
   , default: Nothing
   }
 

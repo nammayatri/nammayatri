@@ -22,6 +22,11 @@ type TipsConfigRC = {
   bike :: Array Int,
   suvPlus :: Array Int,
   default :: Array Int,
+  ambulanceTaxi :: Array Int,
+  ambulanceTaxiOxy :: Array Int,
+  ambulanceAc :: Array Int,
+  ambulanceAcOxy :: Array Int,
+  ambulanceVentilator :: Array Int,
   bookAny :: Array Int
 }
 
@@ -90,7 +95,7 @@ type Service = {
   secondaryPillColor :: String
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq

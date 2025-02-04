@@ -1809,4 +1809,6 @@ getTe =
     , your_duty_has_started_please_start_the_ride : "మీ డ్యూటీ ప్రారంభమైంది, దయచేసి ప్రయాణాన్ని ప్రారంభించండి"
     , ending_your_ride_will_stop_tracking: "మీ ప్రయాణాన్ని ముగించటం ట్రాకింగ్ నిలిపివేస్తుంది. అత్యవసర పరిస్థితుల్లో మాత్రమే ముగించండి"
     , yes_end_ride: "అవును, ప్రయాణాన్ని ముగించండి"
+    , canceling_this_booking_may_affect_the_emergency_medical : "ఈ బుకింగ్‌ను రద్దు చేస్తే, రోగికి అత్యవసర వైద్య సేవలు ప్రభావితం కావచ్చు"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "డ్రైవర్లు తమ వైద్య కారణాలు లేదా వాహన విఫలమై ఉన్న కారణాల వల్ల మాత్రమే రద్దు చేయడానికి అనుమతించబడతారు"
     }

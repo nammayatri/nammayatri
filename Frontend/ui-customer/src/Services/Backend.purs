@@ -298,13 +298,14 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> SearchLocationReq
-makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> Maybe String -> SearchLocationReq
+makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken searchType = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
     "radius" : geoCodeConfig.radius,
     "components" : components,
     "language" : language,
+    "searchType" : searchType,
     "strictbounds": if geoCodeConfig.strictBounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
@@ -400,7 +401,7 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "sessionToken" : Just sessionToken
                 , "isSpecialLocation" : Just isSpecialLocation
                 , "quotesUnifiedFlow" : Just true
-                , "rideRequestAndRideOtpUnifiedFlow" : Just true 
+                , "rideRequestAndRideOtpUnifiedFlow" : if searchActionType == ST.AMBULANCE then Just false else Just true 
                 }
             )
     in case searchActionType of
@@ -410,7 +411,7 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
             }
         _ -> SearchReq 
             { "contents" : OneWaySearchRequest searchRequest
-            , "fareProductType" : "ONE_WAY"
+            , "fareProductType" : show searchActionType
             }
             
     where 
@@ -1555,8 +1556,7 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                     "fareProductType" : "RENTAL"
                    }
 
-------------------------------------------------------------------------- Edit Location API -----------------------------------------------------------------------------
-
+------------------------------------------------------------------------ Edit Location API -----------------------------------------------------------------------------
 makeEditLocationRequest :: String -> Maybe SearchReqLocation -> Maybe SearchReqLocation -> EditLocationRequest
 makeEditLocationRequest rideId srcAddress destAddress =
     EditLocationRequest rideId $ makeEditLocationReq srcAddress destAddress

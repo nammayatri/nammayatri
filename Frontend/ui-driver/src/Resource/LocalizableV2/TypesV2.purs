@@ -1824,6 +1824,9 @@ newtype Keymap
   , your_duty_has_started_please_start_the_ride :: String
   , ending_your_ride_will_stop_tracking :: String
   , yes_end_ride :: String
+  , canceling_this_booking_may_affect_the_emergency_medical :: String
+  , drivers_are_permitted_to_cancel_ambulance_bookings :: String
+
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7244,3 +7247,8 @@ ending_your_ride_will_stop_tracking = Proxy
 
 yes_end_ride :: Proxy "yes_end_ride"
 yes_end_ride = Proxy
+drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
+drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
+
+canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
+canceling_this_booking_may_affect_the_emergency_medical = Proxy

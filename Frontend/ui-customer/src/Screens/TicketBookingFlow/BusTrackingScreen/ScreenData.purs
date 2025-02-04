@@ -142,6 +142,7 @@ mockDriverInfo =
   , senderDetails : Nothing
   , receiverDetails : Nothing
   , estimatedTimeToReachDestination : Nothing
+  , isAirConditioned : Nothing
   }
 
 mockRoute :: API.Route

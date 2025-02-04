@@ -2803,19 +2803,23 @@ let staticSubscriptionConfig = [
 ]
 
 let defWaitingChargesConfig = {
-    "cab" : {
-      "freeSeconds" : 300,
-      "perMinCharges" : 1.0
-    },
-    "auto" : {
-      "freeSeconds" : 180,
-      "perMinCharges" : 1.50
-    },
-    "bike" : {
-      "freeSeconds" : 300,
-      "perMinCharges" : 1.0
-    }
+  "cab" : {
+    "freeSeconds" : 300,
+    "perMinCharges" : 1.0
+  },
+  "auto" : {
+    "freeSeconds" : 180,
+    "perMinCharges" : 1.50
+  },
+  "bike" : {
+    "freeSeconds" : 300,
+    "perMinCharges" : 1.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
+    "perMinCharges" : 2.0
   }
+}
 
 
 let defRentalWaitingChargesConfig = {
@@ -2829,6 +2833,10 @@ let defRentalWaitingChargesConfig = {
   },
   "bike" : {
     "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
     "perMinCharges" : 2.0
   }
 }

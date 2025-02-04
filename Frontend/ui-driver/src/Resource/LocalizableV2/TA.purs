@@ -1809,4 +1809,6 @@ getTa =
     , your_duty_has_started_please_start_the_ride : "உங்கள் கடமை தொடங்கப்பட்டுள்ளது, தயவுசெய்து பயணம் தொடங்கவும்"
     , ending_your_ride_will_stop_tracking: "உங்கள் பயணத்தை முடித்தால் கண்காணிப்பு நிறுத்தப்படும். அவசர நிலை என்பதை மட்டும் முடிக்கவும்"
     , yes_end_ride: "ஆம், பயணத்தை முடிக்கவும்"
+    , canceling_this_booking_may_affect_the_emergency_medical : "இந்த முன்பதிவு ரத்து செய்யப்படுவது நோயாளிக்கு அவசர மருத்துவ சேவைகளை"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ஓட்டுனர்கள் தங்களின் மருத்துவ காரணங்கள் அல்லது வாகனம் முறிவுக்கான காரணங்களுக்கே ரத்து செய்ய அனுமதிக்கப்படுகிறார்கள்"
     }

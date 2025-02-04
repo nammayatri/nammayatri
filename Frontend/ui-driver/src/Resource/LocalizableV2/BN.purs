@@ -1809,4 +1809,6 @@ getBn =
     , your_duty_has_started_please_start_the_ride : "আপনার ডিউটি শুরু হয়েছে, অনুগ্রহ করে রাইড শুরু করুন"
     , ending_your_ride_will_stop_tracking: "আপনার যাত্রা শেষ করলে ট্র্যাকিং বন্ধ হয়ে যাবে। শুধুমাত্র জরুরি পরিস্থিতিতে শেষ করুন"
     , yes_end_ride: "হ্যাঁ, যাত্রা শেষ করুন"
+    , canceling_this_booking_may_affect_the_emergency_medical : "এই বুকিং বাতিল করলে রোগীর জরুরি চিকিৎসা সেবাগুলিতে প্রভাব পড়তে পারে"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ড্রাইভারদের শুধুমাত্র তাদের চিকিৎসা সংক্রান্ত কারণ বা যানবাহন সমস্যার জন্যই বাতিল করার অনুমতি রয়েছে"
     }
