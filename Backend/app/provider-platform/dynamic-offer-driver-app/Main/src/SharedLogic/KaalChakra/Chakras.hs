@@ -71,19 +71,20 @@ runKaalChakraAndResheduleJob merchantId merchantOperatingCityId chakra jobData =
   now <- getCurrentTime
   let req = mkRunKaalChakraJobReq chakra jobData now
   eventResult <- Event.kaalChakraEvent req
+  timeAfterRun <- getCurrentTime
   case eventResult.chakraBatchState of
     LYT.Continue shortDelayTime -> do
-      pure $ ReSchedule $ addUTCTime (fromIntegral shortDelayTime) now
+      pure $ ReSchedule $ addUTCTime (fromIntegral shortDelayTime) timeAfterRun
     LYT.Completed -> do
       void $ Event.clearEventData chakra Nothing --- passing Nothing will only clear the batch number key, which is required for the next job from 0 again
       whenJust eventResult.eventId $ \eventId -> do
         let updateUserTagJobData = LYT.mkUpdateTagDataFromKaalChakraJobData req eventId
-        createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra updateUserTagJobData (addUTCTime 60 now) -- starting updateTags job after 60 seconds of caching UserData
+        createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra updateUserTagJobData (addUTCTime 60 timeAfterRun) -- starting updateTags job after 60 seconds of caching UserData
       pure Complete
     LYT.Failed -> do
       -- clear all event data and create new job for the next cycle
       void $ Event.clearEventData chakra eventResult.eventId
-      let newScheduleTime = getNextChakraTime now chakra
+      let newScheduleTime = getNextChakraTime timeAfterRun chakra
       createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData newScheduleTime
       pure $ Terminate "Fetch user data job failed"
 
