@@ -3,6 +3,7 @@
 module Lib.Yudhishthira.TypesTH (generateGenericDefault, GenericDefaults (..)) where
 
 import Control.Monad
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as DT
 import qualified Data.Time
@@ -60,6 +61,7 @@ generateGenericDefault typeName = do
   let overrides = []
   res <- reify typeName
   result <- case res of
+    -- [(Ghci1.val,Bang NoSourceUnpackedness NoSourceStrictness,AppT (AppT (ConT Data.HashMap.Internal.HashMap) (ConT Data.Text.Internal.Text)) (ConT Data.Text.Internal.Text))]
     TyConI (DataD _ _ _ _ [RecC conName fields] _) -> generateGenericDefaultForRecords overrides typeName conName fields
     TyConI (NewtypeD _ _ _ _ (RecC conName fields) []) -> generateGenericDefaultForRecords overrides typeName conName fields
     TyConI (DataD _ _ _ _ enums _) -> generateGenericDefaultForEnums overrides typeName enums
@@ -83,43 +85,69 @@ generateGenericDefaultForRecords overrides typeName conName fields = do
             AppT (ConT maybeName) (AppT ListT (AppT (ConT typeOfConstructor) (ConT _rawFieldType))) | maybeName == ''Maybe && typeOfConstructor == ''Kernel.Types.Id.Id -> do
               fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
               let fieldDefaultValues = fst fieldGenericDefaults
-              pure $ (ListE [AppE (ConE 'Just) (fieldDefaultValues)], snd fieldGenericDefaults)
+              pure (ListE [AppE (ConE 'Just) (fieldDefaultValues)], snd fieldGenericDefaults)
             AppT (ConT maybeName) (AppT (ConT typeOfConstructor) (ConT _rawFieldType)) | maybeName == ''Maybe && typeOfConstructor == ''Kernel.Types.Id.Id -> do
               fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
               let fieldDefaultValues = fst fieldGenericDefaults
               let allValues = AppE (AppE (VarE 'map) (ConE 'Just)) fieldDefaultValues
-              pure $ (allValues, snd fieldGenericDefaults)
+              pure (allValues, snd fieldGenericDefaults)
             AppT (ConT maybeName) (AppT ListT (ConT rawFieldType)) | maybeName == ''Maybe -> do
               fieldGenericDefaults <- getFieldDefaultValues rawFieldType
               let fieldDefaultValues = fst fieldGenericDefaults
               let allValues = ListE [AppE (ConE 'Just) fieldDefaultValues]
-              pure $ (allValues, snd fieldGenericDefaults)
+              pure (allValues, snd fieldGenericDefaults)
             AppT (ConT maybeName) (ConT rawFieldType) | maybeName == ''Maybe -> do
               fieldGenericDefaults <- getFieldDefaultValues rawFieldType
               let fieldDefaultValues = fst fieldGenericDefaults
               let allValues = AppE (AppE (VarE 'map) (ConE 'Just)) fieldDefaultValues
-              pure $ (allValues, snd fieldGenericDefaults)
+              pure (allValues, snd fieldGenericDefaults)
             AppT (ConT typeOfConstructor) (ConT _rawFieldType) | typeOfConstructor == ''Kernel.Types.Id.ShortId -> do
               fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
               let fieldDefaultValues = fst fieldGenericDefaults
-              pure $ (fieldDefaultValues, snd fieldGenericDefaults)
+              pure (fieldDefaultValues, snd fieldGenericDefaults)
             AppT (ConT typeOfConstructor) (ConT _rawFieldType) | typeOfConstructor == ''Kernel.Types.Id.Id -> do
               fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
               let fieldDefaultValues = fst fieldGenericDefaults
-              pure $ (fieldDefaultValues, snd fieldGenericDefaults)
+              pure (fieldDefaultValues, snd fieldGenericDefaults)
             AppT ListT (ConT rawFieldType) -> do
               fieldGenericDefaults <- getFieldDefaultValues rawFieldType
               let fieldDefaultValues = fst fieldGenericDefaults
               let allValues = ListE [fieldDefaultValues]
-              pure $ (allValues, snd fieldGenericDefaults)
+              pure (allValues, snd fieldGenericDefaults)
             ConT rawFieldType -> do
               fieldGenericDefaults <- getFieldDefaultValues rawFieldType
               let fieldDefaultValues = fst fieldGenericDefaults
-              pure $ (fieldDefaultValues, snd fieldGenericDefaults)
+              pure (fieldDefaultValues, snd fieldGenericDefaults)
+            AppT (AppT (ConT hashMapName) (ConT type1)) (ConT type2) | hashMapName == ''HashMap.HashMap -> do
+              domain1Defaults <- getFieldDefaultValues type1
+              domain2Defaults <- getFieldDefaultValues type2
+              let keyExp = fst domain1Defaults
+              let valueExp = fst domain2Defaults
+              runIO $ print keyExp
+              let keyExpList = case keyExp of
+                    ListE elems -> elems
+                    AppE (VarE fn) arg -> do
+                      let evaluatedExp = AppE (VarE fn) arg
+                      [AppE (VarE 'head) evaluatedExp]
+                    single -> [single]
+              let valueExpList = case valueExp of
+                    ListE elems -> elems
+                    AppE (VarE fn) arg -> do
+                      let evaluatedExp = AppE (VarE fn) arg
+                      [AppE (VarE 'head) evaluatedExp]
+                    single -> [single]
+              let hashMapExp =
+                    ListE
+                      [ AppE
+                          (VarE 'HashMap.fromList)
+                          (ListE (zipWith (\k v -> TupE [Just k, Just v]) keyExpList valueExpList))
+                      ]
+              let combinedDec = snd domain1Defaults ++ snd domain2Defaults
+              pure (hashMapExp, combinedDec)
             a@(_) -> do
               runIO $ putStrLn $ "non supported type: " ++ show a
               fail "Not Supported currently, to add support for your case check this: https://hackage.haskell.org/package/template-haskell-2.22.0.0/docs/Language-Haskell-TH.html#g:22"
-        pure $ (BindS (VarP fieldNameVar) fieldValues, fieldGetAllInstance)
+        pure (BindS (VarP fieldNameVar) fieldValues, fieldGetAllInstance)
 
   let mkTypeValue acc fieldCombination = do
         case fst fieldCombination of
@@ -147,22 +175,22 @@ generateGenericDefaultForEnums overrides enumName (firstEnum : _rest) = do
   let typeProxy = mkName "_typeProxy"
   (body, innerDec) <-
     if not $ null overrides
-      then pure $ (foldl' (\accD (_, fvs) -> UInfixE accD (VarE '(<>)) (ListE $ map (\fv -> AppE (VarE 'read) (LitE (StringL fv))) fvs)) (ListE []) overrides, [])
+      then pure (foldl' (\accD (_, fvs) -> UInfixE accD (VarE '(<>)) (ListE $ map (\fv -> AppE (VarE 'read) (LitE (StringL fv))) fvs)) (ListE []) overrides, [])
       else do
         foldlF [firstEnum] (ListE [], []) $ \(acc, innerD) enum -> do
           fmap (\(fstV, sndV) -> (UInfixE acc (VarE '(<>)) fstV, innerD <> sndV)) $ do
             case enum of
               NormalC en [(_, ConT wrappedType)] -> do
                 (fieldValues, innerD') <- getFieldDefaultValues wrappedType
-                pure $ (AppE (AppE (VarE 'map) (ConE en)) fieldValues, innerD')
+                pure (AppE (AppE (VarE 'map) (ConE en)) fieldValues, innerD')
               NormalC en [(_, AppT (ConT typeWrapper) (ConT wrappedType))] | typeWrapper == ''Maybe -> do
                 fieldGenericDefaults <- getFieldDefaultValues wrappedType
                 let fieldValues = fst fieldGenericDefaults
-                pure $ ((AppE (AppE (VarE 'map) (UInfixE (ConE en) (VarE '(.)) (ConE 'Just))) fieldValues), snd fieldGenericDefaults)
+                pure ((AppE (AppE (VarE 'map) (UInfixE (ConE en) (VarE '(.)) (ConE 'Just))) fieldValues), snd fieldGenericDefaults)
               NormalC en [(_, AppT (ConT typeWrapper) (ConT _))] | typeWrapper == ''Kernel.Types.Id.Id -> do
                 fieldGenericDefaults <- getFieldDefaultValues typeWrapper
                 let fieldValues = fst fieldGenericDefaults
-                pure $ ((AppE (AppE (VarE 'map) (UInfixE (ConE en) (VarE '(.)) (ConE 'Kernel.Types.Id.Id))) fieldValues), snd fieldGenericDefaults)
+                pure ((AppE (AppE (VarE 'map) (UInfixE (ConE en) (VarE '(.)) (ConE 'Kernel.Types.Id.Id))) fieldValues), snd fieldGenericDefaults)
               NormalC en [(_, ConT enumInnerValType), (_, AppT (ConT typeWrapper) (ConT wrappedType))] | typeWrapper == ''Maybe -> do
                 enumInnerDefaultVals <- getFieldDefaultValues enumInnerValType
                 fieldGenericDefaults <- getFieldDefaultValues wrappedType
@@ -172,7 +200,7 @@ generateGenericDefaultForEnums overrides enumName (firstEnum : _rest) = do
                     allCombinations = DoE Nothing [BindS (VarP fstLis) (fst enumInnerDefaultVals), BindS (VarP sndLis) (fst fieldGenericDefaults), NoBindS (AppE (VarE 'return) almostBody)]
                     tupFst = mkName "x"
                     tupSnd = mkName "y"
-                pure $ ((AppE (AppE (VarE 'map) (LamE [TupP [VarP tupFst, VarP tupSnd]] (UInfixE (AppE (ConE en) (VarE tupFst)) (VarE '($)) (AppE (ConE 'Just) (VarE tupSnd))))) allCombinations), snd fieldGenericDefaults <> snd enumInnerDefaultVals)
+                pure ((AppE (AppE (VarE 'map) (LamE [TupP [VarP tupFst, VarP tupSnd]] (UInfixE (AppE (ConE en) (VarE tupFst)) (VarE '($)) (AppE (ConE 'Just) (VarE tupSnd))))) allCombinations), snd fieldGenericDefaults <> snd enumInnerDefaultVals)
               NormalC en _ -> pure $ (ListE [ConE en], [])
               _ -> fail $ "expected enum, but got -> " <> show enum
   let finalBody = UInfixE (AppE (VarE 'take) (LitE (IntegerL 10))) (VarE '($)) body

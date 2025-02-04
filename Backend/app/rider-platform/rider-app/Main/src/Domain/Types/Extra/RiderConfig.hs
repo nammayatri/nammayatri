@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Extra.RiderConfig where
 
@@ -8,13 +9,12 @@ import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
 import Data.Hashable
-import Data.Text (Text)
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import GHC.Generics (Generic)
+import Kernel.Prelude hiding (error)
 import Prelude
 
 data AppletKey = SosAppletID | RentalAppletID | UnattendedTicketAppletID | PostRideSafetyCheckAppletID deriving (Show, Read, Eq, Ord, Generic)
