@@ -1801,7 +1801,8 @@ newtype Keymap
   , driver_unsubscribed :: String
   , canceling_this_booking_may_affect_the_emergency_medical :: String
   , drivers_are_permitted_to_cancel_ambulance_bookings :: String
-
+  , payment_under_maintenance :: String
+  , payments_temporarily_unavailable :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7153,3 +7154,9 @@ drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
 
 canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
 canceling_this_booking_may_affect_the_emergency_medical = Proxy
+
+payment_under_maintenance :: Proxy "payment_under_maintenance"
+payment_under_maintenance = Proxy
+
+payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
+payments_temporarily_unavailable = Proxy

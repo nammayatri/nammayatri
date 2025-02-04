@@ -1786,4 +1786,6 @@ getKn =
     , driver_unsubscribed : "ಡ್ರೈವರ್ ಪ್ಲ್ಯಾಟ್‌ಫಾರಮ್‌ನಿಂದ ಅನಾಗರಿಕವಾಗಿದ್ದಾರೆ. ಮರುಬದಲಾಯಿಸಲು ಹಣ ಪಾವತಿಸಿ"
     , canceling_this_booking_may_affect_the_emergency_medical : " ಈ ಬುಕ್ಕಿಂಗ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ರೋಗಿಗೆ ತುರ್ತು ವೈದ್ಯಕೀಯ ಸೇವೆಗಳ ಮೇಲೆ ಪರಿಣಾಮ ಬೀರುವ ಸಾಧ್ಯತೆಯಿದೆ"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ಡ್ರೈವರರು ತಮ್ಮ ವೈದ್ಯಕೀಯ ಕಾರಣಗಳು ಅಥವಾ ವಾಹನದ ಬೃಹತ್‌ ಕಡಿವಾಣಗಳಿಂದ ಮಾತ್ರ ರದ್ದು ಮಾಡುವುದು ಅನುಮತಿಸಲಾಗಿದೆ"
+    , payment_under_maintenance : "ಪಾವತಿ ನಿರ್ವಹಣೆಯಲ್ಲಿದೆ"
+    , payments_temporarily_unavailable : "ಪಾವತಿಗಳು ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ ಮತ್ತು ಶೀಘ್ರದಲ್ಲೇ ಮರಳಲಿವೆ. ದಯವಿಟ್ಟು ನಂತರ ಪ್ರಯತ್ನಿಸಿ."
     }

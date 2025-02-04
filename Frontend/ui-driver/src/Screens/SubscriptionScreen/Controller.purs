@@ -114,6 +114,7 @@ data Action = BackPressed
             | TogglePlanAction PlanCard.Action
             | SelectPlansModalAction SelectPlansModal.Action
             | OnCityOrVehicleChange APITypes.UiPlansResp
+            | PaymentUnderMaintenanceModalAC PopUpModal.Action
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -458,6 +459,12 @@ eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButton.OnC
   case state.data.switchPlanModalState.selectedPlan of
     Mb.Nothing -> continue state
     Mb.Just plan -> exit $ SwitchPlanOnCityOrVehicleChange plan state
+
+eval (PaymentUnderMaintenanceModalAC popUpModalAC) state = do
+  let newState = state{data{subscriptionDown = Mb.Nothing}}
+  case popUpModalAC of
+      PopUpModal.OnButton2Click -> exit $ HomeScreen newState
+      _ -> continue state
 
 eval _ state = update state
 

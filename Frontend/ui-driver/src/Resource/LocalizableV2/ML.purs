@@ -1786,4 +1786,6 @@ getMl =
     , driver_unsubscribed : "ഡ്രൈവർ പ്ലാറ്റ്ഫോം നിലവിലില്ല. താഴെ കൊടുക്കേണ്ട തുക അടയ്ക്കാൻ വേണ്ടി പുനഃ സബ്സ്ക്രൈബ് ചെയ്യുക"
     , canceling_this_booking_may_affect_the_emergency_medical : "ഈ ബുക്കിംഗ്キャンസル ചെയ്യുന്നത് രോഗിക്ക് അടിയന്തര മെഡിക്കൽ സേവനങ്ങൾക്ക് പ്രഭാവം വരുത്താം"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ഡ്രൈവർമാർ അവരുടെ വൈദ്യശാസ്ത്ര കാരണം അല്ലെങ്കിൽ veículo തകരാറുകൾ മൂലം മാത്രമേ റദ്ദുചെയ്യേണ്ടു"
+    , payment_under_maintenance : "പേയ്മെന്റ് പരിപാലനത്തിലാണ്"
+    , payments_temporarily_unavailable : "പേയ്മെന്റുകൾ താൽക്കാലികമായി ലഭ്യമല്ല, ഉടൻ തിരിച്ചുവരും. ദയവായി പിന്നീടു ശ്രമിക്കുക."
     }
