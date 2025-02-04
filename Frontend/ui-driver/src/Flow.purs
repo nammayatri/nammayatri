@@ -3697,6 +3697,7 @@ subScriptionFlow = do
           , vehicleAndCityConfig = vehicleAndCityConfig
           , linkedVehicleVariant = linkedVehicle.variant
           , switchPlanModalState = SubscriptionScreenInitData.initData.data.switchPlanModalState
+          , subscriptionDown = getDriverInfoResp.subscriptionDown
           }
       , props
           { offerBannerProps = fromMaybe CommonRC.defaultOfferBannerConfig vehicleAndCityConfig.offerBannerConfig

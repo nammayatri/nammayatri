@@ -272,6 +272,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSubscriptionEnabledAtCategoryLevel : Nothing
     , isSpecialLocWarrior : Nothing
     , onboardingVehicleCategory : Nothing
+    , subscriptionDown : Nothing
 }
 
 organizationInfo :: OrganizationInfo
