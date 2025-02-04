@@ -1,0 +1,35 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  HighPrecMeters: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+
+module: Voip
+types:
+  VoipStatus:
+    enum: "UNKNOWN_ERROR, SDK_NOT_INIT, MULTIPLE_VOIP_CALL_ATTEMPTS, NETWORK_ERROR, MIC_PERMISSION_DENIED, NO_INTERNET, CALL_CANCELLED_DUE_TO_RING_TIMEOUT, CALL_DECLINED, CALL_OVER, CALL_DECLINED_DUE_TO_NOTIFICATIONS_DISABLED, CALLEE_MICROPHONE_PERMISSION_BLOCKED"
+
+  UserType:
+    enum: "DRIVER, RIDER"
+
+  VoipReq:
+    - callStatus: VoipStatus
+    - rideId: Id Ride
+    - errorCode: Maybe Int
+    - userType: UserType
+    - networkType: Text
+    - networkQuality: Text
+    - merchantId: Id Merchant
+    - merchantCity: Text
+
+apis:
+  - POST:
+      endpoint: /call/voip
+      auth: TokenAuth
+      request:
+        type: VoipReq
+      response:
+        type: APISuccess

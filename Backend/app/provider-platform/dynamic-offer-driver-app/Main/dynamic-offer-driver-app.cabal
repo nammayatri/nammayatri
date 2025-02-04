@@ -250,6 +250,7 @@ library
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
+      Domain.Action.UI.Voip
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
       Domain.Types.Beckn.Status
@@ -685,6 +686,7 @@ library
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
+      API.Action.UI.Voip
       API.Action.UI.WMB
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
@@ -718,6 +720,7 @@ library
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
+      API.Types.UI.Voip
       API.Types.UI.WMB
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
