@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Management where
 
 import qualified API.Types.ProviderPlatform.Management.Booking
+import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
@@ -26,6 +27,7 @@ import qualified Text.Show
 
 data ManagementUserActionType
   = BOOKING API.Types.ProviderPlatform.Management.Booking.BookingUserActionType
+  | COINS_CONFIG API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigUserActionType
   | DRIVER API.Types.ProviderPlatform.Management.Driver.DriverUserActionType
   | DRIVER_COINS API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsUserActionType
   | DRIVER_GO_HOME API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeUserActionType
@@ -45,6 +47,7 @@ data ManagementUserActionType
 instance Text.Show.Show ManagementUserActionType where
   show = \case
     BOOKING e -> "BOOKING/" <> show e
+    COINS_CONFIG e -> "COINS_CONFIG/" <> show e
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_COINS e -> "DRIVER_COINS/" <> show e
     DRIVER_GO_HOME e -> "DRIVER_GO_HOME/" <> show e
@@ -65,11 +68,20 @@ instance Text.Read.Read ManagementUserActionType where
       (d' > app_prec)
       ( \r ->
           [(BOOKING v1, r2) | r1 <- stripPrefix "BOOKING/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( COINS_CONFIG v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "COINS_CONFIG/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( DRIVER v1,
                    r2
                  )
                  | r1 <- stripPrefix "DRIVER/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( DRIVER_COINS v1,
                    r2

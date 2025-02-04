@@ -15,6 +15,7 @@
 
 module Storage.Queries.Coins.CoinsConfig where
 
+import API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig (UpdateReq (..))
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -35,6 +36,22 @@ fetchCoins eventFunction (Id merchantId) =
           Se.Is BeamDC.merchantId $ Se.Eq merchantId
         ]
     ]
+
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id CoinsConfig -> m (Maybe CoinsConfig)
+findById (Id coinsConfigId) =
+  findOneWithKV [Se.Is BeamDC.id $ Se.Eq coinsConfigId]
+
+createCoinEntries :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CoinsConfig -> m ()
+createCoinEntries = createWithKV
+
+updateCoinEntries :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => UpdateReq -> m ()
+updateCoinEntries UpdateReq {..} =
+  updateWithKV
+    [ Se.Set BeamDC.active active,
+      Se.Set BeamDC.expirationAt expirationAt,
+      Se.Set BeamDC.coins coins
+    ]
+    [Se.Is BeamDC.id $ Se.Eq $ getId entriesId]
 
 fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m [CoinsConfig]
 fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) vehicleCategory = do

@@ -5,6 +5,7 @@ module API.Client.ProviderPlatform.Management where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified API.Types.ProviderPlatform.Management.Booking
+import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
@@ -28,6 +29,7 @@ import qualified "lib-dashboard" Tools.Client
 
 data ManagementAPIs = ManagementAPIs
   { bookingDSL :: API.Types.ProviderPlatform.Management.Booking.BookingAPIs,
+    coinsConfigDSL :: API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigAPIs,
     driverDSL :: API.Types.ProviderPlatform.Management.Driver.DriverAPIs,
     driverCoinsDSL :: API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsAPIs,
     driverGoHomeDSL :: API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeAPIs,
@@ -46,6 +48,7 @@ data ManagementAPIs = ManagementAPIs
 mkManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> ManagementAPIs)
 mkManagementAPIs merchantId city token = do
   let bookingDSL = API.Types.ProviderPlatform.Management.Booking.mkBookingAPIs bookingClientDSL
+  let coinsConfigDSL = API.Types.ProviderPlatform.Management.CoinsConfig.mkCoinsConfigAPIs coinsConfigClientDSL
   let driverDSL = API.Types.ProviderPlatform.Management.Driver.mkDriverAPIs driverClientDSL
   let driverCoinsDSL = API.Types.ProviderPlatform.Management.DriverCoins.mkDriverCoinsAPIs driverCoinsClientDSL
   let driverGoHomeDSL = API.Types.ProviderPlatform.Management.DriverGoHome.mkDriverGoHomeAPIs driverGoHomeClientDSL
@@ -61,7 +64,7 @@ mkManagementAPIs merchantId city token = do
   let systemDSL = API.Types.ProviderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    bookingClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    bookingClientDSL :<|> coinsConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

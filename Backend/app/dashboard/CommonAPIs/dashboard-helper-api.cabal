@@ -52,12 +52,14 @@ library
       API.Types.ProviderPlatform.Fleet.Endpoints.Driver
       API.Types.ProviderPlatform.Management
       API.Types.ProviderPlatform.Management.Booking
+      API.Types.ProviderPlatform.Management.CoinsConfig
       API.Types.ProviderPlatform.Management.Driver
       API.Types.ProviderPlatform.Management.DriverCoins
       API.Types.ProviderPlatform.Management.DriverGoHome
       API.Types.ProviderPlatform.Management.DriverReferral
       API.Types.ProviderPlatform.Management.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.Booking
+      API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
       API.Types.ProviderPlatform.Management.Endpoints.Driver
       API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
