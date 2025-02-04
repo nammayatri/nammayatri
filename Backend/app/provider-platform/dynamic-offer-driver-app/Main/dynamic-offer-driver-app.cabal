@@ -144,6 +144,7 @@ library
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Booking
+      Domain.Action.Dashboard.Management.CoinsConfig
       Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
@@ -651,6 +652,7 @@ library
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.CoinsConfig
       API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.DriverCoins
       API.Action.Dashboard.Management.DriverGoHome
