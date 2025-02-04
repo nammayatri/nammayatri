@@ -452,8 +452,9 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
-        setCleverTapSignedCallCredentials();
-        cleverTapSignedCall = new CleverTapSignedCall(context, activity, true);
+        String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
+        String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
+        cleverTapSignedCall = new CleverTapSignedCall(context, activity, true, SC_API_KEY, SC_ACCOUNT_ID);
         CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
         SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
         SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
@@ -461,7 +462,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onNetworkQualityResponse(final int score) {
                 Log.d(LOG_TAG, "Signed Call Network quality score: " + score);
-                return score >= 70;
+                JSONObject voipCallConfig = null;
+                int scoreThreshold = 70;
+                try {
+                    voipCallConfig = new JSONObject(remoteConfigs.getString("voip_call_config"));
+                    scoreThreshold = voipCallConfig.optInt("score",70);
+                } catch (JSONException e) {
+                    Log.d("SC","Failed to fetch voip call config");
+                }
+                return score >= scoreThreshold;
             }
         });  
 
@@ -486,13 +495,6 @@ public class MainActivity extends AppCompatActivity {
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
         startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
-    }
-
-    private void setCleverTapSignedCallCredentials(){
-        String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
-        String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
-        sharedPref.edit().putString("CLEVERTAP_SC_API_KEY", SC_API_KEY).apply();
-        sharedPref.edit().putString("CLEVERTAP_SC_ACCOUNT_ID", SC_ACCOUNT_ID).apply();
     }
 
     private void initiateRSIntegration() {

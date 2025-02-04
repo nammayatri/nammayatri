@@ -176,13 +176,13 @@ public class CleverTapSignedCall {
         JSONObject voipCallConfig = null;
         int fallBackThreshold = 1;
         int callAttemptsThreshold = 3;
-       try {
-           voipCallConfig = new JSONObject(remoteConfig.getString("voip_call_config"));
-           fallBackThreshold = voipCallConfig.optInt("fallbackDialerThreshold",1);
-           callAttemptsThreshold = voipCallConfig.optInt("callAttemptsThreshold",3);
-       } catch (JSONException e) {
-           Log.d("SC","Failed to fetch voip call config");
-       }
+        try {
+            voipCallConfig = new JSONObject(remoteConfig.getString("voip_call_config"));
+            fallBackThreshold = voipCallConfig.optInt("fallbackDialerThreshold",1);
+            callAttemptsThreshold = voipCallConfig.optInt("callAttemptsThreshold",3);
+        } catch (JSONException e) {
+            Log.d("SC","Failed to fetch voip call config");
+        }
         if(useFallbackDialer > fallBackThreshold || callAttempts > callAttemptsThreshold ){
             showDialer(phone);
             return;
