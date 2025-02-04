@@ -669,8 +669,9 @@ view push state =
                       , gravity CENTER
                       , onClick push $ const NoAction
                       , background Color.black9000
-                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]]
-                    else [])
+                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
+                    else []
+              <> if state.props.bookAmbulanceModal then [PopUpModal.view (push <<< AgreePopUp) (PopUpConfigs.bookAmbulanceModalConfig state)] else [])
         ]
   ]
   where
@@ -682,6 +683,7 @@ view push state =
                         && state.props.showAcWorkingPopup
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
                         && (not $ state.data.driverInfoCardState.serviceTierName `Arr.elem` [Just "Auto", Just "Bike Taxi"])
+                        && (not $ state.data.driverInfoCardState.vehicleVariant `Arr.elem` ["AMBULANCE_TAXI" , "AMBULANCE_TAXI_OXY"])
                         && state.data.currentCityConfig.enableAcViews
                         && state.data.fareProductType /= FPT.DELIVERY
 

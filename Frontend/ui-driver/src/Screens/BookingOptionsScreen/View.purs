@@ -8,13 +8,13 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
+import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions ,isAmbulance)
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate, (/=)) 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
-import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback,textFromHtml, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
+import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.BookingOptionsScreen.ScreenData (defaultRidePreferenceOption)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -48,7 +48,7 @@ screen initialState =
   , view
   , name: "BookingDetailsScreen"
   , globalEvents: 
-        [( \push -> if not $ initialState.data.config.rateCardScreen.showRateCard then pure $ pure unit else do
+        [( \push -> if not $ initialState.data.config.rateCardScreen.showRateCard then pure $ pure unit else if HU.isAmbulance initialState.data.vehicleType then pure $ pure unit else do
             _ <-
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
@@ -112,7 +112,7 @@ view push state =
 acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 acCheckForDriversView push state =
   let
-    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned
+    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned && not (isAmbulance state.data.vehicleType)
 
     (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
 
@@ -347,7 +347,7 @@ serviceTierItem state push service enabled opacity index =
            , clickable state.props.rateCardLoaded
            ][ textView
               [ height WRAP_CONTENT
-              , text service.name
+              , textFromHtml $ service.name
               , margin (MarginHorizontal 12 2)
               , color Color.black800
               , singleLine true
@@ -561,7 +561,9 @@ vehicleLogoAndType push state =
             , margin $ MarginLeft 7
             ]
             [ customTV (state.data.defaultRidePreference.name) FontSize.a_20 FontStyle.h3 Color.black800
-            , customTV ((show $ fromMaybe 4 state.data.defaultRidePreference.seatingCapacity) <> " "<> getString PEOPLE) FontSize.a_12 FontStyle.body3 Color.black650
+            , if RC.decodeVehicleType (getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory
+              then textView []
+              else customTV ((show $ fromMaybe 4 state.data.defaultRidePreference.seatingCapacity) <> " " <> getString PEOPLE) FontSize.a_12 FontStyle.body3 Color.black650
             ]
         ]
     ]

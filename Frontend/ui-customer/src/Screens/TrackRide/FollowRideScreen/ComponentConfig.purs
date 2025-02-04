@@ -111,6 +111,7 @@ getDriverDetails state =
     , providerType : Common.ONUS
     , showAcView : false
     , isOtpRideFlow : false
+    , isAirConditioned : ride.isAirConditioned
     }
 
 

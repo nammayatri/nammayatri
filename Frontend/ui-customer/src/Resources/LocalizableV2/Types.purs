@@ -1757,6 +1757,14 @@ newtype Keymap = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes :: String -> String
 , note_your_ticket_is_only_valid_for :: String -> String
 , here_is_bus_ticket :: String
+, a_c :: String
+, no_oxygen :: String
+, oxygen :: String
+, ventilator :: String
+, ambulance_ :: String
+, uncomfortable_ambulance :: String
+, clean_ambulance :: String
+, ambulance_booking_disclaimer :: String
 }
 
 
@@ -6906,3 +6914,28 @@ note_your_ticket_is_only_valid_for = a
 
 here_is_bus_ticket :: Proxy "here_is_bus_ticket"
 here_is_bus_ticket = a
+
+a_c :: Proxy "a_c"
+a_c = a
+
+no_oxygen :: Proxy "no_oxygen"
+no_oxygen = a
+
+oxygen :: Proxy "oxygen"
+oxygen = a
+
+ventilator :: Proxy "ventilator"
+ventilator = a
+
+ambulance_ :: Proxy "ambulance_"
+ambulance_ = a
+
+uncomfortable_ambulance :: Proxy "uncomfortable_ambulance"
+uncomfortable_ambulance = a
+
+clean_ambulance :: Proxy "clean_ambulance"
+clean_ambulance = a
+
+ambulance_booking_disclaimer :: Proxy "ambulance_booking_disclaimer"
+ambulance_booking_disclaimer = a
+
