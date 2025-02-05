@@ -3,8 +3,18 @@
 module Domain.Action.Dashboard.MultiModal (postMultiModalMultimodalFrfsDataPreprocess, postMultiModalMultimodalFrfsDataStatus, postMultiModalMultimodalFrfsDataVersionIsReady, postMultiModalMultimodalFrfsDataVersionApply) where
 
 import qualified API.Types.RiderPlatform.Management.MultiModal
+-- import qualified Domain.Types.Stage as DTS
+-- import qualified Storage.Queries.Stage as QS
+
+-- import EulerHS.Prelude hiding (id, length, map)
+
+import qualified API.Types.RiderPlatform.Management.MultiModal as MTypes
+import qualified AWS.S3 as S3
 import qualified BecknV2.FRFS.Enums
+import qualified Data.ByteString as BS
 import qualified Data.HashMap.Lazy as HM
+import Data.List (nub)
+import qualified Data.Text as T
 import Domain.Types.Extra.Rollout
 import Domain.Types.GTFS
 import Domain.Types.Merchant
@@ -16,6 +26,8 @@ import Domain.Types.Station
 import qualified Domain.Types.Version
 import Domain.Types.VersionStageMapping
 import qualified Environment
+import qualified EulerHS.Language as L
+import EulerHS.Types (base64Encode)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -29,10 +41,30 @@ import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Version as QV
 import qualified Storage.Queries.VersionStageMapping as QVSM
+import System.Process
 import Tools.Error
 
 postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
-postMultiModalMultimodalFrfsDataPreprocess _merchantShortId _opCity _req = do error "Logic yet to be decided"
+postMultiModalMultimodalFrfsDataPreprocess _merchantShortId _opCity req = do
+  case req.inputDataType of
+    MTypes.GTFS_DATA -> case req.fileFormat of
+      MTypes.GTFS -> do
+        versionId <- generateGUID
+        let inputFile = req.file
+            outputFile = "cleaned-" <> req.file
+            command = "gtfstidy --remove-red-trips --remove-red-stops --drop-shapes -o " <> outputFile <> " " <> inputFile
+        filePath <- S3.createFilePath "/multimodal/" ("version-" <> versionId) S3.Zip "zip"
+        liftIO $ callCommand command
+        zipFile <- L.runIO $ base64Encode <$> BS.readFile outputFile
+        _ <- fork "S3 Put Multimodal GTFS data" $ S3.put (T.unpack filePath) zipFile
+        pure $
+          MTypes.PreprocessFRFSDataResp
+            { versionId = versionId,
+              versionTag = 1
+            }
+      MTypes.JSON -> error "Logic yet to be decided"
+      MTypes.CSV -> error "Logic yet to be decided"
+    MTypes.FARE_DATA -> error "Logic yet to be decided"
 
 -- Get All Stages for Data Type and City
 -- Iterate on each stage, till reching the end, and create next stage if current is completed
@@ -145,14 +177,14 @@ gtfsToDomainRoute merchantId merchantOperatingCityId versionTag Route {..} = do
     DR.Route
       { code = r_route_id,
         color = r_route_color,
-        endPoint = (LatLong 0 0), -- start and endpoint me kya daalna hai?
+        endPoint = LatLong 0 0, -- start and endpoint me kya daalna hai?
         id,
         longName = r_route_long_name,
         merchantId,
         merchantOperatingCityId,
         polyline = r_polyline,
         shortName = r_route_short_name,
-        startPoint = (LatLong 0 0),
+        startPoint = LatLong 0 0,
         timeBounds = Unbounded,
         vehicleType = BecknV2.FRFS.Enums.METRO,
         versionTag,

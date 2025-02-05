@@ -93,6 +93,7 @@ dependencies:
   - servant-openapi3
   - openapi3
   - persistent
+  - process
   - extra
   - text-conversions
   - dashboard-helper-api

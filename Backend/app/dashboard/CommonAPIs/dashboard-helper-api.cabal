@@ -45,6 +45,7 @@ library
       Dashboard.ProviderPlatform.Management.Ride
       Dashboard.RiderPlatform.Management.FRFSTicket
       Dashboard.RiderPlatform.Management.Merchant
+      Dashboard.RiderPlatform.Management.MultiModal
       Dashboard.RiderPlatform.Management.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Fleet

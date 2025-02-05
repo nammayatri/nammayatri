@@ -1,14 +1,16 @@
 imports:
   VehicleCategory: BecknV2.FRFS.Enums
-  FilePath: EulerHS.Prelude
+  FilePath: Kernel.Prelude
 
 module: MultiModal
 
 types:
   FileFormat:
     enum: "GTFS,JSON,CSV"
+    derive: "Read"
   RawDataType:
     enum: "GTFS_DATA,FARE_DATA"
+    derive: "Read"
   StageInfo:
     - stageName: Text
     - stageStatus: StageStatus
@@ -50,7 +52,7 @@ apis:
   - POST: # PreprocessFRFSDataAPI
       endpoint: multimodal/frfs/data/preprocess
       auth: ApiAuthV2
-      request:
+      multipart:
         type: PreprocessFRFSDataReq
       response:
           type: PreprocessFRFSDataResp
@@ -78,3 +80,6 @@ apis:
         type: ApplyVersionReq
       response:
         type: APISuccess
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

@@ -1046,6 +1046,7 @@ library
     , payment
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5
@@ -1180,6 +1181,7 @@ executable rider-app-exe
     , passetto-client
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5

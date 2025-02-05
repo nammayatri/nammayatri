@@ -28,7 +28,7 @@ import qualified Network.HTTP.Media as M
 import Network.HTTP.Types as HttpTypes
 import Servant
 
-data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
+data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink | Zip
   deriving stock (Eq, Show, Read, Ord, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
