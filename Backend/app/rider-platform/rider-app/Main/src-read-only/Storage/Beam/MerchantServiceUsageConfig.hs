@@ -40,6 +40,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getFirstPickupRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getMultiModalService :: B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService),
+    getMultimodalWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,
