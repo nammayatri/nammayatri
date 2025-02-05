@@ -61,7 +61,5 @@ postCallVoip (personId, _, _mid) req = do
             personId = personId,
             createdAt = now
           }
-  logDebug $ "voip-call-initially :" <> show voipCallData
   pushToKafka voipCallData "voip-call-data" voipCallData.rideId.getId
-  logDebug $ "voip-call-2 :" <> show voipCallData
   return Success
