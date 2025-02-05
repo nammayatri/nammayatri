@@ -18,7 +18,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -27,6 +29,7 @@ import android.provider.Settings;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -40,95 +43,152 @@ public class LocationUpdateWorker extends Worker {
     private final SharedPreferences sharedPrefs;
     private final String TAG = "LocationUpdateWorker";
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
+
+    private void sendMissingPermissionNotification() {
+        Context context = getApplicationContext();
+
+        String channelId = "location_permission_channel";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    "Permissions",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription("Notifies user that location permission is missing.");
+            NotificationManager nm = context.getSystemService(NotificationManager.class);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
+        }
+
+        // Intent to open App Settings
+        Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        settingsIntent.setData(Uri.parse("package:" + context.getPackageName()));
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                settingsIntent,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
+                .setContentTitle("Location Permission Needed")
+                .setSmallIcon(Utils.getResIdentifier(this.getApplicationContext(), (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                .setContentText("Tap here to enable location access in settings.")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent);
+
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.notify(1001, builder.build());
+        }
+    }
+
+
+    private boolean hasLocationPermission(Context context) {
+        int fineLocPermission = ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION);
+        int coarseLocPermission = ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION);
+        return (fineLocPermission == PackageManager.PERMISSION_GRANTED
+                || coarseLocPermission == PackageManager.PERMISSION_GRANTED);
+    }
+
     private String driverId = "empty";
     @NonNull
     @Override
     public Result doWork() {
-        try {
-            // Create the service connection.
-            Context context = getApplicationContext();
-            ServiceConnection connection = new ServiceConnection()
-            {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder service)
-                {
-                    LocationUpdateService.LocalBinder binder = (LocationUpdateService.LocalBinder) service;
+        if (hasLocationPermission(getApplicationContext())) {
+            Log.e(TAG, "Error in LocationUpdateWorker " + "SUCCESS");
+            try {
+                // Create the service connection.
+                Context context = getApplicationContext();
+                ServiceConnection connection = new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName name, IBinder service) {
+                        System.out.println("OnServiceConnected called");
+                        LocationUpdateService.LocalBinder binder = (LocationUpdateService.LocalBinder) service;
 
-                    LocationUpdateService myService = binder.getService();
+                        LocationUpdateService myService = binder.getService();
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(getServiceIntent(context));
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-                    }else {
-                        myService.startForeground(15082022, getNotification());
-                    }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(getServiceIntent(context));
+                        } else {
+                            context.startService(getServiceIntent(context));
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                        } else {
+                            myService.startForeground(15082022, getNotification());
+                        }
 
-                    context.unbindService(this);
-                    Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
-                    FirebaseCrashlytics.getInstance().recordException(exception);
-                }
-
-                @Override
-                public void onBindingDied(ComponentName name)
-                {
-                    Log.w(TAG, "Binding has dead.");
-                }
-
-                @Override
-                public void onNullBinding(ComponentName name)
-                {
-                    Log.w(TAG, "Bind was null.");
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName name)
-                {
-                    Log.w(TAG, "Service is disconnected..");
-                }
-            };
-            String driverStatus = sharedPrefs != null ? sharedPrefs.getString("DRIVER_STATUS_N", "__failed") : "__failed";
-            if (!driverStatus.isEmpty() && !driverStatus.equals("null") && !driverStatus.equals("__failed") && !driverStatus.equals("Offline")) {
-                try
-                {
-                    context.bindService(getServiceIntent(context), connection,
-                            Context.BIND_AUTO_CREATE);
-                }
-                catch (Exception e)
-                {
-                    Exception exception = new Exception("Exception in Binding Not working for ID : " + driverId + " $ Error : " + e);
-                    FirebaseCrashlytics.getInstance().recordException(exception);
-                    Intent locationService = new Intent(context, LocationUpdateService.class);
-                    locationService.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(locationService);
-                    } else {
-                        context.startService(locationService);
-                    }
-                }
-
-                Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-                restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-                if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
-                    try{
-                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                            context.startActivity(restartIntent);
-                            Utils.minimizeApp(context);
-                        }, 5000);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Unable to Start Widget Service");
-                        Exception exception = new Exception("Exception in LocationUpdateWorker$minimizeApp for ID : " + driverId + " $ Error : " + e);
+                        context.unbindService(this);
+                        Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
                         FirebaseCrashlytics.getInstance().recordException(exception);
                     }
+
+                    @Override
+                    public void onBindingDied(ComponentName name) {
+                        Log.w(TAG, "Binding has dead.");
+                    }
+
+                    @Override
+                    public void onNullBinding(ComponentName name) {
+                        Log.w(TAG, "Bind was null.");
+                    }
+
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {
+                        Log.w(TAG, "Service is disconnected..");
+                    }
+                };
+                String driverStatus = sharedPrefs != null ? sharedPrefs.getString("DRIVER_STATUS_N", "__failed") : "__failed";
+                if (!driverStatus.isEmpty() && !driverStatus.equals("null") && !driverStatus.equals("__failed") && !driverStatus.equals("Offline")) {
+                    try {
+                        context.bindService(getServiceIntent(context), connection,
+                                Context.BIND_AUTO_CREATE);
+                    } catch (Exception e) {
+                        Exception exception = new Exception("Exception in Binding Not working for ID : " + driverId + " $ Error : " + e);
+                        FirebaseCrashlytics.getInstance().recordException(exception);
+                        Intent locationService = new Intent(context, LocationUpdateService.class);
+                        locationService.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(locationService);
+                        } else {
+                            context.startService(locationService);
+                        }
+                    }
+
+                    Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+                    restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+                    if (Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")) {
+                        try {
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                context.startActivity(restartIntent);
+                                Utils.minimizeApp(context);
+                            }, 5000);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Unable to Start Widget Service");
+                            Exception exception = new Exception("Exception in LocationUpdateWorker$minimizeApp for ID : " + driverId + " $ Error : " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
+                        }
+                    }
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "Error in LocationUpdateWorker " + e);
+                if (sharedPrefs != null) driverId = sharedPrefs.getString("DRIVER_ID", "null");
+                Exception exception = new Exception("Exception in LocationUpdateWorker for ID : " + driverId + " $ Error : " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error in LocationUpdateWorker " + e);
-            if(sharedPrefs != null) driverId = sharedPrefs.getString("DRIVER_ID", "null");
-            Exception exception = new Exception("Exception in LocationUpdateWorker for ID : " + driverId + " $ Error : " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);
+        }else{
+            if (sharedPrefs != null) {
+                String appState = sharedPrefs.getString(this.getApplicationContext().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate");
+                Log.e(TAG, "Error in LocationUpdateWorker " + "No Location permission" + appState);
+                if (!appState.equals("onCreate") && !appState.equals("onResume")) sendMissingPermissionNotification();
+                Exception exception = new Exception("Exception in LocationUpdateWorker Permission Not for ID : " + driverId);
+                FirebaseCrashlytics.getInstance().recordException(exception);
+            }
         }
         return Result.success();
     }
