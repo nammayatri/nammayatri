@@ -581,12 +581,28 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLoc = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   startLocation <- return $ fromMaybe journeyLeg.startLocation startLoc
+  (newDistance, newDuration) <-
+    case newMode of
+      DTrip.Walk -> do
+        merchantId <- journeyLeg.merchantId & fromMaybeM (InvalidRequest $ "MerchantId not found for journeyLegId: " <> journeyLeg.id.getId)
+        merchantOperatingCityId <- journeyLeg.merchantOperatingCityId & fromMaybeM (InvalidRequest $ "MerchantOperatingCityId not found for journeyLegId: " <> journeyLeg.id.getId)
+        newDistanceAndDuration <-
+          Maps.getMultimodalWalkDistance merchantId merchantOperatingCityId $
+            Maps.GetDistanceReq
+              { origin = LatLong {lat = startLocation.latitude, lon = startLocation.longitude},
+                destination = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
+                travelMode = Just Maps.FOOT,
+                sourceDestinationMapping = Nothing,
+                distanceUnit = Meter
+              }
+        return (Just newDistanceAndDuration.distanceWithUnit, Just newDistanceAndDuration.duration)
+      _ -> return (journeyLeg.distance, journeyLeg.duration)
 
   return $
     DJourneyLeg.JourneyLeg
       { agency = Nothing,
-        distance = journeyLeg.distance,
-        duration = journeyLeg.duration,
+        distance = newDistance,
+        duration = newDuration,
         endLocation = journeyLeg.endLocation,
         fromArrivalTime = Nothing,
         fromDepartureTime = Nothing,

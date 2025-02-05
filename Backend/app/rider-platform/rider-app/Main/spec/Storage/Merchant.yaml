@@ -331,21 +331,25 @@ MerchantServiceUsageConfig:
     updatedAt: UTCTime
     createdAt: UTCTime
     getMultiModalService: MultiModalService
+    getMultimodalWalkDistance: MapsService
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
     getFrfsAutocompleteDistances: Maybe MapsService
     getMultiModalService: Maybe MultiModalService
+    getMultimodalWalkDistance: Maybe MapsService
 
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
+    getMultimodalWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
 
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
     getMultiModalService: Kernel.Prelude.Just|I
+    getMultimodalWalkDistance: Kernel.Prelude.Just|I
 
   beamInstance:
     - MakeTableInstances
@@ -407,6 +411,8 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: "'OSRM'"
     getFrfsAutocompleteDistances: "'OSRM'"
     getMultiModalService: "'OTPTransit'"
+    getMultimodalWalkDistance: "'OSRM'"
+
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

@@ -27,6 +27,7 @@ module Tools.Maps
     getDistanceForCancelRide,
     getDistanceForScheduledRides,
     getMerchantOperatingCityId,
+    getMultimodalWalkDistance,
   )
 where
 
@@ -98,6 +99,17 @@ getDistances ::
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
+
+getMultimodalWalkDistance ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  GetDistanceReq a b ->
+  m (GetDistanceResp a b)
+getMultimodalWalkDistance = runWithServiceConfig Maps.getDistance (.getMultimodalWalkDistance)
 
 getRoutes :: ServiceFlow m r => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getRoutes isAvoidToll personId merchantId mbMOCId req = do
