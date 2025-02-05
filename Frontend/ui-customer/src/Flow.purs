@@ -63,7 +63,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser, defaultMarkerImageConfig)
+import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser, defaultMarkerImageConfig,getKeyInSharedPrefKeys)
 import JBridge as JB
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, normalRoute, breakPrefixAndId, editPickupCircleConfig)
 import Language.Strings (getString)
@@ -193,7 +193,7 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue, initData) as SafetyScreenData
 import Services.Config (getNumbersToWhiteList)
 import SessionCache (getValueFromWindow, setValueInWindow)
-import LocalStorage.Cache (clearCache, setInCache)
+import LocalStorage.Cache (clearCache, setInCache,setValueToCache,getValueFromCache)
 import DecodeUtil (getAnyFromWindow)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
@@ -1062,7 +1062,7 @@ currentFlowStatus prioritizeRating = do
     let
       providerType = maybe CTA.ONUS (\valueAdd -> if valueAdd then CTA.ONUS else CTA.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
     removeChatService ""
-    if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) [ "__failed", "" ] then do
+    if any (_ == (getValueFromCache (show FINDING_QUOTES_START_TIME) getKeyInSharedPrefKeys)) [ "__failed", "" ] then do
       updateFlowStatus SEARCH_CANCELLED
     else do
       let
@@ -1458,14 +1458,14 @@ homeScreenFlow = do
       let
         currentTime = (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")
 
-        findingQuotesTime = convertUTCtoISC (getValueToLocalNativeStore FINDING_QUOTES_START_TIME) "HH:mm:ss"
+        findingQuotesTime = convertUTCtoISC (getValueFromCache (show FINDING_QUOTES_START_TIME) getKeyInSharedPrefKeys) "HH:mm:ss"
       if withinTimeRange findingQuotesTime currentTime "22:00:00" || withinTimeRange findingQuotesTime currentTime "05:00:00" then do
         void $ lift $ lift $ showToast (getString STR.PLEASE_FIND_REVISED_FARE_ESTIMATE)
         void $ pure $ firebaseLogEvent "ny_user_new_estimate_after_night_charges_applicable"
         updateLocalStage FindEstimateAndSearch
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindEstimateAndSearch, searchAfterEstimate = false } })
       else do
-        void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+        void $ pure $ setValueToCache (show FINDING_QUOTES_START_TIME) (getCurrentUTC "LazyCheck") identity
         response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
         case response of
           Right res -> do
@@ -1848,7 +1848,7 @@ homeScreenFlow = do
               let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
               if valid then do
                 void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) selectedEstimateOrQuote.id
-                void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+                void $ pure $ setValueToCache (show FINDING_QUOTES_START_TIME) (getCurrentUTC "LazyCheck") identity
                 setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
                 logStatus "finding_quotes" ("estimateId : " <> selectedEstimateOrQuote.id)
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
@@ -6932,7 +6932,7 @@ enterRentalRideSearchFlow bookingId = do
   (GlobalState globalState) <- getState
   setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
   updateLocalStage ConfirmingQuotes
-  setValueToLocalNativeStore CONFIRM_QUOTES_START_TIME $ getCurrentUTC ""
+  void $ pure $ setValueToCache (show CONFIRM_QUOTES_START_TIME) (getCurrentUTC "") identity
   void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = ConfirmingQuotes, rideRequestFlow = true, bookingId = bookingId, isPopUp = NoPopUp } })
   homeScreenFlow
@@ -7350,7 +7350,7 @@ fcmHandler notification state notificationBody= do
             Nothing -> homeScreenState { props { tipViewProps = HomeScreenData.initData.props.tipViewProps } }
         modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState {data {driverInfoCardState {driverArrived = false}}})
         void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
-        void $ pure $ setValueToLocalNativeStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+        void $ pure $ setValueToCache (show FINDING_QUOTES_START_TIME) (getCurrentUTC "LazyCheck") identity
         updateLocalStage ReAllocated
       homeScreenFlow
     _
