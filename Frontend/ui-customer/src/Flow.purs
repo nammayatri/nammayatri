@@ -6589,6 +6589,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
 firstRideCompletedEvent :: String -> FlowBT String Unit
 firstRideCompletedEvent str = do
   logField_ <- lift $ lift $ getLogFields
+  (GlobalState globalState) <- getState
   let
     appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
     eventPrefix = case appName of
@@ -6607,7 +6608,16 @@ firstRideCompletedEvent str = do
         let
           arraySize = Arr.length listResp.list
         if (arraySize == 1) then do
-          void $ liftFlowBT $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
+          liftFlowBT $ logEventWithMultipleParams logField_ (eventPrefix <> "user_first_ride_completed") $  [ {key: "Source", value: unsafeToForeign (take 99 (globalState.homeScreen.data.driverInfoCardState.source))},
+                                                                                                              {key: "Destination", value: unsafeToForeign (take 99 (globalState.homeScreen.data.driverInfoCardState.destination))},
+                                                                                                              {key: "Ride Amount", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.price},
+                                                                                                              {key: "Driver Name", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.driverName},
+                                                                                                              {key: "Driver Rating", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.rating},
+                                                                                                              {key: "Distance (m)", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.distance},
+                                                                                                              {key: "Destination Reached", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.destinationReached},
+                                                                                                              {key: "Service Tier Name", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.serviceTierName},
+                                                                                                              {key: "ETA", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.eta},
+                                                                                                              {key: "Vehicle Variant", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.vehicleVariant} ]
           setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
         else if arraySize > 1 then do
           setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
@@ -7067,11 +7077,16 @@ fcmHandler notification state notificationBody= do
         isPersonDeliveryInitiator = HU.isDeliveryInitiator state.data.requestorPartyRoles
 
       void $ pure $ metaLogEvent "ny_user_ride_completed"
-      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_completed_with_props" $ [{key : "Source", value : unsafeToForeign (take 99 (state.data.driverInfoCardState.source))},
-                                                                                              {key : "Destination", value : unsafeToForeign (take 99 (state.data.driverInfoCardState.destination))},
-                                                                                              {key : "Ride Amount", value : unsafeToForeign state.data.driverInfoCardState.price},
-                                                                                              {key: "Driver Name", value: unsafeToForeign state.data.driverInfoCardState.driverName},
-                                                                                              {key: "Driver Rating", value: unsafeToForeign state.data.driverInfoCardState.rating}]
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_completed_with_props" $ [ {key: "Source", value: unsafeToForeign (DS.take 99 (state.data.driverInfoCardState.source))},
+                                                                                                {key: "Destination", value: unsafeToForeign (DS.take 99 (state.data.driverInfoCardState.destination))},
+                                                                                                {key: "Ride Amount", value: unsafeToForeign state.data.driverInfoCardState.price},
+                                                                                                {key: "Driver Name", value: unsafeToForeign state.data.driverInfoCardState.driverName},
+                                                                                                {key: "Driver Rating", value: unsafeToForeign state.data.driverInfoCardState.rating},
+                                                                                                {key: "Distance (m)", value: unsafeToForeign state.data.driverInfoCardState.distance},
+                                                                                                {key: "Destination Reached", value: unsafeToForeign state.data.driverInfoCardState.destinationReached},
+                                                                                                {key: "Service Tier Name", value: unsafeToForeign state.data.driverInfoCardState.serviceTierName},
+                                                                                                {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
+                                                                                                {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} ]
       void $ updateLocalStage HomeScreen
       setValueToLocalStore IS_SOS_ACTIVE "false"
       deleteValueFromLocalStore SELECTED_VARIANT
