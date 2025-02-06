@@ -154,7 +154,6 @@ library
       Domain.Action.Dashboard.Management.Merchant
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.NammaTag
-      Domain.Action.Dashboard.Management.NammaTag.Handle
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
