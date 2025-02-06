@@ -50,7 +50,7 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
         bppSubscriberUrl = showBaseUrl bapConfig.subscriberUrl,
         providerDescription = Nothing,
         providerId = bapConfig.uniqueKeyId,
-        providerName = "Metro",
+        providerName = getProviderName providerConfig,
         quotes = maybeToList mbQuote,
         validTill = validTill,
         transactionId = searchReq.id.getId,
@@ -58,6 +58,10 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
         bppDelayedInterest = Nothing
       }
   where
+    getProviderName :: ProviderConfig -> Text
+    getProviderName (CMRL _) = "Chennai Metro Rail Limited"
+    getProviderName _ = "Metro"
+
     mkStations :: Station -> Station -> [DStation]
     mkStations fromStation toStation = do
       let startStation = DStation fromStation.code fromStation.name fromStation.lat fromStation.lon START Nothing Nothing

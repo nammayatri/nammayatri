@@ -538,7 +538,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
               { originStop = stationToStationAPI fromStation,
                 destinationStop = stationToStationAPI toStation,
                 tickets = Just qrDataList,
-                providerName = Nothing,
+                providerName = Just booking.providerName,
                 routeName = booking.lineColor
               }
         Spec.SUBWAY -> do
