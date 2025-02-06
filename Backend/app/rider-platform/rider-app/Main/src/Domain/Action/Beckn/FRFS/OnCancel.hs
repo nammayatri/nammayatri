@@ -96,16 +96,23 @@ onCancel _ booking' dOnCancel = do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
-  tickets <- QTicket.findAllByTicketBookingId booking.id
-  let serviceName = DEMSC.WalletService GW.GoogleWallet
-  let mId = booking.merchantId
-  let mocId' = booking.merchantOperatingCityId
-  serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-  forM_ tickets $ \ticket -> do
-    let googleStatus = GWLink.mapToGoogleTicketStatus ticket.status
-    let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
-    let obj = TC.TransitObjectPatch {TC.state = show googleStatus}
-    void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+  whenJust booking.partnerOrgId $ \_ -> do
+    fork ("updating status of tickets in google wallet for bookingId: " <> booking.id.getId) $ do
+      tickets <- QTicket.findAllByTicketBookingId booking.id
+      let serviceName = DEMSC.WalletService GW.GoogleWallet
+      let mId = booking.merchantId
+      let mocId' = booking.merchantOperatingCityId
+      serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+      forM_ tickets $ \ticket -> do
+        let googleStatus = GWLink.mapToGoogleTicketStatus ticket.status
+        let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
+        let obj = TC.TransitObjectPatch {TC.state = show googleStatus}
+        resp <- GWSA.getObjectGoogleWallet serviceAccount resourceId
+        case resp of
+          Nothing -> return ()
+          Just _ -> do
+            void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+            return ()
   return ()
   where
     checkRefundAndCancellationCharges bookingId = do
