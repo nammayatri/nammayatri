@@ -201,10 +201,9 @@ postMultimodalSwitch (_, _) journeyId req = do
               JM.cancelLeg legData (SCR.CancellationReasonCode "") False
               newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
               QJourneyLeg.create newJourneyLeg
-              resp <- addAllLegs journeyId
+              addAllLegs journeyId
               when (legData.status /= JL.InPlan) $
-                startJourney Nothing journeyId
-              return resp
+                fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
             else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
         else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
     else throwError $ JourneyLegCannotBeCancelled journeyLeg.id.getId

@@ -24,6 +24,7 @@ import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
@@ -96,21 +97,23 @@ instance JT.JourneyLeg TaxiLegRequest m where
     let shouldSkipBooking = req.skipBooking || (floor (diffUTCTime req.startTime now) :: Integer) >= 300 || req.forcedBooked -- 5 minutes buffer
     unless shouldSkipBooking $ do
       mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
-      estimate <- mbEstimate & fromMaybeM (InvalidRequest "You can't confrim taxi before getting the fare")
-      when (estimate.status == DEstimate.NEW) $ do
-        let selectReq =
-              DSelect.DSelectReq
-                { customerExtraFee = Nothing,
-                  customerExtraFeeWithCurrency = Nothing,
-                  autoAssignEnabled = True,
-                  autoAssignEnabledV2 = Just True,
-                  paymentMethodId = Nothing,
-                  otherSelectedEstimates = Nothing,
-                  isAdvancedBookingEnabled = Nothing,
-                  deliveryDetails = Nothing,
-                  disabilityDisable = Nothing
-                }
-        void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
+      case mbEstimate of
+        Just estimate -> do
+          when (estimate.status == DEstimate.NEW) $ do
+            let selectReq =
+                  DSelect.DSelectReq
+                    { customerExtraFee = Nothing,
+                      customerExtraFeeWithCurrency = Nothing,
+                      autoAssignEnabled = True,
+                      autoAssignEnabledV2 = Just True,
+                      paymentMethodId = Nothing,
+                      otherSelectedEstimates = Nothing,
+                      isAdvancedBookingEnabled = Nothing,
+                      deliveryDetails = Nothing,
+                      disabilityDisable = Nothing
+                    }
+            void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
+        Nothing -> CFFM.setConfirmOnceGetFare req.searchId
   confirm _ = throwError (InternalError "Not Supported")
 
   update (TaxiLegRequestUpdate _taxiLegUpdateRequest) = return ()

@@ -149,7 +149,7 @@ onSearch onSearchReq validatedReq = do
   let search = validatedReq.search
       mbRequiredQuote = filterQuotes quotes
   whenJust mbRequiredQuote $ \requiredQuote -> do
-    SLCF.createFares search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
+    void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
   return ()
   where

@@ -34,6 +34,7 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
@@ -267,9 +268,6 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       updateRiderPreferredOption quotes
 
       let mbRequiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
-      whenJust mbRequiredEstimate $ \requiredEstimate ->
-        SLCF.createFares searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
-
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
@@ -277,7 +275,25 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         QEstimate.createMany estimates
         QQuote.createMany quotes
         QPFS.clearCache searchRequest.riderId
+
+      whenJust mbRequiredEstimate $ \requiredEstimate -> do
+        shouldAutoSelect <- SLCF.createFares requestId.getId searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
+        when shouldAutoSelect $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
   where
+    autoSelectEstimate personId estimateId = do
+      let selectReq =
+            DSelect.DSelectReq
+              { customerExtraFee = Nothing,
+                customerExtraFeeWithCurrency = Nothing,
+                autoAssignEnabled = True,
+                autoAssignEnabledV2 = Just True,
+                paymentMethodId = Nothing,
+                otherSelectedEstimates = Nothing,
+                isAdvancedBookingEnabled = Nothing,
+                deliveryDetails = Nothing,
+                disabilityDisable = Nothing
+              }
+      void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
     {- Author: Hemant Mangla
       Rider quotes and estimates are filtered based on their preferences.
       Currently, riders preferring rentals receive only rental options.

@@ -120,6 +120,7 @@ confirm forcedBooked JL.LegInfo {..} =
           TaxiLegRequestConfirmData
             { skipBooking = skipBooking,
               forcedBooked,
+              searchId,
               estimateId = Id <$> pricingId,
               startTime,
               personId,
