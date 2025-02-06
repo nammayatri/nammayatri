@@ -166,6 +166,7 @@ data KeyStore = USER_NAME
                 | SHOW_PARCEL_INTRODUCTION_POPUP
                 | METRO_STATIONS_LIST
                 | DRIVER_RIDE_STATUS
+                | DRIVER_LOCATION_TS
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
