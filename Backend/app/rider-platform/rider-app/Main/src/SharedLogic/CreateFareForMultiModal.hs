@@ -16,12 +16,30 @@ module SharedLogic.CreateFareForMultiModal where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 
 fareProcessingLockKey :: Text -> Text
 fareProcessingLockKey journeyId = "Fare:Processing:JourneyId" <> journeyId
 
-createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Maybe JPT.JourneySearchData -> m () -> m ()
-createFares journeyLegInfo updateInSearchReqFunc = do
+createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Text -> Maybe JPT.JourneySearchData -> m () -> m Bool
+createFares searchId journeyLegInfo updateInSearchReqFunc = do
   whenJust journeyLegInfo $ \_ -> updateInSearchReqFunc
+  mbShouldConfirmFare <- getConfirmOnceGetFare searchId
+  when (mbShouldConfirmFare == Just True) $ resetConfirmOnceGetFare searchId
+  return (mbShouldConfirmFare == Just True)
+
+confirmOnceGetFare :: Text -> Text
+confirmOnceGetFare searchId = "COGF:SRID-" <> searchId
+
+setConfirmOnceGetFare :: CacheFlow m r => Text -> m ()
+setConfirmOnceGetFare searchId = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (confirmOnceGetFare searchId) True 600
+
+resetConfirmOnceGetFare :: CacheFlow m r => Text -> m ()
+resetConfirmOnceGetFare searchId = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (confirmOnceGetFare searchId) False 600
+
+getConfirmOnceGetFare :: CacheFlow m r => Text -> m (Maybe Bool)
+getConfirmOnceGetFare searchId = Hedis.withCrossAppRedis (Hedis.safeGet (confirmOnceGetFare searchId))

@@ -30,6 +30,7 @@ data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
     startTime :: UTCTime,
     personId :: Id DP.Person,
     merchantId :: Id DM.Merchant,
+    searchId :: Text,
     estimateId :: Maybe (Id DE.Estimate)
   }
 
