@@ -6,7 +6,7 @@ imports:
   PriceAPIEntity : Kernel.Types.Common
   FRFSStationAPI : API.Types.UI.FRFSTicketService
   MultimodalTravelMode : Domain.Types.Trip
-  Location : Domain.Types.Location
+  LocationAPIEntity : Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
   JourneyLeg: Domain.Types.JourneyLeg
   LatLong: Kernel.External.Maps.Types
@@ -46,11 +46,11 @@ types:
     duration : Seconds
     fare: GetFareResponse
     startLocation: ExtendLegStartPoint
-    endLocation: Maybe Location
+    endLocation: Maybe LocationAPIEntity
 
   ExtendLegGetFareReq:
     startLocation: ExtendLegStartPoint
-    endLocation: Maybe Location
+    endLocation: Maybe LocationAPIEntity
 
   ExtendLegGetFareResp:
     totalFare : Maybe GetFareResponse
