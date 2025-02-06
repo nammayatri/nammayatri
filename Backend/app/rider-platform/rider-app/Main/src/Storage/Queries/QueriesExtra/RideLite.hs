@@ -42,6 +42,7 @@ data RideLite = RideLite
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     status :: Domain.Types.Ride.RideStatus,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool
   }
@@ -65,6 +66,7 @@ instance FromTType' RideLiteTable RideLite where
             shortId = Kernel.Types.Id.ShortId shortId,
             status = status,
             driverArrivalTime = driverArrivalTime,
+            destinationReachedAt = destinationReachedAt,
             driversPreviousRideDropLoc = Storage.Queries.Extra.Transformers.Ride.mkLatLong driversPreviousRideDropLat driversPreviousRideDropLon,
             showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc
           }

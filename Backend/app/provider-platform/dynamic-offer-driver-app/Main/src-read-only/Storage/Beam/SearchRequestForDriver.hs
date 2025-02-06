@@ -8,6 +8,7 @@ import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -69,6 +70,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType),
     pickupZone :: B.C f Kernel.Prelude.Bool,
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

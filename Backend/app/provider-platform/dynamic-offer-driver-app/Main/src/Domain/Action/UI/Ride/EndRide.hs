@@ -518,6 +518,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
       (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams
+      destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.destinationReachedAt))
   vehicleAge <-
     if DTC.isAmbulanceTrip booking.tripCategory
       then do
@@ -541,7 +542,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               rideTime = booking.startTime,
               returnTime = booking.returnTime,
               roundTrip = fromMaybe False booking.roundTrip,
-              waitingTime = if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
+              waitingTime = fmap (destinationWaitingTime +) $ if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
               stopWaitingTimes = stopsInfo <&> (\stopInfo -> max 0 (secondsToMinutes $ roundToIntegral (diffUTCTime (fromMaybe stopInfo.waitingTimeStart stopInfo.waitingTimeEnd) stopInfo.waitingTimeStart))),
               actualRideDuration = finalDuration,
               estimatedRideDuration = booking.estimatedDuration,
@@ -697,3 +698,9 @@ shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
       let shouldRecompute = distanceDiff > distanceThreshold.minThresholdDistance && distanceDiff.getMeters > (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100
       pure shouldRecompute
     Nothing -> pure False
+
+isUnloadingTimeRequired :: DVST.ServiceTierType -> Bool
+isUnloadingTimeRequired str =
+  str
+    `elem` [ DVST.DELIVERY_LIGHT_GOODS_VEHICLE
+           ]

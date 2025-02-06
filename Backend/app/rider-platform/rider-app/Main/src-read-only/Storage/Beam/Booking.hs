@@ -10,6 +10,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
+import qualified Domain.Types.ParcelDetails
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
@@ -28,6 +29,8 @@ data BookingT f = BookingT
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
     isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelDetails.ParcelType),
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

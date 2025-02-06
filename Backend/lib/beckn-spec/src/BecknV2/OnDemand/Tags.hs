@@ -451,6 +451,8 @@ data BecknTag
   | PARCEL_IMAGE_UPLOADED
   | CUSTOMER_DISABILITY_DISABLE
   | IS_VALID_RIDE
+  | PARCEL_TYPE
+  | PARCEL_QUANTITY
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -491,6 +493,8 @@ instance CompleteTag BecknTag where
     ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
     SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
     UPGRADE_TO_CAB -> (Just "Request upgraded to cab", Nothing)
+    PARCEL_TYPE -> (Just "Delivery Parcel Type", Nothing)
+    PARCEL_QUANTITY -> (Just "Delivery Parcel Quantity", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -530,6 +534,8 @@ instance CompleteTag BecknTag where
     SPECIAL_LOCATION_TAG -> GENERAL_INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
+    PARCEL_TYPE -> DELIVERY
+    PARCEL_QUANTITY -> DELIVERY
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

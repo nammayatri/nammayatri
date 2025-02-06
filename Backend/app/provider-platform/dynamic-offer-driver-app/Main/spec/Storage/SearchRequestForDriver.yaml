@@ -16,6 +16,7 @@ imports:
   LocalTime: Data.Time
   Months: Kernel.Types.Time
   Value: Data.Aeson
+  ParcelType: Domain.Types.DeliveryDetails
 
 
 SearchRequestForDriver:
@@ -95,6 +96,8 @@ SearchRequestForDriver:
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime
     isFavourite : Maybe Bool
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
 
   beamType:
     clientBundleVersion: Maybe Text
