@@ -865,6 +865,7 @@ public class LocationUpdateService extends Service {
                                 final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                 f.setTimeZone(TimeZone.getTimeZone("UTC"));
                                 String getCurrTime = f.format(new Date());
+                                updateStorage("DRIVER_LOCATION_TS",getCurrTime);
                                 updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude), "SUCCESS");
                             }
                         }
