@@ -84,6 +84,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
 type SelectFlow m r c =
@@ -167,6 +168,7 @@ newtype DSelectResultRes = DSelectResultRes
 data QuotesResultResponse = QuotesResultResponse
   { selectedQuotes :: Maybe SelectListRes,
     bookingId :: Maybe (Id Booking), -- DEPRECATED
+    batchConfig :: Maybe SharedRedisKeys.BatchConfig,
     bookingIdV2 :: Maybe (Id Booking)
   }
   deriving stock (Generic, Show)
@@ -306,6 +308,7 @@ selectList estimateId = do
 selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  batchConfig <- SharedRedisKeys.getBatchConfig estimate.requestId.getId
   res <- runMaybeT $ do
     when (UEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
     booking <- MaybeT . runInReplica $ QBooking.findByTransactionIdAndStatus estimate.requestId.getId [NEW, CONFIRMED, TRIP_ASSIGNED, AWAITING_REASSIGNMENT, CANCELLED]
@@ -318,7 +321,7 @@ selectResult estimateId = do
       selectedQuotes <- runInReplica $ QQuote.findAllQuotesBySRId estimate.requestId DDO.ACTIVE
       bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}
+      return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList, ..}
 
 makeDeliverySearchParties :: SelectFlow m r c => Id DSearchReq.SearchRequest -> Id DM.Merchant -> DTDD.DeliveryDetails -> m ()
 makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do

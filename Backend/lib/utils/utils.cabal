@@ -22,6 +22,7 @@ source-repository head
 library
   exposed-modules:
       Tools.DynamicLogic
+      Tools.SharedRedisKeys
       Utils.Common.Cac.ContextConstants
       Utils.Common.Cac.KeyNameConstants
       Utils.Common.Cac.PrefixConstants
