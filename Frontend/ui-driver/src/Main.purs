@@ -72,7 +72,8 @@ main event driverInfoRespFiber = do
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event driverInfoRespFiber
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+  -- required if we need to update Payment page assets in first run
+  -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   void $ markPerformance "MAIN_END"
   pure unit
 
@@ -142,7 +143,8 @@ onNewIntent event = do
         setValueToLocalStore REFERRER_URL event.data
         Flow.baseAppFlow true Nothing Nothing
       _ -> Flow.baseAppFlow false Nothing Nothing
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
+  -- required if we need to update Payment page assets in first run
+  -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit
