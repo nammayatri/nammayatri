@@ -594,6 +594,7 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
             igmSubCategory = igmSubCategory,
+            mandatoryUploads = mandatoryUploads,
             ..
           }
 
@@ -636,6 +637,7 @@ updateIssueOption merchantShortId city issueOptionId req issueHandle identifier 
             showOnlyWhenUserBlocked = fromMaybe False $ req.showOnlyWhenUserBlocked <|> Just showOnlyWhenUserBlocked,
             label = req.label <|> label,
             updatedAt = now,
+            mandatoryUploads = req.mandatoryUploads <|> mandatoryUploads,
             ..
           }
 
