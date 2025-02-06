@@ -116,25 +116,32 @@ public class LocationUpdateWorker extends Worker {
                 ServiceConnection connection = new ServiceConnection() {
                     @Override
                     public void onServiceConnected(ComponentName name, IBinder service) {
-                        System.out.println("OnServiceConnected called");
-                        LocationUpdateService.LocalBinder binder = (LocationUpdateService.LocalBinder) service;
+                        try {
+                            if (hasLocationPermission(getApplicationContext())) {
+                                System.out.println("OnServiceConnected called");
+                                LocationUpdateService.LocalBinder binder = (LocationUpdateService.LocalBinder) service;
 
-                        LocationUpdateService myService = binder.getService();
+                                LocationUpdateService myService = binder.getService();
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            context.startForegroundService(getServiceIntent(context));
-                        } else {
-                            context.startService(getServiceIntent(context));
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    context.startForegroundService(getServiceIntent(context));
+                                } else {
+                                    context.startService(getServiceIntent(context));
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                                } else {
+                                    myService.startForeground(15082022, getNotification());
+                                }
+
+                                context.unbindService(this);
+                                Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
+                            }
+                        }catch (Exception e){
+                            Exception exception = new Exception("Location Update Service onServiceConnected Exception " + driverId + "exception = " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
                         }
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            myService.startForeground(15082022, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-                        } else {
-                            myService.startForeground(15082022, getNotification());
-                        }
-
-                        context.unbindService(this);
-                        Exception exception = new Exception("Location Update Service onServiceConnected " + driverId);
-                        FirebaseCrashlytics.getInstance().recordException(exception);
                     }
 
                     @Override
