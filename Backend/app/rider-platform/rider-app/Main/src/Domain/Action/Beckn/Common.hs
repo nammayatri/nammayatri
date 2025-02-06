@@ -50,7 +50,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Types as PT
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -724,12 +724,14 @@ driverArrivedReqHandler ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    ServiceFlow m r
   ) =>
   ValidatedDriverArrivedReq ->
   m ()
 driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
   unless (isJust ride.driverArrivalTime) $ do
+    void $ notifyOnDriverArrived booking ride
     void $ QRide.updateDriverArrival ride.id arrivalTime
     QPFS.clearCache booking.riderId
 
@@ -1190,3 +1192,15 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just riderConfig.appUrl) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
+
+notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> m ()
+notifyOnDriverArrived booking ride = do
+  mbHasReachedNotified <- Redis.safeGet @() driverHasReached
+  when (isNothing mbHasReachedNotified) $ do
+    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+    Redis.setExp driverHasReached () 1500
+  where
+    driverHasReached = driverHasReachedCacheKey ride.id.getId
+
+driverHasReachedCacheKey :: Text -> Text
+driverHasReachedCacheKey rideId = "Ride:GetDriverLoc:DriverHasReached " <> rideId
