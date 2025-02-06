@@ -2620,6 +2620,7 @@ newtype TicketCategoriesResp = TicketCategoriesResp {
   name :: String,
   id :: String,
   availableSeats :: Maybe Int,
+  isClosed :: Maybe Boolean,
   allowedSeats :: Maybe Int,
   bookedSeats :: Int,
   peopleCategories :: Array PeopleCategoriesResp
