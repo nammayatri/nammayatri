@@ -34,6 +34,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Data.Text as Text
+import Domain.Action.Beckn.Common (driverHasReachedCacheKey)
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
@@ -193,7 +194,7 @@ getDriverLoc rideId = do
   where
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
-    driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
+    driverHasReached = driverHasReachedCacheKey rideId.getId
     driverReaching = "Ride:GetDriverLoc:DriverReaching " <> rideId.getId
 
 getDriverPhoto :: Text -> Flow Text
