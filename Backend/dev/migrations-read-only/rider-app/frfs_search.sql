@@ -62,3 +62,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN platform_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_search ADD COLUMN is_deleted boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN is_on_search_received boolean ;

@@ -87,7 +87,9 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    isFareChanged: Maybe Bool
     googleWalletJWTUrl: Maybe Text
+    derive: "Show"
 
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType
@@ -124,6 +126,7 @@ types:
     status: FRFSBookingPaymentStatusAPI
     paymentOrder: Maybe CreateOrderResp
     transactionId: Maybe Text
+    derive: "Show"
 
   FRFSBookingPaymentStatusAPI:
     enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
