@@ -6,7 +6,6 @@ module Domain.Action.Dashboard.NammaTag
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
     postNammaTagRunJob,
-    Handle.kaalChakraHandle,
     postNammaTagTimeBoundsCreate,
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
@@ -21,7 +20,6 @@ where
 
 import qualified Dashboard.Common as Common
 import Data.Singletons
-import qualified Domain.Action.Dashboard.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
@@ -91,9 +89,9 @@ postNammaTagRunJob merchantShortId opCity req = do
         unless (castChakra jobType == Just req.chakra) do
           throwError (InvalidRequest "Invalid job type")
         QDBJ.markAsComplete oldJobId
-
+  let kaalChakraHandle = Chakras.mkKaalChakraHandle mbMerchantId mbMerchantOpCityId
   case req.action of
-    LYT.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
+    LYT.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
     LYT.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
@@ -102,7 +100,7 @@ postNammaTagRunJob merchantShortId opCity req = do
         LYT.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
       let jobData = LYT.mkKaalChakraJobData req
-      Chakras.createFetchUserDataJob mbMerchantId mbMerchantOpCityId req.chakra jobData scheduledTime
+      kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ LYT.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = LYT.Completed}
