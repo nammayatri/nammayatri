@@ -198,10 +198,11 @@ hyperVergeResultWebhookHandler =
   withFlowHandlerAPI . HyperVergeWebhook.hyperVergeResultWebhookHandler
 
 hyperVergeVerificaitonWebhookHandler ::
+  BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-hyperVergeVerificaitonWebhookHandler =
-  withFlowHandlerAPI . HyperVergeWebhook.hyperVergeVerificaitonWebhookHandler
+hyperVergeVerificaitonWebhookHandler authData =
+  withFlowHandlerAPI . HyperVergeWebhook.hyperVergeVerificaitonWebhookHandler authData
 
 juspayPayoutWebhookHandler ::
   ShortId DM.Merchant ->

@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.Types (VerificationFlow)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -65,18 +66,13 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
       IVQuery.updateStatus "source_down_retried" verificationReq.requestId
       case verificationReq.docType of
         DTO.VehicleRegistrationCertificate -> callVerifyRC documentNum person verificationReq
-        DTO.DriverLicense -> do
-          whenJust verificationReq.driverDateOfBirth $ \dob -> do
-            verifyRes <-
-              Verification.verifyDLAsync person.merchantId person.merchantOperatingCityId $
-                Verification.VerifyDLAsyncReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId}
-            IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq verifyRes.requestId
+        DTO.DriverLicense -> callVerifyDL documentNum person verificationReq
         _ -> pure ()
     else do
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, EncFlow m r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
         Verification.verifyRC person.merchantId person.merchantOperatingCityId
@@ -86,20 +82,29 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
         Verification.AsyncResp res -> do
           case res.requestor of
             VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
-            VT.HyperVerge -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq
+            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId
             _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
           CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-        Verification.SyncResp res -> do
-          void $ VehicleRegistrationCert.onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.multipleRC verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying")
+        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.multipleRC verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing
+    callVerifyDL :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyDL documentNum person verificationReq = do
+      whenJust verificationReq.driverDateOfBirth $ \dob -> do
+        verifyRes <-
+          Verification.verifyDLAsync person.merchantId person.merchantOperatingCityId $
+            Verification.VerifyDLAsyncReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True}
+        case verifyRes.requestor of
+          VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq verifyRes.requestId
+          VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity verifyRes.requestId verificationReq verifyRes.transactionId
+          _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show verifyRes.requestor))
 
-mkHyperNewVergeVerificationEntity :: MonadFlow m => Text -> DIdfyVerification.IdfyVerification -> m DHVVerification.HyperVergeVerification
-mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} = do
+mkHyperNewVergeVerificationEntity :: MonadFlow m => Text -> DIdfyVerification.IdfyVerification -> Maybe Text -> m DHVVerification.HyperVergeVerification
+mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} transactionId = do
   now <- getCurrentTime
   newId <- generateGUID
   return $
     DHVVerification.HyperVergeVerification
       { id = newId,
-        retryCount = Just $ maybe 1 ((+) 1) retryCount,
+        retryCount = Just $ maybe 1 (1 +) retryCount,
         status = "source_down_retrying",
         hypervergeResponse = idfyResponse,
         requestId = reqId,
@@ -115,7 +120,7 @@ mkIdfyNewVerificationEntity verificationReq requestId = do
   return $
     verificationReq
       { id = newId,
-        retryCount = Just $ maybe 1 ((+) 1) verificationReq.retryCount,
+        retryCount = Just $ maybe 1 (1 +) verificationReq.retryCount,
         status = "source_down_retrying",
         requestId,
         createdAt = now,

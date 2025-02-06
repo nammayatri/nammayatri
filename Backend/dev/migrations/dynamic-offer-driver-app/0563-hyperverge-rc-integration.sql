@@ -2,8 +2,6 @@ CREATE INDEX idx_hv_verification_req_id ON atlas_driver_offer_bpp.hyperverge_ver
 
 CREATE INDEX idx_hv_verification_driver_id ON atlas_driver_offer_bpp.hyperverge_verification USING btree (driver_id);
 
-ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification RENAME COLUMN multiple_rc to multiple_r_c;
-
 INSERT INTO atlas_driver_offer_bpp.merchant_service_config
 (
   merchant_id,
@@ -15,5 +13,5 @@ SELECT
   merchant_id,
   id,
   'Verification_HyperVergeRCDL',
-  '{ "url":"https://dummyUrl","appId":"dummy","appKey":"0.1.0|8|xgWOO3UTpKVvav8nc93+KVrEneQHUXMlXy1vpcsaoC/RKjHC3YTGcePB00hiZSsgENimo1Gy938="}'  --This password is master passetto encrypted. Please re-encrypt before running in prod.
+  '{"username":"dummy","password":"0.1.0|8|xgWOO3UTpKVvav8nc93+KVrEneQHUXMlXy1vpcsaoC/RKjHC3YTGcePB00hiZSsgENimo1Gy938=","url":"http://dummy","appId":"dummy","appKey":"0.1.0|8|xgWOO3UTpKVvav8nc93+KVrEneQHUXMlXy1vpcsaoC/RKjHC3YTGcePB00hiZSsgENimo1Gy938="}'  --This password is master passetto encrypted. Please re-encrypt before running in prod.
 FROM atlas_driver_offer_bpp.merchant_operating_city;

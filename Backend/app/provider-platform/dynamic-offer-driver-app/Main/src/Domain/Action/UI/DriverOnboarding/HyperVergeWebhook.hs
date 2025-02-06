@@ -2,19 +2,22 @@ module Domain.Action.UI.DriverOnboarding.HyperVergeWebhook where
 
 import Data.Aeson
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
+import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DRC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.HyperVergeVerification as DHVVerification
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Environment
 import Kernel.External.Encryption
-import qualified Kernel.External.SharedLogic.HyperVerge.Error as HVErr
 import qualified Kernel.External.Verification as KEV
 import Kernel.Prelude
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
+import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.HyperVergeVerification as QHVVerification
@@ -72,12 +75,13 @@ hyperVergeResultWebhookHandler payload = do
 type HyperVergeVerificationWebhookAPI =
   "hyperverge"
     :> "verification"
+    :> BasicAuth "username-password" BasicAuthData
     :> ReqBody '[JSON] Value
     :> Post '[JSON] AckResponse
 
-data HyperVergeVerificationWebhookPayload = HypervVergeVerificationWebhookPayload
+data HyperVergeVerificationWebhookPayload = HyperVergeVerificationWebhookPayload
   { status :: Text,
-    statusCode :: Int,
+    statusCode :: Text,
     result :: Maybe VerificationResultInfo
   }
   deriving (Generic, ToJSON, FromJSON, Show, Eq, ToSchema)
@@ -89,38 +93,46 @@ data VerificationResultInfo = VerificationResultInfo
   }
   deriving (Generic, ToJSON, FromJSON, Show, Eq, ToSchema)
 
-hyperVergeVerificaitonWebhookHandler :: Value -> Flow AckResponse
-hyperVergeVerificaitonWebhookHandler payload = do
+hyperVergeVerificaitonWebhookHandler :: BasicAuthData -> Value -> Flow AckResponse
+hyperVergeVerificaitonWebhookHandler authData payload = do
   logDebug $ "Received RC DL verification HyperVerge Webhook!!!!! Payload : " <> show payload
+  hvServiceConfig <- CQMSC.findOne (DMSC.VerificationService KEV.HyperVergeRCDL) >>= fromMaybeM (MerchantServiceConfigNotFound "default" "Verification" $ show KEV.HyperVergeRCDL)
+  (username, password) <- case hvServiceConfig.serviceConfig of
+    DMSC.VerificationServiceConfig (KEV.HyperVergeVerificationConfigRCDL vsc) -> do
+      passwd <- decrypt vsc.password
+      return (vsc.username, passwd)
+    _ -> throwError $ InternalError "Unknown Service Config"
+  unless (basicAuthUsername authData == DT.encodeUtf8 username && basicAuthPassword authData == DT.encodeUtf8 password) $ throwError WebhookAuthFailed
   parsedPayload <- case (fromJSON payload :: Result HyperVergeVerificationWebhookPayload) of
     Error err -> throwError $ InvalidWebhookPayload "HyperVerge" (T.pack err)
     Success pyload -> return pyload
   reqId <- fromMaybeM (InvalidWebhookPayload "HyperVerge" ("cannot resolve requestId for hyperverge verification payload. Payload : " <> show parsedPayload)) $ join (parsedPayload.result <&> (.id))
-  verificationReq <- QHVVerification.findByRequestId reqId >>= fromMaybeM HyperVergeWebhookPayloadRecordNotFound
+  verificationReq <- QHVVerification.findByRequestId reqId >>= fromMaybeM (HyperVergeWebhookPayloadRecordNotFound reqId)
   mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
-  when (verificationReq.status /= "pending") $ throwError DupilicateWebhookRecieved
+  when (verificationReq.status /= "pending" && verificationReq.status /= "source_down_retrying") $ throwError DuplicateWebhookReceived
   QHVVerification.updateStatus parsedPayload.status reqId
   regNum <- decrypt verificationReq.documentNumber
   apiEndpoint <- fromMaybeM (InvalidWebhookPayload "HyperVerge" ("cannot resolve endpoint for hyperverge verification payload. Payload : " <> show parsedPayload)) $ join (parsedPayload.result <&> (.endpoint))
   person <- QPerson.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   case T.unpack apiEndpoint of
-    "fetchDetailedRC" -> do
-      rsp <- Verification.getTask person.merchantOperatingCityId KEV.HyperVergeRCDL $ KEV.GetTaskReq (Just "fetchDetailedRC") reqId
+    "RCVerification" -> do
+      rsp <- Verification.getTask person.merchantOperatingCityId KEV.HyperVergeRCDL (KEV.GetTaskReq (Just "RCVerification") reqId) QHVVerification.updateResponse
       case rsp of
-        KEV.HyperVergeStatus resp -> do
+        KEV.RCResp resp -> do
           logDebug $ "RC: getTask api response for request id : " <> reqId <> " is : " <> show resp
-          fromMaybeM (HVErr.HVError "status field empty in getTask response of HyperVerge") resp.status >>= \stat -> QHVVerification.updateResponse stat (Just $ show resp) reqId
-          ack_ <- DRC.onVerifyRC person (Just $ makeVerificationReqRecord verificationReq) (resp {Verification.registrationNumber = Just regNum}) mbRemPriorityList Nothing Nothing verificationReq.multipleRC verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status)
+          ack_ <- DRC.onVerifyRC person (Just $ SLogicOnboarding.makeHVVerificationReqRecord verificationReq) (resp {Verification.registrationNumber = Just regNum}) mbRemPriorityList Nothing Nothing verificationReq.multipleRC verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just KEV.HyperVergeRCDL)
           -- running statusHandler to enable Driver
-          void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing
+          void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing
           return ack_
-        _ -> throwError $ InternalError "Invalid Provider !!!!!!!!"
-    "checkDL" -> throwError $ InvalidWebhookPayload "HyperVerge" ("Payload contains invalid endpoint parameter value. Payload : " <> show parsedPayload)
+        _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
+    "checkDL" -> do
+      rsp <- Verification.getTask person.merchantOperatingCityId KEV.HyperVergeRCDL (KEV.GetTaskReq (Just "checkDL") reqId) QHVVerification.updateResponse
+      case rsp of
+        KEV.DLResp resp -> do
+          logDebug $ "DL: getTask api response for request id : " <> reqId <> " is : " <> show resp
+          ack_ <- DDL.onVerifyDL (SLogicOnboarding.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL
+          -- running statusHandler to enable Driver
+          void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing
+          return ack_
+        _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
     _ -> throwError $ InvalidWebhookPayload "HyperVerge" ("Payload contains invalid endpoint parameter value. Payload : " <> show parsedPayload)
-  where
-    makeVerificationReqRecord DHVVerification.HyperVergeVerification {..} =
-      DRC.VerificationReqRecord
-        { id = id.getId,
-          verificaitonResponse = hypervergeResponse,
-          ..
-        }

@@ -834,7 +834,7 @@ HyperVergeVerification:
     oxygen: Maybe Bool
     ventilator: Maybe Bool
     nameOnCard: Maybe Text
-  beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
+    transactionId: Maybe Text
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

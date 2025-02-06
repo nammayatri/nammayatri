@@ -18,6 +18,7 @@ ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN oxygen boo
 ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN request_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN retry_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN transaction_id text ;
 ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN vehicle_category text ;
 ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN ventilator boolean ;
 ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD COLUMN merchant_id character varying(36) ;

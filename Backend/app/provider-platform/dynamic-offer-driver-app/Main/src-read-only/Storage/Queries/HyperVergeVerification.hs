@@ -27,12 +27,12 @@ createMany = traverse_ create
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.HyperVergeVerification.HyperVergeVerification]))
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.HyperVergeVerification.HyperVergeVerification])
 findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findAllByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.HyperVergeVerification.HyperVergeVerification]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.HyperVergeVerification.HyperVergeVerification])
 findAllByDriverIdAndDocType driverId docType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.docType $ Se.Eq docType]]
 
 findById ::
@@ -45,7 +45,7 @@ findByRequestId requestId = do findOneWithKV [Se.Is Beam.requestId $ Se.Eq reque
 
 findLatestByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.HyperVergeVerification.HyperVergeVerification]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.HyperVergeVerification.HyperVergeVerification])
 findLatestByDriverIdAndDocType limit offset driverId docType = do
   findAllWithOptionsKV
     [ Se.And
@@ -83,8 +83,8 @@ updateByPrimaryKey (Domain.Types.HyperVergeVerification.HyperVergeVerification {
       Se.Set Beam.docType docType,
       Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
-      Se.Set Beam.documentNumberEncrypted (((documentNumber & unEncrypted . encrypted))),
-      Se.Set Beam.documentNumberHash ((documentNumber & hash)),
+      Se.Set Beam.documentNumberEncrypted (documentNumber & unEncrypted . encrypted),
+      Se.Set Beam.documentNumberHash (documentNumber & hash),
       Se.Set Beam.driverDateOfBirth driverDateOfBirth,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.hypervergeResponse hypervergeResponse,
@@ -96,6 +96,7 @@ updateByPrimaryKey (Domain.Types.HyperVergeVerification.HyperVergeVerification {
       Se.Set Beam.requestId requestId,
       Se.Set Beam.retryCount retryCount,
       Se.Set Beam.status status,
+      Se.Set Beam.transactionId transactionId,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -127,6 +128,7 @@ instance FromTType' Beam.HyperVergeVerification Domain.Types.HyperVergeVerificat
             requestId = requestId,
             retryCount = retryCount,
             status = status,
+            transactionId = transactionId,
             vehicleCategory = vehicleCategory,
             ventilator = ventilator,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -142,8 +144,8 @@ instance ToTType' Beam.HyperVergeVerification Domain.Types.HyperVergeVerificatio
         Beam.docType = docType,
         Beam.documentImageId1 = Kernel.Types.Id.getId documentImageId1,
         Beam.documentImageId2 = Kernel.Types.Id.getId <$> documentImageId2,
-        Beam.documentNumberEncrypted = ((documentNumber & unEncrypted . encrypted)),
-        Beam.documentNumberHash = (documentNumber & hash),
+        Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,
+        Beam.documentNumberHash = documentNumber & hash,
         Beam.driverDateOfBirth = driverDateOfBirth,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.hypervergeResponse = hypervergeResponse,
@@ -156,6 +158,7 @@ instance ToTType' Beam.HyperVergeVerification Domain.Types.HyperVergeVerificatio
         Beam.requestId = requestId,
         Beam.retryCount = retryCount,
         Beam.status = status,
+        Beam.transactionId = transactionId,
         Beam.vehicleCategory = vehicleCategory,
         Beam.ventilator = ventilator,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

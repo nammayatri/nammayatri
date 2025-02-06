@@ -42,7 +42,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
-import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -57,6 +56,7 @@ import qualified Domain.Types.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.External.Encryption
+import Kernel.External.Types (VerificationFlow)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
@@ -132,33 +132,6 @@ data RCStatusReq = RCStatusReq
     isActivate :: Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
-
-data VerificationReqRecord = VerificationReqRecord
-  { airConditioned :: Maybe Bool,
-    docType :: DomainDVC.DocumentType,
-    documentImageId1 :: Id Image.Image,
-    documentImageId2 :: Maybe (Id Image.Image),
-    documentNumber :: EncryptedHashedField 'AsEncrypted Text,
-    driverDateOfBirth :: Maybe UTCTime,
-    driverId :: Id Person.Person,
-    verificaitonResponse :: Maybe Text,
-    id :: Text,
-    imageExtractionValidation :: Domain.ImageExtractionValidation,
-    issueDateOnDoc :: Maybe UTCTime,
-    multipleRC :: Maybe Bool,
-    nameOnCard :: Maybe Text,
-    oxygen :: Maybe Bool,
-    requestId :: Text,
-    retryCount :: Maybe Int,
-    status :: Text,
-    vehicleCategory :: Maybe DVC.VehicleCategory,
-    ventilator :: Maybe Bool,
-    merchantId :: Maybe (Id DM.Merchant),
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic)
 
 validateDriverRCReq :: Validate DriverRCReq
 validateDriverRCReq DriverRCReq {..} =
@@ -256,7 +229,6 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           pucValidityUpto = Nothing,
           manufacturerModel = Just vehicleModel,
           mYManufacturing = Nothing,
-          colour = Just vehicleColour,
           color = Just vehicleColour,
           fuelType = Nothing,
           bodyType = Nothing,
@@ -275,11 +247,11 @@ verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipl
     Verification.AsyncResp res -> do
       case res.requestor of
         VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
-        VT.HyperVerge -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
+        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
         _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
       CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
     Verification.SyncResp res -> do
-      void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing
+      void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing Nothing
 
 mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
 mkIdfyVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
@@ -311,8 +283,8 @@ mkIdfyVerificationEntity person requestId now imageExtractionValidation multiple
         updatedAt = now
       }
 
-mkHyperVergeVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.HyperVergeVerification
-mkHyperVergeVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
+mkHyperVergeVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe Text -> m Domain.HyperVergeVerification
+mkHyperVergeVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus transactionId = do
   id <- generateGUID
   return $
     Domain.HyperVergeVerification
@@ -338,13 +310,20 @@ mkHyperVergeVerificationEntity person requestId now imageExtractionValidation mu
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        ..
       }
 
-onVerifyRC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, EncFlow m r) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m AckResponse
-onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
+onVerifyRC :: VerificationFlow m r => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> m AckResponse
+onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus mbServiceName = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates rcVerificationResponse.registrationDate req.issueDateOnDoc) mbVerificationReq
-    then IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq) >> return Ack
+    then do
+      case mbServiceName of
+        Just VT.Idfy -> IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq)
+        Just VT.HyperVergeRCDL -> HVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq)
+        Nothing -> logError "WARNING: Sync API call, this check is redundant still entered in this case!!!!!!"
+        _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyRC. Name of provider : " <> show mbServiceName)
+      return Ack
     else do
       let mbVehicleCategory = mbVerificationReq >>= (.vehicleCategory)
           mbAirConditioned = mbVerificationReq >>= (.airConditioned)
@@ -355,7 +334,7 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
       void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' multipleRC imageId mbRetryCnt mbReqStatus
       return Ack
 
-onVerifyRCHandler :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, EncFlow m r) => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
+onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
@@ -368,21 +347,24 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput
-  if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
+  if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
     then do
-      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or remPriorityList or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
+      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
-          verifyRes <- Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) $ Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId}
-          case verifyRes.verifyRCResp of
-            Verification.AsyncResp res -> do
-              case res.requestor of
-                VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus
-                VT.HyperVerge -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus
-                _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
-              CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-            Verification.SyncResp resp -> do
-              onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
+          resVerifyRes <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
+          case resVerifyRes of
+            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId
+            Right verifyRes -> do
+              case verifyRes.verifyRCResp of
+                Verification.AsyncResp res -> do
+                  case res.requestor of
+                    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus
+                    VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus res.transactionId
+                    _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
+                  CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
+                Verification.SyncResp resp -> do
+                  onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
     else initiateRCCreation mVehicleRC now mbFleetOwnerId
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> CreateRCInput
@@ -409,7 +391,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           fuelType = rcVerificationResponse.fuelType,
           dateOfRegistration,
           vehicleModelYear,
-          color = rcVerificationResponse.color <|> rcVerificationResponse.colour
+          color = rcVerificationResponse.color
         }
 
     readFromJson (String val) = Just val

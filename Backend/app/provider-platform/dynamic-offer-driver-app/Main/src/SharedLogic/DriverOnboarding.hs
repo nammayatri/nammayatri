@@ -28,6 +28,8 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.FleetRCAssociation as FRCA
+import qualified Domain.Types.HyperVergeVerification as DHV
+import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.MerchantMessage as DMM
@@ -43,6 +45,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Types (VerificationFlow)
 import Kernel.Prelude
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
@@ -324,7 +327,7 @@ data CreateRCInput = CreateRCInput
     vehicleModelYear :: Maybe Int
   }
 
-buildRC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, EncFlow m r) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> m (Maybe VehicleRegistrationCertificate)
+buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> m (Maybe VehicleRegistrationCertificate)
 buildRC merchantId merchantOperatingCityId input = do
   now <- getCurrentTime
   id <- generateGUID
@@ -492,3 +495,46 @@ convertTextToDay a = do
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (formatTime defaultTimeLocale "%d/%m/%Y" utctime)
+
+data VerificationReqRecord = VerificationReqRecord
+  { airConditioned :: Maybe Bool,
+    docType :: DVC.DocumentType,
+    documentImageId1 :: Id Domain.Image,
+    documentImageId2 :: Maybe (Id Domain.Image),
+    documentNumber :: EncryptedHashedField 'AsEncrypted Text,
+    driverDateOfBirth :: Maybe UTCTime,
+    driverId :: Id Person,
+    verificaitonResponse :: Maybe Text,
+    id :: Text,
+    imageExtractionValidation :: DIdfy.ImageExtractionValidation,
+    issueDateOnDoc :: Maybe UTCTime,
+    multipleRC :: Maybe Bool,
+    nameOnCard :: Maybe Text,
+    oxygen :: Maybe Bool,
+    requestId :: Text,
+    retryCount :: Maybe Int,
+    status :: Text,
+    vehicleCategory :: Maybe DVC.VehicleCategory,
+    ventilator :: Maybe Bool,
+    merchantId :: Maybe (Id DTM.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic)
+
+makeIdfyVerificationReqRecord :: DIdfy.IdfyVerification -> VerificationReqRecord
+makeIdfyVerificationReqRecord DIdfy.IdfyVerification {..} =
+  VerificationReqRecord
+    { id = id.getId,
+      verificaitonResponse = idfyResponse,
+      ..
+    }
+
+makeHVVerificationReqRecord :: DHV.HyperVergeVerification -> VerificationReqRecord
+makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
+  VerificationReqRecord
+    { id = id.getId,
+      verificaitonResponse = hypervergeResponse,
+      ..
+    }
