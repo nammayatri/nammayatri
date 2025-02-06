@@ -21,7 +21,7 @@ import qualified Lib.JourneyModule.Types
 import Servant
 import Tools.Auth
 
-data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
+data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -32,7 +32,7 @@ data ExtendLegGetFareResp = ExtendLegGetFareResp {distance :: Kernel.Types.Commo
 data ExtendLegReq = ExtendLegReq
   { distance :: Kernel.Types.Common.Distance,
     duration :: Kernel.Types.Common.Seconds,
-    endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity,
     fare :: Lib.JourneyModule.Types.GetFareResponse,
     startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint
   }

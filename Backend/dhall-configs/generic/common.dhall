@@ -88,7 +88,12 @@ let loggerConfigT =
 let smsConfigT =
       { sessionConfig :
           { attempts : Integer, authExpiry : Integer, tokenExpiry : Integer }
-      , credConfig : { username : Text, password : Text, otpHash : Text }
+      , credConfig :
+          { username : Text
+          , password : Text
+          , otpHash : Text
+          , token : Optional Text
+          }
       , useFakeSms : Optional Natural
       , url : Text
       , sender : Text

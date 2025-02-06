@@ -2,9 +2,9 @@ module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Applicative ((<|>))
 import Data.List (sortBy)
 import Data.Ord (comparing)
+import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -631,7 +631,7 @@ extendLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
   JL.ExtendLegStartPoint ->
-  Maybe DLocation.Location ->
+  Maybe DLocation.LocationAPIEntity ->
   Maybe Int ->
   JL.GetFareResponse ->
   Distance ->
@@ -640,7 +640,7 @@ extendLeg ::
 extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newDuration = do
   journey <- getJourney journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
-  endLocation <- (mbEndLocation <|> parentSearchReq.toLocation) & fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId)
+  endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId) parentSearchReq.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
   case startPoint of
     JL.StartLegOrder startLegOrder -> do
       allLegs <- getAllLegsInfo journeyId
@@ -668,7 +668,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           let editLocReq =
                 DRide.EditLocationReq
                   { origin = Nothing,
-                    destination = Just $ DRide.EditLocation {gps = LatLong {lat = endLocation.lat, lon = endLocation.lon}, address = endLocation.address}
+                    destination = Just $ DRide.EditLocation {gps = LatLong {lat = endLocation.lat, lon = endLocation.lon}, address = getAddress endLocation}
                   }
           void $ DRide.editLocation ride.id (currentLeg.personId, currentLeg.merchantId) editLocReq -- handle case if driver declines
           journeyLeg <- QJourneyLeg.findByLegSearchId (Just currentLeg.searchId) >>= fromMaybeM (InvalidRequest $ "JourneyLeg not found for searchId: " <> currentLeg.searchId)
@@ -685,6 +685,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         _ -> do
           throwError $ InvalidRequest ("Cannot extend leg for mode: " <> show currentLeg.travelMode)
   where
+    getAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}
     cancelRequiredLegs = do
       case mbEndLegOrder of
         Nothing -> cancelRemainingLegs journeyId
@@ -778,7 +779,7 @@ extendLegEstimatedFare ::
   ) =>
   Id DJourney.Journey ->
   JL.ExtendLegStartPoint ->
-  Maybe DLocation.Location ->
+  Maybe DLocation.LocationAPIEntity ->
   Maybe Int ->
   m APITypes.ExtendLegGetFareResp
 extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
@@ -796,17 +797,14 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
   if isLegsCancellable
     then do
       parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
-      endLocation <-
-        maybe
-          (fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId) parentSearchReq.toLocation)
-          return
-          mbEndLocation
+      endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId) parentSearchReq.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
+
       startLocation <- getStartLocation startPoint remainingLegs
       distResp <-
         Maps.getDistance currentLeg.merchantId currentLeg.merchantOperatingCityId $
           Maps.GetDistanceReq
             { origin = startLocation,
-              destination = endLocation,
+              destination = getEndLocation endLocation,
               travelMode = Just Maps.CAR,
               sourceDestinationMapping = Nothing,
               distanceUnit = Meter
@@ -822,6 +820,11 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           }
     else throwError (InvalidRequest "Legs are not cancellable")
   where
+    getEndLocation location =
+      LatLong
+        { lat = location.lat,
+          lon = location.lon
+        }
     getStartLocation (JL.StartLocation startloc) _ = pure $ LatLong {lat = startloc.lat, lon = startloc.lon}
     getStartLocation (JL.StartLegOrder startLegOrder) legs = do
       startLeg <- find (\leg -> leg.order == startLegOrder) legs & fromMaybeM (InvalidRequest ("Journey Leg not Present" <> show startLegOrder))

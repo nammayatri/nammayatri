@@ -725,6 +725,6 @@ cannotCancelStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled]
 cannotCancelWalkStatus :: [JourneyLegStatus]
 cannotCancelWalkStatus = [Skipped, Finishing, Completed, Cancelled]
 
-data ExtendLegStartPoint = StartLocation DLocation.Location | StartLegOrder Int
+data ExtendLegStartPoint = StartLocation DLocation.LocationAPIEntity | StartLegOrder Int
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

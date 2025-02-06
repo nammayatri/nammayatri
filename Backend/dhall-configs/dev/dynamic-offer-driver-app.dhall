@@ -86,6 +86,7 @@ let smsConfig =
         { username = common.smsUserName
         , password = common.smsPassword
         , otpHash = sec.smsOtpHash
+        , token = None Text
         }
       , useFakeSms = Some 7891
       , url = "http://localhost:4343"
