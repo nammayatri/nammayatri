@@ -38,6 +38,7 @@ import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.work.BackoffPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
@@ -72,6 +73,7 @@ import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -286,7 +288,11 @@ public class RideRequestUtils {
     }
     public static void restartLocationService(Context context) {
         try {
-            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).build();
+            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL, // Use exponential backoff strategy
+                    1, // Minimum delay before retrying (in minutes)
+                    TimeUnit.MINUTES // Time unit for delay
+            ).build();
             WorkManager.getInstance(context).enqueue(oneTimeWorkRequest);
             Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);

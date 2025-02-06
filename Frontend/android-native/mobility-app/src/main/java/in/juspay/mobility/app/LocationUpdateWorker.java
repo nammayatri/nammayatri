@@ -90,8 +90,18 @@ public class LocationUpdateWorker extends Worker {
     private boolean hasLocationPermission(Context context) {
         int fineLocPermission = ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION);
         int coarseLocPermission = ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION);
-        return (fineLocPermission == PackageManager.PERMISSION_GRANTED
-                || coarseLocPermission == PackageManager.PERMISSION_GRANTED);
+        boolean backGroundPermission = true;
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            String appState = sharedPrefs.getString(this.getApplicationContext().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate");
+            if (!appState.equals("onCreate") && !appState.equals("onResume") && !appState.equals("onPause")) {
+                backGroundPermission = ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
+            }
+        }
+        int foregroundPermission = 0;
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) foregroundPermission = ContextCompat.checkSelfPermission(context, android.Manifest.permission.FOREGROUND_SERVICE_LOCATION);
+        return ((fineLocPermission == PackageManager.PERMISSION_GRANTED
+                || coarseLocPermission == PackageManager.PERMISSION_GRANTED) && foregroundPermission == PackageManager.PERMISSION_GRANTED && backGroundPermission);
     }
 
     private String driverId = "empty";
@@ -189,6 +199,7 @@ public class LocationUpdateWorker extends Worker {
                 Exception exception = new Exception("Exception in LocationUpdateWorker Permission Not for ID : " + driverId);
                 FirebaseCrashlytics.getInstance().recordException(exception);
             }
+            return Result.retry();
         }
         return Result.success();
     }
