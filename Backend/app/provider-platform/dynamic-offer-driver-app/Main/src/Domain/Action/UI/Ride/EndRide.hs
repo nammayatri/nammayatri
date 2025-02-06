@@ -246,7 +246,30 @@ endRide ::
   Id DRide.Ride ->
   EndRideReq ->
   m EndRideResp
-endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
+endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
+  isLocked <- withLockRideId
+  if isLocked
+    then do
+      finally
+        (endRideHandler handle rideId req)
+        ( do
+            Redis.unlockRedis mkLockKey
+            logDebug $ "End ride for RideId: " <> rideId.getId <> " Unlocked"
+        )
+    else throwError (InternalError $ "End ride inprogress")
+  where
+    withLockRideId = do
+      isLocked <- Redis.tryLockRedis mkLockKey 60
+      return isLocked
+    mkLockKey = "EndTransaction:RID:-" <> rideId.getId
+
+endRideHandler ::
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  ServiceHandle m ->
+  Id DRide.Ride ->
+  EndRideReq ->
+  m EndRideResp
+endRideHandler handle@ServiceHandle {..} rideId req = do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
