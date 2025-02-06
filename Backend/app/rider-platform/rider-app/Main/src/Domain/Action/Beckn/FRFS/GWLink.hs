@@ -60,7 +60,7 @@ getserviceAccount merchantId merchantOpCityId serviceName = do
         TC.saIssuerId = issuerId
       }
 
-type WalletAPI =
+type PatchWalletAPI =
   "walletobjects"
     :> "v1"
     :> "transitObject"
@@ -71,6 +71,14 @@ type WalletAPI =
 
 instance ToJSON NoContent where
   toJSON _ = J.Null
+
+type GetWalletAPI =
+  "walletobjects"
+    :> "v1"
+    :> "transitObject"
+    :> Capture "resourceId" Text
+    :> Header "Authorization" Text
+    :> Get '[JSON] NoContent
 
 updateTicketStatusForGoogleWallet :: (Metrics.CoreMetrics m, MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String]) => TC.TransitObjectPatch -> TC.ServiceAccount -> Text -> m ()
 updateTicketStatusForGoogleWallet obj sa resourceId = do
@@ -99,9 +107,42 @@ updateTicketStatusForGoogleWallet obj sa resourceId = do
   token' <- liftIO $ TC.getJwtToken jwtHeader claims sa privateKey
   token <- fromEitherM (\err -> InternalError $ "Failed to get jwt token" <> show err) token'
   let tokenText = jwtTokenType token <> " " <> jwtAccessToken token
-  let eulerClient = Euler.client (Proxy @WalletAPI) resourceId (Just tokenText) obj
+  let eulerClient = Euler.client (Proxy @PatchWalletAPI) resourceId (Just tokenText) obj
   url <- parseBaseUrl "https://walletobjects.googleapis.com"
-  void $ callAPI url eulerClient "Calling Google Wallet API" (Proxy @WalletAPI) >>= fromEitherM (FailedToCallWalletAPI . show)
+  void $ callAPI url eulerClient "Calling Google Wallet API" (Proxy @PatchWalletAPI) >>= fromEitherM (FailedToCallWalletAPI . show)
+
+getObjectGoogleWallet :: (Metrics.CoreMetrics m, MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String]) => TC.ServiceAccount -> Text -> m (Maybe NoContent)
+getObjectGoogleWallet sa resourceId = do
+  privateKey <- asks (.googleSAPrivateKey)
+  let additionalClaims = TC.createAdditionalClaims [("scope", String "https://www.googleapis.com/auth/wallet_object.issuer")]
+  let jwtHeader =
+        JOSEHeader
+          { typ = Just "JWT",
+            cty = Nothing,
+            alg = Just RS256,
+            kid = Just $ saPrivateKeyId sa
+          }
+  let iss = stringOrURI . saClientEmail $ sa
+  let aud = Left <$> (stringOrURI . saTokenUri $ sa)
+  let now = liftIO $ getPOSIXTime
+  iat <- numericDate <$> now
+  exp <- numericDate . (+ 3600) <$> now
+  let claims =
+        mempty
+          { exp = exp,
+            iat = iat,
+            iss = iss,
+            aud = aud,
+            unregisteredClaims = additionalClaims
+          }
+  token' <- liftIO $ TC.getJwtToken jwtHeader claims sa privateKey
+  token <- fromEitherM (\err -> InternalError $ "Failed to get jwt token" <> show err) token'
+  let tokenText = jwtTokenType token <> " " <> jwtAccessToken token
+  let eulerClient = Euler.client (Proxy @GetWalletAPI) resourceId (Just tokenText)
+  url <- parseBaseUrl "https://walletobjects.googleapis.com"
+  callAPI url eulerClient "Calling Google Wallet API" (Proxy @GetWalletAPI) >>= \case
+    Left _ -> pure Nothing
+    Right _ -> pure $ Just NoContent
 
 mapToGoogleTicketStatus :: FRFS.FRFSTicketStatus -> GoogleWalletTicketState
 mapToGoogleTicketStatus status = newStatus
