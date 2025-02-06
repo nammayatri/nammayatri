@@ -38,3 +38,10 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN bus_station_ttl integer  default 18
 
 ALTER TABLE atlas_app.frfs_config ADD COLUMN straight_line_distance integer  default 5000;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN radius integer  default 3000;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN valid_till_seconds integer  default 300;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_name text ;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN provider_id text ;

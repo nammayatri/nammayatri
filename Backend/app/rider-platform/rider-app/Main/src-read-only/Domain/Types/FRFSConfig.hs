@@ -28,9 +28,12 @@ data FRFSConfig = FRFSConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metroStationTtl :: Kernel.Prelude.Int,
     oneWayTicketLimit :: Kernel.Prelude.Int,
+    providerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     radius :: Kernel.Types.Common.Meters,
     roundTripTicketLimit :: Kernel.Prelude.Int,
     straightLineDistance :: Kernel.Types.Common.Meters,
+    validTillSeconds :: Kernel.Types.Time.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
