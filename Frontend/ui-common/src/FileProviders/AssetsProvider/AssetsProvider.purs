@@ -46,20 +46,18 @@ foreign import isUseLocalAssets :: Fn1 Unit Boolean
 
 foreign import renewFile :: EffectFn3 String String (Boolean -> Effect Unit) Unit
 
+foreign import getMJOS :: String -> Foreign
+
 
 fetchAssets :: Effect Unit
 fetchAssets = do
   if runFn1 isUseLocalAssets unit then
     pure unit
   else do
-    config <- runEffectFn1 getFromTopWindow "configPackage"
-    (decodedConfig :: AssetConfig) <- case runExcept (decode config) of
-      Right dConfig -> pure dConfig
-      Left _ -> do
-        let configFile = loadFileInDUI $ "config" <> Constants.dotJSON
-        case runExcept (decode $ parseJSON $ configFile) of
-          Right dConfig -> pure dConfig
-          Left _ -> throw "prefetch_failed"
+    let configFile = getMJOS $ "config" <> Constants.dotJSON
+    decodedConfig <- case runExcept (decode $ configFile) of
+                          Right dConfig -> pure dConfig
+                          Left _ -> throw "prefetch_failed"
     files <- runEffectFn1 getDownloadList decodedConfig
     fold $ map (\item -> launchAff_ $ void $ download item.path item.location) files
 
@@ -107,7 +105,7 @@ getDownloadList =
               else do acc <> runFn3 getAssetFiles assets bundle root
           )
           []
-          apps
+          (apps)
 
 getAssetFiles ∷ Fn3 (Maybe.Maybe AssetsListBlock) (Maybe.Maybe String) String (Array RenewFile)
 getAssetFiles =
