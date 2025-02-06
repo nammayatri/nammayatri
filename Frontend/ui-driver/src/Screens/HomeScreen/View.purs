@@ -2341,21 +2341,26 @@ offlineNavigationLinks push state =
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-    , weight 1.0
-    , gravity CENTER_VERTICAL
-  ][
-    textView $
-      [  width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , ellipsize true
-        , singleLine true
-        , color Color.black800
-        , gravity CENTER_VERTICAL
-        , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
-      ] <> FontStyle.body4 TypoGraphy
-  ]
+  let locationTS = getValueToLocalStore DRIVER_LOCATION_TS
+      fallbackCode = if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER_VERTICAL
+    ][
+      textView $
+        [  width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , ellipsize true
+          , singleLine true
+          , color Color.black800
+          , gravity CENTER_VERTICAL
+          , text if (locationTS) == "__failed" 
+              then fallbackCode
+              else (convertUTCtoISC locationTS "hh:mm a")
+        ] <> FontStyle.body4 TypoGraphy
+    ]
 
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 updateButtonIconAndText push state =
