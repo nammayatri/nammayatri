@@ -116,6 +116,7 @@ library
     , text
     , time
     , unordered-containers
+    , uuid
     , warp
   default-language: Haskell2010
   if flag(Local)
@@ -199,6 +200,7 @@ executable kafka-consumers-exe
     , text
     , time
     , unordered-containers
+    , uuid
     , warp
   default-language: Haskell2010
   if flag(Local)
