@@ -17,7 +17,7 @@ module Screens.TicketBookingFlow.PlaceDetails.Transformer where
 
 import Prelude
 
-import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services, _id, _categoryId, _name, _availableSeats, _allowedSeats, _bookedSeats, _peopleCategories)
+import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services, _id, _categoryId, _name, _availableSeats, _allowedSeats, _bookedSeats, _peopleCategories, _isClosed)
 import Data.Array (head, concat, sortBy, elem, find, groupBy, length, mapWithIndex, (!!), filter)
 import Data.String (toUpper)
 import Data.String as DS
@@ -148,6 +148,7 @@ transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state 
               availableSeats : bhData.category ^. _availableSeats,
               allowedSeats : bhData.category ^. _allowedSeats,
               bookedSeats :  bhData.category ^. _bookedSeats,
+              isClosed : bhData.category ^. _isClosed,
               isSelected : false,
               peopleCategories : generatePeopleCategories (bhData.category ^. _peopleCategories),
               operationalDays : operationalDaysData,
