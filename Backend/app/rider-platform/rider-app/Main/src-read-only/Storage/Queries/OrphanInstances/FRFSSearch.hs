@@ -21,6 +21,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Domain.Types.FRFSSearch.FRFSSearch
           { fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
+            isOnSearchReceived = isOnSearchReceived,
             journeyLegInfo = mkJourneyLegInfo agency convenienceCost journeyId journeyLegOrder pricingId skipBooking,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -40,6 +41,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     Beam.FRFSSearchT
       { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isOnSearchReceived = isOnSearchReceived,
         Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
         Beam.journeyId = Kernel.Prelude.fmap (.journeyId) journeyLegInfo,

@@ -46,6 +46,9 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    isOnSearchReceived: Maybe Bool
+
+
 
   beamFields:
     journeyLegInfo:
@@ -77,6 +80,14 @@ FRFSSearch:
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateIsOnSearchReceivedById:
+      kvFunction: updateWithKV
+      params: [isOnSearchReceived]
+      where: id
+    updateRiderIdById:
+      kvFunction: updateWithKV
+      params: [riderId]
       where: id
 
   extraOperations:
@@ -161,7 +172,8 @@ FRFSQuote:
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
+    oldCacheDump: Maybe Text
 
   beamFields:
     price:
@@ -198,6 +210,9 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -245,6 +260,7 @@ FRFSTicketBooking:
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
     googleWalletJWTUrl : Maybe Text
+    isFareChanged: Maybe Bool
 
   default:
     customerCancelled: "false"
@@ -355,7 +371,6 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
-
   extraOperations:
     - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket
@@ -549,12 +564,16 @@ FRFSConfig:
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
     radius: Meters
+    providerId: Maybe Text
+    providerName: Maybe Text
+    validTillSeconds: Seconds
 
   beamType:
     isCancellationAllowed: Maybe Bool
     busStationTtl: Maybe Seconds
     straightLineDistance: Maybe Meters
     radius: Maybe Meters
+    validTillSeconds: Maybe Seconds
 
   queries:
     findByMerchantOperatingCityId:
@@ -572,19 +591,21 @@ FRFSConfig:
     busStationTtl: "1800"
     straightLineDistance: "5000"
     radius: "3000"
+    validTillSeconds: "300"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
-
+    validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
     busStationTtl: Kernel.Prelude.Just|I
     straightLineDistance: Kernel.Prelude.Just|I
     radius: Kernel.Prelude.Just|I
+    validTillSeconds: Kernel.Prelude.Just|I
 
 Route:
   tableName: route

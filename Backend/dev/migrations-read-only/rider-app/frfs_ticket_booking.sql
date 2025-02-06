@@ -121,3 +121,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounts_json text ;
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN google_wallet_jwt_url text ;
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_fare_changed boolean ;
