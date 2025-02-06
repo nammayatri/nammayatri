@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_UPDATE_APP = 587;
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
-    private HyperServices hyperServices;
+    private MobilityServices hyperServices;
 
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
@@ -685,7 +685,7 @@ public class MainActivity extends AppCompatActivity {
     private void initApp() {
         long initiateTimeStamp = System.currentTimeMillis();
         Log.i("APP_PERF", "INIT_APP_START : " + System.currentTimeMillis());
-        hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
+        hyperServices = new MobilityServices(this);
         Log.i("APP_PERF", "INIT_APP_HYPER_SERVICE_END : " + System.currentTimeMillis());
         final JSONObject json = new JSONObject();
         JSONObject payload = new JSONObject();
@@ -703,7 +703,7 @@ public class MainActivity extends AppCompatActivity {
         }
         mFirebaseAnalytics.logEvent("ny_hyper_initiate",null);
         Log.i("APP_PERF", "INIT_HYPER_SERVICE : " + System.currentTimeMillis());
-        hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
+        hyperServices.initiate(this,findViewById(R.id.cl_dui_container),json, new HyperPaymentsCallbackAdapter() {
             @Override
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
                 Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
