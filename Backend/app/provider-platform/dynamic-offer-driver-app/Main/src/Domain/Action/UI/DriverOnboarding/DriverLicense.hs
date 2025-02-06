@@ -29,6 +29,7 @@ import Data.Time (nominalDay)
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverLicense as Domain
+import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
@@ -39,7 +40,9 @@ import Environment
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
+import qualified Kernel.External.Verification.Interface.Types as VerificationIntTypes
 import Kernel.External.Verification.SafetyPortal.Types
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -55,6 +58,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
+import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
@@ -106,7 +110,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
   nameOnCard <-
-    if (isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard))
+    if isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
       then do
         image1 <- getImage imageId1
         image2 <- getImage `mapM` imageId2
@@ -195,10 +199,12 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
           else Domain.Skipped
   verifyRes <-
     Verification.verifyDLAsync person.merchantId merchantOpCityId $
-      Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId}
+      Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True}
   encryptedDL <- encrypt dlNumber
-  idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
-  IVQuery.create idfyVerificationEntity
+  case verifyRes.requestor of
+    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
+    VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL verifyRes.transactionId
+    _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show verifyRes.requestor))
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedDL = do
       id <- generateGUID
@@ -228,9 +234,38 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             createdAt = now,
             updatedAt = now
           }
+    mkHyperVergeVerificationEntity requestId now imageExtractionValidation encryptedDL transactionId = do
+      id <- generateGUID
+      return $
+        Domain.HyperVergeVerification
+          { id,
+            driverId = person.id,
+            documentImageId1 = imageId1,
+            documentImageId2 = imageId2,
+            requestId,
+            docType = DTO.DriverLicense,
+            documentNumber = encryptedDL,
+            driverDateOfBirth = Just driverDateOfBirth,
+            imageExtractionValidation = imageExtractionValidation,
+            issueDateOnDoc = dateOfIssue,
+            status = "pending",
+            hypervergeResponse = Nothing,
+            multipleRC = Nothing,
+            vehicleCategory = mbVehicleCategory,
+            airConditioned = Nothing,
+            oxygen = Nothing,
+            ventilator = Nothing,
+            retryCount = Just 0,
+            nameOnCard,
+            merchantId = Just person.merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
 
-onVerifyDL :: Domain.IdfyVerification -> Idfy.DLVerificationOutput -> Flow AckResponse
-onVerifyDL verificationReq output = do
+onVerifyDL :: VerificationReqRecord -> VerificationIntTypes.DLVerificationOutputInterface -> VT.VerificationService -> Flow AckResponse
+onVerifyDL verificationReq output serviceName = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   let key = dlCacheKey person.id
   extractedDlAndOperatingCity <- Redis.safeGet key
@@ -244,14 +279,17 @@ onVerifyDL verificationReq output = do
       if verificationReq.imageExtractionValidation == Domain.Skipped
         && isJust verificationReq.issueDateOnDoc
         && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
-               /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
+               /= (convertUTCTimetoDate <$> convertTextToUTC output.dateOfIssue)
            )
         then do
-          _ <- IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
+          case serviceName of
+            VT.Idfy -> IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
+            VT.HyperVergeRCDL -> HVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
+            _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyDL. Name of provider : " <> show serviceName)
           pure Ack
         else do
           documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
-          onVerifyDLHandler person output.id_number (output.t_validity_to <|> output.nt_validity_to) output.cov_details output.name output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
+          onVerifyDLHandler person output.licenseNumber (output.t_validity_to <|> output.nt_validity_to) output.covs output.driverName output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 
 onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> Flow ()
@@ -345,7 +383,7 @@ cacheExtractedDl personId extractedDL operatingCity = do
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   Redis.setExp key (extractedDL, operatingCity) authTokenCacheExpiry
 
-dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> Domain.IdfyVerification -> Person.Person -> Flow AckResponse
+dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> VerificationReqRecord -> Person.Person -> Flow AckResponse
 dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do
   let dlreq =
         DriverDLReq

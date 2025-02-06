@@ -272,7 +272,7 @@ import Tools.Event
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Utils as TU
-import Tools.Verification
+import Tools.Verification hiding (length)
 import Utils.Common.Cac.KeyNameConstants
 
 data DriverInformationRes = DriverInformationRes
