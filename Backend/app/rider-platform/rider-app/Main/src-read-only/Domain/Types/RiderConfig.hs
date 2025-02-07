@@ -51,6 +51,7 @@ data RiderConfig = RiderConfig
     metroBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    multimodalTesting :: Kernel.Prelude.Bool,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,

@@ -36,8 +36,8 @@ getProviderName (CMRL _) = "Chennai Metro Rail Limited"
 getProviderName (EBIX _) = "Kolkata Buses"
 getProviderName (DIRECT _) = "Direct Multimodal Services"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> Maybe Text -> Text -> Text -> m [FRFSUtils.FRFSFare]
-getFares mbRiderId merchant merchanOperatingCity config mbRouteCode startStopCode endStopCode = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> Maybe Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares mbRiderId merchant merchanOperatingCity config mbRouteCode startStopCode endStopCode vehicleCategory = do
   case (config, mbRouteCode) of
     (CMRL config', _) ->
       CMRLFareByOriginDest.getFareByOriginDest config' $
@@ -46,8 +46,8 @@ getFares mbRiderId merchant merchanOperatingCity config mbRouteCode startStopCod
             destination = endStopCode,
             ticketType = "SJT"
           }
-    (EBIX _, Just routeCode) -> FRFSUtils.getFares mbRiderId Spec.BUS merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    (DIRECT _, Just routeCode) -> FRFSUtils.getFares mbRiderId Spec.BUS merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    (EBIX _, Just routeCode) -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    (DIRECT _, Just routeCode) -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
     _ -> return []
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder

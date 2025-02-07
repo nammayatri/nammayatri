@@ -44,14 +44,14 @@ RiderConfig:
     policeTriggerDelay: NominalDiffTime
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
-    exotelStatusCheckSchedulerDelay : Int
+    exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
     sensitiveWords: "Maybe [Text]"
-    sensitiveWordsForExactMatch : "Maybe [Text]"
+    sensitiveWordsForExactMatch: "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
     makeMultiModalSearch: Bool
@@ -67,12 +67,13 @@ RiderConfig:
     minRidesToBlock: Maybe Int
     minRidesToShowCancellationRate: Maybe Int
     autoSendBookingDetailsViaWhatsapp: Maybe Bool
+    multimodalTesting: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
     policeTriggerDelay: Maybe Seconds
     hardLimitForSafetyJobs: Maybe Seconds
-    exotelStatusCheckSchedulerDelay : Maybe Seconds
+    exotelStatusCheckSchedulerDelay: Maybe Seconds
     incidentReportSupport: Maybe Bool
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
@@ -85,7 +86,8 @@ RiderConfig:
     feedbackAlertRatingThreshold: Maybe Int
     postRideSafetyNotificationDelay: Maybe Seconds
     useUserSettingsForSafetyIVR: Maybe Bool
-    payoutReferralProgram : Maybe Bool
+    payoutReferralProgram: Maybe Bool
+    multimodalTesting: Maybe Bool
     payoutReferralStartDate: Maybe UTCTime
 
   constraints:
@@ -114,6 +116,7 @@ RiderConfig:
     useUserSettingsForSafetyIVR: fromMaybe False useUserSettingsForSafetyIVR|E
     payoutReferralProgram: fromMaybe False payoutReferralProgram|E
     payoutReferralStartDate: payoutReferralStartDate_|E
+    multimodalTesting: fromMaybe False multimodalTesting|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -134,6 +137,7 @@ RiderConfig:
     useUserSettingsForSafetyIVR: Just useUserSettingsForSafetyIVR|E
     payoutReferralProgram: Just payoutReferralProgram|E
     payoutReferralStartDate: Just payoutReferralStartDate|E
+    multimodalTesting: Just multimodalTesting|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -150,15 +154,16 @@ RiderConfig:
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
     kaptureQueue: "''"
-    kaptureConfig: "'{\"kaptureQueue\":\"\", \"disposition\":\"\"}'"
+    kaptureConfig: '''{"kaptureQueue":"", "disposition":""}'''
     exotelStatusCheckSchedulerDelay: "120"
     avgSpeedInKmPerHr: "20"
     makeMultiModalSearch: "false"
     maximumWalkDistance: "600"
-    postRideSafetyNotificationDelay : "60"
+    postRideSafetyNotificationDelay: "60"
     useUserSettingsForSafetyIVR: "false"
     payoutReferralProgram: "false"
     payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
+    multimodalTesting: "false"
 
   queries:
     findByMerchantOperatingCityId:
