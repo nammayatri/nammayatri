@@ -168,7 +168,7 @@ data RideInfoRes = RideInfoRes
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
     vehicleVariant :: Maybe VehicleVariant,
-    vehicleServiceTier :: Maybe Text,
+    vehicleServiceTierName :: Maybe Text,
     actualFare :: Maybe Money,
     bookingStatus :: Maybe BookingStatus,
     rideStatus :: RideStatus,
@@ -179,7 +179,8 @@ data RideInfoRes = RideInfoRes
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
     rideCreatedAt :: UTCTime,
-    rideStartTime :: Maybe UTCTime
+    rideStartTime :: Maybe UTCTime,
+    mobileCountryCode :: Maybe Text
   }
 
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
