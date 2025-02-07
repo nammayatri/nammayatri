@@ -31,7 +31,7 @@ data JourneyLeg = JourneyLeg
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legSearchId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mode :: Domain.Types.Common.MultimodalTravelMode,
-    routeDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails,
+    routeDetails :: [Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails],
     sequenceNumber :: Kernel.Prelude.Int,
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

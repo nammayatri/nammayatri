@@ -13,9 +13,12 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FRFSTicketBooking as Beam
+import qualified Storage.Queries.JourneyRouteDetails
+import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
+    journeyRouteDetailsList <- Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id searchId)
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -36,7 +39,6 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             estimatedPrice = Kernel.Types.Common.mkPrice currency estimatedPrice,
             eventDiscountAmount = eventDiscountAmount,
             finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
-            frequency = frequency,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             googleWalletJWTUrl = googleWalletJWTUrl,
             id = Kernel.Types.Id.Id id,
@@ -48,15 +50,13 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             journeyLegOrder = journeyLegOrder,
             journeyLegStatus = journeyLegStatus,
             journeyOnInitDone = journeyOnInitDone,
-            lineColor = lineColor,
-            lineColorCode = lineColorCode,
+            journeyRouteDetails = Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             payerVpa = payerVpa,
             paymentTxnId = paymentTxnId,
-            platformNumber = platformNumber,
             price = Kernel.Types.Common.mkPrice currency price,
             providerDescription = providerDescription,
             providerId = providerId,
@@ -97,7 +97,6 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.estimatedPrice = (.amount) estimatedPrice,
         Beam.eventDiscountAmount = eventDiscountAmount,
         Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
-        Beam.frequency = frequency,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.googleWalletJWTUrl = googleWalletJWTUrl,
         Beam.id = Kernel.Types.Id.getId id,
@@ -109,15 +108,12 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.journeyLegOrder = journeyLegOrder,
         Beam.journeyLegStatus = journeyLegStatus,
         Beam.journeyOnInitDone = journeyOnInitDone,
-        Beam.lineColor = lineColor,
-        Beam.lineColorCode = lineColorCode,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.payerVpa = payerVpa,
         Beam.paymentTxnId = paymentTxnId,
-        Beam.platformNumber = platformNumber,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,

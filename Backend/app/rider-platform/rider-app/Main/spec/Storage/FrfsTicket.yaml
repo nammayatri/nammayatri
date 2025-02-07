@@ -30,6 +30,7 @@ imports:
   JourneySearchData: Lib.JourneyLeg.Types
   Journey: Domain.Types.Journey
   JourneyLegStatus: Lib.JourneyLeg.Types
+  MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
 
 FRFSSearch:
@@ -49,11 +50,12 @@ FRFSSearch:
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
     journeyLegStatus: Maybe JourneyLegStatus
-    lineColor: Maybe Text
-    lineColorCode: Maybe Text
-    platformNumber: Maybe Text
-    frequency: Maybe Int
+    # lineColor: Maybe Text
+    # lineColorCode: Maybe Text
+    # platformNumber: Maybe Text
+    # frequency: Maybe Int
     isOnSearchReceived: Maybe Bool
+    journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
 
   beamFields:
     journeyLegInfo:
@@ -64,6 +66,7 @@ FRFSSearch:
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
+    journeyRouteDetails: {}
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -74,8 +77,13 @@ FRFSSearch:
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
 
+  intermediateTransformers:
+    fromTType:
+      - journeyRouteDetailsList: Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id id)|EM
+
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList|E
 
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
@@ -101,6 +109,54 @@ FRFSSearch:
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
+
+JourneyRouteDetails:
+  fields:
+    id: Id JourneyRouteDetails
+    searchId: Id FRFSSearch
+    # bookingId: Id FRFSTicketBooking
+    lineColor: Maybe Text
+    lineColorCode: Maybe Text
+    platformNumber: Maybe Text
+    frequency: Maybe Seconds
+    routeLongName: Maybe Text
+    fromStationId : Maybe (Id Station)
+    toStationId : Maybe (Id Station)
+    # routeGtfsId: Maybe Text
+    # routeLongName: Maybe Text
+    # routeShortName: Maybe Text
+    # routeColorName : Maybe Text
+    # routeColorCode : Maybe Text
+    # frequency : Maybe Seconds
+    # agencyGtfsId: Maybe Text
+    # agencyName: Maybe Text
+    # fromStopDetails:----------------------------------------
+    # fromStopCode: Maybe Text
+    # fromStopName: Maybe Text
+    # fromStopGtfsId: Maybe Text
+    # fromStopPlatformCode : Maybe Text
+    # toStopDetails:----------------------------------------
+    # toStopCode: Maybe Text
+    # toStopName: Maybe Text
+    # toStopGtfsId: Maybe Text
+    # toStopPlatformCode : Maybe Text
+    # Times --------------------------------------------
+    # fromArrivalTime: Maybe UTCTime
+    # fromDepartureTime: Maybe UTCTime
+    # toArrivalTime: Maybe UTCTime
+    # toDepartureTime: Maybe UTCTime
+
+  queries:
+    findAllBySearchId:
+      kvFunction: findAllWithKV
+      where: searchId
+    # findAllByBookingId:
+    #   kvFunction: findAllWithKV
+    #   where: bookingId
+
+  constraints:
+    id: PrimaryKey
+    searchId: "!SecondaryKey"
 
 Station:
   tableName: station
@@ -272,19 +328,20 @@ FRFSTicketBooking:
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest : Maybe Int
-    lineColor : Maybe Text
-    lineColorCode : Maybe Text
-    platformNumber: Maybe Text
+    # lineColor : Maybe Text      ### ??
+    # lineColorCode : Maybe Text  ### ??
+    # platformNumber: Maybe Text  ### ??
     googleWalletJWTUrl : Maybe Text
-    frequency : Maybe Int
-    journeyLegOrder : Maybe Int
+    # frequency : Maybe Int
+    journeyLegOrder : Maybe Int  ### ??
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
-    startTime: Maybe UTCTime
+    startTime: Maybe UTCTime      ### ??
     journeyLegStatus: Maybe JourneyLegStatus
     isDeleted : Maybe Bool
     isFareChanged: Maybe Bool
     isSkipped: Maybe Bool
+    journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
 
   default:
     customerCancelled: "false"
@@ -297,6 +354,7 @@ FRFSTicketBooking:
       estimatedPrice: HighPrecMoney
     finalPrice:
       finalPrice: Maybe HighPrecMoney
+    journeyRouteDetails: {}
 
   types:
     FRFSTicketBookingStatus:
@@ -304,10 +362,15 @@ FRFSTicketBooking:
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
+  intermediateTransformers:
+    fromTType:
+      - journeyRouteDetailsList: Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id searchId)|EM
+
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList|E
 
   toTType:
     price: (.amount)|I

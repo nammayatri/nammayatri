@@ -333,7 +333,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req =
-  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req Nothing Nothing Nothing Nothing Nothing Nothing
+  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req Nothing Nothing []
 
 postFrfsSearchHandler ::
   CallExternalBPP.FRFSSearchFlow m r =>
@@ -343,12 +343,10 @@ postFrfsSearchHandler ::
   API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
   Maybe (Id DPO.PartnerOrgTransaction) ->
   Maybe (Id DPO.PartnerOrganization) ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Int ->
-  Maybe Text ->
+  [JLT.MultiModalJourneyRouteDetails] ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId mbColor mbColorCode mbFrequency platformNumber = do
+--postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId mbColor mbColorCode mbFrequency platformNumber = do
+postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId mbJourneyRouteDetails = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -390,10 +388,10 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
             journeyLegInfo = journeySearchData,
-            lineColor = mbColor,
-            lineColorCode = mbColorCode,
+            -- lineColor = mbColor,
+            -- lineColorCode = mbColorCode,
             journeyLegStatus = Just JLT.InPlan,
-            frequency = mbFrequency,
+            journeyRouteDetails = mbJourneyRouteDetails,
             isOnSearchReceived = Nothing,
             ..
           }
@@ -493,6 +491,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
               selectedDiscounts
       let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational quote.quantity)) - totalDiscount
       let isFareChanged = isJust oldCacheDump
+      let journeyRouteDetails' = maybe [] (.journeyRouteDetails) mbSearch
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
@@ -520,11 +519,12 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 journeyLegOrder = mbSearch >>= (.journeyLegInfo) <&> (.journeyLegOrder),
                 journeyId = Id <$> (mbSearch >>= (.journeyLegInfo) <&> (.journeyId)),
                 journeyOnInitDone = Nothing,
-                frequency = mbSearch >>= (.frequency),
-                lineColor = mbSearch >>= (.lineColor),
-                lineColorCode = mbSearch >>= (.lineColorCode),
+                -- frequency = Just 300, --mbSearch >>= (.frequency),
+                -- lineColor = Nothing, --mbSearch >>= (.lineColor),
+                -- lineColorCode = Nothing, --mbSearch >>= (.lineColorCode),
                 journeyLegStatus = mbSearch >>= (.journeyLegStatus),
-                platformNumber = mbSearch >>= (.platformNumber),
+                -- platformNumber = Nothing, --mbSearch >>= (.platformNumber),
+                journeyRouteDetails = journeyRouteDetails',
                 startTime = Just now, -- TODO
                 isFareChanged = Just isFareChanged,
                 googleWalletJWTUrl = Nothing,
