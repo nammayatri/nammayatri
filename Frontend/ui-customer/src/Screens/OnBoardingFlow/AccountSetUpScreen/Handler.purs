@@ -15,7 +15,9 @@
 
 module Screens.AccountSetUpScreen.Handler where
 
-import Prelude (bind, ($), pure , (<$>))
+import Prelude (bind, ($), pure , (<$>), void, discard)
+import ModifyScreenState (modifyScreenState)
+import Types.App (ScreenType(..))
 import Engineering.Helpers.BackTrack (getState)
 import Screens.AccountSetUpScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
@@ -34,3 +36,6 @@ accountSetUpScreen = do
   case act of
     GoHome updatedState ->  App.BackT $ App.NoBack <$> (pure $ GO_HOME updatedState)
     ChangeMobileNumber -> App.BackT $ App.NoBack <$> (pure $ GO_BACK)
+    VerifyReferral state  -> do
+      void $ modifyScreenState $ AccountSetUpScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> (pure $ APPLY_REFERRAL state.data.referralCode)
