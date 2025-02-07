@@ -174,7 +174,9 @@ generateJourneyInfoResponse journey legs now = do
       estimatedDistance = journey.estimatedDistance,
       journeyStatus = journey.status,
       legs,
-      unifiedQR
+      unifiedQR,
+      startTime = journey.startTime,
+      endTime = journey.endTime
     }
 
 postMultimodalSwitch ::
