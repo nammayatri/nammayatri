@@ -33,6 +33,7 @@ import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
@@ -205,7 +206,9 @@ data LegInfo = LegInfo
     legExtraInfo :: LegExtraInfo,
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    personId :: Id DP.Person
+    personId :: Id DP.Person,
+    actualDistance :: Maybe Distance,
+    totalFare :: Maybe Kernel.Types.Common.Price
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -227,7 +230,8 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     driverName :: Maybe Text,
     vehicleNumber :: Maybe Text,
     otp :: Maybe Text,
-    serviceTierName :: Maybe Text
+    serviceTierName :: Maybe Text,
+    bookingId :: Maybe (Id DBooking.Booking)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -383,8 +387,11 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 driverName = mRide <&> (.driverName),
                 vehicleNumber = mRide <&> (.vehicleNumber),
                 otp = mRide <&> (.otp),
-                serviceTierName = booking.serviceTierName
-              }
+                serviceTierName = booking.serviceTierName,
+                bookingId = Just $ booking.id
+              },
+        actualDistance = mRide >>= (.traveledDistance),
+        totalFare = mRide >>= (.fare)
       }
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> m LegInfo
@@ -422,8 +429,11 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 driverName = Nothing,
                 vehicleNumber = Nothing,
                 otp = Nothing,
-                serviceTierName = mbEstimate >>= (.serviceTierName)
-              }
+                serviceTierName = mbEstimate >>= (.serviceTierName),
+                bookingId = Nothing
+              },
+        actualDistance = Nothing,
+        totalFare = Nothing
       }
 
 getWalkLegStatusFromWalkLeg :: DWalkLeg.WalkLegMultimodal -> JourneySearchData -> JourneyLegStatus
@@ -466,7 +476,9 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         merchantOperatingCityId,
         personId = riderId,
         status = getWalkLegStatusFromWalkLeg legData journeyLegInfo',
-        legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'}
+        legExtraInfo = Walk $ WalkLegExtraInfo {origin = fromLocation, destination = toLocation'},
+        actualDistance = estimatedDistance,
+        totalFare = Nothing
       }
 
 getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
@@ -515,7 +527,9 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
         status = legStatus,
-        legExtraInfo = mkLegExtraInfo fromStation toStation qrDataList
+        legExtraInfo = mkLegExtraInfo fromStation toStation qrDataList,
+        actualDistance = distance,
+        totalFare = booking.finalPrice
       }
   where
     mkLegExtraInfo fromStation toStation qrDataList = do
@@ -601,7 +615,9 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
         merchantOperatingCityId,
         personId = riderId,
         status = fromMaybe InPlan journeyLegStatus,
-        legExtraInfo = mkLegExtraInfo fromStation toStation
+        legExtraInfo = mkLegExtraInfo fromStation toStation,
+        actualDistance = Nothing,
+        totalFare = Nothing
       }
   where
     mkLegExtraInfo fromStation toStation = do

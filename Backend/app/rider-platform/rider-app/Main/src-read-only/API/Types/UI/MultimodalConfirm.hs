@@ -8,6 +8,7 @@ import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
+import Domain.Types.Ride (RideStatus (..))
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.MapsClient.Types
@@ -54,7 +55,9 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
-    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
+    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
