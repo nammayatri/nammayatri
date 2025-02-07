@@ -202,7 +202,7 @@ castRideInfo merchantId merchantOpCityId rideId = do
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
           vehicleVariant = res.vehicleVariant,
-          vehicleServiceTier = Just $ show res.vehicleServiceTierName,
+          vehicleServiceTierName = Just $ show res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Just $ castBookingStatus res.bookingStatus,
           merchantOperatingCityId = res.merchantOperatingCityId,
@@ -213,7 +213,8 @@ castRideInfo merchantId merchantOpCityId rideId = do
           fareBreakup = [],
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
-          rideStatus = castRideStatus res.rideStatus
+          rideStatus = castRideStatus res.rideStatus,
+          mobileCountryCode = Nothing
         }
 
     castBookingStatus :: DRide.BookingStatus -> Common.BookingStatus
