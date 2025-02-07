@@ -1662,3 +1662,12 @@ getFR stringKey =
         BOOK_FOR_ pricerange -> "Book for " <> pricerange
         YOUR_CANCELLATION_RATE_IS_HIGH -> ""
         AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> ""
+        REFERRAL_CODE -> "Verifying"
+        VERIFYING -> "Referral Code Verified!"
+        REFERRAL_CODE_VERIFIED -> "Referral Code Invalid! Please check and try again"
+        REFERRAL_CODE_FAILED -> "Enter 6 digit referral code"
+        ENTER_6_DIGIT_REFERRAL_CODE -> "Not Verified"
+        NOT_VERIFIED -> "(Optional)"
+        OPTIONAL_BRACKETTED -> "Verify"
+        VERIFY -> "Referral Code"
+        VERIFIED -> ""

@@ -1666,3 +1666,12 @@ getEN stringKey =
         BOOK_FOR_ pricerange -> "Book for " <> pricerange
         YOUR_CANCELLATION_RATE_IS_HIGH -> "Your cancellation rate is high!"
         AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> "Avoid further cancellations to keep using " <> appName
+        REFERRAL_CODE -> "Referral Code"
+        VERIFYING -> "Verifying"
+        REFERRAL_CODE_VERIFIED -> "Referral Code Verified!"
+        REFERRAL_CODE_FAILED -> "Referral Code Invalid! Please check and try again"
+        ENTER_6_DIGIT_REFERRAL_CODE -> "Enter 6 digit referral code"
+        NOT_VERIFIED -> "Not Verified"
+        OPTIONAL_BRACKETTED -> "(Optional)"
+        VERIFY -> "Verify"
+        VERIFIED -> "Verified"
