@@ -12,6 +12,7 @@
 
 module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where
 
+import qualified AWS.S3 as S3
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -323,6 +324,24 @@ instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [CxAgent
   sqlValueSyntax batchList =
     let x = (show <$> batchList :: [Text])
      in sqlValueSyntax (V.fromList x)
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [(S3.FileType, Int)] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [(S3.FileType, Int)]
+
+instance FromBackendRow Postgres [(S3.FileType, Int)]
+
+instance FromField (S3.FileType, Int) where
+  fromField = fromFieldEnum
+
+instance FromField [(S3.FileType, Int)] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance {-# OVERLAPPING #-} ToSQLObject (S3.FileType, Int) where
+  convertToSQLObject = SQLObjectValue . show
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [CxAgentDetails]
 

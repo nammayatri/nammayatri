@@ -17,6 +17,7 @@
 
 module IssueManagement.Storage.Beam.Issue.IssueOption where
 
+import qualified AWS.S3 as S3
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified IGM.Enums as Spec
@@ -38,7 +39,8 @@ data IssueOptionT f = IssueOptionT
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory)
+    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory),
+    mandatoryUploads :: B.C f (Maybe [(S3.FileType, Int)])
   }
   deriving (Generic, B.Beamable)
 

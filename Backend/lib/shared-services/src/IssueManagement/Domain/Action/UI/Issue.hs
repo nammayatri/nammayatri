@@ -927,7 +927,8 @@ mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslat
   Common.IssueOptionRes
     { issueOptionId = issueOption.id,
       label = fromMaybe (issueOption.option & T.toUpper & T.replace " " "_") issueOption.label,
-      option = transformOption $ fromMaybe issueOption.option $ issueTranslation <&> (.translation)
+      option = transformOption $ fromMaybe issueOption.option $ issueTranslation <&> (.translation),
+      mandatoryUploads = issueOption.mandatoryUploads
     }
   where
     transformOption :: Text -> Text
