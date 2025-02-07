@@ -25,6 +25,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import Lib.DriverCoins.Types as DCT
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
@@ -36,7 +38,6 @@ import Storage.Queries.LmsVideoTranslation as SQLVT
 import Storage.Queries.ModuleCompletionInformation as SQMCI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
-import qualified Tools.Utils as TU
 
 -- types of coin event and its corresponding function
 -- LMS - QuizQuestionCompleted
@@ -487,8 +488,8 @@ generateLmsCertificate personId modId driverModuleCompletionId = do
 getExpiryTime :: Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow (Maybe UTCTime)
 getExpiryTime mbExpiryConfig personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  let driverTags = TU.convertTags $ fromMaybe [] person.driverTag
-  let mbDriverSafetyTag = TU.accessKey "SafetyCohort" driverTags
+  let driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag
+  let mbDriverSafetyTag = Yudhishthira.accessTagKey (LYT.TagName "SafetyCohort") driverTags
   now <- getCurrentTime
   case mbExpiryConfig of
     Nothing -> return Nothing

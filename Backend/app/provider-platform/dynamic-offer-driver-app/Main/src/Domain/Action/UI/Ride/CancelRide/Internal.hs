@@ -42,6 +42,7 @@ import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Cancel
@@ -181,7 +182,7 @@ updateNammaTagsForCancelledRide ::
   SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
-  m [Text]
+  m [LYT.TagNameValue]
 updateNammaTagsForCancelledRide booking ride bookingCReason = do
   now <- getCurrentTime
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)

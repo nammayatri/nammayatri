@@ -64,6 +64,7 @@ import Kernel.Utils.Version
 import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
+import Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC
 import SharedLogic.Search
@@ -252,7 +253,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     backfillCustomerNammaTags Person.Person {..} =
       if isNothing customerNammaTags
         then do
-          let genderTag = "Gender#" <> show gender -- handle it properly later
+          let genderTag = LYT.TagNameValueExpiry $ "Gender#" <> show gender -- handle it properly later
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
@@ -283,7 +284,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
               [ (Beckn.CUSTOMER_LANGUAGE, (Just . show) searchRequest.language),
                 (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
                 (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
-                (Beckn.CUSTOMER_NAMMA_TAGS, show <$> person.customerNammaTags)
+                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags)
               ]
            }
 

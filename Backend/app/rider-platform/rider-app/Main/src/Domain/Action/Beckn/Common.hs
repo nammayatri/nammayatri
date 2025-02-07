@@ -65,12 +65,14 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -844,7 +846,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           when (details.isUpgradedToCab == Just True) $ do
             person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
             let personTags = fromMaybe [] person.customerNammaTags
-            unless (rejectUpgradeTag `elem` personTags) $ QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTag]) person.id
+            unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
+              rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
+              QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
 
 mkBookingCancellationReason ::
