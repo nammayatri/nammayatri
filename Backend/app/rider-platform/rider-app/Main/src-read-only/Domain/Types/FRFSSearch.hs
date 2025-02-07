@@ -17,19 +17,16 @@ import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
-  { frequency :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+  { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
-    lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    journeyRouteDetails :: [Lib.JourneyLeg.Types.MultiModalJourneyRouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
-    platformNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     quantity :: Kernel.Prelude.Int,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),

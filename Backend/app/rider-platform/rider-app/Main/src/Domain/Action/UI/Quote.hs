@@ -380,8 +380,8 @@ getJourneys searchRequest = do
                     toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
                     fromStationCode = journeyLeg.fromStopDetails >>= (.stopCode),
                     toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
-                    color = journeyLeg.routeDetails >>= (.shortName),
-                    colorCode = journeyLeg.routeDetails >>= (.color),
+                    color = listToMaybe $ catMaybes $ map (.shortName) journeyLeg.routeDetails,
+                    colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
                     distance = journeyLeg.distance
                   }

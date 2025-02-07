@@ -218,7 +218,7 @@ JourneyLeg:
     endLocation: LatLngV2 #LocationV2
     fromStopDetails: Maybe MultiModalStopDetails
     toStopDetails: Maybe MultiModalStopDetails
-    routeDetails: Maybe MultiModalRouteDetails
+    routeDetails: "[MultiModalRouteDetails]"
     agency: Maybe MultiModalAgency
     fromArrivalTime: Maybe UTCTime
     fromDepartureTime: Maybe UTCTime
@@ -245,16 +245,8 @@ JourneyLeg:
       toStopName: Maybe Text
       toStopGtfsId: Maybe Text
       toStopPlatformCode : Maybe Text
-    routeDetails:
-      routeGtfsId: Maybe Text
-      routeLongName: Maybe Text
-      routeShortName: Maybe Text
-      routeColorName : Maybe Text
-      routeColorCode : Maybe Text
-      frequency : Maybe Seconds
-    agency:
-      agencyGtfsId: Maybe Text
-      agencyName: Maybe Text
+    routeDetails: {}
+    agency: {}
     startLocation:
       startLocationLat: Double
       startLocationLon: Double
@@ -295,6 +287,10 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [duration, distance, endLocation]
       where: id
+  intermediateTransformers:
+    fromTType:
+      - routeDetailsList: Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)|EM
+      - agencyDetails: Storage.Queries.Transformers.RouteDetails.getAgencyDetails routeDetailsList|E
 
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
@@ -317,14 +313,6 @@ JourneyLeg:
     toStopName:  (toStopDetails >>= (.name))|E
     toStopPlatformCode:  (toStopDetails >>= (.platformCode))|E
     toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
-    routeGtfsId: (routeDetails >>= (.gtfsId))|E
-    routeLongName: (routeDetails >>= (.longName))|E
-    routeShortName: (routeDetails >>= (.shortName))|E
-    routeColorName: (routeDetails >>= (.shortName))|E
-    routeColorCode: (routeDetails >>= (.color))|E
-    frequency : (Nothing)|E
-    agencyGtfsId: (routeDetails >>= (.gtfsId))|E
-    agencyName: (routeDetails >>= (.longName))|E
     startLocationLat: (startLocation & (.latitude))|E
     startLocationLon: (startLocation & (.longitude))|E
     endLocationLat: (endLocation & (.latitude))|E
@@ -369,3 +357,49 @@ JourneyLegsFeedbacks:
   constraints:
     journeyId : PrimaryKey
     legOrder : PrimaryKey
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+RouteDetails:
+  fields:
+    id: Id RouteDetails
+    journeyLegId: Id JourneyLeg
+    routeGtfsId: Maybe Text
+    routeLongName: Maybe Text
+    routeShortName: Maybe Text
+    routeColorName : Maybe Text
+    routeColorCode : Maybe Text
+    frequency : Maybe Seconds
+    agencyGtfsId: Maybe Text
+    agencyName: Maybe Text
+    # fromStopDetails:
+    fromStopCode: Maybe Text
+    fromStopName: Maybe Text
+    fromStopGtfsId: Maybe Text
+    fromStopPlatformCode : Maybe Text
+    # toStopDetails:
+    toStopCode: Maybe Text
+    toStopName: Maybe Text
+    toStopGtfsId: Maybe Text
+    toStopPlatformCode : Maybe Text
+    # Times --
+    fromArrivalTime: Maybe UTCTime
+    fromDepartureTime: Maybe UTCTime
+    toArrivalTime: Maybe UTCTime
+    toDepartureTime: Maybe UTCTime
+    # startLocation:
+    startLocationLat: Maybe Double
+    startLocationLon: Maybe Double
+    # endLocation:
+    endLocationLat: Maybe Double
+    endLocationLon: Maybe Double
+
+  queries:
+    findAllByJourneyLegId:
+      kvFunction: findAllWithKV
+      where: journeyLegId
+
+  constraints:
+    id: PrimaryKey
+    journeyLegId: "!SecondaryKey"

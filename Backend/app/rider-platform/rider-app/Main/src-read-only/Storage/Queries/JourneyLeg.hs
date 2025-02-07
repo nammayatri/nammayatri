@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.JourneyLeg where
+module Storage.Queries.JourneyLeg (module Storage.Queries.JourneyLeg, module ReExport) where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.Journey
@@ -14,15 +14,15 @@ import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLeg as Beam
+import Storage.Queries.JourneyLegExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLeg.JourneyLeg -> m ())
-create = createWithKV
+-- create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLeg.JourneyLeg -> m ())
+-- create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLeg.JourneyLeg] -> m ())
 createMany = traverse_ create
@@ -80,9 +80,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.agencyGtfsId (routeDetails >>= (.gtfsId)),
-      Se.Set Beam.agencyName (routeDetails >>= (.longName)),
-      Se.Set Beam.distance ((.value) <$> distance),
+    [ Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
       Se.Set Beam.duration duration,
       Se.Set Beam.endLocationLat (endLocation & (.latitude)),
@@ -100,12 +98,6 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.legId legSearchId,
       Se.Set Beam.mode mode,
-      Se.Set Beam.frequency Nothing,
-      Se.Set Beam.routeColorCode (routeDetails >>= (.color)),
-      Se.Set Beam.routeColorName (routeDetails >>= (.shortName)),
-      Se.Set Beam.routeGtfsId (routeDetails >>= (.gtfsId)),
-      Se.Set Beam.routeLongName (routeDetails >>= (.longName)),
-      Se.Set Beam.routeShortName (routeDetails >>= (.shortName)),
       Se.Set Beam.sequenceNumber sequenceNumber,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),
