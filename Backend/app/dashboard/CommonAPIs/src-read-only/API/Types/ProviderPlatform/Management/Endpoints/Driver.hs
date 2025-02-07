@@ -20,6 +20,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
@@ -257,7 +258,7 @@ data UpdateDriverNameReq = UpdateDriverNameReq {firstName :: Kernel.Prelude.Text
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDriverNameReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UpdateDriverTagReq = UpdateDriverTagReq {driverTag :: Kernel.Prelude.Text, isAddingTag :: Kernel.Prelude.Bool}
+data UpdateDriverTagReq = UpdateDriverTagReq {driverTag :: Lib.Yudhishthira.Types.TagNameValue, isAddingTag :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -11,6 +11,7 @@ imports:
   Centesimal: Kernel.Types.Common
   MediaFile: IssueManagement.Domain.Types.MediaFile
   DeviceType: Kernel.Types.Version
+  TagNameValueExpiry: Lib.Yudhishthira.Types
 
 
 Person:
@@ -71,7 +72,7 @@ Person:
     clientDevice : Maybe Device
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
-    driverTag : "Maybe [Text]"
+    driverTag: "Maybe [TagNameValueExpiry]"
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>
@@ -106,6 +107,7 @@ Person:
     merchantOperatingCityId: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    driverTag: "Maybe [Text]"
 
   fromTType:
       merchantOperatingCityId:  Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId |EM
@@ -116,6 +118,7 @@ Person:
       clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
       mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
       alternateMobileNumber: EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash|E
+      driverTag: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType|M
 
   toTType:
       merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
@@ -131,6 +134,7 @@ Person:
       alternateMobileNumberEncrypted: (alternateMobileNumber <&> unEncrypted . (.encrypted))|E
       clientModelName: (clientDevice <&> (.deviceModel))|E
       clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+      driverTag: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType
 
   constraints:
     id: PrimaryKey

@@ -66,7 +66,10 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -319,7 +322,23 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe SP.Role -> m SP.Person
+makePerson ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  AuthReq ->
+  TC.TransporterConfig ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Id DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Maybe SP.Role ->
+  m SP.Person
 makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard mbRole = do
   pid <- BC.generateGUID
   now <- getCurrentTime
@@ -340,6 +359,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+  safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
       { id = pid,
@@ -379,7 +399,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
         useFakeOtp,
-        driverTag = Just ["SafetyCohort#New"]
+        driverTag = Just [safetyCohortNewTag]
       }
 
 makeSession ::

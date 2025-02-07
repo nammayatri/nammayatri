@@ -16,6 +16,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.TH
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
@@ -29,7 +30,7 @@ data PersonE e = Person
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceToken :: Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken,
-    driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    driverTag :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     faceImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     firstName :: Kernel.Prelude.Text,

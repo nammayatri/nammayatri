@@ -22,6 +22,7 @@ import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
@@ -76,7 +77,7 @@ data Ride = Ride
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
-    rideTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,

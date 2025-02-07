@@ -55,6 +55,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -414,7 +415,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         cancellationRate = (.cancellationRate) <$> cancellationData,
         windowSize = (.windowSize) <$> cancellationData,
         blockedDueToRiderComplains = not isACAllowedForDriver,
-        driverTag = person.driverTag,
+        driverTag = fmap Yudhishthira.removeTagExpiry <$> person.driverTag,
+        driverTagObject = fmap Yudhishthira.convertToTagObject <$> person.driverTag,
         blockedInfo = blockDetails,
         email,
         softBlockStiers = info.softBlockStiers >>= (pure . map show),

@@ -451,9 +451,6 @@ findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
 updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]
 
-updateTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Text] -> m ()
-updateTag (Id driverId) tags = updateOneWithKV [Se.Set BeamP.driverTag $ Just tags] [Se.Is BeamP.id $ Se.Eq driverId]
-
 updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do
   now <- getCurrentTime

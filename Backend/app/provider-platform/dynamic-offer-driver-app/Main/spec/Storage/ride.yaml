@@ -22,6 +22,7 @@ imports:
   Confidence: Kernel.Types.Confidence
   VehicleVariant: Domain.Types.VehicleVariant
   ServiceTierType: Domain.Types.Common
+  TagNameValue: Lib.Yudhishthira.Types
 
 Ride:
   tableName: ride
@@ -114,7 +115,7 @@ Ride:
     passedThroughDestination: Maybe Bool
     deliveryFileIds: Maybe [Id MediaFile]
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
-    rideTags: Maybe [Text]
+    rideTags: Maybe [TagNameValue]
     isPickupOrDestinationEdited: Maybe Bool
 
   sqlType:
@@ -202,6 +203,7 @@ Ride:
     deliveryFileIds: (Kernel.Types.Id.Id <$> ) <$> deliveryFileIds|E
     isDriverSpecialLocWarrior: Kernel.Prelude.fromMaybe False isDriverSpecialLocWarrior|E
     estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
+    rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -234,6 +236,7 @@ Ride:
     deliveryFileIds: (Kernel.Types.Id.getId <$> ) <$> deliveryFileIds|E
     estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
+    rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
 
   beamType:
     trackingUrl: Text
@@ -249,6 +252,7 @@ Ride:
     isDriverSpecialLocWarrior: Maybe Bool
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    rideTags: "Maybe [Text]"
 
   constraints:
     id: PrimaryKey
