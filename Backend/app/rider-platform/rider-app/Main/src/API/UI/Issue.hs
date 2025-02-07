@@ -215,7 +215,7 @@ castRideInfo merchantId _ rideId = do
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
           vehicleVariant = Just res.vehicleVariant,
-          vehicleServiceTier = res.vehicleServiceTierName,
+          vehicleServiceTierName = res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Nothing,
           merchantOperatingCityId = res.merchantOperatingCityId,
@@ -226,7 +226,8 @@ castRideInfo merchantId _ rideId = do
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
-          rideStatus = castRideStatus res.rideStatus
+          rideStatus = castRideStatus res.rideStatus,
+          mobileCountryCode = res.mobileCountryCode
         }
 
     castLocationAPIEntity ent =

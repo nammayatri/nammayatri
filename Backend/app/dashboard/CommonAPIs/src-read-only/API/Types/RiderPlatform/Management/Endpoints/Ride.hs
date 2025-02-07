@@ -209,7 +209,8 @@ data RideInfoRes = RideInfoRes
     computedPrice :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,
     fareBreakup :: [FareBreakup],
     rideCreatedAt :: Kernel.Prelude.UTCTime,
-    roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
