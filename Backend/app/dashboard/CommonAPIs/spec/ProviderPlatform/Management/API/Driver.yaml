@@ -25,6 +25,7 @@ imports:
   PersonRes: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
   DriverFeeStatus:  Dashboard.Common.Driver
+  TagNameValue: Lib.Yudhishthira.Types
 
 module: Driver
 
@@ -606,7 +607,7 @@ types:
     - rcId: Text
     - status: Text
   UpdateDriverTagReq:
-    - driverTag: Text
+    - driverTag: TagNameValue
     - isAddingTag: Bool
     - derive: "'HideSecrets"
   ClearDriverFeeReq:

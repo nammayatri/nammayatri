@@ -81,7 +81,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 import Tools.Maps as Maps
-import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 isBatchNumExceedLimit ::
@@ -582,7 +581,7 @@ makeTaggedDriverPool ::
   [DriverPoolWithActualDistResult] ->
   Int ->
   Bool ->
-  Maybe [Text] ->
+  Maybe [LYT.TagNameValue] ->
   Maybe Int ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
 makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion = do
@@ -601,10 +600,10 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   return (mbVersion, take batchSize sortedPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
-      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
     updateDriverPoolResult DriverPoolResult {..} =
-      DriverPoolResult {customerTags = Just $ maybe A.emptyObject convertTags customerNammaTags, ..}
+      DriverPoolResult {customerTags = Just $ maybe A.emptyObject LYTU.convertTags customerNammaTags, ..}
 
     updateVersionInSearchReq mbVersion =
       whenJust mbVersion $ \_ -> do

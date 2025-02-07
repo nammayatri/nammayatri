@@ -20,7 +20,7 @@ kaalChakraHandle =
   KaalChakra.Handle
     { getUserTags = \userId -> do
         mbRider <- QPerson.findById $ cast @Lib.Yudhishthira.Types.User @DPerson.Person userId
-        pure $ mbRider <&> (\rider -> Lib.Yudhishthira.Types.TagNameValue <$> fromMaybe [] rider.customerNammaTags),
-      updateUserTags = \userId customerTags -> QPerson.updateCustomerTags (Just $ Lib.Yudhishthira.Types.getTagNameValue <$> customerTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId),
+        pure $ mbRider <&> (\rider -> fromMaybe [] rider.customerNammaTags),
+      updateUserTags = \userId customerTags -> QPerson.updateCustomerTags (Just customerTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId),
       action = Actions.kaalChakraAction . cast @Lib.Yudhishthira.Types.User @DPerson.Person
     }

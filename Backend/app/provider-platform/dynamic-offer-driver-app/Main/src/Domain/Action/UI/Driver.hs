@@ -208,6 +208,8 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -271,7 +273,6 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
-import qualified Tools.Utils as TU
 import Tools.Verification hiding (length)
 import Utils.Common.Cac.KeyNameConstants
 
@@ -909,9 +910,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
               return False
             else return driverInfo.onRide
       else return driverInfo.onRide
-  let driverTags = TU.convertTags $ fromMaybe [] person.driverTag
-  let mbDriverSafetyTag = TU.accessKey "SafetyCohort" driverTags
-      mbDriverSafetyScore = TU.accessKey "SafetyScore" driverTags
+  let driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag
+  let mbDriverSafetyTag = Yudhishthira.accessTagKey (LYT.TagName "SafetyCohort") driverTags
+      mbDriverSafetyScore = Yudhishthira.accessTagKey (LYT.TagName "SafetyScore") driverTags
   return $
     DriverEntityRes
       { id = person.id,

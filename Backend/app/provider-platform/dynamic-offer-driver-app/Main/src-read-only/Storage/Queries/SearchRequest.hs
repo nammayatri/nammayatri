@@ -14,6 +14,8 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Yudhishthira.Tools.Utils
+import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as Beam
 import Storage.Queries.SearchRequestExtra as ReExport
@@ -38,8 +40,8 @@ updatePoolingConfigVersion poolingConfigVersion id = do updateWithKV [Se.Set Bea
 updatePoolingLogicVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updatePoolingLogicVersion poolingLogicVersion id = do updateWithKV [Se.Set Beam.poolingLogicVersion poolingLogicVersion] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags searchTags] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTripCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateTripCategory tripCategory id = do updateWithKV [Se.Set Beam.tripCategory tripCategory] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

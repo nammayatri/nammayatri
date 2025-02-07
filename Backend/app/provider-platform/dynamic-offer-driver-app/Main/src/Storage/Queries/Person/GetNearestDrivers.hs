@@ -20,6 +20,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -27,7 +29,6 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
-import qualified Tools.Utils as TU
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -137,4 +138,28 @@ getNearestDrivers NearestDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion info.latestScheduledBooking info.latestScheduledPickup (TU.convertTags $ "NormalDriver#true" : (fromMaybe [] person.driverTag))
+          Just $
+            NearestDriversResult
+              { driverId = cast person.id,
+                driverDeviceToken = person.deviceToken,
+                language = person.language,
+                onRide = info.onRide,
+                distanceToDriver = roundToIntegral dist,
+                variant = vehicle.variant,
+                serviceTier,
+                serviceTierDowngradeLevel = maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver,
+                isAirConditioned = serviceTierInfo.isAirConditioned,
+                lat = location.lat,
+                lon = location.lon,
+                mode = info.mode,
+                clientSdkVersion = person.clientSdkVersion,
+                clientBundleVersion = person.clientBundleVersion,
+                clientConfigVersion = person.clientConfigVersion,
+                clientDevice = person.clientDevice,
+                vehicleAge = getVehicleAge vehicle.mYManufacturing now,
+                backendConfigVersion = person.backendConfigVersion,
+                backendAppVersion = person.backendAppVersion,
+                latestScheduledBooking = info.latestScheduledBooking,
+                latestScheduledPickup = info.latestScheduledPickup,
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : fromMaybe [] person.driverTag
+              }

@@ -20,13 +20,13 @@ data NammaTagT f = NammaTagT
     chakra :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra),
     event :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent),
     tagType :: B.C f Lib.Yudhishthira.Types.NammaTag.TagType,
-    validity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Hours),
     name :: B.C f Kernel.Prelude.Text,
     rangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rangeStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     llmContext :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ruleEngine :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    validity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Hours),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

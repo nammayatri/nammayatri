@@ -21,10 +21,11 @@ instance FromTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
           { actionEngine = actionEngine,
             category = category,
             description = description,
-            info = mkTagInfo chakra event tagType validity,
+            info = mkTagInfo chakra event tagType,
             name = name,
             possibleValues = mkTagValues rangeEnd rangeStart tags,
             rule = mkTagRule llmContext ruleEngine,
+            validity = validity,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -38,13 +39,13 @@ instance ToTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
         Beam.chakra = getChakra info,
         Beam.event = getEvent info,
         Beam.tagType = getTag info,
-        Beam.validity = getValidity info,
         Beam.name = name,
         Beam.rangeEnd = getRangeEnd possibleValues,
         Beam.rangeStart = getRangeStart possibleValues,
         Beam.tags = getTags possibleValues,
         Beam.llmContext = getLlmContext rule,
         Beam.ruleEngine = getRuleEngine rule,
+        Beam.validity = validity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -19,6 +19,7 @@ imports:
   Person: Domain.Types.Person
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  TagNameValue: Lib.Yudhishthira.Types
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -65,8 +66,8 @@ SearchRequest:
     roundTrip: Maybe Bool
     isAdvanceBookingEnabled: Bool
     isDashboardRequest: Bool
-    customerNammaTags: "Maybe [Text]"
-    searchTags: "Maybe [Text]"
+    customerNammaTags: "Maybe [TagNameValue]"
+    searchTags: "Maybe [TagNameValue]"
     startTime: UTCTime
     createdAt: UTCTime
     tripCategory: Maybe TripCategory
@@ -86,6 +87,8 @@ SearchRequest:
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
     configInExperimentVersions: Maybe Value
+    customerNammaTags: "Maybe [Text]"
+    searchTags: "Maybe [Text]"
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -111,6 +114,8 @@ SearchRequest:
     distanceUnit: Kernel.Prelude.Just|I
     isDashboardRequest: Just isDashboardRequest|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
 
   intermediateTransformers:
     fromTType:
@@ -134,6 +139,9 @@ SearchRequest:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     isDashboardRequest: fromMaybe False isDashboardRequest|E
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+    searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+
 
   constraints:
     id: PrimaryKey

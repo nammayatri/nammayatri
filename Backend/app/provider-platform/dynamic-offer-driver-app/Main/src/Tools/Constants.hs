@@ -1,21 +1,21 @@
 module Tools.Constants where
 
-import Kernel.Prelude
+import qualified Lib.Yudhishthira.Types as LYT
 
-validRideTag :: Text
-validRideTag = "ValidRide#Yes"
+validRideTag :: LYT.TagNameValue
+validRideTag = LYT.TagNameValue "ValidRide#Yes"
 
-riderEligibleForCabUpgradeTag :: Text
-riderEligibleForCabUpgradeTag = "RiderEligibleForCabUpgrade#Yes"
+riderEligibleForCabUpgradeTag :: LYT.TagNameValue
+riderEligibleForCabUpgradeTag = LYT.TagNameValue "RiderEligibleForCabUpgrade#Yes"
 
-validDriverCancellation :: Text
-validDriverCancellation = "DriverCancellation#Valid"
+validDriverCancellation :: LYT.TagNameValue
+validDriverCancellation = LYT.TagNameValue "DriverCancellation#Valid"
 
-validCustomerCancellation :: Text
-validCustomerCancellation = "CustomerCancellation#Valid"
+validCustomerCancellation :: LYT.TagNameValue
+validCustomerCancellation = LYT.TagNameValue "CustomerCancellation#Valid"
 
-invalidDriverCancellation :: Text
-invalidDriverCancellation = "DriverCancellation#Invalid"
+invalidDriverCancellation :: LYT.TagNameValue
+invalidDriverCancellation = LYT.TagNameValue "DriverCancellation#Invalid"
 
-invalidCustomerCancellation :: Text
-invalidCustomerCancellation = "CustomerCancellation#Invalid"
+invalidCustomerCancellation :: LYT.TagNameValue
+invalidCustomerCancellation = LYT.TagNameValue "CustomerCancellation#Invalid"

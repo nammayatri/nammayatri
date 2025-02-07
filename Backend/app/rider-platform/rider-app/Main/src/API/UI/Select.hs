@@ -43,9 +43,11 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
@@ -151,7 +153,9 @@ rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estim
 rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personTags = fromMaybe [] person.customerNammaTags
-  unless (rejectUpgradeTag `elem` personTags) $ QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTag]) person.id
+  unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
+    rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
+    QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
   cancelSearchUtil (personId, merchantId) estimateId
 
 cancelSearchUtil :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.CancelAPIResponse

@@ -11,6 +11,8 @@ imports: #
   AddVehicleReq: API.Types.ProviderPlatform.Fleet.Driver
   RCStatusReq: API.Types.ProviderPlatform.Fleet.Driver
   DriverFeeStatus:  Dashboard.Common.Driver
+  TagNameValue: Lib.Yudhishthira.Types
+  TagObject: Lib.Yudhishthira.Types
 module: Driver
 
 apis:
@@ -284,7 +286,8 @@ types:
     - windowSize : Maybe Int
     - blockedDueToRiderComplains: Bool
     - blockStateModifier: Maybe Text
-    - driverTag: Maybe [Text]
+    - driverTag: Maybe [TagNameValue]
+    - driverTagObject: Maybe [TagObject]
     - email: Maybe Text
     - blockedInfo : [DriverBlockTransactions]
     - softBlockStiers: Maybe [Text]

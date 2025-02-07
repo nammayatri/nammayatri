@@ -23,3 +23,10 @@ GET {{bpp-dashboard-host}}
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId1}}/enable
 token: {{juspay_ops}}
 content-type: application/json
+
+###
+
+# @name driverInfo
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/info
+?personId=favorit-suv-000000000000000000000000
+token: {{juspay_ops}}

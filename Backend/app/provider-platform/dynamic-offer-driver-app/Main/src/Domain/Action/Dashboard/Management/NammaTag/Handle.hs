@@ -20,7 +20,7 @@ kaalChakraHandle =
   KaalChakra.Handle
     { getUserTags = \userId -> do
         mbDriver <- QPerson.findById $ cast @Lib.Yudhishthira.Types.User @DPerson.Person userId
-        pure $ mbDriver <&> (\driver -> Lib.Yudhishthira.Types.TagNameValue <$> fromMaybe [] driver.driverTag),
-      updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just $ Lib.Yudhishthira.Types.getTagNameValue <$> driverTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId),
+        pure $ mbDriver <&> (\driver -> fromMaybe [] driver.driverTag),
+      updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId),
       action = Actions.kaalChakraAction . cast @Lib.Yudhishthira.Types.User @DPerson.Person
     }
