@@ -59,7 +59,12 @@ data BusLegRequestGetStateData = BusLegRequestGetStateData
 
 data BusLegRequestGetFareData = BusLegRequestGetFareData
   { startLocation :: LatLngV2,
-    endLocation :: LatLngV2
+    endLocation :: LatLngV2,
+    routeCode :: Text,
+    startStopCode :: Text,
+    endStopCode :: Text,
+    merchant :: DMerchant.Merchant,
+    merchantOpCity :: DMOC.MerchantOperatingCity
   }
 
 data BusLegRequest

@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module ExternalBPP.Metro.ExternalAPI.CMRL.FareMatrix where
+module ExternalBPP.ExternalAPI.Metro.CMRL.FareMatrix where
 
 import Data.Aeson
 import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.Metro.ExternalAPI.CMRL.Auth
+import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App

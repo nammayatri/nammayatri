@@ -62,5 +62,10 @@ data SubwayLegRequest
 
 data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
   { startLocation :: LatLngV2,
-    endLocation :: LatLngV2
+    endLocation :: LatLngV2,
+    routeCode :: Text,
+    startStopCode :: Text,
+    endStopCode :: Text,
+    merchant :: DMerchant.Merchant,
+    merchantOpCity :: DMOC.MerchantOperatingCity
   }

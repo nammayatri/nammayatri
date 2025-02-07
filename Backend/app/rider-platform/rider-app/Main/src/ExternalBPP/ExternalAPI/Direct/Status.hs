@@ -1,16 +1,16 @@
-module ExternalBPP.Bus.ExternalAPI.CUMTA.Status where
+module ExternalBPP.ExternalAPI.Direct.Status where
 
 import qualified Domain.Types.FRFSTicket as Ticket
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
-import ExternalBPP.Bus.ExternalAPI.CUMTA.Utils
-import ExternalBPP.Bus.ExternalAPI.Types
+import ExternalBPP.ExternalAPI.Direct.Utils
+import ExternalBPP.ExternalAPI.Types
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 
-getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => CUMTAConfig -> FRFSTicketBooking -> m [ProviderTicket]
+getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DIRECTConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus config booking = do
   tickets <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
   updatedTickets <-

@@ -1,4 +1,4 @@
-module ExternalBPP.Bus.ExternalAPI.CUMTA.Utils where
+module ExternalBPP.ExternalAPI.Direct.Utils where
 
 import Crypto.Cipher.TripleDES
 import Crypto.Cipher.Types
@@ -7,14 +7,14 @@ import Crypto.Error (CryptoFailable (..))
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text.Encoding as TE
 import Domain.Types.IntegratedBPPConfig
-import ExternalBPP.Bus.ExternalAPI.Types
+import ExternalBPP.ExternalAPI.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Base64
 import Kernel.Utils.Common
 import Tools.Error
 
-generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CUMTAConfig -> TicketPayload -> m Text
+generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> TicketPayload -> m Text
 generateQR config ticket = do
   let cipherKey = config.cipherKey
       qrData = encodeToText ticket
@@ -30,7 +30,7 @@ generateQR config ticket = do
            in Right $ TE.decodeUtf8 $ Base64.encode $ ecbEncrypt cipher paddedPlainText
         CryptoFailed err -> Left $ show err
 
-decodeQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CUMTAConfig -> Text -> m TicketPayload
+decodeQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> Text -> m TicketPayload
 decodeQR config encryptedQrData = do
   let cipherKey = config.cipherKey
   decryptedQR <- decryptDES cipherKey encryptedQrData & fromEitherM (\err -> InternalError $ "Failed to decrypt: " <> show err)
@@ -50,7 +50,7 @@ decodeQR config encryptedQrData = do
             Nothing -> Left "Could not decrypt!"
         CryptoFailed err -> Left $ show err
 
-refreshQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CUMTAConfig -> Text -> m (Maybe (Text, UTCTime))
+refreshQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> Text -> m (Maybe (Text, UTCTime))
 refreshQR config encryptedQrData = do
   ticket :: TicketPayload <- decodeQR config encryptedQrData
   now <- getCurrentTime

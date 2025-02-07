@@ -258,29 +258,27 @@ library
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
       Environment
-      ExternalBPP.Bus.ExternalAPI.CallAPI
-      ExternalBPP.Bus.ExternalAPI.CUMTA.Order
-      ExternalBPP.Bus.ExternalAPI.CUMTA.Status
-      ExternalBPP.Bus.ExternalAPI.CUMTA.Utils
-      ExternalBPP.Bus.ExternalAPI.CUMTA.Verify
-      ExternalBPP.Bus.ExternalAPI.EBIX.Auth
-      ExternalBPP.Bus.ExternalAPI.EBIX.Order
-      ExternalBPP.Bus.ExternalAPI.EBIX.Payment
-      ExternalBPP.Bus.ExternalAPI.EBIX.Status
-      ExternalBPP.Bus.ExternalAPI.Types
-      ExternalBPP.Bus.Flow
       ExternalBPP.CallAPI
-      ExternalBPP.Metro.ExternalAPI.CallAPI
-      ExternalBPP.Metro.ExternalAPI.CMRL.Auth
-      ExternalBPP.Metro.ExternalAPI.CMRL.BusinessHour
-      ExternalBPP.Metro.ExternalAPI.CMRL.DurationDetails
-      ExternalBPP.Metro.ExternalAPI.CMRL.FareByOriginDest
-      ExternalBPP.Metro.ExternalAPI.CMRL.FareMatrix
-      ExternalBPP.Metro.ExternalAPI.CMRL.PassengerViewStatus
-      ExternalBPP.Metro.ExternalAPI.CMRL.QR
-      ExternalBPP.Metro.ExternalAPI.CMRL.StationList
-      ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
-      ExternalBPP.Metro.Flow
+      ExternalBPP.ExternalAPI.Bus.EBIX.Auth
+      ExternalBPP.ExternalAPI.Bus.EBIX.Order
+      ExternalBPP.ExternalAPI.Bus.EBIX.Payment
+      ExternalBPP.ExternalAPI.Bus.EBIX.Status
+      ExternalBPP.ExternalAPI.CallAPI
+      ExternalBPP.ExternalAPI.Direct.Order
+      ExternalBPP.ExternalAPI.Direct.Status
+      ExternalBPP.ExternalAPI.Direct.Utils
+      ExternalBPP.ExternalAPI.Direct.Verify
+      ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+      ExternalBPP.ExternalAPI.Metro.CMRL.BusinessHour
+      ExternalBPP.ExternalAPI.Metro.CMRL.DurationDetails
+      ExternalBPP.ExternalAPI.Metro.CMRL.FareByOriginDest
+      ExternalBPP.ExternalAPI.Metro.CMRL.FareMatrix
+      ExternalBPP.ExternalAPI.Metro.CMRL.Order
+      ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.StationList
+      ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
+      ExternalBPP.ExternalAPI.Types
+      ExternalBPP.Flow
       Lib.JourneyLeg.Bus
       Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Interface
