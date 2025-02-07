@@ -916,6 +916,7 @@ currentFlowStatus prioritizeRating = do
     if isNothing (response ^. _firstName) then do
       void $ updateLocalStage HomeScreen
       hideLoaderFlow
+      when (response ^. _referralCode /= Nothing) $ void $ modifyScreenState $ AccountSetUpScreenStateType (\state -> state {data {isReferred = Verified, referralCode = (fromMaybe "" (response ^. _referralCode))}})
       accountSetUpScreenFlow
       handleDeepLinks Nothing true
     else do
@@ -1223,6 +1224,7 @@ accountSetUpScreenFlow = do
             }
       setValueToLocalStore DISABILITY_UPDATED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showDisabilityPopUp = (isJust selectedDisability) }, data { disability = selectedDisability } })
+      when (state.data.isReferred == NotVerified && DS.length state.data.referralCode >= 6) $ void $ applyReferralCode state.data.referralCode
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
@@ -1247,6 +1249,16 @@ accountSetUpScreenFlow = do
       modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> AccountSetUpScreenData.initData)
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen -> enterMobileNumberScreen { data { otp = "" } })
       enterMobileNumberScreenFlow
+    APPLY_REFERRAL referralCode -> do
+      referralAppliedStatus <- applyReferralCode referralCode
+      case referralAppliedStatus of
+        REFERRAL_APPLIED -> do
+          void $ pure $ hideKeyboardOnNavigation true
+          modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = Verified, referralTextFocussed = true} })
+        REFERRAL_INVALID -> do
+          modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = ReferralFailed, referralTextFocussed = true} })
+        _ -> pure unit
+      accountSetUpScreenFlow
 
 updateDisabilityList :: String -> FlowBT String (Array DisabilityT)
 updateDisabilityList screenType = do

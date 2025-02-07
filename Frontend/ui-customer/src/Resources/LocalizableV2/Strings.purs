@@ -278,6 +278,14 @@ getProxy str =
     GETTING_ESTIMATES_FOR_YOU -> \a -> a @~ getting_estimates_for_you
     GETTING_REVISED_ESTIMATE -> \a -> a @~ getting_revised_estimate
     GETTING_STARTED_AND_FAQS -> \a -> a @~ getting_started_and_faqs
+    VERIFYING -> \a -> a @~ verifying
+    REFERRAL_CODE_VERIFIED -> \a -> a @~ referral_code_verified
+    REFERRAL_CODE_FAILED -> \a -> a @~ referral_code_failed
+    ENTER_6_DIGIT_REFERRAL_CODE -> \a -> a @~ enter_6_digit_referral_code
+    NOT_VERIFIED -> \a -> a @~ not_verified
+    OPTIONAL_BRACKETTED -> \a -> a @~ optional_bracketted
+    VERIFY -> \a -> a @~ verify
+    REFERRAL_CODE -> \a -> a @~ referral_code
     GIVE_THIS_LOCATION_A_NAME -> \a -> a @~ give_this_location_a_name
     GO_BACK_ -> \a -> a @~ go_back_
     GO_HOME_ -> \a -> a @~ go_home_

@@ -32,8 +32,9 @@ import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, id, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
+import Screens.Types (ReferralEnum(..), AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Data.Array as DA
+import Engineering.Helpers.Commons as EHC
 import Timers (clearTimerWithId)
 import Engineering.Helpers.Events as EHE
 
@@ -74,7 +75,10 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "option_with_html_clicked"
       _ -> pure unit
     ShowOptions -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "show_options"
-    EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
+    EditTextFocusChanged _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
+    ReferralTextFocusChanged _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "referral_edit_text_focus_changed" "referral_text"
+    ReferralTextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "referral_text_changed" "edit_text"
+    VerifyReferralClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "verify_referral_click"
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
     GenderSelected value -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "gender_selected" "edit_text"
     AnimationEnd _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "show_options" "animation_end"
@@ -89,6 +93,7 @@ instance loggableAction :: Loggable Action where
 data ScreenOutput
   = GoHome AccountSetUpScreenState
   | ChangeMobileNumber
+  | VerifyReferral AccountSetUpScreenState
 
 data Action
   = BackPressed
@@ -97,7 +102,11 @@ data Action
   | GenericHeaderActionController GenericHeaderController.Action
   | PopUpModalAction PopUpModal.Action
   | ShowOptions
-  | EditTextFocusChanged
+  | EditTextFocusChanged Boolean
+  | ReferralTextFocusChanged Boolean
+  | ReferralTextChanged String
+  | VerifyReferralClick
+  | ReferralSectionClick
   | TextChanged String
   | GenderSelected Gender
   | AfterRender
@@ -125,7 +134,14 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) 
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state[ do pure $ BackPressed]
 
-eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
+eval (EditTextFocusChanged focus) state = continue state {data{referralTextFocussed = false},props{genderOptionExpanded = false, activeField = if EHC.isTrue focus then Just NameSection else state.props.activeField}}
+
+eval (ReferralTextFocusChanged focus) state = if state.data.isReferred == Verified then continue state else continue state {data {referralTextFocussed = EHC.isTrue focus}, props{genderOptionExpanded = false, activeField = if EHC.isTrue focus then Just ReferralSection else state.props.activeField}}
+
+eval (ReferralTextChanged value) state = do
+  let
+    newState = state {data { referralCode = if state.data.isReferred == Verified then state.data.referralCode else trim value, isReferred = if state.data.isReferred == Verified then Verified else NotVerified}}
+  continue newState
 
 eval (GenderSelected value) state = do
   let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_gender_selected") { module = "onboarding", payload = show value}
@@ -138,11 +154,17 @@ eval (TextChanged value) state = do
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{data {nameErrorMessage = if(length state.data.name >= 3) then Nothing else Just INVALID_NAME}, props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
+  continue state{data {referralTextFocussed = false, nameErrorMessage = if(length state.data.name >= 3) then Nothing else Just INVALID_NAME}, props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
 
 eval NameSectionClick state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
 
 eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
+
+eval VerifyReferralClick state = do 
+  let newState = state {data {isReferred = Verifying}}
+  updateAndExit newState $ (VerifyReferral newState)
+
+eval ReferralSectionClick state = if state.data.isReferred == Verified then continue state {props{genderOptionExpanded = false}} else continue state {props{genderOptionExpanded = false, activeField = Just ReferralSection}, data {referralTextFocussed = true}}
 
 eval BackPressed state = do
   if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
@@ -156,7 +178,8 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { pro
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 
 eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
-  let newState = state{data{disabilityOptions = 
+  let newState = state{data{referralTextFocussed = false,
+                    disabilityOptions = 
                       if idx == 0 then 
                         state.data.disabilityOptions{ activeIndex = idx, specialAssistActiveIndex = 0, editedDisabilityReason = "", selectedDisability = Nothing, otherDisabilityReason = Nothing }
                         else state.data.disabilityOptions{ activeIndex = idx}
