@@ -1674,3 +1674,13 @@ getTE stringKey =
     BOOK_FOR_ pricerange -> pricerange <> " కి బుక్ చేయండి"
     YOUR_CANCELLATION_RATE_IS_HIGH -> "మీ రద్దు రేటు ఎక్కువగా ఉంది!"
     AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ని ఉపయోగించడం కొనసాగించడానికి తదుపరి రద్దులను నివారించండి."
+    VERIFYING -> "ధృవీకరిస్తోంది"
+    REFERRAL_CODE_VERIFIED -> "సూచన కోడ్ ధృవీకరించబడింది"
+    REFERRAL_CODE_FAILED -> "సూచన కోడ్ విఫలమైంది! దయచేసి తనిఖీ చేసి మళ్లీ ప్రయత్నించండి"
+    ENTER_6_DIGIT_REFERRAL_CODE -> "6 అంకెల సూచన కోడ్‌ను నమోదు చేయండి"
+    NOT_VERIFIED -> "ధృవీకరించబడలేదు"
+    OPTIONAL_BRACKETTED -> "(ఐచ్ఛికం)"
+    VERIFY -> "ధృవీకరించండి"
+    REFERRAL_CODE -> "రిఫరల్_కోడ్"
+    VERIFIED -> "ధృవీకరించబడింది"
+    

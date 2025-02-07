@@ -258,8 +258,11 @@ type AccountSetUpScreenStateProps =
 
 
 
-data ActiveFieldAccountSetup = DropDown | NameSection
+data ActiveFieldAccountSetup = DropDown | NameSection | ReferralSection
 
+data ReferralEnum = Verified | NotVerified | ReferralFailed | Verifying
+
+derive instance eqReferralEnum :: Eq ReferralEnum
 derive instance genericActiveFieldAccountSetup :: Generic ActiveFieldAccountSetup _
 instance eqActiveFieldAccountSetup :: Eq ActiveFieldAccountSetup where eq = genericEq
 
@@ -270,6 +273,10 @@ type AccountSetUpScreenStateData =
     , nameErrorMessage :: Maybe ErrorType
     , config :: AppConfig
     , disabilityOptions :: DisabilityData
+    , isReferred :: ReferralEnum
+    , referralTextFocussed :: Boolean
+    , referralTextDisabled :: Boolean
+    , referralCode :: String
   }
 
 

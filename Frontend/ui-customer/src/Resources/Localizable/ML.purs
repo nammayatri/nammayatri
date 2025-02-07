@@ -1659,3 +1659,12 @@ getML stringKey =
         BOOK_FOR_ pricerange -> pricerange <> " വരെ ബുക്ക് ചെയ്യുക"
         YOUR_CANCELLATION_RATE_IS_HIGH -> "നിങ്ങളുടെ റദ്ദാക്കൽ നിരക്ക് കൂടുതലാണ്!"
         AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> "ഉപയോഗിക്കുന്നത് തുടരാൻ കൂടുതൽ റദ്ദാക്കലുകൾ ഒഴിവാക്കുക " <> appName
+        VERIFYING -> "പരിശോധന നടക്കുന്നു"
+        REFERRAL_CODE_VERIFIED -> "റഫറൽ കോഡ് പരിശോധന കഴിഞ്ഞു!"
+        REFERRAL_CODE_FAILED -> "റഫറൽ കോഡ് പരാജയപ്പെട്ടു! ദയവായി പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക"
+        ENTER_6_DIGIT_REFERRAL_CODE -> "6 അക്ക റഫറൽ കോഡ് നൽകുക"
+        NOT_VERIFIED -> "പരിശോധന നടത്തപ്പെടാത്തത്"
+        OPTIONAL_BRACKETTED -> "(ഐച്ഛികം)"
+        VERIFY -> "പരിശോധന നടത്തുക"
+        REFERRAL_CODE -> "റഫറൽ കോഡ്"
+        VERIFIED -> "പരിശോധിച്ചു"
