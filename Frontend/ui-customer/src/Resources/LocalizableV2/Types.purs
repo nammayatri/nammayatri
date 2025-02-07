@@ -1476,6 +1476,14 @@ newtype Keymap = Keymap {
 , emergency_actions_sub :: String
 , current_initiatives :: String
 , current_initiatives_sub :: String
+, verifying :: String
+, referral_code_verified :: String
+, referral_code_failed :: String
+, enter_6_digit_referral_code :: String
+, not_verified :: String
+, optional_bracketted :: String
+, verify :: String
+, referral_code :: String
 , driver_verification :: String
 , driver_verification_sub :: String
 , safety_feedback :: String
@@ -1777,6 +1785,8 @@ derive instance ntK :: Newtype Keymap _
 a :: forall a. Proxy a
 a = Proxy
 
+verify :: Proxy "verify"
+verify = a
 
 about :: Proxy "about"
 about = a
@@ -1906,6 +1916,28 @@ book_ride_ = a
 
 booking_preference :: Proxy "booking_preference"
 booking_preference = a
+
+
+verifying :: Proxy "verifying"
+verifying = a
+
+referral_code_verified :: Proxy "referral_code_verified"
+referral_code_verified = a
+
+referral_code_failed :: Proxy "referral_code_failed"
+referral_code_failed = a
+
+enter_6_digit_referral_code :: Proxy "enter_6_digit_referral_code"
+enter_6_digit_referral_code = a
+
+not_verified :: Proxy "not_verified"
+not_verified = a
+
+optional_bracketted :: Proxy "optional_bracketted"
+optional_bracketted = a
+
+referral_code :: Proxy "referral_code"
+referral_code = a
 
 boost_your_ride_chances_and_help_drivers_with_tips :: Proxy "boost_your_ride_chances_and_help_drivers_with_tips"
 boost_your_ride_chances_and_help_drivers_with_tips = a
