@@ -17,7 +17,7 @@ data EBIXConfig = EBIXConfig
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-data CUMTAConfig = CUMTAConfig
+data DIRECTConfig = DIRECTConfig
   { cipherKey :: Base64,
     qrRefreshTtl :: Maybe Seconds
   }

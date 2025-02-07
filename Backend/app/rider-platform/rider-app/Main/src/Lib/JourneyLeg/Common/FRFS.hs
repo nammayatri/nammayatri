@@ -18,6 +18,8 @@ import ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -71,6 +73,20 @@ getState mode searchId riderLastPoints isLastCompleted = do
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
       let oldStatus = fromMaybe (if isLastCompleted then JPT.Ongoing else JPT.InPlan) mbOldStatus
       return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted) mbToLatLong
+
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> Text -> Text -> Text -> m (Maybe JT.GetFareResponse)
+getFare merchant merchantOperatingCity vehicleCategory routeCode startStationCode endStationCode = do
+  QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
+    >>= \case
+      Just bapConfig -> do
+        try @_ @SomeException (CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig (Just routeCode) startStationCode endStationCode vehicleCategory)
+          >>= \case
+            Right [] -> return Nothing
+            Right (fare : _) -> return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = fare.price.amount.getHighPrecMoney}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = fare.price.amount.getHighPrecMoney}})
+            Left err -> do
+              logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Route : " <> routeCode <> ", Start Stop : " <> startStationCode <> ", End Stop : " <> endStationCode <> ", Error : " <> show err
+              return Nothing
+      Nothing -> return Nothing
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
 getInfo searchId fallbackFare distance duration = do

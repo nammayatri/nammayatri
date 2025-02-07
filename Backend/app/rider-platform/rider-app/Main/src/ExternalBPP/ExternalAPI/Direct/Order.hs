@@ -1,4 +1,4 @@
-module ExternalBPP.Bus.ExternalAPI.CUMTA.Order where
+module ExternalBPP.ExternalAPI.Direct.Order where
 
 import API.Types.UI.FRFSTicketService
 import qualified Data.Text as T
@@ -7,8 +7,8 @@ import Data.Time.Format
 import qualified Data.UUID as UU
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
-import ExternalBPP.Bus.ExternalAPI.CUMTA.Utils
-import ExternalBPP.Bus.ExternalAPI.Types
+import ExternalBPP.ExternalAPI.Direct.Utils
+import ExternalBPP.ExternalAPI.Types
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -19,7 +19,7 @@ import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => CUMTAConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DIRECTConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
 createOrder config qrTtl booking = do
   when (isJust booking.bppOrderId) $ throwError (InternalError $ "Order Already Created for Booking : " <> booking.id.getId)
   bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
@@ -29,7 +29,7 @@ createOrder config qrTtl booking = do
   tickets <- mapM (getTicketDetail config qrTtl booking) routeStations
   return ProviderOrder {..}
 
-getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CUMTAConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config qrTtl booking routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
@@ -59,7 +59,7 @@ getTicketDetail config qrTtl booking routeStation = do
           toRouteProviderCode = toRoute.providerCode,
           adultQuantity = adultQuantity,
           childQuantity = 0,
-          busTypeProviderCode = busTypeId,
+          vehicleTypeProviderCode = busTypeId,
           expiry = formatUtcTime qrValidityIST,
           ticketNumber,
           ticketAmount = amount,

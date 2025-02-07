@@ -57,7 +57,7 @@ data DTicketPayload = DTicketPayload
     toRouteProviderCode :: Text,
     adultQuantity :: Int,
     childQuantity :: Int,
-    busTypeProviderCode :: Text,
+    vehicleTypeProviderCode :: Text,
     expiry :: Text,
     ticketNumber :: Text,
     ticketAmount :: Money,

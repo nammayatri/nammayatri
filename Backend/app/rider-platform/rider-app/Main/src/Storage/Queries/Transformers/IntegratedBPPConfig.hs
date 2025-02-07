@@ -13,5 +13,5 @@ getProviderConfig configJSON = Kernel.Utils.JSON.valueToMaybe configJSON & fromM
 getProviderConfigJson :: Domain.ProviderConfig -> A.Value
 getProviderConfigJson = \case
   Domain.EBIX cfg -> toJSON cfg
-  Domain.CUMTA cfg -> toJSON cfg
+  Domain.DIRECT cfg -> toJSON cfg
   Domain.CMRL cfg -> toJSON cfg

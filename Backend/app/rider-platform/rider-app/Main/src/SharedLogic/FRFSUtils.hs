@@ -20,6 +20,7 @@ import Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
+import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
@@ -43,8 +44,14 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Station as CQS
 import Storage.Queries.AadhaarVerification as QAV
+import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
+import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
+import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
+import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
+import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
+import Storage.Queries.RouteStopFare as QRouteStopFare
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Tools.DynamicLogic
 import Tools.Error
@@ -190,35 +197,100 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
       )
       routes
 
--- TODO :: This to be handled from OTP, Currently Hardcode for Chennai
-getPossibleTransitRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [[RouteStopInfo]]
-getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
-  case (startStationCode, endStationCode) of
-    ("MBTcSIip", "jQaLNViL") -> do
-      routes <- QRoute.findByRouteCodes ["jylLjHej", "BTuKbmBy"]
-      return $
-        [ map
-            ( \route ->
-                if route.code == "jylLjHej"
-                  then
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 6,
-                        stops = Nothing,
-                        startStopCode = "MBTcSIip",
-                        endStopCode = "TiulEaYs",
-                        travelTime = Just $ Seconds 660
-                      }
-                  else
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 8,
-                        stops = Nothing,
-                        startStopCode = "TiulEaYs",
-                        endStopCode = "jQaLNViL",
-                        travelTime = Just $ Seconds 1440
-                      }
-            )
-            routes
-        ]
-    _ -> return []
+data FRFSDiscount = FRFSDiscount
+  { code :: Text,
+    title :: Text,
+    description :: Text,
+    tnc :: Text,
+    price :: Price,
+    eligibility :: Bool
+  }
+
+data FRFSVehicleServiceTier = FRFSVehicleServiceTier
+  { serviceTierType :: Spec.ServiceTierType,
+    serviceTierProviderCode :: Text,
+    serviceTierShortName :: Text,
+    serviceTierDescription :: Text,
+    serviceTierLongName :: Text
+  }
+
+data FRFSFare = FRFSFare
+  { price :: Price,
+    discounts :: [FRFSDiscount],
+    vehicleServiceTier :: FRFSVehicleServiceTier
+  }
+
+getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe (Id DP.Person) -> Spec.VehicleCategory -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
+getFares mbRiderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+  currentTime <- getCurrentTime
+  fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode merchantId merchantOperatingCityId
+  let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
+  mapM
+    ( \fareProduct -> do
+        vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
+        farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+        price <-
+          case farePolicy._type of
+            DFRFSFarePolicy.MatrixBased -> do
+              routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id routeCode startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
+              return $
+                Price
+                  { amountInt = round routeStopFare.amount,
+                    amount = routeStopFare.amount,
+                    currency = routeStopFare.currency
+                  }
+            DFRFSFarePolicy.StageBased -> do
+              stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
+              startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+              endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+              let stage = endStageFare.stage - startStageFare.stage
+              stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
+              return $
+                Price
+                  { amountInt = round stageFare.amount,
+                    amount = stageFare.amount,
+                    currency = stageFare.currency
+                  }
+        discountsWithEligibility <-
+          case mbRiderId of
+            Just riderId -> getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
+            Nothing -> pure []
+        return $
+          FRFSFare
+            { price = price,
+              discounts = map (mkDiscount price) discountsWithEligibility,
+              vehicleServiceTier =
+                FRFSVehicleServiceTier
+                  { serviceTierType = vehicleServiceTier._type,
+                    serviceTierProviderCode = vehicleServiceTier.providerCode,
+                    serviceTierShortName = vehicleServiceTier.shortName,
+                    serviceTierDescription = vehicleServiceTier.description,
+                    serviceTierLongName = vehicleServiceTier.longName
+                  }
+            }
+    )
+    serviceableFareProducts
+  where
+    mkDiscount price (discount, eligibility) =
+      let discountPrice =
+            case discount.value of
+              DFRFSTicketDiscount.FixedAmount amount ->
+                Price
+                  { amountInt = round amount,
+                    amount = amount,
+                    currency = discount.currency
+                  }
+              DFRFSTicketDiscount.Percentage percent ->
+                Price
+                  { amountInt = round ((HighPrecMoney (toRational percent) * price.amount) / 100),
+                    amount = (HighPrecMoney (toRational percent) * price.amount) / 100,
+                    currency = discount.currency
+                  }
+       in FRFSDiscount
+            { code = discount.code,
+              title = discount.title,
+              description = discount.description,
+              tnc = discount.tnc,
+              price = discountPrice,
+              ..
+            }
