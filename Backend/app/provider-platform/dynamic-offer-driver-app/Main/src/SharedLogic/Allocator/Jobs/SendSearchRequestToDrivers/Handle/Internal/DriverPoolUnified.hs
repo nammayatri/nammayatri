@@ -142,11 +142,11 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
             gateTaggedDrivers <- assignDriverGateTags searchReq newFilteredDriversWithFavourites
             goHomeTaggedDrivers <- assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig
             logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
-            calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig goHomeTaggedDrivers previousBatchesDrivers) txnId
+            calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig goHomeTaggedDrivers previousBatchesDrivers) txnId batchNum
           _ -> do
             allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) newFilteredDriversWithFavourites
             logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
-            calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers previousBatchesDrivers) txnId
+            calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers previousBatchesDrivers) txnId batchNum
       cacheBatch driverPoolNotOnRide Nothing
       cacheBatch driverPoolOnRide (Just True)
       let (poolNotOnRide, poolOnRide) =
@@ -198,25 +198,25 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo
 
-        calculateNormalBatch mOCityId transporterConfig normalDriverPool radiusStep blockListedDrivers onlyNewNormalDrivers txnId' = do
+        calculateNormalBatch mOCityId transporterConfig normalDriverPool radiusStep blockListedDrivers onlyNewNormalDrivers txnId' batchNum = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool <> " and txnId " <> show txnId'
-          (normalBatchNotOnRide, normalBatchOnRide', mbRadiusThreshold) <- getDriverPoolNotOnRide mOCityId transporterConfig normalDriverPool radiusStep onlyNewNormalDrivers txnId'
+          (normalBatchNotOnRide, normalBatchOnRide', mbRadiusThreshold) <- getDriverPoolNotOnRide mOCityId transporterConfig normalDriverPool radiusStep onlyNewNormalDrivers txnId' batchNum
           logDebug $ "NormalBatchNotOnRide-" <> show normalBatchNotOnRide <> " and txnId " <> show txnId' <> " and radiusStep " <> show radiusStep <> " in DriverPoolUnified"
           normalBatchOnRide <-
             case mbRadiusThreshold of
               Just radiusStepThreshold -> do
-                getDriverPoolOnRide mOCityId transporterConfig radiusStepThreshold blockListedDrivers NormalPool
+                getDriverPoolOnRide mOCityId transporterConfig radiusStepThreshold blockListedDrivers NormalPool batchNum
               Nothing -> pure normalBatchOnRide'
           pure (normalBatchNotOnRide, normalBatchOnRide)
 
-        getDriverPoolNotOnRide mOCityId transporterConfig normalDriverPool radiusStep onlyNewNormalDrivers txnId' = do
+        getDriverPoolNotOnRide mOCityId transporterConfig normalDriverPool radiusStep onlyNewNormalDrivers txnId' batchNum = do
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
               SDP.incrementPoolRadiusStep searchTry.id
               batchEntity <- prepareDriverPoolBatch' previousBatchesDrivers batchNum mOCityId txnId' isValueAddNP
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
-              (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False
+              (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False batchNum
               if length normalDriverPoolBatch < batchSize
                 then do
                   filledBatch <- fillBatch transporterConfig normalDriverPool normalDriverPoolBatch (mbVersion <|> searchReq.poolingLogicVersion)
@@ -230,14 +230,14 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           let allNearbyDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyNonGoHomeDrivers
           pure $ bookAnyFilters transporterConfig allNearbyDrivers previousBatchesDrivers'
 
-        getDriverPoolOnRide mOCityId transporterConfig radiusStep blockListedDrivers poolType = do
+        getDriverPoolOnRide mOCityId transporterConfig radiusStep blockListedDrivers poolType batchNum = do
           if poolType == NormalPool && driverPoolCfg.enableForwardBatching && searchTry.isAdvancedBookingEnabled
             then do
               previousDriverOnRide <- getPreviousBatchesDrivers (Just True)
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig batchNum
               logDebug $ "NormalDriverPoolBatchOnRideCurrentlyOnRide-" <> show allNearbyDriversCurrentlyOnRide
               onlyNewNormalDriversOnRide <- filtersForNormalBatch mOCityId transporterConfig allNearbyDriversCurrentlyOnRide blockListedDrivers previousDriverOnRide
-              (_, normalDriverPoolBatchOnRide) <- mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True
+              (_, normalDriverPoolBatchOnRide) <- mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True batchNum
               validDriversFromPreviousBatch <-
                 filterM
                   ( \dpr -> do
@@ -276,7 +276,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool = SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool batchNum = SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
           fst $
