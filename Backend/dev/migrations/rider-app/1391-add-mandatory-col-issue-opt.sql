@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.issue_option ADD COLUMN mandatory_uploads text[] DEFAULT '{}';
