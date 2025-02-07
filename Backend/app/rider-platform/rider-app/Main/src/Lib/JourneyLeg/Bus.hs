@@ -4,7 +4,6 @@ module Lib.JourneyLeg.Bus where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.Trip as DTrip
-import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
@@ -39,6 +38,5 @@ instance JT.JourneyLeg BusLegRequest m where
   getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (BusLegRequestGetFare _) = do
-    return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = 20}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 20}})
+  getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare merchant merchantOpCity Spec.BUS routeCode startStopCode endStopCode
   getFare _ = throwError (InternalError "Not supported")

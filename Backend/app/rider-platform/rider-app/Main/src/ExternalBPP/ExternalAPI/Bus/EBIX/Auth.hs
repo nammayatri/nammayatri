@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 
-module ExternalBPP.Bus.ExternalAPI.EBIX.Auth where
+module ExternalBPP.ExternalAPI.Bus.EBIX.Auth where
 
 import Data.Aeson
 import qualified Data.Text as T

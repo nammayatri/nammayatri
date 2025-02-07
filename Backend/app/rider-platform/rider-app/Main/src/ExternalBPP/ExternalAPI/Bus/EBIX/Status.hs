@@ -1,12 +1,12 @@
-module ExternalBPP.Bus.ExternalAPI.EBIX.Status where
+module ExternalBPP.ExternalAPI.Bus.EBIX.Status where
 
 import Data.Aeson
 import qualified Domain.Types.FRFSTicket as Ticket
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.Bus.ExternalAPI.EBIX.Auth
-import ExternalBPP.Bus.ExternalAPI.Types
+import ExternalBPP.ExternalAPI.Bus.EBIX.Auth
+import ExternalBPP.ExternalAPI.Types
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Utils.Common

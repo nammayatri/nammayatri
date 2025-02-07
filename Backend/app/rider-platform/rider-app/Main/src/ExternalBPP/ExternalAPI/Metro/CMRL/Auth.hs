@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 
-module ExternalBPP.Metro.ExternalAPI.CMRL.Auth where
+module ExternalBPP.ExternalAPI.Metro.CMRL.Auth where
 
 import Data.Aeson
 import Domain.Types.Extra.IntegratedBPPConfig
