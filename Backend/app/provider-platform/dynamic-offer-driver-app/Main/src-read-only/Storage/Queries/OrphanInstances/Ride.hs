@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.Transformers.Ride
 import qualified Storage.Queries.Transformers.Ride
@@ -84,7 +85,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             previousRideTripEndPos = Storage.Queries.Transformers.Ride.mkLatLong previousRideTripEndLat previousRideTripEndLon,
             previousRideTripEndTime = previousRideTripEndTime,
             rideEndedBy = rideEndedBy,
-            rideTags = rideTags,
+            rideTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType rideTags,
             safetyAlertTriggered = safetyAlertTriggered,
             shortId = Kernel.Types.Id.ShortId shortId,
             startOdometerReading = Storage.Queries.Transformers.Ride.mkOdometerReading startOdometerReadingFileId startOdometerReadingValue,
@@ -171,7 +172,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.previousRideTripEndLon = Kernel.Prelude.fmap (.lon) previousRideTripEndPos,
         Beam.previousRideTripEndTime = previousRideTripEndTime,
         Beam.rideEndedBy = rideEndedBy,
-        Beam.rideTags = rideTags,
+        Beam.rideTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType rideTags,
         Beam.safetyAlertTriggered = safetyAlertTriggered,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.startOdometerReadingFileId = getStartOdometerReadingFileId startOdometerReading,

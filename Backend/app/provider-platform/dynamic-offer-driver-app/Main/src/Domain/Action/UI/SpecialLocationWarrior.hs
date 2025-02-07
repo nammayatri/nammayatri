@@ -21,6 +21,9 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.DriverInformation as TDI
@@ -70,28 +73,29 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
   let preferredPrimarySpecialLocationId = preferredPrimarySpecialLocId <|> driverInfo.preferredPrimarySpecialLocId
   preferredPrimarySpecialLocation <- maybe (return Nothing) (\locId -> TDI.getPreferredPrimarySpecialLoc (Just locId.getId)) preferredPrimarySpecialLocationId
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
+  metroWarriorTagValidity <- Yudhishthira.fetchNammaTagValidity $ LYT.TagName "MetroWarrior"
+  now <- getCurrentTime
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocationId' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLocId
-    getDriverTag preferredPrimarySpecialLocationId' driverInfo.preferredSecondarySpecialLocIds
-  now <- getCurrentTime
+    pure $ getDriverTag preferredPrimarySpecialLocationId' driverInfo.preferredSecondarySpecialLocIds metroWarriorTagValidity now
   let enabledAt = if isSpecialLocWarrior then Just now else Nothing
   QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocationId preferredSecondarySpecialLocIds enabledAt personId
 
   mbDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocationId' <- MaybeT $ pure preferredPrimarySpecialLocationId
-    getDriverTag preferredPrimarySpecialLocationId' preferredSecondarySpecialLocIds
+    pure $ getDriverTag preferredPrimarySpecialLocationId' preferredSecondarySpecialLocIds metroWarriorTagValidity now
   whenJust mbDriverTag $ \driverTag -> do
     if isSpecialLocWarrior
-      then unless (maybe False (elem driverTag) driver.driverTag) $ do
+      then unless (maybe False (Yudhishthira.elemTagNameValue driverTag) driver.driverTag) $ do
         logDebug $ "Driver Tag driverTag: ----------" <> personId.getId <> "  " <> show driverTag
         whenJust mbOlderDriverTag $ \olderDriverTag -> do
-          let updatedTag = addDriverTag (Just $ removeDriverTag driver.driverTag olderDriverTag) driverTag
+          let updatedTag = Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.removeTagNameValue driver.driverTag olderDriverTag) driverTag
           logDebug $ "Driver Tag olderDriverTag: ----------" <> personId.getId <> "  " <> show olderDriverTag
-          logDebug $ "Driver Tag removeDriverTag: ----------" <> personId.getId <> "  " <> show (removeDriverTag driver.driverTag olderDriverTag)
+          logDebug $ "Driver Tag removeDriverTag: ----------" <> personId.getId <> "  " <> show (Yudhishthira.removeTagNameValue driver.driverTag olderDriverTag)
           QPerson.updateDriverTag (Just updatedTag) personId
-        whenNothing_ mbOlderDriverTag $ QPerson.updateDriverTag (Just $ addDriverTag driver.driverTag driverTag) personId
-        logDebug $ "Driver Tag addDriverTag: ----------" <> personId.getId <> "  " <> show (addDriverTag driver.driverTag driverTag)
-      else when (maybe False (elem driverTag) driver.driverTag) $ QPerson.updateDriverTag (Just $ removeDriverTag driver.driverTag driverTag) personId
+        whenNothing_ mbOlderDriverTag $ QPerson.updateDriverTag (Just $ Yudhishthira.replaceTagNameValue driver.driverTag driverTag) personId
+        logDebug $ "Driver Tag addDriverTag: ----------" <> personId.getId <> "  " <> show (Yudhishthira.replaceTagNameValue driver.driverTag driverTag)
+      else when (maybe False (Yudhishthira.elemTagNameValue driverTag) driver.driverTag) $ QPerson.updateDriverTag (Just $ Yudhishthira.removeTagNameValue driver.driverTag driverTag) personId
   return $
     SpecialLocWarriorInfoRes
       { isSpecialLocWarrior = isSpecialLocWarrior,
@@ -99,20 +103,14 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
         preferredSecondarySpecialLocIds = preferredSecondarySpecialLocIds
       }
   where
-    getDriverTag prefPrimarySpecialLocationId prefSecondarySpecialLocIds =
-      if notNull prefSecondarySpecialLocIds
-        then do
-          let secondaryLocTag = makeDriverTag (map (.getId) prefSecondarySpecialLocIds)
-          pure $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId <> "&" <> secondaryLocTag
-        else pure $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId
+    getDriverTag prefPrimarySpecialLocationId prefSecondarySpecialLocIds metroWarriorTagValidity now = do
+      let tagNameValue =
+            if notNull prefSecondarySpecialLocIds
+              then do
+                let secondaryLocTag = makeDriverTag (map (.getId) prefSecondarySpecialLocIds)
+                LYT.TagNameValue $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId <> "&" <> secondaryLocTag
+              else LYT.TagNameValue $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId
+      Yudhishthira.addTagExpiry tagNameValue metroWarriorTagValidity now
 
 makeDriverTag :: [Text] -> Text
 makeDriverTag = T.intercalate "&"
-
-addDriverTag :: Maybe [Text] -> Text -> [Text]
-addDriverTag Nothing tag = [tag]
-addDriverTag (Just tags) tag = tags ++ [tag]
-
-removeDriverTag :: Maybe [Text] -> Text -> [Text]
-removeDriverTag Nothing _ = []
-removeDriverTag (Just tags) tag = filter (/= tag) tags

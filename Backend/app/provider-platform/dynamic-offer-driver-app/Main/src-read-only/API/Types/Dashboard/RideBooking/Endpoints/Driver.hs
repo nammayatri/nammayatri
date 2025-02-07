@@ -18,6 +18,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
@@ -74,7 +75,8 @@ data DriverInfoRes = DriverInfoRes
     windowSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     blockedDueToRiderComplains :: Kernel.Prelude.Bool,
     blockStateModifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    driverTag :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
+    driverTagObject :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagObject],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockedInfo :: [DriverBlockTransactions],
     softBlockStiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

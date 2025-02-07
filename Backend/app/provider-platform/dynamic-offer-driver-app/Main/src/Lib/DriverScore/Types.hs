@@ -32,6 +32,7 @@ import EulerHS.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool as DP
 
 data DriverRideRequest
@@ -63,7 +64,7 @@ data DriverRideRequest
         currency :: Currency,
         distanceUnit :: DistanceUnit,
         doCancellationRateBasedBlocking :: Maybe Bool,
-        rideTags :: [Text]
+        rideTags :: [LYT.TagNameValue]
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,

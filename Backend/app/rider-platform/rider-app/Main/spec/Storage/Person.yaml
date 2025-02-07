@@ -15,6 +15,7 @@ imports:
   PartnerOrganization: Domain.Types.PartnerOrganization
   CustomerId: Kernel.External.Payment.Interface.Types
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  TagNameValueExpiry: Lib.Yudhishthira.Types
 
 Person:
   tableName: person
@@ -101,7 +102,7 @@ Person:
     deviceId : Maybe Text
     informPoliceSos : Bool
     androidId: Maybe Text
-    customerNammaTags: "Maybe [Text]"
+    customerNammaTags: "Maybe [TagNameValueExpiry]"
     payoutVpa: Maybe Text
     frequentLocGeohashes: "Maybe [Text]"
 
@@ -144,6 +145,7 @@ Person:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     informPoliceSos: Maybe Bool
+    customerNammaTags: "Maybe [Text]"
 
   fromTType:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
@@ -159,6 +161,7 @@ Person:
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     informPoliceSos : fromMaybe False informPoliceSos|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType|M
 
   toTType:
     blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
@@ -178,6 +181,7 @@ Person:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     informPoliceSos: Just informPoliceSos|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType
 
   constraints:
     id: PrimaryKey

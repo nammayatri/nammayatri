@@ -19,6 +19,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.TH
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
@@ -36,7 +37,7 @@ data PersonE e = Person
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currentCity :: Kernel.Types.Beckn.Context.City,
-    customerNammaTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    customerNammaTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     customerPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     customerReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,

@@ -49,12 +49,14 @@ module Lib.Yudhishthira.Types
     TagNameValue (..),
     ConfigVersionMap (..),
     Config (..),
+    TagNameValueExpiry (..),
+    TagObject (..),
   )
 where
 
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
-import Data.OpenApi as OpenApi hiding (description, name, tags, version)
+import Data.OpenApi as OpenApi hiding (TagName, description, name, tags, version)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -109,11 +111,12 @@ data UpdateNammaTagRequest = UpdateNammaTagRequest
     tagPossibleValues :: Maybe TagValues,
     tagChakra :: Maybe Chakra,
     tagValidity :: Maybe Hours,
+    resetTagValidity :: Maybe Bool,
     tagStage :: Maybe ApplicationEvent,
     tagRule :: Maybe TagRule,
     actionEngine :: Maybe Value
   }
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets UpdateNammaTagRequest where
   hideSecrets = identity
@@ -384,7 +387,7 @@ data RunKaalChakraJobReq = RunKaalChakraJobReq
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data UpdateTagReq = UpdateTagReq
-  { tag :: Text,
+  { tag :: TagNameValue,
     isAddingTag :: Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -436,13 +439,24 @@ data TagAPIEntity = TagAPIEntity
 data RunKaalChakraJobResForUser = RunKaalChakraJobResForUser
   { userId :: Id User,
     userDataValue :: Value, -- final result with default values
-    userOldTags :: Maybe [TagNameValue], -- tagName#TAG_VALUE format
-    userUpdatedTags :: Maybe [TagNameValue] -- tagName#TAG_VALUE format
+    userOldTags :: Maybe [TagNameValueExpiry],
+    userUpdatedTags :: Maybe [TagNameValueExpiry]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-newtype TagNameValue = TagNameValue {getTagNameValue :: Text} -- tagName#tagValue format
+newtype TagNameValue = TagNameValue {getTagNameValue :: Text} -- tagName#tagValue format (only tagName is mandatory)
   deriving newtype (Show, Read, Eq, ToJSON, FromJSON, ToSchema)
+
+-- We don't need Eq here because we want to compare only tagName and tagValue, not expiredAt. Use compareTagNameValue function instead
+newtype TagNameValueExpiry = TagNameValueExpiry {getTagNameValueExpiry :: Text} -- tagName#tagValue#expiredAt format (only tagName is mandatory)
+  deriving newtype (Show, Read, ToJSON, FromJSON, ToSchema)
+
+data TagObject = TagObject
+  { tagName :: TagName,
+    tagValue :: Maybe TagValue,
+    tagExpiry :: Maybe UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets RunKaalChakraJobReq where
   hideSecrets = identity

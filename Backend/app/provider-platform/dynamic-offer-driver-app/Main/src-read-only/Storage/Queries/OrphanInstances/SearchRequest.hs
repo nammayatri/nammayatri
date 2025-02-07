@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
+import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.SearchRequest as Beam
 import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
@@ -49,7 +50,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = customerCancellationDues,
             customerLanguage = customerLanguage,
-            customerNammaTags = customerNammaTags,
+            customerNammaTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType customerNammaTags,
             device = device,
             disabilityTag = disabilityTag,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -77,7 +78,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
             roundTrip = roundTrip,
-            searchTags = searchTags,
+            searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType searchTags,
             specialLocationTag = specialLocationTag,
             startTime = startTime_,
             stops = stops',
@@ -104,7 +105,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.currency = Just currency,
         Beam.customerCancellationDues = customerCancellationDues,
         Beam.customerLanguage = customerLanguage,
-        Beam.customerNammaTags = customerNammaTags,
+        Beam.customerNammaTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType customerNammaTags,
         Beam.device = device,
         Beam.disabilityTag = disabilityTag,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
@@ -133,7 +134,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.roundTrip = roundTrip,
-        Beam.searchTags = searchTags,
+        Beam.searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags,
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,

@@ -125,7 +125,7 @@ data DSearchReq = DSearchReq
     device :: Maybe Text,
     stops :: [DSearchReqLocation],
     customerLanguage :: Maybe Maps.Language,
-    customerNammaTags :: Maybe [Text],
+    customerNammaTags :: Maybe [LYT.TagNameValue],
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     disabilityTag :: Maybe Text,

@@ -111,6 +111,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
@@ -795,24 +796,21 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  when (req.isAddingTag && maybe False (elem req.driverTag) driver.driverTag) $ throwError (InvalidRequest "Tag already exists")
+  when (req.isAddingTag && maybe False (Yudhishthira.elemTagNameValue req.driverTag) driver.driverTag) $
+    logInfo "Tag already exists, update expiry"
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  Yudhishthira.verifyTag req.driverTag
+  mbNammTag <- Yudhishthira.verifyTag req.driverTag
+  now <- getCurrentTime
   let tag =
         if req.isAddingTag
-          then addDriverTag driver.driverTag req.driverTag
-          else removeDriverTag driver.driverTag req.driverTag
-  QPerson.updateTag personId tag
+          then do
+            let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry req.driverTag (mbNammTag >>= (.validity)) now
+            Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+          else Yudhishthira.removeTagNameValue driver.driverTag req.driverTag
+  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
+    QPerson.updateDriverTag (Just tag) personId
   pure Success
-
-addDriverTag :: Maybe [Text] -> Text -> [Text]
-addDriverTag Nothing tag = [tag]
-addDriverTag (Just tags) tag = tags ++ [tag]
-
-removeDriverTag :: Maybe [Text] -> Text -> [Text]
-removeDriverTag Nothing _ = []
-removeDriverTag (Just tags) tag = filter (/= tag) tags
 
 ---------------------------------------------------------------------
 postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
