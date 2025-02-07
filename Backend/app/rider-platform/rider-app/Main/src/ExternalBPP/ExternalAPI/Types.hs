@@ -1,16 +1,16 @@
-module ExternalBPP.Bus.ExternalAPI.Types where
+module ExternalBPP.ExternalAPI.Types where
 
 import Kernel.Prelude
 import Kernel.Types.Price
 
--- CUMTA Encrypted QR code generation
+-- Encrypted QR code generation
 data TicketPayload = TicketPayload
   { transactionId :: Text,
     fromRouteProviderCode :: Text,
     toRouteProviderCode :: Text,
     adultQuantity :: Int,
     childQuantity :: Int,
-    busTypeProviderCode :: Text,
+    vehicleTypeProviderCode :: Text,
     expiry :: Text,
     ticketNumber :: Text,
     ticketAmount :: Money,

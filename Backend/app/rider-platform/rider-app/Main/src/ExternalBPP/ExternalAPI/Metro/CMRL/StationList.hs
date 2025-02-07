@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedLists #-}
 
-module ExternalBPP.Metro.ExternalAPI.CMRL.StationList where
+module ExternalBPP.ExternalAPI.Metro.CMRL.StationList where
 
 import Data.Aeson
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.Metro.ExternalAPI.CMRL.Auth
+import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App

@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module ExternalBPP.Metro.ExternalAPI.CMRL.DurationDetails where
+module ExternalBPP.ExternalAPI.Metro.CMRL.DurationDetails where
 
 import Data.Aeson
 import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.Metro.ExternalAPI.CMRL.Auth
+import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
