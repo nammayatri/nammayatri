@@ -93,7 +93,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf pendingFees.currency (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
-      splitSettlementDetails = if splitEnabled then mkSplitSettlementDetails vendorFees amount else Nothing
+  splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails vendorFees amount else pure Nothing
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
@@ -126,7 +126,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
       createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled -- call same function with no existing order
 
-mkSplitSettlementDetails :: [VF.VendorFee] -> HighPrecMoney -> Maybe SplitSettlementDetails
+mkSplitSettlementDetails :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails vendorFees totalAmount = do
   let sortedVendorFees = sortBy (compare `on` VF.vendorId) vendorFees
       groupedVendorFees = groupBy ((==) `on` VF.vendorId) sortedVendorFees
@@ -134,12 +134,15 @@ mkSplitSettlementDetails vendorFees totalAmount = do
       vendorSplits = catMaybes mbVendorSplits
   let totalVendorAmount = sum $ map (\Split {amount} -> amount) vendorSplits
       marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-  Just $
-    SplitSettlementDetails
-      { marketplace = Marketplace marketplaceAmount,
-        mdrBorneBy = ALL,
-        vendor = Vendor vendorSplits
-      }
+  logInfo $ "totalVendorAmount: " <> show totalVendorAmount <> " marketplaceAmount: " <> show marketplaceAmount <> " totalAmount: " <> show totalAmount
+  when (marketplaceAmount < 0) $ throwError (InternalError "Marketplace amount is negative")
+  return $
+    Just $
+      SplitSettlementDetails
+        { marketplace = Marketplace marketplaceAmount,
+          mdrBorneBy = ALL,
+          vendor = Vendor vendorSplits
+        }
   where
     roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
     computeSplit feesForVendor =
