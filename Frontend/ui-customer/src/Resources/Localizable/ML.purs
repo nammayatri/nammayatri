@@ -1657,3 +1657,5 @@ getML stringKey =
         BOOK_ANY_DETAILS -> "ഏത് വിശദാംശങ്ങളും ബുക്ക് ചെയ്യുക"
         BOOST_SEARCH -> "തിരയൽ ബൂസ്റ്റ് ചെയ്യുക"
         BOOK_FOR_ pricerange -> pricerange <> " വരെ ബുക്ക് ചെയ്യുക"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "നിങ്ങളുടെ റദ്ദാക്കൽ നിരക്ക് കൂടുതലാണ്!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> "ഉപയോഗിക്കുന്നത് തുടരാൻ കൂടുതൽ റദ്ദാക്കലുകൾ ഒഴിവാക്കുക " <> appName

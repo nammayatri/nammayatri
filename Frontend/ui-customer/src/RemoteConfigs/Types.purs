@@ -144,3 +144,8 @@ type VariantBasedBoostSearchConfig = {
 type RemoteCancellationReason = {
     cancellationReasons :: Array OptionButtonList
 }
+
+type CancellationThreshold = {
+  showBanner :: Boolean,
+  percentage :: Number
+}

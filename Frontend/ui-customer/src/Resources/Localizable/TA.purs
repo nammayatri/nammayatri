@@ -1678,3 +1678,5 @@ getTA stringKey =
     BOOK_ANY_DETAILS -> "எந்த விவரங்களையும் பதிவு செய்யவும்"
     BOOST_SEARCH -> "தேடலை அதிகரிக்கவும்"
     BOOK_FOR_ pricerange -> pricerange <> " க்கு புக் செய்யுங்கள்"
+    YOUR_CANCELLATION_RATE_IS_HIGH -> "உங்கள் ரத்து விகிதம் அதிகமாக உள்ளது!"
+    AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ஐ தொடர்ந்து பயன்படுத்த, இனி ரத்து செய்வதைத் தவிர்க்கவும்."

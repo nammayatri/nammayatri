@@ -1659,3 +1659,5 @@ getHI stringKey =
         BOOK_ANY_DETAILS -> "कोई भी विवरण बुक करें"
         BOOST_SEARCH -> "खोज को बढ़ावा दें"
         BOOK_FOR_ pricerange -> pricerange <> " में बुक करें"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "आपकी रद्दीकरण दर ऊंची है!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " का उपयोग जारी रखने के लिए आगे रद्दीकरण से बचें"
