@@ -1614,6 +1614,7 @@ newtype GetProfileRes = GetProfileRes
   , deviceId :: Maybe String
   , androidId :: Maybe String
   , aadhaarVerified :: Maybe Boolean
+  , cancellationRate :: Maybe Number
   }
 
 
