@@ -864,6 +864,7 @@ config =
   , ambulanceConfig : { radius : 50000
       , strictBounds : false
       }
+  , showRecommendedText : false
 }
 
 defaultCityConfig :: CityConfig
