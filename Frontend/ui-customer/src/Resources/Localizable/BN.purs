@@ -1657,3 +1657,5 @@ getBN stringKey =
         BOOK_ANY_DETAILS -> "যেকোনো বিস্তারিত বুক করুন"
         BOOST_SEARCH -> "বুস্ট সার্চ"
         BOOK_FOR_ pricerange -> pricerange <> " এ বুক করুন"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "আপনার বাতিলকরণের হার বেশি!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ব্যবহার চালিয়ে যেতে আরও বাতিলকরণ এড়ান"

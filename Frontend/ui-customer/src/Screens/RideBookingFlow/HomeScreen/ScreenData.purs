@@ -204,6 +204,7 @@ initData = let
     , selectedService : Nothing
     , intercityBus : initialIntercityBusData
     , boostSearchEstimate : CV.config
+    , cancellationRate : Nothing
     },
     props: {
       rideRequestFlow : false

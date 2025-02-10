@@ -830,6 +830,7 @@ type HomeScreenStateData =
   , selectedService :: Maybe RC.Service
   , intercityBus :: IntercityBusData
   , boostSearchEstimate :: ChooseVehicle.Config
+  , cancellationRate :: Maybe Number
 }
 
 type UpcomingRideDetails = {

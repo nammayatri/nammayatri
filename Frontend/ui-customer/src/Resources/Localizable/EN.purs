@@ -1664,3 +1664,5 @@ getEN stringKey =
         BOOK_ANY_DETAILS -> "Book Any Details"
         BOOST_SEARCH -> "Boost Search"
         BOOK_FOR_ pricerange -> "Book for " <> pricerange
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "Your cancellation rate is high!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> "Avoid further cancellations to keep using " <> appName

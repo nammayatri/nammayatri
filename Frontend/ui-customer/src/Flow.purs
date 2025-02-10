@@ -771,6 +771,7 @@ currentFlowStatus prioritizeRating = do
                   , email = response ^. _email
                   , hasCompletedSafetySetup = hasCompletedSafetySetup
                   }
+                , cancellationRate = response ^. _cancellationRate
                 }
               , props
                 { isBanner = false
@@ -6020,7 +6021,6 @@ firstRideCompletedEvent str = do
                                                                                                               {key: "Driver Name", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.driverName},
                                                                                                               {key: "Driver Rating", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.rating},
                                                                                                               {key: "Distance (m)", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.distance},
-                                                                                                              {key: "Destination Reached", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.destinationReached},
                                                                                                               {key: "Service Tier Name", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.serviceTierName},
                                                                                                               {key: "ETA", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.eta},
                                                                                                               {key: "Vehicle Variant", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.vehicleVariant} ]
@@ -6482,7 +6482,6 @@ fcmHandler notification state notificationBody= do
                                                                                                 {key: "Driver Name", value: unsafeToForeign state.data.driverInfoCardState.driverName},
                                                                                                 {key: "Driver Rating", value: unsafeToForeign state.data.driverInfoCardState.rating},
                                                                                                 {key: "Distance (m)", value: unsafeToForeign state.data.driverInfoCardState.distance},
-                                                                                                {key: "Destination Reached", value: unsafeToForeign state.data.driverInfoCardState.destinationReached},
                                                                                                 {key: "Service Tier Name", value: unsafeToForeign state.data.driverInfoCardState.serviceTierName},
                                                                                                 {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
                                                                                                 {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} ]

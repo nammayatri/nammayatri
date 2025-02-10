@@ -1661,3 +1661,5 @@ getKN stringKey =
         BOOK_ANY_DETAILS -> "ಯಾವುದೇ ವಿವರಗಳನ್ನು ಬುಕ್ ಮಾಡಿ"
         BOOST_SEARCH -> "ಹುಡುಕಾಟವನ್ನು ಹೆಚ್ಚಿಸಿ"
         BOOK_FOR_ pricerange -> pricerange <> " ಗೆ ಬುಕ್ ಮಾಡಿ"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "ನಿಮ್ಮ ರದ್ದತಿ ದರ ಹೆಚ್ಚಾಗಿದೆ!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು ಮುಂದಿನ ರದ್ದತಿಗಳನ್ನು ತಪ್ಪಿಸಿ."

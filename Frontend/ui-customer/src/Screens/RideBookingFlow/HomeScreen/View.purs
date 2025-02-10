@@ -4120,7 +4120,8 @@ mapView' push state idTag =
                (const $ RecenterCurrentLocation)
            , height $ V 32
            , width $ V 32
-           ] 
+           ]
+          , highCancellationBanner push state
           ,relativeLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
@@ -4244,6 +4245,57 @@ getMapDimensions state =
                   else MATCH_PARENT 
       mapWidth = MATCH_PARENT
   in {height : mapHeight, width : mapWidth}
+
+highCancellationBanner :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+highCancellationBanner push state =
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in
+  linearLayout 
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.brownishYellow
+  , margin $ Margin 16 8 16 2
+  , cornerRadius 12.0
+  , visibility $ boolToVisibility $ showCancellationHighBanner state.data.cancellationRate
+  ]
+  [ linearLayout 
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ Margin 14 8 8 8
+    ]
+    [ textView $
+      [ text $ getString YOUR_CANCELLATION_RATE_IS_HIGH
+      , color Color.black900
+      ] <> FontStyle.subHeading3 TypoGraphy
+    , textView $
+      [ text $ getString $ AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName
+      , color Color.black900
+      , singleLine false
+      , margin $ MarginVertical 4 4
+      ] <> FontStyle.body1 TypoGraphy
+    ]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height MATCH_PARENT
+      , gravity BOTTOM
+      ]
+      [ imageView
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancellation_high"
+        , accessibility DISABLE
+        , margin $ MarginRight 12
+        , height $ V 60
+        , width $ V 60
+        ]
+      ]
+    ]
+    where 
+      showCancellationHighBanner :: Maybe Number -> Boolean
+      showCancellationHighBanner cancellationRate =
+        let rate = fromMaybe 0.0 cancellationRate
+            cancellationThresholdConfig = RemoteConfig.getCancellationBannerThresholdConfig $  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+        in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
+        
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state = 

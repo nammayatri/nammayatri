@@ -1672,3 +1672,5 @@ getTE stringKey =
     BOOK_ANY_DETAILS -> "బుక్ ఏనీ వివరాలు"
     BOOST_SEARCH -> "శోధనను పెంచండి"
     BOOK_FOR_ pricerange -> pricerange <> " కి బుక్ చేయండి"
+    YOUR_CANCELLATION_RATE_IS_HIGH -> "మీ రద్దు రేటు ఎక్కువగా ఉంది!"
+    AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ని ఉపయోగించడం కొనసాగించడానికి తదుపరి రద్దులను నివారించండి."
