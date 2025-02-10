@@ -47,7 +47,7 @@ import Log (printLog)
 import ModifyScreenState (modifyScreenState)
 import Prelude
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS, fork)
+import Presto.Core.Types.Language.Flow (Flow, APIResult, doAff, loadS, fork)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
@@ -77,6 +77,7 @@ import Effect.Aff
 import Helpers.API (noInternetScreenHandler)
 import DecodeUtil
 import Data.Int (fromString, toNumber)
+import Services.CallAPI (callAPI)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do

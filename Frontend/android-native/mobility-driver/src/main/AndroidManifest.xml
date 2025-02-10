@@ -29,9 +29,9 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES"/>
 
 
-    <application
-        android:name=".MainApplication">
-    </application>
+<!--    <application-->
+<!--        android:name=".MainApplication">-->
+<!--    </application>-->
 
     <queries>
         <intent>

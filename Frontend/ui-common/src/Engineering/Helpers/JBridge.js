@@ -1763,7 +1763,6 @@ export const refreshFlowCallback = function (key,cb) {
     const callback = function () {
       cb();
     }
-    console.log ("onResumeListenersMap",callback);
     if (window.onResumeListenersMap) {
       window.onResumeListenersMap[key] = callback;
     }
@@ -1940,7 +1939,7 @@ export const isInternetAvailable = function (unit) {
 
 export const emitJOSEvent = function (mapp, eventType, payload) {
   console.log("payload", payload);
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+  JOS.emitEvent(mapp,eventType,JSON.stringify(payload))()
 };
 
 export const restartApp = function () {
@@ -1949,23 +1948,14 @@ export const restartApp = function () {
     if (window.__OS == "IOS") {
       emitJOSEvent("java","onEvent",{event: "show_splash"})
       emitJOSEvent("java","onEvent",{event: "reboot"})
-    } else if (JBridge.restartApp){
-      JBridge.restartApp();
-    } else {
-      JBridge.factoryResetApp();
     }
   }
 }
 
 // Deprecated
 export const factoryResetApp = function (str) {
-  console.log("HERE IN RESET ===--->>")
-  if (window.__OS == "IOS") {
-    emitJOSEvent("java","onEvent",{event: "show_splash"})
-    emitJOSEvent("java","onEvent",{event: "reboot"})
-  } else {
-    JBridge.factoryResetApp()
-  }
+  emitJOSEvent("java","onEvent",{event: "show_splash"})
+  emitJOSEvent("java","onEvent",{event: "reboot"})
 }
 
 export const uploadFile = function (aspectRatio) {
@@ -2115,7 +2105,7 @@ export const shareImageMessage = function (message) {
 }
 
 export const showInAppNotification = function (payload) {
-  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()
+  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))
 }
 
 export const openWhatsAppSupport = function (contactNumber) {
@@ -2428,9 +2418,9 @@ export const getLatLonFromAddress = function (address) {
 
 export const hideLoader = function () {
   return function () {
-    JOS.emitEvent("java")("onEvent")(JSON.stringify({
+    JOS.emitEvent("java","onEvent",JSON.stringify({
       event: "hide_loader"
-    }))()()
+    }))()
   }
 };
 
@@ -2927,7 +2917,7 @@ export const initHVSdk = function (accessToken, workFLowId, transactionId, useLo
       inputJson: inputJson,
       callback: callback
     };
-    window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
+    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload));
   }
   catch (err) {
     console.error(err);
@@ -3028,7 +3018,7 @@ export const emitJOSEventWithCb = function (eventName, innerPayload, cb, action)
   const callback = callbackMapper.map(function (stringifyPayload) {
     cb(action(stringifyPayload))();
   });
-  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: eventName, action: callback, innerPayload: JSON.stringify(innerPayload)}))()();
+  return window.JOS.emitEvent("java", "onEvent", JSON.stringify({ event: eventName, action: callback, innerPayload: JSON.stringify(innerPayload)}))();
 }
 
 export const triggerReloadApp = function (lazy){
