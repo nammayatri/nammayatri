@@ -186,6 +186,7 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
   otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  logDebug $ "[Multimodal - OTP Response]" <> show otpResponse
   forM_ otpResponse.routes $ \r -> do
     let initReq =
           JMTypes.JourneyInitData

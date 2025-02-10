@@ -53,6 +53,7 @@ getFareByOriginDest config fareReq = do
   fareByODRes <-
     callAPI config.networkHostUrl (ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType) "getFareByOriginDest" fareByOriginDestAPI
       >>= fromEitherM (ExternalAPICallError (Just "CMRL_FARE_BY_ORIGIN_DEST_API") config.networkHostUrl)
+  logDebug $ "CMRL Get Fares API Response : " <> show fareByODRes
   case fareByODRes.result >>= (.result) of
     Just amount ->
       return $
