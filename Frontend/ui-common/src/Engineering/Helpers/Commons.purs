@@ -125,6 +125,8 @@ foreign import getUTCBeforeNSecondsImpl :: Fn2 String Int String
 
 foreign import loadWebViewWithURL :: EffectFn2 String String Unit
 
+foreign import addBenchMark :: Fn2 String Boolean Unit
+
 os :: String
 os = getOs unit
 
@@ -272,6 +274,7 @@ apiRunner :: APIRunner
 apiRunner (API.Request request@{headers: API.Headers hs}) =
   makeAff
     ( \cb -> do
+        let _ = runFn2 addBenchMark ("apiRunner_" <> request.url) false
         void $ pure $ printLog "callAPI request" request   
         case request.options of
           Nothing -> do
@@ -285,6 +288,7 @@ apiRunner (API.Request request@{headers: API.Headers hs}) =
     callback cb = callbackMapper $
         mkEffectFn6 $
           \status response statusCode url responseHeaders urlEncodedResponse -> do
+            let _ = runFn2 addBenchMark ("apiRunner_" <> atobImpl url) true
             let formattedResponse = { status : status,
               response : extractResponse response urlEncodedResponse,
               code : fromMaybe (-3) (fromString statusCode),

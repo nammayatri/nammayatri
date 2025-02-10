@@ -146,7 +146,7 @@ export const getAvailableUpiApps = function (resultCb) {
       console.log("%cUPIINTENT initiate Result - Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", payload); 
       JOS.startApp("in.juspay.upiintent")(payload)(cb)();
       const process = function() {
-        window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
+        // window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
       }
       callUpiProcess(process,["in.juspay.upiintent"]);
     } catch (err) {

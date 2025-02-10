@@ -261,7 +261,7 @@ export const getDatebyCount = function (count) {
   return today;
 }
 
-export const hideSplash = JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: "hide_splash" }))()
+export const hideSplash = JOS.emitEvent("java","onEvent",JSON.stringify({ event: "hide_splash" }))
 
 export const currentPosition = function (str) {
   return function () {

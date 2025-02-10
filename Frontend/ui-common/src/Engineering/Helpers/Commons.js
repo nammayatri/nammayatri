@@ -698,3 +698,15 @@ export const getDateMinusNDays = function (dateStr, days) {
   date.setDate(date.getDate() - days);
   return date.toISOString().split("T")[0] + "T00:00:00";
 }
+
+export const addBenchMark  = function(key,isEnded) {
+  window.benchMark = window.benchMark || {};
+  window.benchMark[key] = window.benchMark[key] || {};
+  window.benchMark[key].renders= window.benchMark[key].renders || [];
+  if (window.benchMark[key].startTime && isEnded) {
+    let diff = Date.now() - window.benchMark[key].startTime;
+    window.benchMark[key].renders.push(diff);
+  } else {
+    window.benchMark[key].startTime = Date.now();
+  }
+}

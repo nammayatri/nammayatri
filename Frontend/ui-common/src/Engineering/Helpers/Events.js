@@ -22,6 +22,8 @@ const nestJSON = function (original) {
 export const initMeasuringDuration = function (key) {
   return function () {
     try {
+      window.timeStamps[key] = window.timeStamps[key] || {}
+      window.timeStamps[key]["start"] = Date.now();
       window.events = window.events || {};
       if (typeof window.events[key] === "undefined")
         window.events[key] = new Date();
@@ -34,6 +36,8 @@ export const initMeasuringDuration = function (key) {
 export const endMeasuringDuration = function (key) {
   return function () {
     try {
+      window.timeStamps[key] = window.timeStamps[key] || {}
+      window.timeStamps[key]["end"] = Date.now();
       window.events = window.events || {};
       if (typeof window.events[key] === "object")
         window.events[key] =
@@ -44,6 +48,17 @@ export const endMeasuringDuration = function (key) {
   };
 };
 
+const processTimeStamp = () => {
+  const result = {};
+  Object.keys(window.timeStamps).filter((key) => {
+    return window.timeStamps[key].end && window.timeStamps[key].start
+  }).forEach((key) => {
+    result[key] = window.timeStamps[key].end - window.timeStamps[key].start;
+    delete window.timeStamps[key];
+  })
+  return result;
+}
+
 export const getEvents = function () {
   try {
     if (typeof window === "object") {
@@ -51,17 +66,18 @@ export const getEvents = function () {
         window.events.Aggregate = window.Aggregate;
         window.Aggregate.pushOnce = true;        
       }
-      const events = Object.assign({}, window.events, {
+      const newEvents = processTimeStamp()
+      const events = Object.assign({},  window.events, {
         appVersion: window.version["app"],
         configVersion: window.version["configuration"],
-        hyperCoreVersion: window.top.hyper_core_version,
+        hyperCoreVersion: window.version["assets_downloader"],
+        assetDownloader: window.version["assets_downloader"],
         os: window.__OS,
-        josBundleLoadTime:
-          window.top.__osBundleLoadLogLine.os_bundle_load.bundle_load_latency,
         sdkVersion: window.__payload.sdkVersion,
         service: window.__payload.service,
         sessionId: window.session_id,
-      });
+        "newEvents" : newEvents,
+      }, newEvents);
       return JSON.stringify(nestJSON(events));
     } else {
       return JSON.stringify({});

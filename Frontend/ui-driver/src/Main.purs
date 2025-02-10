@@ -42,7 +42,7 @@ import Types.App (FlowBT, ScreenType(..))
 import JBridge as JBridge
 import Helpers.Utils as Utils
 import Effect.Exception (error)
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn3)
 import Screens (ScreenName(..)) as ScreenNames
 import Engineering.Helpers.Events as Events
 import Data.Array as DA
@@ -51,29 +51,36 @@ import Screens.Types as ST
 import Common.Types.App as Common
 import Storage (KeyStore(..), setValueToLocalStore)
 import Services.API (GetDriverInfoResp(..))
+import DecodeUtil (getFromWindow, removeFromWindow)
+import Debug
 
-main :: Event -> Foreign -> Effect Unit
-main event driverInfoRespFiber = do
+main :: Event -> Effect Unit
+main event = do
   void $ markPerformance "MAIN_START"
   void $ Events.initMeasuringDuration "Flow.mainFlow"
-  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"  
-  (driverInfoResp :: Maybe (Either ErrorResponse GetDriverInfoResp)) <- case runExcept (decode driverInfoRespFiber) of
-    Right (driverInfoRes :: GetDriverInfoResp) -> pure $ Just (Right driverInfoRes)
-    Left _ -> case runExcept (decode driverInfoRespFiber) of
-      Right (errorRes :: ErrorResponse) ->
-        if (DA.any (\error -> Utils.decodeErrorCode errorRes.response.errorMessage == error) ["VEHICLE_NOT_FOUND", "DRIVER_INFORMATON_NOT_FOUND"]) 
-          then pure $ Just (Left errorRes)
-          else pure Nothing
-      Left err -> pure Nothing
+  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"
+  let profile = runFn3 getFromWindow "Profile" Nothing Just
+      _ = removeFromWindow "Profile"
+  let driverInfoResp = case profile of
+                        Just driverInfoRespFiber -> 
+                          case runExcept (decode driverInfoRespFiber) of
+                            Right (driverInfoRes :: GetDriverInfoResp) -> Just (Right driverInfoRes)
+                            Left _ -> case runExcept (decode driverInfoRespFiber) of
+                              Right (errorRes :: ErrorResponse) ->
+                                if (DA.any (\error -> Utils.decodeErrorCode errorRes.response.errorMessage == error) ["VEHICLE_NOT_FOUND", "DRIVER_INFORMATON_NOT_FOUND"]) 
+                                  then Just (Left errorRes)
+                                  else Nothing
+                              Left err -> Nothing
+                        Nothing -> Nothing
+  let _ = spy "driverInfoResp =>" driverInfoResp
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
     liftFlow $ setEventTimestamp "main_purs" 
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing driverInfoResp
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
-      Left error -> liftFlow $ main event driverInfoRespFiber
-  -- required if we need to update Payment page assets in first run
-  -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+      Left error -> liftFlow $ main event
+  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   void $ markPerformance "MAIN_END"
   pure unit
 
@@ -107,7 +114,7 @@ onEvent event = do
   case event of 
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
-    "onReloadApp" -> main { type: "REFRESH", data : "" } $ unsafeToForeign {}
+    "onReloadApp" -> main { type: "REFRESH", data : "" }
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
