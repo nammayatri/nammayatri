@@ -168,7 +168,6 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Map as Map
 import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
-import ConfigProvider
 import Mobility.Prelude
 import Timers
 import PrestoDOM.Core
@@ -1022,23 +1021,24 @@ trackingCardCallView push state item =
 
 labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 labelView push state =
-  linearLayout[
-    height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , cornerRadii $ Corners 8.0 true true true true
-  , background Color.green900
-  , margin (MarginHorizontal 10 10)
-  ][
-    textView $ [
-      width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.white900
-    , gravity CENTER
-    , padding (Padding 8 1 8 1)
-    , textSize FontSize.a_13
-    , text (getString RECOMMENDED)
+    linearLayout[
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , cornerRadii $ Corners 8.0 true true true true
+    , background Color.green900
+    , margin (MarginHorizontal 10 10)
+    , visibility $ boolToVisibility $ state.data.config.showRecommendedText
+    ][
+      textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.white900
+      , gravity CENTER
+      , padding (Padding 8 1 8 1)
+      , textSize FontSize.a_13
+      , text (getString RECOMMENDED)
+      ]
     ]
-  ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =
