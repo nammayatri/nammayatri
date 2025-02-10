@@ -1282,6 +1282,8 @@ getOd = Keymap {
 , view_fares: "ଭାଡ଼ା ଦେଖନ୍ତୁ"
 , excess_time_description: (\charges -> "ଅତିରିକ୍ତ ସମୟ " <> charges)
 , estimated_charges: "ଅନୁମାନିତ ଚାର୍ଜ"
+, your_cancellation_rate_is_high: "ଆପଣଙ୍କର ବାତିଲକରଣ ହାର ଅଧିକ!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ବ୍ୟବହାର ଜାରି ରଖିବା ପାଇଁ ଆଗକୁ ବାତିଲକରଣକୁ ଏଡାନ୍ତୁ।")
 , night_time_fees: "ରାତି ସମୟର ଚାର୍ଜ"
 , parking_and_other_charges: "ପାର୍କିଂ ଏବଂ ଅନ୍ୟାନ୍ୟ ଚାର୍ଜ"
 , additional_charges: "ଅତିରିକ୍ତ ଚାର୍ଜ"

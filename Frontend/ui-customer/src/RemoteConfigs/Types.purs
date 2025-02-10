@@ -178,3 +178,8 @@ type BusFlowConfig = {
 type AppInfoConfig = {
   website :: String
 }
+
+type CancellationThreshold = {
+  showBanner :: Boolean,
+  percentage :: Number
+}
