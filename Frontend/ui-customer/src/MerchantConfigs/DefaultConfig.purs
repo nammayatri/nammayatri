@@ -794,6 +794,7 @@ config =
       showAfterTime : 5
     }
   , enableDeliveryService : false
+, showRecommendedText : false
 }
 
 defaultCityConfig :: CityConfig
