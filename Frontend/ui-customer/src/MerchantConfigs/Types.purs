@@ -85,6 +85,7 @@ type AppConfigCustomer a =
   , riderRideCompletedCard :: RiderRideCompletedCard
   , enableDeliveryService :: Boolean
   , ambulanceConfig :: GeoCodeConfig
+  , showRecommendedText :: Boolean
   | a
   }
 
