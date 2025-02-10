@@ -4331,7 +4331,7 @@ highCancellationBanner push state =
       showCancellationHighBanner cancellationRate =
         let rate = fromMaybe 0.0 cancellationRate
             cancellationThresholdConfig = RemoteConfig.getCancellationBannerThresholdConfig $  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        in cancellationThresholdConfig.showBanner && rate >= 0.0
+        in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
         
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
