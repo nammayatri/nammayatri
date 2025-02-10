@@ -695,7 +695,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         updatedAt = now
       }
 
-mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> GetFareResponse -> m DJL.JourneyLeg
+mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> Maybe GetFareResponse -> m DJL.JourneyLeg
 mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
@@ -718,8 +718,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = leg.toStopDetails,
-        estimatedMinFare = Just fare.estimatedMinFare,
-        estimatedMaxFare = Just fare.estimatedMaxFare,
+        estimatedMinFare = fare <&> (.estimatedMinFare),
+        estimatedMaxFare = fare <&> (.estimatedMaxFare),
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOpCityId,
         createdAt = now,
