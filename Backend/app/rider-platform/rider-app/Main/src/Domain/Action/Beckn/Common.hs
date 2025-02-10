@@ -1144,7 +1144,8 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             validActivations = 0,
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
-            backlogPayoutAmount = 0
+            backlogPayoutAmount = 0,
+            isBackfilled = Just False
           }
 
 payoutProcessingLockKey :: Text -> Text

@@ -213,7 +213,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
   let device = getDeviceFromText mbDevice
       totalRides = personStats.completedRides + personStats.driverCancelledRides + personStats.userCancelledRides
       rate = (personStats.userCancelledRides * 100) `div` max 1 totalRides
-      sendCancellationRate = totalRides >= (fromMaybe 1000 riderConfig.minRidesToShowCancellationRate)
+      sendCancellationRate = totalRides >= (fromMaybe 1000 riderConfig.minRidesToShowCancellationRate) && personStats.isBackfilled == Just True
   let cancellationPerc = if sendCancellationRate then Just rate else Nothing
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
