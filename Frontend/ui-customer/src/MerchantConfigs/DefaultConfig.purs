@@ -821,6 +821,7 @@ config =
       enableNonAcPopup : false,
       showAfterTime : 5
     }
+, showRecommendedText : false
 }
 
 defaultCityConfig :: CityConfig

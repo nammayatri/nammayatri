@@ -82,6 +82,7 @@ type AppConfigCustomer a =
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
   , riderRideCompletedCard :: RiderRideCompletedCard
+  , showRecommendedText :: Boolean
   | a
   }
 
