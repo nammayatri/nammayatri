@@ -18,7 +18,7 @@ module Services.Backend where
 import Data.Maybe
 import Locale.Utils
 import Services.API
-
+import DecodeUtil
 import Common.Types.App (Version(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
@@ -33,7 +33,7 @@ import Data.String.Common as DSC
 import Data.Foldable as DF
 import Debug (spy)
 import Effect.Class (liftEffect)
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn3)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader, checkConditionToShowInternetScreen)
 import Foreign.Generic (encode, decode)
@@ -48,7 +48,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS, fork)
+import Presto.Core.Types.Language.Flow (Flow, doAff, loadS, fork)
 import Screens.Types (DriverStatus)
 import Services.Config as SC
 import Services.EndPoints as EP
@@ -73,6 +73,7 @@ import Screens.NoInternetScreen.Handler as NoInternetScreen
 import Helpers.API as HAPI
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
+import Services.CallAPI (callAPI)
 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -567,11 +568,23 @@ getRideHistoryReq limit offset onlyActive status day = do
 
 getRideHistoryReqBT :: String -> String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
 getRideHistoryReqBT limit offset onlyActive status day= do
+    if limit == "2" && offset == "0" && onlyActive == "true" 
+      then do
+        let listResp = runFn3 getFromWindow "RideList" Nothing Just
+            _ = removeFromWindow "RideList"
+        case listResp of
+          Nothing -> callRideList
+          Just resp -> 
+            case runExcept $ decode resp of
+                Right decodedResp -> pure decodedResp
+                Left _ -> callRideList
+      else callRideList
+    where
+      callRideList = do 
         headers <- lift $ lift $ getHeaders "" true
         withAPIResultBT (EP.getRideHistory limit offset onlyActive status day) identity errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day))
-    where
-    errorHandler (ErrorPayload errorPayload) =  do
-        BackT $ pure GoBack
+      errorHandler (ErrorPayload errorPayload) =  do
+          BackT $ pure GoBack
 
 --------------------------------- GetRidesSummaryListResp --------------------------------------------------------------------------------------------------
 getRideSummaryListReq :: Array String -> Flow GlobalState (Either ErrorResponse GetRidesSummaryListResp)

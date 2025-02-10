@@ -412,28 +412,37 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
   }
 }
 
-if (typeof window.JOS != "undefined") {
-  window.JOS.addEventListener("onEvent'")();
-  window.JOS.addEventListener("onEvent")();
-  window.JOS.addEventListener("onMerchantEvent")();
-  window.JOS.addEventListener("onActivityResult")();
-  console.error("Calling action DUI_READY");
-  if (window.JBridge.emptyCallbackQueue)
-    window.JBridge.emptyCallbackQueue()
-  JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", service : JOS.self }))()();
-} else {
-  console.error("JOS not present")
-}
+console.error("Calling action DUI_READY");
+if (window.JBridge.emptyCallbackQueue)
+  window.JBridge.emptyCallbackQueue()
+JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+  action: "DUI_READY",
+  event: "initiate",
+  service: JOS.self
+}), "");
+
+eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
+
+
+window.JOS.tracker = window.getTrackerModule.Main.initTracker()
+window.tracker =  window.JOS.tracker
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 const JOSFlags = window.JOS.getJOSflags()
-if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
+if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser) {
   logger.enableLogger();
   Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
 } else {
   logger.disableLogger();
   Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
+}
+
+if (window.eventQueue) {
+  while (window.eventQueue.length) {
+    const args = window.eventQueue.pop();
+    window.onMerchantEvent.apply(null, args)
+  }
 }
 
 console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());
