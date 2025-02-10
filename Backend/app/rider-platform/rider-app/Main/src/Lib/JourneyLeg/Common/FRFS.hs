@@ -81,12 +81,16 @@ getFare merchant merchantOperatingCity vehicleCategory routeCode startStationCod
       Just bapConfig -> do
         try @_ @SomeException (CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig (Just routeCode) startStationCode endStationCode vehicleCategory)
           >>= \case
-            Right [] -> return Nothing
+            Right [] -> do
+              logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory
+              return Nothing
             Right (fare : _) -> return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = fare.price.amount.getHighPrecMoney}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = fare.price.amount.getHighPrecMoney}})
             Left err -> do
               logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Route : " <> routeCode <> ", Start Stop : " <> startStationCode <> ", End Stop : " <> endStationCode <> ", Error : " <> show err
               return Nothing
-      Nothing -> return Nothing
+      Nothing -> do
+        logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
+        return Nothing
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
 getInfo searchId fallbackFare distance duration = do
