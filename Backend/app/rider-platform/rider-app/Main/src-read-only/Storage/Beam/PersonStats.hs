@@ -19,6 +19,7 @@ data PersonStatsT f = PersonStatsT
     createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverCancelledRides :: B.C f Kernel.Prelude.Int,
     eveningPeakRides :: B.C f Kernel.Prelude.Int,
+    isBackfilled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     morningPeakRides :: B.C f Kernel.Prelude.Int,
     offPeakRides :: B.C f Kernel.Prelude.Int,
     personId :: B.C f Kernel.Prelude.Text,
