@@ -2383,9 +2383,6 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
   (GlobalState allState) <- getState
   setValueToLocalStore RIDE_STATUS_POLLING "False"
   setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
-
-  -- Will need to have more optimised WMB flow for bus driver instead of polling like this
-  setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
   
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   let isBusVariant = getDriverInfoResp.onboardingVehicleCategory == Just "BUS" || HU.specialVariantsForTracking FunctionCall
@@ -2998,12 +2995,12 @@ homeScreenFlow = do
           void $ pure $ JB.exitLocateOnMap ""   
           currentRideFlow Nothing Nothing Nothing Nothing
         "WMB_TRIP_FINISHED" -> do
+          void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "ACCEPTED"
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-          void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS
-          currentRideFlow Nothing Nothing Nothing Nothing
+          modifyScreenState $ HomeScreenStateType (\state -> state{props{endRidePopUp = true}})
+          homeScreenFlow
         "DRIVER_REQUEST_REJECTED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-          void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
           void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "REVOKED"
           modifyScreenState $ HomeScreenStateType (\state -> state {props {endRidePopUp = true}})
           homeScreenFlow
@@ -3369,7 +3366,6 @@ homeScreenFlow = do
           else do
             deleteValueFromLocalStore WMB_END_TRIP_STATUS
             deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-            deleteValueFromLocalStore WMB_END_TRIP_STATUS_POLLING
             pure unit
         Right (API.TripEndResp tripEndResp) -> do
           void $ lift $ lift $ toggleLoader false
@@ -3381,7 +3377,6 @@ homeScreenFlow = do
               homeScreenFlow
             "WAITING_FOR_ADMIN_APPROVAL" -> do 
               setValueToLocalStore WMB_END_TRIP_STATUS "AWAITING_APPROVAL"
-              setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
               setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripEndResp.requestId
               void $ pure $ removeAllMarkers ""
               void $ pure $ removeAllPolylines ""
@@ -3397,7 +3392,6 @@ homeScreenFlow = do
         Right _ -> do
           deleteValueFromLocalStore WMB_END_TRIP_STATUS
           deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-          setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{endRidePopUp = false}})
           homeScreenFlow
     WMB_ACTIVE_RIDE state (TripTransactionDetails tripDetails) -> currentRideFlow Nothing Nothing Nothing Nothing
