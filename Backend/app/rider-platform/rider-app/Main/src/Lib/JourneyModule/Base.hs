@@ -61,12 +61,12 @@ init ::
   m (Maybe DJourney.Journey)
 init journeyReq = do
   journeyId <- Common.generateGUID
+  riderConfig <- QRC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
   mbTotalFares <-
     mapWithIndex
       ( \idx leg -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
           mbTotalLegFare <- JLI.getFare journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode
-          riderConfig <- QRC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
           if riderConfig.multimodalTesting
             then do
               journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance mbTotalLegFare
@@ -78,8 +78,8 @@ init journeyReq = do
           return mbTotalLegFare
       )
       journeyReq.legs
-
-  if any isNothing mbTotalFares
+  logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
+  if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
       journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance
