@@ -1279,6 +1279,8 @@ getKn = Keymap {
 , view_fares: "ದರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
 , excess_time_description: (\charges -> "ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು " <> charges <> " ವಿಧಿಸಲಾಗುತ್ತದೆ")
 , estimated_charges: "ಅಂದಾಜು ಶುಲ್ಕಗಳು"
+, your_cancellation_rate_is_high: "ನಿಮ್ಮ ರದ್ದತಿ ದರ ಹೆಚ್ಚಾಗಿದೆ!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು ಮುಂದಿನ ರದ್ದತಿಗಳನ್ನು ತಪ್ಪಿಸಿ.")
 , night_time_fees: "ರಾತ್ರಿ ಸಮಯ ಶುಲ್ಕಗಳು"
 , parking_and_other_charges: "ಪಾರ್ಕಿಂಗ್ ಮತ್ತು ಇತರ ವೆಚ್ಚಗಳು"
 , additional_charges: "ಅತಿಯಾದ ವೆಚ್ಚಗಳು"

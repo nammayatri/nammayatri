@@ -524,3 +524,15 @@ defaultSwitchCityConfigs = {
     }
   ]
 }
+
+defaultCancellationBannerThresholdConfig :: CancellationThreshold 
+defaultCancellationBannerThresholdConfig = {
+    showBanner : false,
+    percentage : 100.0
+}
+
+getCancellationBannerThresholdConfig :: String -> CancellationThreshold
+getCancellationBannerThresholdConfig city =
+    let config = fetchRemoteConfigString "customer_cancellation_banner_threshold"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCancellationBannerThresholdConfig
+    in getCityBasedConfig value $ DS.toLower city 
