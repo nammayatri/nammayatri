@@ -19,6 +19,7 @@ data PersonStats = PersonStats
     createdAt :: Kernel.Prelude.UTCTime,
     driverCancelledRides :: Kernel.Prelude.Int,
     eveningPeakRides :: Kernel.Prelude.Int,
+    isBackfilled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     morningPeakRides :: Kernel.Prelude.Int,
     offPeakRides :: Kernel.Prelude.Int,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
