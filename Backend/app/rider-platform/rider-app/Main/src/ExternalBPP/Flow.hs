@@ -31,58 +31,14 @@ import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
 import Tools.Error
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> Maybe Text -> Text -> Text -> m [FRFSFare]
-getFares riderId merchant merchantOperatingCity config _bapConfig mbRouteCode startStationCode endStationCode = CallAPI.getFares riderId merchant merchantOperatingCity config mbRouteCode startStationCode endStationCode
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> Maybe Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
+getFares riderId merchant merchantOperatingCity config _bapConfig mbRouteCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity config mbRouteCode startStationCode endStationCode vehicleCategory
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
 search merchant merchantOperatingCity config bapConfig searchReq = do
   fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
-  quotes <- do
-    -- For Metro, Usually External Providers give Pricing without the context of Route. So, we would try to fetch Fares by start and end stations.
-    -- If not able to fetch, then we navigate to granular level of Route.
-    fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config Nothing fromStation.code toStation.code
-    if null fares
-      then do
-        case searchReq.routeId of
-          Just routeId -> do
-            route <- QRoute.findByRouteId routeId >>= fromMaybeM (RouteNotFound routeId.getId)
-            let routeInfo =
-                  RouteStopInfo
-                    { route,
-                      totalStops = Nothing,
-                      stops = Nothing,
-                      startStopCode = fromStation.code,
-                      endStopCode = toStation.code,
-                      travelTime = Nothing
-                    }
-            mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
-          Nothing -> do
-            routesInfo <- getPossibleRoutesBetweenTwoStops fromStation.code toStation.code
-            quotes' <-
-              mapM
-                ( \routeInfo -> do
-                    mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
-                )
-                routesInfo
-            return $ concat quotes'
-      else do
-        let startStation = DStation fromStation.code fromStation.name fromStation.lat fromStation.lon START Nothing Nothing
-            endStation = DStation toStation.code toStation.name toStation.lat toStation.lon END Nothing Nothing
-        return $
-          map
-            ( \FRFSFare {..} ->
-                DQuote
-                  { bppItemId = CallAPI.getProviderName config,
-                    _type = DFRFSQuote.SingleJourney,
-                    routeStations = [],
-                    stations = [startStation] ++ [endStation],
-                    discounts = map mkDDiscount discounts,
-                    vehicleType = searchReq.vehicleType,
-                    ..
-                  }
-            )
-            fares
+  quotes <- buildQuote fromStation toStation
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
@@ -99,6 +55,51 @@ search merchant merchantOperatingCity config bapConfig searchReq = do
         bppDelayedInterest = Nothing
       }
   where
+    buildQuote fromStation toStation = do
+      -- For Metro, Usually External Providers give Pricing without the context of Route. So, we would try to fetch Fares by start and end stations.
+      -- If not able to fetch, then we navigate to granular level of Route.
+      fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config Nothing fromStation.code toStation.code searchReq.vehicleType
+      if null fares
+        then do
+          case searchReq.routeId of
+            Just routeId -> do
+              route <- QRoute.findByRouteId routeId >>= fromMaybeM (RouteNotFound routeId.getId)
+              let routeInfo =
+                    RouteStopInfo
+                      { route,
+                        totalStops = Nothing,
+                        stops = Nothing,
+                        startStopCode = fromStation.code,
+                        endStopCode = toStation.code,
+                        travelTime = Nothing
+                      }
+              mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
+            Nothing -> do
+              routesInfo <- getPossibleRoutesBetweenTwoStops fromStation.code toStation.code
+              quotes' <-
+                mapM
+                  ( \routeInfo -> do
+                      mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
+                  )
+                  routesInfo
+              return $ concat quotes'
+        else do
+          let startStation = DStation fromStation.code fromStation.name fromStation.lat fromStation.lon START Nothing Nothing
+              endStation = DStation toStation.code toStation.name toStation.lat toStation.lon END Nothing Nothing
+          return $
+            map
+              ( \FRFSFare {..} ->
+                  DQuote
+                    { bppItemId = CallAPI.getProviderName config,
+                      _type = DFRFSQuote.SingleJourney,
+                      routeStations = [],
+                      stations = [startStation] ++ [endStation],
+                      discounts = map mkDDiscount discounts,
+                      vehicleType = searchReq.vehicleType,
+                      ..
+                    }
+              )
+              fares
     mkStations :: Station -> Station -> [RouteStopMapping] -> Maybe [DStation]
     mkStations fromStation toStation stops =
       ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
@@ -117,7 +118,7 @@ search merchant merchantOperatingCity config bapConfig searchReq = do
       startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
-      fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config (Just routeInfo.route.code) startStation.code endStation.code
+      fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config (Just routeInfo.route.code) startStation.code endStation.code vehicleType
       return $
         map
           ( \FRFSFare {..} ->

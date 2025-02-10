@@ -184,3 +184,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_show_cancellation_rat
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN auto_send_booking_details_via_whatsapp boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN multimodal_testing boolean  default false;

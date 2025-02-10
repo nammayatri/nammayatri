@@ -165,5 +165,5 @@ getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFl
 getFares riderId merchant merchantOperatingCity bapConfig mbRouteCode startStationCode endStationCode vehicleCategory = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
-    Just config -> Flow.getFares riderId merchant merchantOperatingCity config bapConfig mbRouteCode startStationCode endStationCode
+    Just config -> Flow.getFares riderId merchant merchantOperatingCity config bapConfig mbRouteCode startStationCode endStationCode vehicleCategory
     Nothing -> return []
