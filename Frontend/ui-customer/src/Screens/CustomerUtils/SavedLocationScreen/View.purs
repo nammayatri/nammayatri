@@ -478,7 +478,7 @@ savedLocationsView push state =
           , margin (MarginTop 8)
           , height WRAP_CONTENT
           ](map (\item -> SavedLocationCard.view (push <<< SavedLocationCardAction)({
-                cardType : Just $ show $ case (DS.toLower item.tag) of
+                cardType : Just $ show $ case DS.toLower $ fromMaybe "" ((DS.split (DS.Pattern " | ") item.tag) DA.!! 0) of
                               "home" -> ST.HOME_TAG
                               "work" -> ST.WORK_TAG
                               _      -> ST.OTHER_TAG

@@ -44,6 +44,8 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.String
+import Data.Array
 
 view :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -198,7 +200,7 @@ getFavouritesItem item = {
   , description : item.description
   , tag : item.tag
   , tagType : item.tagType
-  , cardType : Just $ show $ case (toLower item.tag) of
+  , cardType : Just $ show $ case toLower $ fromMaybe "" ((split (Pattern " | ") item.tag) !! 0) of
                               "home" -> HOME_TAG
                               "work" -> WORK_TAG
                               _      -> OTHER_TAG

@@ -254,8 +254,6 @@ eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
                                           }) (LOCATE_ON_MAP)
 
 eval (TagSelected index) state = do
-  if (index == 2) then void $ pure $ requestKeyboardShow (getNewIDWithTag "SaveAsEditText")
-    else void $ pure $ hideKeyboardOnNavigation true
   let activeTag = case index of
                     0 -> "Home"
                     1 -> "Work"
@@ -265,16 +263,15 @@ eval (TagSelected index) state = do
       if (validTag state.data.savedTags activeTag state.data.placeName) then
         continue state{ data  { activeIndex = Just index
                               , selectedTag = getTag index
-                              , addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs}
-                      , props { placeNameExists = if index /= 2 then false else state.props.placeNameExists 
-                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation && state.data.placeName /="" ) || index == 1 || index == 0
-                                              }}
+                              , addressSavedAs = state.data.addressSavedAs}
+                      , props { placeNameExists = state.props.placeNameExists 
+                              , isBtnActive = (state.data.addressSavedAs /= "") || (state.props.editLocation && state.data.placeName /="" )}}
         else do
           void $ pure $ showToast ((case (toLower activeTag) of
                                   "home" -> (getString HOME)
                                   "work" -> (getString WORK)
                                   _      -> "") <> " " <> (getString LOCATION_ALREADY_EXISTS))
-          continue state{data{addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs }, props {placeNameExists = if index /= 2 then false else state.props.placeNameExists}}
+          continue state{data{addressSavedAs = state.data.addressSavedAs }, props {placeNameExists = state.props.placeNameExists}}
 
 eval (ChangeAddress ) state = do
   continue state{props{showSavePlaceView = false, editLocation = true, isSearchedLocationServiceable = state.props.isLocationServiceable},data{latSelectedFromMap = state.data.lat , lonSelectedFromMap = state.data.lon ,locationList= state.data.recentSearchs.predictionArray}}
@@ -358,8 +355,8 @@ encodeAddressDescription state = do
                     "lat" : (fromMaybe 0.0 state.data.selectedItem.lat),
                     "lon" : (fromMaybe 0.0 state.data.selectedItem.lon),
                     "tag" : case state.data.selectedTag of
-                              Just HOME_TAG -> "Home"
-                              Just WORK_TAG -> "Work"
+                              Just HOME_TAG -> "Home" <> " | " <> state.data.addressSavedAs
+                              Just WORK_TAG -> "Work" <> " | " <> state.data.addressSavedAs
                               Just OTHER_TAG -> state.data.addressSavedAs
                               Nothing  -> state.data.addressSavedAs,
                     "placeId" : state.data.selectedItem.placeId,

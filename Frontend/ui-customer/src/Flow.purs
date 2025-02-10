@@ -2507,7 +2507,7 @@ homeScreenFlow = do
                         , editLocation = false
                         , editSavedLocation = false
                         , isLocateOnMap = false
-                        , isBtnActive = true
+                        , isBtnActive = false
                         , isSearchedLocationServiceable = true
                         , tagExists = false
                         , placeNameExists = false
@@ -4390,11 +4390,7 @@ updateDistanceInfo state lat lon = do
                 { tagExists = distanceInfo.tagExists
                 , isLocateOnMap = false
                 , showSavePlaceView = true
-                , isBtnActive =
-                  case state.data.activeIndex of
-                    Just 2 -> if state.data.addressSavedAs /= "" then true else false
-                    Just index -> true
-                    Nothing -> false
+                , isBtnActive = false
                 }
               , data
                 { selectedTag = state.data.selectedTag
@@ -6182,7 +6178,7 @@ addFavLocFlow state tag = do
                 , editLocation = false
                 , editSavedLocation = false
                 , isLocateOnMap = false
-                , isBtnActive = true
+                , isBtnActive = false
                 , isSearchedLocationServiceable = true
                 , tagExists = false
                 , placeNameExists = false
