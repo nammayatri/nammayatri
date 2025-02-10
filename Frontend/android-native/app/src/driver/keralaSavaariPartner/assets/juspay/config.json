@@ -110,23 +110,23 @@
         "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"
       },
       "in.yatri.provider": {
-        "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.32/v1-configuration.zip"
+        "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.34/v1-configuration.zip"
       }
     },
-    "id": "49045752474763336-patch-1.47.14",
+    "id": "62106116376494238-patch-1.47.14",
     "package": {
       "in.juspay.ec": "https://assets.juspay.in/hyper/bundles/app/in.juspay.ec/3.18.4/android/v1-index_bundle.zip",
       "in.juspay.godel": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.3.11/android/v1-index_bundle.zip",
       "in.juspay.godel.placeholder": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.3.11/android/v1-index_bundle.zip",
       "in.juspay.hyperpay": "https://assets.juspay.in/hyper/bundles/app/in.juspay.hyperpay/3.49.26-release-20230814.2/android/v1-index_bundle.zip",
       "in.juspay.upiintent": "https://assets.juspay.in/hyper/bundles/app/in.juspay.upiintent/4.1.5/android/v1-index_bundle.zip",
-      "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.86/android/v1-index_bundle.zip"
+      "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.95/android/v1-index_bundle.zip"
     },
-    "package_version": "90_provider_android"
+    "package_version": "100_provider_android"
   },
   "meta": {
     "clientId": "nammayatriprovider",
-    "timeStamp": "Wednesday 29 January, 2025 at 03:29:20 PM IST"
+    "timeStamp": "Friday 07 February, 2025 at 01:23:40 AM IST"
   },
   "new": {
     "assets": {
@@ -161,42 +161,42 @@
         "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"
       },
       "in.yatri.provider": {
-        "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.32/v1-configuration.zip"
+        "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.34/v1-configuration.zip"
       }
     },
-    "id": "49045752474763336-patch-1.47.14",
+    "id": "62106116376494238-patch-1.47.14",
     "package": {
       "in.juspay.ec": "https://assets.juspay.in/hyper/bundles/app/in.juspay.ec/3.18.4/android/v1-index_bundle.zip",
       "in.juspay.godel": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.3.11/android/v1-index_bundle.zip",
       "in.juspay.godel.placeholder": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.3.11/android/v1-index_bundle.zip",
       "in.juspay.hyperpay": "https://assets.juspay.in/hyper/bundles/app/in.juspay.hyperpay/3.49.26-release-20230814.2/android/v1-index_bundle.zip",
       "in.juspay.upiintent": "https://assets.juspay.in/hyper/bundles/app/in.juspay.upiintent/4.1.5/android/v1-index_bundle.zip",
-      "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.86/android/v1-index_bundle.zip"
+      "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.95/android/v1-index_bundle.zip"
     },
-    "package_version": "90_provider_android"
+    "package_version": "100_provider_android"
   },
   "overrides": [
     {
-      "condition": "var appVersion = '0.0'; try{appVersion = JSON.parse(JBridge.getSessionInfo()).app_version}catch(e){};appVersion.replace( /^\\D+/g, '').localeCompare('3.0.30', undefined, { numeric: true, sensitivity: 'base' }) >= 0",
+      "condition": "var appVersion = '0.0'; try{appVersion = JSON.parse(JBridge.getSessionInfo()).app_version}catch(e){};appVersion.replace( /^\\D+/g, '').localeCompare('3.0.30', undefined, { numeric: true, sensitivity: 'base' }) < 0",
       "result": {
         "live": {
           "assets": {
             "in.yatri.provider": {
-              "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.22/v1-configuration.zip"
+              "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.33/v1-configuration.zip"
             }
           },
           "package": {
-            "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.54/android/v1-index_bundle.zip"
+            "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.88/android/v1-index_bundle.zip"
           }
         },
         "new": {
           "assets": {
             "in.yatri.provider": {
-              "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.22/v1-configuration.zip"
+              "configuration": "https://assets.moving.tech/hyper/configs/nammayatriprovider/in.yatri.provider/2.0.33/v1-configuration.zip"
             }
           },
           "package": {
-            "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.54/android/v1-index_bundle.zip"
+            "in.yatri.provider": "https://assets.moving.tech/hyper/bundles/app/in.yatri.provider/3.0.88/android/v1-index_bundle.zip"
           }
         }
       }
