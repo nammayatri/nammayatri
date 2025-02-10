@@ -1309,7 +1309,6 @@ eval (WMBEndTripAC endTripStatus) state =
     _ | endTripStatus `Array.elem` ["REVOKED", "REJECTED"] -> do
       void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS endTripStatus
       void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
-      void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS_POLLING "false"
       continue state
     _ | endTripStatus `Array.elem` ["SUCCESS", "ACCEPTED"] -> do
       void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS endTripStatus
