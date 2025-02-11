@@ -13,7 +13,8 @@ import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout a
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
-import Lib.Yudhishthira.Types.AppDynamicLogicRollout
+
+-- import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
 getConfigVersion ::
   BeamFlow m r =>
@@ -103,19 +104,19 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime = do
   where
     unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
 
-cumulativeRollout :: [AppDynamicLogicRollout] -> [(AppDynamicLogicRollout, Int)]
+cumulativeRollout :: HasField "percentageRollout" a Int => [a] -> [(a, Int)]
 cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageRollout) logics)
   where
     addPercentages (_, p1) (logic2, p2) = (logic2, p1 + p2)
 
-chooseLogic :: MonadFlow m => [AppDynamicLogicRollout] -> m (Maybe AppDynamicLogicRollout)
+chooseLogic :: HasField "percentageRollout" a Int => MonadFlow m => [a] -> m (Maybe a)
 chooseLogic logics = do
   let cumulative = cumulativeRollout logics
   toss <- getRandomInRange (1, 100 :: Int)
   return $ findLogic toss cumulative
 
 -- Function to find the logic corresponding to the random number
-findLogic :: Int -> [(AppDynamicLogicRollout, Int)] -> Maybe AppDynamicLogicRollout
+findLogic :: Int -> [(a, Int)] -> Maybe a
 findLogic _ [] = Nothing
 findLogic randVal ((logic, cumPercent) : xs)
   | randVal <= cumPercent = Just logic

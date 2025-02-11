@@ -154,6 +154,7 @@ library
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.IssueManagement.IssueList
       Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.MultiModal
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.NammaTag.Handle
       Domain.Action.Dashboard.Ride
@@ -251,9 +252,11 @@ library
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
+      Domain.Types.Extra.Rollout
       Domain.Types.Extra.TicketBooking
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
+      Domain.Types.GTFS
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
@@ -497,6 +500,7 @@ library
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Merchant
+      API.Action.Dashboard.Management.MultiModal
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
@@ -654,6 +658,7 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
+      Domain.Types.Rollout
       Domain.Types.Route
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
@@ -669,6 +674,7 @@ library
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
+      Domain.Types.Stage
       Domain.Types.Station
       Domain.Types.StopInformation
       Domain.Types.TicketBooking
@@ -680,6 +686,8 @@ library
       Domain.Types.TripTerms
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
+      Domain.Types.Version
+      Domain.Types.VersionStageMapping
       Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -765,6 +773,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
+      Storage.Beam.Rollout
       Storage.Beam.Route
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
@@ -780,6 +789,7 @@ library
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
+      Storage.Beam.Stage
       Storage.Beam.Station
       Storage.Beam.StopInformation
       Storage.Beam.TicketBooking
@@ -791,6 +801,8 @@ library
       Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
+      Storage.Beam.Version
+      Storage.Beam.VersionStageMapping
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
@@ -925,6 +937,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
+      Storage.Queries.Rollout
       Storage.Queries.Route
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
@@ -940,6 +953,7 @@ library
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.Stage
       Storage.Queries.Station
       Storage.Queries.StopInformation
       Storage.Queries.TicketBooking
@@ -951,6 +965,8 @@ library
       Storage.Queries.TripTerms
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
+      Storage.Queries.Version
+      Storage.Queries.VersionStageMapping
       Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:
@@ -1001,6 +1017,7 @@ library
     , amazonka
     , amazonka-core
     , amazonka-ses
+    , attoparsec ==0.14.4
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core
@@ -1043,6 +1060,7 @@ library
     , payment
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5
@@ -1138,6 +1156,7 @@ executable rider-app-exe
     , amazonka
     , amazonka-core
     , amazonka-ses
+    , attoparsec ==0.14.4
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core
@@ -1176,6 +1195,7 @@ executable rider-app-exe
     , passetto-client
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5

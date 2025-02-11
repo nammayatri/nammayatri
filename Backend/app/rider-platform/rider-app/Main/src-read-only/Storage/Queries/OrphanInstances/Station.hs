@@ -30,6 +30,7 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
             possibleTypes = possibleTypes,
             timeBounds = fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
             vehicleType = vehicleType,
+            versionTag = versionTag,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -48,6 +49,7 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.possibleTypes = possibleTypes,
         Beam.timeBounds = Kernel.Prelude.Just timeBounds,
         Beam.vehicleType = vehicleType,
+        Beam.versionTag = versionTag,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

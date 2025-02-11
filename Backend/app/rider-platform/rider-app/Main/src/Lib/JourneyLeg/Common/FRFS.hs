@@ -157,7 +157,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
               timeBounds = Kernel.Types.TimeBound.Unbounded,
               merchantOperatingCityId = merchantOpCityId,
               createdAt = now,
-              updatedAt = now
+              updatedAt = now,
+              versionTag = Nothing
             }
 
 confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Id FRFSSearch -> Maybe (Id FRFSQuote) -> Bool -> Bool -> m ()

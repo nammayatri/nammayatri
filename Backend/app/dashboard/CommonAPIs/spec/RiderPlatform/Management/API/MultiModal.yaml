@@ -1,0 +1,85 @@
+imports:
+  VehicleCategory: BecknV2.FRFS.Enums
+  FilePath: Kernel.Prelude
+
+module: MultiModal
+
+types:
+  FileFormat:
+    enum: "GTFS,JSON,CSV"
+    derive: "Read"
+  RawDataType:
+    enum: "GTFS_DATA,FARE_DATA"
+    derive: "Read"
+  StageInfo:
+    - stageName: Text
+    - stageStatus: StageStatus
+  PreprocessFRFSDataResp:
+    - versionId: Text
+    - versionTag: Int
+  FRFSDataStatusResp:
+    - versionId: Text
+    - status: [StageInfo]
+  ReadyVersionsResp:
+    - readyVersions: [PreprocessFRFSDataResp]
+  StageStatus:
+    enum: "INPROGRESS,COMPLETED,FAILED"
+  PreprocessFRFSDataReq: # city inferred from api path variable
+    - vehicleType: VehicleCategory
+    - fileFormat: FileFormat
+    - file: FilePath
+    - inputDataType: RawDataType
+    - derive: "'HideSecrets"
+  FRFSDataStatusReq:
+    - versionId: Text
+    - operatingCityId: Text
+    - vehicleType: VehicleCategory
+    - derive: "'HideSecrets"
+  ReadyVersionReq:
+    - cityId: Text
+    - vehicleType: VehicleCategory
+    - inputDataType: RawDataType
+    - derive: "'HideSecrets"
+  ApplyVersionReq:
+    - cityId: Text
+    - vehicleType: VehicleCategory
+    - versionId: Text
+    - versionTag: Int
+    - rolloutPercent: Int
+    - derive: "'HideSecrets"
+
+apis:
+  - POST: # PreprocessFRFSDataAPI
+      endpoint: multimodal/frfs/data/preprocess
+      auth: ApiAuthV2
+      multipart:
+        type: PreprocessFRFSDataReq
+      response:
+          type: PreprocessFRFSDataResp
+
+  - POST: # StatusCheckFRFSDataAPI
+      endpoint: multimodal/frfs/data/status
+      auth: ApiAuthV2
+      request:
+        type: FRFSDataStatusReq
+      response:
+          type: FRFSDataStatusResp
+
+  - POST: # GetReadyVersionsAPI
+      endpoint: multimodal/frfs/data/version/isReady
+      auth: ApiAuthV2
+      request:
+        type: ReadyVersionReq
+      response:
+        type: ReadyVersionsResp
+
+  - POST: # ApplyReadyVersionsAPI
+      endpoint: multimodal/frfs/data/version/apply
+      auth: ApiAuthV2
+      request:
+        type: ApplyVersionReq
+      response:
+        type: APISuccess
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

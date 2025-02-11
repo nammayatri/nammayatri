@@ -1,0 +1,121 @@
+imports:
+  VehicleCategory: BecknV2.FRFS.Enums
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RawDataType: Domain.Types.Extra.Rollout
+  # StageData: Domain.Types.Extra.Rollout
+
+Rollout:
+  tableName: rollout
+
+  fields:
+    id: Id Rollout
+    vehicleType: VehicleCategory
+    inputDataType: RawDataType
+    versionTag: Int
+    percentage: Int
+
+  queries:
+    findByMerchantOperatingCityAndVehicleType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    findAllByMerchantOperatingCityAndVehicleType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    updateByMerchantOperatingCityAndVehicleType:
+      kvFunction: updateWithKV
+      params: [percentage]
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    deleteByVersionId:
+      kvFunction: deleteWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+Stage:
+  tableName: stage
+
+  types:
+    StageName:
+      enum: "PREPROCESSING,VALIDATION,UPLOAD"
+
+  fields:
+    id: Id Stage
+    vehicleType: VehicleCategory
+    inputDataType: RawDataType
+    name: StageName
+    order: Int
+
+
+  queries:
+    findByMerchantOperatingCityAndVehicleType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    findByMerchantOperatingCityAndVehicleTypeAndStageName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType, name]
+
+Version:
+  tableName: version
+
+  fields:
+    id: Id Version
+    vehicleType: VehicleCategory
+    inputDataType: RawDataType
+    versionTag: Int
+    isReadyToApply: Bool
+
+
+
+  queries:
+    findAllByMerchantOperatingCityAndVehicleTypeAndDataType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType, inputDataType]
+    findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType:
+      kvFunction: findAllWithKV
+      where:
+        and: [isReadyToApply, merchantOperatingCityId, vehicleType, inputDataType]
+
+VersionStageMapping:
+  tableName: version_stage_mapping
+
+  types:
+    Status:
+      enum: "Inprogress,Completed,Failed"
+    StageData:
+      enum: "GTFSData GtfsDataType,FAREData FareDataType"
+    GtfsDataType:
+      - gtfsFilePath: Maybe Text
+      - customFilePath: Maybe Text
+      - derive: "Read, Eq, Ord"
+    FareDataType:
+      - id: Text
+      - derive: "Read, Eq, Ord"
+
+
+  fields:
+    id: Id VersionStageMapping
+    versionId: Text
+    stageId: Text
+    status: Status
+    stageData: Maybe StageData # (GTFS GtfsDataType | FARE FareDataType)
+    failureReason: Maybe Text
+    stageName: Text
+
+
+
+  queries:
+    findByVersionIdAndStageId:
+      kvFunction: findOneWithKV
+      where:
+        and: [versionId, stageId]
+    findAllByVersionId:
+      kvFunction: findAllWithKV
+      where: versionId
