@@ -14,6 +14,7 @@
 
 module SharedLogic.Referral
   ( applyReferralCode,
+    isCustomerReferralCode,
   )
 where
 
@@ -58,8 +59,7 @@ applyReferralCode person shouldShareReferrerInfo refCode = withPersonIdLogTag pe
 validateRefCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Person.Person -> Text -> m ValidatedRefCode
 validateRefCode person refCode =
   withLogTag ("Referral Code Flow:> refCode:-" <> show refCode) $ do
-    let isCustomerReferralCode = T.isPrefixOf "C" refCode
-    if isCustomerReferralCode
+    if isCustomerReferralCode refCode
       then withLogTag "Rider" $ do
         unless (TU.validateAlphaNumericWithLength refCode 6) $
           throwError $ InvalidRequest "Referral Code must have 6 digits and must be Alphanumeric"
@@ -76,6 +76,9 @@ validateRefCode person refCode =
         mobileNumber <- fromMaybeM (PersonMobileNumberIsNULL person.id.getId) person.mobileNumber >>= decrypt
         countryCode <- person.mobileCountryCode & fromMaybeM (PersonMobileNumberIsNULL person.id.getId)
         return $ Driver refCode mobileNumber countryCode
+
+isCustomerReferralCode :: Text -> Bool
+isCustomerReferralCode = T.isPrefixOf "C"
 
 getReferrerInfo :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> ValidatedRefCode -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
 getReferrerInfo person shouldShareReferrerInfo = \case

@@ -15,7 +15,7 @@
 module Domain.Action.UI.Search where
 
 import qualified BecknV2.OnDemand.Tags as Beckn
-import Control.Applicative (liftA2)
+import Control.Applicative ((<|>))
 import Control.Monad
 import Data.Aeson
 import qualified Data.Aeson.Text as AT
@@ -67,6 +67,7 @@ import Lib.SessionizerMetrics.Types.Event
 import Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Referral as Referral
 import SharedLogic.Search
 import qualified SharedLogic.Serviceability as Serviceability
 import Storage.Beam.Yudhishthira ()
@@ -193,6 +194,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
+  let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -222,7 +224,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       hasStops
       (safeInit stopLocations)
       journeySearchData
-      (liftA2 (,) driverIdentifier_ riderCfg.driverReferredSearchReqExpiry)
+      driverIdentifier'
       configVersionMap
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -249,6 +251,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         ..
       }
   where
+    mkDriverIdentifier :: Text -> Maybe DRL.DriverIdentifier
+    mkDriverIdentifier refCode = DRL.mkDriverIdentifier (Just DRL.REFERRAL_CODE) (Just refCode)
+
+    shouldPriortiseDriver :: Person.Person -> RiderConfig -> Text -> Bool
+    shouldPriortiseDriver person riderCfg refCode = riderCfg.isFirstReferredRideEnabled && isFirstRideFor person && not (Referral.isCustomerReferralCode refCode)
+
+    isFirstRideFor :: Person.Person -> Bool
+    isFirstRideFor person = person.totalRidesCount == Just 0
+
     backfillCustomerNammaTags :: Person.Person -> Person.Person
     backfillCustomerNammaTags Person.Person {..} =
       if isNothing customerNammaTags
@@ -446,7 +457,7 @@ buildSearchRequest ::
   Maybe Bool ->
   [Location.Location] ->
   Maybe JPT.JourneySearchData ->
-  Maybe (DRL.DriverIdentifier, Seconds) ->
+  Maybe DRL.DriverIdentifier ->
   [LYT.ConfigVersionMap] ->
   m SearchRequest.SearchRequest
 buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap = do
@@ -495,7 +506,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         placeNameSource = mbPlaceNameSource,
         initiatedBy = Nothing,
         journeyLegInfo = journeySearchData,
-        driverIdentifier = fst <$> mbDriverReferredInfo,
+        driverIdentifier = mbDriverReferredInfo,
         hasMultimodalSearch = Just False,
         configInExperimentVersions = configVersionMap,
         ..
@@ -503,13 +514,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
   where
     getSearchRequestExpiry :: SearchRequestFlow m r => UTCTime -> m UTCTime
     getSearchRequestExpiry time = do
-      let mbExpiryTime :: Maybe Seconds = snd <$> mbDriverReferredInfo
-      searchRequestExpiry <- maybe 1800 (fromIntegral . orElse mbExpiryTime) <$> asks (.searchRequestExpiry)
+      searchRequestExpiry <- maybe 1800 fromIntegral <$> asks (.searchRequestExpiry)
       pure $ addUTCTime (fromInteger searchRequestExpiry) time
-
-    -- TODO: Move to shared-kernel
-    orElse :: Maybe a -> a -> a
-    orElse = flip fromMaybe
 
 calculateDistanceAndRoutes ::
   SearchRequestFlow m r =>

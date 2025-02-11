@@ -129,9 +129,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
     then do
       (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
       let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
-      case (res, isJust searchReq.driverIdForSearch) of
-        (_, True) -> return ()
-        (ReSchedule _, _) -> scheduleBatching searchTry inTime
+      case res of
+        (ReSchedule _) -> scheduleBatching searchTry inTime
         _ -> return ()
       SharedRedisKeys.setBatchConfig searchReq.transactionId $
         SharedRedisKeys.BatchConfig
