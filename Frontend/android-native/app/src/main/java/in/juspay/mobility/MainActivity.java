@@ -22,7 +22,6 @@ import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -74,6 +73,7 @@ import com.google.android.play.core.appupdate.AppUpdateManager;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.metrics.AddTrace;
 import com.google.gson.Gson;
@@ -85,6 +85,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -96,6 +97,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import co.hyperverge.hyperkyc.HyperKyc;
+import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
+import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
@@ -104,7 +108,6 @@ import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
@@ -112,18 +115,14 @@ import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
-import in.juspay.mobility.common.utils.CipherUtil;
-import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.utils.CipherUtil;
+import in.juspay.mobility.common.utils.Utils;
+import in.juspay.mobility.events.service.EventsFGService;
+import in.juspay.mobility.events.store.EventsStore;
+import in.juspay.mobility.events.types.EventPayload;
 import in.juspay.services.HyperServices;
-
-import java.util.Iterator;
-
-
-import co.hyperverge.hyperkyc.HyperKyc;
-import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
-import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -156,8 +155,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             if (key != null && key.equals("LANGUAGE_KEY")) {
-                new TranslatorMLKit("en",sharedPreferences.getString(key, "null"),MainActivity.this);
-                Utils.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
+                new TranslatorMLKit("en", sharedPreferences.getString(key, "null"), MainActivity.this);
+                Utils.updateLocaleResource(sharedPreferences.getString(key, "__failed"), context);
             }
             if (key != null && key.equals("REGISTERATION_TOKEN")) {
                 String token = sharedPreferences.getString(key, "null");
@@ -197,8 +196,8 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("TRIGGERED UPDATE POLLING");
                 Context context = getApplicationContext();
                 Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
-                if(key.equals("TRIP_STATUS")){
-                    locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key,"null"));
+                if (key.equals("TRIP_STATUS")) {
+                    locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key, "null"));
                 }
                 context.startService(locationUpdateIntent);
             }
@@ -316,12 +315,11 @@ public class MainActivity extends AppCompatActivity {
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
 
-        String viewParam = null, deepLinkJSON =null;
-        if (res!=null ){
+        String viewParam = null, deepLinkJSON = null;
+        if (res != null) {
             viewParam = res.get(0);
             deepLinkJSON = res.get(1);
-        }
-        else if (notificationDeepLinkVector != null) {
+        } else if (notificationDeepLinkVector != null) {
             viewParam = notificationDeepLinkVector.get(0);
             deepLinkJSON = notificationDeepLinkVector.get(1);
         }
@@ -330,10 +328,10 @@ public class MainActivity extends AppCompatActivity {
             widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if (sharedPref != null) {
-                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
+                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"), context);
             }
         }
-        
+
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
@@ -367,23 +365,25 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-                return results;
+        return results;
     }
 
     protected void getCurrentLocationFlow(int locationPriority) {
-        if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+        if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+            return;
         FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         client.getCurrentLocation(locationPriority, cancellationTokenSource.getToken())
                 .addOnSuccessListener(location -> {
                     if (location != null) {
                         try {
-                            currentLocationRes.put("lat",location.getLatitude());
-                            currentLocationRes.put("lon",location.getLongitude());
+                            currentLocationRes.put("lat", location.getLatitude());
+                            currentLocationRes.put("lon", location.getLongitude());
                         } catch (JSONException e) {
                             currentLocationRes = null;
                         }
-                    }});
+                    }
+                });
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -391,6 +391,16 @@ public class MainActivity extends AppCompatActivity {
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
+        Intent serviceIntent = new Intent(this, EventsFGService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+        Thread.setDefaultUncaughtExceptionHandler(new CrashHandler(this));
+        // TODO(Jayanth): Add actual event data
+        EventPayload eventsPayload = EventPayload.createEventPayload(this, "onCreateTimeStamp", null, "some");
+        EventsStore.getInstance(getApplicationContext()).addEvent(eventsPayload);
         onCreateTimeStamp = System.currentTimeMillis();
         currentLocExecuter = Executors.newSingleThreadExecutor();
         ActivityLifecycleCallback.register(this.getApplication());
@@ -402,34 +412,34 @@ public class MainActivity extends AppCompatActivity {
         if (isClassAvailable("com.facebook.soloader.SoLoader")) SoLoader.init(this, false);
         initiateRSIntegration();
 
-        Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
+        Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());
 
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
         String okHttpConfig = "{}";
-        try{
+        try {
             isPerfEnabled = remoteConfigs.getBoolean("perf_enabled");
             isPerfEnabledCustomer = remoteConfigs.getBoolean("perf_enabled_customer");
             okHttpConfig = remoteConfigs.getString("ok_http_config");
             Log.i("PERF", "Fetched from remote config - perf enabled : " + isPerfEnabled);
 
-        }catch(Exception e){
+        } catch (Exception e) {
             Log.i("PERF", "unable to fetch PERF remote config");
             Exception exception = new Exception("Error in parsing perf config " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);            
+            FirebaseCrashlytics.getInstance().recordException(exception);
         }
 
-        if(isPerfEnabledCustomer){
+        if (isPerfEnabledCustomer) {
             String appName = getApplicationContext().getResources().getString(R.string.app_type);
-            if(appName.equals("driver")){
+            if (appName.equals("driver")) {
                 String configPriority = remoteConfigs.getString("driver_location_priority");
                 int priority = in.juspay.mobility.app.Utils.getPriority(configPriority);
                 currentLocExecuter.execute(() -> getCurrentLocationFlow(priority));
-            }else{
+            } else {
                 currentLocExecuter.execute(() -> getCurrentLocationFlow(Priority.PRIORITY_HIGH_ACCURACY));
             }
         }
 
-        if(isPerfEnabled) {
+        if (isPerfEnabled) {
             preInitFutureTask = Executors.newSingleThreadExecutor().submit(this::preInitFlow);
             driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
         } else {
@@ -444,17 +454,17 @@ public class MainActivity extends AppCompatActivity {
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
 
-        mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
+        mFirebaseAnalytics.logEvent(isMigrated ? "migrate_local_store_success" : "migrate_local_store_failed", new Bundle());
         CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX, "4_promotional",true);
-            CleverTapAPI.createNotificationChannel(context,"nammayatriHindi","nammayatriHindi","notification",NotificationManager.IMPORTANCE_MAX,true,"clevertap_custom_notification.mp3");
-        }else{
-            CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX,true);
+            CleverTapAPI.createNotificationChannel(context, clientId, "Promotion", "Notifications Related to promotion", NotificationManager.IMPORTANCE_MAX, "4_promotional", true);
+            CleverTapAPI.createNotificationChannel(context, "nammayatriHindi", "nammayatriHindi", "notification", NotificationManager.IMPORTANCE_MAX, true, "clevertap_custom_notification.mp3");
+        } else {
+            CleverTapAPI.createNotificationChannel(context, clientId, "Promotion", "Notifications Related to promotion", NotificationManager.IMPORTANCE_MAX, true);
         }
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
-        CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
+        CleverTapAPI.setNotificationHandler((NotificationHandler) new PushTemplateNotificationHandler());
 
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
@@ -495,7 +505,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void initiateHvLauncher() {
-        if (isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
+        if (isClassAvailable("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
             launcher = this.registerForActivityResult(new HyperKyc.Contract(), new ActivityResultCallback<HyperKycResult>() {
                 @Override
                 public void onActivityResult(HyperKycResult result) {
@@ -505,7 +515,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                         JSONObject processPL = new JSONObject();
-                        JSONObject innerPayload = getInnerPayload(new JSONObject(),"process_hv_resp", MainActivity.this);
+                        JSONObject innerPayload = getInnerPayload(new JSONObject(), "process_hv_resp", MainActivity.this);
                         innerPayload.put("callback", registeredCallBackForHV)
                                 .put("hv_response", jsonStr);
                         processPL.put(PaymentConstants.PAYLOAD, innerPayload)
@@ -520,6 +530,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
     }
+
     private void handleSplashScreen() {
         try {
             setContentView(R.layout.activity_main);
@@ -537,7 +548,7 @@ public class MainActivity extends AppCompatActivity {
             View splash = findViewById(R.id.splash);
             LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
             if (splashLottie != null) {
-                if ((!city.equals("__failed")) && enableCityBasedSplash ) {
+                if ((!city.equals("__failed")) && enableCityBasedSplash) {
                     skipDefaultSplash = setSplashAnimAndStart(splashLottie, city.toLowerCase());
                 }
                 if ((!skipDefaultSplash) && enableCityBasedSplash) {
@@ -549,43 +560,44 @@ public class MainActivity extends AppCompatActivity {
                 }
                 splash.setVisibility(View.VISIBLE);
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
+            bundle.putString("Exception", e.toString());
             FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-            mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
+            mFirebaseAnalytics.logEvent("splash_screen_inflate_exception", bundle);
             setContentView(R.layout.activity_main_without_bg);
         }
     }
 
-    private boolean setSplashAnimAndStart (LottieAnimationView view ,String city) {
+    private boolean setSplashAnimAndStart(LottieAnimationView view, String city) {
         ResourceHandler resourceHandler = new ResourceHandler(this);
         @Nullable
         String animationFile = null;
         try {
             JSONObject cityConfig = getCityConfig(city);
-            String file = cityConfig.optString("file_name","");
-            if  (resourceHandler.isResourcePresent("raw",file) && !cityConfig.optBoolean("force_remote",false)) {
+            String file = cityConfig.optString("file_name", "");
+            if (resourceHandler.isResourcePresent("raw", file) && !cityConfig.optBoolean("force_remote", false)) {
                 animationFile = resourceHandler.getRawResource(file);
             } else {
                 animationFile = cityConfig.optString("url");
             }
         } catch (Exception e) {
             Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
+            bundle.putString("Exception", e.toString());
             FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-            mFirebaseAnalytics.logEvent("exception_while_reading_city_config",bundle);
+            mFirebaseAnalytics.logEvent("exception_while_reading_city_config", bundle);
         }
         resourceHandler.close();
         if (animationFile != null && !animationFile.isEmpty()) {
             if (animationFile.startsWith("http")) {
-                view.setFailureListener(throwable -> mFirebaseAnalytics.logEvent("failure_in_set_animation_from_url",new Bundle()));
+                view.setFailureListener(throwable -> mFirebaseAnalytics.logEvent("failure_in_set_animation_from_url", new Bundle()));
                 view.setAnimationFromUrl(animationFile);
             } else {
-                view.setAnimationFromJson(animationFile,null);
+                view.setAnimationFromJson(animationFile, null);
             }
             view.setVisibility(View.VISIBLE);
-            if ((view.getTag() != null) && view.getTag().equals("autoStart")) view.setRepeatCount(ValueAnimator.INFINITE);
+            if ((view.getTag() != null) && view.getTag().equals("autoStart"))
+                view.setRepeatCount(ValueAnimator.INFINITE);
             view.playAnimation();
             return true;
         } else {
@@ -601,20 +613,22 @@ public class MainActivity extends AppCompatActivity {
         JSONObject config = new JSONObject();
         JSONObject cityConfig = new JSONObject();
         boolean isFeatureEnabled = false;
-        Log.d("Feature flags","remote config for feature :-" + key +  "->" + forward_dispatch_config);
+        Log.d("Feature flags", "remote config for feature :-" + key + "->" + forward_dispatch_config);
         try {
             config = new JSONObject(forward_dispatch_config);
             cityConfig = config.optJSONObject(city);
             Log.d("feature bool", "getCityConfigForFeatureFlags: " + cityConfig);
-            if(cityConfig != null){isFeatureEnabled = cityConfig.optBoolean("is_" + key + "_Enabled", false);}
+            if (cityConfig != null) {
+                isFeatureEnabled = cityConfig.optBoolean("is_" + key + "_Enabled", false);
+            }
         } catch (Exception e) {
             Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
+            bundle.putString("Exception", e.toString());
             FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
             Log.d("feature bool deterimatal", "getCityConfigForFeatureFlags: " + cityConfig);
-            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config", bundle);
         }
-        return isFeatureEnabled ;
+        return isFeatureEnabled;
     }
 
     @NonNull
@@ -629,11 +643,11 @@ public class MainActivity extends AppCompatActivity {
             config = cityConfig.optJSONObject(merchant);
         } catch (Exception e) {
             Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
+            bundle.putString("Exception", e.toString());
             FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config", bundle);
         }
-        return config != null ? config : cityConfig ;
+        return config != null ? config : cityConfig;
     }
 
     private void registerCallBack() {
@@ -670,12 +684,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        mFirebaseAnalytics.logEvent("ny_hyper_onActivityResult",null);
+        mFirebaseAnalytics.logEvent("ny_hyper_onActivityResult", null);
         hyperServices.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_UPDATE_APP) {
             if (resultCode != RESULT_OK) {
-                Log.i(LOG_TAG,"Update flow failed! Result code: " + resultCode);
-                if(updateType == AppUpdateType.IMMEDIATE){
+                Log.i(LOG_TAG, "Update flow failed! Result code: " + resultCode);
+                if (updateType == AppUpdateType.IMMEDIATE) {
                     finishAndRemoveTask();
                 }
             }
@@ -694,30 +708,31 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload = getInnerPayload(payload,"initiate", MainActivity.this);
+            payload = getInnerPayload(payload, "initiate", MainActivity.this);
             payload.put("onCreateTimeStamp", onCreateTimeStamp);
-            payload.put("initiateTimeStamp" , initiateTimeStamp);
+            payload.put("initiateTimeStamp", initiateTimeStamp);
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        mFirebaseAnalytics.logEvent("ny_hyper_initiate",null);
+        mFirebaseAnalytics.logEvent("ny_hyper_initiate", null);
         Log.i("APP_PERF", "INIT_HYPER_SERVICE : " + System.currentTimeMillis());
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
                 Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
                 String event = jsonObject.optString("event");
-                mFirebaseAnalytics.logEvent("ny_hyper_" + event,null);
+                mFirebaseAnalytics.logEvent("ny_hyper_" + event, null);
                 switch (event) {
                     case "initiate_result":
+                        EventsStore.getInstance(getApplicationContext()).setPrestoLoaded(true);
                         Log.i("APP_PERF", "INITIATE_RESULT : " + System.currentTimeMillis());
                         try {
                             JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
 
                             String viewParam = null, deepLinkJSON = null;
                             JSONObject driverInfoResponse = null;
-                            if(preInitFutureTaskResult != null) {
+                            if (preInitFutureTaskResult != null) {
                                 Log.i("APP_PERF", "PRE_INIT : " + System.currentTimeMillis());
                                 viewParam = preInitFutureTaskResult.optString("viewParam");
                                 deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
@@ -727,7 +742,8 @@ public class MainActivity extends AppCompatActivity {
                                     Log.i("APP_PERF", "PRE_INIT_NO_EXCEPTION : " + System.currentTimeMillis());
                                     viewParam = preInitFutureTaskResult.optString("viewParam");
                                     deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
-                                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                } catch (InterruptedException | ExecutionException |
+                                         TimeoutException e) {
                                     preInitFutureTask.cancel(true);
                                     JSONObject preInitFutureTaskResult = preInitFlow();
                                     Log.i("APP_PERF", "PRE_INIT_EXCEPTION : " + System.currentTimeMillis());
@@ -738,7 +754,8 @@ public class MainActivity extends AppCompatActivity {
                                     JSONObject driverInfoFutureTaskResult = driverInfoFutureTask.get(4500, TimeUnit.MILLISECONDS);
                                     driverInfoResponse = driverInfoFutureTaskResult.optJSONObject("driverInfoResponse");
                                     Log.i("APP_PERF", "PRE_INIT_CALL_API_NO_EXCEPTION : " + System.currentTimeMillis());
-                                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                } catch (InterruptedException | ExecutionException |
+                                         TimeoutException e) {
                                     driverInfoFutureTask.cancel(true);
                                     Log.i("APP_PERF", "PRE_INIT_CALL_API_EXCEPTION : " + System.currentTimeMillis());
                                     e.printStackTrace();
@@ -777,13 +794,13 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "reboot":
                         Log.i(LOG_TAG, "event reboot");
-                        mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
+                        mFirebaseAnalytics.logEvent("ny_hyper_terminate", null);
                         hyperServices.terminate();
                         hyperServices = null;
                         initApp();
                         break;
-                    case "gl_sdk" :
-                        in.juspay.mobility.Utils.onGullakEvent(jsonObject, MainActivity.this, sharedPref, startForResult );
+                    case "gl_sdk":
+                        in.juspay.mobility.Utils.onGullakEvent(jsonObject, MainActivity.this, sharedPref, startForResult);
                         break;
                     case "in_app_notification":
                         showInAppNotificationApp(jsonObject, context);
@@ -805,16 +822,16 @@ public class MainActivity extends AppCompatActivity {
                             switch (payload.optString("label")) {
                                 case "current_screen":
                                     params.put("screen_name", payload.getJSONObject("value").getString("screen_name"));
-                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_current_screen", params ,context);
+                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_current_screen", params, context);
                                     break;
                                 case "button_clicked":
-                                    params.put("button_name",payload.getJSONObject("value").getString("button_name"));
-                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_button_clicked",params ,context);
+                                    params.put("button_name", payload.getJSONObject("value").getString("button_name"));
+                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_button_clicked", params, context);
                                     break;
                                 case "upi_apps":
-                                    params.put("app_name",payload.getJSONObject("value").getString("appName"));
-                                    params.put("package_name",payload.getJSONObject("value").getString("packageName"));
-                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_upi_app_selected",params ,context);
+                                    params.put("app_name", payload.getJSONObject("value").getString("appName"));
+                                    params.put("package_name", payload.getJSONObject("value").getString("packageName"));
+                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_upi_app_selected", params, context);
                                     break;
                                 default:
                             }
@@ -826,9 +843,8 @@ public class MainActivity extends AppCompatActivity {
                         try {
                             String cb = jsonObject.getString("callback");
                             registeredCallBackForHV = cb;
-                            initHyperVergeSdk(jsonObject.getString("accessToken"), jsonObject.getString("workFlowId"), jsonObject.getString("transactionId"), jsonObject.getBoolean("useLocation"), jsonObject.getString("defLanguageCode"),jsonObject.getString("inputJson"));
-                        }
-                        catch (JSONException e) {
+                            initHyperVergeSdk(jsonObject.getString("accessToken"), jsonObject.getString("workFlowId"), jsonObject.getString("transactionId"), jsonObject.getBoolean("useLocation"), jsonObject.getString("defLanguageCode"), jsonObject.getString("inputJson"));
+                        } catch (JSONException e) {
                             Log.e("Error Occurred while calling Hyperverge SDK ", e.toString());
                         }
                         break;
@@ -855,7 +871,7 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(constraintLayout);
         builder.setPositiveButton(in.juspay.mobility.app.R.string.okay_got_it, (dialog, which) -> {
             dialog.cancel();
-            mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
+            mFirebaseAnalytics.logEvent("ny_hyper_terminate", null);
             hyperServices.terminate();
             hyperServices = null;
             initApp();
@@ -867,8 +883,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    protected Vector<String> handleDeepLinkIfAvailable(Intent appLinkIntent){
-        if(appLinkIntent==null) return null;
+    protected Vector<String> handleDeepLinkIfAvailable(Intent appLinkIntent) {
+        if (appLinkIntent == null) return null;
         Vector<String> res = new Vector<>();
         Uri appLinkData = appLinkIntent.getData();
         String deepLinkJSON = null, viewParam = null;
@@ -876,7 +892,7 @@ public class MainActivity extends AppCompatActivity {
             String query = appLinkData.getQuery();
             HashMap<String, String> query_params = getQueryMap(query);
             for (String key : query_params.keySet()) {
-                if (key.equals("vp")){
+                if (key.equals("vp")) {
                     viewParam = query_params.get(key);
                     break;
                 } else if (key.equals("referrer")) {
@@ -887,16 +903,16 @@ public class MainActivity extends AppCompatActivity {
             Gson gson = new Gson();
             deepLinkJSON = gson.toJson(query_params);
         } else return null;
-        if(viewParam==null || deepLinkJSON == null) return null;
+        if (viewParam == null || deepLinkJSON == null) return null;
         res.add(viewParam);
         res.add(deepLinkJSON);
         return res;
     }
 
-    private void processDeeplink(String viewParam, String deepLinkJSON){
+    private void processDeeplink(String viewParam, String deepLinkJSON) {
         try {
             JSONObject processPayloadDL = new JSONObject();
-            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process", MainActivity.this);
+            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(), "process", MainActivity.this);
             if (viewParam != null && deepLinkJSON != null) {
                 innerPayloadDL.put("view_param", viewParam)
                         .put("deepLinkJSON", deepLinkJSON)
@@ -906,10 +922,10 @@ public class MainActivity extends AppCompatActivity {
                         .put("merchantId", getResources().getString(R.string.merchant_id))
                         .put("requestId", UUID.randomUUID())
                         .put(PaymentConstants.PAYLOAD, innerPayloadDL);
-                mFirebaseAnalytics.logEvent("ny_hyper_process",null);
+                mFirebaseAnalytics.logEvent("ny_hyper_process", null);
                 hyperServices.process(processPayloadDL);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             // Need to handle exception
         }
     }
@@ -919,25 +935,25 @@ public class MainActivity extends AppCompatActivity {
             if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
                 String data = intent.getExtras().getString("NOTIFICATION_DATA");
                 JSONObject jsonData = new JSONObject(data);
-                if (jsonData.has("notification_type")){
+                if (jsonData.has("notification_type")) {
                     String type = jsonData.getString("notification_type");
-                    if (type.equals("COINS_SUCCESS")){
+                    if (type.equals("COINS_SUCCESS")) {
                         return new Vector<>(Arrays.asList("coins", "{\"vp\":\"coins\"}"));
                     }
                 }
             }
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
         return null;
     }
 
-    private Vector<Double> handleGeoSchemeVector(Intent intent){
+    private Vector<Double> handleGeoSchemeVector(Intent intent) {
         Uri data = intent.getData();
         Vector<Double> geoData = new Vector<>();
         String[] parts;
-        try{
-            if (data != null && data.getScheme().equals("geo")){
+        try {
+            if (data != null && data.getScheme().equals("geo")) {
                 parts = data.getSchemeSpecificPart().split(",");
                 if (parts.length != 3) return geoData;
                 String latitude = parts[0];
@@ -945,14 +961,15 @@ public class MainActivity extends AppCompatActivity {
                 geoData.add(Double.parseDouble(latitude));
                 geoData.add(Double.parseDouble(longitude));
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
         return geoData;
 
     }
-    private void handleGeoSchemeData(JSONObject innerPayload , Intent intent){
+
+    private void handleGeoSchemeData(JSONObject innerPayload, Intent intent) {
         try {
             Uri data = intent.getData();
             if (data != null && intent.getScheme().equals("geo")) {
@@ -960,19 +977,20 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject geoObj = new JSONObject();
                 geoObj.put("lat", geoData.get(0));
                 geoObj.put("lon", geoData.get(1));
-                geoObj.put("name",null);
+                geoObj.put("name", null);
                 innerPayload.put("destination", geoObj);
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
     @Override
     protected void onNewIntent(Intent intent) {
         Vector<String> res = handleDeepLinkIfAvailable(intent);
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(intent);
-        String viewParam = null, deepLinkJSON =null;
-        if (res!=null ){
+        String viewParam = null, deepLinkJSON = null;
+        if (res != null) {
             viewParam = res.get(0);
             deepLinkJSON = res.get(1);
         } else if (notificationDeepLinkVector != null) {
@@ -987,30 +1005,29 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject innerPayload = new JSONObject().put("onNewIntent", true);
                 proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
                 setNotificationData(innerPayload, intent);
-                mFirebaseAnalytics.logEvent("ny_hyper_process",null);
+                mFirebaseAnalytics.logEvent("ny_hyper_process", null);
                 hyperServices.process(proccessPayload);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        if(intent.getScheme()!=null && intent.getScheme().equals("geo")){
-            try{
+        if (intent.getScheme() != null && intent.getScheme().equals("geo")) {
+            try {
                 JSONObject proccessPayload = new JSONObject().put("service", getService())
                         .put("requestId", UUID.randomUUID());
                 JSONObject innerPayload = new JSONObject().put("onNewIntent", true);
                 proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
                 handleGeoSchemeData(innerPayload, intent);
-                mFirebaseAnalytics.logEvent("ny_hyper_process",null);
+                mFirebaseAnalytics.logEvent("ny_hyper_process", null);
                 hyperServices.process(proccessPayload);
-            }
-            catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
         super.onNewIntent(intent);
     }
 
-    public void setNotificationData (JSONObject innerPayload, Intent intent) {
+    public void setNotificationData(JSONObject innerPayload, Intent intent) {
         try {
             String data = intent.getExtras().getString("NOTIFICATION_DATA");
             String fullNotificationString = intent.getExtras().getString("fullNotificationBody");
@@ -1026,9 +1043,9 @@ public class MainActivity extends AppCompatActivity {
                 innerPayload.put("notification_type", "CHAT_MESSAGE");
             }
 
-            if(jsonData.has("entity_data")){
+            if (jsonData.has("entity_data")) {
                 JSONObject entityData = (JSONObject) jsonData.get("entity_data");
-                if(entityData!=null && entityData.has("channelId")){
+                if (entityData != null && entityData.has("channelId")) {
                     innerPayload.put("chatMessageData", jsonData.get("entity_data"));
                 }
             }
@@ -1051,12 +1068,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        setCleverTapUserProp("Session Status" , "true" , context);
+        setCleverTapUserProp("Session Status", "true", context);
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onResume").apply();
             sharedPref.edit().putString("MAPS_OPENED", "null").apply();
         }
-        if (appUpdateManager != null){
+        if (appUpdateManager != null) {
             appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
                 if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
                     // If an in-app update is already running, resume the update.
@@ -1087,7 +1104,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         pauseYoutubePlayer();
-        setCleverTapUserProp("Session Status" , "false" , context);
+        setCleverTapUserProp("Session Status", "false", context);
         if (sharedPref != null)
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onPause").apply();
         if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") &&
@@ -1118,7 +1135,7 @@ public class MainActivity extends AppCompatActivity {
         }
         pauseYoutubePlayer();
         if (hyperServices != null) {
-            mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
+            mFirebaseAnalytics.logEvent("ny_hyper_terminate", null);
             hyperServices.terminate();
         }
         ChatService.deRegisterInAppCallback(inappCallBack);
@@ -1130,15 +1147,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        mFirebaseAnalytics.logEvent("ny_hyper_onRequestPermissionsResult",null);
+        mFirebaseAnalytics.logEvent("ny_hyper_onRequestPermissionsResult", null);
         hyperServices.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    private void pauseYoutubePlayer(){
+    private void pauseYoutubePlayer() {
         MobilityAppBridge.youtubeVideoStatus = "PAUSE";
-        if (MobilityAppBridge.youtubePlayer != null ) {
+        if (MobilityAppBridge.youtubePlayer != null) {
             MobilityAppBridge.youtubePlayer.pause();
-        } else if (MobilityAppBridge.youTubePlayerView != null ) {
+        } else if (MobilityAppBridge.youTubePlayerView != null) {
             MobilityAppBridge.youTubePlayerView = null;
         }
     }
@@ -1176,7 +1193,7 @@ public class MainActivity extends AppCompatActivity {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
                 try {
-                    InAppNotification.getInstance(activity,activity.findViewById(R.id.cl_dui_container)).generateNotification(payload);
+                    InAppNotification.getInstance(activity, activity.findViewById(R.id.cl_dui_container)).generateNotification(payload);
                 } catch (JSONException e) {
                     Log.e(LOG_TAG, "Error in In App Notification Handler " + e);
                 }
@@ -1199,16 +1216,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void hideInAppNotificationApp (String channelId) {
+    public void hideInAppNotificationApp(String channelId) {
         InAppNotification.getInstance(activity, activity.findViewById(R.id.cl_dui_container)).hideInAppNotification(channelId);
     }
+
     private class GetGAIDTask extends AsyncTask<String, Integer, String> {
         @Override
         protected String doInBackground(String... strings) {
             AdvertisingIdClient.Info adInfo;
             adInfo = null;
             try {
-                if(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MainActivity.this.getApplicationContext()) != ConnectionResult.SUCCESS) {
+                if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MainActivity.this.getApplicationContext()) != ConnectionResult.SUCCESS) {
                     return "google play service not available";
                 }
                 adInfo = AdvertisingIdClient.getAdvertisingIdInfo(MainActivity.this.getApplicationContext());
@@ -1220,12 +1238,13 @@ public class MainActivity extends AppCompatActivity {
             }
             return adInfo != null ? adInfo.getId() : "did not found GAID... sorry";
         }
+
         @Override
         protected void onPostExecute(String s) {
             GAID = s;
-            System.out.println("GAID "+GAID);
+            System.out.println("GAID " + GAID);
             Bundle params = new Bundle();
-            params.putString("id",GAID);
+            params.putString("id", GAID);
             FirebaseAnalytics.getInstance(context).logEvent("ad_id", params);
         }
     }
@@ -1239,55 +1258,55 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean migrateLocalStore(Context context) {
-        SharedPreferences oldSharedPref = context.getSharedPreferences("namma_yatri_app_local_keys",MODE_PRIVATE);
-        SharedPreferences currentSharedPref = context.getSharedPreferences(context.getString(in.juspay.mobility.app.R.string.preference_file_key),MODE_PRIVATE);
-        Map<String,?> oldEntries = oldSharedPref.getAll();
+        SharedPreferences oldSharedPref = context.getSharedPreferences("namma_yatri_app_local_keys", MODE_PRIVATE);
+        SharedPreferences currentSharedPref = context.getSharedPreferences(context.getString(in.juspay.mobility.app.R.string.preference_file_key), MODE_PRIVATE);
+        Map<String, ?> oldEntries = oldSharedPref.getAll();
         for (Map.Entry<String, ?> entry : oldEntries.entrySet()) {
             Object current = entry.getValue();
             if (current instanceof Integer) {
-                currentSharedPref.edit().putInt(entry.getKey(),(int)current).apply();
+                currentSharedPref.edit().putInt(entry.getKey(), (int) current).apply();
             } else if (current instanceof String) {
-                currentSharedPref.edit().putString(entry.getKey(),(String) current).apply();
-            }else if (current instanceof Float) {
-                currentSharedPref.edit().putFloat(entry.getKey(),(float) current).apply();
-            }else if (current instanceof Long) {
-                currentSharedPref.edit().putLong(entry.getKey(),(long) current).apply();
-            }else if (current instanceof Boolean) {
-                currentSharedPref.edit().putBoolean(entry.getKey(),(boolean) current).apply();
+                currentSharedPref.edit().putString(entry.getKey(), (String) current).apply();
+            } else if (current instanceof Float) {
+                currentSharedPref.edit().putFloat(entry.getKey(), (float) current).apply();
+            } else if (current instanceof Long) {
+                currentSharedPref.edit().putLong(entry.getKey(), (long) current).apply();
+            } else if (current instanceof Boolean) {
+                currentSharedPref.edit().putBoolean(entry.getKey(), (boolean) current).apply();
             }
         }
         oldSharedPref.edit().clear().apply();
         return true;
     }
-    
-    public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
-        if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
-                HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
-                config.setUseLocation(useLocation);
-                config.setDefaultLangCode(defLanguageCode);
-                if (inputsJson.length() > 0) {
-                    Map<String, String> inpMap = new HashMap<>();
-                    JSONObject jsonObject;
-                    try {
-                        jsonObject = new JSONObject(inputsJson);
-                        for (Iterator<String> it = jsonObject.keys(); it.hasNext(); ) {
-                            String key = it.next();
-                            inpMap.put(key, jsonObject.getString(key));
-                        }
+
+    public void initHyperVergeSdk(String accessToken, String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
+        if (isClassAvailable("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
+            HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
+            config.setUseLocation(useLocation);
+            config.setDefaultLangCode(defLanguageCode);
+            if (inputsJson.length() > 0) {
+                Map<String, String> inpMap = new HashMap<>();
+                JSONObject jsonObject;
+                try {
+                    jsonObject = new JSONObject(inputsJson);
+                    for (Iterator<String> it = jsonObject.keys(); it.hasNext(); ) {
+                        String key = it.next();
+                        inpMap.put(key, jsonObject.getString(key));
                     }
-                    catch (JSONException e) {
-                        Log.e("Unable find Specified Key, So returning config without setting inputs.", inputsJson);
-                        e.printStackTrace();
-                        return;
-                    }
-                    if (inpMap.size() > 0)  config.setInputs(inpMap);
-                    else Log.d("HyperKycConfig Inputs JSON: ", "Empty json passed as input so not initializing inputs in config");
+                } catch (JSONException e) {
+                    Log.e("Unable find Specified Key, So returning config without setting inputs.", inputsJson);
+                    e.printStackTrace();
+                    return;
                 }
-                else Log.d("HyperKycConfig Inputs JSON: ", "Not initializing inputs as inputs json passed is null");
-                launcher.launch(config);
-            } else {
+                if (inpMap.size() > 0) config.setInputs(inpMap);
+                else
+                    Log.d("HyperKycConfig Inputs JSON: ", "Empty json passed as input so not initializing inputs in config");
+            } else
+                Log.d("HyperKycConfig Inputs JSON: ", "Not initializing inputs as inputs json passed is null");
+            launcher.launch(config);
+        } else {
 
         }
-        }
+    }
 
 }
