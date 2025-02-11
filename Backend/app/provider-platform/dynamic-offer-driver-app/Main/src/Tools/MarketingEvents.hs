@@ -34,12 +34,15 @@ notifyMarketingEvents driverId deviceToken marketingEventsType vehicleCategory c
       return (mcity.city, id, mcity.merchantShortId.getShortId)
 
   let events = case vehicleCategory of
-        Just vehicleCat -> T.toLower $ shortId <> "_driver_" <> show marketingEventsType <> "_" <> show vehicleCat <> "_" <> show city
-        _ -> T.toLower $ shortId <> "_driver_" <> show marketingEventsType <> "_" <> show city
+        Just vehicleCat -> T.toLower $ (splitFirstChars shortId) <> "_" <> show marketingEventsType <> "_" <> show vehicleCat <> "_" <> T.take 3 (T.pack (show city))
+        _ -> T.toLower $ (splitFirstChars shortId) <> "_" <> show marketingEventsType <> "_" <> T.take 3 (T.pack (show city))
   logDebug $ "the event to be triggered is :" <> events
 
   notification <- setNotificationData events merchantOpCityId driverId eventDestination deviceToken
   runWithServiceConfigForProviders merchantOpCityId notification EulerHS.Prelude.id (clearDeviceToken driverId)
+  where
+    splitFirstChars :: T.Text -> T.Text
+    splitFirstChars shortId = T.concat $ map (T.take 1) $ T.splitOn "_" shortId
 
 setNotificationData ::
   (Monad m, Log m) =>
