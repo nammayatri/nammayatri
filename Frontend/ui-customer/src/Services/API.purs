@@ -1850,6 +1850,7 @@ newtype SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
   , lon :: Number
   , placeId :: Maybe String
   , ward :: Maybe String
+  , locationName :: Maybe String
 }
 
 data AddLocationResp = AddLocationResp
