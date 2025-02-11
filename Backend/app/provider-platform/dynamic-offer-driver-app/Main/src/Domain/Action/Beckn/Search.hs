@@ -28,7 +28,7 @@ module Domain.Action.Beckn.Search
 where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
-import Control.Applicative (liftA2, (<|>))
+import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
 import Data.List (sortBy)
@@ -257,7 +257,7 @@ handler ValidatedDSearchReq {..} sReq = do
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocationName = allFarePoliciesProduct.specialLocationName
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
-  let mbDriverInfo = liftA2 (,) driverIdForSearch transporterConfig.driverDrivenSearchReqExpiry
+  let mbDriverInfo = driverIdForSearch
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
   searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId fromLocation mbToLocation mbDistance mbDuration spcllocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohash toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
@@ -276,13 +276,14 @@ handler ValidatedDSearchReq {..} sReq = do
   fork "Updating Demand Hotspots on search" $ do
     DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
 
-  (driverPool', selectedFarePolicies') <-
+  (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
       then do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP searchReq
         pure (nonEmpty pool, policies)
       else return (Nothing, farePolicies)
-  (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
+  -- This is to filter the fare policies based on the driverId, if passed during search
+  -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates', quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
@@ -315,13 +316,6 @@ handler ValidatedDSearchReq {..} sReq = do
           specialLocationTag = listToMaybe products >>= (.specialLocationTag),
           specialLocationName = listToMaybe products >>= (.specialLocationName)
         }
-
-    filterFPsForDriverId :: (Maybe (NonEmpty DriverPoolResult), [DFP.FullFarePolicy]) -> Id DP.Person -> Flow (Maybe (NonEmpty DriverPoolResult), [DFP.FullFarePolicy])
-    filterFPsForDriverId (unfilteredDriverPool, unfilteredFarePolicies) driverId = do
-      vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound $ "driverId:-" <> driverId.getId)
-      let newDriverPool = NE.filter (\dp -> dp.driverId == driverId) <$> unfilteredDriverPool
-          newFarePolicies = filter (\fp -> fp.vehicleServiceTier `elem` vehicle.selectedServiceTiers) unfilteredFarePolicies
-      pure (nonEmpty =<< newDriverPool, newFarePolicies)
 
     processPolicy ::
       (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
@@ -491,15 +485,14 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Int ->
   [DLoc.Location] ->
-  Maybe (Id DP.Person, NominalDiffTime) ->
+  Maybe (Id DP.Person) ->
   [ConfigVersionMap] ->
   m DSR.SearchRequest
 buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let mbExpiryTime :: Maybe NominalDiffTime = snd <$> mbDriverInfo
-  let validTill = fromMaybe searchRequestExpirationSeconds mbExpiryTime `addUTCTime` startTime
+  let validTill = searchRequestExpirationSeconds `addUTCTime` startTime
   pure
     DSR.SearchRequest
       { id = Id uuid,
@@ -526,7 +519,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         poolingConfigVersion = Nothing,
         stops = stops',
         hasStops = Just . not $ null stops',
-        driverIdForSearch = fst <$> mbDriverInfo,
+        driverIdForSearch = mbDriverInfo,
         configInExperimentVersions = configVersionMap,
         parcelType = Nothing,
         parcelQuantity = Nothing,

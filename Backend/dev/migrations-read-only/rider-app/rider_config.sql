@@ -189,3 +189,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN auto_send_booking_details_via_what
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN multimodal_testing boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN is_first_referred_ride_enabled boolean ;
