@@ -33,6 +33,7 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  ParcelType: Domain.Types.ParcelDetails
 
 BookingLocation:
   tableName: booking_location
@@ -166,6 +167,8 @@ Booking:
       toLocation: Location
       distance: Distance
       otpCode: Maybe Text
+      parcelType: ParcelType
+      parcelQuantity: Maybe Int
 
   fields:
     id: Id Booking
@@ -248,6 +251,8 @@ Booking:
       otpCode: Maybe Text
       isUpgradedToCab: Maybe Bool
       stops: {}
+      parcelType: Maybe ParcelType
+      parcelQuantity: Maybe Int
     fromLocation:
       fromLocationId: Maybe Text
     tripTerms:
@@ -371,13 +376,15 @@ Booking:
     bppEstimateId: itemId|E
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    parcelType: getParcelType
+    parcelQuantity: getParcelQuantity
 
   intermediateTransformers:
     toTType:
       - distance: getDistance bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops|EM
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E

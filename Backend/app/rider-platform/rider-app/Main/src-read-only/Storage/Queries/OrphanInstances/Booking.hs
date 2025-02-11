@@ -25,7 +25,7 @@ import qualified Storage.Queries.TripTerms
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
-    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops
+    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -110,6 +110,8 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.fareProductType = getFareProductType bookingDetails,
         Beam.isUpgradedToCab = getIsUpgradedToCab bookingDetails,
         Beam.otpCode = getOtpCode bookingDetails,
+        Beam.parcelQuantity = getParcelQuantity bookingDetails,
+        Beam.parcelType = getParcelType bookingDetails,
         Beam.stopLocationId = getStopLocationId bookingDetails,
         Beam.toLocationId = getToLocationId bookingDetails,
         Beam.bppBookingId = Kernel.Types.Id.getId <$> bppBookingId,

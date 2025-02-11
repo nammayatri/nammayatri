@@ -633,6 +633,7 @@ library
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
+      Domain.Types.ParcelDetails
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
@@ -744,6 +745,7 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
+      Storage.Beam.ParcelDetails
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
@@ -903,6 +905,7 @@ library
       Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.ParcelDetails
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation

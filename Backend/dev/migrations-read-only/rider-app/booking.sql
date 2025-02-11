@@ -203,6 +203,16 @@ ALTER TABLE atlas_app.booking ADD COLUMN config_in_experiment_versions json ;
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_skipped boolean ;
 
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN parcel_type text ;
+ALTER TABLE atlas_app.booking ADD COLUMN parcel_quantity integer ;
+
+
+------- SQL updates -------
+
+
+
 
 ------- SQL updates -------
 

@@ -242,6 +242,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
     (Just "CAB", Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
     (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
+    (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just VehVar.DELIVERY_LIGHT_GOODS_VEHICLE
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource

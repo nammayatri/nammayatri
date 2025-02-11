@@ -528,6 +528,8 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         hasStops = Just . not $ null stops',
         driverIdForSearch = fst <$> mbDriverInfo,
         configInExperimentVersions = configVersionMap,
+        parcelType = Nothing,
+        parcelQuantity = Nothing,
         ..
       }
 
