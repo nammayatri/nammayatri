@@ -911,7 +911,7 @@ eval BackPressed state = do
             data{
               rideHistoryTrip = Nothing
             , specialZoneQuoteList = []
-          , fareProductType = FPT.ONE_WAY
+          , fareProductType = if state.data.fareProductType == FPT.AMBULANCE then FPT.AMBULANCE else  FPT.ONE_WAY
             }
           , props{
               rideRequestFlow = false
