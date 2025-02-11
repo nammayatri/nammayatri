@@ -8,3 +8,9 @@ ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN merchant_operating_city_
 ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.journey_legs_feedbacks ADD PRIMARY KEY ( journey_id, leg_order);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN travel_mode text ;

@@ -22,10 +22,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks] -> m ())
 createMany = traverse_ create
 
-findAllByJourneyIdAndLegOrder ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m ([Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks]))
-findAllByJourneyIdAndLegOrder journeyId legOrder = do findAllWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.legOrder $ Se.Eq legOrder]]
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks])
+findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -37,6 +35,7 @@ updateByPrimaryKey (Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.isExperienceGood isExperienceGood,
+      Se.Set Beam.travelMode travelMode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -52,6 +51,7 @@ instance FromTType' Beam.JourneyLegsFeedbacks Domain.Types.JourneyLegsFeedbacks.
           { isExperienceGood = isExperienceGood,
             journeyId = Kernel.Types.Id.Id journeyId,
             legOrder = legOrder,
+            travelMode = travelMode,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -64,6 +64,7 @@ instance ToTType' Beam.JourneyLegsFeedbacks Domain.Types.JourneyLegsFeedbacks.Jo
       { Beam.isExperienceGood = isExperienceGood,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.legOrder = legOrder,
+        Beam.travelMode = travelMode,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

@@ -343,8 +343,8 @@ JourneyFeedback:
     additionalFeedBack: Maybe Text
 
   queries:
-    findAllByJourneyId:
-      kvFunction: findAllWithKV
+    findByJourneyId:
+      kvFunction: findOneWithKV
       where: journeyId
     findAllByRiderId:
       kvFunction: findAllWithKV
@@ -359,12 +359,12 @@ JourneyLegsFeedbacks:
     journeyId : Id Journey
     legOrder: Int
     isExperienceGood: Maybe Bool
+    travelMode: Maybe MultimodalTravelMode
 
   queries:
-    findAllByJourneyIdAndLegOrder:
+    findAllByJourneyId:
       kvFunction: findAllWithKV
-      where:
-        and: [journeyId, legOrder]
+      where: journeyId
 
   constraints:
     journeyId : PrimaryKey

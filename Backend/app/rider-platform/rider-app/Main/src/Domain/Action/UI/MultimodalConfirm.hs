@@ -13,6 +13,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalExtendLegGetfare,
     postMultimodalJourneyFeedback,
     getActiveJourneyIds,
+    getMultimodalFeedback,
   )
 where
 
@@ -308,6 +309,7 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
         JLFB.JourneyLegsFeedbacks
           { isExperienceGood = feedbackEntry.isExperienceGood,
             journeyId = journeyId,
+            travelMode = feedbackEntry.travelMode,
             legOrder = feedbackEntry.legOrder,
             merchantId = Just mbMerchantId,
             merchantOperatingCityId = journey.merchantOperatingCityId,
@@ -319,3 +321,31 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
   SQJLFB.createMany $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
   JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
   pure Kernel.Types.APISuccess.Success
+
+getMultimodalFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow (Kernel.Prelude.Maybe ApiTypes.JourneyFeedBackForm)
+getMultimodalFeedback (mbPersonId, _) journeyId = do
+  _ <- JM.getJourney journeyId
+  _ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  feedBackForjourney' <- SQJFB.findByJourneyId journeyId
+  case feedBackForjourney' of
+    Just feedBackForjourney -> do
+      ratingForLegs' <- SQJLFB.findAllByJourneyId journeyId
+      let ratingForLegs = map mkRatingForLegs ratingForLegs'
+      return $ Just (mkFeedbackFormData feedBackForjourney ratingForLegs)
+    Nothing -> return Nothing
+  where
+    mkFeedbackFormData :: JFB.JourneyFeedback -> [ApiTypes.RateMultiModelTravelModes] -> ApiTypes.JourneyFeedBackForm
+    mkFeedbackFormData feedBackForjourney ratingForLegs = do
+      ApiTypes.JourneyFeedBackForm
+        { rating = feedBackForjourney.rating,
+          additionalFeedBack = feedBackForjourney.additionalFeedBack,
+          rateTravelMode = ratingForLegs
+        }
+
+    mkRatingForLegs :: JLFB.JourneyLegsFeedbacks -> ApiTypes.RateMultiModelTravelModes
+    mkRatingForLegs ratingForLeg =
+      ApiTypes.RateMultiModelTravelModes
+        { isExperienceGood = ratingForLeg.isExperienceGood,
+          legOrder = ratingForLeg.legOrder,
+          travelMode = ratingForLeg.travelMode
+        }
