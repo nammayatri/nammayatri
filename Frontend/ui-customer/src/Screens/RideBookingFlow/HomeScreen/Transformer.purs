@@ -285,7 +285,8 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
                     "ward" : if DA.null addressComponents then
                         getWard Nothing (splitedAddress DA.!! (totalAddressComponents - 4)) (splitedAddress DA.!! (totalAddressComponents - 5)) (splitedAddress DA.!! (totalAddressComponents - 6))
                       else
-                        Just $ getValueByComponent addressComponents "sublocality"
+                        Just $ getValueByComponent addressComponents "sublocality",
+                    "locationName" : Nothing
                 }
 
 

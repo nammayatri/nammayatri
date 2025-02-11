@@ -2520,7 +2520,7 @@ homeScreenFlow = do
                         , editLocation = false
                         , editSavedLocation = false
                         , isLocateOnMap = false
-                        , isBtnActive = true
+                        , isBtnActive = false
                         , isSearchedLocationServiceable = true
                         , tagExists = false
                         , placeNameExists = false
@@ -2544,7 +2544,7 @@ homeScreenFlow = do
                         }
                       }
                 )
-          addNewAddressScreenFlow ""
+          addNewAddressScreenFlow
         Just selectedLocationListItem -> do
           case selectedLocationListItem.locationItemType of
             Just RECENTS -> getDistanceDiff state (fromMaybe 0.0 selectedLocationListItem.lat) (fromMaybe 0.0 selectedLocationListItem.lon)
@@ -3914,7 +3914,7 @@ savedLocationFlow goBackState = do
       case (AddNewAddress.validTag (AddNewAddress.getSavedTags savedLocationResp.list) "HOME" ""), (AddNewAddress.validTag (AddNewAddress.getSavedTags savedLocationResp.list) "WORK" "") of
         false, false -> modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen { data { activeIndex = (Just 2), selectedTag = (Just OTHER_TAG) }, props { editSavedLocation = false } })
         _, _ -> modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen { data { activeIndex = Nothing, selectedTag = Nothing }, props { editSavedLocation = false } })
-      addNewAddressScreenFlow "dummy"
+      addNewAddressScreenFlow
     DELETE_LOCATION tagName -> do
       resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim tagName))
       void $ FlowCache.updateAndFetchSavedLocations true
@@ -3972,7 +3972,7 @@ savedLocationFlow goBackState = do
                     }
                   }
             )
-      addNewAddressScreenFlow "edit Location"
+      addNewAddressScreenFlow
     GO_BACK_FROM_SAVED_LOCATION -> do
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       case goBackState of
@@ -3981,14 +3981,16 @@ savedLocationFlow goBackState = do
         _ -> homeScreenFlow
   pure unit
 
-addNewAddressScreenFlow :: String -> FlowBT String Unit
-addNewAddressScreenFlow input = do
+addNewAddressScreenFlow :: FlowBT String Unit
+addNewAddressScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   flow <- UI.addNewAddressScreen
   case flow of
     SEARCH_ADDRESS input state -> do
       (GlobalState newState) <- getState
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input newState.homeScreen.props.sourceLat newState.homeScreen.props.sourceLong (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)) "" defaultCityConfig.geoCodeConfig Nothing "" Nothing)
+      let sourceLat =  fromMaybe newState.homeScreen.props.sourceLat $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+          sourceLong =  fromMaybe newState.homeScreen.props.sourceLong $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input sourceLat sourceLong (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)) "" defaultCityConfig.geoCodeConfig Nothing "" Nothing)
       let
         sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
 
@@ -4018,7 +4020,7 @@ addNewAddressScreenFlow input = do
                     }
                   }
             )
-      addNewAddressScreenFlow ""
+      addNewAddressScreenFlow
     ADD_LOCATION state -> do
       if (state.props.editSavedLocation) then do
         void $ Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim state.data.placeName))
@@ -4129,7 +4131,7 @@ addNewAddressScreenFlow input = do
               )
         void $ pure $ removeAllPolylines ""
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, labelId = getNewIDWithTag "AddAddressPin", locationName = srcSpecialLocation.locationName }
-        addNewAddressScreenFlow ""
+        addNewAddressScreenFlow
       else do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
@@ -4147,7 +4149,7 @@ addNewAddressScreenFlow input = do
                         }
                   )
           Nothing -> void $ void $ lift $ lift $ showToast $  getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
-        addNewAddressScreenFlow ""
+        addNewAddressScreenFlow
     GO_TO_FAVOURITES -> do
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       savedLocationFlow HomeScreenFlow
@@ -4212,7 +4214,7 @@ addNewAddressScreenFlow input = do
                           }
                         }
                   )
-            addNewAddressScreenFlow ""
+            addNewAddressScreenFlow
         updateDistanceInfo state (Just placeLatLong.lat) (Just placeLatLong.lon)
       else do
         let
@@ -4403,11 +4405,7 @@ updateDistanceInfo state lat lon = do
                 { tagExists = distanceInfo.tagExists
                 , isLocateOnMap = false
                 , showSavePlaceView = true
-                , isBtnActive =
-                  case state.data.activeIndex of
-                    Just 2 -> if state.data.addressSavedAs /= "" then true else false
-                    Just index -> true
-                    Nothing -> false
+                , isBtnActive = false
                 }
               , data
                 { selectedTag = state.data.selectedTag
@@ -4416,7 +4414,7 @@ updateDistanceInfo state lat lon = do
                 }
               }
         )
-  addNewAddressScreenFlow ""
+  addNewAddressScreenFlow
 
 dummyLocationListItemState :: LocationListItemState
 dummyLocationListItemState = locationListStateObj { locationItemType = Just PREDICTION }
@@ -6195,7 +6193,7 @@ addFavLocFlow state tag = do
                 , editLocation = false
                 , editSavedLocation = false
                 , isLocateOnMap = false
-                , isBtnActive = true
+                , isBtnActive = false
                 , isSearchedLocationServiceable = true
                 , tagExists = false
                 , placeNameExists = false
@@ -6217,7 +6215,7 @@ addFavLocFlow state tag = do
                 }
               }
         )
-  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> addNewAddressScreenFlow "")
+  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> addNewAddressScreenFlow)
 
 checkForBothLocs :: SearchLocationScreenState -> Maybe LocationInfo -> Maybe LocationInfo -> FlowBT String Unit
 checkForBothLocs state sourceLoc destinationLoc =
