@@ -63,10 +63,13 @@ getIssueList ::
   Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) ->
   Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueReportListResponse
-getIssueList merchantShortId opCity apiTokenInfo limit offset status category assignee = do
+getIssueList merchantShortId opCity apiTokenInfo limit offset status category assignee countryCode phoneNumber rideShortId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueList) limit offset status category assignee
+  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueList) limit offset status category assignee countryCode phoneNumber rideShortId
 
 getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
