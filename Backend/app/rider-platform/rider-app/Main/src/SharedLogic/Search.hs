@@ -91,6 +91,7 @@ data OneWaySearchReq = OneWaySearchReq
   { origin :: SearchReqLocation,
     destination :: SearchReqLocation,
     stops :: Maybe [SearchReqLocation],
+    isMeterRideSearch :: Maybe Bool,
     isSourceManuallyMoved :: Maybe Bool,
     isDestinationManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,

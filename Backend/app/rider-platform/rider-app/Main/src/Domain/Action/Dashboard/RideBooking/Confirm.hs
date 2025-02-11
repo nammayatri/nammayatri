@@ -21,4 +21,4 @@ postConfirmRideSearchQuotes ::
   Environment.Flow API.UI.Confirm.ConfirmRes
 postConfirmRideSearchQuotes merchantShortId _opCity personId quoteId mbPaymentMethodId isAdvanceBookingEnabled = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Confirm.confirm' (personId, m.id) quoteId mbPaymentMethodId isAdvanceBookingEnabled
+  API.UI.Confirm.confirm' (personId, m.id) quoteId Kernel.Prelude.Nothing mbPaymentMethodId isAdvanceBookingEnabled

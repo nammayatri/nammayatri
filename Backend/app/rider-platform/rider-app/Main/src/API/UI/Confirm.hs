@@ -47,6 +47,7 @@ type API =
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
+    :> QueryParam "userPhoneNumber" Text
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
     :> QueryParam "isAdvancedBookingEnabled" Bool
     :> Post '[JSON] ConfirmRes
@@ -67,20 +68,22 @@ handler =
 confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
+  Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Maybe Bool ->
   FlowHandler ConfirmRes
-confirm (personId, merchantId) quoteId mbPaymentMethodId = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId mbPaymentMethodId
+confirm (personId, merchantId) quoteId mbUserPhoneNumber mbPaymentMethodId = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId mbUserPhoneNumber mbPaymentMethodId
 
 confirm' ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
+  Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Maybe Bool ->
   Flow ConfirmRes
-confirm' (personId, _) quoteId mbPaymentMethodId isAdvanceBookingEnabled =
+confirm' (personId, _) quoteId mbUserPhoneNumber mbPaymentMethodId isAdvanceBookingEnabled =
   withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId isAdvanceBookingEnabled
+    dConfirmRes <- DConfirm.confirm personId quoteId mbUserPhoneNumber mbPaymentMethodId isAdvanceBookingEnabled
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
     bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dConfirmRes.merchant.id "MOBILITY" moc.id

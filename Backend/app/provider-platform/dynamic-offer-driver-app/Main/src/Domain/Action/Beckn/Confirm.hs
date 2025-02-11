@@ -262,6 +262,7 @@ validateRequest subscriber transporterId req now = do
     Delivery OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
+    _ -> getStaticQuoteDetails booking transporter -- TODO: piyush fix here
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

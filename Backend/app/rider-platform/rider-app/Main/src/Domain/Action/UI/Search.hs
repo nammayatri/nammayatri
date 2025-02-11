@@ -244,7 +244,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard,
+        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard req.isMeterRideSearch,
         ..
       }
   where
@@ -256,7 +256,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard = do
+    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled && isNothing searchRequest.driverIdentifier
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard && isNothing searchRequest.driverIdentifier
       Just $
@@ -267,6 +267,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.ROUND_TRIP, Just $ show roundTrip),
                 (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
                 (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
+                (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
                 (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
                 (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
                 (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText)
@@ -447,8 +448,9 @@ buildSearchRequest ::
   Maybe JPT.JourneySearchData ->
   Maybe (DRL.DriverIdentifier, Seconds) ->
   [LYT.ConfigVersionMap] ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRideSearch = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)

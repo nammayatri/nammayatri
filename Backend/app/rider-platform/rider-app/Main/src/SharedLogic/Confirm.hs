@@ -52,7 +52,6 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -61,7 +60,6 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
@@ -71,6 +69,9 @@ import TransactionLogs.Types
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quote :: DQuote.Quote,
+    now :: UTCTime,
+    merchant :: DM.Merchant,
+    searchRequest :: DSReq.SearchRequest,
     paymentMethodId :: Maybe Payment.PaymentMethodId
   }
 
@@ -124,11 +125,8 @@ confirm ::
   DConfirmReq ->
   m DConfirmRes
 confirm DConfirmReq {..} = do
-  now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
-  bppQuoteId <- getBppQuoteId now quote.quoteDetails
-  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  bppQuoteId <- getBppQuoteId quote.quoteDetails
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
@@ -136,9 +134,6 @@ confirm DConfirmReq {..} = do
   case activeBooking of
     Just booking -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
-  when (searchRequest.validTill < now) $
-    throwError SearchRequestExpired
-  unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
       stops = searchRequest.stops
@@ -193,16 +188,16 @@ confirm DConfirmReq {..} = do
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 
-    getBppQuoteId now = \case
+    getBppQuoteId = \case
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
-      DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
-      DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
+      DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer
+      DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer
       DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
-      DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
+      DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer
       DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
       DQuote.InterCityDetails details -> pure details.id.getId
 
-    getBppQuoteIdFromDriverOffer driverOffer now = do
+    getBppQuoteIdFromDriverOffer driverOffer = do
       estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
       when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
       when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
