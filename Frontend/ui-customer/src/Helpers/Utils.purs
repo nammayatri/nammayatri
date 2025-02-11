@@ -1255,7 +1255,9 @@ getRouteMarkers variant city trackingType fareProductType currentStage =
   }
 
 mkSrcMarker :: City -> String ->Maybe Stage -> String
-mkSrcMarker = getCitySpecificMarker
+mkSrcMarker city variant currentStage =
+  let srcMarker = getCitySpecificMarker city variant currentStage
+  in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "ny_ic_src_marker" -- Added local resource check for avoiding native crash
 
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
 fetchVehicleVariant variant = 

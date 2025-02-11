@@ -1720,4 +1720,5 @@ getEn = Keymap {
 ,uncomfortable_ambulance : "Uncomfortable Ambulance"
 ,clean_ambulance : "Clean Ambulance"
 ,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
+,different_ambulance : "Different Ambulance"
 }

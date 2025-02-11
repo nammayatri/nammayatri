@@ -103,7 +103,7 @@ feedBack id vehicleVariant  = case id of
                               "3" -> case vehicleVariant of 
                                       "AUTO_RICKSHAW" -> getString LT.DIFFERENT_AUTO
                                       "BIKE" -> getString LT.DIFFERENT_BIKE
-                                      _ -> getString LT.DIFFERENT_CAB
+                                      _ -> if isAmbulance vehicleVariant then getStringV2 different_ambulance else  getString LT.DIFFERENT_CAB
                               "11" -> case vehicleVariant of 
                                       "AUTO_RICKSHAW" -> getString LT.UNCOMFORTABLE_AUTO
                                       "BIKE" -> getString LT.UNCOMFORTABLE_BIKE
