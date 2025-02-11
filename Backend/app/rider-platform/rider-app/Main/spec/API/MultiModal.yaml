@@ -84,7 +84,7 @@ types:
     additionalFeedBack: Maybe Text
 
   RateMultiModelTravelModes:
-    travelMode: MultimodalTravelMode
+    travelMode: Maybe MultimodalTravelMode
     isExperienceGood: Maybe Bool
     legOrder: Int
 
@@ -192,3 +192,10 @@ apis:
         type: JourneyFeedBackForm
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: multimodal/{journeyId}/feedback
+      params:
+        journeyId: Id Journey
+      response:
+        type: (Maybe JourneyFeedBackForm)
