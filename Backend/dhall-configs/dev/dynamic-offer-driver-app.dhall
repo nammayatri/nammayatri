@@ -229,6 +229,7 @@ let AllocatorJobType =
       | WeeklyUpdateTag
       | FleetAlert
       | SendWebhookToExternal
+      | ScheduledFCMS
       >
 
 let jobInfoMapx =
@@ -271,6 +272,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
