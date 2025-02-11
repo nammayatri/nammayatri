@@ -143,6 +143,7 @@ types:
     - _type: InputType
     - messageId: Text
     - derive: "'HideSecrets"
+    - scheduledTime : Maybe UTCTime
   InputType:
     - enum: "Include, Exclude, AllEnabled"
     - derive: "Kernel.Prelude.Read"
