@@ -51,10 +51,10 @@ findByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = 
 updateByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m ())
-updateByMerchantOperatingCityAndVehicleType percentage merchantOperatingCityId vehicleType = do
+updateByMerchantOperatingCityAndVehicleType percentageRollout merchantOperatingCityId vehicleType = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.percentage percentage, Se.Set Beam.updatedAt _now]
+    [Se.Set Beam.percentageRollout percentageRollout, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
@@ -69,7 +69,7 @@ updateByPrimaryKey (Domain.Types.Rollout.Rollout {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.inputDataType inputDataType,
-      Se.Set Beam.percentage percentage,
+      Se.Set Beam.percentageRollout percentageRollout,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.versionTag versionTag,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -86,7 +86,7 @@ instance FromTType' Beam.Rollout Domain.Types.Rollout.Rollout where
         Domain.Types.Rollout.Rollout
           { id = Kernel.Types.Id.Id id,
             inputDataType = inputDataType,
-            percentage = percentage,
+            percentageRollout = percentageRollout,
             vehicleType = vehicleType,
             versionTag = versionTag,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -100,7 +100,7 @@ instance ToTType' Beam.Rollout Domain.Types.Rollout.Rollout where
     Beam.RolloutT
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.inputDataType = inputDataType,
-        Beam.percentage = percentage,
+        Beam.percentageRollout = percentageRollout,
         Beam.vehicleType = vehicleType,
         Beam.versionTag = versionTag,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

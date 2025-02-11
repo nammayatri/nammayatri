@@ -136,23 +136,23 @@ Station:
     timeBounds: Kernel.Prelude.Just|I
 
   queries:
-    findByMerchantOperatingCityIdAndVehicleType:
+    findByMerchantOperatingCityIdVehicleTypeAndVersionTag:
       kvFunction: findAllWithOptionsKV
       where:
-        and: [merchantOperatingCityId, vehicleType]
+        and: [merchantOperatingCityId, vehicleType, versionTag]
     findById:
       kvFunction: findOneWithKV
       where: id
     findByStationCode:
       kvFunction: findOneWithKV
       where: code
-    deleteByStationCode:
+    deleteByStationId:
       kvFunction: deleteWithKV
-      where: code
-    findByStationCodeAndMerchantOperatingCityId:
+      where: id
+    findByStationCodeMerchantOperatingCityIdAndVersionTag:
       kvFunction: findOneWithKV
       where:
-        and: [code, merchantOperatingCityId]
+        and: [code, versionTag, merchantOperatingCityId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -687,24 +687,26 @@ Route:
     code: SecondaryKey
 
   queries:
-    findByRouteCode:
+    findByRouteCodeAndVersionTag:
       kvFunction: findOneWithKV
-      where: code
+      where:
+        and: [code, versionTag]
     findByRouteId:
       kvFunction: findOneWithKV
       where: id
-    findAllByMerchantOperatingCityAndVehicleType:
+    findAllByMerchantOperatingCityAndVehicleTypeAndVersionTag:
       kvFunction: findAllWithOptionsKV
       where:
-        and: [merchantOperatingCityId, vehicleType]
-    findByRouteCodes:
+        and: [merchantOperatingCityId, vehicleType, versionTag]
+    findByRouteCodesAndVersionTag:
       kvFunction: findAllWithKV
       where:
         and:
+          - eq: [versionTag]
           - in: [code]
-    deleteByRouteCode:
+    deleteByRouteId:
       kvFunction: deleteWithKV
-      where: code
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -739,20 +741,23 @@ RouteStopMapping:
     routeCode: PrimaryKey
     stopCode: PrimaryKey
   queries:
-    findByRouteCode:
+    findByRouteCodeAndVersionTag:
       kvFunction: findAllWithKV
-      where: routeCode
-    findByRouteCodeAndStopCode:
+      where:
+        and: [routeCode, versionTag]
+    findByRouteCodeAndStopCodeAndVersionTag:
       kvFunction: findOneWithKV
       where:
-        and: [routeCode, stopCode]
-    findByStopCode:
+        and: [routeCode, stopCode, versionTag]
+    findByStopCodeAndVersionTag:
       kvFunction: findAllWithKV
-      where: stopCode
-    findByRouteCodes:
+      where:
+        and: [stopCode, versionTag]
+    findByRouteCodesAndVersionTag:
       kvFunction: findAllWithKV
       where:
         and:
+          - eq: [versionTag]
           - in: [routeCode]
 
 FRFSRouteFareProduct:

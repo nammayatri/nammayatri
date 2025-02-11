@@ -19,6 +19,7 @@ module API.UI.PartnerOrganizationFRFS
 where
 
 import qualified API.Types.UI.FRFSTicketService as DFRFSTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.PartnerOrganizationFRFS as DPOFRFS
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -34,6 +35,7 @@ import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified Lib.JourneyLeg.Types as JPT
+import Lib.JourneyModule.Utils (getVersionTag)
 import Servant hiding (route, throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -84,9 +86,9 @@ handler =
 upsertPersonAndGetFare :: PartnerOrganization -> DPOFRFS.GetFareReq -> FlowHandler DPOFRFS.GetFareResp
 upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareHitsCountKey
-
-  fromStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.fromStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
-  toStation <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId req.toStationCode req.cityId >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  versionTag <- getVersionTag req.cityId Spec.METRO Nothing
+  fromStation <- B.runInReplica $ CQS.findByStationCodeMerchantOperatingCityIdAndVersionTag req.fromStationCode req.cityId versionTag >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
+  toStation <- B.runInReplica $ CQS.findByStationCodeMerchantOperatingCityIdAndVersionTag req.toStationCode req.cityId versionTag >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "cityId:" +|| req.cityId.getId ||+ "")
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
@@ -95,7 +97,7 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          route' <- B.runInReplica $ QRoute.findByRouteCodeAndVersionTag routeCode' (Just versionTag) >>= fromMaybeM (RouteNotFound routeCode')
           return $ Just route'
       )
       req.routeCode

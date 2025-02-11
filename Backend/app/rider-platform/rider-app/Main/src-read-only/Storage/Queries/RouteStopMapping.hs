@@ -22,17 +22,28 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopMapping.RouteStopMapping] -> m ())
 createMany = traverse_ create
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+findByRouteCodeAndStopCodeAndVersionTag ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
+findByRouteCodeAndStopCodeAndVersionTag routeCode stopCode versionTag = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.stopCode $ Se.Eq stopCode,
+          Se.Is Beam.versionTag $ Se.Eq versionTag
+        ]
+    ]
 
-findByRouteCodeAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
-findByRouteCodeAndStopCode routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
+findByRouteCodeAndVersionTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCodeAndVersionTag routeCode versionTag = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.versionTag $ Se.Eq versionTag]]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByRouteCodes routeCode = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.In routeCode]]
+findByRouteCodesAndVersionTag ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> [Kernel.Prelude.Text] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCodesAndVersionTag versionTag routeCode = do findAllWithKV [Se.And [Se.Is Beam.versionTag $ Se.Eq versionTag, Se.Is Beam.routeCode $ Se.In routeCode]]
 
-findByStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByStopCode stopCode = do findAllWithKV [Se.Is Beam.stopCode $ Se.Eq stopCode]
+findByStopCodeAndVersionTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByStopCodeAndVersionTag stopCode versionTag = do findAllWithKV [Se.And [Se.Is Beam.stopCode $ Se.Eq stopCode, Se.Is Beam.versionTag $ Se.Eq versionTag]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
 findByPrimaryKey routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]

@@ -17,7 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data Rollout = Rollout
   { id :: Kernel.Types.Id.Id Domain.Types.Rollout.Rollout,
     inputDataType :: Domain.Types.Extra.Rollout.RawDataType,
-    percentage :: Kernel.Prelude.Int,
+    percentageRollout :: Kernel.Prelude.Int,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     versionTag :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
