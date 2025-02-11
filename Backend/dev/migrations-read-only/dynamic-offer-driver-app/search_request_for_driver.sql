@@ -142,3 +142,34 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN last_rid
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_type text ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_quantity integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

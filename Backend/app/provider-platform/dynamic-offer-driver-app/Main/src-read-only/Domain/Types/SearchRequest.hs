@@ -4,6 +4,7 @@
 module Domain.Types.SearchRequest where
 
 import Data.Aeson
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -52,6 +53,8 @@ data SearchRequest = SearchRequest
     isScheduled :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

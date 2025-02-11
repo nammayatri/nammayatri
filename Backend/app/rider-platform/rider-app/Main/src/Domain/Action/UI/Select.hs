@@ -19,6 +19,7 @@ module Domain.Action.UI.Select
     SelectListRes (..),
     QuotesResultResponse (..),
     CancelAPIResponse (..),
+    DSelectResDetails (..),
     SelectFlow,
     select,
     select2,
@@ -47,6 +48,8 @@ import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -79,6 +82,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Location as QLoc
+import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -127,7 +131,8 @@ validateDSelectReq DSelectReq {..} =
       whenJust deliveryDetails $ \(DTDD.DeliveryDetails {..}) ->
         sequenceA_
           [ validateObject "senderDetails" senderDetails validatePersonDetails,
-            validateObject "receiverDetails" receiverDetails validatePersonDetails
+            validateObject "receiverDetails" receiverDetails validatePersonDetails,
+            validateField "parcelQuantity" parcelQuantity $ InMaybe $ InRange @Int 1 100000
           ]
     ]
 
@@ -156,8 +161,11 @@ data DSelectRes = DSelectRes
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
     tripCategory :: Maybe TripCategory,
-    disabilityDisable :: Maybe Bool
+    disabilityDisable :: Maybe Bool,
+    selectResDetails :: Maybe DSelectResDetails
   }
+
+data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
 
 newtype DSelectResultRes = DSelectResultRes
   { selectTtl :: Int
@@ -247,7 +255,7 @@ select2 personId estimateId req@DSelectReq {..} = do
     throwError SearchRequestExpired
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
-    makeDeliverySearchParties searchRequestId searchRequest.merchantId validDeliveryDetails
+    updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
     let senderLocationId = searchRequest.fromLocation.id
     receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
     let senderLocationAddress = validDeliveryDetails.senderDetails.address
@@ -264,7 +272,12 @@ select2 personId estimateId req@DSelectReq {..} = do
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
       throwError $ InvalidRequest "Invalid currency"
-
+  dselectResDetails <-
+    DEstimate.tripCategory estimate & \case
+      Just (Trip.Delivery _) -> do
+        parcelDetails <- QParcel.findBySearchRequestId searchRequest.id
+        return $ DSelectResDelivery <$> parcelDetails
+      _ -> pure Nothing
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
@@ -288,6 +301,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         variant = DV.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
         tripCategory = estimate.tripCategory,
+        selectResDetails = dselectResDetails,
         ..
       }
   where
@@ -323,10 +337,12 @@ selectResult estimateId = do
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
       return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList, ..}
 
-makeDeliverySearchParties :: SelectFlow m r c => Id DSearchReq.SearchRequest -> Id DM.Merchant -> DTDD.DeliveryDetails -> m ()
-makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do
+updateRequiredDeliveryDetails :: SelectFlow m r c => Id DSearchReq.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTDD.DeliveryDetails -> m ()
+updateRequiredDeliveryDetails searchRequestId merchantId merchantOperatingCityId deliveryDetails = do
   senderPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.senderDetails.phoneNumber) (deliveryDetails.senderDetails.countryCode)
   receiverPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.receiverDetails.phoneNumber) (deliveryDetails.receiverDetails.countryCode)
+  let parcelType = fromMaybe (DParcel.Others "Unknown") deliveryDetails.parcelType
+      quantity = deliveryDetails.parcelQuantity
   -- restrict here only as why send request to driver and restrict later during booking
   isActiveBookingPresentForAnyParty <- anyM (\partyId -> isJust <$> QBooking.findLatestSelfAndPartyBookingByRiderId partyId) [senderPartyId, receiverPartyId]
   when isActiveBookingPresentForAnyParty $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES"
@@ -354,3 +370,4 @@ makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do
             updatedAt = now
           }
   QSRPL.createMany [senderParty, receiverParty]
+  QParcel.create $ DParcel.ParcelDetails {createdAt = now, updatedAt = now, ..}

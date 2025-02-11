@@ -13,6 +13,7 @@ import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.ParcelDetails
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.ServiceTierType
@@ -104,7 +105,13 @@ data BookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   deriving (Show)
 
-data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+data DeliveryBookingDetails = DeliveryBookingDetails
+  { distance :: Kernel.Types.Common.Distance,
+    otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Domain.Types.ParcelDetails.ParcelType,
+    toLocation :: Domain.Types.Location.Location
+  }
   deriving (Generic, Show)
 
 data InterCityBookingDetails = InterCityBookingDetails
