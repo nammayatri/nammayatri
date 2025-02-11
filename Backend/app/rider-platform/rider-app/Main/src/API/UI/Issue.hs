@@ -32,6 +32,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -144,23 +145,34 @@ castMerchantById merchantId = do
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById personId = do
   person <- runInReplica $ QP.findById (cast personId)
-  return $ fmap castPerson person
-  where
-    castPerson person =
-      Common.Person
-        { id = cast person.id,
-          language = person.language,
-          firstName = person.firstName,
-          lastName = person.lastName,
-          middleName = person.middleName,
-          mobileNumber = person.mobileNumber,
-          merchantOperatingCityId = cast person.merchantOperatingCityId,
-          blocked = Just person.blocked
-        }
+  return $ mkPerson <$> person
+
+castPersonByMobileNumberAndMerchant :: Text -> DbHash -> Id Common.Merchant -> Flow (Maybe Common.Person)
+castPersonByMobileNumberAndMerchant mobileCountryCode numHash merchantId = do
+  mbPerson <- runInReplica $ QP.findByMobileNumberAndMerchantId mobileCountryCode numHash (cast merchantId)
+  return $ mkPerson <$> mbPerson
+
+mkPerson :: SP.Person -> Common.Person
+mkPerson person =
+  Common.Person
+    { id = cast person.id,
+      language = person.language,
+      firstName = person.firstName,
+      lastName = person.lastName,
+      middleName = person.middleName,
+      mobileNumber = person.mobileNumber,
+      merchantOperatingCityId = cast person.merchantOperatingCityId,
+      blocked = Just person.blocked
+    }
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId merchantId = do
   mbRide <- runInReplica $ QR.findById (cast rideId)
+  traverse (mkRide merchantId) mbRide
+
+castRideByRideShortId :: Id Common.Merchant -> ShortId Common.Ride -> Flow (Maybe Common.Ride)
+castRideByRideShortId merchantId (ShortId rideShortId) = do
+  mbRide <- runInReplica $ QR.findRideByRideShortId (ShortId rideShortId)
   traverse (mkRide merchantId) mbRide
 
 mkRide :: Id Common.Merchant -> DR.Ride -> Flow Common.Ride

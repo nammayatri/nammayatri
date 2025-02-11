@@ -38,7 +38,9 @@ dashboardIssueHandle =
     { findPersonById = AUI.castPersonById,
       findByMerchantShortIdAndCity = AUI.castMOCityByMerchantShortIdAndCity,
       findMerchantConfig = AUI.buildMerchantConfig,
-      mbSendUnattendedTicketAlert = Nothing
+      mbSendUnattendedTicketAlert = Nothing,
+      findRideByRideShortId = AUI.castRideByRideShortId,
+      findByMobileNumberAndMerchantId = AUI.castPersonByMobileNumberAndMerchant
     }
 
 getIssueCategoryList ::
@@ -56,9 +58,12 @@ getIssueList ::
   Kernel.Prelude.Maybe Common.IssueStatus ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Common.Ride) ->
   Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueReportListResponse
-getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
-  DIssue.issueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (Kernel.Types.Id.cast <$> mbCategoryId) mbAssignee dashboardIssueHandle Common.DRIVER
+getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbCountryCode mbMobileNumber mbRideShortId =
+  DIssue.issueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (Kernel.Types.Id.cast <$> mbCategoryId) mbAssignee mbCountryCode mbMobileNumber mbRideShortId dashboardIssueHandle Common.DRIVER
 
 getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
