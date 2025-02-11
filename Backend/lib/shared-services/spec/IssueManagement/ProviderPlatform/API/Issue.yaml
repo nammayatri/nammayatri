@@ -58,6 +58,9 @@ apis:
         - status: IssueStatus
         - category: (Id IssueCategory)
         - assignee: Text
+        - countryCode: Text
+        - phoneNumber: Text
+        - rideShortId: ShortId Ride
       response:
         type: IssueReportListResponse
       migrate:
