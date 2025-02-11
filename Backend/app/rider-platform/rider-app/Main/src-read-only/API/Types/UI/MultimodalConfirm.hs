@@ -79,7 +79,7 @@ data PaymentOrder = PaymentOrder {sdkPayload :: Kernel.Prelude.Maybe Kernel.Exte
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RateMultiModelTravelModes = RateMultiModelTravelModes {isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, legOrder :: Kernel.Prelude.Int, travelMode :: Domain.Types.Trip.MultimodalTravelMode}
+data RateMultiModelTravelModes = RateMultiModelTravelModes {isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, legOrder :: Kernel.Prelude.Int, travelMode :: Kernel.Prelude.Maybe Domain.Types.Trip.MultimodalTravelMode}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
