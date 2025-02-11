@@ -930,15 +930,15 @@ driverCallPopUp push state =
 
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
-  [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
-    , type: ANONYMOUS_CALLER
-    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
-    }
-  , { text: (getString DIRECT_CALL)
+  [ { text: (getString DIRECT_CALL)
     , imageWithFallback: fetchImage FF_ASSET "ic_direct_call"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
+    },
+    { text: (getString ANONYMOUS_CALL)
+    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
+    , type: ANONYMOUS_CALLER
+    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   ]
 
