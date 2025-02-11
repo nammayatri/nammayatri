@@ -243,7 +243,7 @@ getFares mbRiderId vehicleType merchantId merchantOperatingCityId routeCode star
               stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
               startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
               endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
-              let stage = endStageFare.stage - startStageFare.stage
+              let stage = abs $ endStageFare.stage - startStageFare.stage
               stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
               return $
                 Price
