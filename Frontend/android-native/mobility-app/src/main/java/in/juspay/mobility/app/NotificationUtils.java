@@ -453,7 +453,7 @@ public class NotificationUtils {
         }
     }
 
-    public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
+    public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl, String messageId) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
         int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
         String show_notification = data.getString("show_notification");
@@ -472,6 +472,7 @@ public class NotificationUtils {
         System.out.println("imageUrl" + imageUrl);
         System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
+        intent.putExtra("message_id", messageId != null ? messageId : "");
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("title",title)
                   .put("msg",msg);
@@ -1021,7 +1022,7 @@ public class NotificationUtils {
             if (triggerUICallback) NotificationUtils.triggerUICallbacks(notificationType, String.valueOf(new JSONObject().put("title", title).put("msg" , body)));
             switch (notificationType){
                 case MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT:
-                    NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                    NotificationUtils.showNotification(context, title, body, payload, imageUrl, null);
                     sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
 
@@ -1042,7 +1043,7 @@ public class NotificationUtils {
                     break;
                 case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
                     if (payload.get("show_notification").equals("true")) {
-                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, null);
                     }
                     if (merchantType.equals("DRIVER")){
                         // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
