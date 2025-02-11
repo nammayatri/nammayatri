@@ -211,7 +211,8 @@ instance Default IntelligentScores where
 
 data TaggedDriverPoolInput = TaggedDriverPoolInput
   { drivers :: [DriverPoolWithActualDistResult],
-    needOnRideDrivers :: Bool
+    needOnRideDrivers :: Bool,
+    batchNum :: PoolBatchNum
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
