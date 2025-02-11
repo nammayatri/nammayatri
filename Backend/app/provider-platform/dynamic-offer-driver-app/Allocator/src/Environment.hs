@@ -34,6 +34,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
@@ -110,7 +111,8 @@ data HandlerEnv = HandlerEnv
     s3Env :: S3Env Flow,
     passettoContext :: PassettoContext,
     serviceClickhouseCfg :: ClickhouseCfg,
-    kafkaClickhouseCfg :: ClickhouseCfg
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    broadcastMessageTopic :: KafkaTopic
   }
   deriving (Generic)
 

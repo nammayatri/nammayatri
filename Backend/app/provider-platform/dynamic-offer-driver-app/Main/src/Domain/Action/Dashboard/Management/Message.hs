@@ -40,9 +40,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
+import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import Storage.Beam.IssueManagement ()
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.DriverInformation as QDI
@@ -182,7 +185,15 @@ postMessageSend merchantShortId opCity Common.SendMessageRequest {..} = do
       driverIds <- readCsv
       B.runInReplica $ QDI.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
-  fork "Adding messages to kafka queue" $ mapM_ (addBroadcastMessageToKafka kafkaPush message) allDriverIds
+  now <- getCurrentTime
+  case scheduledTime of
+    Just scheduleTime
+      | now <= scheduleTime ->
+        QAllJ.createJobByTime @_ @'ScheduledFCMS (Just merchant.id) (Just merchantOpCity.id) scheduleTime $
+          ScheduledFCMSJobData allDriverIds message
+      | otherwise -> throwError (InvalidRequest "Scheduled Time cannot be in the past")
+    Nothing -> fork "Adding messages to Kafka queue" $ mapM_ (addBroadcastMessageToKafka kafkaPush message) allDriverIds
+
   return Success
   where
     readCsv = case csvFile of
