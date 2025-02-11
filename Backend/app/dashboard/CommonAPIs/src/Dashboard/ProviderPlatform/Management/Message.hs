@@ -41,16 +41,13 @@ instance ToMultipart Tmp UploadFileRequest where
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
----
--- Send Message
---
-
 instance FromMultipart Tmp SendMessageRequest where
   fromMultipart form = do
     let inputType = fmap (read . T.unpack) (lookupInput "type" form)
     csvFile <- either (helper inputType) (Right . Just . fdPayload) (lookupFile "csvFile" form)
     _type <- inputType
     messageId <- lookupInput "messageId" form
+    scheduledTime <- fmap (readMaybe . T.unpack) (lookupInput "scheduledTime" form)
     pure SendMessageRequest {..}
     where
       helper (Right AllEnabled) _ = Right Nothing
@@ -60,6 +57,7 @@ instance ToMultipart Tmp SendMessageRequest where
   toMultipart form =
     MultipartData
       [ Input "type" $ show form._type,
-        Input "messageId" form.messageId
+        Input "messageId" form.messageId,
+        Input "scheduledTime" $ show form.scheduledTime
       ]
       (maybe [] (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)

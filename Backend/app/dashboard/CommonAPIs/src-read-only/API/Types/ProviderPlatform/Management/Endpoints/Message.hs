@@ -140,7 +140,7 @@ data MessageType
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SendMessageRequest = SendMessageRequest {csvFile :: Kernel.Prelude.Maybe Kernel.Prelude.FilePath, _type :: InputType, messageId :: Kernel.Prelude.Text}
+data SendMessageRequest = SendMessageRequest {csvFile :: Kernel.Prelude.Maybe Kernel.Prelude.FilePath, _type :: InputType, messageId :: Kernel.Prelude.Text, scheduledTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
