@@ -141,7 +141,7 @@ tfOrderItem res isValueAddNP =
 
 mkItemTags :: DSelect.DSelectRes -> [Spec.TagGroup]
 mkItemTags res =
-  let itemTags = [mkAutoAssignEnabledTagGroup res]
+  let itemTags = [mkAutoAssignEnabledTagGroup res] <> mkSelectResDetailsTagGroup res
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
       itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
@@ -321,6 +321,52 @@ mkDisabilityDisableTagGroup res =
               }
           ]
     }
+
+mkSelectResDetailsTagGroup :: DSelect.DSelectRes -> [Spec.TagGroup]
+mkSelectResDetailsTagGroup res =
+  maybe
+    []
+    ( \case
+        (DSelect.DSelectResDelivery details) -> [getDeliveryTags details]
+    )
+    res.selectResDetails
+  where
+    getDeliveryTags details =
+      Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DELIVERY,
+                  descriptorName = Just "Delivery Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.PARCEL_TYPE,
+                            descriptorName = Just "Delivery Parcel Type",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagDisplay = Just False,
+                    tagValue = Just $ show details.parcelType
+                  },
+                Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.PARCEL_QUANTITY,
+                            descriptorName = Just "Delivery Parcel Quantity",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagDisplay = Just False,
+                    tagValue = show <$> details.quantity
+                  }
+              ]
+        }
 
 tfPrice :: DSelect.DSelectRes -> Spec.Price
 tfPrice res =

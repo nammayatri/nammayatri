@@ -1,13 +1,16 @@
 module Domain.Types.DeliveryDetails where
 
 import Domain.Types.LocationAddress
+import Domain.Types.ParcelDetails
 import Domain.Types.Trip
 import Kernel.Prelude
 
 data DeliveryDetails = DeliveryDetails
   { senderDetails :: PersonDetails,
     receiverDetails :: PersonDetails,
-    initiatedAs :: DeliveryParties
+    initiatedAs :: DeliveryParties,
+    parcelType :: Maybe ParcelType,
+    parcelQuantity :: Maybe Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

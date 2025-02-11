@@ -278,6 +278,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 middleStopCount = Just $ length searchReq.stops,
                 upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
                 isFavourite = isFavourite,
+                parcelType = searchReq.parcelType,
+                parcelQuantity = searchReq.parcelQuantity,
                 ..
               }
       pure searchRequestForDriver

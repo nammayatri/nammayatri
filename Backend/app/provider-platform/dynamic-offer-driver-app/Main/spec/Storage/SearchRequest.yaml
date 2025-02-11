@@ -20,6 +20,7 @@ imports:
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   TagNameValue: Lib.Yudhishthira.Types
+  ParcelType: Domain.Types.DeliveryDetails
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -75,6 +76,8 @@ SearchRequest:
     poolingConfigVersion: Maybe Int
     driverIdForSearch: Maybe (Id Person)
     configInExperimentVersions: "[ConfigVersionMap]"
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
 
   beamType:
     startTime: Maybe UTCTime
@@ -211,6 +214,10 @@ SearchRequest:
     updatePoolingConfigVersion:
       kvFunction: updateWithKV
       params: [poolingConfigVersion]
+      where: id
+    updateParcelDetails:
+      kvFunction: updateWithKV
+      params: [parcelType, parcelQuantity]
       where: id
 
   extraOperations:

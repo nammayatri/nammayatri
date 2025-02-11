@@ -28,6 +28,7 @@ import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location, LocationAPIEntity)
+import Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
@@ -132,6 +133,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     rideStatus :: Maybe DRide.RideStatus,
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     driverArrivalTime :: Maybe UTCTime,
+    destinationReachedAt :: Maybe UTCTime,
     sosStatus :: Maybe DSos.SosStatus,
     driversPreviousRideDropLocLat :: Maybe Double,
     driversPreviousRideDropLocLon :: Maybe Double,
@@ -217,7 +219,9 @@ data DeliveryBookingAPIDetails = DeliveryBookingAPIDetails
     estimatedDistanceWithUnit :: Distance,
     senderDetails :: DeliveryPersonDetailsAPIEntity,
     receiverDetails :: DeliveryPersonDetailsAPIEntity,
-    requestorPartyRoles :: [Trip.PartyRole]
+    requestorPartyRoles :: [Trip.PartyRole],
+    parcelType :: DParcel.ParcelType,
+    parcelQuantity :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -466,8 +470,9 @@ buildBookingStatusAPIEntity booking = do
       rideStatus = fmap (.status) mbActiveRide
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
+      destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

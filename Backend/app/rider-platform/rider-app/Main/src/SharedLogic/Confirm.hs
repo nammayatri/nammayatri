@@ -29,6 +29,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -59,6 +60,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
@@ -223,6 +225,9 @@ confirm DConfirmReq {..} = do
         DRB.DeliveryDetails details -> return details.toLocation
         _ -> throwError (InternalError $ "DeliveryBookingDetails not found for booking" <> booking.id.getId)
       (Trip.DeliveryParty initiatedBy) <- booking.initiatedBy & fromMaybeM (InternalError $ "BookingInitiatedBy not found for booking" <> booking.id.getId)
+      let (parcelType, parcelQuantity) = case booking.bookingDetails of
+            DRB.DeliveryDetails details -> (Just details.parcelType, details.parcelQuantity)
+            _ -> (Nothing, Nothing)
       return $
         DConfirmResDelivery $
           DTDD.DeliveryDetails
@@ -240,7 +245,8 @@ confirm DConfirmReq {..} = do
                     DTDD.countryCode = Nothing,
                     DTDD.address = toLocation.address
                   },
-              DTDD.initiatedAs = initiatedBy
+              DTDD.initiatedAs = initiatedBy,
+              ..
             }
 
 buildBooking ::
@@ -370,6 +376,9 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
     buildDeliveryDetails = do
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      parcelDetails <- QParcel.findBySearchRequestId searchRequest.id
+      let parcelType = maybe (DParcel.Others "Unknown") (.parcelType) parcelDetails
+          parcelQuantity = parcelDetails >>= (.quantity)
       pure DRB.DeliveryBookingDetails {..}
     makeDeliveryParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
     makeDeliveryParties bookingId = do
