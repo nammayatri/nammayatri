@@ -24,28 +24,29 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Route.Route] -> m ())
 createMany = traverse_ create
 
-deleteByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
-deleteByRouteCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
+deleteByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Route.Route -> m ())
+deleteByRouteId id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findAllByMerchantOperatingCityAndVehicleType ::
+findAllByMerchantOperatingCityAndVehicleTypeAndVersionTag ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Route.Route])
-findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.Route.Route])
+findAllByMerchantOperatingCityAndVehicleTypeAndVersionTag limit offset merchantOperatingCityId vehicleType versionTag = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.versionTag $ Se.Eq versionTag
         ]
     ]
     (Se.Desc Beam.createdAt)
     limit
     offset
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
-findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
+findByRouteCodeAndVersionTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m (Maybe Domain.Types.Route.Route))
+findByRouteCodeAndVersionTag code versionTag = do findOneWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.versionTag $ Se.Eq versionTag]]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
-findByRouteCodes code = do findAllWithKV [Se.And [Se.Is Beam.code $ Se.In code]]
+findByRouteCodesAndVersionTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> [Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
+findByRouteCodesAndVersionTag versionTag code = do findAllWithKV [Se.And [Se.Is Beam.versionTag $ Se.Eq versionTag, Se.Is Beam.code $ Se.In code]]
 
 findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Route.Route -> m (Maybe Domain.Types.Route.Route))
 findByRouteId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

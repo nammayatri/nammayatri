@@ -27,4 +27,4 @@ data Stage = Stage
 
 data StageName = PREPROCESSING | VALIDATION | UPLOAD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''StageName))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StageName)

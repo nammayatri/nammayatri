@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JT
+import Lib.JourneyModule.Utils (getVersionTag)
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -104,6 +105,8 @@ getInfo searchId fallbackFare distance duration = do
 
 search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg = do
+  moc <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
+  versionTag <- getVersionTag moc.id vehicleCategory Nothing
   let journeySearchData =
         JPT.JourneySearchData
           { journeyId = journeyLeg.journeyId.getId,
@@ -114,7 +117,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
             pricingId = Nothing,
             isDeleted = Just False
           }
-  frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
+  frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData) versionTag
   let colorName = journeyLeg.routeDetails >>= (.shortName)
   let routeColorCode = journeyLeg.routeDetails >>= (.color)
   let platformNumber = journeyLeg.fromStopDetails >>= (.platformCode)
@@ -122,17 +125,17 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
   res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq Nothing Nothing colorName routeColorCode frequency platformNumber
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
-    buildFRFSSearchReq journeySearchData = do
+    buildFRFSSearchReq journeySearchData versionTag = do
       fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> (journeyLeg.fromStopDetails >>= (.gtfsId))) & fromMaybeM (InvalidRequest "From station code and gtfsId not found")
       toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> (journeyLeg.toStopDetails >>= (.gtfsId))) & fromMaybeM (InvalidRequest "To station code and gtfsId not found")
-      createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude
-      createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude
+      createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude versionTag
+      createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude versionTag
       let routeCode = Nothing
       return $ API.FRFSSearchAPIReq {..}
 
-    createStationIfRequired name code lat lon = do
+    createStationIfRequired name code lat lon versionTag = do
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-      mbStation <- QStation.findByStationCodeAndMerchantOperatingCityId code merchantOpCity.id
+      mbStation <- QStation.findByStationCodeMerchantOperatingCityIdAndVersionTag code (Just versionTag) merchantOpCity.id
       when (isNothing mbStation) $ do
         mbNewStation <- createStation name code lat lon merchantOpCity.id
         whenJust mbNewStation $ \station -> QStation.create station

@@ -106,16 +106,16 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
   rolloutVersions <- QRollout.findAllByMerchantOperatingCityAndVehicleType (Just $ Kernel.Types.Id.Id req.cityId) req.vehicleType
   oldRolloutVersion <- maybe (throwError $ InternalError $ "No rollout version found for city: " <> show req.cityId <> " and vehicleType: " <> show req.vehicleType) return (listToMaybe <$> filter (\v -> v.versionTag /= req.versionTag) $ rolloutVersions)
   let mbNewRolloutVersion = listToMaybe <$> filter (\v -> v.versionTag == req.versionTag) $ rolloutVersions
-      updatedOldVersion = oldRolloutVersion {Domain.Types.Rollout.percentage = 100 - req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
+      updatedOldVersion = oldRolloutVersion {Domain.Types.Rollout.percentageRollout = 100 - req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
   case mbNewRolloutVersion of
     Nothing -> do
       id <- generateGUID
-      let newVersion = Domain.Types.Rollout.Rollout {id, inputDataType = version.inputDataType, vehicleType = req.vehicleType, versionTag = req.versionTag, merchantId = version.merchantId, merchantOperatingCityId = version.merchantOperatingCityId, createdAt = now, percentage = req.rolloutPercent, updatedAt = now}
+      let newVersion = Domain.Types.Rollout.Rollout {id, inputDataType = version.inputDataType, vehicleType = req.vehicleType, versionTag = req.versionTag, merchantId = version.merchantId, merchantOperatingCityId = version.merchantOperatingCityId, createdAt = now, percentageRollout = req.rolloutPercent, updatedAt = now}
       void $ QRollout.create newVersion
     Just newRolloutVersion -> do
-      let newVersion = newRolloutVersion {Domain.Types.Rollout.percentage = req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
+      let newVersion = newRolloutVersion {Domain.Types.Rollout.percentageRollout = req.rolloutPercent, Domain.Types.Rollout.updatedAt = now}
       void $ QRollout.updateByPrimaryKey newVersion
-  void $ if updatedOldVersion.percentage == 0 then QRollout.deleteByVersionId updatedOldVersion.id else QRollout.updateByPrimaryKey updatedOldVersion
+  void $ if updatedOldVersion.percentageRollout == 0 then QRollout.deleteByVersionId updatedOldVersion.id else QRollout.updateByPrimaryKey updatedOldVersion
   return Kernel.Types.APISuccess.Success
 
 -- _validateGTFSData ::

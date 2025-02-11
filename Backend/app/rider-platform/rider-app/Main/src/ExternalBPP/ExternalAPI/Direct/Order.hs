@@ -14,6 +14,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
+import Lib.JourneyModule.Utils
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
@@ -35,11 +36,12 @@ getTicketDetail config qrTtl booking routeStation = do
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
       endStation = last routeStation.stations
-  fromStation <- B.runInReplica $ QStation.findByStationCodeAndMerchantOperatingCityId startStation.code booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ startStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
-  toStation <- B.runInReplica $ QStation.findByStationCodeAndMerchantOperatingCityId endStation.code booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ endStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
-  route <- B.runInReplica $ QRoute.findByRouteCode routeStation.code >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code)
-  toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code)
+  versionTag <- getVersionTag booking.merchantOperatingCityId booking.vehicleType (Just booking.searchId.getId)
+  fromStation <- B.runInReplica $ QStation.findByStationCodeMerchantOperatingCityIdAndVersionTag startStation.code (Just versionTag) booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ startStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
+  toStation <- B.runInReplica $ QStation.findByStationCodeMerchantOperatingCityIdAndVersionTag endStation.code (Just versionTag) booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ endStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
+  route <- B.runInReplica $ QRoute.findByRouteCodeAndVersionTag routeStation.code (Just versionTag) >>= fromMaybeM (RouteNotFound routeStation.code)
+  fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCodeAndVersionTag route.code fromStation.code (Just versionTag) >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code)
+  toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCodeAndVersionTag route.code toStation.code (Just versionTag) >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code)
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
     id <- generateGUID

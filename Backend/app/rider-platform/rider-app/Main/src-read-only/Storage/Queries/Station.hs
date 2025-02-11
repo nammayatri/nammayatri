@@ -24,20 +24,21 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Station.Station] -> m ())
 createMany = traverse_ create
 
-deleteByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
-deleteByStationCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
+deleteByStationId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m ())
+deleteByStationId id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByMerchantOperatingCityIdAndVehicleType ::
+findByMerchantOperatingCityIdVehicleTypeAndVersionTag ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Station.Station])
-findByMerchantOperatingCityIdAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.Station.Station])
+findByMerchantOperatingCityIdVehicleTypeAndVersionTag limit offset merchantOperatingCityId vehicleType versionTag = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.versionTag $ Se.Eq versionTag
         ]
     ]
     (Se.Desc Beam.createdAt)
@@ -47,13 +48,14 @@ findByMerchantOperatingCityIdAndVehicleType limit offset merchantOperatingCityId
 findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
 findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
-findByStationCodeAndMerchantOperatingCityId ::
+findByStationCodeMerchantOperatingCityIdAndVersionTag ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.Station.Station))
-findByStationCodeAndMerchantOperatingCityId code merchantOperatingCityId = do
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.Station.Station))
+findByStationCodeMerchantOperatingCityIdAndVersionTag code versionTag merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.code $ Se.Eq code,
+          Se.Is Beam.versionTag $ Se.Eq versionTag,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]

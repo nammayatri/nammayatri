@@ -807,6 +807,7 @@ library
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.IntegratedBPPConfig
+      Storage.CachedQueries.Rollout
       Storage.CachedQueries.SavedReqLocation
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify

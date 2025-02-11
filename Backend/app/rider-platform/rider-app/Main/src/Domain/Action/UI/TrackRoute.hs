@@ -1,6 +1,7 @@
 module Domain.Action.UI.TrackRoute (getTrackVehicles) where
 
 import qualified API.Types.UI.TrackRoute as TrackRoute
+import qualified BecknV2.FRFS.Enums as Spec
 import Data.Function
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
@@ -19,8 +20,10 @@ import Kernel.Types.Distance
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.JourneyModule.Utils
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteTripMapping as RTM
 import Tools.Error
@@ -34,7 +37,8 @@ getTrackVehicles ::
     Environment.Flow TrackRoute.TrackingResp
   )
 getTrackVehicles (mbPersonId, merchantId) routeCode = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Missing PersonId in request")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   routeInfoByRouteCode :: [(Text, TrackRoute.VehicleInfoForRoute)] <- do
     vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)
@@ -52,7 +56,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
         mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfo'
   logDebug $ "got route from lts " <> show routeInfo'
   logDebug $ "got route from lts with lat/long " <> show routeInfoWithLatLong
-  reqStops <- QRSM.findByRouteCode routeCode
+  versionTag <- getVersionTag person.merchantOperatingCityId Spec.BUS Nothing
+  reqStops <- QRSM.findByRouteCodeAndVersionTag routeCode (Just versionTag)
   let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) reqStops
       stopPairs = map (\(x, y) -> (x, y)) (pairWithNext sortedStops)
 

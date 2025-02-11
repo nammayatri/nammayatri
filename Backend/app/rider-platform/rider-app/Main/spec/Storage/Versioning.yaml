@@ -3,7 +3,6 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   RawDataType: Domain.Types.Extra.Rollout
-  # StageData: Domain.Types.Extra.Rollout
 
 Rollout:
   tableName: rollout
@@ -13,7 +12,7 @@ Rollout:
     vehicleType: VehicleCategory
     inputDataType: RawDataType
     versionTag: Int
-    percentage: Int
+    percentageRollout: Int
 
   queries:
     findByMerchantOperatingCityAndVehicleType:
@@ -26,12 +25,19 @@ Rollout:
         and: [merchantOperatingCityId, vehicleType]
     updateByMerchantOperatingCityAndVehicleType:
       kvFunction: updateWithKV
-      params: [percentage]
+      params: [percentageRollout]
       where:
         and: [merchantOperatingCityId, vehicleType]
     deleteByVersionId:
       kvFunction: deleteWithKV
       where: id
+
+  cachedQueries:
+    findAllByMerchantOperatingCityAndVehicleType:
+      keyParams: [merchantOperatingCityId, vehicleType]
+      dbQuery: findAllByMerchantOperatingCityAndVehicleType
+      dbQueryParams: [merchantOperatingCityId, vehicleType]
+      queryType: FindAndCache
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

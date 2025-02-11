@@ -25,15 +25,15 @@ data VersionStageMapping = VersionStageMapping
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FareDataType = FareDataType {id :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, (Eq), (Ord))
+data FareDataType = FareDataType {id :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq, Ord)
 
 data GtfsDataType = GtfsDataType {gtfsFilePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text, customFilePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, (Eq), (Ord))
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq, Ord)
 
 data StageData = GTFSData Domain.Types.VersionStageMapping.GtfsDataType | FAREData Domain.Types.VersionStageMapping.FareDataType deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Status = Inprogress | Completed | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''StageData))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StageData)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
