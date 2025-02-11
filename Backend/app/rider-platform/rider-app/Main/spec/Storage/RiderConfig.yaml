@@ -68,6 +68,7 @@ RiderConfig:
     minRidesToShowCancellationRate: Maybe Int
     autoSendBookingDetailsViaWhatsapp: Maybe Bool
     multimodalTesting: Bool
+    isFirstReferredRideEnabled: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -89,6 +90,7 @@ RiderConfig:
     payoutReferralProgram: Maybe Bool
     multimodalTesting: Maybe Bool
     payoutReferralStartDate: Maybe UTCTime
+    isFirstReferredRideEnabled: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -117,6 +119,7 @@ RiderConfig:
     payoutReferralProgram: fromMaybe False payoutReferralProgram|E
     payoutReferralStartDate: payoutReferralStartDate_|E
     multimodalTesting: fromMaybe False multimodalTesting|E
+    isFirstReferredRideEnabled: fromMaybe False isFirstReferredRideEnabled|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -138,6 +141,7 @@ RiderConfig:
     payoutReferralProgram: Just payoutReferralProgram|E
     payoutReferralStartDate: Just payoutReferralStartDate|E
     multimodalTesting: Just multimodalTesting|E
+    isFirstReferredRideEnabled: Just isFirstReferredRideEnabled|E
 
   default:
     enableLocalPoliceSupport: "false"
