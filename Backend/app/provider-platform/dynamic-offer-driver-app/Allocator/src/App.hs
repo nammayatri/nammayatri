@@ -43,6 +43,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+import SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS (runScheduledFCMS)
 import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
 import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
@@ -120,6 +121,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runScheduledFCMS)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
     }
 

@@ -310,6 +310,7 @@ library
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+      SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS
       SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
       SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
       SharedLogic.Allocator.Jobs.Mandate.Execution
