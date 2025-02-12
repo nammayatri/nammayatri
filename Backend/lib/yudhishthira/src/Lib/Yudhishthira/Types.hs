@@ -5,6 +5,8 @@ module Lib.Yudhishthira.Types
     YudhishthiraDecideReq (..),
     YudhishthiraDecideResp (..),
     ChakraQueriesAPIEntity (..),
+    ChakraQueryUpdateReq (..),
+    ChakraQueryDeleteReq (..),
     Source (..),
     SourceData,
     CreateNammaTagRequest (..),
@@ -141,6 +143,26 @@ data QueryResultDefault = BOOL Bool | INT Int | DOUBLE Double | TEXT Text
 $(mkBeamInstancesForEnumAndList ''QueryResult)
 
 instance HideSecrets ChakraQueriesAPIEntity where
+  hideSecrets = identity
+
+data ChakraQueryUpdateReq = ChakraQueryUpdateReq
+  { chakra :: Chakra,
+    queryName :: Text,
+    queryResults :: Maybe [QueryResult],
+    queryText :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ChakraQueryUpdateReq where
+  hideSecrets = identity
+
+data ChakraQueryDeleteReq = ChakraQueryDeleteReq
+  { chakra :: Chakra,
+    queryName :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ChakraQueryDeleteReq where
   hideSecrets = identity
 
 data YudhishthiraDecideReq = YudhishthiraDecideReq

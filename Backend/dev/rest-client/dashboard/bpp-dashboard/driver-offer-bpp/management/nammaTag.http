@@ -62,6 +62,71 @@ content-type: application/json
 
 ###
 
+# @name dailyRidesQueryUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/query/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "queryName" : "dailyRides",
+    "queryResults":
+    [
+      { "resultName" : "userId",
+        "resultDefault" : {
+          "tag" : "TEXT",
+          "contents" : "UserNotFound"
+        }
+      },
+      { "resultName" : "totalRides",
+        "resultDefault" : {
+          "tag" : "INT",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalDistance",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalFare",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      }
+      ],
+    "queryText":
+      "select   \n
+          driver_id as userId,\n
+          count(id) as totalRides,\n
+          sum(chargeable_distance) as totalDistance,\n
+          sum(fare) as totalFare\n
+        FROM atlas_driver_offer_bpp.ride\n
+        WHERE created_at >= date_sub (day, 3650, toStartOfDay (now ()))\n
+          AND created_at < toStartOfDay (now ())\n
+          AND {usersSetCondition}\n
+        GROUP BY driver_id\n
+        ORDER BY driver_id ASC LIMIT {limit} OFFSET {offset}"
+}
+
+###
+
+# @name dailyRidesQueryDelete
+
+DELETE {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/query/delete
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "queryName" : "dailyRides1"
+}
+
+###
+
 # @name dailyCancellationsQueryCreate
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/query/create
