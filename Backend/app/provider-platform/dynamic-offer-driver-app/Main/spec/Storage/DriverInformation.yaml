@@ -71,6 +71,7 @@ DriverInformation:
     canDowngradeToTaxi: Bool
     canSwitchToRental: Bool
     canSwitchToInterCity: Bool
+    canSwitchToIntraCity: Bool
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
@@ -127,6 +128,7 @@ DriverInformation:
     canDowngradeToTaxi: "false"
     canSwitchToRental: "false"
     canSwitchToInterCity: "false"
+    canSwitchToIntraCity: "true"
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
@@ -147,6 +149,7 @@ DriverInformation:
   beamType:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
+    canSwitchToIntraCity: Maybe Bool
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
     hasAdvanceBooking: Maybe Bool
     forwardBatchingEnabled: Maybe Bool
@@ -165,6 +168,7 @@ DriverInformation:
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    canSwitchToIntraCity: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
     isSpecialLocWarrior: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -180,6 +184,7 @@ DriverInformation:
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
+    canSwitchToIntraCity: Kernel.Prelude.Just|I
     isSpecialLocWarrior: Kernel.Prelude.Just|I
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
@@ -230,12 +235,13 @@ DriverInformation:
           canDowngradeToTaxi,
           canSwitchToRental,
           canSwitchToInterCity,
+          canSwitchToIntraCity,
           availableUpiApps,
         ]
       where: driverId
-    updateRentalAndInterCitySwitch:
+    updateRentalInterCityAndIntraCitySwitch:
       kvFunction: updateOneWithKV
-      params: [canSwitchToRental, canSwitchToInterCity]
+      params: [canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity]
       where: driverId
     updateAirConditionScore:
       kvFunction: updateOneWithKV
