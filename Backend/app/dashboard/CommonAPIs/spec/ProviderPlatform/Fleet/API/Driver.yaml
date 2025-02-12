@@ -864,6 +864,14 @@ types:
     - gstNumber: Maybe Text
     - gstImageId: Maybe Text
     - panNumber: Maybe Text
+    - fleetConfig: Maybe FleetConfig
+    - derive: "'HideSecrets"
+  FleetConfig:
+    - allowAutomaticRoundTripAssignment: Bool
+    - allowEndingMidRoute: Bool
+    - allowStartRideFromQR: Bool
+    - endRideDistanceThreshold: HighPrecMeters
+    - rideEndApproval: Bool
     - derive: "'HideSecrets"
   VerifyFleetJoiningOtpReq:
     - mobileCountryCode: Text
