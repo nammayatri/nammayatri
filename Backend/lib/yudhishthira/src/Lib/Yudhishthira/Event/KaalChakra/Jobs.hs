@@ -1,13 +1,13 @@
 module Lib.Yudhishthira.Event.KaalChakra.Jobs
   ( runKaalChakraAndRescheduleJob,
     runKaalChakraUpdateTagsJob,
+    getNextChakraTime,
   )
 where
 
+import qualified Data.Time.Clock as Time
 import Kernel.Prelude
-import qualified Kernel.Types.SlidingWindowCounters as SWCT
 import Kernel.Utils.Common
-import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Event.KaalChakra.Internal as Event
 import qualified Lib.Yudhishthira.Types as LYT
@@ -47,13 +47,13 @@ runKaalChakraAndRescheduleJob h chakra jobData = do
     LYT.Completed -> do
       void $ Event.clearEventData chakra Nothing --- passing Nothing will only clear the batch number key, which is required for the next job from 0 again
       whenJust eventResult.eventId $ \eventId -> do
-        let updateUserTagJobData = LYT.mkUpdateTagDataFromKaalChakraJobData req eventId
+        let updateUserTagJobData = LYT.mkUpdateTagDataFromKaalChakraJobData req eventId jobData.startTime
         h.createUpdateUserTagDataJob chakra updateUserTagJobData (addUTCTime 60 timeAfterRun) -- starting updateTags job after 60 seconds of caching UserData
       pure Complete
     LYT.Failed -> do
       -- clear all event data and create new job for the next cycle
       void $ Event.clearEventData chakra eventResult.eventId
-      let newScheduleTime = getNextChakraTime timeAfterRun chakra
+      let newScheduleTime = getNextChakraTime jobData.startTime timeAfterRun chakra
       h.createFetchUserDataJob chakra jobData newScheduleTime
       pure $ Terminate "Fetch user data job failed"
 
@@ -68,34 +68,46 @@ runKaalChakraUpdateTagsJob h chakra jobData = do
   logInfo $ "Running " <> show chakra <> "UpdateTag Job"
   let req = mkRunKaalChakraUpdateTagJobReq chakra jobData
   eventResult <- Event.updateUserTagsHandler h req
-  now <- getCurrentTime
+  timeAfterRun <- getCurrentTime
   case eventResult.chakraBatchState of
     LYT.Continue shortDelayTime -> do
-      pure $ ReSchedule $ addUTCTime (fromIntegral shortDelayTime) now
+      pure $ ReSchedule $ addUTCTime (fromIntegral shortDelayTime) timeAfterRun
     LYT.Completed -> do
       void $ Event.clearEventData req.chakra eventResult.eventId
-      let newScheduleTime = getNextChakraTime now req.chakra
+      let newScheduleTime = getNextChakraTime jobData.startTime timeAfterRun req.chakra
       let fetchUserDataJobData = LYT.mkKaalChakraJobDataFromUpdateTagData req True
       h.createFetchUserDataJob chakra fetchUserDataJobData newScheduleTime
       pure Complete
     LYT.Failed -> do
       -- clear all event data and create new job for the next cycle
       void $ Event.clearEventData chakra eventResult.eventId
-      let newScheduleTime = getNextChakraTime now chakra
+      let newScheduleTime = getNextChakraTime jobData.startTime timeAfterRun chakra
       let fetchUserDataJobData = LYT.mkKaalChakraJobDataFromUpdateTagData req True
       h.createFetchUserDataJob chakra fetchUserDataJobData newScheduleTime
       pure $ Terminate "Update user tags job failed"
 
--- for now keeping the rescheduling of ckahra job to be at night 12:00 + some delta based on chakra type
-getNextChakraTime :: UTCTime -> LYT.Chakra -> UTCTime
-getNextChakraTime now chakra = do
-  let endOfDayToday = SWC.incrementPeriod SWCT.Days now
-  -- above function gives us the end of day time for the next day,
-  -- i.e. 00:00 of the next day no matter what the time today you run this function.
+getNextChakraTime :: Maybe UTCTime -> UTCTime -> LYT.Chakra -> UTCTime
+getNextChakraTime mbStartTime finishTime chakra = do
+  let (chakraDiffHours, chakraDays) :: (Integer, Integer) = case chakra of
+        LYT.Daily -> (1, 1)
+        LYT.Weekly -> (2, 7)
+        LYT.Monthly -> (3, 30)
+        LYT.Quarterly -> (4, 90)
+      timeZoneDiffTime = 19800 -- 5.5*3600
+      chakraDiffTime :: Time.DiffTime = Time.secondsToDiffTime $ 86400 + chakraDiffHours * 3600 - timeZoneDiffTime
+      startTime = fromMaybe (previousDiffTime chakraDiffTime finishTime) mbStartTime
+      nextChakraTime = addDays chakraDays startTime
+  max nextChakraTime (nextDiffTime (Time.utctDayTime nextChakraTime) finishTime) -- in case of very long jobs
 
-  -- adding n - 1 days below due to above.
-  flip addUTCTime endOfDayToday $ case chakra of
-    LYT.Daily -> 86400 + 3600 - 19800
-    LYT.Weekly -> 7 * 86400 + 7200 - 19800
-    LYT.Monthly -> 30 * 86400 + 10800 - 19800
-    LYT.Quarterly -> 90 * 86400 + 14400 - 19800
+addDays :: Integer -> UTCTime -> UTCTime
+addDays n = addUTCTime $ fromInteger (n * 86400)
+
+nextDiffTime :: Time.DiffTime -> UTCTime -> UTCTime
+nextDiffTime diff time = do
+  let currentDiffTime = time {Time.utctDayTime = diff}
+  if currentDiffTime > time then currentDiffTime else addDays 1 currentDiffTime
+
+previousDiffTime :: Time.DiffTime -> UTCTime -> UTCTime
+previousDiffTime diff time = do
+  let currentDiffTime = time {Time.utctDayTime = diff}
+  if currentDiffTime < time then currentDiffTime else addDays (-1) currentDiffTime

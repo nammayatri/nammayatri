@@ -357,7 +357,8 @@ data UpdateKaalBasedTagsJobReq = UpdateKaalBasedTagsJobReq
     maxBatches :: Int,
     batchDelayInSec :: Int,
     usersSet :: UsersSet,
-    chakra :: Chakra
+    chakra :: Chakra,
+    startTime :: Maybe UTCTime
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -366,7 +367,8 @@ data UpdateKaalBasedTagsData = UpdateKaalBasedTagsData
     updateUserTags :: Bool,
     usersInBatch :: Int,
     maxBatches :: Int,
-    batchDelayInSec :: Int
+    batchDelayInSec :: Int,
+    startTime :: Maybe UTCTime
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -400,15 +402,16 @@ data KaalChakraJobData = KaalChakraJobData
     parseQueryResults :: Bool,
     usersInBatch :: Int,
     maxBatches :: Int,
-    batchDelayInSec :: Int
+    batchDelayInSec :: Int,
+    startTime :: Maybe UTCTime
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-mkKaalChakraJobData :: RunKaalChakraJobReq -> KaalChakraJobData
-mkKaalChakraJobData RunKaalChakraJobReq {..} = KaalChakraJobData {..}
+mkKaalChakraJobData :: RunKaalChakraJobReq -> Maybe UTCTime -> KaalChakraJobData
+mkKaalChakraJobData RunKaalChakraJobReq {..} startTime = KaalChakraJobData {..}
 
-mkUpdateTagDataFromKaalChakraJobData :: RunKaalChakraJobReq -> Id Event -> UpdateKaalBasedTagsData
-mkUpdateTagDataFromKaalChakraJobData RunKaalChakraJobReq {..} eventId = UpdateKaalBasedTagsData {..}
+mkUpdateTagDataFromKaalChakraJobData :: RunKaalChakraJobReq -> Id Event -> Maybe UTCTime -> UpdateKaalBasedTagsData
+mkUpdateTagDataFromKaalChakraJobData RunKaalChakraJobReq {..} eventId startTime = UpdateKaalBasedTagsData {..}
 
 data KaalChakraAction = RUN | SCHEDULE UTCTime
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)

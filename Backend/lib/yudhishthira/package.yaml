@@ -128,6 +128,8 @@ dependencies:
   - hashable
   - json-logic-hs
   - scientific
+  - tasty
+  - tasty-hunit
 
 ghc-options:
   - -fwrite-ide-info
@@ -167,3 +169,12 @@ library:
   extra-libraries:
     - cac_client
 
+tests:
+  yudhishthira-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    dependencies:
+      - yudhishthira
+      - mobility-core

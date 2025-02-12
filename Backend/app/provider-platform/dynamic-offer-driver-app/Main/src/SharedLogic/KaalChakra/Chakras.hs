@@ -60,10 +60,12 @@ createFetchUserDataJob ::
   UTCTime ->
   m ()
 createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = case chakra of
-  LYT.Daily -> QAllJ.createJobByTime @_ @'Daily merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Weekly -> QAllJ.createJobByTime @_ @'Weekly merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Monthly -> QAllJ.createJobByTime @_ @'Monthly merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly merchantId merchantOperatingCityId scheduledTime jobData
+  LYT.Daily -> QAllJ.createJobByTime @_ @'Daily merchantId merchantOperatingCityId scheduledTime updJobData
+  LYT.Weekly -> QAllJ.createJobByTime @_ @'Weekly merchantId merchantOperatingCityId scheduledTime updJobData
+  LYT.Monthly -> QAllJ.createJobByTime @_ @'Monthly merchantId merchantOperatingCityId scheduledTime updJobData
+  LYT.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly merchantId merchantOperatingCityId scheduledTime updJobData
+  where
+    updJobData = jobData{startTime = Just scheduledTime}
 
 createUpdateUserTagDataJob ::
   ChakraJobs m r =>

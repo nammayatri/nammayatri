@@ -99,7 +99,7 @@ postNammaTagRunJob merchantShortId opCity req = do
       case req.usersSet of
         LYT.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
-      let jobData = LYT.mkKaalChakraJobData req
+      let jobData = LYT.mkKaalChakraJobData req (Just scheduledTime)
       kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
