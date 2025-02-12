@@ -54,3 +54,26 @@ instance IsHTTPError Error where
     MissingQueryFields _ -> E400
 
 instance IsAPIError Error
+
+data ChakraQueriesError
+  = ChakraQueriesAlreadyExists Text Text
+  | ChakraQueriesDoesNotExist Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ChakraQueriesError
+
+instance IsBaseError ChakraQueriesError where
+  toMessage = \case
+    ChakraQueriesAlreadyExists chakra queryName -> Just $ "Chakra query with chakra \"" <> chakra <> "\" and queryName \"" <> queryName <> "\" already exist"
+    ChakraQueriesDoesNotExist chakra queryName -> Just $ "Chakra query with chakra \"" <> chakra <> "\" and queryName \"" <> queryName <> "\" does not exist"
+
+instance IsHTTPError ChakraQueriesError where
+  toErrorCode = \case
+    ChakraQueriesAlreadyExists _ _ -> "CHAKRA_QUERIES_ALREADY_EXISTS"
+    ChakraQueriesDoesNotExist _ _ -> "CHAKRA_QUERIES_DOES_NOT_EXIST"
+
+  toHttpCode = \case
+    ChakraQueriesAlreadyExists _ _ -> E400
+    ChakraQueriesDoesNotExist _ _ -> E400
+
+instance IsAPIError ChakraQueriesError

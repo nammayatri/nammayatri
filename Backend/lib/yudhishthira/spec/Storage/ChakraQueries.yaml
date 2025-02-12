@@ -22,6 +22,10 @@ ChakraQueries:
     findAllByChakra:
       kvFunction: findAllWithKV
       where: chakra
+    deleteByPrimaryKey:
+      kvFunction: deleteWithKV
+      where:
+        and: [chakra, queryName]
 
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

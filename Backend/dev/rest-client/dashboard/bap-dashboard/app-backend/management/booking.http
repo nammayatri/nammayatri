@@ -6,7 +6,7 @@
 @customer_service = {{bap-dashboard/token/YATRI/customer_service}}
 
 # @name healthcheck
-GET {{bpp-dashboard-host}}
+GET {{bap-dashboard-host}}
 
 ###
 

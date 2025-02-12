@@ -132,21 +132,14 @@ postQueryCreate ::
   Lib.Yudhishthira.Types.ChakraQueriesAPIEntity ->
   m Kernel.Types.APISuccess.APISuccess
 postQueryCreate queryRequest = do
-  checkIfMandatoryFieldsArePresent queryRequest.queryResults
-  checkIfFieldsAreNotRepeated (queryRequest.queryResults <&> (.resultName))
+  validateQueryResults queryRequest.queryResults
   existingChakraQuery <- SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName
   whenJust existingChakraQuery $ \_ -> do
-    throwError $ InvalidRequest "Chakra query with this name already exists"
+    throwError $ ChakraQueriesAlreadyExists (show queryRequest.chakra) queryRequest.queryName
   chakraQuery <- buildQuery
 
   -- TODO find a better way to validate query than run it
-  let template =
-        KaalChakraEvent.Template
-          { limit = Lib.Yudhishthira.Types.QLimit 10,
-            offset = Lib.Yudhishthira.Types.QOffset 0,
-            usersSet = Lib.Yudhishthira.Types.ALL_USERS
-          }
-  void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery template
+  void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
   SQCQ.create chakraQuery
 
   pure Kernel.Types.APISuccess.Success
@@ -156,13 +149,55 @@ postQueryCreate queryRequest = do
       let Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..} = queryRequest
       return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, ..}
 
-    checkIfMandatoryFieldsArePresent newQueryFields = do
+postQueryUpdate ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Lib.Yudhishthira.Types.ChakraQueryUpdateReq ->
+  m Kernel.Types.APISuccess.APISuccess
+postQueryUpdate queryRequest = do
+  whenJust queryRequest.queryResults validateQueryResults
+  existingChakraQuery <-
+    SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName >>= fromMaybeM (ChakraQueriesDoesNotExist (show queryRequest.chakra) queryRequest.queryName)
+  chakraQuery <- buildUpdatedQuery existingChakraQuery
+
+  void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
+  SQCQ.updateByPrimaryKey chakraQuery
+
+  pure Kernel.Types.APISuccess.Success
+  where
+    buildUpdatedQuery existingChakraQuery = do
+      let queryResults = fromMaybe existingChakraQuery.queryResults queryRequest.queryResults
+      let queryText = fromMaybe existingChakraQuery.queryText queryRequest.queryText
+      return $ existingChakraQuery{queryResults = queryResults, queryText = queryText}
+
+validateQueryResults :: (MonadThrow m, Log m) => [Lib.Yudhishthira.Types.QueryResult] -> m ()
+validateQueryResults newQueryFields = do
+  checkIfMandatoryFieldsArePresent
+  checkIfFieldsAreNotRepeated $ newQueryFields <&> (.resultName)
+  where
+    checkIfMandatoryFieldsArePresent = do
       let missingFields = filter (\field -> field `notElem` (newQueryFields <&> (.resultName))) mandatoryChakraFields
       unless (null missingFields) $ throwError (MissingQueryFields missingFields)
 
     checkIfFieldsAreNotRepeated newQueryFieldNames = do
       let repeatedFields = filter (\f -> length (filter (== f) newQueryFieldNames) > 1) newQueryFieldNames
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
+
+defaultTemplate :: KaalChakraEvent.Template
+defaultTemplate =
+  KaalChakraEvent.Template
+    { limit = Lib.Yudhishthira.Types.QLimit 10,
+      offset = Lib.Yudhishthira.Types.QOffset 0,
+      usersSet = Lib.Yudhishthira.Types.ALL_USERS
+    }
+
+queryDelete ::
+  BeamFlow m r =>
+  Lib.Yudhishthira.Types.ChakraQueryDeleteReq ->
+  m Kernel.Types.APISuccess.APISuccess
+queryDelete queryRequest = do
+  void $ SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName >>= fromMaybeM (ChakraQueriesDoesNotExist (show queryRequest.chakra) queryRequest.queryName)
+  SQCQ.deleteByPrimaryKey queryRequest.chakra queryRequest.queryName
+  return Kernel.Types.APISuccess.Success
 
 verifyTag :: BeamFlow m r => Lib.Yudhishthira.Types.TagNameValue -> m (Maybe DNT.NammaTag)
 verifyTag (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
