@@ -50,6 +50,7 @@ types:
     tiers: [DriverVehicleServiceTier]
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
+    canSwitchToIntraCity: Maybe Bool
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
       isWorking: Bool

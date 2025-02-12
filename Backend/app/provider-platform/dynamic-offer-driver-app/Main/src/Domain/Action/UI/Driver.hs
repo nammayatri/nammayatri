@@ -303,6 +303,7 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
+    canSwitchToIntraCity :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -381,6 +382,7 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
+    canSwitchToIntraCity :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -428,6 +430,7 @@ data UpdateDriverReq = UpdateDriverReq
     canDowngradeToTaxi :: Maybe Bool,
     canSwitchToRental :: Maybe Bool,
     canSwitchToInterCity :: Maybe Bool,
+    canSwitchToIntraCity :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -939,6 +942,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         canSwitchToRental = driverInfo.canSwitchToRental,
         canSwitchToInterCity = driverInfo.canSwitchToInterCity,
+        canSwitchToIntraCity = driverInfo.canSwitchToIntraCity,
         mode = driverInfo.mode,
         payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
@@ -1030,6 +1034,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
           canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
           canSwitchToInterCity = fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity
+          canSwitchToIntraCity = fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity
           availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
           selectedServiceTiers =
             case vehicle.variant of
@@ -1056,7 +1061,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
