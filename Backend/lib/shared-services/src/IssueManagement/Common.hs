@@ -270,6 +270,33 @@ data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKI
   deriving stock (Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data MandatoryUploads = MandatoryUploads
+  { fileType :: S3.FileType,
+    limit :: Int
+  }
+  deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be MandatoryUploads where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance FromField MandatoryUploads where
+  fromField = fromFieldEnum
+
+instance FromField [MandatoryUploads] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [MandatoryUploads] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [MandatoryUploads]
+
+instance FromBackendRow Postgres [MandatoryUploads]
+
+instance {-# OVERLAPPING #-} ToSQLObject MandatoryUploads where
+  convertToSQLObject = SQLObjectValue . show
+
 data KaptureConfig = KaptureConfig
   { queue :: Text,
     sosQueue :: Maybe Text,
@@ -325,24 +352,6 @@ instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [CxAgent
   sqlValueSyntax batchList =
     let x = (show <$> batchList :: [Text])
      in sqlValueSyntax (V.fromList x)
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [(S3.FileType, Int)] where
-  sqlValueSyntax batchList =
-    let x = (show <$> batchList :: [Text])
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [(S3.FileType, Int)]
-
-instance FromBackendRow Postgres [(S3.FileType, Int)]
-
-instance FromField (S3.FileType, Int) where
-  fromField = fromFieldEnum
-
-instance FromField [(S3.FileType, Int)] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance {-# OVERLAPPING #-} ToSQLObject (S3.FileType, Int) where
-  convertToSQLObject = SQLObjectValue . show
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [CxAgentDetails]
 
