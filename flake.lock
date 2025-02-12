@@ -3613,16 +3613,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1739353260,
+        "lastModified": 1739360695,
         "narHash": "sha256-ENaj5IDl9AS0AoCzSYuSDFt0SeIDbxRGS3NbpmmQOO4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6c93f3b6650f879b877be03aa0fa8e0cee83beeb",
+        "rev": "0763910a59730cecf7c7d90880a5bb7c7373ab99",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/hedis-upgrade-for-zone-aware-replica-usage",
         "repo": "shared-kernel",
         "type": "github"
       }
