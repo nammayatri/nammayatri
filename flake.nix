@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/hedis-upgrade-for-zone-aware-replica-usage";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
