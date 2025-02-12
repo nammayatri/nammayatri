@@ -108,7 +108,7 @@ getAllDrivers locationDelay now = do
 getDriversBatchFromKey :: Text -> Seconds -> UTCTime -> Flow [Text]
 getDriversBatchFromKey key locationDelay now = do
   let presentTime = negate (fromIntegral locationDelay) `addUTCTime` now
-  batchSize <- fromMaybe 100 . fmap (.batchSize) <$> asks (.healthCheckAppCfg)
+  batchSize <- 10 * (fromMaybe 10 . fmap (.batchSize) <$> asks (.healthCheckAppCfg))
   redisRes <- Redis.withCrossAppRedis $ Redis.zRangeByScoreByCount key 0 (utcToDouble presentTime) 0 batchSize
   pure $ mapMaybe decode redisRes
   where
