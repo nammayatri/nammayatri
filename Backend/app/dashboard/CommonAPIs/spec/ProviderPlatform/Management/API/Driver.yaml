@@ -24,7 +24,7 @@ imports:
   PersonMobileNoReq: Dashboard.Common
   PersonRes: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
-  DriverFeeStatus:  Dashboard.Common.Driver
+  DriverFeeStatus: Dashboard.Common.Driver
   TagNameValue: Lib.Yudhishthira.Types
 
 module: Driver
@@ -280,7 +280,7 @@ apis:
         type: UpdateDriverNameReq
       response:
         type: APISuccess
-      validation: Dashboard.ProviderPlatform.Management.Driver.validateUpdateDriverNameReq
+      # validation: Dashboard.ProviderPlatform.Management.Driver.validateUpdateDriverNameReq
       migrate:
         endpoint: DriverAPI UpdateDriverNameEndpoint
         endpointV2:
@@ -614,8 +614,8 @@ types:
     - serviceName: ServiceNames
     - feeType: DriverFeeType
     - platformFee: HighPrecMoney
-    - sgstPercentage : Maybe HighPrecMoney
-    - cgstPercentage : Maybe HighPrecMoney
+    - sgstPercentage: Maybe HighPrecMoney
+    - cgstPercentage: Maybe HighPrecMoney
     - currency: Maybe Currency
     - sendManualLink: Bool
   DriverFeeType:
@@ -647,25 +647,25 @@ types:
     - documentType: SyncDocType
     - derive: "'HideSecrets"
   SecurityDepositDfStatusRes:
-    - securityDepositStatus : DriverFeeStatus
-    - securityDepositAmountWithCurrency : Maybe PriceAPIEntity
-    - driverFeeId : Text
-    - createdAt : UTCTime
+    - securityDepositStatus: DriverFeeStatus
+    - securityDepositAmountWithCurrency: Maybe PriceAPIEntity
+    - driverFeeId: Text
+    - createdAt: UTCTime
   RefundByPayoutReq:
-    - serviceName : ServiceNames
-    - refundAmountDeduction : HighPrecMoney
-    - payerVpa : Maybe Text
-    - driverFeeType : DriverFeeType
-    - refundAmountSegregation : Maybe Text
+    - serviceName: ServiceNames
+    - refundAmountDeduction: HighPrecMoney
+    - payerVpa: Maybe Text
+    - driverFeeType: DriverFeeType
+    - refundAmountSegregation: Maybe Text
     - derive: "'HideSecrets"
   PanAadharSelfieDetailsListResp:
-    - transactionId : Text
-    - verificationStatus : Maybe Text
-    - failureReason : Maybe Text
-    - createdAt : UTCTime
-    - updatedAt : UTCTime
-    - imageId1 : Maybe Text
-    - imageId2 : Maybe Text
+    - transactionId: Text
+    - verificationStatus: Maybe Text
+    - failureReason: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - imageId1: Maybe Text
+    - imageId2: Maybe Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

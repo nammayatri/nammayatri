@@ -197,9 +197,6 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId req 
 
 getDriverFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.FleetOwnerInfoRes
 getDriverFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId = do
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
-  unless (fleetOwnerId == driverId.getId) $
-    throwError AccessDenied
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerInfo) driverId
 
