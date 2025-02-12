@@ -199,7 +199,7 @@ data IssueOptionRes = IssueOptionRes
   { issueOptionId :: Id IssueOption,
     label :: Text,
     option :: Text,
-    mandatoryUploads :: Maybe [(FileType, Int)]
+    mandatoryUploads :: Maybe [MandatoryUploads]
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
 
