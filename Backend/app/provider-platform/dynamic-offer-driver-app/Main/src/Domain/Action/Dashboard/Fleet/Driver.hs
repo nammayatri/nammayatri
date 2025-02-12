@@ -69,6 +69,7 @@ import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.EmptyDynamicParam
+import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import Domain.Types.FleetOwnerInformation as FOI
@@ -1025,14 +1026,24 @@ getDriverFleetOwnerInfo ::
 getDriverFleetOwnerInfo _ _ driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   fleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  fleetConfig <- QFC.findByPrimaryKey personId
   panDetails <- B.runInReplica $ DPC.findByDriverId personId
   panNumber <- case panDetails of
     Just pan -> Just <$> decrypt pan.panCardNumber
     Nothing -> pure Nothing
-  makeFleetOwnerInfoRes panNumber fleetOwnerInfo
+  makeFleetOwnerInfoRes panNumber fleetConfig fleetOwnerInfo
   where
-    makeFleetOwnerInfoRes :: Maybe Text -> DFOI.FleetOwnerInformation -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes panNumber DFOI.FleetOwnerInformation {..} = do
+    makeFleetOwnerInfoRes :: Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes panNumber mbFleetConfig DFOI.FleetOwnerInformation {..} = do
+      let fleetConfig =
+            mbFleetConfig <&> \fleetConfig' ->
+              Common.FleetConfig
+                { allowAutomaticRoundTripAssignment = fleetConfig'.allowAutomaticRoundTripAssignment,
+                  allowEndingMidRoute = fleetConfig'.allowEndingMidRoute,
+                  allowStartRideFromQR = fleetConfig'.allowStartRideFromQR,
+                  endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
+                  rideEndApproval = fleetConfig'.rideEndApproval
+                }
       return $ Common.FleetOwnerInfoRes {panNumber = panNumber, fleetType = show fleetType, ..}
 
 ---------------------------------------------------------------------
