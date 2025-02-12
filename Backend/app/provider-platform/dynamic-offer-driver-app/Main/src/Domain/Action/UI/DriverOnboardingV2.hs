@@ -347,6 +347,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
       { tiers = tierOptions,
         canSwitchToRental = if canSwitchToRental' then Just driverInfo.canSwitchToRental else Nothing,
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
+        canSwitchToIntraCity = if canSwitchToInterCity' || canSwitchToRental' then Just driverInfo.canSwitchToIntraCity else Nothing,
         airConditioned = mbAirConditioned
       }
 
@@ -402,7 +403,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           False
           driverVehicleServiceTierTypes
 
-  QDI.updateRentalAndInterCitySwitch canSwitchToRental' canSwitchToInterCity' personId
+  QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' (fromMaybe driverInfo.canSwitchToIntraCity canSwitchToIntraCity) personId
 
   return Success
 

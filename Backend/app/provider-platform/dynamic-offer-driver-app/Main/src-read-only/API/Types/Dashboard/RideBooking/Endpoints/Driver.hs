@@ -52,6 +52,7 @@ data DriverInfoRes = DriverInfoRes
     canDowngradeToTaxi :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Bool,
+    canSwitchToIntraCity :: Kernel.Prelude.Bool,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     selectedServiceTiers :: [Kernel.Prelude.Text],
     driverLicenseDetails :: Kernel.Prelude.Maybe DriverLicenseAPIEntity,

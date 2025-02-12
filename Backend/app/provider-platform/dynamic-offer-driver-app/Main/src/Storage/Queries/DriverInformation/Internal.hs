@@ -65,6 +65,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity 
             <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
+            <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
         )
     ]
   where
@@ -95,6 +96,7 @@ getSpecialLocWarriorDriverInfoWithCond driverLocs onlyNotOnRide onlyOnRide isRen
             <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
+            <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
             <> [Se.Is BeamDI.isSpecialLocWarrior $ Se.Eq (Just True)]
         )
     ]
