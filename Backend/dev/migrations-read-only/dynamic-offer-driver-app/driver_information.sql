@@ -192,3 +192,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN onboarding_vehi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN services_enabled_for_subscription text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_intra_city boolean  default true;
