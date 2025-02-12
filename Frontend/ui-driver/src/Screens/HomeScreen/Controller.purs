@@ -330,6 +330,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
+                    | MeterLocationScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -489,6 +490,7 @@ data Action = NoAction
             | FavPopUpAction PopUpModal.Action
             | CompleteProfileAction PopUpModal.Action
             | ParcelIntroductionPopup PopUpModal.Action
+            | MeterPopUp PopUpModal.Action
             | ToggleMetroWarriors
             | ClickMetroWarriors
             | MetroWarriorPopupAC PopUpModal.Action
@@ -496,6 +498,7 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
+            | ShowMeterPopUp
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -515,6 +518,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
+
+eval ShowMeterPopUp state = continue state{props{showMeterPopup = true}}
 
 eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
 
@@ -616,7 +621,7 @@ eval (BannerChanged item) state = do
 
 eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
-  continue newState
+  update newState
 
 
 eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
@@ -1805,6 +1810,12 @@ eval (ParcelIntroductionPopup action) state = do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_parcel_introduction_clicked"
       void $ pure $ setValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP "false"
       continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
+
+eval (MeterPopUp action) state = do
+  case action of
+    PopUpModal.DismissPopup -> continue state
+    PopUpModal.OnButton1Click -> exit $ MeterLocationScreen state{props{showMeterPopup = false}}
+    _ -> update state
 
 eval (MetroWarriorSwitchAction SwitchButtonView.OnClick) state = exit $ UpdateToggleMetroWarriors state
 

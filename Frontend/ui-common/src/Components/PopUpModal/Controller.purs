@@ -101,7 +101,8 @@ type Config = {
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
     completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
-    deliveryDetailsConfig :: DeliveryDetailsConfig
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w)
 }
 
 type DeliveryDetailsConfig = {
@@ -717,6 +718,7 @@ config = {
     gravity : CENTER
   }
   , layout : Mb.Nothing
+  , externalHeader : Mb.Nothing
   , upiDetailConfig : {
       visibility : GONE,
       upiID : "",

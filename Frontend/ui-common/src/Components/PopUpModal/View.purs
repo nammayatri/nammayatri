@@ -106,6 +106,7 @@ view push state =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dismiss" 
             ]
         ]
+      , maybe noView (\layout -> layout) state.externalHeader
      , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -304,6 +305,7 @@ view push state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
+            , padding state.primaryText.padding
             ]
             [ imageView [
                width state.primaryText.prefixImage.width

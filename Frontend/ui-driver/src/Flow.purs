@@ -203,13 +203,13 @@ baseAppFlow baseFlow event driverInfoResponse = do
     updateNightSafetyPopup
     void $ liftFlowBT initiateLocationServiceClient
     updateOperatingCity
+    homeScreenFlow
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit  
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
-    when baseFlow $ showParcelIntroductionPopup
-    initialFlow    
+    when baseFlow $ showParcelIntroductionPopup    
     where
     updateOperatingCity :: FlowBT String Unit
     updateOperatingCity = do
@@ -2459,21 +2459,21 @@ homeScreenFlow = do
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   setValueToLocalStore LOGS_TRACKING "false"
-  Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
-    void $ pure $ cleverTapSetLocation unit
-    if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
-      then do  
-        currentRideFlow Nothing Nothing
-      else do 
-        pure unit
-    (GlobalState globalState) <- getState  
-    getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
-    checkDriverBlockingStatus getDriverInfoResp globalState.homeScreen.data.config.subscriptionConfig.enableBlocking
-    when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-    updateBannerAndPopupFlags  
-    void $ lift $ lift $ toggleLoader false
-    liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
-  liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration" 
+  -- Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
+  --   void $ pure $ cleverTapSetLocation unit
+  --   if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
+  --     then do  
+  --       currentRideFlow Nothing Nothing
+  --     else do 
+  --       pure unit
+  --   (GlobalState globalState) <- getState  
+  --   getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
+  --   checkDriverBlockingStatus getDriverInfoResp globalState.homeScreen.data.config.subscriptionConfig.enableBlocking
+  --   when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
+  --   updateBannerAndPopupFlags  
+  --   void $ lift $ lift $ toggleLoader false
+  --   liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
+  -- liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration" 
   action <- UI.homeScreen 
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case action of             
@@ -3141,6 +3141,10 @@ homeScreenFlow = do
       updateWarriorSettings $ not state.data.isSpecialLocWarrior
       homeScreenFlow
     GO_TO_METRO_WARRIOR state -> metroWarriorsScreenFlow
+    GO_TO_METER_RIDE_SCREEN -> do
+      (GlobalState globalState) <- getState
+      let state = globalState.homeScreen
+      homeScreenFlow
   homeScreenFlow
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit

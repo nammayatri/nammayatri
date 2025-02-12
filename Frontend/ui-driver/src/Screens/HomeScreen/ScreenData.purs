@@ -290,6 +290,7 @@ initData =
       , chatServiceKilled : false
       , checkUpcomingRide : true
       , homeScreenBannerVisibility : false
+      , showMeterPopup : false
       , rideRequestPill :{
         isPillClickable :  true,
         pillShimmerVisibility : true,

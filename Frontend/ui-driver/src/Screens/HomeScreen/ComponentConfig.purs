@@ -55,7 +55,8 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity, margin, linearLayout, textView, background, imageView, imageWithFallback, text, color, height, width, weight)
+import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
@@ -3061,6 +3062,86 @@ parcelIntroductionPopup state = PopUpModal.config {
     , width = V (EHC.screenWidth unit - 80)
     , height = V (EHC.screenWidth unit - 180)
     }
+  }
+
+meterPopup :: ST.HomeScreenState -> PopUpModal.Config
+meterPopup state = PopUpModal.config {
+    popUpHeaderConfig {
+      visibility = VISIBLE,
+      orientation = "",
+      padding = PaddingTop 0,
+      height = WRAP_CONTENT,
+      headingText {
+        text = "Quick rides, book without customer app!",
+        color = Color.black800,
+        textStyle = SubHeading1,
+        gravity = START
+      },
+      subHeadingText {
+        visibility = GONE
+      }
+    },
+    gravity = CENTER,
+    backgroundClickable = true,
+    dismissPopup = true,
+    isVisible = true,
+    margin = MarginHorizontal 24 24,
+    padding = Padding 16 24 16 0,
+    optionButtonOrientation = "HORIZONTAL",
+    cornerRadius = PTD.Corners 15.0 false false true true,
+    primaryText {
+      text = "• Get customers quickly and easily!",
+      textStyle = Body1,
+      color = Color.black700,
+      margin = Margin 0 16 0 4,
+      padding = PaddingHorizontal 5 16,
+      gravity = START
+      },
+    secondaryText{
+      visibility = VISIBLE,
+      textStyle = Body1,
+      color = Color.black700,
+      margin = Margin 0 10 0 4,
+      padding = PaddingHorizontal 5 16,
+      gravity = START,
+      text = "• Earn ₹100 extra when a new customer <b>   installs the app </b> and completes the ride!"
+      },
+    option1 {
+      text = "Proceed",
+      color = Color.yellow900,
+      background = Color.black900,
+      textStyle = FontStyle.SubHeading3,
+      strokeColor = Color.black900,
+      margin = MarginTop 24
+    },
+    option2 { visibility = false },
+    coverImageConfig {
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_meter_rides_cover"
+    , visibility = VISIBLE
+    , width = V (EHC.screenWidth unit - 80)
+    , height = V (EHC.screenWidth unit - 250)
+    , margin = MarginTop 16
+    },
+    externalHeader = Just 
+      $ linearLayout[
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background "#FFF9EB"
+      , padding $ Padding 16 16 16 16
+      , margin $ MarginHorizontal 24 24
+      , cornerRadii $ PTD.Corners 15.0 true true false false
+      ][
+        textView
+        ([ text "Namma Meter Rides"
+        , color Color.black800
+        , weight 1.0
+        ] <> FontStyle.h2 TypoGraphy)
+      , imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_odometer_yellow"
+        , height $ V 30
+        , width $ V 30
+        ]
+      ]
   }
   
 disableMetroWarriorWarningPopup :: ST.HomeScreenState-> PopUpModal.Config
