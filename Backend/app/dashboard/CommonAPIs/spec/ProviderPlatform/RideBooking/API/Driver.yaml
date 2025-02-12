@@ -264,6 +264,7 @@ types:
     - canDowngradeToTaxi: Bool
     - canSwitchToRental: Bool
     - canSwitchToInterCity: Bool
+    - canSwitchToIntraCity: Bool
     - vehicleNumber: Maybe Text
     - selectedServiceTiers: [Text]
     - driverLicenseDetails: Maybe DriverLicenseAPIEntity
