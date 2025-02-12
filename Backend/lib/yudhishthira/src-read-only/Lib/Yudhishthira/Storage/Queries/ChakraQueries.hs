@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] -> m ())
 createMany = traverse_ create
 
+deleteByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Text -> m ())
+deleteByPrimaryKey chakra queryName = do deleteWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]
+
 findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
 findAllByChakra chakra = do findAllWithKV [Se.Is Beam.chakra $ Se.Eq chakra]
 
