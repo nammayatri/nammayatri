@@ -1304,6 +1304,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
           CQFProduct.create fareProduct
           CQFProduct.clearCache fareProduct
+          oldFareProducts `forM_` CQFProduct.clearCache
 
           return (errors, newBoundedAlreadyDeletedMap)
 
