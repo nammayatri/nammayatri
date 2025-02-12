@@ -171,7 +171,7 @@ postNammaTagRunJob merchantShortId opCity req = do
       case req.usersSet of
         Lib.Yudhishthira.Types.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
-      let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req
+      let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req (Just scheduledTime)
       kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
