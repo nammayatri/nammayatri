@@ -2,7 +2,6 @@
 
 module IssueManagement.Domain.Types.Issue.IssueOption where
 
-import qualified AWS.S3 as S3
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import qualified IGM.Enums as Spec
@@ -28,6 +27,6 @@ data IssueOption = IssueOption
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     igmSubCategory :: Maybe Spec.IssueSubCategory,
-    mandatoryUploads :: Maybe [(S3.FileType, Int)]
+    mandatoryUploads :: Maybe [Common.MandatoryUploads]
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)

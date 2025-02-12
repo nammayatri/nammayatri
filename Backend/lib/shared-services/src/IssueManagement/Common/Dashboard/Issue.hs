@@ -6,7 +6,6 @@ module IssueManagement.Common.Dashboard.Issue
   )
 where
 
-import qualified AWS.S3 as S3
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as BL
@@ -254,7 +253,7 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool,
     igmSubCategory :: Maybe Spec.IssueSubCategory,
-    mandatoryUploads :: Maybe [(S3.FileType, Int)]
+    mandatoryUploads :: Maybe [Common.MandatoryUploads]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -316,7 +315,7 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
     restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool,
     igmCategory :: Maybe Text,
-    mandatoryUploads :: Maybe [(S3.FileType, Int)]
+    mandatoryUploads :: Maybe [Common.MandatoryUploads]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
