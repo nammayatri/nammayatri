@@ -568,7 +568,7 @@ postDriverUpdateByPhoneNumber merchantShortId _ phoneNumber req = do
 ---------------------------------------------------------------------
 postDriverUpdateName :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
 postDriverUpdateName merchantShortId opCity reqDriverId req = do
-  runRequestValidation Common.validateUpdateDriverNameReq req
+  -- runRequestValidation Common.validateUpdateDriverNameReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId

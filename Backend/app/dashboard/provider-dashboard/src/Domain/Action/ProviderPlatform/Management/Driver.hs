@@ -194,7 +194,7 @@ postDriverUpdateByPhoneNumber merchantShortId opCity apiTokenInfo phoneNo req = 
 
 postDriverUpdateName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
 postDriverUpdateName merchantShortId opCity apiTokenInfo driverId req = do
-  runRequestValidation Common.validateUpdateDriverNameReq req
+  -- runRequestValidation Common.validateUpdateDriverNameReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
