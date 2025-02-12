@@ -46,10 +46,10 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
   let locationDelay = healthCheckAppCfg.driverAllowedDelayForLocationUpdateInSec
       serviceInterval = healthCheckAppCfg.driverLocationHealthCheckIntervalInSec
       fcmNofificationSendCount = healthCheckAppCfg.fcmNofificationSendCount
-  withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
+  key <- incrementCounterAndReturnShard
+  withLock (key <> ":lock") $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    key <- incrementCounterAndReturnShard
     drivers <- getDriversBatchFromKey key locationDelay now
     case nonEmpty drivers of
       Just allDrivers -> do
@@ -65,7 +65,7 @@ redisKey driverId = "beckn:driver-tracking-healthcheck:drivers-to-ping:" <> driv
 
 driverDevicePingService :: Text -> Int -> Flow (Maybe Text)
 driverDevicePingService driverId fcmNofificationSendCount = do
-  log INFO "Ping driver"
+  log INFO ("Pinging driver: " <> driverId)
   SQP.findById (Id driverId) >>= \case
     Nothing -> log ERROR ("Driver not found: " <> driverId) >> pure (Just $ T.decodeUtf8 $ BSL.toStrict $ A.encode driverId)
     Just driver ->
