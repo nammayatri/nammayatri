@@ -10,6 +10,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Common
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -61,6 +62,7 @@ data Booking = Booking
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

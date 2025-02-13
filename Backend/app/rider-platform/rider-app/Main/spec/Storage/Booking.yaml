@@ -33,6 +33,7 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  Journey: Domain.Types.Journey
   ParcelType: Domain.Types.ParcelDetails
 
 BookingLocation:
@@ -231,6 +232,7 @@ Booking:
     isDeleted: Maybe Bool
     isSkipped: Maybe Bool
     configInExperimentVersions: "[ConfigVersionMap]"
+    journeyId: Maybe (Id Journey)
 
   beamFields:
     estimatedDistance:
