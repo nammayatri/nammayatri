@@ -77,7 +77,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
             backlogPayoutAmount = 0,
-            isBackfilled = Just True,
+            isBackfilled = Just False,
             ..
           }
   return personStatsValues
