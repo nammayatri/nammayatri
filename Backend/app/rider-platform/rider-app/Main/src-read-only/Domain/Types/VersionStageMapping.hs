@@ -4,8 +4,6 @@
 module Domain.Types.VersionStageMapping where
 
 import Data.Aeson
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -18,8 +16,6 @@ data VersionStageMapping = VersionStageMapping
     stageName :: Kernel.Prelude.Text,
     status :: Domain.Types.VersionStageMapping.Status,
     versionId :: Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

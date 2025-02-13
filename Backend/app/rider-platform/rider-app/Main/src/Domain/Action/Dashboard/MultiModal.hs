@@ -17,9 +17,10 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Rollout
 import qualified Domain.Types.Route as DR
 import qualified Domain.Types.RouteStopMapping as DRSM
+import qualified Domain.Types.Stage as DStage
 import Domain.Types.Station
-import qualified Domain.Types.Version
-import Domain.Types.VersionStageMapping
+import qualified Domain.Types.Version as DVersion
+import qualified Domain.Types.VersionStageMapping as DVSMapping
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
@@ -30,36 +31,93 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Version as CQV
 import qualified Storage.Queries.Rollout as QRollout
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteStopMapping as QRSM
+import qualified Storage.Queries.Stage as QStage
 import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Version as QV
 import qualified Storage.Queries.VersionStageMapping as QVSM
+import System.Exit (ExitCode (..))
 import System.Process
 import Tools.Error
 
 postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
-postMultiModalMultimodalFrfsDataPreprocess _merchantShortId _opCity req = do
+postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity req = do
+  moc <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId-" <> merchantShortId.getShortId <> " opCity-" <> show opCity)
   case req.inputDataType of
     MTypes.GTFS_DATA -> case req.fileFormat of
       MTypes.GTFS -> do
         versionId <- generateGUID
-        let inputFile = req.file
-            outputFile = "cleaned-" <> req.file
-            command = "gtfstidy --remove-red-trips --remove-red-stops --drop-shapes -o " <> outputFile <> " " <> inputFile
+        now <- getCurrentTime
         filePath <- S3.createFilePath "/multimodal/" ("version-" <> versionId) S3.Zip "zip"
-        liftIO $ callCommand command
-        zipFile <- L.runIO $ base64Encode <$> BS.readFile outputFile
-        _ <- fork "S3 Put Multimodal GTFS data" $ S3.put (T.unpack filePath) zipFile
+        oldVersions <- CQV.findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType (Just moc.id) req.vehicleType Domain.Types.Extra.Rollout.GTFS False
+        let oldVersionTag = fromMaybe 0 (getMaxVersionTag oldVersions)
+            version = DVersion.Version {id = Kernel.Types.Id.Id versionId, inputDataType = Domain.Types.Extra.Rollout.GTFS, isReadyToApply = False, vehicleType = req.vehicleType, versionTag = oldVersionTag + 1, gtfsLink = Just filePath, merchantId = Just moc.merchantId, merchantOperatingCityId = Just moc.id, createdAt = now, updatedAt = now}
+        void $ QV.create version
+        stages <- QStage.findByMerchantOperatingCityAndVehicleTypeAndInputDataType (Just moc.id) req.vehicleType Domain.Types.Extra.Rollout.GTFS
+        let sortedStages = sortOn (.order) stages
+        let outputFile = "cleaned-" <> req.file
+        fork "Processing Stages" $ processStages sortedStages version.id req.file outputFile filePath
         pure $
           MTypes.PreprocessFRFSDataResp
             { versionId = versionId,
-              versionTag = 1
+              versionTag = oldVersionTag + 1
             }
       MTypes.JSON -> error "Logic yet to be decided"
       MTypes.CSV -> error "Logic yet to be decided"
     MTypes.FARE_DATA -> error "Logic yet to be decided"
+  where
+    getMaxVersionTag :: [DVersion.Version] -> Maybe Int
+    getMaxVersionTag [] = Nothing
+    getMaxVersionTag versions = Just . maximum $ map (.versionTag) versions
+
+    processStages :: [DStage.Stage] -> Kernel.Types.Id.Id DVersion.Version -> FilePath -> FilePath -> Text -> Environment.Flow ()
+    processStages [] _ _ _ _ = pure ()
+    processStages (stage : stages) versionId inputFile outputFile uploadFilePath = do
+      isSuccess <- processStage stage.name versionId inputFile outputFile uploadFilePath stage
+      bool (processStages stages versionId inputFile outputFile uploadFilePath) (pure ()) isSuccess
+
+    processStage :: DStage.StageName -> Kernel.Types.Id.Id DVersion.Version -> FilePath -> FilePath -> Text -> DStage.Stage -> Environment.Flow (Bool)
+    processStage DStage.PREPROCESSING _ _ _ _ _ = error "Logic yet to be decided"
+    processStage DStage.VALIDATION versionId inputFile outputFile _ stage = do
+      vsmId <- generateGUID
+      now <- getCurrentTime
+      let vsMapping = DVSMapping.VersionStageMapping {id = vsmId, versionId = versionId.getId, stageId = stage.id.getId, status = DVSMapping.Inprogress, stageData = Nothing, failureReason = Nothing, stageName = show stage.name, updatedAt = now, createdAt = now}
+      void $ QVSM.create vsMapping
+      isValid <- validateGTFSData inputFile outputFile vsmId
+      when isValid $ void $ QVSM.updateSuccessById DVSMapping.Completed vsmId
+      pure isValid
+    processStage DStage.UPLOAD versionId _ outputFile uploadFilePath stage = do
+      vsmId <- generateGUID
+      now <- getCurrentTime
+      let vsMapping = DVSMapping.VersionStageMapping {id = vsmId, versionId = versionId.getId, stageId = stage.id.getId, status = DVSMapping.Inprogress, stageData = Nothing, failureReason = Nothing, stageName = show stage.name, updatedAt = now, createdAt = now}
+      void $ QVSM.create vsMapping
+      void $ uploadGTFSData outputFile uploadFilePath vsmId
+      void $ QVSM.updateSuccessById DVSMapping.Completed vsmId
+      pure True
+
+    validateGTFSData :: FilePath -> FilePath -> Kernel.Types.Id.Id DVSMapping.VersionStageMapping -> Environment.Flow (Bool)
+    validateGTFSData inputFile outputFile vsmId = do
+      let validateCommand = "gtfstidy"
+          args = ["-v", inputFile]
+      (exitCode, _, errorText) <- liftIO $ readProcessWithExitCode validateCommand args ""
+      case exitCode of
+        ExitSuccess -> do
+          let cleanupCommand = "gtfstidy --remove-red-trips --remove-red-stops --drop-shapes -o " <> outputFile <> " " <> inputFile
+          liftIO $ callCommand cleanupCommand
+          pure True
+        ExitFailure code -> do
+          void $ QVSM.updateFailureById (Just $ "GTFS validation failed with exit code " <> show code <> ":" <> show errorText) DVSMapping.Failed vsmId
+          pure False
+
+    uploadGTFSData :: FilePath -> Text -> Kernel.Types.Id.Id DVSMapping.VersionStageMapping -> Environment.Flow ()
+    uploadGTFSData outputFile filePath vsmId = do
+      zipFile <- L.runIO $ base64Encode <$> BS.readFile outputFile
+      void $ S3.put (T.unpack filePath) zipFile
+      void $ QVSM.updateSuccessById DVSMapping.Completed vsmId
 
 -- Get All Stages for Data Type and City
 -- Iterate on each stage, till reching the end, and create next stage if current is completed
@@ -76,13 +134,13 @@ postMultiModalMultimodalFrfsDataStatus _ _ req = do
   stageData <- traverse mkFRFSDataStatus versionStageMappings
   return $ API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp req.versionId stageData
 
-mkFRFSDataStatus :: (MonadFlow m) => VersionStageMapping -> m API.Types.RiderPlatform.Management.MultiModal.StageInfo
+mkFRFSDataStatus :: (MonadFlow m) => DVSMapping.VersionStageMapping -> m API.Types.RiderPlatform.Management.MultiModal.StageInfo
 mkFRFSDataStatus mapping = return $ API.Types.RiderPlatform.Management.MultiModal.StageInfo mapping.stageName (mapStatus mapping.status)
 
-mapStatus :: Status -> API.Types.RiderPlatform.Management.MultiModal.StageStatus
-mapStatus Inprogress = API.Types.RiderPlatform.Management.MultiModal.INPROGRESS
-mapStatus Completed = API.Types.RiderPlatform.Management.MultiModal.COMPLETED
-mapStatus Failed = API.Types.RiderPlatform.Management.MultiModal.FAILED
+mapStatus :: DVSMapping.Status -> API.Types.RiderPlatform.Management.MultiModal.StageStatus
+mapStatus DVSMapping.Inprogress = API.Types.RiderPlatform.Management.MultiModal.INPROGRESS
+mapStatus DVSMapping.Completed = API.Types.RiderPlatform.Management.MultiModal.COMPLETED
+mapStatus DVSMapping.Failed = API.Types.RiderPlatform.Management.MultiModal.FAILED
 
 postMultiModalMultimodalFrfsDataVersionIsReady :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.ReadyVersionReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.ReadyVersionsResp)
 postMultiModalMultimodalFrfsDataVersionIsReady _merchantShortId _opCity req = do
@@ -94,7 +152,7 @@ mapInputDataType :: API.Types.RiderPlatform.Management.MultiModal.RawDataType ->
 mapInputDataType API.Types.RiderPlatform.Management.MultiModal.GTFS_DATA = GTFS
 mapInputDataType API.Types.RiderPlatform.Management.MultiModal.FARE_DATA = FARE
 
-mkReadyVersionList :: (MonadFlow m) => Domain.Types.Version.Version -> m API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp
+mkReadyVersionList :: (MonadFlow m) => DVersion.Version -> m API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp
 mkReadyVersionList version = return $ API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp version.id.getId version.versionTag
 
 postMultiModalMultimodalFrfsDataVersionApply :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.ApplyVersionReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -117,9 +175,6 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
       void $ QRollout.updateByPrimaryKey newVersion
   void $ if updatedOldVersion.percentageRollout == 0 then QRollout.deleteByVersionId updatedOldVersion.id else QRollout.updateByPrimaryKey updatedOldVersion
   return Kernel.Types.APISuccess.Success
-
--- _validateGTFSData ::
--- _uploadGTFSData ::
 
 _convertBusGTFSToQueries :: BusGTFS -> m ()
 _convertBusGTFSToQueries _gtfs = do

@@ -62,6 +62,10 @@ Stage:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
+    findByMerchantOperatingCityAndVehicleTypeAndInputDataType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType, inputDataType]
     findByMerchantOperatingCityAndVehicleTypeAndStageName:
       kvFunction: findOneWithKV
       where:
@@ -76,8 +80,7 @@ Version:
     inputDataType: RawDataType
     versionTag: Int
     isReadyToApply: Bool
-
-
+    gtfsLink: Maybe Text # S3 path
 
   queries:
     findAllByMerchantOperatingCityAndVehicleTypeAndDataType:
@@ -88,6 +91,13 @@ Version:
       kvFunction: findAllWithKV
       where:
         and: [isReadyToApply, merchantOperatingCityId, vehicleType, inputDataType]
+
+  cachedQueries:
+    findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType:
+      keyParams: [merchantOperatingCityId, vehicleType, inputDataType]
+      dbQuery: findAllReadyToApplyByMerchantOperatingCityAndVehicleTypeAndDataType
+      dbQueryParams: [isReadyToApply, merchantOperatingCityId, vehicleType, inputDataType]
+      queryType: FindAndCache
 
 VersionStageMapping:
   tableName: version_stage_mapping
@@ -125,3 +135,13 @@ VersionStageMapping:
     findAllByVersionId:
       kvFunction: findAllWithKV
       where: versionId
+    updateFailureById:
+      kvFunction: updateWithKV
+      params: [failureReason, status]
+      where: id
+    updateSuccessById:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+
+  excludedFields: [merchantOperatingCityId, merchantId]

@@ -13,7 +13,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Version = Version
-  { id :: Kernel.Types.Id.Id Domain.Types.Version.Version,
+  { gtfsLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    id :: Kernel.Types.Id.Id Domain.Types.Version.Version,
     inputDataType :: Domain.Types.Extra.Rollout.RawDataType,
     isReadyToApply :: Kernel.Prelude.Bool,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,

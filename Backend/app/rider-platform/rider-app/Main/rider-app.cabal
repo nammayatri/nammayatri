@@ -809,6 +809,7 @@ library
       Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.Rollout
       Storage.CachedQueries.SavedReqLocation
+      Storage.CachedQueries.Version
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification

@@ -21,11 +21,21 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VersionStageMapping.VersionStageMapping] -> m ())
 createMany = traverse_ create
 
-findAllByVersionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VersionStageMapping.VersionStageMapping]))
+findAllByVersionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VersionStageMapping.VersionStageMapping])
 findAllByVersionId versionId = do findAllWithKV [Se.Is Beam.versionId $ Se.Eq versionId]
 
 findByVersionIdAndStageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VersionStageMapping.VersionStageMapping))
 findByVersionIdAndStageId versionId stageId = do findOneWithKV [Se.And [Se.Is Beam.versionId $ Se.Eq versionId, Se.Is Beam.stageId $ Se.Eq stageId]]
+
+updateFailureById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.VersionStageMapping.Status -> Kernel.Types.Id.Id Domain.Types.VersionStageMapping.VersionStageMapping -> m ())
+updateFailureById failureReason status id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.failureReason failureReason, Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateSuccessById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VersionStageMapping.Status -> Kernel.Types.Id.Id Domain.Types.VersionStageMapping.VersionStageMapping -> m ())
+updateSuccessById status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -42,8 +52,6 @@ updateByPrimaryKey (Domain.Types.VersionStageMapping.VersionStageMapping {..}) =
       Se.Set Beam.stageName stageName,
       Se.Set Beam.status status,
       Se.Set Beam.versionId versionId,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -61,8 +69,6 @@ instance FromTType' Beam.VersionStageMapping Domain.Types.VersionStageMapping.Ve
             stageName = stageName,
             status = status,
             versionId = versionId,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -77,8 +83,6 @@ instance ToTType' Beam.VersionStageMapping Domain.Types.VersionStageMapping.Vers
         Beam.stageName = stageName,
         Beam.status = status,
         Beam.versionId = versionId,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

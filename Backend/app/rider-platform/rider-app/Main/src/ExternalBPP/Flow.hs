@@ -25,7 +25,9 @@ import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.JourneyModule.Utils (getVersionTag)
 import SharedLogic.FRFSUtils
+import qualified Storage.CachedQueries.Station as CQS
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
@@ -36,9 +38,10 @@ getFares riderId merchant merchantOperatingCity config _bapConfig mbRouteCode st
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
 search merchant merchantOperatingCity config bapConfig searchReq = do
+  versionTag <- getVersionTag merchantOperatingCity.id searchReq.vehicleType (Just searchReq.id.getId)
   fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
-  quotes <- buildQuote fromStation toStation
+  quotes <- buildQuote fromStation toStation versionTag
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
@@ -55,7 +58,7 @@ search merchant merchantOperatingCity config bapConfig searchReq = do
         bppDelayedInterest = Nothing
       }
   where
-    buildQuote fromStation toStation = do
+    buildQuote fromStation toStation versionTag = do
       -- For Metro, Usually External Providers give Pricing without the context of Route. So, we would try to fetch Fares by start and end stations.
       -- If not able to fetch, then we navigate to granular level of Route.
       fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config Nothing fromStation.code toStation.code searchReq.vehicleType
@@ -73,13 +76,13 @@ search merchant merchantOperatingCity config bapConfig searchReq = do
                         endStopCode = toStation.code,
                         travelTime = Nothing
                       }
-              mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
+              mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id versionTag
             Nothing -> do
-              routesInfo <- getPossibleRoutesBetweenTwoStops fromStation.code toStation.code
+              routesInfo <- getPossibleRoutesBetweenTwoStops fromStation.code toStation.code versionTag
               quotes' <-
                 mapM
                   ( \routeInfo -> do
-                      mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id
+                      mkSingleRouteQuote searchReq.vehicleType routeInfo merchantOperatingCity.id versionTag
                   )
                   routesInfo
               return $ concat quotes'
@@ -112,11 +115,11 @@ search merchant merchantOperatingCity config bapConfig searchReq = do
                     <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
             [startStation] ++ intermediateStations ++ [endStation]
 
-    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> Id MerchantOperatingCity -> m [DQuote]
-    mkSingleRouteQuote vehicleType routeInfo merchantOperatingCityId = do
-      stops <- QRouteStopMapping.findByRouteCode routeInfo.route.code
-      startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
-      endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
+    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> Id MerchantOperatingCity -> Int -> m [DQuote]
+    mkSingleRouteQuote vehicleType routeInfo merchantOperatingCityId versionTag = do
+      stops <- QRouteStopMapping.findByRouteCodeAndVersionTag routeInfo.route.code (Just versionTag)
+      startStation <- CQS.findByStationCodeMerchantOperatingCityIdAndVersionTag routeInfo.startStopCode merchantOperatingCityId versionTag >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
+      endStation <- CQS.findByStationCodeMerchantOperatingCityIdAndVersionTag routeInfo.endStopCode merchantOperatingCityId versionTag >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
       fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config (Just routeInfo.route.code) startStation.code endStation.code vehicleType
       return $

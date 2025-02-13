@@ -13,15 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VersionT f = VersionT
-  { id :: (B.C f Kernel.Prelude.Text),
-    inputDataType :: (B.C f Domain.Types.Extra.Rollout.RawDataType),
-    isReadyToApply :: (B.C f Kernel.Prelude.Bool),
-    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
-    versionTag :: (B.C f Kernel.Prelude.Int),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { gtfsLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    inputDataType :: B.C f Domain.Types.Extra.Rollout.RawDataType,
+    isReadyToApply :: B.C f Kernel.Prelude.Bool,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    versionTag :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +32,6 @@ instance B.Table VersionT where
 
 type Version = VersionT Identity
 
-$(enableKVPG (''VersionT) [('id)] [])
+$(enableKVPG ''VersionT ['id] [])
 
-$(mkTableInstances (''VersionT) "version")
+$(mkTableInstances ''VersionT "version")

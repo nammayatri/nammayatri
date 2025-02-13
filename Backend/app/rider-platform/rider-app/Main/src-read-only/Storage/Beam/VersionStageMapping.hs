@@ -12,17 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VersionStageMappingT f = VersionStageMappingT
-  { failureReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    stageData :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VersionStageMapping.StageData)),
-    stageId :: (B.C f Kernel.Prelude.Text),
-    stageName :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.VersionStageMapping.Status),
-    versionId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    stageData :: B.C f (Kernel.Prelude.Maybe Domain.Types.VersionStageMapping.StageData),
+    stageId :: B.C f Kernel.Prelude.Text,
+    stageName :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.VersionStageMapping.Status,
+    versionId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +30,6 @@ instance B.Table VersionStageMappingT where
 
 type VersionStageMapping = VersionStageMappingT Identity
 
-$(enableKVPG (''VersionStageMappingT) [('id)] [])
+$(enableKVPG ''VersionStageMappingT ['id] [])
 
-$(mkTableInstances (''VersionStageMappingT) "version_stage_mapping")
+$(mkTableInstances ''VersionStageMappingT "version_stage_mapping")

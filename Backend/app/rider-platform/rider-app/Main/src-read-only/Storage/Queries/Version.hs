@@ -56,7 +56,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Version.Version {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.inputDataType inputDataType,
+    [ Se.Set Beam.gtfsLink gtfsLink,
+      Se.Set Beam.inputDataType inputDataType,
       Se.Set Beam.isReadyToApply isReadyToApply,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.versionTag versionTag,
@@ -72,7 +73,8 @@ instance FromTType' Beam.Version Domain.Types.Version.Version where
     pure $
       Just
         Domain.Types.Version.Version
-          { id = Kernel.Types.Id.Id id,
+          { gtfsLink = gtfsLink,
+            id = Kernel.Types.Id.Id id,
             inputDataType = inputDataType,
             isReadyToApply = isReadyToApply,
             vehicleType = vehicleType,
@@ -86,7 +88,8 @@ instance FromTType' Beam.Version Domain.Types.Version.Version where
 instance ToTType' Beam.Version Domain.Types.Version.Version where
   toTType' (Domain.Types.Version.Version {..}) = do
     Beam.VersionT
-      { Beam.id = Kernel.Types.Id.getId id,
+      { Beam.gtfsLink = gtfsLink,
+        Beam.id = Kernel.Types.Id.getId id,
         Beam.inputDataType = inputDataType,
         Beam.isReadyToApply = isReadyToApply,
         Beam.vehicleType = vehicleType,

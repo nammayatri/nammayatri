@@ -5,6 +5,7 @@
 module Storage.Queries.Stage where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Domain.Types.Extra.Rollout
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Stage
 import Kernel.Beam.Functions
@@ -25,12 +26,24 @@ createMany = traverse_ create
 
 findByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m ([Domain.Types.Stage.Stage]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Stage.Stage])
 findByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
+
+findByMerchantOperatingCityAndVehicleTypeAndInputDataType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> BecknV2.FRFS.Enums.VehicleCategory -> Domain.Types.Extra.Rollout.RawDataType -> m [Domain.Types.Stage.Stage])
+findByMerchantOperatingCityAndVehicleTypeAndInputDataType merchantOperatingCityId vehicleType inputDataType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.inputDataType $ Se.Eq inputDataType
         ]
     ]
 
