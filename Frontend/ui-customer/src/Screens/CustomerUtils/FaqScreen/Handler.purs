@@ -99,7 +99,7 @@ gotToChatScreenHandler categoryId optionId updatedState = do
                                       Nothing -> Remote.getOptionsBT language categoryId "" "" ""
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = optionObj.option}) getOptionsRes.options
-    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
+    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
     chats' = map (
       \(Message currMessage) -> Chat {
         chatId : currMessage.id,

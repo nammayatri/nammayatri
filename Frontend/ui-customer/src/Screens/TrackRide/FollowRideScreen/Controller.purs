@@ -256,7 +256,7 @@ eval action state = case action of
   LoadMessages -> do
     let allMessages = getChatMessages FunctionCall
         toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
-          { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+          { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
         transformedMessages = map toChatComponentConfig allMessages
     case (last allMessages) of
       Just value ->
@@ -303,7 +303,7 @@ eval action state = case action of
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
               let allMessages = getChatMessages FunctionCall
                   toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
-                    { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+                    { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
                   transformedMessages = map toChatComponentConfig allMessages
               continueWithCmd state {data{messages = transformedMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
                 void $ launchAff $ flowRunner defaultGlobalState $ updateMapPadding state
