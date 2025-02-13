@@ -176,6 +176,7 @@ initData =
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
       , isSpecialLocWarrior : false
+      , enquiryBannerStage : Nothing
     }
   , props:
       { isFreeRide: false
