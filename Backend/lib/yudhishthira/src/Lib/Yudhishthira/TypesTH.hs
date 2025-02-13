@@ -71,6 +71,74 @@ generateGenericDefault typeName = do
   -- runIO $ putStrLn (pprint result)
   pure result
 
+generateGenericDefaultDefaultForType :: Type -> Q (Exp, [Dec])
+generateGenericDefaultDefaultForType fieldType = do
+  case fieldType of
+    AppT (ConT maybeName) (AppT ListT (AppT (ConT typeOfConstructor) (ConT _rawFieldType))) | maybeName == ''Maybe && typeOfConstructor == ''Kernel.Types.Id.Id -> do
+      fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
+      let fieldDefaultValues = fst fieldGenericDefaults
+      pure (ListE [AppE (ConE 'Just) (fieldDefaultValues)], snd fieldGenericDefaults)
+    AppT (ConT maybeName) (AppT (ConT typeOfConstructor) (ConT _rawFieldType)) | maybeName == ''Maybe && typeOfConstructor == ''Kernel.Types.Id.Id -> do
+      fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
+      let fieldDefaultValues = fst fieldGenericDefaults
+      let allValues = AppE (AppE (VarE 'map) (ConE 'Just)) fieldDefaultValues
+      pure (allValues, snd fieldGenericDefaults)
+    AppT (ConT maybeName) (AppT ListT (ConT rawFieldType)) | maybeName == ''Maybe -> do
+      fieldGenericDefaults <- getFieldDefaultValues rawFieldType
+      let fieldDefaultValues = fst fieldGenericDefaults
+      let allValues = ListE [AppE (ConE 'Just) fieldDefaultValues]
+      pure (allValues, snd fieldGenericDefaults)
+    AppT (ConT maybeName) (ConT rawFieldType) | maybeName == ''Maybe -> do
+      fieldGenericDefaults <- getFieldDefaultValues rawFieldType
+      let fieldDefaultValues = fst fieldGenericDefaults
+      let allValues = AppE (AppE (VarE 'map) (ConE 'Just)) fieldDefaultValues
+      pure (allValues, snd fieldGenericDefaults)
+    AppT (ConT typeOfConstructor) (ConT _rawFieldType) | typeOfConstructor == ''Kernel.Types.Id.ShortId -> do
+      fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
+      let fieldDefaultValues = fst fieldGenericDefaults
+      pure (fieldDefaultValues, snd fieldGenericDefaults)
+    AppT (ConT typeOfConstructor) (ConT _rawFieldType) | typeOfConstructor == ''Kernel.Types.Id.Id -> do
+      fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
+      let fieldDefaultValues = fst fieldGenericDefaults
+      pure (fieldDefaultValues, snd fieldGenericDefaults)
+    AppT ListT (ConT rawFieldType) -> do
+      fieldGenericDefaults <- getFieldDefaultValues rawFieldType
+      let fieldDefaultValues = fst fieldGenericDefaults
+      let allValues = ListE [fieldDefaultValues]
+      pure (allValues, snd fieldGenericDefaults)
+    ConT rawFieldType -> do
+      fieldGenericDefaults <- getFieldDefaultValues rawFieldType
+      let fieldDefaultValues = fst fieldGenericDefaults
+      pure (fieldDefaultValues, snd fieldGenericDefaults)
+    AppT (AppT (ConT hashMapName) type1) type2 | hashMapName == ''HashMap.HashMap -> do
+      domain1Defaults <- generateGenericDefaultDefaultForType type1
+      domain2Defaults <- generateGenericDefaultDefaultForType type2
+      let keyExp = fst domain1Defaults
+      let valueExp = fst domain2Defaults
+      let keyExpList = case keyExp of
+            ListE elems -> elems
+            AppE (VarE fn) arg -> do
+              let evaluatedExp = AppE (VarE fn) arg
+              [AppE (VarE 'head) evaluatedExp]
+            single -> [single]
+      let valueExpList = case valueExp of
+            ListE elems -> elems
+            AppE (VarE fn) arg -> do
+              let evaluatedExp = AppE (VarE fn) arg
+              [AppE (VarE 'head) evaluatedExp]
+            single -> [single]
+      let hashMapExp =
+            ListE
+              [ AppE
+                  (VarE 'HashMap.fromList)
+                  (ListE (zipWith (\k v -> TupE [Just k, Just v]) keyExpList valueExpList))
+              ]
+      let combinedDec = snd domain1Defaults ++ snd domain2Defaults
+      pure (hashMapExp, combinedDec)
+    a@(_) -> do
+      runIO $ putStrLn $ "non supported type: " ++ show a
+      fail "Not Supported currently, to add support for your case check this: https://hackage.haskell.org/package/template-haskell-2.22.0.0/docs/Language-Haskell-TH.html#g:22"
+
 generateGenericDefaultForRecords :: [(String, [String])] -> Name -> Name -> [VarBangType] -> Q [Dec]
 generateGenericDefaultForRecords overrides typeName conName fields = do
   let typeProxy = mkName "_typeProxy"
@@ -80,73 +148,7 @@ generateGenericDefaultForRecords overrides typeName conName fields = do
     if elem fieldName' (map fst overrides)
       then pure $ (BindS (VarP fieldNameVar) $ foldl' (\acc (fn, fvs) -> if fn == fieldName' then UInfixE acc (VarE '(<>)) (ListE $ map (\fv -> AppE (VarE 'read) (LitE (StringL fv))) fvs) else acc) (ListE []) overrides, [])
       else do
-        (fieldValues, fieldGetAllInstance) <-
-          case fieldType of
-            AppT (ConT maybeName) (AppT ListT (AppT (ConT typeOfConstructor) (ConT _rawFieldType))) | maybeName == ''Maybe && typeOfConstructor == ''Kernel.Types.Id.Id -> do
-              fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
-              let fieldDefaultValues = fst fieldGenericDefaults
-              pure (ListE [AppE (ConE 'Just) (fieldDefaultValues)], snd fieldGenericDefaults)
-            AppT (ConT maybeName) (AppT (ConT typeOfConstructor) (ConT _rawFieldType)) | maybeName == ''Maybe && typeOfConstructor == ''Kernel.Types.Id.Id -> do
-              fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
-              let fieldDefaultValues = fst fieldGenericDefaults
-              let allValues = AppE (AppE (VarE 'map) (ConE 'Just)) fieldDefaultValues
-              pure (allValues, snd fieldGenericDefaults)
-            AppT (ConT maybeName) (AppT ListT (ConT rawFieldType)) | maybeName == ''Maybe -> do
-              fieldGenericDefaults <- getFieldDefaultValues rawFieldType
-              let fieldDefaultValues = fst fieldGenericDefaults
-              let allValues = ListE [AppE (ConE 'Just) fieldDefaultValues]
-              pure (allValues, snd fieldGenericDefaults)
-            AppT (ConT maybeName) (ConT rawFieldType) | maybeName == ''Maybe -> do
-              fieldGenericDefaults <- getFieldDefaultValues rawFieldType
-              let fieldDefaultValues = fst fieldGenericDefaults
-              let allValues = AppE (AppE (VarE 'map) (ConE 'Just)) fieldDefaultValues
-              pure (allValues, snd fieldGenericDefaults)
-            AppT (ConT typeOfConstructor) (ConT _rawFieldType) | typeOfConstructor == ''Kernel.Types.Id.ShortId -> do
-              fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
-              let fieldDefaultValues = fst fieldGenericDefaults
-              pure (fieldDefaultValues, snd fieldGenericDefaults)
-            AppT (ConT typeOfConstructor) (ConT _rawFieldType) | typeOfConstructor == ''Kernel.Types.Id.Id -> do
-              fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
-              let fieldDefaultValues = fst fieldGenericDefaults
-              pure (fieldDefaultValues, snd fieldGenericDefaults)
-            AppT ListT (ConT rawFieldType) -> do
-              fieldGenericDefaults <- getFieldDefaultValues rawFieldType
-              let fieldDefaultValues = fst fieldGenericDefaults
-              let allValues = ListE [fieldDefaultValues]
-              pure (allValues, snd fieldGenericDefaults)
-            ConT rawFieldType -> do
-              fieldGenericDefaults <- getFieldDefaultValues rawFieldType
-              let fieldDefaultValues = fst fieldGenericDefaults
-              pure (fieldDefaultValues, snd fieldGenericDefaults)
-            AppT (AppT (ConT hashMapName) (ConT type1)) (ConT type2) | hashMapName == ''HashMap.HashMap -> do
-              domain1Defaults <- getFieldDefaultValues type1
-              domain2Defaults <- getFieldDefaultValues type2
-              let keyExp = fst domain1Defaults
-              let valueExp = fst domain2Defaults
-              runIO $ print keyExp
-              let keyExpList = case keyExp of
-                    ListE elems -> elems
-                    AppE (VarE fn) arg -> do
-                      let evaluatedExp = AppE (VarE fn) arg
-                      [AppE (VarE 'head) evaluatedExp]
-                    single -> [single]
-              let valueExpList = case valueExp of
-                    ListE elems -> elems
-                    AppE (VarE fn) arg -> do
-                      let evaluatedExp = AppE (VarE fn) arg
-                      [AppE (VarE 'head) evaluatedExp]
-                    single -> [single]
-              let hashMapExp =
-                    ListE
-                      [ AppE
-                          (VarE 'HashMap.fromList)
-                          (ListE (zipWith (\k v -> TupE [Just k, Just v]) keyExpList valueExpList))
-                      ]
-              let combinedDec = snd domain1Defaults ++ snd domain2Defaults
-              pure (hashMapExp, combinedDec)
-            a@(_) -> do
-              runIO $ putStrLn $ "non supported type: " ++ show a
-              fail "Not Supported currently, to add support for your case check this: https://hackage.haskell.org/package/template-haskell-2.22.0.0/docs/Language-Haskell-TH.html#g:22"
+        (fieldValues, fieldGetAllInstance) <- generateGenericDefaultDefaultForType fieldType
         pure (BindS (VarP fieldNameVar) fieldValues, fieldGetAllInstance)
 
   let mkTypeValue acc fieldCombination = do
