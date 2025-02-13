@@ -4296,33 +4296,40 @@ highCancellationBanner push state =
   , visibility $ boolToVisibility $ showCancellationHighBanner state.data.cancellationRate
   ]
   [ linearLayout 
-    [ weight 1.0
+    [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ Margin 14 8 8 8
+    , id $ EHC.getNewIDWithTag "cancellationBannerText"
     ]
     [ textView $
       [ text $ getString YOUR_CANCELLATION_RATE_IS_HIGH
       , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
+      , height WRAP_CONTENT
       ] <> FontStyle.subHeading3 TypoGraphy
     , textView $
       [ text $ getString $ AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName
       , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
       , singleLine false
+      , height WRAP_CONTENT
       , margin $ MarginVertical 4 4
       ] <> FontStyle.body1 TypoGraphy
     ]
+    , linearLayout[weight 1.0][]
     , linearLayout
       [ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , gravity BOTTOM
+      , orientation VERTICAL
+      , height $ V (if contentLayout.height == 0 then 80 else contentLayoutHeight)
       ]
-      [ imageView
+      [ linearLayout[weight 1.0][]
+      , imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancellation_high"
         , accessibility DISABLE
         , margin $ MarginRight 12
-        , height $ V 60
-        , width $ V 60
+        , height $  V 80
+        , width $ V 80
         ]
       ]
     ]
@@ -4332,6 +4339,8 @@ highCancellationBanner push state =
         let rate = fromMaybe 0.0 cancellationRate
             cancellationThresholdConfig = RemoteConfig.getCancellationBannerThresholdConfig $  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
         in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
+      contentLayoutHeight = HU.getDefaultPixelSize(contentLayout.height + 20)
+      contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "cancellationBannerText"
         
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
