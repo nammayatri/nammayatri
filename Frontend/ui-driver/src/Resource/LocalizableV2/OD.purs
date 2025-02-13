@@ -1692,6 +1692,7 @@ getOd =
     , your_ride_starts_in: "ଆପଣଙ୍କର ରାଇଡ୍ ଆରମ୍ଭ ହେବ"
     , away: " ଦୂରେ"
     , intercity: "ଇଣ୍ଟରସିଟି"
+    , local: "ସ୍ଥାନୀୟ"
     , intercity_return: "ଇଣ୍ଟରସିଟି ଫେରିବା"
     , rental: "ଭାଡା"
     , regular: "ନିୟମିତ"

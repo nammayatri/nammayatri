@@ -1438,7 +1438,7 @@ driverProfileFlow = do
                                                                                             , vehicleName = state.data.vehicleModelName
                                                                                             , vehicleCapacity = state.data.capacity
                                                                                             , downgradeOptions = downgradeOptions}
-                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) , canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
+                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) , canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity}
                                                                                      })
       bookingOptionsFlow
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
@@ -1865,6 +1865,7 @@ bookingOptionsFlow = do
       ridePreferences' = transfromRidePreferences filterByDeliveryBike
       canSwitchToInterCity' = resp.canSwitchToInterCity
       canSwitchToRental' = resp.canSwitchToRental
+      canSwitchToIntraCity' = resp.canSwitchToIntraCity
       defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
@@ -1876,7 +1877,8 @@ bookingOptionsFlow = do
           }, 
      props {
              canSwitchToRental = canSwitchToRental',
-             canSwitchToInterCity = canSwitchToInterCity'
+             canSwitchToInterCity = canSwitchToInterCity',
+             canSwitchToIntraCity = canSwitchToIntraCity'
            } 
     })
 
@@ -1915,9 +1917,9 @@ bookingOptionsFlow = do
         driverProfileFlow
     ENABLE_RENTAL_INTERCITY_RIDE state -> do
       let initialData = mkUpdateDriverInfoReq ""
-          requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
+          requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity, canSwitchToIntraCity = state.props.canSwitchToIntraCity}
       (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
-      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity} })
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity, canSwitchToIntraCity = updateDriverResp.canSwitchToIntraCity} })
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
@@ -3777,7 +3779,7 @@ updateDriverDataToStates = do
     , capacity = fromMaybe 2 linkedVehicle.capacity
     , downgradeOptions = getDowngradeOptions linkedVehicle.variant
     , vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)
-    , profileImg = getDriverInfoResp.aadhaarCardPhoto},props {canSwitchToRental =  (getDriverInfoResp.canSwitchToRental),canSwitchToInterCity = getDriverInfoResp.canSwitchToInterCity}})
+    , profileImg = getDriverInfoResp.aadhaarCardPhoto},props {canSwitchToRental =  (getDriverInfoResp.canSwitchToRental),canSwitchToInterCity = getDriverInfoResp.canSwitchToInterCity, canSwitchToIntraCity = getDriverInfoResp.canSwitchToIntraCity}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  
     {  driverName = getDriverInfoResp.firstName
     , driverMobile = getDriverInfoResp.mobileNumber
