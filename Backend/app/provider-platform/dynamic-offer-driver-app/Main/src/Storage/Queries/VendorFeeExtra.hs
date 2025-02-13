@@ -8,6 +8,7 @@ import Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
+import SharedLogic.Payment (roundToTwoDecimalPlaces)
 import qualified Storage.Beam.VendorFee as Beam
 import Storage.Queries.OrphanInstances.VendorFee ()
 
@@ -26,7 +27,7 @@ updateVendorFee vendorFee = do
     Just fee -> do
       now <- getCurrentTime
       updateWithKV
-        [ Se.Set Beam.amount (HighPrecMoney $ fee.amount.getHighPrecMoney + vendorFee.amount.getHighPrecMoney),
+        [ Se.Set Beam.amount (roundToTwoDecimalPlaces (HighPrecMoney $ fee.amount.getHighPrecMoney + vendorFee.amount.getHighPrecMoney)),
           Se.Set Beam.updatedAt now
         ]
         [ Se.And

@@ -133,10 +133,12 @@ mkSplitSettlementDetails vendorFees totalAmount = do
       groupedVendorFees = groupBy ((==) `on` VF.vendorId) sortedVendorFees
       mbVendorSplits = map computeSplit groupedVendorFees
       vendorSplits = catMaybes mbVendorSplits
-  let totalVendorAmount = sum $ map (\Split {amount} -> amount) vendorSplits
+  let totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
       marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
   logInfo $ "totalVendorAmount: " <> show totalVendorAmount <> " marketplaceAmount: " <> show marketplaceAmount <> " totalAmount: " <> show totalAmount
-  when (marketplaceAmount < 0) $ throwError (InternalError "Marketplace amount is negative")
+  when (marketplaceAmount < 0) $ do
+    logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
+    throwError (InternalError "Marketplace amount is negative")
   return $
     Just $
       SplitSettlementDetails
@@ -151,7 +153,7 @@ mkSplitSettlementDetails vendorFees totalAmount = do
         (firstFee : _) ->
           Just $
             Split
-              { amount = sum $ map (\fee -> VF.amount fee) feesForVendor,
+              { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> VF.amount fee) feesForVendor,
                 merchantCommission = 0,
                 subMid = firstFee.vendorId
               }
