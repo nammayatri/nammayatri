@@ -73,12 +73,20 @@ type API =
            :<|> "shareTicketInfo"
              :> Capture "ticketBookingId" (Id DFTB.FRFSTicketBooking)
              :> Get '[JSON] DPOFRFS.ShareTicketInfoResp
+           :<|> "auth"
+             :> Capture "ticketBookingId" (Id DFTB.FRFSTicketBooking)
+             :> Post '[JSON] DPOFRFS.PartnerOrgAuthRes
+           :<|> "authVerify"
+             :> ReqBody '[JSON] DPOFRFS.PartnerOrgAuthVerifyReq
+             :> Post '[JSON] DPOFRFS.PartnerOrgAuthVerifyRes
        )
 
 handler :: FlowServer API
 handler =
   handlerForAPIKey
     :<|> shareTicketInfo
+    :<|> partnerOrgAuth
+    :<|> partnerOrgAuthVerify
   where
     handlerForAPIKey pOrg =
       upsertPersonAndGetFare pOrg
@@ -202,3 +210,15 @@ upsertPersonAndQuoteConfirm partnerOrg req = withFlowHandlerAPI . withLogTag $ d
     withLogTag = Log.withLogTag ("FRFS:UpsertPersonAndQuoteConfirm:PartnerOrgId:" <> partnerOrg.orgId.getId <> " FRFS:UpsertPersonAndQuoteConfirm:SearchId:" <> req.searchId.getId)
     partnerQuoteConfirmHitsCountKey :: Text
     partnerQuoteConfirmHitsCountKey = "BAP:FRFS:PartnerOrgId:" <> partnerOrg.orgId.getId <> ":UpsertPersonAndQuoteConfirm:hitsCount"
+
+partnerOrgAuth :: Id DFTB.FRFSTicketBooking -> FlowHandler DPOFRFS.PartnerOrgAuthRes
+partnerOrgAuth bookingId = withFlowHandlerAPI . withLogTag $ do
+  DPOFRFS.partnerOrgAuth bookingId
+  where
+    withLogTag = Log.withLogTag ("FRFS:AuthPartnerOrg:TicketBookingId:" <> bookingId.getId)
+
+partnerOrgAuthVerify :: DPOFRFS.PartnerOrgAuthVerifyReq -> FlowHandler DPOFRFS.PartnerOrgAuthVerifyRes
+partnerOrgAuthVerify req = withFlowHandlerAPI . withLogTag $ do
+  DPOFRFS.partnerOrgAuthVerify req
+  where
+    withLogTag = Log.withLogTag ("FRFS:AuthVerifyPartnerOrg:Registration TokenId:" <> req.tokenId.getId)

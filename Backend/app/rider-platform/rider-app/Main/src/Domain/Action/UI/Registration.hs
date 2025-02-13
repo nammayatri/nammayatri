@@ -29,6 +29,7 @@ module Domain.Action.UI.Registration
     generateCustomerReferralCode,
     createPersonWithPhoneNumber,
     buildPerson,
+    getRegistrationTokenE,
   )
 where
 
