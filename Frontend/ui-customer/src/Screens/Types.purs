@@ -837,6 +837,7 @@ type HomeScreenStateData =
   , deliveryImage :: Maybe String
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)
+  , cancellationRate :: Maybe Number
 }
 
 type UpcomingRideDetails = {

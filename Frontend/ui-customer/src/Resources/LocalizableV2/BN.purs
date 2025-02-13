@@ -1278,6 +1278,8 @@ getBn = Keymap {
 , view_fares: "ভাড়া দেখুন"
 , excess_time_description: (\charges -> "অতিরিক্ত সময় " <> charges <> " চার্জ করা হবে")
 , estimated_charges: "আনুমানিক চার্জ"
+, your_cancellation_rate_is_high: "আপনার বাতিলকরণের হার বেশি!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ব্যবহার চালিয়ে যেতে আরও বাতিলকরণ এড়ান")
 , night_time_fees: "রাতের সময় ফি"
 , parking_and_other_charges: "পার্কিং এবং অন্যান্য খরচ"
 , additional_charges: "অতিরিক্ত খরচ"

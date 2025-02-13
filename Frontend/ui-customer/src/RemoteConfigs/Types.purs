@@ -117,3 +117,8 @@ type BusFlowConfig = {
   liveRoutes :: Int,
   ticketValidity :: String
 }
+
+type CancellationThreshold = {
+  showBanner :: Boolean,
+  percentage :: Number
+}

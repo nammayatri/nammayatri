@@ -1279,6 +1279,8 @@ getMl = Keymap {
 , view_fares: "നിരക്കുകൾ കാണുക"
 , excess_time_description: (\charges -> "അധിക സമയം " <> charges <> " നിരക്കിൽ ഈടാക്കും")
 , estimated_charges: "കണക്കാക്കിയ നിരക്കുകൾ"
+, your_cancellation_rate_is_high: "നിങ്ങളുടെ റദ്ദാക്കൽ നിരക്ക് കൂടുതലാണ്!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> "ഉപയോഗിക്കുന്നത് തുടരാൻ കൂടുതൽ റദ്ദാക്കലുകൾ ഒഴിവാക്കുക " <> appName)
 , night_time_fees: "രാത്രിയിലെ സമയ ചാര്ജുകൾ"
 , parking_and_other_charges: "പാർക്കിംഗ് മറ്റ് ചാര്ജുകൾ"
 , additional_charges: "അതിരിക്കുന്ന ചാര്ജുകൾ"
