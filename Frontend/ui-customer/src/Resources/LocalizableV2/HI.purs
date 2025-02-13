@@ -1279,6 +1279,8 @@ getHi = Keymap {
 , view_fares: "किराया देखें"
 , excess_time_description: (\charges -> "अतिरिक्त समय के लिए " <> charges <> "लिया जाएगा")
 , estimated_charges: "अनुमानित शुल्क"
+, your_cancellation_rate_is_high: "आपकी रद्दीकरण दर ऊंची है!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " का उपयोग जारी रखने के लिए आगे रद्दीकरण से बचें")
 , night_time_fees: "रात के समय का शुल्क"
 , parking_and_other_charges: "पार्किंग और अन्य शुल्क"
 , additional_charges: "अतिरिक्त शुल्क"
