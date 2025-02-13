@@ -240,14 +240,14 @@ tipsHorizontalView push state =
               ],
               linearLayout
               [  height WRAP_CONTENT
-              , width $ if index == 0 then WRAP_CONTENT else V 64
+              , width $ if index == 0 then WRAP_CONTENT else WRAP_CONTENT
               , margin $ if index == 0 then Margin 0 0 0 0 else Margin 18 0 0 0
               , gravity CENTER
               , gradient (Linear 90.0 [Color.green900, Color.darkGreen])
               , cornerRadius 40.0
-              , visibility $ boolToVisibility $ state.tipViewProps.activeIndex == index
+              , visibility $ boolToVisibility $ state.tipViewProps.suggestedActiveIndex == Just index
               ][ textView $ [
-                text "Selected"
+                text "Suggested"
               , color Color.white900
               , padding $ Padding 6 2 6 2
               ] <> FontStyle.tags TypoGraphy
