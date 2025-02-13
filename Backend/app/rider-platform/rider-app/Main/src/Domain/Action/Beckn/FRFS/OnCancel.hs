@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.FRFS.OnCancel where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Data.HashMap.Strict as HashMap
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWLink
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -23,6 +24,7 @@ import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.Merchant as Merchant
+import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -33,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -40,6 +43,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
+import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
@@ -96,23 +100,28 @@ onCancel _ booking' dOnCancel = do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
-  whenJust booking.partnerOrgId $ \_ -> do
-    fork ("updating status of tickets in google wallet for bookingId: " <> booking.id.getId) $ do
-      tickets <- QTicket.findAllByTicketBookingId booking.id
-      let serviceName = DEMSC.WalletService GW.GoogleWallet
-      let mId = booking.merchantId
-      let mocId' = booking.merchantOperatingCityId
-      serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-      forM_ tickets $ \ticket -> do
-        let googleStatus = GWLink.mapToGoogleTicketStatus ticket.status
-        let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
-        let obj = TC.TransitObjectPatch {TC.state = show googleStatus}
-        resp <- GWSA.getObjectGoogleWallet serviceAccount resourceId
-        case resp of
-          Nothing -> return ()
-          Just _ -> do
-            void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
-            return ()
+  whenJust booking.partnerOrgId $ \pOrgId -> do
+    walletPOCfg <- do
+      pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
+      DPOC.getWalletClassNameConfig pOrgCfg.config
+    let mbClassName = HashMap.lookup booking.merchantOperatingCityId.getId walletPOCfg.className
+    whenJust mbClassName $ \_ -> do
+      fork ("updating status of tickets in google wallet for bookingId: " <> booking.id.getId) $ do
+        tickets <- QTicket.findAllByTicketBookingId booking.id
+        let serviceName = DEMSC.WalletService GW.GoogleWallet
+        let mId = booking.merchantId
+        let mocId' = booking.merchantOperatingCityId
+        serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+        forM_ tickets $ \ticket -> do
+          let googleStatus = GWLink.mapToGoogleTicketStatus ticket.status
+          let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
+          let obj = TC.TransitObjectPatch {TC.state = show googleStatus}
+          resp <- GWSA.getObjectGoogleWallet serviceAccount resourceId
+          case resp of
+            Nothing -> return ()
+            Just _ -> do
+              void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+              return ()
   return ()
   where
     checkRefundAndCancellationCharges bookingId = do
