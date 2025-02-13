@@ -252,6 +252,7 @@ window.onMerchantEvent = function (_event, payload) {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
+    window.__payload = parsedPayload;
     try {
       if (
         parsedPayload.payload &&
@@ -272,7 +273,6 @@ window.onMerchantEvent = function (_event, payload) {
       window.callPopUp(parsedPayload.payload.popType, parsedPayload.payload.entityPayload);
     }
     else {
-      window.__payload = parsedPayload;
       console.log("window Payload: ", window.__payload);
       const jpConsumingBackpress = {
         event: "jp_consuming_backpress",

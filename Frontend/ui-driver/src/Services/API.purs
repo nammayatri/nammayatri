@@ -1407,6 +1407,8 @@ instance standardEncodeFlowStatus :: StandardEncode FlowStatus
 
 data MessageListReq = MessageListReq String String
 
+data GetMessageReq = GetMessageReq String
+
 newtype MessageListRes = MessageListRes (Array MessageAPIEntityResponse)
 
 newtype MessageAPIEntityResponse = MessageAPIEntityResponse
@@ -1444,11 +1446,21 @@ instance makeMessageListReq :: RestEndpoint MessageListReq where
     makeRequest reqBody@(MessageListReq limit offset) headers = defaultMakeRequestWithoutLogs GET (EP.messageList limit offset) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
+instance makeGetMessageReq:: RestEndpoint GetMessageReq where
+    makeRequest reqBody@(GetMessageReq id) headers = defaultMakeRequestWithoutLogs GET (EP.getMessage id) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
 derive instance genericMessageListReq :: Generic MessageListReq _
 instance showMessageListReq :: Show MessageListReq where show = genericShow
 instance standardEncodeMessageListReq :: StandardEncode MessageListReq where standardEncode (MessageListReq _ _) = standardEncode {}
 instance decodeMessageListReq :: Decode MessageListReq where decode = defaultDecode
 instance encodeMessageListReq :: Encode MessageListReq where encode = defaultEncode
+
+derive instance genericGetMessageReq :: Generic GetMessageReq _
+instance showGetMessageReq :: Show GetMessageReq where show = genericShow
+instance standardEncodeGetMessageReq :: StandardEncode GetMessageReq where standardEncode (GetMessageReq _) = standardEncode {}
+instance decodeGetMessageReq :: Decode GetMessageReq where decode = defaultDecode
+instance encodeGetMessageReq :: Encode GetMessageReq where encode = defaultEncode
 
 derive instance genericMessageListRes :: Generic MessageListRes _
 derive instance newtypeMessageListRes :: Newtype MessageListRes _
