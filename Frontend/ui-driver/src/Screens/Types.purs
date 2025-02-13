@@ -596,6 +596,7 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean,
   showDriverBlockedPopup :: Boolean
 }
@@ -2193,6 +2194,7 @@ type BookingOptionsScreenProps = {
   acExplanationPopup :: Boolean,
   fromDeepLink :: Boolean,
   canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   showRateCard :: Boolean,
   rateCardLoaded :: Boolean,
   peakTime :: Boolean

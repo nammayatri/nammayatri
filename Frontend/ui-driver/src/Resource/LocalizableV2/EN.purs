@@ -1711,6 +1711,7 @@ getEn =
     , your_ride_starts_in: "your ride starts in"
     , away: " away"
     , intercity: "Intercity"
+    , local: "Local"
     , intercity_return: "Intercity Return"
     , rental: "Rental"
     , regular: "Regular"

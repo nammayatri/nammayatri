@@ -624,6 +624,7 @@ mkUpdateDriverInfoReq dummy
     , vehicleName: Nothing
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
+    , canSwitchToIntraCity : Nothing
     , canSwitchToInterCity: Nothing
     , isSpecialLocWarrior: Nothing
     }

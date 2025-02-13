@@ -1711,6 +1711,7 @@ getBn =
     , your_ride_starts_in: "আপনার যাত্রা শুরু হচ্ছে"
     , away: " দূরে"
     , intercity: "আন্তঃনগর"
+    , local: "স্থানীয়"
     , intercity_return: "আন্তঃনগর প্রত্যাবর্তন"
     , rental: "ভাড়া"
     , regular: "নিয়মিত"

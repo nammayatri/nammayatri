@@ -465,6 +465,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Maybe Boolean
+    , canSwitchToIntraCity  :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
     , payoutVpa             :: Maybe String 
@@ -979,6 +980,7 @@ type UpdateDriverInfoReqEntity =
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
+  , canSwitchToIntraCity :: Maybe Boolean
   , canSwitchToInterCity :: Maybe Boolean
   , isSpecialLocWarrior :: Maybe Boolean
   }
@@ -4406,6 +4408,7 @@ data ServiceTierType
   | TAXI
   | TAXI_PLUS
   | RENTALS
+  | LOCAL
   | INTERCITY
   | BIKE_TIER
   | SUV_PLUS_TIER
@@ -4434,6 +4437,7 @@ newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
   tiers :: Array DriverVehicleServiceTier,
   airConditioned :: Maybe AirConditionedTier,
   canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToRental :: Maybe Boolean
 }
 
@@ -4474,6 +4478,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "TAXI_PLUS"    -> except $ Right TAXI_PLUS
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
+                  "LOCAL"        -> except $ Right LOCAL
                   "BIKE"         -> except $ Right BIKE_TIER
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
@@ -4499,6 +4504,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode BIKE_TIER = standardEncode "BIKE"
     standardEncode DELIVERY_BIKE = standardEncode "DELIVERY_BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
+    standardEncode LOCAL = standardEncode "LOCAL"
     standardEncode INTERCITY = standardEncode "INTERCITY"
     standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
     standardEncode AMBULANCE_TAXI_TIER = standardEncode "AMBULANCE_TAXI"

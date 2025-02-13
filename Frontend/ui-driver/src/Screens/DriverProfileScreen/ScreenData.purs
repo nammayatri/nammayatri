@@ -143,6 +143,7 @@ initData =
     isRideActive : false,
     canSwitchToRental : Nothing,
     canSwitchToInterCity : Nothing,
+    canSwitchToIntraCity : Nothing,
     showDriverBlockedPopup : false
    }
 }
@@ -249,6 +250,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , operatingCity         : Nothing
     , isVehicleSupported    : Nothing
     , canSwitchToRental     : Nothing
+    , canSwitchToIntraCity : Nothing
     , checkIfACWorking    : Nothing
     , canSwitchToInterCity   : Nothing
     , payoutVpa             : Nothing

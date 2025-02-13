@@ -1711,6 +1711,7 @@ getKn =
     , your_ride_starts_in: "ನಿಮ್ಮ ಪ್ರಯಾಣ ಆರಂಭವಾಗುತ್ತದೆ"
     , away: " ದೂರ"
     , intercity: "ನಗರಾಂತರ"
+    , local: "ಸ್ಥಳೀಯ"
     , intercity_return: "ನಗರಾಂತರ ಮರಳಿ"
     , rental: "ಬಾಡಿಗೆ"
     , regular: "ನಿಯಮಿತ"

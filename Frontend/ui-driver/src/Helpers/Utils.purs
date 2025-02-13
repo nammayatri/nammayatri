@@ -627,6 +627,7 @@ getVehicleVariantImage variant =
       "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
       "PREMIUM"   -> "ic_cab_premium" <> commonUrl <> "ic_cab_premium.png"
       "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "LOCAL"     -> "ny_ic_local_asset,https://assets.moving.tech/beckn/common/driver/images/ny_ic_local_asset.png"  
       "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "AUTO_RICKSHAW" -> 
@@ -994,6 +995,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.TAXI_PLUS -> "TAXI_PLUS"
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
+  SA.LOCAL -> "LOCAL"
   SA.BIKE_TIER -> "BIKE"
   SA.AMBULANCE_TAXI_TIER -> "AMBULANCE_TAXI"
   SA.AMBULANCE_TAXI_OXY_TIER -> "AMBULANCE_TAXI_OXY"
