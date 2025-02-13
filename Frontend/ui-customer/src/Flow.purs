@@ -783,6 +783,7 @@ currentFlowStatus prioritizeRating = do
                   , email = response ^. _email
                   , hasCompletedSafetySetup = hasCompletedSafetySetup
                   }
+                , cancellationRate = response ^. _cancellationRate
                 }
               , props
                 { isBanner = false

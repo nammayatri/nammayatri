@@ -207,6 +207,7 @@ initData = let
     , deliveryImage : Nothing
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
+    , cancellationRate : Nothing
     },
     props: {
       rideRequestFlow : false

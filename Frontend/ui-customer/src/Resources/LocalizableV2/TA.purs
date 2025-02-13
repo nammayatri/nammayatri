@@ -1277,6 +1277,8 @@ getTa = Keymap {
 , view_fares: "கட்டணங்களைக் காண்க"
 , excess_time_description: (\charges -> "அதிகப்படியான நேரம் " <> charges <> " வசூலிக்கப்படும்")
 , estimated_charges: "மதிப்பிடப்பட்ட கட்டணங்கள்"
+, your_cancellation_rate_is_high: "உங்கள் ரத்து விகிதம் அதிகமாக உள்ளது!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ஐ தொடர்ந்து பயன்படுத்த, இனி ரத்து செய்வதைத் தவிர்க்கவும்.")
 , night_time_fees: "இரவு நேர கட்டணங்கள்"
 , parking_and_other_charges: "பார்க்கிங் மற்றும் மற்ற கட்டணங்கள்"
 , additional_charges: "கூடுதல் கட்டணங்கள்"

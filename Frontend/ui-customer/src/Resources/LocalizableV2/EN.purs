@@ -1281,6 +1281,8 @@ getEn = Keymap {
 , view_fares: "View Fares"
 , excess_time_description: (\charges -> "Excess time will be charged at " <> charges)
 , estimated_charges: "Estimated Charges"
+, your_cancellation_rate_is_high: "Your cancellation rate is high!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> "Avoid further cancellations to keep using " <> appName)
 , night_time_fees: "Night Time Fees"
 , parking_and_other_charges: "Parking and other charges"
 , additional_charges: "Additional Charges"
