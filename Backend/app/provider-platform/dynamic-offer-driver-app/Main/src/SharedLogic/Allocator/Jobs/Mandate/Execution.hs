@@ -1,5 +1,6 @@
 module SharedLogic.Allocator.Jobs.Mandate.Execution where
 
+import qualified Control.Monad.Catch as C
 import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
 import Domain.Types.DriverFee as DF
@@ -78,9 +79,10 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         driverExecutionRequests <- mapMaybe identity <$> sequence (mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' subscriptionConfig successfulNotifications)
         changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverExecutionRequests <&> (.driverFee) <&> (.id))
         QDF.updateAutopayPaymentStageByIds (Just EXECUTION_ATTEMPTING) ((.driverFee.id) <$> driverExecutionRequests)
-        for_ driverExecutionRequests $ \executionData -> do
-          fork ("execution for driverFeeId : " <> executionData.driverFee.id.getId) $ do
-            asyncExecutionCall executionData merchantId merchantOpCityId
+        flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee execution for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
+          for_ driverExecutionRequests $ \executionData -> do
+            fork ("execution for driverFeeId : " <> executionData.driverFee.id.getId) $ do
+              asyncExecutionCall executionData merchantId merchantOpCityId
         ReSchedule <$> getRescheduledTime transporterConfig
   logInfo ("duration of job " <> show timetaken)
   return response
