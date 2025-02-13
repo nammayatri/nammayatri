@@ -301,6 +301,7 @@ initData = let
       , customerTipArrayWithValues : []
       , activeIndex : -1
       , primaryButtonText : ""
+      , suggestedActiveIndex : Nothing
       }
     , focussedBottomIcon : MOBILITY
     , timerId : ""
