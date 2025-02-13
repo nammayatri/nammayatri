@@ -6625,16 +6625,8 @@ firstRideCompletedEvent str = do
         let
           arraySize = Arr.length listResp.list
         if (arraySize == 1) then do
-          liftFlowBT $ logEventWithMultipleParams logField_ (eventPrefix <> "user_first_ride_completed") $  [ {key: "Source", value: unsafeToForeign (take 99 (globalState.homeScreen.data.driverInfoCardState.source))},
-                                                                                                              {key: "Destination", value: unsafeToForeign (take 99 (globalState.homeScreen.data.driverInfoCardState.destination))},
-                                                                                                              {key: "Ride Amount", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.price},
-                                                                                                              {key: "Driver Name", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.driverName},
-                                                                                                              {key: "Driver Rating", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.rating},
-                                                                                                              {key: "Distance (m)", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.distance},
-                                                                                                              {key: "Destination Reached", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.destinationReached},
-                                                                                                              {key: "Service Tier Name", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.serviceTierName},
-                                                                                                              {key: "ETA", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.eta},
-                                                                                                              {key: "Vehicle Variant", value: unsafeToForeign globalState.homeScreen.data.driverInfoCardState.vehicleVariant} ]
+          void $ liftFlowBT $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
+          liftFlowBT $ logEventWithMultipleParams logField_ (eventPrefix <> "user_first_ride_completed_with_props") $  rideCompletedEventParams globalState.homeScreen
           setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
         else if arraySize > 1 then do
           setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
@@ -7094,16 +7086,7 @@ fcmHandler notification state notificationBody= do
         isPersonDeliveryInitiator = HU.isDeliveryInitiator state.data.requestorPartyRoles
 
       void $ pure $ metaLogEvent "ny_user_ride_completed"
-      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_completed_with_props" $ [ {key: "Source", value: unsafeToForeign (DS.take 99 (state.data.driverInfoCardState.source))},
-                                                                                                {key: "Destination", value: unsafeToForeign (DS.take 99 (state.data.driverInfoCardState.destination))},
-                                                                                                {key: "Ride Amount", value: unsafeToForeign state.data.driverInfoCardState.price},
-                                                                                                {key: "Driver Name", value: unsafeToForeign state.data.driverInfoCardState.driverName},
-                                                                                                {key: "Driver Rating", value: unsafeToForeign state.data.driverInfoCardState.rating},
-                                                                                                {key: "Distance (m)", value: unsafeToForeign state.data.driverInfoCardState.distance},
-                                                                                                {key: "Destination Reached", value: unsafeToForeign state.data.driverInfoCardState.destinationReached},
-                                                                                                {key: "Service Tier Name", value: unsafeToForeign state.data.driverInfoCardState.serviceTierName},
-                                                                                                {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
-                                                                                                {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} ]
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_completed_with_props" $ rideCompletedEventParams state
       void $ pure $ JB.destroySignedCall unit
       void $ updateLocalStage HomeScreen
       setValueToLocalStore IS_SOS_ACTIVE "false"
@@ -7947,3 +7930,17 @@ updateMetroBookingQuoteInfo metroBookingStatus = do
       void $ lift $ lift $ showToast errMsg
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = Nothing}, props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection } })
       pure unit
+
+rideCompletedEventParams :: HomeScreenState -> Array ClevertapEventParams
+rideCompletedEventParams state = 
+  [ {key: "Source", value: unsafeToForeign (take 99 (state.data.driverInfoCardState.source))},
+    {key: "Destination", value: unsafeToForeign (take 99 (state.data.driverInfoCardState.destination))},
+    {key: "Ride Amount", value: unsafeToForeign state.data.driverInfoCardState.price},
+    {key: "Driver Name", value: unsafeToForeign state.data.driverInfoCardState.driverName},
+    {key: "Driver Rating", value: unsafeToForeign state.data.driverInfoCardState.rating},
+    {key: "Distance (m)", value: unsafeToForeign state.data.driverInfoCardState.distance},
+    {key: "Destination Reached", value: unsafeToForeign state.data.driverInfoCardState.destinationReached},
+    {key: "Service Tier Name", value: unsafeToForeign state.data.driverInfoCardState.serviceTierName},
+    {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
+    {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} 
+  ]
