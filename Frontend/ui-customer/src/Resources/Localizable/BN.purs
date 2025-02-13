@@ -1258,6 +1258,8 @@ getBN stringKey =
         VIEW_FARES -> "ভাড়া দেখুন"
         EXCESS_TIME_DESCRIPTION charges -> "অতিরিক্ত সময় " <> charges <> " চার্জ করা হবে"
         ESTIMATED_CHARGES -> "আনুমানিক চার্জ"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "আপনার বাতিলকরণের হার বেশি!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ব্যবহার চালিয়ে যেতে আরও বাতিলকরণ এড়ান"
         NIGHT_TIME_FEES -> "রাতের সময় ফি"
         PARKING_AND_OTHER_CHARGES -> "পার্কিং এবং অন্যান্য খরচ"
         ADDITIONAL_CHARGES -> "অতিরিক্ত খরচ"

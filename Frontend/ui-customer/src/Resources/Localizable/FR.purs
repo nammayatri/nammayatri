@@ -1260,6 +1260,8 @@ getFR stringKey =
         VIEW_FARES -> "Voir les tarifs"
         EXCESS_TIME_DESCRIPTION charges -> "Le temps excédentaire sera facturé à " <> charges
         ESTIMATED_CHARGES -> "Frais estimés"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> ""
+        YOUR_CANCELLATION_RATE_IS_HIGH -> ""
         NIGHT_TIME_FEES -> "Frais de nuit"
         PARKING_AND_OTHER_CHARGES -> "Frais de stationnement et autres"
         ADDITIONAL_CHARGES -> "Frais supplémentaires"

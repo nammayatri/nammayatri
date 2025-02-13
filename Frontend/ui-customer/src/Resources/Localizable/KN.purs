@@ -1259,6 +1259,8 @@ getKN stringKey =
         VIEW_FARES -> "ದರಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
         EXCESS_TIME_DESCRIPTION charges -> "ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು " <> charges <> " ವಿಧಿಸಲಾಗುತ್ತದೆ"
         ESTIMATED_CHARGES -> "ಅಂದಾಜು ಶುಲ್ಕಗಳು"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "ನಿಮ್ಮ ರದ್ದತಿ ದರ ಹೆಚ್ಚಾಗಿದೆ!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು ಮುಂದಿನ ರದ್ದತಿಗಳನ್ನು ತಪ್ಪಿಸಿ."
         NIGHT_TIME_FEES -> "ರಾತ್ರಿ ಸಮಯ ಶುಲ್ಕಗಳು"
         PARKING_AND_OTHER_CHARGES -> "ಪಾರ್ಕಿಂಗ್ ಮತ್ತು ಇತರ ವೆಚ್ಚಗಳು"
         ADDITIONAL_CHARGES -> "ಅತಿಯಾದ ವೆಚ್ಚಗಳು"

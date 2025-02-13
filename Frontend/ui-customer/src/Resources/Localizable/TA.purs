@@ -1276,6 +1276,8 @@ getTA stringKey =
     VIEW_FARES -> "கட்டணங்களைக் காண்க"
     EXCESS_TIME_DESCRIPTION charges -> "அதிகப்படியான நேரம் " <> charges <> " வசூலிக்கப்படும்"
     ESTIMATED_CHARGES -> "மதிப்பிடப்பட்ட கட்டணங்கள்"
+    YOUR_CANCELLATION_RATE_IS_HIGH -> "உங்கள் ரத்து விகிதம் அதிகமாக உள்ளது!"
+    AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ஐ தொடர்ந்து பயன்படுத்த, இனி ரத்து செய்வதைத் தவிர்க்கவும்."
     NIGHT_TIME_FEES -> "இரவு நேர கட்டணங்கள்"
     PARKING_AND_OTHER_CHARGES -> "பார்க்கிங் மற்றும் மற்ற கட்டணங்கள்"
     ADDITIONAL_CHARGES -> "கூடுதல் கட்டணங்கள்"

@@ -1260,6 +1260,8 @@ getML stringKey =
         VIEW_FARES -> "നിരക്കുകൾ കാണുക"
         EXCESS_TIME_DESCRIPTION charges -> "അധിക സമയം " <> charges <> " നിരക്കിൽ ഈടാക്കും"
         ESTIMATED_CHARGES -> "കണക്കാക്കിയ നിരക്കുകൾ"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "നിങ്ങളുടെ റദ്ദാക്കൽ നിരക്ക് കൂടുതലാണ്!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> "ഉപയോഗിക്കുന്നത് തുടരാൻ കൂടുതൽ റദ്ദാക്കലുകൾ ഒഴിവാക്കുക " <> appName
         NIGHT_TIME_FEES -> "രാത്രിയിലെ സമയ ചാര്ജുകൾ"
         PARKING_AND_OTHER_CHARGES -> "പാർക്കിംഗ് മറ്റ് ചാര്ജുകൾ"
         ADDITIONAL_CHARGES -> "അതിരിക്കുന്ന ചാര്ജുകൾ"
