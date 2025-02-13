@@ -1387,6 +1387,8 @@ getProxy str =
     VIEW_FARES -> \a -> a @~ view_fares
     EXCESS_TIME_DESCRIPTION arg1 -> \a -> (a @~ excess_time_description) arg1
     ESTIMATED_CHARGES -> \a -> a @~ estimated_charges
+    YOUR_CANCELLATION_RATE_IS_HIGH -> \a -> a @~ your_cancellation_rate_is_high
+    AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP arg1 -> \a -> (a @~ avoid_further_cancellations_to_keep_using_app) arg1
     NIGHT_TIME_FEES -> \a -> a @~ night_time_fees
     PARKING_AND_OTHER_CHARGES -> \a -> a @~ parking_and_other_charges
     ADDITIONAL_CHARGES -> \a -> a @~ additional_charges

@@ -246,7 +246,7 @@ pendingVehicleOnly = false
 
 getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if any new vehicle category is introduced
 getCategoryFromVariant variant = case variant of
-  "AUTO_RICKSHAW" -> Just ST.AutoCategory
+  _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> Just ST.AutoCategory
   "BIKE" -> Just ST.BikeCategory
   _ | variant `DA.elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> Just ST.AmbulanceCategory
   _ -> Just ST.CarCategory

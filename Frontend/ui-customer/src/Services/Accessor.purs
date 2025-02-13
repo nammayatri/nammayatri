@@ -272,6 +272,9 @@ _rideList = lens (unwrap >>> _._ideList) (\oldRec newVal -> wrap ((unwrap oldRec
 _categoryId :: forall a b c. Newtype a { categoryId :: b | c } => Lens' a b
 _categoryId = lens (unwrap >>> _.categoryId) (\oldRec newVal -> wrap ((unwrap oldRec) { categoryId = newVal }))
 
+_cancellationRate :: forall a b c. Newtype a { cancellationRate :: b | c } => Lens' a b
+_cancellationRate = lens (unwrap >>> _.cancellationRate) (\oldRec newVal -> wrap ((unwrap oldRec) { cancellationRate = newVal }))
+
 _availableSeats :: forall a b c. Newtype a { availableSeats :: b | c } => Lens' a b
 _availableSeats = lens (unwrap >>> _.availableSeats) (\oldRec newVal -> wrap ((unwrap oldRec) { availableSeats = newVal }))
 

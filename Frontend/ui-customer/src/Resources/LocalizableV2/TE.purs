@@ -1287,6 +1287,8 @@ getTe = Keymap {
 , view_fares: "ఛార్జీలను వీక్షించండి"
 , excess_time_description: (\charges -> "అదనపు సమయం " <> charges <> " ఛార్జ్ చేయబడుతుంది")
 , estimated_charges: "అంచనా వేసిన ఛార్జీలు"
+, your_cancellation_rate_is_high: "మీ రద్దు రేటు ఎక్కువగా ఉంది!"
+, avoid_further_cancellations_to_keep_using_app: (\appName -> appName <> " ని ఉపయోగించడం కొనసాగించడానికి తదుపరి రద్దులను నివారించండి.")
 , night_time_fees: "రాత్రి సమయ ధరలు"
 , parking_and_other_charges: "పార్కింగ్ మరియు ఇతర ధరలు"
 , additional_charges: "అదనపు ధరలు"

@@ -1315,6 +1315,8 @@ newtype Keymap = Keymap {
 , view_fares :: String
 , excess_time_description :: String -> String
 , estimated_charges :: String
+, your_cancellation_rate_is_high :: String
+, avoid_further_cancellations_to_keep_using_app :: String -> String
 , night_time_fees :: String
 , parking_and_other_charges :: String
 , additional_charges :: String
@@ -5609,6 +5611,12 @@ excess_time_description = a
 
 estimated_charges :: Proxy "estimated_charges"
 estimated_charges = a
+
+your_cancellation_rate_is_high :: Proxy "your_cancellation_rate_is_high"
+your_cancellation_rate_is_high = a
+
+avoid_further_cancellations_to_keep_using_app :: Proxy "avoid_further_cancellations_to_keep_using_app"
+avoid_further_cancellations_to_keep_using_app = a
 
 night_time_fees :: Proxy "night_time_fees"
 night_time_fees = a
