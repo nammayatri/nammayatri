@@ -88,7 +88,7 @@ import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI,
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const, (>>=))
 import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
-import PrestoDOM (initUI)
+import PrestoDOM (initUI, Visibility(..))
 import RemoteConfig as RC
 import Resource.Constants (decodeAddress)
 import Resource.Constants as RC
@@ -131,7 +131,7 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..))
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
+import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
@@ -178,6 +178,7 @@ import Data.Newtype (unwrap)
 import Data.Function.Uncurried as UC
 import Screens.Benefits.BenefitsScreen.Controller as BSC
 import PrestoDOM.Core (getPushFn)
+import Screens.NotificationsScreen.Controller (notificationTransformer, notifisDetailStateTransformer)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -608,13 +609,14 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{props{fromDeepLink = true, openPP = true}})
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
-              hideSplashAndCallFlow notificationFlow
+              let gPayload = EHC.getGlobalPayload "__payload"
+              hideSplashAndCallFlow $ notificationFlow gPayload
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
   case allState.notificationScreen.selectedNotification of
-    Just _ -> hideSplashAndCallFlow notificationFlow
+    Just _ -> hideSplashAndCallFlow $ notificationFlow Nothing
     Nothing -> pure unit
   case allState.globalProps.callScreen of
     ScreenNames.SUBSCRIPTION_SCREEN -> hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
@@ -1428,7 +1430,7 @@ driverProfileFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
       myRidesScreenFlow
     GO_TO_EDIT_BANK_DETAIL_SCREEN -> editBankDetailsFlow
-    NOTIFICATIONS_SCREEN -> notificationFlow
+    NOTIFICATIONS_SCREEN -> notificationFlow Nothing
     GO_TO_BOOKING_OPTIONS_SCREEN state-> do
       let downgradeOptions = (downgradeOptionsConfig state.data.vehicleSelected) <$> state.data.downgradeOptions
       modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{  data{ vehicleType = state.data.driverVehicleType
@@ -2101,7 +2103,7 @@ myRidesScreenFlow = do
       }})
 
       tripDetailsScreenFlow
-    NOTIFICATION_FLOW -> notificationFlow
+    NOTIFICATION_FLOW -> notificationFlow Nothing
     SELECTED_TAB state -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
       myRidesScreenFlow
@@ -2228,7 +2230,7 @@ referralScreenFlow = do
     GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN -> homeScreenFlow
     GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN -> myRidesScreenFlow
     GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN -> driverProfileFlow
-    GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN -> notificationFlow
+    GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN -> notificationFlow Nothing
     GO_TO_FLOW_AND_COME_BACK updatedState-> do
       response <-  lift $ lift $ Remote.linkReferralCode ( makeLinkReferralCodeReq updatedState.data.referralCode updatedState.data.password)
       case response of
@@ -2950,7 +2952,7 @@ homeScreenFlow = do
     UPDATE_STAGE stage -> do
       void $ updateStage $ HomeScreenStage stage
       homeScreenFlow
-    GO_TO_NOTIFICATIONS -> notificationFlow
+    GO_TO_NOTIFICATIONS -> notificationFlow Nothing
     ADD_ALTERNATE_HOME -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
@@ -3427,7 +3429,7 @@ subScriptionFlow = do
     NAV HomeScreenNav -> homeScreenFlow
     NAV GoToRideHistory -> myRidesScreenFlow
     NAV GoToContest -> referralFlow
-    NAV GoToAlerts -> notificationFlow
+    NAV GoToAlerts -> notificationFlow Nothing
     GOTO_HOMESCREEN -> homeScreenFlow
     NAV (GoToEarningsScreen _) -> driverEarningsFlow
     MAKE_PAYMENT state -> do
@@ -3659,17 +3661,31 @@ updateDriverStatusGlobal mode active= do
 --       homeScreenFlow
 --     CloseScreen -> homeScreenFlow
 
-notificationFlow :: FlowBT String Unit
-notificationFlow = do
+notificationFlow :: Maybe CTA.GlobalPayload -> FlowBT String Unit
+notificationFlow mbPayload= do
   let (GlobalState defGlobalState) = defaultGlobalState
+  case mbPayload of
+    Nothing -> pure unit
+    Just payload -> 
+      case payload ^. _payload ^. _deepLinkJSON of
+        Nothing -> pure unit
+        Just (CTA.QueryParam queryParam) -> 
+          case queryParam.messageId of 
+            Nothing -> pure unit
+            Just id -> do
+              resp <- lift $ lift $ Remote.getMessageById id
+              case resp of
+                Left err -> do
+                  pure $ toast $ "Message Not Found"
+                Right resp -> modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ notificationDetailModelState = notifisDetailStateTransformer $ notificationTransformer $ resp, notifsDetailModelVisibility = VISIBLE })
   screenAction <- UI.notifications
   case screenAction of
     REFRESH_SCREEN state -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> state{offsetValue = 0})
-      notificationFlow
+      notificationFlow Nothing
     LOAD_NOTIFICATIONS state -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> state{offsetValue = (length state.notificationList)})
-      notificationFlow
+      notificationFlow Nothing
     GO_HOME_SCREEN -> homeScreenFlow
     GO_REFERRAL_SCREEN -> referralFlow
     GO_EARNINGS_SCREEN -> driverEarningsFlow
@@ -3677,7 +3693,7 @@ notificationFlow = do
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing Nothing
     NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
-    NOTIFICATION_SCREEN_NAV _ -> notificationFlow
+    NOTIFICATION_SCREEN_NAV _ -> notificationFlow Nothing
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do
@@ -4121,7 +4137,7 @@ benefitsScreenFlow = do
     DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav -> homeScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory -> myRidesScreenFlow
-    DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow
+    DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow Nothing
     DRIVER_REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
     DRIVER_REFERRAL_SCREEN_NAV _ -> benefitsScreenFlow
     DRIVER_CONTEST_SCREEN -> referralScreenFlow
@@ -4388,7 +4404,7 @@ driverEarningsFlow = do
     EARNINGS_NAV GoToContest state -> do
        updateDriverStats state referralFlow  
     EARNINGS_NAV GoToAlerts state -> do
-       updateDriverStats state notificationFlow  
+       updateDriverStats state $ notificationFlow Nothing
     EARNINGS_NAV _ state -> do
        updateDriverStats state driverEarningsFlow
     CHANGE_SUB_VIEW subView state -> do

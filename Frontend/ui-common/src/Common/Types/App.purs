@@ -169,7 +169,8 @@ newtype Payload = Payload
 newtype QueryParam = QueryParam {
   option :: Maybe String,
   bookingId :: Maybe String,
-  rideId :: Maybe String
+  rideId :: Maybe String,
+  messageId :: Maybe String
 }
 
 newtype DeeplinkOptions = DeeplinkOptions {
