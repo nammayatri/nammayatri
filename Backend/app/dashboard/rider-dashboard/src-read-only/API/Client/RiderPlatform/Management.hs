@@ -9,6 +9,7 @@ import qualified API.Types.RiderPlatform.Management.Customer
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
+import qualified API.Types.RiderPlatform.Management.MultiModal
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.System
@@ -26,6 +27,7 @@ data ManagementAPIs = ManagementAPIs
     fRFSTicketDSL :: API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketAPIs,
     invoiceDSL :: API.Types.RiderPlatform.Management.Invoice.InvoiceAPIs,
     merchantDSL :: API.Types.RiderPlatform.Management.Merchant.MerchantAPIs,
+    multiModalDSL :: API.Types.RiderPlatform.Management.MultiModal.MultiModalAPIs,
     nammaTagDSL :: API.Types.RiderPlatform.Management.NammaTag.NammaTagAPIs,
     rideDSL :: API.Types.RiderPlatform.Management.Ride.RideAPIs,
     systemDSL :: API.Types.RiderPlatform.Management.System.SystemAPIs
@@ -38,12 +40,13 @@ mkManagementAPIs merchantId city token = do
   let fRFSTicketDSL = API.Types.RiderPlatform.Management.FRFSTicket.mkFRFSTicketAPIs fRFSTicketClientDSL
   let invoiceDSL = API.Types.RiderPlatform.Management.Invoice.mkInvoiceAPIs invoiceClientDSL
   let merchantDSL = API.Types.RiderPlatform.Management.Merchant.mkMerchantAPIs merchantClientDSL
+  let multiModalDSL = API.Types.RiderPlatform.Management.MultiModal.mkMultiModalAPIs multiModalClientDSL
   let nammaTagDSL = API.Types.RiderPlatform.Management.NammaTag.mkNammaTagAPIs nammaTagClientDSL
   let rideDSL = API.Types.RiderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> merchantClientDSL :<|> multiModalClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

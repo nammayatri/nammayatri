@@ -22,17 +22,28 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopMapping.RouteStopMapping] -> m ())
 createMany = traverse_ create
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+findByRouteCodeAndStopCodeAndVersionTag ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
+findByRouteCodeAndStopCodeAndVersionTag routeCode stopCode versionTag = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.stopCode $ Se.Eq stopCode,
+          Se.Is Beam.versionTag $ Se.Eq versionTag
+        ]
+    ]
 
-findByRouteCodeAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
-findByRouteCodeAndStopCode routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
+findByRouteCodeAndVersionTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCodeAndVersionTag routeCode versionTag = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.versionTag $ Se.Eq versionTag]]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByRouteCodes routeCode = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.In routeCode]]
+findByRouteCodesAndVersionTag ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> [Kernel.Prelude.Text] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCodesAndVersionTag versionTag routeCode = do findAllWithKV [Se.And [Se.Is Beam.versionTag $ Se.Eq versionTag, Se.Is Beam.routeCode $ Se.In routeCode]]
 
-findByStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByStopCode stopCode = do findAllWithKV [Se.Is Beam.stopCode $ Se.Eq stopCode]
+findByStopCodeAndVersionTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByStopCodeAndVersionTag stopCode versionTag = do findAllWithKV [Se.And [Se.Is Beam.stopCode $ Se.Eq stopCode, Se.Is Beam.versionTag $ Se.Eq versionTag]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
 findByPrimaryKey routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
@@ -51,6 +62,7 @@ updateByPrimaryKey (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
       Se.Set Beam.stopLon ((.lon) stopPoint),
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.versionTag versionTag,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -72,6 +84,7 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
             stopPoint = Kernel.External.Maps.Types.LatLong stopLat stopLon,
             timeBounds = timeBounds,
             vehicleType = vehicleType,
+            versionTag = versionTag,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -91,6 +104,7 @@ instance ToTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopM
         Beam.stopLon = (.lon) stopPoint,
         Beam.timeBounds = timeBounds,
         Beam.vehicleType = vehicleType,
+        Beam.versionTag = versionTag,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

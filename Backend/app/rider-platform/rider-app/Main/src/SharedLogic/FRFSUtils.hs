@@ -77,9 +77,9 @@ mkFRFSConfigAPI :: Config.FRFSConfig -> APITypes.FRFSConfigAPIRes
 mkFRFSConfigAPI Config.FRFSConfig {..} = do
   APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
 
-mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> Id DMOC.MerchantOperatingCity -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
-mkPOrgStationAPI mbPOrgId merchantOperatingCityId stationAPI = do
-  station <- B.runInReplica $ CQS.findByStationCodeAndMerchantOperatingCityId stationAPI.code merchantOperatingCityId >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and merchantOperatingCityId: " +|| merchantOperatingCityId ||+ "")
+mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> Id DMOC.MerchantOperatingCity -> Int -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
+mkPOrgStationAPI mbPOrgId merchantOperatingCityId versionTag stationAPI = do
+  station <- B.runInReplica $ CQS.findByStationCodeMerchantOperatingCityIdAndVersionTag stationAPI.code merchantOperatingCityId versionTag >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and merchantOperatingCityId: " +|| merchantOperatingCityId ||+ "")
   mkPOrgStationAPIRes station mbPOrgId
 
 data FRFSTicketDiscountDynamic = FRFSTicketDiscountDynamic
@@ -137,11 +137,11 @@ data RouteStopInfo = RouteStopInfo
     travelTime :: Maybe Seconds
   }
 
-getPossibleRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [RouteStopInfo]
-getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
-  routesWithStop <- B.runInReplica $ QRouteStopMapping.findByStopCode startStationCode
+getPossibleRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Int -> m [RouteStopInfo]
+getPossibleRoutesBetweenTwoStops startStationCode endStationCode versionTag = do
+  routesWithStop <- B.runInReplica $ QRouteStopMapping.findByStopCodeAndVersionTag startStationCode (Just versionTag)
   let routeCodes = nub $ map (.routeCode) routesWithStop
-  routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCodes routeCodes
+  routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCodesAndVersionTag (Just versionTag) routeCodes
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) serviceableStops
@@ -181,7 +181,7 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
                             )
               )
               groupedStops
-  routes <- QRoute.findByRouteCodes (map (\(routeCode, _, _, _) -> routeCode) possibleRoutes)
+  routes <- QRoute.findByRouteCodesAndVersionTag (Just versionTag) (map (\(routeCode, _, _, _) -> routeCode) possibleRoutes)
   return $
     map
       ( \route ->

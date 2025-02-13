@@ -14,7 +14,7 @@
 
 module Storage.CachedQueries.Station
   ( findByStationCode,
-    findByStationCodeAndMerchantOperatingCityId,
+    findByStationCodeMerchantOperatingCityIdAndVersionTag,
     findById,
   )
 where
@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Station as Queries
 
+-- prefer using findByStationCodeAndMerchantOperatingCityId as findByStationCode may not be unique
 findByStationCode :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Station)
 findByStationCode stationCode = do
   let key = makeStationCodeKey stationCode
@@ -45,14 +46,14 @@ cacheByStationCode station = do
   let key = makeStationCodeKey station.code
   Hedis.setExp key station expTime
 
-findByStationCodeAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperatingCity -> m (Maybe Station)
-findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId = do
+findByStationCodeMerchantOperatingCityIdAndVersionTag :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperatingCity -> Int -> m (Maybe Station)
+findByStationCodeMerchantOperatingCityIdAndVersionTag stationCode merchantOperatingCityId versionTag = do
   let key = makeStationCodeAndOpCityKey stationCode merchantOperatingCityId
   Hedis.safeGet key >>= \case
     Just a -> return $ Just a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheByStationCodeAndMerchantOperatingCityId /=<< Queries.findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId
+    findAndCache = flip whenJust cacheByStationCodeAndMerchantOperatingCityId /=<< Queries.findByStationCodeMerchantOperatingCityIdAndVersionTag stationCode (Just versionTag) merchantOperatingCityId
 
 makeStationCodeAndOpCityKey :: Text -> Id DMOC.MerchantOperatingCity -> Text
 makeStationCodeAndOpCityKey stationCode merchantOperatingCityId = "CachedQueries:Station:StationCode:" <> stationCode <> ":merchantOperatingCityId:" <> merchantOperatingCityId.getId

@@ -70,6 +70,7 @@ import Kernel.Utils.Common as Kernel
 import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.JourneyModule.Utils (getVersionTag)
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -412,15 +413,16 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
   bapConfig <-
     CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)
       >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")
+  merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
+  versionTag <- getVersionTag merchantOperatingCity.id frfsVehicleType Nothing
   route <-
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          route' <- B.runInReplica $ QRoute.findByRouteCodeAndVersionTag routeCode' (Just versionTag) >>= fromMaybeM (RouteNotFound routeCode')
           return $ Just route'
       )
       routeCode
-  merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
   let partnerOrgRiderId = "partnerOrg_rider_id"
   searchReq <- mkSearchReq frfsVehicleType partnerOrgRiderId partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do

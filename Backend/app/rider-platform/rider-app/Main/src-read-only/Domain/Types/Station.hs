@@ -25,6 +25,7 @@ data Station = Station
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    versionTag :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

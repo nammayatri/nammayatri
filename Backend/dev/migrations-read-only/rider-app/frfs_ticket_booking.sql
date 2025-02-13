@@ -173,17 +173,6 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN platform_number text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_skipped boolean ;
 
 
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
 
 
 
