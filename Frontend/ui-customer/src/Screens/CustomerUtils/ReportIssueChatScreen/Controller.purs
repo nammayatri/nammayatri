@@ -25,7 +25,7 @@ import Components.PrimaryButton.Controller (Action(..)) as PrimaryButton
 import Components.PrimaryEditText.Controller (Action(..)) as PrimaryEditText
 import Components.RecordAudioModel.Controller (Action(..)) as RecordAudioModel
 import Components.ViewImageModel.Controller as ViewImageModel
-import Data.Array (deleteAt, length, snoc, filter) 
+import Data.Array (deleteAt, length, snoc, filter, index) 
 import Data.Either (Either(..))
 import Data.Foldable (find)
 import Data.Int (fromString)
@@ -37,8 +37,8 @@ import Data.TraversableWithIndex (forWithIndex)
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5, runEffectFn1, runEffectFn4)
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
-import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC, getGlobalPayload)
+import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp, copyToClipboard)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
@@ -62,6 +62,9 @@ import Engineering.Helpers.Accessor
 import Mobility.Prelude (startsWith)
 import Services.API (MandatoryUploads(..), MediaType(..))
 import Data.Array as DA
+import Data.String.Regex (regex, replace) as Regex
+import Data.String.Regex.Flags (global) as RegexFlags
+import Data.String (replace, Pattern(..), Replacement(..), split, trim)
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -434,7 +437,7 @@ eval (UpdateRecordModelPlayer url) state = do
 
 ---------------------------------------------------- Chat View Model ----------------------------------------------------
 eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
-  let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent optionName Nothing Nothing "Customer" (getCurrentUTC ""))
+  let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent optionName Nothing Nothing Nothing "Customer" (getCurrentUTC ""))
       option = find (\optionObj -> optionObj.option == optionName) state.data.options
   case option of
     Just selectedOption -> do
@@ -508,7 +511,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state = do
   let option = find (\opt -> (state.props.showCallSupportModel && opt.label == "CALL_SUPPORT") ||(state.props.showCallDriverModel && opt.label == "CALL_DRIVER")) state.data.options
   case option of
     Just selectedOption -> do
-      let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent selectedOption.option Nothing Nothing "Customer" (getCurrentUTC "") )
+      let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent selectedOption.option Nothing Nothing Nothing "Customer" (getCurrentUTC "") )
           state' = state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOption = Just selectedOption }, props { isPopupModelOpen = false, showCallDriverModel = false, showCallSupportModel = false } }
       if state.props.showCallDriverModel
       then
@@ -526,6 +529,40 @@ eval InitializeCallback state = continue state { props {initalizedCallbacks = tr
 
 eval GoToRideDetails state = do
   exit $ GotoTripDetailsScreen state
+
+eval (ChatViewActionController (ChatView.OnClickMessageAction chatComponentConfig)) state = do
+  case chatComponentConfig.messageLabel of
+    Just "COPY_MESSAGE_TO_CLIPBOARD" -> do
+      pure $ copyToClipboard $ cleanMessage chatComponentConfig.message
+    _ -> pure unit
+  continue state
+  where
+    cleanMessage :: String -> String
+    cleanMessage input =
+      input
+      # replace (Pattern "<br>") (Replacement "\n")
+      # removeHtmlTags
+      # formatLabelsAndValues
+      # trim
+
+    removeHtmlTags :: String -> String
+    removeHtmlTags str = case Regex.regex "<[^>]*>" RegexFlags.global of
+      Right pattern -> Regex.replace pattern "" str
+      Left _ -> str
+
+    formatLabelsAndValues :: String -> String
+    formatLabelsAndValues str =
+      str
+      # replace (Pattern ":\n") (Replacement ": ")
+      # replace (Pattern "\n") (Replacement "\n\n")
+
+    trim :: String -> String
+    trim str =
+      str
+      # replace (Pattern "^\\s+") (Replacement "")
+      # replace (Pattern "\\s+$") (Replacement "")
+      # replace (Pattern "\\s*\\n\\s*") (Replacement "\n")
+      # replace (Pattern "  +") (Replacement " ")
 
 eval _ state = do
   continue state

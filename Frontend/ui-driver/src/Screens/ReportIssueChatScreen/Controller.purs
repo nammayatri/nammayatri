@@ -167,7 +167,7 @@ eval ShowOptions state = do
   let message = (getString SELECT_OPTION) <> "\n"
                 <> joinWith "\n" options'
   let messages' = snoc state.data.chatConfig.messages
-                    (makeChatComponent' message Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500)
+                    (makeChatComponent' message Nothing Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500)
   continue state { data { chatConfig { enableSuggestionClick = false, messages = messages', chatSuggestionsList = options' } } }
 
 ---------------------------------------------------- Add Media ----------------------------------------------------
@@ -411,14 +411,14 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
       then
         continue state { props { showCallCustomerModel = true, isPopupModelOpen = true } }
       else do
-        let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName Nothing Nothing "Driver" (getCurrentUTC ""))
+        let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName Nothing Nothing Nothing "Driver" (getCurrentUTC ""))
         continueWithCmd state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId } } [do
           if state.props.isReversedFlow
           then
-            let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500
+            let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500
             in pure $ SendMessage message false
           else
-            pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE) Nothing Nothing "Bot" ((getCurrentUTC "")) "Text" 500) (not state.props.isReversedFlow)
+            pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE) Nothing Nothing Nothing "Bot" ((getCurrentUTC "")) "Text" 500) (not state.props.isReversedFlow)
       ]
     Nothing -> do
       void $  pure $ toast $ getString CANT_FIND_OPTION
@@ -455,7 +455,7 @@ eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id text)) sta
 eval (ConfirmCall (PrimaryButton.OnClick)) state =
   case find (\x -> x.label == "CALL_THE_CUSTOMER") state.data.options of
     Just selectedOption -> do
-      let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option Nothing Nothing "Driver" (getCurrentUTC ""))
+      let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option Nothing Nothing Nothing "Driver" (getCurrentUTC ""))
       exit $ CallCustomer state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId }, props { isPopupModelOpen = false, showCallCustomerModel = false } }
     Nothing -> do
       void $ pure $ toast $ getString CANT_FIND_OPTION
