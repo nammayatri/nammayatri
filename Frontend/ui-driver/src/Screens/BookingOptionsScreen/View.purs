@@ -273,6 +273,7 @@ downgradeVehicleView push state =
         [
           width MATCH_PARENT
         , height WRAP_CONTENT
+        , margin $ MarginBottom 12
         ] 
         $ if state.data.vehicleType /= "BIKE" then 
           [ localPreferenceView push state
@@ -410,46 +411,37 @@ serviceTierItem state push service enabled opacity index =
 
 serviceTierItemHorizontal :: forall w. ST.BookingOptionsScreenState -> (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> Int -> PrestoDOM (Effect Unit) w
 serviceTierItemHorizontal state push service enabled opacity index =
-      linearLayout
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      ][
-        linearLayout
-        [ width $ V 100
-        , height WRAP_CONTENT
-        , padding (Padding 12 8 8 8)
-        , margin $ MarginVertical 5 5
-        , orientation VERTICAL
-        , background $ if service.isSelected then Color.blue600 else Color.white900
-        , stroke $ "1," <> Color.grey900
-        , cornerRadius 8.0
-        , gravity CENTER
-        ]
-        [ imageView
-            [ imageWithFallback $ getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
-            , width $ V 35
-            , margin $ MarginTop 8
-            , height $ V 35
-            ]
-          , textView
-            [ height WRAP_CONTENT
-            , padding $ PaddingTop 8
-            , textFromHtml $ service.name
-            , color Color.black800
-            , singleLine true
-            ]
-          , linearLayout
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , padding $ PaddingVertical 12 8
-            , onClick push $ const $ getAction
-            , gravity RIGHT
-            ]
-            [ toggleView push service.isSelected service.isDefault service ]
-        ]
-        
-        ]
+  linearLayout
+  [ weight 1.0
+  , height WRAP_CONTENT
+  , padding (Padding 12 8 8 8)
+  , orientation VERTICAL
+  , onClick push $ const $ getAction
+  , cornerRadius 8.0
+  , gravity CENTER
+  ]
+  [ imageView
+    [ imageWithFallback $ getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
+    , width $ V 35
+    , margin $ MarginTop 8
+    , height $ V 35
+    ]
+  , textView
+    [ height WRAP_CONTENT
+    , padding $ PaddingTop 8
+    , textFromHtml $ service.name
+    , color Color.black800
+    , singleLine true
+    ]
+  , linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , padding $ PaddingVertical 12 8
+    , onClick push $ const $ getAction
+    , gravity RIGHT
+    ]
+    [ toggleView push service.isSelected service.isDefault service ]
+]
   where 
     getAction :: Action
     getAction = case service.serviceTierType of
@@ -485,7 +477,12 @@ localPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScr
 localPreferenceView push state = 
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , weight 1.0
+    , background $ if item.isSelected then Color.blue600 else Color.white900
+    , stroke $ "1," <> Color.grey900
+    , cornerRadius 8.0
+    , margin $ MarginRight 12
+    , gravity CENTER
     , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToIntraCity
     ][ serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToIntraCity) false (-1)]
   where 
@@ -497,8 +494,12 @@ rentalPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsSc
 rentalPreferenceView push state = 
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , margin $ MarginLeft 12
+    , weight 1.0
+    , margin $ MarginRight 12
+    , background $ if item.isSelected then Color.blue600 else Color.white900
+    , stroke $ "1," <> Color.grey900
+    , cornerRadius 8.0
+    , gravity CENTER
     , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToRental
     ][serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToRental) false (-1)]
   where 
@@ -509,8 +510,11 @@ intercityPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOption
 intercityPreferenceView push state = do
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , margin $ MarginLeft 12
+    , weight 1.0
+    , background $ if item.isSelected then Color.blue600 else Color.white900
+    , stroke $ "1," <> Color.grey900
+    , cornerRadius 8.0
+    , gravity CENTER
     , visibility $ MP.boolToVisibility $ isJust state.props.canSwitchToInterCity
     ][serviceTierItemHorizontal state push item (fromMaybe false state.props.canSwitchToInterCity) false (-1)]
   where 
