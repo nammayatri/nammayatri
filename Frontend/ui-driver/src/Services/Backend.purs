@@ -961,6 +961,14 @@ messageSeenBT messageId = do
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
+--------------------------------- messageSeen  --------------------------------------------------------------------------------------------------------
+getMessageById :: String -> Flow GlobalState (Either ErrorResponse MessageAPIEntityResponse)
+getMessageById id = do
+     headers <- getHeaders "" false
+     withAPIResult (EP.getMessage id) unwrapResponse $ callAPI headers (GetMessageReq id)
+    where
+        unwrapResponse (x) = x
+
 --------------------------------- likeMessage  --------------------------------------------------------------------------------------------------------
 likeMessageBT :: String -> FlowBT String ApiSuccessResult
 likeMessageBT messageId = do

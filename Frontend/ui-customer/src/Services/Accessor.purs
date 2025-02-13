@@ -296,9 +296,6 @@ _createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldR
 _isSafetyCenterDisabled :: forall a b c. Newtype a { isSafetyCenterDisabled :: b | c } => Lens' a b
 _isSafetyCenterDisabled = lens (unwrap >>> _.isSafetyCenterDisabled) (\oldRec newVal -> wrap ((unwrap oldRec) { isSafetyCenterDisabled = newVal }))
 
-_deepLinkJSON :: forall a b c. Newtype a { deepLinkJSON :: b | c } => Lens' a b
-_deepLinkJSON = lens (unwrap >>> _.deepLinkJSON) (\oldRec newVal -> wrap ((unwrap oldRec) { deepLinkJSON = newVal }))
-
 _rideEndTime :: forall a b c. Newtype a { rideEndTime :: b | c } => Lens' a b
 _rideEndTime = lens (unwrap >>> _.rideEndTime) (\oldRec newVal -> wrap ((unwrap oldRec) { rideEndTime = newVal }))
 

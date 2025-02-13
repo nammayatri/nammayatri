@@ -232,6 +232,30 @@ descriptionAndComment state push =
         , visibility GONE -- TODO :: Change the visibility in next iteration
         , text state.actionText
         ] <> FontStyle.body15 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , background Color.blue600
+      , cornerRadius 15.0
+      , padding $ Padding 10 6 10 6
+      , margin $ MarginTop 16
+      , onClick push $ const ShareMessage
+      , gravity CENTER
+      , rippleColor Color.rippleShade
+      ][
+        imageView
+        [ height $ V 16
+        , width $ V 16 
+        , imageUrl "ic_share_blue"
+        , margin $ MarginRight 2
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width  WRAP_CONTENT
+        , text $ getString SHARE
+        , color Color.blue900
+        ] <> FontStyle.body1 LanguageStyle
+      ]
     , if isJust state.comment then customTextView (getString YOUR_COMMENT) FontSize.a_14 Color.black900 (MarginTop 16) $ FontStyle.medium LanguageStyle else textView []
     , linearLayout
         [ height WRAP_CONTENT
