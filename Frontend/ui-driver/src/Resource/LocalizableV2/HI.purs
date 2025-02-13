@@ -1711,6 +1711,7 @@ getHi =
     , your_ride_starts_in: "आपकी सवारी में शुरू होती है"
     , away: " दूर"
     , intercity: "अंतर-शहर"
+    , local: "स्थानीय"
     , intercity_return: "अंतर-शहर वापसी"
     , rental: "किराया"
     , regular: "नियमित"
