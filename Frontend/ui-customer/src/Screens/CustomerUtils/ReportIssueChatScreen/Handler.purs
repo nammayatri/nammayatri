@@ -116,7 +116,7 @@ selectIssueOptionHandler updatedState = do
    
     messages' = DA.mapWithIndex (
       \index (Message currMessage) -> 
-          makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
+          makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
     ) getOptionsRes.messages
 
     chats' = [
@@ -217,16 +217,16 @@ uploadIssueHandler updatedState = do
         showDescription = DS.length (DS.trim issueInfoRes.description) > 0
         descMessages = 
           if showDescription then 
-            DA.snoc updatedState.data.chatConfig.messages (makeChatComponent' (reportIssueMessageTransformer issueInfoRes.description) Nothing Nothing "Customer" (getCurrentUTC "") "Text" 500) 
+            DA.snoc updatedState.data.chatConfig.messages (makeChatComponent' (reportIssueMessageTransformer issueInfoRes.description) Nothing Nothing Nothing "Customer" (getCurrentUTC "") "Text" 500) 
           else
             updatedState.data.chatConfig.messages
 
-        mediaMessages' = DA.mapWithIndex (\index media -> makeChatComponent' media.url Nothing Nothing "Customer" (getCurrentUTC "") media._type ((index +  1) * 500)) issueInfoRes.mediaFiles
+        mediaMessages' = DA.mapWithIndex (\index media -> makeChatComponent' media.url Nothing Nothing Nothing "Customer" (getCurrentUTC "") media._type ((index +  1) * 500)) issueInfoRes.mediaFiles
         messages' = DA.concat [
           descMessages
         , mediaMessages'
         , DA.mapWithIndex (
-            \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (DA.length mediaMessages' + 1 + index))
+            \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (DA.length mediaMessages' + 1 + index))
           ) postIssueRes.messages
         ]
       modifyScreenState $ ReportIssueChatScreenStateType (
@@ -273,7 +273,7 @@ callDriverHandler updatedState = do
           issueReportId = fromMaybe "" updatedState.data.issueId
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.selectedCategory.categoryId selectedOptionId rideId issueReportId
       let getOptionsRes' = DA.mapWithIndex (\index (Option optObj) -> optObj{ option = optObj.option}) getOptionsRes.options
-          messages' = DA.mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
+          messages' = DA.mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
           chats' = [Chat {chatId : selectedOptionId,chatType : "IssueOption",timestamp : (getCurrentUTC "")}] <> 
                     (map (\(Message currMessage) -> Chat {
                       chatId : currMessage.id, 
@@ -301,7 +301,7 @@ callSupportHandler updatedState = do
       issueReportId = fromMaybe "" updatedState.data.issueId
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.selectedCategory.categoryId selectedOptionId rideId issueReportId
   let getOptionsRes' = DA.mapWithIndex (\index (Option optionObj) -> optionObj {option =  optionObj.option}) getOptionsRes.options
-      messages' = DA.mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages -- Transformer Not Needed for Issue Flow
+      messages' = DA.mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages -- Transformer Not Needed for Issue Flow
       chats' = [Chat {chatId : selectedOptionId, 
                       chatType : "IssueMessage",
                       timestamp : (getCurrentUTC "")}] <> 
@@ -320,7 +320,7 @@ reOpenIssueHandler updatedState = do
   (GetOptionsRes _) <- Remote.getOptionsBT language updatedState.data.selectedCategory.categoryId selectedOptionId "" (fromMaybe "" updatedState.data.issueId)
   (UpdateIssueRes updateIssueRes) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
   let messages' = DA.mapWithIndex (\index (Message currMessage) -> 
-                                      makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
+                                      makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
                                   ) updateIssueRes.messages
   modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
     updatedState { 

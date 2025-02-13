@@ -28,6 +28,7 @@ data Action = SendMessage
             | NoAction
             | OnImageClick String
             | MessageAnimationEnd
+            | OnClickMessageAction ChatComponentConfig
 
 type Config = 
   { userConfig :: UserConfig
@@ -70,6 +71,7 @@ type ChatComponentConfig = {
     message :: String 
   , messageTitle :: Maybe String
   , messageAction :: Maybe String
+  , messageLabel :: Maybe String
   , sentBy :: String 
   , timeStamp :: String
   , type :: String
@@ -113,22 +115,24 @@ config =
     , useSuggestionsView : false
   }
 
-makeChatComponent' :: String -> Maybe String -> Maybe String -> String -> String -> String -> Int -> ChatComponentConfig 
-makeChatComponent' message messageTitle messageAction sender timeStamp type' delay =  {
+makeChatComponent' :: String -> Maybe String -> Maybe String -> Maybe String -> String -> String -> String -> Int -> ChatComponentConfig 
+makeChatComponent' message messageTitle messageAction messageLabel sender timeStamp type' delay =  {
   "message" : message
 , "messageTitle" : messageTitle
 , "messageAction" : messageAction
+, "messageLabel" : messageLabel
 , "sentBy" : sender
 , "timeStamp" : timeStamp
 , "type" : type'
 , delay : delay
 }
 
-makeChatComponent :: String -> Maybe String -> Maybe String -> String -> String -> ChatComponentConfig
-makeChatComponent message messageTitle messageAction sender timeStamp =  {
+makeChatComponent :: String -> Maybe String -> Maybe String -> Maybe String -> String -> String -> ChatComponentConfig
+makeChatComponent message messageTitle messageAction messageLabel sender timeStamp =  {
   "message" : message
 , "messageTitle" : messageTitle
 , "messageAction" : messageAction
+, "messageLabel" : messageLabel
 , "sentBy" : sender
 , "timeStamp" : timeStamp
 , "type" : "Text"
