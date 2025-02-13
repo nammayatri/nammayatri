@@ -1711,6 +1711,7 @@ getMl =
     , your_ride_starts_in: "നിങ്ങളുടെ യാത്രയിൽ ആരംഭിക്കുന്നു"
     , away: " അകലെ"
     , intercity: "നഗരാന്തര"
+    , local: "സ്ഥലം"
     , intercity_return: "നഗരാന്തര തിരിച്ചു"
     , rental: "വാടക"
     , regular: "സ്ഥിരം"

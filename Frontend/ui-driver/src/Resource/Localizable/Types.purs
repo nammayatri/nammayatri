@@ -1729,6 +1729,7 @@ data STR = LETS_GET_STARTED
         | YOUR_RIDE_STARTS_IN   
         | AWAY   
         | INTERCITY
+        | LOCAL
         | INTERCITY_RETURN
         | RENTAL
         | REGULAR

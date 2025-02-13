@@ -1727,6 +1727,7 @@ newtype Keymap
   , your_ride_starts_in :: String
   , away :: String
   , intercity :: String
+  , local :: String
   , intercity_return :: String
   , rental :: String
   , regular :: String
@@ -6926,6 +6927,9 @@ away = a
 
 intercity :: Proxy "intercity"
 intercity = a
+
+local :: Proxy "local"
+local = a
 
 intercity_return :: Proxy "intercity_return"
 intercity_return = a

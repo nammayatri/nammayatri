@@ -1787,6 +1787,7 @@ getProxy str = case str of
   YOUR_RIDE_STARTS_IN -> \a -> a @~ your_ride_starts_in
   AWAY -> \a -> a @~ away
   INTERCITY -> \a -> a @~ intercity
+  LOCAL -> \a -> a @~ local
   INTERCITY_RETURN -> \a -> a @~ intercity_return
   RENTAL -> \a -> a @~ rental
   REGULAR -> \a -> a @~ regular
