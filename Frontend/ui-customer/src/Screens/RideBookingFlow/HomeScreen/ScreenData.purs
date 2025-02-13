@@ -131,7 +131,7 @@ initData = let
     , quoteList : []
     , selectedQuoteId : Nothing
     , selectedQuoteVariant : Nothing
-    , lastMessage : { message : "", messageTitle : Nothing, messageAction : Nothing, sentBy : "", timeStamp : "", type : "", delay : 0 }
+    , lastMessage : { message : "", messageTitle : Nothing, messageAction : Nothing, messageLabel : Nothing, sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     , ratingViewState : {
         selectedYes : Nothing,

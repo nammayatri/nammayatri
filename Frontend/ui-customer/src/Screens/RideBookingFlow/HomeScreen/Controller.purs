@@ -593,7 +593,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
 eval LoadMessages state = do
   let allMessages = getChatMessages FunctionCall
       toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
-        { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+        { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
       transformedMessages = map toChatComponentConfig allMessages
   case last allMessages of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}}
@@ -712,7 +712,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
           toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
-            { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+            { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
           transformedMessages = map toChatComponentConfig allMessages
       continueWithCmd state {data{messages = transformedMessages}, props {currentStage = ChatWithDriver, stageBeforeChatScreen = if state.props.currentStage /= ChatWithDriver then state.props.currentStage else state.props.stageBeforeChatScreen, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
   else continueWithCmd state[ do
