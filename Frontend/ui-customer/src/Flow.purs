@@ -6550,6 +6550,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
 firstRideCompletedEvent :: String -> FlowBT String Unit
 firstRideCompletedEvent str = do
   logField_ <- lift $ lift $ getLogFields
+  (GlobalState globalState) <- getState
   let
     appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
     eventPrefix = case appName of
