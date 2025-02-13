@@ -706,12 +706,10 @@ setForwardBatchingData cityConf =
 
 getCityConfig :: Array MCT.CityConfig -> String -> MCT.CityConfig
 getCityConfig cityConfig cityName = do
-  maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+  getValueFromCache cityName (\cityName -> maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig)
     
 getCityConfigFromCityCode :: Array MCT.CityConfig -> String -> MCT.CityConfig
-getCityConfigFromCityCode cityConfigArr cityCode =
-  let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr
-  in setForwardBatchingData cityConfig
+getCityConfigFromCityCode cityConfigArr cityCode = getValueFromCache cityCode (\cityCode -> maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr)
 
 formatSecIntoMinSecs :: Int -> String
 formatSecIntoMinSecs seconds = 
