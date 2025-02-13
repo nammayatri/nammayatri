@@ -4,11 +4,11 @@ module API.Types.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.FRFSTicketService
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
-import Domain.Types.Ride (RideStatus (..))
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.MapsClient.Types
@@ -26,12 +26,18 @@ data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Ma
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ExtendLegGetFareResp = ExtendLegGetFareResp {distance :: Kernel.Types.Common.Distance, duration :: Kernel.Types.Common.Seconds, totalFare :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.GetFareResponse}
+data ExtendLegGetFareResp = ExtendLegGetFareResp
+  { bookingUpdateRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest),
+    distance :: Kernel.Types.Common.Distance,
+    duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    totalFare :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.GetFareResponse
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ExtendLegReq = ExtendLegReq
-  { distance :: Kernel.Types.Common.Distance,
+  { bookingUpdateRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest),
+    distance :: Kernel.Types.Common.Distance,
     duration :: Kernel.Types.Common.Seconds,
     endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity,
     fare :: Lib.JourneyModule.Types.GetFareResponse,
@@ -49,15 +55,15 @@ data JourneyFeedBackForm = JourneyFeedBackForm {additionalFeedBack :: Kernel.Pre
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInfoResp = JourneyInfoResp
-  { estimatedDistance :: Kernel.Types.Common.Distance,
+  { endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
-    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

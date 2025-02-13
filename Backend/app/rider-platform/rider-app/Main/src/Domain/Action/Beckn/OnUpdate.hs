@@ -57,15 +57,20 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
+import Environment
 import Environment ()
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Types as DLanguage
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
@@ -82,6 +87,7 @@ import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
@@ -394,7 +400,8 @@ onUpdate ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
   ValidatedOnUpdateReq ->
   m ()
@@ -512,6 +519,11 @@ onUpdate = \case
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
+    whenJust booking.journeyId $ \journeyId -> do
+      journeyLegId <- Redis.safeGet (mkExtendLegKey journeyId.getId) >>= fromMaybeM (InvalidRequest "journeyLegId not found in Redis")
+      toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
+      JM.cancelRemainingLegs journeyId
+      QJourneyLeg.updateAfterEditLocation booking.estimatedDuration booking.estimatedDistance (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLegId
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language
@@ -684,3 +696,6 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         createdAt = now,
         updatedAt = now
       }
+
+mkExtendLegKey :: Text -> Text
+mkExtendLegKey journeyId = "Extend:Leg:For:JourneyId-" <> journeyId

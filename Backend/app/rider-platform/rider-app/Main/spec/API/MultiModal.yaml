@@ -18,6 +18,7 @@ imports:
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
   GetFareResponse: Lib.JourneyModule.Types
+  BookingUpdateRequest: Domain.Types.BookingUpdateRequest
 
 module: MultimodalConfirm
 
@@ -30,6 +31,8 @@ types:
     journeyStatus: Domain.Types.Journey.JourneyStatus
     unifiedQR: Maybe UnifiedTicketQR
     legs: [LegInfo]
+    startTime: Maybe UTCTime
+    endTime: Maybe UTCTime
 
   LegStatus:
     legOrder: Int
@@ -47,6 +50,7 @@ types:
     fare: GetFareResponse
     startLocation: ExtendLegStartPoint
     endLocation: Maybe LocationAPIEntity
+    bookingUpdateRequestId: Maybe (Id BookingUpdateRequest)
 
   ExtendLegGetFareReq:
     startLocation: ExtendLegStartPoint
@@ -55,7 +59,8 @@ types:
   ExtendLegGetFareResp:
     totalFare : Maybe GetFareResponse
     distance : Distance
-    duration : Seconds
+    duration : Maybe Seconds
+    bookingUpdateRequestId : Maybe (Id BookingUpdateRequest)
 
   RiderLocationReq:
     latLong: LatLong
