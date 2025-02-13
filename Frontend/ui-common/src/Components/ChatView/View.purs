@@ -649,7 +649,7 @@ detailedMessageView state push config (ChatConfig chatConfig) value =
       background Color.white900,
       padding $ Padding 12 12 12 0,
       cornerRadius 12.0,
-      width WRAP_CONTENT,
+      width MATCH_PARENT,
       margin $ MarginTop 12,
       orientation VERTICAL
     ][
@@ -663,9 +663,10 @@ detailedMessageView state push config (ChatConfig chatConfig) value =
         text (fromMaybe "" config.messageAction),
         singleLine false,
         margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0,
-        color Color.blue900,
+        color Color.blue800,
         visibility $ boolToVisibility (isJust config.messageAction),
-        padding $ PaddingBottom 6
+        padding $ PaddingBottom 6,
+        onClick push $ const (OnClickMessageAction config)
       ] <> FontStyle.body1 TypoGraphy
     ]
   ]
