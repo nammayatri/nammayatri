@@ -35,6 +35,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
+import qualified SharedLogic.FRFSUtils as SFU
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
@@ -122,7 +123,7 @@ validateRequest DOnSearch {..} = do
   let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
-  if frfsConfig.isEventOngoing == Just True
+  if frfsConfig.isEventOngoing == Just True && search.riderId /= SFU.partnerOrgRiderId
     then do
       stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
       return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent, isEventOngoing = True, mbFreeTicketInterval = frfsConfig.freeTicketInterval, mbMaxFreeTicketCashback = frfsConfig.maxFreeTicketCashback}
@@ -170,24 +171,14 @@ mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch ->
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
-
   startStation <- QStation.findByStationCodeAndMerchantOperatingCityId dStartStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
   endStation <- QStation.findByStationCodeAndMerchantOperatingCityId dEndStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
-  let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
-  let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
   now <- getCurrentTime
-  (discountedTickets, eventDiscountAmount) <-
-    if isEventOngoing
-      then do
-        let perTicketCashback = min maxFreeTicketCashback price.amountInt.getMoney
-            discountedTickets = ((ticketsBookedInEvent + search.quantity) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
-            eventDiscountAmount = toHighPrecMoney $ discountedTickets * perTicketCashback
-        return (Just discountedTickets, Just eventDiscountAmount)
-      else return (Nothing, Nothing)
+  let (discountedTickets, eventDiscountAmount) = SFU.getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price search.quantity ticketsBookedInEvent
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
   return
     Quote.FRFSQuote
