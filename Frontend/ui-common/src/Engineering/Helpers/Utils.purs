@@ -520,3 +520,13 @@ checkConditionToShowInternetScreen lazy =
       in false
 
 foreign import getAndRemoveLatestNotificationType :: Unit -> String
+
+-- | Helper function to execute Maybe computations
+whenJust :: forall m a b. Monad m => Maybe a -> (a -> m b) -> m Unit
+whenJust Nothing _ = pure unit
+whenJust (Just a) f = void $ f a
+
+-- | Helper function to execute Either computations
+whenRight :: forall m a b c. Monad m => Either a b -> (b -> m c) -> m Unit
+whenRight (Left _) _ = pure unit
+whenRight (Right b) f = void $ f b

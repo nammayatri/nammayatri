@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="tip_included"> டிப் சேர்க்கப்பட்டுள்ளது!</string>
     <string name="ride_rejected"> சவாரி நிராகரிக்கப்பட்டது</string>
     <string name="request">கோரிக்கை</string>
@@ -52,4 +52,6 @@
     <string name="no_additional_fare_tips_and_waiting_charges">"கூடுதல் கட்டணம் இல்லை. காலிகைகள் இல்லை. காதிரி கட்டணங்கள் இல்லை."</string>
     <string name="third_party_booking">"மூன்றாம் தரப்பு முன்பதிவு"</string>
     <string name="round_trip">சுற்றுலா பயணம்</string>
+    <string name="zxing_msg_default_status" tools:override="true">""</string>
+    <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
 </resources>

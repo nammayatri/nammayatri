@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="tip_included"> ಟಿಪ್ ಒಳಗೊಂಡಿದೆ!</string>
     <string name="ride_rejected"> ಸವಾರಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ</string>
     <string name="request">ಕೋರಿಕೆ</string>
@@ -52,4 +52,6 @@
     <string name="no_additional_fare_tips_and_waiting_charges">"ಯಾವುದೇ ಅತಿರಿಕ್ತ ಹಣ ಇಲ್ಲ. ಯಾವುದೇ ಸೂಚನೆಗಳಿಲ್ಲ. ಯಾವುದೇ ಕಾಯಲು ವೆಚ್ಚಗಳಿಲ್ಲ."</string>
     <string name="third_party_booking">"ತೃತೀಯ ಪಕ್ಷದ ಬುಕಿಂಗ್"</string>
     <string name="round_trip">ರೌಂಡ್ ಟ್ರಿಪ್</string>
+    <string name="zxing_msg_default_status" tools:override="true">""</string>
+    <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
 </resources>
