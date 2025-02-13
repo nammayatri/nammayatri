@@ -77,7 +77,7 @@ Journey:
     - EXTRA_QUERY_FILE
 
   default:
-    riderId: '""' # default value for backward compatibility
+    riderId: "''" # default value for backward compatibility
 
 #passenger details
 JourneyBooking:
@@ -218,7 +218,7 @@ JourneyLeg:
     endLocation: LatLngV2 #LocationV2
     fromStopDetails: Maybe MultiModalStopDetails
     toStopDetails: Maybe MultiModalStopDetails
-    routeDetails: Maybe MultiModalRouteDetails
+    routeDetails: "[MultiModalRouteDetails]"
     agency: Maybe MultiModalAgency
     fromArrivalTime: Maybe UTCTime
     fromDepartureTime: Maybe UTCTime
@@ -245,16 +245,8 @@ JourneyLeg:
       toStopName: Maybe Text
       toStopGtfsId: Maybe Text
       toStopPlatformCode : Maybe Text
-    routeDetails:
-      routeGtfsId: Maybe Text
-      routeLongName: Maybe Text
-      routeShortName: Maybe Text
-      routeColorName : Maybe Text
-      routeColorCode : Maybe Text
-      frequency : Maybe Int
-    agency:
-      agencyGtfsId: Maybe Text
-      agencyName: Maybe Text
+    routeDetails: {}
+    agency: {}
     startLocation:
       startLocationLat: Double
       startLocationLon: Double
@@ -296,12 +288,17 @@ JourneyLeg:
       params: [duration, distance, endLocation]
       where: id
 
+  intermediateTransformers:
+    fromTType:
+      - routeDetailsList: Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)|EM
+      - agencyDetails: Storage.Queries.Transformers.RouteDetails.getAgencyDetails routeDetailsList|E
+
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
-    routeDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails routeGtfsId routeLongName routeShortName routeColorCode)|E
-    agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E)
+    routeDetails: Storage.Queries.Transformers.RouteDetails.getTransformedRouteDetails routeDetailsList|E
+    agency: agencyDetails|E
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
     legSearchId: legId|E
@@ -317,23 +314,63 @@ JourneyLeg:
     toStopName:  (toStopDetails >>= (.name))|E
     toStopPlatformCode:  (toStopDetails >>= (.platformCode))|E
     toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
-    routeGtfsId: (routeDetails >>= (.gtfsId))|E
-    routeLongName: (routeDetails >>= (.longName))|E
-    routeShortName: (routeDetails >>= (.shortName))|E
-    routeColorName: (routeDetails >>= (.shortName))|E
-    routeColorCode: (routeDetails >>= (.color))|E
-    frequency : (Nothing)|E
-    agencyGtfsId: (routeDetails >>= (.gtfsId))|E
-    agencyName: (routeDetails >>= (.longName))|E
     startLocationLat: (startLocation & (.latitude))|E
     startLocationLon: (startLocation & (.longitude))|E
     endLocationLat: (endLocation & (.latitude))|E
     endLocationLon: (endLocation & (.longitude))|E
     legId: legSearchId|E
 
+  excludedDefaultQueries:
+    - create
+
   constraints:
     id: PrimaryKey
     journeyId: "!SecondaryKey"
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+RouteDetails:
+  fields:
+    id: Id RouteDetails
+    journeyLegId: Id JourneyLeg
+    routeGtfsId: Maybe Text
+    routeLongName: Maybe Text
+    routeShortName: Maybe Text
+    routeColorName : Maybe Text
+    routeColorCode : Maybe Text
+    frequency : Maybe Seconds
+    agencyGtfsId: Maybe Text
+    agencyName: Maybe Text
+    subLegOrder: Maybe Int
+    # fromStopDetails:
+    fromStopCode: Maybe Text
+    fromStopName: Maybe Text
+    fromStopGtfsId: Maybe Text
+    fromStopPlatformCode : Maybe Text
+    # toStopDetails:
+    toStopCode: Maybe Text
+    toStopName: Maybe Text
+    toStopGtfsId: Maybe Text
+    toStopPlatformCode : Maybe Text
+    # Times --
+    fromArrivalTime: Maybe UTCTime
+    fromDepartureTime: Maybe UTCTime
+    toArrivalTime: Maybe UTCTime
+    toDepartureTime: Maybe UTCTime
+    # startLocation:
+    startLocationLat: Maybe Double
+    startLocationLon: Maybe Double
+    # endLocation:
+    endLocationLat: Maybe Double
+    endLocationLon: Maybe Double
+  queries:
+    findAllByJourneyLegId:
+      kvFunction: findAllWithKV
+      where: journeyLegId
+  constraints:
+    id: PrimaryKey
+    journeyLegId: "!SecondaryKey"
 
 JourneyFeedback:
   fields:

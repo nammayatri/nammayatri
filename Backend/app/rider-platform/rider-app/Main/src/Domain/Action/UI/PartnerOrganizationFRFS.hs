@@ -462,12 +462,9 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             partnerOrgTransactionId = partnerOrgTransactionId',
             partnerOrgId = Just partnerOrg'.orgId,
             journeyLegInfo = Nothing,
-            frequency = Nothing,
             isOnSearchReceived = Nothing,
-            lineColor = Nothing,
-            lineColorCode = Nothing,
             journeyLegStatus = Nothing,
-            platformNumber = Nothing,
+            journeyRouteDetails = [],
             ..
           }
 

@@ -13,8 +13,7 @@ import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
-  { frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    fromStationId :: B.C f Kernel.Prelude.Text,
+  { fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -25,13 +24,10 @@ data FRFSSearchT f = FRFSSearchT
     pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
-    lineColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    lineColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    platformNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     quantity :: B.C f Kernel.Prelude.Int,
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

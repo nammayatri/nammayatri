@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Queries.FRFSQuoteExtra where
 
@@ -6,11 +7,14 @@ import Domain.Types.FRFSQuote
 import Domain.Types.FRFSSearch
 import Domain.Types.Person
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuote as Beam
+import Storage.Queries.OrphanInstances.FRFSQuote
 
 -- Extra code goes here --
 
