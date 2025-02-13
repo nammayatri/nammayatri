@@ -2143,18 +2143,18 @@ issueReportChatScreenFlow = do
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT postIssueRes.issueReportId
       void $ pure $ hideKeyboardOnNavigation true
       let showDescription = DS.length (trim issueInfoRes.description) > 0
-          descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description Nothing Nothing "Driver" (getCurrentUTC "") "Text" 500) else state.data.chatConfig.messages
-          mediaMessages' = mapWithIndex (\index media -> makeChatComponent' media.url Nothing Nothing "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)) issueInfoRes.mediaFiles
+          descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description Nothing Nothing Nothing "Driver" (getCurrentUTC "") "Text" 500) else state.data.chatConfig.messages
+          mediaMessages' = mapWithIndex (\index media -> makeChatComponent' media.url Nothing Nothing Nothing "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)) issueInfoRes.mediaFiles
       if state.props.isReversedFlow
       then do
         let options'  = map (\x -> x.option) state.data.options
         let message = (getString SELECT_OPTION_REVERSED) <> "\n"
                       <> joinWith "\n" options'
-        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message Nothing Nothing "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))) ] ]
+        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message Nothing Nothing Nothing "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))) ] ]
         modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { enableSuggestionClick = false, messages = messages', chatSuggestionsList = options', suggestionDelay = 500 * (length mediaMessages' + 3) } }, props { showSubmitComp = false } })
         issueReportChatScreenFlow
       else do
-        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))
+        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing Nothing "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))
         let messages' = concat [descMessages, mediaMessages', [message]]
         modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages' } }, props { showSubmitComp = false } })
         issueReportChatScreenFlow
@@ -2165,7 +2165,7 @@ issueReportChatScreenFlow = do
                        void $ lift $ lift $ toggleLoader true
                        resp <- Remote.callCustomerBT tripId
                        void $ lift $ lift $ toggleLoader false
-                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500
+                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) Nothing Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500
                        let messages' = snoc state.data.chatConfig.messages message
                        modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data  { chatConfig { messages = messages' } } })
                        issueReportChatScreenFlow

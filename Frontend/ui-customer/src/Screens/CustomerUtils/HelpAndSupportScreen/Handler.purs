@@ -221,7 +221,7 @@ goToChatScreenHandler selectedCategory updatedState =  do
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" "" ""
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = optionObj.option}) getOptionsRes.options
-    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
+    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
     chats' = map (
       \(Message currMessage) -> Chat {
         chatId : currMessage.id,
@@ -265,7 +265,7 @@ goToOldChatScreenHandler selectedIssue updatedState = do
   (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language selectedIssue.issueReportId
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) issueInfoRes.options
-    messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) currMessage.title currMessage.actionText (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
+    messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) currMessage.title currMessage.actionText currMessage.label (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
     showStillHaveIssue' = case (DA.last issueInfoRes.chats) of
       Just (ChatDetail msg) -> (fromMaybe "" msg.label) == "AUTO_MARKED_RESOLVED"
       Nothing -> false 

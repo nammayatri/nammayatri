@@ -28,7 +28,7 @@ initData =
       , messages: []
       , messagesSize: "-1"
       , chatSuggestionsList: []
-      , lastMessage: { message: "", messageTitle: Nothing, messageAction: Nothing, sentBy: "", timeStamp: "", type: "", delay: 0 }
+      , lastMessage: { message: "", messageTitle: Nothing, messageAction: Nothing, messageLabel : Nothing, sentBy: "", timeStamp: "", type: "", delay: 0 }
       , lastSentMessage: { message: "", sentBy: "", timeStamp: "", type: "", delay: 0 }
       , lastReceivedMessage: { message: "", sentBy: "", timeStamp: "", type: "", delay: 0 }
       , messageToBeSent: ""
