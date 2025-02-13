@@ -273,6 +273,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
+  let (skipBooking, journeyId) = fromMaybe (Nothing, Nothing) $ (\j -> (Just j.skipBooking, Just (Id j.journeyId))) <$> searchRequest.journeyLegInfo
   return $
     ( DRB.Booking
         { id = Id id,
@@ -332,7 +333,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isReferredRide = searchRequest.driverIdentifier $> True,
           journeyLegOrder = searchRequest.journeyLegInfo <&> (.journeyLegOrder),
           isDeleted = Just False,
-          isSkipped = Just False,
+          isSkipped = skipBooking,
+          journeyId,
           ..
         },
       bookingParties

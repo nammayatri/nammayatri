@@ -243,8 +243,8 @@ postMultimodalExtendLeg ::
   ApiTypes.ExtendLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalExtendLeg (_, _) journeyId req = do
-  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration
-  pure Kernel.Types.APISuccess.Success
+  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration req.bookingUpdateRequestId
+  return Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLegGetfare ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
