@@ -45,3 +45,18 @@ deleteByTokenCreatedViaPartnerOrgId token (Id orgId) =
           Se.Is BeamRT.createdViaPartnerOrgId $ Se.Eq (Just orgId)
         ]
     ]
+
+updateOtpByIdForPartnerOrgId :: (MonadFlow m, EsqDBFlow m r) => Id RegistrationToken -> Id DPOrg.PartnerOrganization -> Text -> Int -> m ()
+updateOtpByIdForPartnerOrgId (Id rtId) (Id orgId) authValueHash authExpiry = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRT.authValueHash authValueHash,
+      Se.Set BeamRT.updatedAt now,
+      Se.Set BeamRT.verified False,
+      Se.Set BeamRT.authExpiry authExpiry
+    ]
+    [ Se.And
+        [ Se.Is BeamRT.id (Se.Eq rtId),
+          Se.Is BeamRT.createdViaPartnerOrgId $ Se.Eq (Just orgId)
+        ]
+    ]
