@@ -1,0 +1,88 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name CustomerSpeedTagCreate
+
+POST {{bap-dashboard-host}}/bap/YATRI/nammaTag/tag/create
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+  "tag": "KaalChakraTag",
+  "contents": {
+    "tagCategory": "CustomerTags",
+    "tagName": "CustomerSpeed",
+    "description": "",
+    "tagPossibleValues": {
+      "tag": "Tags",
+      "contents": [
+        "FAST_CUSTOMER",
+        "SLOW_CUSTOMER"
+      ]
+    },
+    "tagChakra": "Daily",
+    "tagValidity": 24,
+    "tagRule": {
+      "tag": "RuleEngine",
+      "contents": {
+        "if": [
+          {
+            "and": [
+              {
+                ">=": [
+                  {
+                    "var": "dailyRides.totalRides"
+                  },
+                  2
+                ]
+              },
+              {
+                ">=": [
+                  {
+                    "var": "dailyRides.totalDistance"
+                  },
+                  100
+                ]
+              },
+              {
+                "<=": [
+                  {
+                    "var": "dailyCancellations.cancellationsCount"
+                  },
+                  2
+                ]
+              }
+            ]
+          },
+          "FAST_CUSTOMER",
+          "SLOW_CUSTOMER"
+        ]
+      }
+    }
+  }
+}
+
+###
+
+###
+
+# @name updateCustomerTag
+
+@customerId = ec34eede-5a3e-4a41-89d4-7290a0d7a629
+
+POST {{bap-dashboard-host}}/bap/YATRI/nammaTag/{{customerId}}/updateCustomerTag
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "tag" : "CustomerSpeed#FAST_CUSTOMER",
+  "isAddingTag" : true
+}

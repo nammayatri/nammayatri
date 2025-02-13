@@ -162,3 +162,13 @@ token: {{juspay_ops}}
 content-type: application/json
 
 ###
+
+# @name updateDriverTag
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/updateDriverTag
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "driverTag" : "DriverSpeed#FAST_DRIVER",
+  "isAddingTag" : true
+}
