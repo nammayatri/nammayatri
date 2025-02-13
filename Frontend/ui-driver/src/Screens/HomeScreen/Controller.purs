@@ -1447,12 +1447,12 @@ eval (RideActiveAction activeRide mbAdvancedRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
-  else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
-  else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
-  else if not state.props.rcActive then do
+  if not state.props.rcActive then do
     void $ pure $ toast $ getString LT.PLEASE_ADD_RC
     exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline)
+  else if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
+  else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"

@@ -399,7 +399,7 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       driverBlocked = fromMaybe false driverProfileResp.blocked,
                                       blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime
                                       },
-                    props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
+                    props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity, canSwitchToIntraCity = driverProfileResp.canSwitchToIntraCity}}
 
 eval (RegStatusResponse  (SA.DriverRegistrationStatusResp regStatusResp)) state =
   let driverVehicleData = mkDriverVehicleDetails

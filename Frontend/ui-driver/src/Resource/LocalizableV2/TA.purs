@@ -1711,6 +1711,7 @@ getTa =
     , your_ride_starts_in: "உங்கள் பயணம் இல் தொடங்குகிறது"
     , away: " தொலைவில்"
     , intercity: "நகரங்களுக்கிடையிலான"
+    , local: "உள்ளகம்"
     , intercity_return: "நகரங்களுக்கிடையிலான திரும்ப"
     , rental: "வாடகை"
     , regular: "சாதாரண"

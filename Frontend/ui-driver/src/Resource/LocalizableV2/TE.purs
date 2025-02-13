@@ -1711,6 +1711,7 @@ getTe =
     , your_ride_starts_in: "మీ ప్రయాణం లో ప్రారంభమవుతుంది"
     , away: " దూరంగా"
     , intercity: "అంతర నగర"
+    , local: "స్థానిక"
     , intercity_return: "అంతర నగర తిరుగు"
     , rental: "అద్దె"
     , regular: "సాధారణ"
