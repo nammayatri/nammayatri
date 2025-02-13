@@ -90,6 +90,7 @@ initData = {
       , customerTipArrayWithValues : []
       , activeIndex : -1
       , primaryButtonText : ""
+      , suggestedActiveIndex : Nothing
       },
     customerTip : {
         enableTips: false
