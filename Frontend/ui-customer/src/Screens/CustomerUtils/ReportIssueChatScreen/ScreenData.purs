@@ -33,6 +33,7 @@ import Screens.Types (IndividualRideCardState)
 import MerchantConfig.Types (AppConfig)
 import Common.Types.App (CategoryListType)
 import ConfigProvider
+import Services.API (MandatoryUploads(..))
 
 initData :: ReportIssueChatScreenState
 initData = {
@@ -58,7 +59,8 @@ initData = {
         selectedRide : Nothing, 
         entryPoint : TripDetailsScreenEntry,
         issueReportShortId : Nothing,
-        config : getAppConfig appConfig
+        config : getAppConfig appConfig,
+        mandatoryUploads : Nothing
     },
     props : {
       showSubmitComp: false,
@@ -164,7 +166,8 @@ type ReportIssueChatScreenData = {
   selectedRide :: Maybe IndividualRideCardState,
   entryPoint :: ReportIssueChatScreenEntryPoint,
   config :: AppConfig,
-  issueReportShortId :: Maybe String
+  issueReportShortId :: Maybe String,
+  mandatoryUploads :: Maybe (Array MandatoryUploads)
 }
 data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen | HomeScreenEntry | FaqEntry | RiderRideCompletedScreen
 derive instance genericReportIssueChatScreenEntryPoint :: Generic ReportIssueChatScreenEntryPoint _
@@ -208,6 +211,7 @@ type Option = {
   issueOptionId :: String
 , option :: String
 , label :: String
+, mandatoryUploads :: Maybe (Array MandatoryUploads)
 }
 
 type ReportIssueChatScreenProps = {

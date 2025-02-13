@@ -28,14 +28,16 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (Foreign, ForeignError(..), fail,unsafeFromForeign)
+import Foreign (Foreign, ForeignError(..), fail,unsafeFromForeign, readArray)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON, genericDecode)
-import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
+import Prelude (class Show, class Eq, show, ($), (<$>), (>>=), bind, (=<<), pure)
+import Foreign (readString, readNumber, readInt)
+import Foreign.Generic (class Decode)
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequestWithoutLogs, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
-import Foreign.Index (readProp)
+import Foreign.Index (readProp, readIndex)
 import Control.Monad.Except (runExcept, except)
 import Data.Either (Either(..))
 import Foreign.Generic.EnumEncoding (GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
@@ -49,6 +51,8 @@ import DecodeUtil
 import Data.Function.Uncurried (runFn3)
 import Debug
 import Data.Argonaut.Core as AC
+import Data.Tuple (Tuple(..))
+import Foreign (unsafeToForeign)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -2904,6 +2908,7 @@ newtype Option = Option
   { label  :: String
   , option :: String
   , issueOptionId :: String
+  , mandatoryUploads :: Maybe (Array MandatoryUploads)
   }
 
 newtype Message = Message 
@@ -2920,6 +2925,27 @@ instance makeGetOptionsReq :: RestEndpoint GetOptionsReq  where
     makeRequest reqBody@(GetOptionsReq categoryId optionId rideId issueReportId language) headers = defaultMakeRequestWithoutLogs GET (EP.getOptions categoryId optionId rideId issueReportId language) headers reqBody Nothing
     encodeRequest = standardEncode
 
+
+newtype MandatoryUploads = MandatoryUploads 
+  { fileType :: MediaType,
+    limit :: Int
+  }
+
+data MediaType = Video
+               | Audio
+               | Image
+               | AudioLink
+               | VideoLink
+               | ImageLink
+               | PortraitVideoLink
+
+derive instance genericMediaType :: Generic MediaType _
+instance showMediaType :: Show MediaType where show = genericShow
+instance decodeMediaType :: Decode MediaType where decode = defaultEnumDecode
+instance encodeMediaType :: Encode MediaType where encode = defaultEnumEncode
+instance eqMediaType :: Eq MediaType where eq = genericEq
+instance standardEncodeMediaType :: StandardEncode MediaType where standardEncode _ = standardEncode {}
+
 derive instance genericGetOptionsReq :: Generic GetOptionsReq _
 instance showGetOptionsReq     :: Show GetOptionsReq where show     = genericShow
 instance standardGetOptionsReq :: StandardEncode GetOptionsReq where standardEncode (GetOptionsReq _ _ _ _ _) = standardEncode {}
@@ -2931,6 +2957,12 @@ instance showOption     :: Show Option where show     = genericShow
 instance standardOption :: StandardEncode Option where standardEncode (Option opt) = standardEncode opt
 instance decodeOption   :: Decode Option where decode = defaultDecode
 instance encodeOption   :: Encode Option where encode = defaultEncode
+
+derive instance genericMandatoryUploads :: Generic MandatoryUploads _
+instance showMandatoryUploads     :: Show MandatoryUploads where show     = genericShow
+instance standardMandatoryUploads :: StandardEncode MandatoryUploads where standardEncode (MandatoryUploads opt) = standardEncode opt
+instance decodeMandatoryUploads   :: Decode MandatoryUploads where decode = defaultDecode
+instance encodeMandatoryUploads   :: Encode MandatoryUploads where encode = defaultEncode
 
 derive instance genericMessage :: Generic Message _
 instance showMessage     :: Show Message where show     = genericShow
