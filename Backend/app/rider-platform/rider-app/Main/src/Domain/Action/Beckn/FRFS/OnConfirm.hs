@@ -33,7 +33,6 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude ((+||), (||+))
@@ -112,14 +111,19 @@ onConfirm merchant booking' dOrder = do
   void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
   void $ CQP.clearPSCache booking.riderId
   whenJust booking.partnerOrgId $ \pOrgId -> do
-    fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
-      let serviceName = DEMSC.WalletService GW.GoogleWallet
-      let mId = booking'.merchantId
-      let mocId' = booking'.merchantOperatingCityId
-      serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-      transitObjects' <- createTransitObjects booking pOrgId tickets person serviceAccount
-      url <- mkGoogleWalletLink serviceAccount transitObjects'
-      void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+    walletPOCfg <- do
+      pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
+      DPOC.getWalletClassNameConfig pOrgCfg.config
+    let mbClassName = lookup booking.merchantOperatingCityId.getId walletPOCfg.className
+    whenJust mbClassName $ \className -> do
+      fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
+        let serviceName = DEMSC.WalletService GW.GoogleWallet
+        let mId = booking'.merchantId
+        let mocId' = booking'.merchantOperatingCityId
+        serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+        transitObjects' <- createTransitObjects booking tickets person serviceAccount className
+        url <- mkGoogleWalletLink serviceAccount transitObjects'
+        void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
   where
     sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
@@ -238,8 +242,8 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.isTicketFree = Just isTicketFree
       }
 
-mkTransitObjects :: Booking.FRFSTicketBooking -> Id PartnerOrganization -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Flow TC.TransitObject
-mkTransitObjects booking pOrgId ticket person serviceAccount = do
+mkTransitObjects :: Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Flow TC.TransitObject
+mkTransitObjects booking ticket person serviceAccount className = do
   toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
   fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
   let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
@@ -247,16 +251,12 @@ mkTransitObjects booking pOrgId ticket person serviceAccount = do
   let toStaionNameLV = TC.LanguageValue {TC.language = "en-US", TC._value = toStation.name}
   let fromStationName = TC.Name {TC.defaultValue = fromStaionNameLV}
   let toStationName = TC.Name {TC.defaultValue = toStaionNameLV}
-  walletPOCfg <- do
-    pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
-    DPOC.getWalletClassNameConfig pOrgCfg.config
   let barcode' =
         TC.Barcode
           { TC._type = show GWSA.QR_CODE,
             TC.value = ticket.qrData
           }
   let passengerName' = fromMaybe "-" person.firstName
-  let className = fromMaybe ("namma_yatri_metro") $ lookup booking.merchantOperatingCityId.getId walletPOCfg.className
   let istTimeText = GWSA.showTimeIst ticket.validTill
   let textModuleTicketNumber = TC.TextModule {TC._header = "Ticket number", TC.body = ticket.ticketNumber, TC.id = "myfield1"}
   let textModuleValidUntil = TC.TextModule {TC._header = "Valid until", TC.body = istTimeText, TC.id = "myfield2"}
@@ -293,12 +293,12 @@ createTickets booking dTickets discountedTickets = go dTickets discountedTickets
       let newFreeTickets = if isTicketFree then freeTicketsLeft - 1 else freeTicketsLeft
       go ds newFreeTickets (ticket : acc)
 
-createTransitObjects :: Booking.FRFSTicketBooking -> Id PartnerOrganization -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Flow [TC.TransitObject]
-createTransitObjects booking pOrgId tickets person serviceAccount = go tickets []
+createTransitObjects :: Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
+createTransitObjects booking tickets person serviceAccount className = go tickets []
   where
     go [] acc = return (Prelude.reverse acc)
     go (x : xs) acc = do
-      transitObject <- mkTransitObjects booking pOrgId x person serviceAccount
+      transitObject <- mkTransitObjects booking x person serviceAccount className
       go xs (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
