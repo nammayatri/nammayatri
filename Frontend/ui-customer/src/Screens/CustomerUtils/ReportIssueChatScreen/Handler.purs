@@ -155,6 +155,8 @@ selectIssueOptionHandler updatedState = do
       Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
     pure unit 
 
+  let mandatoryUploads = maybe Nothing (\option -> option.mandatoryUploads) updatedState.data.selectedOption
+
   modifyScreenState $ ReportIssueChatScreenStateType (
     \_ -> updatedState { 
       data {
@@ -164,7 +166,8 @@ selectIssueOptionHandler updatedState = do
           messages = (updatedState.data.chatConfig.messages <> messages'),
           enableSuggestionClick = false,
           chatSuggestionsList = map (_.option) getOptionsRes'
-        } 
+        }
+      , mandatoryUploads = if isJust mandatoryUploads then mandatoryUploads else updatedState.data.mandatoryUploads
       }
     , props {
         isResolved = isResolved
