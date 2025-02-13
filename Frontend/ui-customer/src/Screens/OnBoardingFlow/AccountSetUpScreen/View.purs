@@ -50,7 +50,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (InputType(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), inputType, clickable, progressBar, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, onFocus, orientation, padding, pattern, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (InputType(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), inputType, clickable, progressBar, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, onFocus, orientation, padding, pattern, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, progressBarColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
@@ -227,14 +227,20 @@ referralView state push =
           ]
           [ 
             imageView $
-            [ width $ V 16
-            , height $ V 16
+            [ width $ V (case state.data.isReferred of
+                              ST.NotVerified -> 0
+                              ST.Verifying -> 0
+                              _ -> 18)
+            , height $ V (case state.data.isReferred of
+                              ST.NotVerified -> 0
+                              ST.Verifying -> 0
+                              _ -> 18)
             , margin $ Margin 0 2 2 2
             , imageWithFallback $ case state.data.isReferred of
                                     ST.Verified -> fetchImage COMMON_ASSET "ny_ic_checkcircle"
-                                    ST.NotVerified -> fetchImage COMMON_ASSET "ny_ic_info"
+                                    ST.NotVerified -> fetchImage COMMON_ASSET "ny_ic_info_white"
                                     ST.ReferralFailed -> fetchImage COMMON_ASSET "ny_ic_subtract"
-                                    ST.Verifying -> fetchImage COMMON_ASSET "ny_ic_info" 
+                                    ST.Verifying -> fetchImage COMMON_ASSET "ny_ic_info_white" 
             , visibility case state.data.isReferred of
                               ST.NotVerified -> GONE
                               ST.Verifying -> GONE
@@ -247,7 +253,7 @@ referralView state push =
             , visibility case state.data.isReferred of 
                             ST.Verifying -> VISIBLE
                             _ -> GONE
-            , stroke Color.white900
+            , progressBarColor Color.white900
             ]
             ,textView $ 
             [ height MATCH_PARENT
