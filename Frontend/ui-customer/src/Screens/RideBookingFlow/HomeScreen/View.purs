@@ -403,7 +403,6 @@ screen initialState =
                   void $ rideDurationTimer (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
-                initVoipIfEnabled initialState
               ChatWithDriver -> do
                 if (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION" then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
                 when ((not initialState.props.chatcallbackInitiated) && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && disableChat initialState.data.fareProductType) $ do
@@ -438,7 +437,6 @@ screen initialState =
                 push $ SearchForSelectedLocation
                 pure unit
               ReAllocated -> do
-                initVoipIfEnabled initialState
                 void $ launchAff $ flowRunner defaultGlobalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
               ShortDistance -> do
                 when (initialState.props.suggestedRideFlow || initialState.props.isRepeatRide) $ push $ ShortDistanceActionController PopUpModal.OnButton2Click

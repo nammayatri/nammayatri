@@ -1527,8 +1527,9 @@ eval (DriverReachedDestinationAction driverReachedDestinationTime) state =
         continue state { data { driverInfoCardState { destinationReached = true } } }
     else continue state
 
-eval (VOIPCallBack status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
+eval (VOIPCallBack callId status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
   let req = {
+      callId : callId,
       callStatus : status,
       rideId : rideId,
       errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,

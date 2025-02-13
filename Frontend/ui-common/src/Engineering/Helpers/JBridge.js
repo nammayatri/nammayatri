@@ -2376,8 +2376,9 @@ export const cleverTapEvent = function (_event) {
 }
 
 export const voipDialer = function (cuid,isDriver,phoneNum,isMissed,cb,action) {
-  const callback = callbackMapper.map(function (status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
+  const callback = callbackMapper.map(function (callId, status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
     cb(action
+    (callId)
     (status)       
     (rideId)       
     (errorCode)

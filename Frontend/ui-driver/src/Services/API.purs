@@ -2047,6 +2047,7 @@ instance encodeDriversInfo :: Encode DriversInfo where encode = defaultEncode
 
 newtype VoipCallReq = VoipCallReq
   {
+     callId :: String,
      callStatus :: String,
      rideId :: String,
      errorCode :: Maybe Int,

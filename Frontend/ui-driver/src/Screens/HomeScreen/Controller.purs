@@ -500,7 +500,7 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
-            | VOIPCallBack String String Int Int String String String
+            | VOIPCallBack String String String Int Int String String String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1112,10 +1112,11 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
       let customerCuid = state.data.activeRide.id
       continueWithCmd state [ do
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-          when (not (DS.null customerCuid)) do
+          if (not (DS.null customerCuid)) then do
             push <- liftFlow $ getPushFn Nothing "HomeScreen"
             void $ liftFlow $ runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
             pure unit
+          else pure unit
         pure NoAction
       ]
 
@@ -1821,8 +1822,9 @@ eval (BusNumber val) state = do
   let newState = state {data = state.data { bus_number = DS.toUpper val }}
   continue newState
 
-eval (VOIPCallBack status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
+eval (VOIPCallBack callId status rideId errorCode driverFlag networkType networkStrength merchantId) state = do
   let req = {
+      callId : callId,
       callStatus : status,
       rideId : rideId,
       errorCode : if (errorCode < 0 ) then Nothing else Just errorCode,

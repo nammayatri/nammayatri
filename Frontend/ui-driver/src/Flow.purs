@@ -76,7 +76,7 @@ import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
 import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo, getHvErrorMsg)
 import Helpers.Utils as HU
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig, destroySignedCall)
 import JBridge as JB
 import Debug (spy)
 import Language.Strings (getString)
@@ -2325,6 +2325,7 @@ currentRideFlow activeRideResp isActiveRide = do
                 state = allState.homeScreen
                 activeRide = (activeRideDetail state (RidesInfo ride))
                 stage = (if activeRide.status == NEW then (if (any (\c -> c == ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ChatWithCustomer else RideAccepted) else RideStarted)
+                voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
             sourceMod <- translateString decodedSource 500
             destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
               destMod <- translateString decodedDestination' 500
@@ -2335,7 +2336,6 @@ currentRideFlow activeRideResp isActiveRide = do
             lastStopAddressMod <- maybe (pure Nothing) (\decodedLastStopAddress' -> do 
               lastStopMod <- translateString decodedLastStopAddress' 500
               pure $ Just lastStopMod)  decodeLastStopAddress
-            let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
             if (voipConfig.driver.enableVoipFeature) then do
               void $ pure $ JB.initSignedCall activeRide.id true
             else pure unit
@@ -2548,6 +2548,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore RIDE_START_TIME (getCurrentUTC "")
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           void $ lift $ lift $ toggleLoader false
+          void $ pure $ JB.destroySignedCall unit
           currentRideFlow Nothing Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -2659,7 +2660,7 @@ homeScreenFlow = do
             void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
             void $ lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
             void $ pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
-            void $ pure $ JB.destroySignedCall
+            void $ pure $ JB.destroySignedCall unit
             liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
                                                                                             {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
             void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
@@ -2774,7 +2775,7 @@ homeScreenFlow = do
       handleDriverActivityResp resp
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ updateStage $ HomeScreenStage HomeScreen
-      void $ pure $ JB.destroySignedCall
+      void $ pure $ JB.destroySignedCall unit
 
       when state.data.driverGotoState.isGotoEnabled do
         driverInfoResp <- Remote.getDriverInfoBT ""
@@ -2793,6 +2794,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"
           void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
+          void $ pure $ JB.destroySignedCall unit
           removeChatService ""
           void $ updateStage $ HomeScreenStage HomeScreen
           updateDriverDataToStates

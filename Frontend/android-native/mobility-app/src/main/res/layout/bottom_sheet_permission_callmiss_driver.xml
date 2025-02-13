@@ -26,7 +26,7 @@
         android:id="@+id/lottie_animation_z2"
         android:layout_width="0dp"
         android:layout_height="150dp"
-        app:lottie_rawRes="@raw/mic_and_notification_permission_android"
+        app:lottie_rawRes="@raw/mic_permission_driver_lottie"
         app:lottie_autoPlay="true"
         app:lottie_loop="true"
         app:layout_constraintTop_toBottomOf="@id/title"
