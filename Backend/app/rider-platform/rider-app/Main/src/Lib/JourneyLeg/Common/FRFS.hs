@@ -5,6 +5,7 @@ import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Applicative
+import Data.List (sortBy)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSSearch
@@ -13,7 +14,9 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
 import Domain.Types.Station
+import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
+import EulerHS.Prelude (comparing)
 import ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface.Types as EMTypes
@@ -25,10 +28,13 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JT
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -38,19 +44,50 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Station as QStation
 
-getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> m JT.JourneyLegState
+getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> m JT.JourneyLegState
 getState mode searchId riderLastPoints isLastCompleted = do
   mbBooking <- QTBooking.findBySearchId searchId
+  let userPosition = (.latLong) <$> listToMaybe riderLastPoints
   case mbBooking of
     Just booking -> do
       (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationId
       when statusChanged $ QTBooking.updateJourneyLegStatus (Just newStatus) booking.id
       journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+      vehiclePosition <- do
+        let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+        case mbRouteStations of
+          Just routesStations ->
+            case listToMaybe routesStations of
+              Just routeStations -> do
+                vehicleTracking <- trackVehicles booking.riderId booking.merchantId routeStations.code
+                if isUpcomingJourneyLeg newStatus
+                  then do
+                    let vehicleTrackingWithLatLong :: [(VehicleTracking, Double, Double)] = mapMaybe (\vehicleTrack -> (vehicleTrack,,) <$> vehicleTrack.vehicleInfo.latitude <*> vehicleTrack.vehicleInfo.longitude) vehicleTracking
+                        mbStartStation = find (\station -> station.stationType == Just START) routeStations.stations
+                        upcomingNearestVehicles =
+                          sortBy
+                            (comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStop.sequenceNum) <> comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStopTravelDistance))
+                            $ filter
+                              (\(vehicleTrack, _, _) -> maybe False (\startStation -> maybe False (\stationSequenceNum -> vehicleTrack.nextStop.sequenceNum <= stationSequenceNum) startStation.sequenceNum) mbStartStation)
+                              vehicleTrackingWithLatLong
+                    pure ((\(_, lat, lon) -> LatLong {..}) <$> listToMaybe upcomingNearestVehicles)
+                  else
+                    if isOngoingJourneyLeg newStatus
+                      then do
+                        case userPosition of
+                          Just riderLocation -> do
+                            let vehicleInfoWithLatLong :: [(VehicleInfo, Double, Double)] = mapMaybe (\vehicleTrack -> (vehicleTrack.vehicleInfo,,) <$> vehicleTrack.vehicleInfo.latitude <*> vehicleTrack.vehicleInfo.longitude) vehicleTracking
+                                nearestVehicleToUser = sortBy (comparing (\(_, lat, lon) -> distanceBetweenInMeters LatLong {..} riderLocation)) vehicleInfoWithLatLong
+                            pure ((\(_, lat, lon) -> LatLong {..}) <$> listToMaybe nearestVehicleToUser)
+                          Nothing -> pure Nothing
+                      else pure Nothing
+              Nothing -> pure Nothing
+          Nothing -> pure Nothing
       return $
         JT.JourneyLegState
           { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
-            userPosition = (.latLong) <$> listToMaybe riderLastPoints,
-            vehiclePosition = Nothing,
+            userPosition,
+            vehiclePosition = vehiclePosition,
             legOrder = journeyLegOrder,
             statusChanged
           }
@@ -62,12 +99,18 @@ getState mode searchId riderLastPoints isLastCompleted = do
       return $
         JT.JourneyLegState
           { status = newStatus,
-            userPosition = (.latLong) <$> listToMaybe riderLastPoints,
+            userPosition,
             vehiclePosition = Nothing,
             legOrder = journeyLegInfo.journeyLegOrder,
             statusChanged
           }
   where
+    isOngoingJourneyLeg :: JPT.JourneyLegStatus -> Bool
+    isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.Ongoing]
+
+    isUpcomingJourneyLeg :: JPT.JourneyLegStatus -> Bool
+    isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.InPlan]
+
     processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JPT.JourneyLegStatus -> Id Station -> m (Bool, JPT.JourneyLegStatus)
     processOldStatus mbOldStatus toStationId = do
       mbToStation <- QStation.findById toStationId
@@ -121,8 +164,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData = do
-      fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> (journeyLeg.fromStopDetails >>= (.gtfsId))) & fromMaybeM (InvalidRequest "From station code and gtfsId not found")
-      toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> (journeyLeg.toStopDetails >>= (.gtfsId))) & fromMaybeM (InvalidRequest "To station code and gtfsId not found")
+      fromStationCode <- (journeyLeg.fromStopDetails >>= (.gtfsId)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
+      toStationCode <- (journeyLeg.toStopDetails >>= (.gtfsId)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
       _ <- createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude
       _ <- createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude
       let routeCode = Nothing

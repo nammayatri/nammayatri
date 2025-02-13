@@ -157,6 +157,10 @@ getFrfsRoute ::
   Environment.Flow API.Types.UI.FRFSTicketService.FRFSRouteAPI
 getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
   route <- QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)
+  routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCode routeCode
+  currentTime <- getCurrentTime
+  let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+      stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
   return $
     FRFSTicketService.FRFSRouteAPI
       { code = route.code,
@@ -164,8 +168,25 @@ getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
         longName = route.longName,
         startPoint = route.startPoint,
         endPoint = route.endPoint,
-        totalStops = Nothing,
-        stops = Nothing,
+        totalStops = Just $ length stopsSortedBySequenceNumber,
+        stops =
+          Just $
+            map
+              ( \stop ->
+                  FRFSStationAPI
+                    { name = stop.stopName,
+                      code = stop.stopName,
+                      lat = Just stop.stopPoint.lat,
+                      lon = Just stop.stopPoint.lon,
+                      stationType = Nothing,
+                      sequenceNum = Just stop.sequenceNum,
+                      address = Nothing,
+                      distance = Nothing,
+                      color = Nothing,
+                      towards = Nothing
+                    }
+              )
+              stopsSortedBySequenceNumber,
         timeBounds = Just route.timeBounds,
         waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
       }

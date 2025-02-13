@@ -31,6 +31,7 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -66,6 +67,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.External.MultiModal.Interface.Types
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -223,10 +225,20 @@ data JourneyLeg = JourneyLeg
     toLatLong :: LatLong,
     fromStationCode :: Maybe Text,
     toStationCode :: Maybe Text,
-    color :: Maybe Text,
-    colorCode :: Maybe Text,
+    routeDetails :: [RouteDetail],
+    color :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
+    colorCode :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     duration :: Maybe Seconds,
     distance :: Maybe Distance
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data RouteDetail = RouteDetail
+  { routeCode :: Maybe Text,
+    fromStationCode :: Maybe Text,
+    toStationCode :: Maybe Text,
+    color :: Maybe Text,
+    colorCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -382,6 +394,7 @@ getJourneys searchRequest = do
                     toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
                     color = listToMaybe $ catMaybes $ map (.shortName) journeyLeg.routeDetails,
                     colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
+                    routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
                     distance = journeyLeg.distance
                   }
@@ -401,3 +414,18 @@ getJourneys searchRequest = do
               }
       return $ Just journeyData
     _ -> return Nothing
+  where
+    gtfsIdtoDomainCode :: Text -> Text
+    gtfsIdtoDomainCode gtfsId = case break (== ':') $ T.unpack gtfsId of
+      (_, ':' : code) -> T.pack code
+      _ -> gtfsId
+
+    mkRouteDetail :: MultiModalRouteDetails -> RouteDetail
+    mkRouteDetail routeDetail =
+      RouteDetail
+        { routeCode = routeDetail >>= (.gtfsId),
+          fromStationCode = routeDetail >>= (.fromStopDetails) >>= (.gtfsId),
+          toStationCode = routeDetail >>= (.toStopDetails) >>= (.gtfsId),
+          color = routeDetail >>= (.shortName),
+          colorCode = routeDetail >>= (.shortName)
+        }
