@@ -1337,6 +1337,7 @@ type TipViewProps = {
   , customerTipArrayWithValues :: Array Int
   , activeIndex :: Int
   , primaryButtonText :: String
+  , suggestedActiveIndex :: Maybe Int
 }
 
 type Contact = {
