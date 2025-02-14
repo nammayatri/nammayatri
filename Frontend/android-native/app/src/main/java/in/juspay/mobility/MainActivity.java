@@ -13,6 +13,7 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.Utils.getInnerPayload;
 import static in.juspay.mobility.Utils.handleGlResp;
+import static in.juspay.mobility.Utils.initCTSignedCall;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
@@ -452,27 +453,7 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
-        String SC_ACCOUNT_ID = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_ACCOUNT_ID;
-        String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
-        cleverTapSignedCall = new CleverTapSignedCall(context, activity, true, SC_API_KEY, SC_ACCOUNT_ID);
-        CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
-        SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
-        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
-        SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
-            @Override
-            public boolean onNetworkQualityResponse(final int score) {
-                Log.d(LOG_TAG, "Signed Call Network quality score: " + score);
-                JSONObject voipCallConfig = null;
-                int scoreThreshold = 70;
-                try {
-                    voipCallConfig = new JSONObject(remoteConfigs.getString("voip_call_config"));
-                    scoreThreshold = voipCallConfig.optInt("score",70);
-                } catch (JSONException e) {
-                    Log.d("SC","Failed to fetch voip call config");
-                }
-                return score >= scoreThreshold;
-            }
-        });  
+        initCTSignedCall(context,activity,remoteConfigs);
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
         sharedPref.edit().putString("UNIQUE_DD", NotificationUtils.uniqueDeviceDetails()).apply();

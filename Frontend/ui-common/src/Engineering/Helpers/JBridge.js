@@ -2396,6 +2396,7 @@ export const isSignedCallInitialized = function () {
   if (JBridge.isSignedCallInitialized) {
     return JBridge.isSignedCallInitialized();
   } 
+  return false;
 };
 
 export const initSignedCall = function (cuid) {

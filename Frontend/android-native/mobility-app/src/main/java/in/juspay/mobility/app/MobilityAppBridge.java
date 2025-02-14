@@ -167,6 +167,7 @@ public class MobilityAppBridge extends HyperBridge {
         registerCallBacks();
         createVPAdapter(bridgeComponents.getContext());
         initNotificationChannel(bridgeComponents.getContext());
+        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         String mapConfig = remoteConfigs.getString("map_config");
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
     }
@@ -400,19 +401,16 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initSignedCall(String cuid, boolean isDriver){
-        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         cleverTapSignedCall.initSignedCall(cuid,isDriver);
     }
     
     @JavascriptInterface
     public boolean isSignedCallInitialized(){
-        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         return cleverTapSignedCall.isSignedCallInitialized();
     }
 
     @JavascriptInterface
     public void destroySignedCall(){
-        cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
         cleverTapSignedCall.destroySignedCall();
     }
 
