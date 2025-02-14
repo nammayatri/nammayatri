@@ -123,7 +123,7 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
 
 eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
   let 
-    negativeResp = filter (\issueResp -> issueResp.selectedYes == Just true) state.customerIssue.customerResponse
+    negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false || (issueResp.selectedYes == Just true && issueResp.issueType == CTP.AskedToPayExtra)) state.customerIssue.customerResponse
 
     hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
     hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
