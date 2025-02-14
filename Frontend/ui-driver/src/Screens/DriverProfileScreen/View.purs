@@ -72,9 +72,9 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Screens.Types (MenuOptions(..), AutoPayStatus(..))
 import Screens.Types as ST
-import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..))
+import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..),Vehicle(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore , setValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -86,7 +86,7 @@ import RemoteConfig.Types
 import Data.Array (filter)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Types.App (GlobalState(..), FlowBT)
-import Services.API (DriverProfileDataRes(..))
+import Services.API (DriverProfileDataRes(..),DriverProfileSummaryRes(..))
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -117,8 +117,10 @@ screen initialState =
                     let cityConfig = getCityConfig initialState.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
                     profileResponse <- Remote.getDriverInfoApi ""
                     case summaryResponse, profileResponse of
-                      Right summaryResp, Right profileResp -> do
-                        liftFlow $ push $ DriverSummary summaryResp
+                      Right (DriverProfileSummaryRes summaryResp), Right profileResp -> do
+                        liftFlow $ push $ DriverSummary (DriverProfileSummaryRes summaryResp)
+                        let (Vehicle linkedVehicle) = fromMaybe Remote.dummyVehicleObject summaryResp.linkedVehicle
+                        void $ pure $ setValueToLocalStore (VEHICLE_VARIANT) (linkedVehicle.variant)
                         liftFlow $ push $ GetDriverInfoResponse profileResp
                       _, _ -> liftFlow $ push $ BackPressed
                     EHU.toggleLoader false

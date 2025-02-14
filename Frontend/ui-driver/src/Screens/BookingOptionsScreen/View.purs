@@ -403,7 +403,7 @@ serviceTierItem state push service enabled opacity index =
             , onClick push $ const $ ToggleRidePreference service
             , gravity RIGHT
             ]
-            [ toggleView push service.isSelected service.isDefault service ]
+            [ toggleView push service.isSelected (service.isDefault || show service.serviceTierType == show API.AMBULANCE_TAXI_TIER) service ]
         ],
         serviceTierItemDesc state service
       ]
