@@ -15,6 +15,9 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagAppDynamicLogicDomains,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
+    postNammaTagConfigPilotGetVersion,
+    postNammaTagConfigPilotGetConfig,
+    postNammaTagConfigPilotCreateUiConfig,
   )
 where
 
@@ -171,3 +174,12 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.customerNammaTags)) $
     QPerson.updateCustomerTags (Just tag) personId
   pure Success
+
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow Text
+postNammaTagConfigPilotGetVersion _ _ _ = throwError $ InvalidRequest $ ""
+
+postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow LYT.UiConfigResponse
+postNammaTagConfigPilotGetConfig _ _ _ = throwError $ InvalidRequest $ ""
+
+postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateUiConfig _ _ _ = throwError $ InvalidRequest $ ""

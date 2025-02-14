@@ -17,6 +17,9 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
     getNammaTagQueryAll,
+    postNammaTagConfigPilotGetVersion,
+    postNammaTagConfigPilotGetConfig,
+    postNammaTagConfigPilotCreateUiConfig,
   )
 where
 
@@ -214,3 +217,12 @@ getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ Lib.Yudhis
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.Chakra -> Environment.Flow Lib.Yudhishthira.Types.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
+
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Text
+postNammaTagConfigPilotGetVersion _ _ _ = throwError $ InvalidRequest $ ""
+
+postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.UiConfigResponse
+postNammaTagConfigPilotGetConfig _ _ _ = throwError $ InvalidRequest $ ""
+
+postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateUiConfig _ _ _ = throwError $ InvalidRequest $ ""

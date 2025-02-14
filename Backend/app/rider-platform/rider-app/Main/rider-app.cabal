@@ -463,6 +463,7 @@ library
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.UiRiderConfigExtra
       Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
@@ -681,6 +682,7 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.TripTerms
+      Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
       Domain.Types.WalkLegMultimodal
@@ -794,6 +796,7 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.TripTerms
+      Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
       Storage.Beam.WalkLegMultimodal
@@ -910,6 +913,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingService
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
+      Storage.Queries.OrphanInstances.UiRiderConfig
       Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
@@ -957,6 +961,7 @@ library
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
       Storage.Queries.TripTerms
+      Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
       Storage.Queries.WalkLegMultimodal
