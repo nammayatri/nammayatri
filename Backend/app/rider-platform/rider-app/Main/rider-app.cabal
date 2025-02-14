@@ -1088,6 +1088,7 @@ library
     , special-zone-a
     , split
     , template-haskell
+    , temporary
     , text
     , text-conversions
     , text-format
@@ -1103,6 +1104,7 @@ library
     , warp
     , x509
     , yudhishthira
+    , zip
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -1220,6 +1222,7 @@ executable rider-app-exe
     , singletons-th
     , split
     , template-haskell
+    , temporary
     , text
     , text-conversions
     , text-format
@@ -1234,6 +1237,7 @@ executable rider-app-exe
     , warp
     , x509
     , yudhishthira
+    , zip
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

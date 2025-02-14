@@ -137,6 +137,8 @@ dependencies:
   - insert-ordered-containers
   - mtl
   - attoparsec ==0.14.4
+  - zip
+  - temporary
 
 ghc-options:
   - -fwrite-ide-info

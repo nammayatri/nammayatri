@@ -6,7 +6,11 @@ import qualified API.Types.RiderPlatform.Management.MultiModal
 import qualified API.Types.RiderPlatform.Management.MultiModal as MTypes
 import qualified AWS.S3 as S3
 import qualified BecknV2.FRFS.Enums
+import Codec.Archive.Zip (unpackInto, withArchive)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base64.Lazy as B64
+import qualified Data.ByteString.Lazy as BL
+import Data.Csv
 import qualified Data.HashMap.Lazy as HM
 import Data.List (sortOn)
 import qualified Data.Text as T
@@ -40,9 +44,15 @@ import qualified Storage.Queries.Stage as QStage
 import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Version as QV
 import qualified Storage.Queries.VersionStageMapping as QVSM
+import System.Directory (createDirectoryIfMissing, doesFileExist, removeFile)
 import System.Exit (ExitCode (..))
+import System.FilePath ((</>))
+import System.IO (hClose)
+import System.IO.Temp (withTempFile)
 import System.Process
 import Tools.Error
+
+-- import EulerHS.Prelude ((</>))
 
 postMultiModalMultimodalFrfsDataPreprocess :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.PreprocessFRFSDataResp)
 postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity req = do
@@ -60,37 +70,47 @@ postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity req = do
         stages <- QStage.findByMerchantOperatingCityAndVehicleTypeAndInputDataType (Just moc.id) req.vehicleType Domain.Types.Extra.Rollout.GTFS
         let sortedStages = sortOn (.order) stages
         let outputFile = "cleaned-" <> req.file
-        fork "Processing Stages" $ processStages sortedStages version.id req.file outputFile filePath
+        fork "Processing Stages" $ processStages sortedStages version.id req.file outputFile filePath moc
         pure $
           MTypes.PreprocessFRFSDataResp
             { versionId = versionId,
               versionTag = oldVersionTag + 1
             }
-      MTypes.JSON -> error "Logic yet to be decided"
-      MTypes.CSV -> error "Logic yet to be decided"
-    MTypes.FARE_DATA -> error "Logic yet to be decided"
+      MTypes.JSON -> throwError $ InvalidRequest "Logic for JSON yet to be decided"
+      MTypes.CSV -> throwError $ InvalidRequest "Logic for CSV yet to be decided"
+    MTypes.FARE_DATA -> throwError $ InvalidRequest "Logic for FARE_DATA yet to be decided"
   where
     getMaxVersionTag :: [DVersion.Version] -> Maybe Int
     getMaxVersionTag [] = Nothing
     getMaxVersionTag versions = Just . maximum $ map (.versionTag) versions
 
-    processStages :: [DStage.Stage] -> Kernel.Types.Id.Id DVersion.Version -> FilePath -> FilePath -> Text -> Environment.Flow ()
-    processStages [] _ _ _ _ = pure ()
-    processStages (stage : stages) versionId inputFile outputFile uploadFilePath = do
-      isSuccess <- processStage stage.name versionId inputFile outputFile uploadFilePath stage
-      bool (processStages stages versionId inputFile outputFile uploadFilePath) (pure ()) isSuccess
+    processStages :: [DStage.Stage] -> Kernel.Types.Id.Id DVersion.Version -> FilePath -> FilePath -> Text -> MerchantOperatingCity -> Environment.Flow ()
+    processStages [] _ _ _ _ _ = pure ()
+    processStages (stage : stages) versionId inputFile outputFile uploadFilePath moc = do
+      isSuccess <- processStage stage.name versionId inputFile outputFile uploadFilePath moc stage
+      bool (processStages stages versionId inputFile outputFile uploadFilePath moc) (pure ()) isSuccess
 
-    processStage :: DStage.StageName -> Kernel.Types.Id.Id DVersion.Version -> FilePath -> FilePath -> Text -> DStage.Stage -> Environment.Flow (Bool)
-    processStage DStage.PREPROCESSING _ _ _ _ _ = error "Logic yet to be decided"
-    processStage DStage.VALIDATION versionId inputFile outputFile _ stage = do
+    processStage :: DStage.StageName -> Kernel.Types.Id.Id DVersion.Version -> FilePath -> FilePath -> Text -> MerchantOperatingCity -> DStage.Stage -> Environment.Flow (Bool)
+    processStage DStage.PREPROCESSING _ _ _ _ _ _ = throwError $ InvalidRequest "Logic for processStage PREPROCESSING yet to be decided"
+    processStage DStage.VALIDATION versionId inputFile outputFile _ moc stage = do
       vsmId <- generateGUID
       now <- getCurrentTime
       let vsMapping = DVSMapping.VersionStageMapping {id = vsmId, versionId = versionId.getId, stageId = stage.id.getId, status = DVSMapping.Inprogress, stageData = Nothing, failureReason = Nothing, stageName = show stage.name, updatedAt = now, createdAt = now}
       void $ QVSM.create vsMapping
       isValid <- validateGTFSData inputFile outputFile vsmId
-      when isValid $ void $ QVSM.updateSuccessById DVSMapping.Completed vsmId
-      pure isValid
-    processStage DStage.UPLOAD versionId _ outputFile uploadFilePath stage = do
+      if isValid
+        then do
+          parseSuccess <- parseGTFSData outputFile moc
+          if parseSuccess
+            then do
+              void $ QVSM.updateSuccessById DVSMapping.Completed vsmId
+              pure True
+            else do
+              void $ QVSM.updateFailureById (Just "Parsing to GTFS Types Failed") DVSMapping.Failed vsmId
+              pure False
+        else do
+          pure False
+    processStage DStage.UPLOAD versionId _ outputFile uploadFilePath _ stage = do
       vsmId <- generateGUID
       now <- getCurrentTime
       let vsMapping = DVSMapping.VersionStageMapping {id = vsmId, versionId = versionId.getId, stageId = stage.id.getId, status = DVSMapping.Inprogress, stageData = Nothing, failureReason = Nothing, stageName = show stage.name, updatedAt = now, createdAt = now}
@@ -113,6 +133,9 @@ postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity req = do
           void $ QVSM.updateFailureById (Just $ "GTFS validation failed with exit code " <> show code <> ":" <> show errorText) DVSMapping.Failed vsmId
           pure False
 
+    parseGTFSData :: FilePath -> MerchantOperatingCity -> Environment.Flow (Bool)
+    parseGTFSData outputFile moc = processUnzippedData moc.merchantId moc.id outputFile 0 True
+
     uploadGTFSData :: FilePath -> Text -> Kernel.Types.Id.Id DVSMapping.VersionStageMapping -> Environment.Flow ()
     uploadGTFSData outputFile filePath vsmId = do
       zipFile <- L.runIO $ base64Encode <$> BS.readFile outputFile
@@ -129,10 +152,83 @@ postMultiModalMultimodalFrfsDataPreprocess merchantShortId opCity req = do
 --               -> Success: Done.
 
 postMultiModalMultimodalFrfsDataStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusReq -> Environment.Flow API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp)
-postMultiModalMultimodalFrfsDataStatus _ _ req = do
+postMultiModalMultimodalFrfsDataStatus merchantShortId opCity req = do
   versionStageMappings <- QVSM.findAllByVersionId req.versionId
-  stageData <- traverse mkFRFSDataStatus versionStageMappings
-  return $ API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp req.versionId stageData
+  stagesData <- traverse mkFRFSDataStatus versionStageMappings
+  let completedUploadStageMappings = filter (\vsm -> vsm.stageName == show DStage.UPLOAD && vsm.status == DVSMapping.Completed) versionStageMappings
+  moc <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound merchantShortId.getShortId)
+  void $ traverse (makeVersionReadyToApply moc.merchantId moc.id) completedUploadStageMappings
+  return $ API.Types.RiderPlatform.Management.MultiModal.FRFSDataStatusResp req.versionId stagesData
+
+makeVersionReadyToApply :: Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> DVSMapping.VersionStageMapping -> Environment.Flow ()
+makeVersionReadyToApply merchantId mocId versionStageMapping = do
+  uploadedFilePath <- S3.createFilePath "/multimodal/" ("version-" <> versionStageMapping.versionId) S3.Zip "zip"
+  uploadedDataZip <- S3.get (T.unpack uploadedFilePath)
+  let decodedZip = B64.decodeLenient (encodeUtf8 uploadedDataZip)
+  let tempDir = "/tmp/unzipped/" <> T.unpack versionStageMapping.versionId
+  liftIO $ createDirectoryIfMissing True tempDir
+  liftIO $
+    withTempFile tempDir "temp.zip" $ \tempFilePath tempHandle -> do
+      BL.hPut tempHandle decodedZip
+      hClose tempHandle
+      withArchive tempFilePath (unpackInto tempDir)
+      removeFile tempFilePath
+  version <- QV.findByPrimaryKey (Kernel.Types.Id.Id versionStageMapping.versionId) >>= fromMaybeM (InternalError $ "Version with id: " <> show versionStageMapping.versionId <> " not found.")
+  void $ processUnzippedData merchantId mocId tempDir version.versionTag False
+  pure ()
+
+processUnzippedData :: Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> FilePath -> Int -> Bool -> Environment.Flow (Bool)
+processUnzippedData merchantId mocId tempDir versionTag parseOnly = do
+  feed <- parseGTFSFeed tempDir
+  case validateMetro feed of
+    Left err ->
+      if parseOnly then pure False else throwError $ InternalError $ "Data Validation failed: " <> show err <> "\n" <> show feed
+    Right metroGTFS -> do
+      when (not parseOnly) $ convertMetroGTFSToQueries merchantId mocId metroGTFS versionTag
+      pure True
+
+parseGTFSFeed :: FilePath -> Environment.Flow Feed
+parseGTFSFeed dir = do
+  agencies <- parseCsvFile (dir </> "agency.txt")
+  stops <- parseCsvFile (dir </> "stops.txt")
+  routes <- parseCsvFile (dir </> "routes.txt")
+  trips <- parseCsvFile (dir </> "trips.txt")
+  stopTimes <- parseCsvFile (dir </> "stop_times.txt")
+  calendar <- parseCsvFile (dir </> "calendar.txt")
+  calendarDates <- parseCsvFile (dir </> "calendar_dates.txt")
+  fareAttributes <- parseCsvFile (dir </> "fare_attributes.txt")
+  fareRules <- parseCsvFile (dir </> "fare_rules.txt")
+  shapes <- parseCsvFile (dir </> "shapes.txt")
+  frequencies <- parseCsvFile (dir </> "frequencies.txt")
+  transfers <- parseCsvFile (dir </> "transfers.txt")
+  feedInfo <- parseCsvFile (dir </> "feed_info.txt")
+  pure
+    Feed
+      { f_agency = agencies,
+        f_stops = stops,
+        f_routes = routes,
+        f_trips = trips,
+        f_stop_times = stopTimes,
+        f_calendar = calendar,
+        f_calendar_dates = calendarDates,
+        f_fare_attributes = fareAttributes,
+        f_fare_rules = fareRules,
+        f_shapes = shapes,
+        f_frequencies = frequencies,
+        f_transfers = transfers,
+        f_feed_infos = feedInfo
+      }
+
+parseCsvFile :: FromNamedRecord a => FilePath -> Environment.Flow [a]
+parseCsvFile path = do
+  exists <- liftIO $ doesFileExist path
+  if not exists
+    then pure []
+    else do
+      csvData <- liftIO $ BL.readFile path
+      case decodeByName csvData of
+        Left err -> throwError $ InternalError $ "Failed to parse " <> show path <> ": " <> show err
+        Right (_, records) -> pure $ toList records
 
 mkFRFSDataStatus :: (MonadFlow m) => DVSMapping.VersionStageMapping -> m API.Types.RiderPlatform.Management.MultiModal.StageInfo
 mkFRFSDataStatus mapping = return $ API.Types.RiderPlatform.Management.MultiModal.StageInfo mapping.stageName (mapStatus mapping.status)
@@ -176,12 +272,11 @@ postMultiModalMultimodalFrfsDataVersionApply _merchantShortId _opCity req = do
   void $ if updatedOldVersion.percentageRollout == 0 then QRollout.deleteByVersionId updatedOldVersion.id else QRollout.updateByPrimaryKey updatedOldVersion
   return Kernel.Types.APISuccess.Success
 
-_convertBusGTFSToQueries :: BusGTFS -> m ()
-_convertBusGTFSToQueries _gtfs = do
-  error "Logic yet to be decided"
+_convertBusGTFSToQueries :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => BusGTFS -> m ()
+_convertBusGTFSToQueries _gtfs = throwError $ InternalError "Logic for convertBusGTFSToQueries yet to be decided"
 
-_convertMetroGTFSToQueries :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> MetroGTFS -> Int -> m ()
-_convertMetroGTFSToQueries merchantId mocId gtfs versionTag = do
+convertMetroGTFSToQueries :: Kernel.Types.Id.Id Merchant -> Kernel.Types.Id.Id MerchantOperatingCity -> MetroGTFS -> Int -> Environment.Flow ()
+convertMetroGTFSToQueries merchantId mocId gtfs versionTag = do
   when (length gtfs.mgFeed.f_stops == 0) $ throwError $ InternalError "No stops found in the GTFS file"
   when (length gtfs.mgFeed.f_routes == 0) $ throwError $ InternalError "No routes found in the GTFS file"
   let routeStopMapping = map (mkRouteStopMapping gtfs.mgFeed.f_trips gtfs.mgFeed.f_stops gtfs.mgFeed.f_stop_times) gtfs.mgFeed.f_routes
