@@ -426,7 +426,7 @@ let getAllCityConfig = () => {
       },
       "bike" : {
         "freeSeconds" : 180,
-        "perMinCharges" : 2.0
+        "perMinCharges" : 1.0
       },
       "ambulance": {
         "freeSeconds": 480,
