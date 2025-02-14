@@ -26,6 +26,7 @@ flag Local
 
 library
   exposed-modules:
+      ConfigPilotFrontend.Common
       IssueManagement.API.Beckn.Issue
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils

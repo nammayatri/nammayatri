@@ -478,6 +478,7 @@ library
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.Toll
+      Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
@@ -609,6 +610,7 @@ library
       Storage.Queries.TranslationsExtra
       Storage.Queries.TransporterConfigExtra
       Storage.Queries.TripTransactionExtra
+      Storage.Queries.UiDriverConfigExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
@@ -839,6 +841,7 @@ library
       Domain.Types.Translations
       Domain.Types.TransporterConfig
       Domain.Types.TripTransaction
+      Domain.Types.UiDriverConfig
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
       Domain.Types.VehicleDetails
@@ -969,6 +972,7 @@ library
       Storage.Beam.Translations
       Storage.Beam.TransporterConfig
       Storage.Beam.TripTransaction
+      Storage.Beam.UiDriverConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
       Storage.Beam.VehicleDetails
@@ -1129,6 +1133,7 @@ library
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.TripTransaction
+      Storage.Queries.OrphanInstances.UiDriverConfig
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleInsurance
@@ -1169,6 +1174,7 @@ library
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig
       Storage.Queries.TripTransaction
+      Storage.Queries.UiDriverConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
       Storage.Queries.VehicleDetails
