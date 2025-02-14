@@ -856,6 +856,9 @@ cityCodeMap =
   , Tuple (Just "std:06752") Puri
   , Tuple (Just "std:04322") Pudukkottai
   , Tuple (Just "std:8482") Bidar
+  , Tuple (Just "std:0341") Asansol
+  , Tuple (Just "std:0342") Durgapur
+  , Tuple (Just "std:03215") Petrapole
   , Tuple Nothing AnyCity
   ]
 
@@ -920,7 +923,6 @@ getAutoRickshawStartedImage  =
        _ | EHU.isTamilNaduCity city -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
  
-
 
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =
@@ -1227,7 +1229,7 @@ getRouteMarkers variant city trackingType fareProductType currentStage =
 mkSrcMarker :: City -> String ->Maybe Stage -> String
 mkSrcMarker city variant currentStage =
   let srcMarker = getCitySpecificMarker city variant (show <$> currentStage)
-  in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "ny_ic_blue_circle" -- Added local resource check for avoiding native crash
+  in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "" -- Added local resource check for avoiding native crash
 
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
 fetchVehicleVariant variant = 
@@ -1305,6 +1307,9 @@ getLanguageBasedCityName cityName =
     Gulbarga -> getString GULBARGA
     Udupi -> getString UDUPI
     Odisha -> getString ODISHA
+    Asansol -> "Asansol"
+    Durgapur -> "Durgapur"
+    Petrapole -> "Petrapole"
     Bhubaneswar -> getString BHUBANESWAR
     Cuttack -> "Cuttack"
     Nalgonda -> "Nalgonda"

@@ -157,6 +157,7 @@ getAppBasedConfig config app = case app of
   "Odisha Yatri" -> fromMaybe config.default config.odishaYatri
   "Yatri" -> fromMaybe config.default config.yatri
   "Yatri Sathi" -> fromMaybe config.default config.yatriSathi
+  "Yatri Sathi Driver" -> fromMaybe config.default config.yatriSathiPartner
   _ -> config.default
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
