@@ -11,24 +11,25 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SavedReqLocationT f = SavedReqLocationT
-  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    areaCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    building :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    city :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    country :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    door :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    isMoved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    lat :: B.C f Kernel.Prelude.Double,
-    lon :: B.C f Kernel.Prelude.Double,
-    placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    riderId :: B.C f Kernel.Prelude.Text,
-    state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    tag :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    ward :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
+  { area :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    areaCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    building :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    city :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    country :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    door :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    id :: (B.C f Kernel.Prelude.Text),
+    isMoved :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    lat :: (B.C f Kernel.Prelude.Double),
+    locationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    lon :: (B.C f Kernel.Prelude.Double),
+    placeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    riderId :: (B.C f Kernel.Prelude.Text),
+    state :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    street :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    tag :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    ward :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +39,6 @@ instance B.Table SavedReqLocationT where
 
 type SavedReqLocation = SavedReqLocationT Identity
 
-$(enableKVPG ''SavedReqLocationT ['id] [['riderId]])
+$(enableKVPG (''SavedReqLocationT) [('id)] [[('riderId)]])
 
-$(mkTableInstances ''SavedReqLocationT "saved_location")
+$(mkTableInstances (''SavedReqLocationT) "saved_location")

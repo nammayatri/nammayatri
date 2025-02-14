@@ -54,7 +54,8 @@ data CreateSavedReqLocationReq = CreateSavedReqLocationReq
     tag :: Text,
     placeId :: Maybe Text,
     ward :: Maybe Text,
-    isMoved :: Maybe Bool
+    isMoved :: Maybe Bool,
+    locationName :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
