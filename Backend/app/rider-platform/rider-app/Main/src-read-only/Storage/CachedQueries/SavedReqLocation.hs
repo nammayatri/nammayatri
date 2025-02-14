@@ -16,7 +16,7 @@ import Storage.CachedQueries.SavedReqLocationExtra as ReExport
 import qualified Storage.Queries.SavedReqLocation as Queries
 
 deleteSavedLocation :: CacheFlow m r => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.External.Maps.LatLong -> m ())
-deleteSavedLocation riderId latLong = do Hedis.del $ makeIdKey riderId latLong
+deleteSavedLocation riderId latLong = do (Hedis.del $ makeIdKey riderId latLong)
 
 findByLatLonAndRiderId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
