@@ -219,7 +219,7 @@ verifyTag (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
                 _ -> throwError $ InvalidRequest "Tag value should be a number"
             Lib.Yudhishthira.Types.AnyText -> pure ()
       return (Just tag)
-    [_] -> return Nothing
+    [name] -> QNT.findByPrimaryKey name -- this is required for update of tag expiry
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
 
 postRunKaalChakraJob ::
