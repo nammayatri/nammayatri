@@ -67,7 +67,7 @@ getFare merchantId merchantOperatingCityId leg = \case
     mkBusGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let mbRouteCode = gtfsIdtoDomainCode <$> (leg.routeDetails >>= (.gtfsId))
+      let mbRouteCode = gtfsIdtoDomainCode <$> (listToMaybe $ catMaybes $ map (.gtfsId) leg.routeDetails)
       let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
       let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
       case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
@@ -86,7 +86,7 @@ getFare merchantId merchantOperatingCityId leg = \case
     mkMetroGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let mbRouteCode = gtfsIdtoDomainCode <$> (leg.routeDetails >>= (.gtfsId))
+      let mbRouteCode = gtfsIdtoDomainCode <$> (listToMaybe $ catMaybes $ map (.gtfsId) leg.routeDetails)
       let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
       let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
       case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
@@ -105,7 +105,7 @@ getFare merchantId merchantOperatingCityId leg = \case
     mkSubwayGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let mbRouteCode = gtfsIdtoDomainCode <$> (leg.routeDetails >>= (.gtfsId))
+      let mbRouteCode = gtfsIdtoDomainCode <$> (listToMaybe $ catMaybes $ map (.gtfsId) leg.routeDetails)
       let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
       let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
       case (mbRouteCode, mbStartStopCode, mbEndStopCode) of

@@ -20,9 +20,6 @@ import qualified Storage.Beam.FRFSSearch as Beam
 import Storage.Queries.FRFSSearchExtra as ReExport
 import Storage.Queries.Transformers.FRFSSearch
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSSearch.FRFSSearch -> m ())
-create = createWithKV
-
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSSearch.FRFSSearch] -> m ())
 createMany = traverse_ create
 
@@ -54,8 +51,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.frequency frequency,
-      Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+    [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
@@ -65,13 +61,10 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),
       Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
       Se.Set Beam.journeyLegStatus journeyLegStatus,
-      Se.Set Beam.lineColor lineColor,
-      Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.platformNumber platformNumber,
       Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),

@@ -621,7 +621,7 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLoc = do
         id = journeyLegId,
         journeyId = journeyLeg.journeyId,
         mode = newMode,
-        routeDetails = Nothing,
+        routeDetails = [],
         sequenceNumber = journeyLeg.sequenceNumber,
         startLocation = startLocation,
         toArrivalTime = Nothing,
@@ -703,8 +703,14 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       case legExtraInfo of
         JL.Walk info -> return (info.origin.lat, info.origin.lon)
         JL.Taxi info -> return (info.origin.lat, info.origin.lon)
-        JL.Metro info -> getLatLon "Metro" info.originStop.lat info.originStop.lon
-        JL.Subway info -> getLatLon "Subway" info.originStop.lat info.originStop.lon
+        JL.Metro info ->
+          case find (\route -> route.subOrder == Just 1) info.routeInfo of
+            Just firstRoute -> getLatLon "Metro" firstRoute.originStop.lat firstRoute.originStop.lon
+            Nothing -> throwM $ InvalidRequest "No route with subOrder 1 found in Metro leg info"
+        JL.Subway info ->
+          case find (\route -> route.subOrder == Just 1) info.routeInfo of
+            Just firstRoute -> getLatLon "Subway" firstRoute.originStop.lat firstRoute.originStop.lon
+            Nothing -> throwM $ InvalidRequest "No route with subOrder 1 found in Subway leg info"
         JL.Bus info -> getLatLon "Bus" info.originStop.lat info.originStop.lon
 
     getLatLon label mLat mLon = do
@@ -722,7 +728,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
-          routeDetails = Nothing,
+          routeDetails = [],
           agency = Nothing,
           fromArrivalTime = Just startTime,
           fromDepartureTime = Just startTime,
@@ -855,9 +861,15 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
       case startLeg.legExtraInfo of
         JL.Taxi info -> mkLatLng info.origin
         JL.Walk info -> mkLatLng info.origin
-        JL.Metro info -> mkLatLngFromFRFS info.originStop
+        JL.Metro info ->
+          case find (\route -> route.subOrder == Just 1) info.routeInfo of
+            Just firstRoute -> mkLatLngFromFRFS firstRoute.originStop -- Fetch the stop where subOrder is 1
+            Nothing -> throwM $ InvalidRequest "No route with subOrder 1 found in Metro info"
         JL.Bus info -> mkLatLngFromFRFS info.originStop
-        JL.Subway info -> mkLatLngFromFRFS info.originStop
+        JL.Subway info ->
+          case find (\route -> route.subOrder == Just 1) info.routeInfo of
+            Just firstRoute -> mkLatLngFromFRFS firstRoute.originStop -- Fetch the stop where subOrder is 1
+            Nothing -> throwM $ InvalidRequest "No route with subOrder 1 found in Subway info"
 
     mkLatLng originLocation = pure $ LatLong {lat = originLocation.lat, lon = originLocation.lon}
     mkLatLngFromFRFS startLoc = do
@@ -893,7 +905,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
-          routeDetails = Nothing,
+          routeDetails = [],
           agency = Nothing,
           fromArrivalTime = Nothing,
           fromDepartureTime = Nothing,

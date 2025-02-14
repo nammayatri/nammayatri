@@ -13,9 +13,7 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data JourneyLegT f = JourneyLegT
-  { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
+  { distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     endLocationLat :: B.C f Kernel.Prelude.Double,
@@ -34,12 +32,6 @@ data JourneyLegT f = JourneyLegT
     journeyId :: B.C f Kernel.Prelude.Text,
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
-    frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    routeColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    routeColorName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    routeGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    routeLongName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    routeShortName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sequenceNumber :: B.C f Kernel.Prelude.Int,
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
