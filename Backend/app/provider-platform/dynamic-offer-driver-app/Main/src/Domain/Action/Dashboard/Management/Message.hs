@@ -153,6 +153,7 @@ postMessageAdd merchantShortId opCity Common.AddMessageRequest {..} = do
             viewCount = 0,
             alwaysTriggerOnOnboarding = fromMaybe False alwaysTriggerOnOnboarding,
             description,
+            shareable = False,
             shortDescription,
             mediaFiles = cast <$> mediaFiles,
             messageTranslations = translationToDomainType now <$> translations,
@@ -186,6 +187,7 @@ postMessageSend merchantShortId opCity Common.SendMessageRequest {..} = do
       B.runInReplica $ QDI.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
   now <- getCurrentTime
+  MQuery.updateShareable (_type == AllEnabled || message.shareable) message.id
   case scheduledTime of
     Just scheduleTime
       | now <= scheduleTime ->
@@ -218,7 +220,8 @@ getMessageList merchantShortId opCity mbLimit mbOffset = do
       Common.MessageListItem
         { messageId = cast message.id,
           title = message.title,
-          _type = toCommonType message._type
+          _type = toCommonType message._type,
+          shareable = message.shareable
         }
 
 getMessageInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> Flow Common.MessageInfoResponse
@@ -236,6 +239,7 @@ getMessageInfo merchantShortId _ reqMessageId = do
           description,
           shortDescription,
           title,
+          shareable = shareable,
           mediaFiles = (\mediaFile -> Common.MediaFile mediaFile._type mediaFile.url) <$> mf
         }
 

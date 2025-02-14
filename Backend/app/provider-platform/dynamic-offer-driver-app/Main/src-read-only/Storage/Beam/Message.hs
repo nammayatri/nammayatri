@@ -23,6 +23,7 @@ data MessageT f = MessageT
     mediaFiles :: B.C f [Kernel.Prelude.Text],
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    shareable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     shortDescription :: B.C f Kernel.Prelude.Text,
     title :: B.C f Kernel.Prelude.Text,
     viewCount :: B.C f Kernel.Prelude.Int
