@@ -112,4 +112,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])

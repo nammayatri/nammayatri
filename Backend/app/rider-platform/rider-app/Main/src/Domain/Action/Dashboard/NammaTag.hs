@@ -19,6 +19,9 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagAppDynamicLogicDomains,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
+    postNammaTagConfigPilotGetVersion,
+    postNammaTagConfigPilotGetConfig,
+    postNammaTagConfigPilotCreateUiConfig,
     getNammaTagConfigPilotAllConfigs,
     getNammaTagConfigPilotConfigDetails,
     getNammaTagConfigPilotGetTableData,
@@ -29,6 +32,7 @@ where
 
 import qualified Dashboard.Common as Common
 import Data.Singletons
+import qualified Data.Text as Text
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
@@ -38,6 +42,9 @@ import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.RiderConfig as DTR
+import Domain.Types.UiRiderConfig (UiRiderConfig (..))
+import qualified Domain.Types.UiRiderConfig as DTRC
+import qualified Domain.Types.UiRiderConfig as DTURC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -52,6 +59,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as LYSQADLE
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types as LYTU
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
@@ -61,7 +69,9 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as SCMR
+import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
@@ -97,6 +107,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let merchantOpCityId = merchantOperatingCity.id
   _riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
+    Lib.Yudhishthira.Types.UI_RIDER _ _ -> do
+      let def'' = Prelude.listToMaybe $ Lib.Yudhishthira.Types.genDef (Proxy @DTURC.UiRiderConfig)
+      def' <- maybe (throwError $ InternalError "No default found") pure def''
+      logicData :: UiRiderConfig <- YudhishthiraFlow.createLogicData def' (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy UiRiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
     -- TODO add defaults for config
     Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.RiderConfig -> do
       -- fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @TagData)
@@ -229,6 +244,45 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
   unless (Just (LYTU.showRawTags tag) == (LYTU.showRawTags <$> person.customerNammaTags)) $
     QPerson.updateCustomerTags (Just tag) personId
   pure Success
+
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow Text
+postNammaTagConfigPilotGetVersion _ _ uicr = do
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
+  let merchantOpCityId = merchantOperatingCity.id
+  (_, version) <- UIRC.findUiConfig uicr merchantOpCityId
+  case version of
+    Just ver -> pure $ (Text.pack . show) ver
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+
+postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow LYTU.UiConfigResponse
+postNammaTagConfigPilotGetConfig _ _ uicr = do
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
+  let merchantOpCityId = merchantOperatingCity.id
+  (config, version) <- UIRC.findUiConfig uicr merchantOpCityId
+  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform)
+  case config of
+    Just cfg -> pure (LYTU.UiConfigResponse cfg.config (Text.pack . show <$> version) isExp)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+
+postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id ccr.merchantId) ccr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> ccr.merchantId <> " ,city: " <> show ccr.city)
+  let merchantOpCityId = merchantOperatingCity.id
+  now <- getCurrentTime
+  id' <- generateGUID
+  UIRC.create $ cfg now merchantOpCityId id'
+  return Kernel.Types.APISuccess.Success
+  where
+    cfg now merchantOpCityId id' =
+      DTRC.UiRiderConfig
+        { config = ccr.config,
+          createdAt = now,
+          id = id',
+          os = ccr.os,
+          updatedAt = now,
+          merchantOperatingCityId = merchantOpCityId,
+          platform = ccr.platform
+        }
 
 getNammaTagConfigPilotAllConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Bool -> Environment.Flow [Lib.Yudhishthira.Types.ConfigType]
 getNammaTagConfigPilotAllConfigs _merchantShortId _opCity mbUnderExp = do

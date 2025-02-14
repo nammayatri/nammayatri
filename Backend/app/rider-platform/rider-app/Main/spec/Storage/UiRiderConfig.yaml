@@ -1,0 +1,32 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Language: Kernel.External.Types
+  Value: Data.Aeson
+  Merchant: Domain.Types.Merchant
+  DeviceType: Kernel.Types.Version
+  PlatformType: Lib.Yudhishthira.Types
+
+UiRiderConfig:
+  tableName: ui_rider_config
+
+  fields:
+    id: Id UiRiderConfig
+    os: DeviceType
+    merchantOperatingCityId : Id MerchantOperatingCity
+    platform: PlatformType
+    config : Value
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+    sqlType:
+    config: json
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

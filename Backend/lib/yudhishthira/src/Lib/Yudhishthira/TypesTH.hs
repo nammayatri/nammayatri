@@ -3,6 +3,8 @@
 module Lib.Yudhishthira.TypesTH (generateGenericDefault, GenericDefaults (..)) where
 
 import Control.Monad
+import Data.Aeson
+import qualified Data.Aeson.KeyMap
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as DT
@@ -54,6 +56,16 @@ getFieldDefaultValues fieldTypeName = do
       | fieldTypeName == ''Kernel.Types.Id.Id = ListE [LitE (StringL "random-1000-4000-8000-uuid")]
       | fieldTypeName == ''Kernel.Types.Id.ShortId = ListE [LitE (StringL "randomShortId")]
       | fieldTypeName == ''NominalDiffTime = ListE [AppE (VarE 'fromInteger) (LitE (IntegerL 1))]
+      | fieldTypeName == ''Object =
+        ListE
+          [ AppE
+              (VarE 'Data.Aeson.KeyMap.fromList)
+              ( ListE
+                  [ TupE [Just (LitE (StringL "z")), Just (LitE (StringL "someString"))],
+                    TupE [Just (LitE (StringL "a")), Just (LitE (StringL "someString"))]
+                  ]
+              )
+          ]
       | otherwise = ListE []
 
 -- below just to ease the process a little
