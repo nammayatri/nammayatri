@@ -63,6 +63,7 @@ getFareBreakupList fareBreakup maxTip =
      else if baseDistance0AndAbove.amount > 0.0 then [{ key: getString $ MIN_FARE_UPTO $ show (DI.round baseDistance0AndAbove.amount / 1000) <> "km", val: baseFare0AndAbove }] 
      else [])
     <> (map constructExtraFareBreakup extraFareBreakup)
+    <> (map constructExtraFareBreakup ambulanceFareBreakup)
     <> (if congestionCharges.amount > 0.0 then [ { key: getString CONGESTION_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
     <> (if pickupCharges /= "₹0" then [{ key: getString PICKUP_CHARGE, val: pickupCharges }] else [])
@@ -92,7 +93,7 @@ getFareBreakupList fareBreakup maxTip =
       $ DA.mapMaybe
           ( \item ->
               if MP.startsWith "EXTRA_PER_KM_STEP_FARE_" (item ^. EHA._title) 
-                then Just $ parseStepFare item "EXTRA_PER_KM_STEP_FARE_" fareMultiplier
+                then Just $ parseStepFare item 0.0 "EXTRA_PER_KM_STEP_FARE_" fareMultiplier
               else Nothing
           )
           fareBreakup
@@ -101,7 +102,7 @@ getFareBreakupList fareBreakup maxTip =
 
   fareMultiplier =
     if isNightShift && congestionCharges.amount > 0.0
-      then (1.0 + nightShiftRate.amount / 100.0) * (1.0 + congestionCharges.amount / 100.0)
+      then (1.0 + (if nightShiftRate.amount > 0.0 then nightShiftRate.amount else ambulanceShiftRate.amount ) / 100.0) * (1.0 + congestionCharges.amount / 100.0)
     else if congestionCharges.amount > 0.0 
       then (1.0 + congestionCharges.amount / 100.0)
     else 1.0
@@ -115,10 +116,22 @@ getFareBreakupList fareBreakup maxTip =
   midNightUtc = EHC.getMidnightUTC unit
 
   nightShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_CHARGE_PERCENTAGE"
+  ambulanceShiftRate = fetchSpecificFare fareBreakup "NIGHT_SHIFT_STEP_PERCENTAGE0_Above"
 
   isNightShift = if (nightShiftEndSeconds.amount > nightShiftStartSeconds.amount) 
                     then JB.withinTimeRange nightShiftStart nightShiftEnd (EHC.getCurrentUTC "")
                     else EHC.compareUTCDate nightShiftEnd (EHC.getCurrentUTC "") >= 0  || EHC.compareUTCDate (EHC.getCurrentUTC "") nightShiftStart >= 0
+  -- Ambulance fare calculation
+  ambulanceFareBreakup =
+    DA.sortBy compareByLimit
+      $ DA.mapMaybe
+          ( \item ->
+              if MP.startsWith "PER_KM_STEP_FARE0_Above" (item ^. EHA._title)
+                then Just $ parseStepFare item baseDistance0AndAbove.amount "PER_KM_STEP_FARE" fareMultiplier
+              else Nothing
+          )
+          fareBreakup
+  
 
   -- Pickup charges
   pickupCharges = priceToBeDisplayed $ fetchSpecificFare fareBreakup "DEAD_KILOMETER_FARE"
@@ -138,8 +151,8 @@ getFareBreakupList fareBreakup maxTip =
   waitingCharge = fetchSpecificFare fareBreakup "WAITING_CHARGE_RATE_PER_MIN"
   waitingCharge0AndAbove = fetchSpecificFare fareBreakup "WAITING_CHARGE_PER_MIN_STEP_FARE0_Above"
 
-  parseStepFare :: EstimateFares -> String -> Number -> StepFare
-  parseStepFare item prefixString fareMultiplier =
+  parseStepFare :: EstimateFares -> Number ->String -> Number -> StepFare
+  parseStepFare item limit prefixString fareMultiplier =
     let
       title = item ^. EHA._title
 
@@ -158,7 +171,7 @@ getFareBreakupList fareBreakup maxTip =
         Just limit -> fromMaybe 0.0 $ DN.fromString limit
         Nothing -> 0.0
     in
-      { lLimit: lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed price }
+      { lLimit: if limit > 0.0 then limit else lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed price }
 
   constructExtraFareBreakup :: StepFare -> FareList
   constructExtraFareBreakup item =
@@ -179,7 +192,7 @@ getFareBreakupList fareBreakup maxTip =
       $ DA.mapMaybe
           ( \item ->
               if MP.startsWith "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" (item ^. EHA._title) && (item ^. EHA._title) /= "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_0_Above"
-                then Just $ parseStepFare item "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" 1.0
+                then Just $ parseStepFare item 0.0 "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" 1.0
               else Nothing
           )
           fareBreakup
