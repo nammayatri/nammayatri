@@ -34,6 +34,7 @@ Message:
       label : Maybe Text
       likeCount : Int
       viewCount : Int
+      shareable: Bool
       alwaysTriggerOnOnboarding : Bool
       mediaFiles : "[Id MediaFile]"
       merchantId : Id Merchant
@@ -55,6 +56,7 @@ Message:
     mediaFiles : "[Id MediaFile]"
     messageTranslations : "[MessageTranslation]"
     alwaysTriggerOnOnboarding : Bool
+    shareable: Bool
     merchantId : Id Merchant
     merchantOperatingCityId : Id MerchantOperatingCity
     createdAt : UTCTime
@@ -63,6 +65,7 @@ Message:
     alwaysTriggerOnOnboarding: Maybe Bool
     createdAt: LocalTime
     merchantOperatingCityId: Maybe Text
+    shareable: Maybe Bool
 
 
   beamFields:
@@ -81,13 +84,14 @@ Message:
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     _type: messageType|E
     merchantOperatingCityId: Storage.Queries.Transformers.Message.getMerchantOperatingCityId merchantId|EM
+    shareable: Kernel.Prelude.fromMaybe False shareable|E
 
   toTType:
     alwaysTriggerOnOnboarding: Kernel.Prelude.Just|I
     createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     merchantOperatingCityId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOperatingCityId)|E
     messageType: _type|E
-
+    shareable: Kernel.Prelude.Just|I
 
   sqlType:
     likeCount: integer
@@ -97,7 +101,11 @@ Message:
     type: character (100)
     mediaFiles: text[]
 
-
+  queries:
+    updateShareable:
+      kvFunction: updateOneWithKV
+      params: [shareable]
+      where: id
 
   default:
     likeCount: "0"

@@ -15,3 +15,8 @@ ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN short_description text NOT
 ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN title character varying (255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN view_count integer NOT NULL default 0;
 ALTER TABLE atlas_driver_offer_bpp.message ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN shareable boolean ;
