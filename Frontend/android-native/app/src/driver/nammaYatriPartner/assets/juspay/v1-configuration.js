@@ -333,7 +333,12 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         }
-        , "rideStartAudio" : defaultStartAudioConfig
+        , "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Nalgonda",
@@ -2298,7 +2303,12 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         }
-        , "rideStartAudio" : defaultStartAudioConfig
+        , "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName": "Kozhikode",
@@ -2368,7 +2378,12 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         }
-        , "rideStartAudio" : defaultStartAudioConfig
+        , "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {"cityName" : "Pudukkottai",
         "mapImage" : "ny_ic_tamilnadu_map",
