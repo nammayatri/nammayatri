@@ -467,7 +467,15 @@ data RunKaalChakraJobResForUser = RunKaalChakraJobResForUser
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 newtype TagNameValue = TagNameValue {getTagNameValue :: Text} -- tagName#tagValue format (only tagName is mandatory)
-  deriving newtype (Show, Read, Eq, ToJSON, FromJSON, ToSchema)
+  deriving newtype (Show, Read, ToJSON, FromJSON, ToSchema)
+
+instance Eq TagNameValue where
+  TagNameValue tag1 == TagNameValue tag2 = removeEmptyValue tag1 == removeEmptyValue tag2
+    where
+      removeEmptyValue :: Text -> Text
+      removeEmptyValue tagTxt = case T.splitOn "#" tagTxt of
+        [name, ""] -> name
+        _ -> tagTxt
 
 -- We don't need Eq here because we want to compare only tagName and tagValue, not expiredAt. Use compareTagNameValue function instead
 newtype TagNameValueExpiry = TagNameValueExpiry {getTagNameValueExpiry :: Text} -- tagName#tagValue#expiredAt format (only tagName is mandatory)
