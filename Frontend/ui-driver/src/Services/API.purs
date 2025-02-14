@@ -846,7 +846,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | HERITAGE_CAB
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -865,7 +865,7 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode AMBULANCE_AC_OXY = standardEncode {}
  standardEncode AMBULANCE_VENTILATOR = standardEncode {}
  standardEncode SUV_PLUS = standardEncode {}
-
+ standardEncode HERITAGE_CAB = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
@@ -4394,6 +4394,7 @@ data ServiceTierType
   | AMBULANCE_AC_TIER
   | AMBULANCE_AC_OXY_TIER
   | AMBULANCE_VENTILATOR_TIER
+  | HERITAGE_CAB_TIER
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4461,6 +4462,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "AMBULANCE_AC" -> except $ Right AMBULANCE_AC_TIER
                   "AMBULANCE_AC_OXY" -> except $ Right AMBULANCE_AC_OXY_TIER
                   "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR_TIER
+                  "HERITAGE_CAB"  -> except $ Right HERITAGE_CAB_TIER
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4485,6 +4487,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode AMBULANCE_AC_TIER = standardEncode "AMBULANCE_AC"
     standardEncode AMBULANCE_AC_OXY_TIER = standardEncode "AMBULANCE_AC_OXY"
     standardEncode AMBULANCE_VENTILATOR_TIER = standardEncode "AMBULANCE_VENTILATOR"
+    standardEncode HERITAGE_CAB_TIER = standardEncode "HERITAGE_CAB"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow

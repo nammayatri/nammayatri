@@ -63,6 +63,40 @@ type RemoteConfig a
     , ysCities :: Maybe a
     , config :: Maybe Config
     }
+    
+type AppConfigRC a =
+  { nammaYatri :: Maybe a
+  , nammaYatriPartner :: Maybe a
+  , odishaYatri :: Maybe a
+  , odishaYatriPartner :: Maybe a
+  , yatri :: Maybe a
+  , yatriPartner :: Maybe a
+  , manaYatri :: Maybe a
+  , manaYatriPartner :: Maybe a
+  , yatriSathi :: Maybe a
+  , yatriSathiPartner :: Maybe a
+  , default :: a
+  }
+
+type VariantLevelRemoteConfig a = 
+    { autoRickshaw :: a,
+      suv :: a,
+      sedan :: a,
+      hatchback :: a,
+      bookAny :: a,
+      taxi :: a,
+      taxiPlus :: a,
+      ambulanceTaxi :: a,
+      ambulanceTaxiOxy ::  a,
+      ambulanceAc ::  a,
+      ambulanceAcOxy ::  a,
+      ambulanceVentilator :: a,
+      default :: a,
+      deliveryBike :: a,
+      evAutoRickshaw :: a,
+      heritageCab :: a
+    }
+
 
 newtype RCCarousel
   = RCCarousel
@@ -147,7 +181,8 @@ type TipsConfig
       ambulanceTaxiOxy ::  Maybe (Array Int),
       ambulanceAc ::  Maybe (Array Int),
       ambulanceAcOxy ::  Maybe (Array Int),
-      ambulanceVentilator :: Maybe (Array Int)
+      ambulanceVentilator :: Maybe (Array Int),
+      heritageCab :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 
@@ -164,7 +199,8 @@ type SubscriptionConfigVariantLevel
       ambulanceTaxiOxy :: Maybe SubscriptionConfigVariantLevelEntity,
       ambulanceAc :: Maybe SubscriptionConfigVariantLevelEntity,
       ambulanceAcOxy :: Maybe SubscriptionConfigVariantLevelEntity,
-      ambulanceVentilator :: Maybe SubscriptionConfigVariantLevelEntity
+      ambulanceVentilator :: Maybe SubscriptionConfigVariantLevelEntity,
+      heritageCab :: Maybe SubscriptionConfigVariantLevelEntity
     }
 
 

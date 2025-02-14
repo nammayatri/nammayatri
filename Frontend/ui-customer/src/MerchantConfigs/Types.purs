@@ -405,7 +405,8 @@ type VariantConfig = {
   ambulanceTaxiOxy :: VariantInfo,
   ambulanceAc :: VariantInfo,
   ambulanceAcOxy :: VariantInfo,
-  ambulanceVentilator :: VariantInfo
+  ambulanceVentilator :: VariantInfo,
+  heritageCab :: VariantInfo
 }
 
 type VariantInfo = {
