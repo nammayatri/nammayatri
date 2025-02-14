@@ -410,6 +410,7 @@ library
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
+      Storage.Queries.JourneyLegExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
@@ -455,6 +456,7 @@ library
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
       Storage.Queries.Transformers.RentalDetails
+      Storage.Queries.Transformers.RouteDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.ServicePeopleCategory
@@ -619,6 +621,7 @@ library
       Domain.Types.JourneyFeedback
       Domain.Types.JourneyLeg
       Domain.Types.JourneyLegsFeedbacks
+      Domain.Types.JourneyRouteDetails
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -654,6 +657,7 @@ library
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
+      Domain.Types.RouteDetails
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
       Domain.Types.RouteTripMapping
@@ -731,6 +735,7 @@ library
       Storage.Beam.JourneyFeedback
       Storage.Beam.JourneyLeg
       Storage.Beam.JourneyLegsFeedbacks
+      Storage.Beam.JourneyRouteDetails
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -765,6 +770,7 @@ library
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
+      Storage.Beam.RouteDetails
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
       Storage.Beam.RouteTripMapping
@@ -844,6 +850,7 @@ library
       Storage.Queries.JourneyFeedback
       Storage.Queries.JourneyLeg
       Storage.Queries.JourneyLegsFeedbacks
+      Storage.Queries.JourneyRouteDetails
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -876,6 +883,7 @@ library
       Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.Journey
+      Storage.Queries.OrphanInstances.JourneyLeg
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
@@ -925,6 +933,7 @@ library
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
+      Storage.Queries.RouteDetails
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
       Storage.Queries.RouteTripMapping
