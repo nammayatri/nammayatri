@@ -211,7 +211,7 @@ public class CleverTapSignedCall {
         } catch (JSONException e) {
             Log.d("SignedCall", "JSON error when setting up VOIP call");
         }
-        String tempPhone = phone;
+        String exoPhone = phone;
         OutgoingCallResponse outgoingCallResponseListener = new OutgoingCallResponse() {
             @Override
             public void onSuccess() {
@@ -240,19 +240,19 @@ public class CleverTapSignedCall {
                     mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
                     callbackResult = "MIC_PERMISSION_DENIED";
                 } else if(callException.getErrorCode() == CallException.BadNetworkException.getErrorCode() || callException.getErrorCode() == CallException.ContactNotReachableException.getErrorCode()){
-                    showDialer(tempPhone);
+                    showDialer(expPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_BAD_NETWORK_CALLER",bundle);
                     callbackResult = "NETWORK_ERROR";
                 } else if(callException.getErrorCode() == CallException.NoInternetException.getErrorCode()){
-                    showDialer(tempPhone);
+                    showDialer(expPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_NO_INTERNET_CALLER",bundle);
                     callbackResult = "NO_INTERNET";
                 } else if(callException.getErrorCode() == CallException.CallFeatureNotAvailable.getErrorCode()) {
-                    showDialer(tempPhone);
+                    showDialer(expPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_INIT_NOT_DONE",bundle);
                     callbackResult = "SDK_NOT_INIT";
                 } else {
-                    showDialer(tempPhone);
+                    showDialer(expPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_CALLER",bundle);
                     callbackResult = "UNKNOWN_ERROR";
                 }
