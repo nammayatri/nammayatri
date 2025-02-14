@@ -301,7 +301,8 @@ data KaptureConfig = KaptureConfig
   { queue :: Text,
     sosQueue :: Maybe Text,
     l0FeedbackQueue :: Maybe Text,
-    disposition :: Text
+    disposition :: Text,
+    deleteAccountCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
