@@ -4464,7 +4464,7 @@ data ServiceTierType
   | AMBULANCE_TAXI_OXY_TIER
   | AMBULANCE_AC_TIER
   | AMBULANCE_AC_OXY_TIER
-  | AMBULANCE_VENTILATOR
+  | AMBULANCE_VENTILATOR_TIER
   | EV_AUTO_RICKSHAW
   | HERITAGE_CAB_TIER
 
@@ -4513,7 +4513,13 @@ newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
 }
 
 derive instance genericServiceTierType :: Generic ServiceTierType _
-instance showServiceTierType :: Show ServiceTierType where show = genericShow
+instance showServiceTierType :: Show ServiceTierType where 
+      show AMBULANCE_AC_OXY_TIER = "AMBULANCE_AC_OXY"
+      show AMBULANCE_AC_TIER = "AMBULANCE_AC"
+      show AMBULANCE_TAXI_OXY_TIER = "AMBULANCE_TAXI_OXY"
+      show AMBULANCE_TAXI_TIER = "AMBULANCE_TAXI"
+      show AMBULANCE_VENTILATOR_TIER = "AMBULANCE_VENTILATOR"
+      show other = genericShow other
 instance decodeServiceTierType :: Decode ServiceTierType
   where decode body = case unsafeFromForeign body of
                   "COMFY"        -> except $ Right COMFY
@@ -4535,7 +4541,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "AMBULANCE_TAXI_OXY" -> except $ Right AMBULANCE_TAXI_OXY_TIER
                   "AMBULANCE_AC" -> except $ Right AMBULANCE_AC_TIER
                   "AMBULANCE_AC_OXY" -> except $ Right AMBULANCE_AC_OXY_TIER
-                  "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR
+                  "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR_TIER
                   "EV_AUTO_RICKSHAW" -> except $ Right EV_AUTO_RICKSHAW
                   "HERITAGE_CAB"  -> except $ Right HERITAGE_CAB_TIER
                   _              -> except $ Right COMFY
@@ -4562,7 +4568,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode AMBULANCE_TAXI_OXY_TIER = standardEncode "AMBULANCE_TAXI_OXY"
     standardEncode AMBULANCE_AC_TIER = standardEncode "AMBULANCE_AC"
     standardEncode AMBULANCE_AC_OXY_TIER = standardEncode "AMBULANCE_AC_OXY"
-    standardEncode AMBULANCE_VENTILATOR = standardEncode "AMBULANCE_VENTILATOR"
+    standardEncode AMBULANCE_VENTILATOR_TIER = standardEncode "AMBULANCE_VENTILATOR"
     standardEncode EV_AUTO_RICKSHAW = standardEncode "EV_AUTO_RICKSHAW"
     standardEncode HERITAGE_CAB_TIER = standardEncode "HERITAGE_CAB"
 

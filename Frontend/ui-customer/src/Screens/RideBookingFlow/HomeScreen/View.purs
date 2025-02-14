@@ -3810,7 +3810,7 @@ verticalServiceView push index service =
   , accessibility ENABLE
   , accessibility DISABLE_DESCENDANT
   , accessibilityHint $ getEN service.name
-  , margin $ MarginLeft $ if index == 0 then 0 else 12
+  , margin $ MarginLeft $ if index == 0 then 0 else 4
   , onClick push $ const $ ServicesOnClick service
   ][linearLayout 
     [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
@@ -3829,7 +3829,7 @@ verticalServiceView push index service =
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 5 5 5 5
+    , padding $ Padding 3 3 3 3
     , background service.backgroundColor
     , margin $ MarginVertical 9 16
     , cornerRadius 12.0

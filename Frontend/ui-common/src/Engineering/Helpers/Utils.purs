@@ -592,4 +592,7 @@ getCityFromString cityString =
     "Puri" -> Puri
     "Pudukkottai" -> Pudukkottai
     "Bidar" -> Bidar
+    "Asansol" -> Asansol
+    "Durgapur" -> Durgapur
+    "Petrapole" -> Petrapole
     _ -> AnyCity

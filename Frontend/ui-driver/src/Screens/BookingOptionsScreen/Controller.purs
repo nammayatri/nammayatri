@@ -26,6 +26,7 @@ import Data.Foldable as DF
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils as HU
 import Screens.Types as ST
+import Services.API (VehicleVariant(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -71,6 +72,7 @@ eval (ToggleRidePreference service) state =
   if service.isUsageRestricted then do
     void $ pure $ JB.toast $ getString $ SET_THE_AC_ON_TO_ENABLE service.name
     update state
+  else if show service.serviceTierType == show API.AMBULANCE_TAXI_TIER then continue state
   else updateAndExit state $ ChangeRidePreference state service
 
 eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} }

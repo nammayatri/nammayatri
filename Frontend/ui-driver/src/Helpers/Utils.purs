@@ -924,6 +924,7 @@ getChargesOb tripType cityConfig driverVehicle =
       "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
       "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
       "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
+      "BIKE" -> cityConfig.waitingChargesConfig.bike
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
@@ -935,6 +936,7 @@ getRentalChargesOb cityConfig driverVehicle =
     "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
     "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
     "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
+    "BIKE" -> cityConfig.rentalWaitingChargesConfig.bike
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 
@@ -987,7 +989,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.AMBULANCE_TAXI_OXY_TIER -> "AMBULANCE_TAXI_OXY"
   SA.AMBULANCE_AC_TIER -> "AMBULANCE_AC"
   SA.AMBULANCE_AC_OXY_TIER -> "AMBULANCE_AC_OXY"
-  SA.AMBULANCE_VENTILATOR -> "AMBULANCE_VENTILATOR"
+  SA.AMBULANCE_VENTILATOR_TIER -> "AMBULANCE_VENTILATOR"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
   SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
   SA.EV_AUTO_RICKSHAW -> "EV_AUTO_RICKSHAW"

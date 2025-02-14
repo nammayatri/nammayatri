@@ -980,8 +980,8 @@ rideTierAndCapacity push config =
       ] <> FontStyle.body1 TypoGraphy
   ] 
   where paddingLeft = if Maybe.isJust config.acRide then 4 else 10
-        tierName = if config.vehicleServiceTier == show SA.AMBULANCE_VENTILATOR then "" else if config.acRide == Maybe.Just true then "AC" else if config.acRide == Maybe.Just false then "Non-AC" else ""
-        tierImage = if config.vehicleServiceTier == show SA.AMBULANCE_VENTILATOR then "ny_ic_non_ac_white" else if config.acRide == Maybe.Just true then "ny_ic_ac_white" else if config.acRide == Maybe.Just false then "ny_ic_non_ac_white" else ""
+        tierName = if config.vehicleServiceTier == show SA.AMBULANCE_VENTILATOR_TIER then "" else if config.acRide == Maybe.Just true then "AC" else if config.acRide == Maybe.Just false then "Non-AC" else ""
+        tierImage = if config.vehicleServiceTier == show SA.AMBULANCE_VENTILATOR_TIER then "ny_ic_non_ac_white" else if config.acRide == Maybe.Just true then "ny_ic_ac_white" else if config.acRide == Maybe.Just false then "ny_ic_non_ac_white" else ""
         tierBackground = if config.acRide == Maybe.Just true then Color.blue800 else if config.acRide == Maybe.Just false then Color.black700 else Color.blue800
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
