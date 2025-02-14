@@ -15,13 +15,18 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagAppDynamicLogicDomains,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
+    postNammaTagConfigPilotGetVersion,
+    postNammaTagConfigPilotGetConfig,
+    postNammaTagConfigPilotCreateUiConfig,
   )
 where
 
 import qualified Dashboard.Common as Common
 import Data.Singletons
+import qualified Data.Text as Text
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.UiRiderConfig as DTRC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -35,13 +40,16 @@ import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types as LYTU
 import SharedLogic.JobScheduler (RiderJobType (..))
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -171,3 +179,42 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.customerNammaTags)) $
     QPerson.updateCustomerTags (Just tag) personId
   pure Success
+
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow Text
+postNammaTagConfigPilotGetVersion _ _ uicr = do
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
+  let merchantOpCityId = merchantOperatingCity.id
+  (_, version) <- UIRC.findUiConfig uicr merchantOpCityId
+  case version of
+    Just ver -> pure $ (Text.pack . show) ver
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+
+postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow LYT.UiConfigResponse
+postNammaTagConfigPilotGetConfig _ _ uicr = do
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id uicr.merchantId) uicr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> uicr.merchantId <> " ,city: " <> show uicr.city)
+  let merchantOpCityId = merchantOperatingCity.id
+  (config, version) <- UIRC.findUiConfig uicr merchantOpCityId
+  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYTU.UI_RIDER uicr.os uicr.platform)
+  case config of
+    Just cfg -> pure (LYT.UiConfigResponse cfg.config (Text.pack . show <$> version) isExp)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+
+postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
+  merchantOperatingCity <- CQMOC.findByMerchantIdAndCity (Id ccr.merchantId) ccr.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> ccr.merchantId <> " ,city: " <> show ccr.city)
+  let merchantOpCityId = merchantOperatingCity.id
+  now <- getCurrentTime
+  id' <- generateGUID
+  UIRC.create $ cfg now merchantOpCityId id'
+  return Kernel.Types.APISuccess.Success
+  where
+    cfg now merchantOpCityId id' =
+      DTRC.UiRiderConfig
+        { config = ccr.config,
+          createdAt = now,
+          id = id',
+          os = ccr.os,
+          updatedAt = now,
+          merchantOperatingCityId = merchantOpCityId,
+          platform = ccr.platform
+        }

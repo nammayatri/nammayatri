@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Yudhishthira.Types
   ( module Reexport,
@@ -51,6 +52,10 @@ module Lib.Yudhishthira.Types
     Config (..),
     TagNameValueExpiry (..),
     TagObject (..),
+    UiConfigRequest (..),
+    UiConfigResponse (..),
+    CreateConfigRequest (..),
+    PlatformType (..),
   )
 where
 
@@ -59,10 +64,13 @@ import Data.Aeson
 import Data.OpenApi as OpenApi hiding (TagName, description, name, tags, version)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Kernel.Types.Beckn.Context
 import Kernel.Types.HideSecrets
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
+import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Scheduler.Types (AnyJob)
@@ -75,6 +83,11 @@ import qualified Text.Show (show)
 
 class Enumerable a where
   allValues :: [a]
+
+data PlatformType = TypeScript | PureScript
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+
+$(mkBeamInstancesForEnumAndList ''PlatformType)
 
 data ConfigType
   = DriverPoolConfig
@@ -155,12 +168,18 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+deriving instance Enum DeviceType
+
+deriving instance Bounded DeviceType
+
 data LogicDomain
   = POOLING
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
   | FRFS_DISCOUNTS
   | CONFIG ConfigType
+  | UI_DRIVER DeviceType PlatformType
+  | UI_RIDER DeviceType PlatformType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance Enumerable LogicDomain where
@@ -171,6 +190,8 @@ instance Enumerable LogicDomain where
       FRFS_DISCOUNTS
     ]
       ++ map CONFIG [minBound .. maxBound]
+      ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
+      ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -179,8 +200,12 @@ generateLogicDomainShowInstances =
     ++ [show DYNAMIC_PRICING_UNIFIED]
     ++ [show FRFS_DISCOUNTS]
     ++ [show (CONFIG configType) | configType <- configTypes]
+    ++ [show (UI_DRIVER a b) | a <- a', b <- b']
+    ++ [show (UI_RIDER a b) | a <- a', b <- b']
   where
     configTypes = [minBound .. maxBound]
+    a' = [minBound .. maxBound]
+    b' = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -196,6 +221,8 @@ instance Show LogicDomain where
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show FRFS_DISCOUNTS = "FRFS-DISCOUNTS"
   show (CONFIG configType) = "CONFIG_" ++ show configType
+  show (UI_DRIVER a b) = "UI_DRIVER_" ++ show a ++ "_" ++ show b
+  show (UI_RIDER a b) = "UI_RIDER_" ++ show a ++ "_" ++ show b
 
 instance Read LogicDomain where
   readsPrec _ s =
@@ -213,6 +240,24 @@ instance Read LogicDomain where
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
                   Just configType -> [(CONFIG configType, rest1)]
+                  Nothing -> []
+          "UI_DRIVER" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType'' ->
+                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
+                     in case readMaybe configType''' of
+                          Just configType -> [(UI_DRIVER configType'' configType, rest2)]
+                          Nothing -> []
+                  Nothing -> []
+          "UI_RIDER" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType'' ->
+                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
+                     in case readMaybe configType''' of
+                          Just configType -> [(UI_RIDER configType'' configType, rest2)]
+                          Nothing -> []
                   Nothing -> []
           _ -> []
 
@@ -469,3 +514,37 @@ data Config a = Config
     extraDimensions :: Maybe Value
   }
   deriving (Generic, ToJSON, FromJSON, Show)
+
+data UiConfigRequest = UiConfigRequest
+  { os :: DeviceType,
+    language :: Language,
+    bundle :: Maybe Text,
+    platform :: PlatformType,
+    merchantId :: Text,
+    city :: Kernel.Types.Beckn.Context.City,
+    toss :: Maybe Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UiConfigResponse = UiConfigResponse
+  { config :: Value,
+    version :: Maybe Text,
+    isExperimentRunning :: Bool
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UiConfigRequest where
+  hideSecrets = identity
+
+data CreateConfigRequest = CreateConfigRequest
+  { config :: Value,
+    os :: DeviceType,
+    bundle :: Maybe Text,
+    platform :: PlatformType,
+    merchantId :: Text,
+    city :: Kernel.Types.Beckn.Context.City
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateConfigRequest where
+  hideSecrets = identity

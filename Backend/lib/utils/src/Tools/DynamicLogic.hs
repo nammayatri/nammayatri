@@ -55,9 +55,10 @@ getAppDynamicLogic ::
   LYT.LogicDomain ->
   UTCTime ->
   Maybe Int ->
+  Maybe Int ->
   m ([A.Value], Maybe Int)
-getAppDynamicLogic merchantOpCityId domain localTime mbVersion = do
-  mbFinalVersion <- pure mbVersion |<|>| selectAppDynamicLogicVersion merchantOpCityId domain localTime
+getAppDynamicLogic merchantOpCityId domain localTime mbVersion mbToss = do
+  mbFinalVersion <- pure mbVersion |<|>| selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss
   case mbFinalVersion of
     Just version -> do
       logics <- DALE.findByDomainAndVersion domain version
@@ -76,16 +77,22 @@ selectVersionForUnboundedConfigs merchantOpCityId domain = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
   let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") configs
-  mbSelectedConfig <- chooseLogic applicapleConfigs
+  mbSelectedConfig <- chooseLogic applicapleConfigs Nothing
   return $ mbSelectedConfig <&> (.version)
+
+isExperimentRunning :: BeamFlow m r => Id MerchantOperatingCity -> LYT.LogicDomain -> m Bool
+isExperimentRunning merchantOpCityId domain = do
+  mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  return $ any (\cfg -> cfg.percentageRollout /= 100 && cfg.percentageRollout /= 0) mbConfigs
 
 selectAppDynamicLogicVersion ::
   BeamFlow m r =>
   Id MerchantOperatingCity ->
   LYT.LogicDomain ->
   UTCTime ->
+  Maybe Int ->
   m (Maybe Int)
-selectAppDynamicLogicVersion merchantOpCityId domain localTime = do
+selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
   allTimeBoundConfigs <- CTBC.findByCityAndDomain (cast merchantOpCityId) domain
@@ -98,7 +105,7 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime = do
             if null boundedConfigs
               then unboundedConfigs configs
               else boundedConfigs
-  mbSelectedConfig <- chooseLogic applicapleConfigs
+  mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
   return $ mbSelectedConfig <&> (.version)
   where
     unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
@@ -108,10 +115,10 @@ cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageR
   where
     addPercentages (_, p1) (logic2, p2) = (logic2, p1 + p2)
 
-chooseLogic :: MonadFlow m => [AppDynamicLogicRollout] -> m (Maybe AppDynamicLogicRollout)
-chooseLogic logics = do
+chooseLogic :: MonadFlow m => [AppDynamicLogicRollout] -> Maybe Int -> m (Maybe AppDynamicLogicRollout)
+chooseLogic logics mbToss = do
   let cumulative = cumulativeRollout logics
-  toss <- getRandomInRange (1, 100 :: Int)
+  toss <- maybe (getRandomInRange (1, 100 :: Int)) pure mbToss
   return $ findLogic toss cumulative
 
 -- Function to find the logic corresponding to the random number
@@ -134,7 +141,7 @@ getConfigVersionMapForStickiness merchantOpCityId = do
   return configVersionMap
   where
     getVersion now domain = do
-      mbVersion <- selectAppDynamicLogicVersion merchantOpCityId domain now
+      mbVersion <- selectAppDynamicLogicVersion merchantOpCityId domain now Nothing
       case (mbVersion, domain) of
         (Just version, CONFIG cfgType) -> return $ Just $ ConfigVersionMap cfgType version
         _ -> return Nothing

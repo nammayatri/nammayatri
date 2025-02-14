@@ -21,6 +21,9 @@ imports:
   CreateNammaTagResponse: Lib.Yudhishthira.Types
   VerifyNammaTagRequest: Lib.Yudhishthira.Types
   VerifyNammaTagResponse: Lib.Yudhishthira.Types
+  UiConfigRequest: Lib.Yudhishthira.Types
+  UiConfigResponse: Lib.Yudhishthira.Types
+  CreateConfigRequest: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -180,3 +183,30 @@ apis:
         type: ChakraQueryResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG GET_CHAKRA_QUERY
+  - POST:
+      endpoint: /configPilot/getVersion
+      auth: ApiAuthV2
+      request:
+        type: UiConfigRequest
+      response:
+        type: Text
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION
+  - POST:
+      endpoint: /configPilot/getConfig
+      auth: ApiAuthV2
+      request:
+        type: UiConfigRequest
+      response:
+        type: UiConfigResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_CONFIG
+  - POST:
+      endpoint: /configPilot/createUiConfig
+      auth: ApiAuthV2
+      request:
+        type: CreateConfigRequest
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_UI_CONFIG

@@ -17,13 +17,18 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
     getNammaTagQueryAll,
+    postNammaTagConfigPilotGetVersion,
+    postNammaTagConfigPilotGetConfig,
+    postNammaTagConfigPilotCreateUiConfig,
   )
 where
 
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Data.Singletons
+import qualified Data.Text as Text
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.UiDriverConfig as DTDC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -37,6 +42,7 @@ import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.DriverPool.Config (Config (..))
@@ -47,6 +53,8 @@ import SharedLogic.Merchant
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
+import qualified Tools.DynamicLogic as TDL
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.CreateNammaTagResponse)
 postNammaTagTagCreate _merchantShortId _opCity req = do
@@ -214,3 +222,42 @@ getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ Lib.Yudhis
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.Chakra -> Environment.Flow Lib.Yudhishthira.Types.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
+
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Text
+postNammaTagConfigPilotGetVersion _ _ uicr = do
+  merchant <- findById (Id uicr.merchantId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
+  (_, version) <- QUiConfig.findUIConfig uicr merchantOpCityId
+  case version of
+    Just ver -> pure $ Text.pack (show ver)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+
+postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.UiConfigResponse
+postNammaTagConfigPilotGetConfig _ _ uicr = do
+  merchant <- findById (Id uicr.merchantId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
+  (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId
+  isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.UI_DRIVER uicr.os uicr.platform)
+  case config of
+    Just cfg -> pure (Lib.Yudhishthira.Types.UiConfigResponse cfg.config (Text.pack .show <$> version) isExp)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
+
+postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
+  merchant <- findById (Id ccr.merchantId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just ccr.city)
+  now <- getCurrentTime
+  id' <- generateGUID
+  QUiConfig.create $ cfg merchantOpCityId now id'
+  return Kernel.Types.APISuccess.Success
+  where
+    cfg merchantOpCityId now id' =
+      DTDC.UiDriverConfig
+        { platform = ccr.platform,
+          config = ccr.config,
+          createdAt = now,
+          id = id',
+          os = ccr.os,
+          updatedAt = now,
+          merchantOperatingCityId = merchantOpCityId
+        }

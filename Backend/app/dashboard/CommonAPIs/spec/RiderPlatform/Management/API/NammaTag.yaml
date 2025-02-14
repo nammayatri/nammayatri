@@ -20,6 +20,9 @@ imports:
   AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
   AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
   UpdateTagReq: Lib.Yudhishthira.Types
+  CreateConfigRequest: Lib.Yudhishthira.Types
+  UiConfigRequest: Lib.Yudhishthira.Types
+  UiConfigResponse: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -178,3 +181,30 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG MANUAL_TAG_UPDATE
+  - POST:
+      endpoint: /configPilot/getVersion
+      auth: ApiAuthV2
+      request:
+        type: UiConfigRequest
+      response:
+        type: Text
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION
+  - POST:
+      endpoint: /configPilot/getConfig
+      auth: ApiAuthV2
+      request:
+        type: UiConfigRequest
+      response:
+        type: UiConfigResponse
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG POST_RETRIEVE_CONFIG
+  - POST:
+      endpoint: /configPilot/createUiConfig
+      auth: ApiAuthV2
+      request:
+        type: CreateConfigRequest
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_UI_CONFIG

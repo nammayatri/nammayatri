@@ -48,3 +48,15 @@ INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostNammaTagUpdateCustomerTag","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG MANUAL_TAG_UPDATE","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_UPDATE_CUSTOMER_TAG' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'MANUAL_TAG_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagConfigPilotGetVersion","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_VERSION' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'POST_RETRIEVE_VERSION' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagConfigPilotGetConfig","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG POST_RETRIEVE_CONFIG","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'POST_RETRIEVE_CONFIG' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagConfigPilotCreateUiConfig","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_UI_CONFIG","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_UI_CONFIG' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'CREATE_UI_CONFIG' ) ON CONFLICT DO NOTHING;
