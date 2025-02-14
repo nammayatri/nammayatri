@@ -29,6 +29,7 @@ import "rider-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -93,7 +94,9 @@ data HandlerEnv = HandlerEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacConfig :: CacConfig,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    serviceClickhouseEnv :: ClickhouseEnv,
+    serviceClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic)
 
@@ -124,6 +127,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer
+  serviceClickhouseEnv <- createConn riderClickhouseCfg
+  let serviceClickhouseCfg = riderClickhouseCfg
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
