@@ -25,6 +25,7 @@ data Message = Message
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageTranslations :: [Domain.Types.Message.MessageTranslation],
+    shareable :: Kernel.Prelude.Bool,
     shortDescription :: Kernel.Prelude.Text,
     title :: Kernel.Prelude.Text,
     viewCount :: Kernel.Prelude.Int
@@ -56,6 +57,7 @@ data RawMessage = RawMessage
     likeCount :: Kernel.Prelude.Int,
     mediaFiles :: [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    shareable :: Kernel.Prelude.Bool,
     shortDescription :: Kernel.Prelude.Text,
     title :: Kernel.Prelude.Text,
     viewCount :: Kernel.Prelude.Int
