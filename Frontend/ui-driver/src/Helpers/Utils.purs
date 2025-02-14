@@ -924,6 +924,7 @@ getChargesOb tripType cityConfig driverVehicle =
       "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
       "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
       "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
+      "BIKE" -> cityConfig.waitingChargesConfig.bike
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
@@ -935,6 +936,7 @@ getRentalChargesOb cityConfig driverVehicle =
     "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
     "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
     "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
+    "BIKE" -> cityConfig.rentalWaitingChargesConfig.bike
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 

@@ -832,7 +832,10 @@ makeDriverRCReq regNo imageId dateOfRegistration multipleRc category airConditio
       "imageId" : imageId,
       "dateOfRegistration" : dateOfRegistration,
       "vehicleCategory" : mkCategory category,
-      "airConditioned" : maybe Nothing (\ac -> Just (ac == 0)) airConditioned,
+      "airConditioned" : case airConditioned of
+                            Just ac | ac == 0 -> Just true
+                                    | ac == 1 -> Just false
+                            _ -> Nothing ,
       "oxygen" : oxygen,
       "ventilator" : ventilator
     }

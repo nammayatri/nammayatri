@@ -1189,7 +1189,8 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator )
+          let airConditioned = if state.data.airConditioned == Just true then Just 0 else Just 1
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory (if state.data.vehicleCategory == Just ST.AmbulanceCategory then airConditioned else state.props.buttonIndex) state.data.oxygen state.data.ventilator )
           case registerDriverRCResp of
             Right (API.ApiSuccessResult resp) -> do
               void $ pure $ Events.addEvent (Events.defaultEventObject "rc_upload_result") { module = "vehicle_registration_page", source = "RC", payload = "success" }
@@ -1240,7 +1241,8 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator)
+          let airConditioned = if state.data.airConditioned == Just true then Just 0 else Just 1
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory (if state.data.vehicleCategory == Just ST.AmbulanceCategory then airConditioned else state.props.buttonIndex) state.data.oxygen state.data.ventilator)
           void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (API.ApiSuccessResult resp) -> do
@@ -1870,7 +1872,8 @@ bookingOptionsFlow = do
       canSwitchToInterCity' = resp.canSwitchToInterCity
       canSwitchToRental' = resp.canSwitchToRental
       canSwitchToIntraCity' = resp.canSwitchToIntraCity
-      defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
+      filterForAmbulance = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> (show item.serviceTierType) == (getValueToLocalStore VEHICLE_VARIANT)) ridePreferences'
+      defaultRide = if HU.isAmbulance (getValueToLocalStore VEHICLE_VARIANT) then filterForAmbulance else  fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
    { data { airConditioned = resp.airConditioned
