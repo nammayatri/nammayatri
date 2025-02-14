@@ -95,12 +95,13 @@ data MessageInfoResponse = MessageInfoResponse
     description :: Kernel.Prelude.Text,
     shortDescription :: Kernel.Prelude.Text,
     _type :: MessageType,
-    mediaFiles :: [MediaFile]
+    mediaFiles :: [MediaFile],
+    shareable :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MessageListItem = MessageListItem {messageId :: Kernel.Types.Id.Id Dashboard.Common.Message, title :: Kernel.Prelude.Text, _type :: MessageType}
+data MessageListItem = MessageListItem {messageId :: Kernel.Types.Id.Id Dashboard.Common.Message, title :: Kernel.Prelude.Text, _type :: MessageType, shareable :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
