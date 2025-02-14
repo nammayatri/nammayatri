@@ -28,6 +28,11 @@ findMerchantByShortId merchantShortId = do
   CQM.findByShortId merchantShortId
     >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
+findById :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DM.Merchant -> m DM.Merchant
+findById merchantId = do
+  CQM.findById merchantId
+    >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+
 getCurrencyByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Currency
 getCurrencyByMerchantOpCity merchantOpCityId = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)

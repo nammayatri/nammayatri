@@ -1,5 +1,6 @@
 module Lib.Yudhishthira.Flow.Dashboard where
 
+import qualified ConfigPilotFrontend.Common as CPFC
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
@@ -36,6 +37,7 @@ import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
 import Lib.Yudhishthira.Types.TimeBoundConfig
+import qualified System.Environment as Se
 
 postTagCreate :: BeamFlow m r => Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
 postTagCreate tagRequest = do
@@ -410,6 +412,39 @@ getLogicRollout merchantOpCityId _ domain = do
       let rollout = DLNE.map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription) logicRollouts
           firstElement = DLNE.head logicRollouts
        in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout) (firstElement.modifiedBy) firstElement.experimentStatus
+
+getFrontendLogicUrlAndToken :: BeamFlow m r => m (BaseUrl, Text)
+getFrontendLogicUrlAndToken = do
+  config <- liftIO (Se.lookupEnv "FRONTEND_LOGIC_URL") >>= fromMaybeM (InvalidRequest "Frontend logic url not found")
+  token <- liftIO (Se.lookupEnv "FRONTEND_LOGIC_TOKEN") >>= fromMaybeM (InvalidRequest "Frontend logic token not found")
+  url <- parseBaseUrl (T.pack config)
+  return (url, T.pack token)
+
+callWebHook :: BeamFlow m r => Text -> m CPFC.ConfigPilotFrontendRes
+callWebHook domain = do
+  let cpfcreq = CPFC.ConfigPilotFrontendReq domain True
+  (url, token) <- getFrontendLogicUrlAndToken
+  let cfg = CPFC.ConfigPilotFrontendConfig url token
+  CPFC.callConfigPilotFrontend cpfcreq cfg
+
+callTheFrontEndHook ::
+  BeamFlow m r =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m Kernel.Types.APISuccess.APISuccess
+callTheFrontEndHook merchantOpCityId domain = do
+  case domain of
+    Lib.Yudhishthira.Types.UI_DRIVER dt pt -> do
+      let domain' = "ui_driver:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
+      res <- callWebHook domain'
+      logDebug $ "Response from Frontend Logic: " <> show res
+      return Kernel.Types.APISuccess.Success
+    Lib.Yudhishthira.Types.UI_RIDER dt pt -> do
+      let domain' = "ui_customer:" <> T.pack (show merchantOpCityId) <> ":" <> T.pack (show dt) <> ":" <> T.pack (show pt)
+      res <- callWebHook domain'
+      logDebug $ "Response from Frontend Logic: " <> show res
+      return Kernel.Types.APISuccess.Success
+    _ -> return Kernel.Types.APISuccess.Success
 
 upsertLogicRollout ::
   BeamFlow m r =>
