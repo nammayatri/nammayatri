@@ -78,6 +78,7 @@ type AppConfigRC a =
   , nammaYatriPartner :: Maybe a
   , odishaYatri :: Maybe a
   , odishaYatriPartner :: Maybe a
+  , keralaSavaariPartner :: Maybe a
   , yatri :: Maybe a
   , yatriPartner :: Maybe a
   , manaYatri :: Maybe a

@@ -48,6 +48,7 @@ import Data.Number (fromString) as Number
 import Data.String as DS
 import Data.Time.Duration (Seconds(..))
 import Debug (spy)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
@@ -85,6 +86,7 @@ import Components.PlanCard as PlanCard
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Resource.Constants as RSC
+import Data.Function.Uncurried (Fn3(..), runFn3)
 import Screens.Types as ST
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
@@ -315,8 +317,10 @@ joinPlanView push state visibility' = do
       else "ny_ic_ny_driver"
 
 enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> RemoteConfig.SubscriptionConfigVariantLevelEntity -> PrestoDOM (Effect Unit) w
-enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel = 
-  linearLayout
+enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel =
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      plansTitle = if MP.has appName "Kerala Savaari" then "Get ready for\nKerala Savaari Plans!" else (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION")
+  in linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , gravity RIGHT
@@ -326,7 +330,7 @@ enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][  commonTV push (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION") Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
+        ][  commonTV push plansTitle Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
           , commonTV push (getString WE_GUARANTEE_YOU) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
           , linearLayout
             [ width WRAP_CONTENT

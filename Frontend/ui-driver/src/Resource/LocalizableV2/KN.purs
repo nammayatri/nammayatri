@@ -1234,7 +1234,7 @@ getKn =
     , enter_referral_code: "ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
     , have_a_referral_code: "ರೆಫರಲ್ ಕೋಡ್ ಹೊಂದಿರುವಿರಾ?"
     , complete_steps_to_apply_referral: "ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ಅನ್ವಯಿಸಲು ಮೇಲಿನ ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
-    , download_namma_yatri: (\_ -> "ನಮ್ಮ ಯಾತ್ರಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ")
+    , download_namma_yatri: (\appName -> appName <> " ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ")
     , enter_code: "ಕೋಡ್ ನಮೂದಿಸಿ"
     , complete_registration: "ಸಂಪೂರ್ಣ ನೋಂದಣಿ"
     , cant_find_option: "ಆಯ್ಕೆಯನ್ನು ಹುಡುಕಲಾಗಲಿಲ್ಲ"
