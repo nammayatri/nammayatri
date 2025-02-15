@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.ServicePeopleCategory where
 
+import qualified Data.Aeson
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -28,6 +29,7 @@ instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategor
             pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
             pricingType = Kernel.Prelude.fromMaybe Domain.Types.ServicePeopleCategory.AllDays pricingType,
             timeBounds = Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
+            vendorSplitDetails = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -45,6 +47,7 @@ instance ToTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.
         Beam.pricePerUnit = (.amount) pricePerUnit,
         Beam.pricingType = Kernel.Prelude.Just pricingType,
         Beam.timeBounds = Kernel.Prelude.Just timeBounds,
+        Beam.vendorSplitDetails = Data.Aeson.toJSON <$> vendorSplitDetails,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

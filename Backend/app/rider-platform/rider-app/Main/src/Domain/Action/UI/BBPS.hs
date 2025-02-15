@@ -119,7 +119,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails bbpsAmount []
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId

@@ -96,7 +96,7 @@ createOrder (personId, merchantId) rideId = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails totalFare.amount []
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
