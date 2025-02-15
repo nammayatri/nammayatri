@@ -1235,7 +1235,7 @@ getEn =
     , enter_referral_code: "Enter referral code"
     , have_a_referral_code: "Have a referral code?"
     , complete_steps_to_apply_referral: "Complete above steps to apply referral code"
-    , download_namma_yatri: (\_ -> "Download Namma Yatri")
+    , download_namma_yatri: (\appName -> "Download " <> appName)
     , enter_code: "Enter Code"
     , complete_registration: "Complete Registration"
     , help_faq: "Help"

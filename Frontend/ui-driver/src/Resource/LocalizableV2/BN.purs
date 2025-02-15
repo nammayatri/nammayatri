@@ -1233,7 +1233,7 @@ getBn =
     , enter_referral_code: "রেফারেল কোড লিখুন"
     , have_a_referral_code: "একটি রেফারেল কোড আছে?"
     , complete_steps_to_apply_referral: "রেফারেল কোড প্রয়োগ করতে উপরের ধাপগুলি সম্পূর্ণ করুন"
-    , download_namma_yatri: (\_ -> "নম্মা যাত্রী ডাউনলোড করুন")
+    , download_namma_yatri: (\appName -> appName <> " ডাউনলোড করুন")
     , enter_code: "কোড লিখুন"
     , complete_registration: "সম্পূর্ণ নিবন্ধন"
     , help_faq: "সাহায্য"

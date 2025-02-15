@@ -1527,7 +1527,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, 
         "cityLat" : 9.931233,
         "cityLong" : 76.267303,
-        "supportNumber" : "",
+        "supportNumber" : "08069724930",
         "languageKey" : "ML_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : true,

@@ -1235,7 +1235,7 @@ getTe =
     , enter_referral_code: "రెఫరల్ కోడ్‌ని నమోదు చేయండి"
     , have_a_referral_code: "రెఫరల్ కోడ్ ఉందా?"
     , complete_steps_to_apply_referral: "రెఫరల్ కోడ్‌ని వర్తింపజేయడానికి పై దశలను పూర్తి చేయండి"
-    , download_namma_yatri: (\_ -> "డౌన్లోడ్ నమ్మ యాత్రి")
+    , download_namma_yatri: (\appName -> "డౌన్లోడ్ " <> appName)
     , enter_code: "కోడ్ వ్రాయండి"
     , complete_registration: "నమోదును పూర్తి చెయ్యండి"
     , cant_find_option: "ఎంపికను కనుగొనలేకపోయాము"
