@@ -21,6 +21,7 @@ where
 import qualified API.Types.UI.FRFSTicketService as DFRFSTypes
 import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.PartnerOrganizationFRFS as DPOFRFS
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
@@ -109,7 +110,14 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
     let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers Nothing
         frfsVehicleType = fromStation.vehicleType
-    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) frfsVehicleType frfsSearchReq req.partnerOrgTransactionId (Just partnerOrg.orgId) []
+        frfsRouteDetails =
+          [ FRFSRouteDetails
+              { routeCode = route <&> (.code),
+                startStationCode = fromStation.code,
+                endStationCode = toStation.code
+              }
+          ]
+    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) frfsVehicleType frfsSearchReq frfsRouteDetails req.partnerOrgTransactionId (Just partnerOrg.orgId) []
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where
     withLogTag = Log.withLogTag ("FRFS:UpsertPersonAndGetFare:PartnerOrgId:" <> getId partnerOrg.orgId)

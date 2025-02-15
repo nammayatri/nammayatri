@@ -119,8 +119,9 @@ JourneyRouteDetails:
     subLegOrder: Maybe Int
     frequency: Maybe Seconds
     routeLongName: Maybe Text
-    fromStationId : Maybe (Id Station)
-    toStationId : Maybe (Id Station)
+    fromStationId: Maybe (Id Station)
+    toStationId: Maybe (Id Station)
+    routeId: Maybe (Id Route)
 
   queries:
     findAllBySearchId:
@@ -300,14 +301,14 @@ FRFSTicketBooking:
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
-    bppDelayedInterest : Maybe Int
-    googleWalletJWTUrl : Maybe Text
-    journeyLegOrder : Maybe Int
+    bppDelayedInterest: Maybe Int
+    googleWalletJWTUrl: Maybe Text
+    journeyLegOrder: Maybe Int
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
     journeyLegStatus: Maybe JourneyLegStatus
-    isDeleted : Maybe Bool
+    isDeleted: Maybe Bool
     isFareChanged: Maybe Bool
     isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"

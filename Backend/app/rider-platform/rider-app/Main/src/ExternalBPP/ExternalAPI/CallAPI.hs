@@ -36,19 +36,19 @@ getProviderName (CMRL _) = "Chennai Metro Rail Limited"
 getProviderName (EBIX _) = "Kolkata Buses"
 getProviderName (DIRECT _) = "Direct Multimodal Services"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> Maybe Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
-getFares mbRiderId merchant merchanOperatingCity config mbRouteCode startStopCode endStopCode vehicleCategory = do
-  case (config, mbRouteCode) of
-    (CMRL config', _) ->
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares mbRiderId merchant merchanOperatingCity config routeCode startStopCode endStopCode vehicleCategory = do
+  case config of
+    CMRL config' ->
       CMRLFareByOriginDest.getFareByOriginDest config' $
         CMRLFareByOriginDest.FareByOriginDestReq
-          { origin = startStopCode,
+          { route = routeCode,
+            origin = startStopCode,
             destination = endStopCode,
             ticketType = "SJT"
           }
-    (EBIX _, Just routeCode) -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    (DIRECT _, Just routeCode) -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    _ -> return []
+    EBIX _ -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    DIRECT _ -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder config qrTtl (_mRiderName, mRiderNumber) booking = do

@@ -1,6 +1,6 @@
 module Lib.JourneyLeg.Interface where
 
-import qualified Data.Text as T
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Trip as DTrip
@@ -67,11 +67,12 @@ getFare merchantId merchantOperatingCityId leg = \case
     mkBusGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let mbRouteCode = gtfsIdtoDomainCode <$> (listToMaybe $ catMaybes $ map (.gtfsId) leg.routeDetails)
-      let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
-      let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
-      case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
-        (Just routeCode, Just startStopCode, Just endStopCode) ->
+      let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
+      if length routeDetails /= length leg.routeDetails
+        then do
+          logError "Unable to Map Route Details for all Bus Route Sub Legs"
+          return Nothing
+        else
           return $
             Just $
               BusLegRequestGetFare $
@@ -80,17 +81,17 @@ getFare merchantId merchantOperatingCityId leg = \case
                     endLocation = leg.endLocation.latLng,
                     ..
                   }
-        _ -> return Nothing
 
     mkMetroGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg MetroLegRequest m) => m (Maybe MetroLegRequest)
     mkMetroGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let mbRouteCode = gtfsIdtoDomainCode <$> (listToMaybe $ catMaybes $ map (.gtfsId) leg.routeDetails)
-      let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
-      let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
-      case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
-        (Just routeCode, Just startStopCode, Just endStopCode) ->
+      let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
+      if length routeDetails /= length leg.routeDetails
+        then do
+          logError "Unable to Map Route Details for all Metro Route Sub Legs"
+          return Nothing
+        else
           return $
             Just $
               MetroLegRequestGetFare $
@@ -99,17 +100,17 @@ getFare merchantId merchantOperatingCityId leg = \case
                     endLocation = leg.endLocation.latLng,
                     ..
                   }
-        _ -> return Nothing
 
     mkSubwayGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg SubwayLegRequest m) => m (Maybe SubwayLegRequest)
     mkSubwayGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let mbRouteCode = gtfsIdtoDomainCode <$> (listToMaybe $ catMaybes $ map (.gtfsId) leg.routeDetails)
-      let mbStartStopCode = gtfsIdtoDomainCode <$> (leg.fromStopDetails >>= (.gtfsId))
-      let mbEndStopCode = gtfsIdtoDomainCode <$> (leg.toStopDetails >>= (.gtfsId))
-      case (mbRouteCode, mbStartStopCode, mbEndStopCode) of
-        (Just routeCode, Just startStopCode, Just endStopCode) ->
+      let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
+      if length routeDetails /= length leg.routeDetails
+        then do
+          logError "Unable to Map Route Details for all Subway Route Sub Legs"
+          return Nothing
+        else
           return $
             Just $
               SubwayLegRequestGetFare $
@@ -118,17 +119,21 @@ getFare merchantId merchantOperatingCityId leg = \case
                     endLocation = leg.endLocation.latLng,
                     ..
                   }
-        _ -> return Nothing
 
     mkWalkGetFareReq :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, JL.JourneyLeg WalkLegRequest m) => m WalkLegRequest
     mkWalkGetFareReq = do
       return $
         (WalkLegRequestGetFare WalkLegRequestGetFareData)
 
-    gtfsIdtoDomainCode :: Text -> Text
-    gtfsIdtoDomainCode gtfsId = case break (== ':') $ T.unpack gtfsId of
-      (_, ':' : code) -> T.pack code
-      _ -> gtfsId
+    mkRouteDetails :: EMInterface.MultiModalRouteDetails -> Maybe FRFSRouteDetails
+    mkRouteDetails routeDetails =
+      let mbRouteCode = gtfsIdtoDomainCode <$> routeDetails.gtfsId
+          mbFromStationCode = gtfsIdtoDomainCode <$> (routeDetails.fromStopDetails >>= (.gtfsId))
+          mbToStationCode = gtfsIdtoDomainCode <$> (routeDetails.toStopDetails >>= (.gtfsId))
+       in case (mbRouteCode, mbFromStationCode, mbToStationCode) of
+            (Just routeCode, Just startStationCode, Just endStationCode) ->
+              Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
+            _ -> Nothing
 
 confirm :: JL.ConfirmFlow m r c => Bool -> JL.LegInfo -> m ()
 confirm forcedBooked JL.LegInfo {..} =
