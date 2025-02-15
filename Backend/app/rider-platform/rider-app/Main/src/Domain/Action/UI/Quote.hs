@@ -31,7 +31,6 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -46,6 +45,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
@@ -60,6 +60,7 @@ import qualified Domain.Types.Trip as DTrip
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
+import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
@@ -67,7 +68,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.External.MultiModal.Interface.Types
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -415,17 +415,12 @@ getJourneys searchRequest = do
       return $ Just journeyData
     _ -> return Nothing
   where
-    gtfsIdtoDomainCode :: Text -> Text
-    gtfsIdtoDomainCode gtfsId = case break (== ':') $ T.unpack gtfsId of
-      (_, ':' : code) -> T.pack code
-      _ -> gtfsId
-
     mkRouteDetail :: MultiModalRouteDetails -> RouteDetail
     mkRouteDetail routeDetail =
       RouteDetail
-        { routeCode = routeDetail >>= (.gtfsId),
-          fromStationCode = routeDetail >>= (.fromStopDetails) >>= (.gtfsId),
-          toStationCode = routeDetail >>= (.toStopDetails) >>= (.gtfsId),
-          color = routeDetail >>= (.shortName),
-          colorCode = routeDetail >>= (.shortName)
+        { routeCode = gtfsIdtoDomainCode <$> routeDetail.gtfsId,
+          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
+          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
+          color = routeDetail.shortName,
+          colorCode = routeDetail.shortName
         }

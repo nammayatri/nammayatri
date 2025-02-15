@@ -86,5 +86,6 @@ getTransformedJourneyRouteDetails routeDetails = do
           frequency = JRD.frequency rd,
           routeLongName = JRD.routeLongName rd,
           fromStationId = JRD.fromStationId rd,
-          toStationId = JRD.toStationId rd
+          toStationId = JRD.toStationId rd,
+          routeId = JRD.routeId rd
         }

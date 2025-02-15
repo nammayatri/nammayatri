@@ -12,20 +12,21 @@ import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data JourneyRouteDetailsT f = JourneyRouteDetailsT
-  { frequency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds)),
-    fromStationId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    id :: (B.C f Kernel.Prelude.Text),
-    lineColor :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    lineColorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    platformNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    routeLongName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    searchId :: (B.C f Kernel.Prelude.Text),
-    subLegOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    toStationId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
+    fromStationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    lineColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lineColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    platformNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    routeLongName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    searchId :: B.C f Kernel.Prelude.Text,
+    subLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    toStationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +36,6 @@ instance B.Table JourneyRouteDetailsT where
 
 type JourneyRouteDetails = JourneyRouteDetailsT Identity
 
-$(enableKVPG (''JourneyRouteDetailsT) [('id)] [[('searchId)]])
+$(enableKVPG ''JourneyRouteDetailsT ['id] [['searchId]])
 
-$(mkTableInstances (''JourneyRouteDetailsT) "journey_route_details")
+$(mkTableInstances ''JourneyRouteDetailsT "journey_route_details")
