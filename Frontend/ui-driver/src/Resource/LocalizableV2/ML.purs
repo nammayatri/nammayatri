@@ -1234,7 +1234,7 @@ getMl =
     , enter_referral_code: "റഫറൽ കോഡ് നൽകുക"
     , have_a_referral_code: "ഒരു റഫറൽ കോഡ് ഉണ്ടോ?"
     , complete_steps_to_apply_referral: "റഫറൽ കോഡ് പ്രയോഗിക്കുന്നതിന് മുകളിലുള്ള ഘട്ടങ്ങൾ പൂർത്തിയാക്കുക"
-    , download_namma_yatri: (\_ -> "നമ്മ യാത്രി ഡൗൺലോഡ് ചെയ്യുക")
+    , download_namma_yatri: (\appName -> appName <> " ഡൗൺലോഡ് ചെയ്യുക")
     , enter_code: "കോഡ് നൽകുക"
     , complete_registration: "പൂർണ്ണമായ രജിസ്ട്രേഷൻ"
     , cant_find_option: "ഓപ്ഷൻ കണ്ടെത്താൻ കഴിയുന്നില്ല"

@@ -83,6 +83,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "x-package" (getValueToLocalStore PACKAGE_NAME),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" getDeviceDetails
                     ] <> case regToken of
@@ -97,7 +98,8 @@ getHeaders' dummy isGzipCompressionEnabled = do
     _ <- pure $ spy "import headers" regToken
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                         Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
+                        Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
+                        Header "x-package" (getValueToLocalStore PACKAGE_NAME),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" getDeviceDetails
@@ -207,6 +209,7 @@ triggerOTPBT payload = do
 makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
 makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
+        packageName = getValueToLocalStore PACKAGE_NAME
         latitude = mkLatLon lat
         longitude = mkLatLon lng
     in
@@ -216,7 +219,8 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
       "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
       "merchantOperatingCity" : mkOperatingCity operatingCity,
       "registrationLat" : latitude,
-      "registrationLon" : longitude
+      "registrationLon" : longitude,
+      "packageName" : packageName
     }
     where 
         mkOperatingCity :: String -> Maybe String

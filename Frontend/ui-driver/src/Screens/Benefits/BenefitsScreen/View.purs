@@ -608,7 +608,8 @@ referralCountView showStar text' count visibility' push popupType =
 
 appQRCodeView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 appQRCodeView push state =
-  linearLayout
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , gravity CENTER
@@ -629,7 +630,7 @@ appQRCodeView push state =
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER
-              , text $ getString $ LT.DOWNLOAD_NAMMA_YATRI "DOWNLOAD_NAMMA_YATRI"
+              , text $ getString $ LT.DOWNLOAD_NAMMA_YATRI appName
               , margin $ MarginVertical 10 7
               , color Color.black800
               ]
