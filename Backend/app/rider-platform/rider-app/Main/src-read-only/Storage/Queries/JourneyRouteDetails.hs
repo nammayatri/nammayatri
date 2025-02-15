@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyRouteDetails.JourneyRouteDetails] -> m ())
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.JourneyRouteDetails.JourneyRouteDetails]))
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.JourneyRouteDetails.JourneyRouteDetails])
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
 findByPrimaryKey ::
@@ -38,6 +38,7 @@ updateByPrimaryKey (Domain.Types.JourneyRouteDetails.JourneyRouteDetails {..}) =
       Se.Set Beam.lineColor lineColor,
       Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.platformNumber platformNumber,
+      Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
       Se.Set Beam.routeLongName routeLongName,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.subLegOrder subLegOrder,
@@ -60,6 +61,7 @@ instance FromTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jo
             lineColor = lineColor,
             lineColorCode = lineColorCode,
             platformNumber = platformNumber,
+            routeId = Kernel.Types.Id.Id <$> routeId,
             routeLongName = routeLongName,
             searchId = Kernel.Types.Id.Id searchId,
             subLegOrder = subLegOrder,
@@ -79,6 +81,7 @@ instance ToTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jour
         Beam.lineColor = lineColor,
         Beam.lineColorCode = lineColorCode,
         Beam.platformNumber = platformNumber,
+        Beam.routeId = Kernel.Types.Id.getId <$> routeId,
         Beam.routeLongName = routeLongName,
         Beam.searchId = Kernel.Types.Id.getId searchId,
         Beam.subLegOrder = subLegOrder,

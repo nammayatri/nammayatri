@@ -23,7 +23,7 @@ create frfsSearchReq = do
   forM_ (FS.journeyRouteDetails frfsSearchReq) $ \journeyRouteDetail -> do
     _now <- getCurrentTime
     newId <- Common.generateGUID
-    let journey_route_details =
+    let journeyRouteDetails =
           JourneyRouteDetails.JourneyRouteDetails
             { id = newId,
               lineColor = journeyRouteDetail.lineColor,
@@ -35,12 +35,13 @@ create frfsSearchReq = do
               subLegOrder = journeyRouteDetail.subLegOrder,
               fromStationId = journeyRouteDetail.fromStationId,
               toStationId = journeyRouteDetail.toStationId,
+              routeId = journeyRouteDetail.routeId,
               merchantId = Just frfsSearchReq.merchantId,
               merchantOperatingCityId = Just frfsSearchReq.merchantOperatingCityId,
               createdAt = _now,
               updatedAt = _now
             }
-    JRD.create journey_route_details
+    JRD.create journeyRouteDetails
 
   create' frfsSearchReq
 

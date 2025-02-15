@@ -45,6 +45,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
@@ -59,6 +60,7 @@ import qualified Domain.Types.Trip as DTrip
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
+import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
@@ -223,10 +225,20 @@ data JourneyLeg = JourneyLeg
     toLatLong :: LatLong,
     fromStationCode :: Maybe Text,
     toStationCode :: Maybe Text,
-    color :: Maybe Text,
-    colorCode :: Maybe Text,
+    routeDetails :: [RouteDetail],
+    color :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
+    colorCode :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     duration :: Maybe Seconds,
     distance :: Maybe Distance
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data RouteDetail = RouteDetail
+  { routeCode :: Maybe Text,
+    fromStationCode :: Maybe Text,
+    toStationCode :: Maybe Text,
+    color :: Maybe Text,
+    colorCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -382,6 +394,7 @@ getJourneys searchRequest = do
                     toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
                     color = listToMaybe $ catMaybes $ map (.shortName) journeyLeg.routeDetails,
                     colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
+                    routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
                     distance = journeyLeg.distance
                   }
@@ -401,3 +414,13 @@ getJourneys searchRequest = do
               }
       return $ Just journeyData
     _ -> return Nothing
+  where
+    mkRouteDetail :: MultiModalRouteDetails -> RouteDetail
+    mkRouteDetail routeDetail =
+      RouteDetail
+        { routeCode = gtfsIdtoDomainCode <$> routeDetail.gtfsId,
+          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
+          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
+          color = routeDetail.shortName,
+          colorCode = routeDetail.shortName
+        }

@@ -7,6 +7,7 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
+import Domain.Types.FRFSRouteDetails
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -63,9 +64,7 @@ data SubwayLegRequest
 data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
-    routeCode :: Text,
-    startStopCode :: Text,
-    endStopCode :: Text,
+    routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
     merchantOpCity :: DMOC.MerchantOperatingCity
   }

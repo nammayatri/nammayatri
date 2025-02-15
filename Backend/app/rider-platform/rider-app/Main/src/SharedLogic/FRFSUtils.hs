@@ -18,6 +18,9 @@ import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Data.Time as Time
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
@@ -30,16 +33,21 @@ import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
-import EulerHS.Prelude ((+||), (||+))
+import EulerHS.Prelude (comparing, (+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Station as CQS
@@ -53,8 +61,10 @@ import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
+import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Tools.DynamicLogic
 import Tools.Error
+import Tools.Maps as Maps
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
@@ -294,3 +304,132 @@ getFares mbRiderId vehicleType merchantId merchantOperatingCityId routeCode star
               price = discountPrice,
               ..
             }
+
+data VehicleTracking = VehicleTracking
+  { nextStop :: RouteStopMapping.RouteStopMapping,
+    nextStopTravelTime :: Maybe Seconds,
+    nextStopTravelDistance :: Meters,
+    vehicleId :: Text,
+    vehicleInfo :: VehicleInfo
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleInfo = VehicleInfo
+  { latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    scheduleRelationship :: Maybe Text,
+    speed :: Maybe Double,
+    startDate :: Maybe Text,
+    startTime :: Maybe UTCTime,
+    timestamp :: Maybe Text,
+    tripId :: Maybe Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DP.Person -> Id DM.Merchant -> Text -> m [VehicleTracking]
+trackVehicles personId merchantId routeCode = do
+  vehicleTrackingInfo <- getVehicleInfo
+  let vehicleInfoWithLatLong :: [(Text, VehicleInfo, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) vehicleTrackingInfo
+  routeStops <- QRouteStopMapping.findByRouteCode routeCode
+  let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
+      stopPairs = pairWithNext sortedStops
+  stopPairsWithWaypoints <- getStopPairsWithWaypoints stopPairs
+  forM vehicleInfoWithLatLong $ \(vehicleId, vehicleInfo, vehicleLat, vehicleLon) -> do
+    minDistancesWithWaypoints <-
+      forM stopPairsWithWaypoints $ \((_currStop, nextStop), waypoints) -> do
+        let (groupedWaypoints, _) =
+              foldr
+                ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
+                    let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
+                        subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
+                     in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
+                )
+                ([], waypoints)
+                waypoints
+        let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
+        pure (minDistanceFromVehicle, nextStop)
+    let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
+        nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
+        nextStopTravelTime = (\speed -> Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed
+    pure $
+      VehicleTracking
+        { nextStopTravelDistance = highPrecMetersToMeters nextStopTravelDistance,
+          ..
+        }
+  where
+    getStopPairsWithWaypoints stopPairs = do
+      Redis.get (stopPairRoutePointsKey routeCode)
+        >>= \case
+          Just stopPairsWithWaypoint -> pure stopPairsWithWaypoint
+          Nothing -> do
+            stopPairsWithWaypoint <-
+              forM stopPairs $ \stopPair -> do
+                let startStop = fst stopPair
+                    nextStop = snd stopPair
+                    request =
+                      Maps.GetRoutesReq
+                        { waypoints = NE.fromList [startStop.stopPoint, nextStop.stopPoint],
+                          calcPoints = True,
+                          mode = Just Maps.CAR
+                        }
+                routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
+                reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (RouteNotFound routeCode)
+                let wayPoints = reqRouteInfo.points
+                pure (stopPair, wayPoints)
+            Redis.set (stopPairRoutePointsKey routeCode) stopPairsWithWaypoint
+            pure stopPairsWithWaypoint
+
+    getVehicleInfo = do
+      vehicleInfoByRouteCode :: [(Text, VehicleInfo)] <- do
+        vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)
+        pure $ mkVehicleInfo vehicleTrackingResp
+      if null vehicleInfoByRouteCode
+        then do
+          tripIds <- map DRTM.tripCode <$> QRouteTripMapping.findAllTripIdByRouteCode routeCode
+          vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByTrips tripIds)
+          pure $ mkVehicleInfo vehicleTrackingResp
+        else pure vehicleInfoByRouteCode
+
+    mkVehicleInfo :: [LT.VehicleTrackingOnRouteResp] -> [(Text, VehicleInfo)]
+    mkVehicleInfo vehiclesInfo =
+      vehiclesInfo
+        <&> ( \vehicleInfo ->
+                ( vehicleInfo.vehicleNumber,
+                  VehicleInfo
+                    { latitude = Just vehicleInfo.vehicleInfo.latitude,
+                      longitude = Just vehicleInfo.vehicleInfo.longitude,
+                      scheduleRelationship = vehicleInfo.vehicleInfo.scheduleRelationship,
+                      speed = vehicleInfo.vehicleInfo.speed,
+                      startDate =
+                        ( \startTime ->
+                            T.pack $
+                              Time.formatTime
+                                Time.defaultTimeLocale
+                                "%d-%m-%Y"
+                                ( addUTCTime
+                                    (secondsToNominalDiffTime 19800)
+                                    startTime
+                                )
+                        )
+                          <$> vehicleInfo.vehicleInfo.startTime,
+                      startTime = vehicleInfo.vehicleInfo.startTime,
+                      timestamp = Just vehicleInfo.vehicleInfo.timestamp,
+                      tripId = vehicleInfo.vehicleInfo.tripId
+                    }
+                )
+            )
+
+    mkLatLong :: Double -> Double -> Maps.LatLong
+    mkLatLong lat_ lon_ =
+      Maps.LatLong
+        { lat = lat_,
+          lon = lon_
+        }
+
+    pairWithNext :: [a] -> [(a, a)]
+    pairWithNext xs = zip xs (tail xs)
+
+    stopPairRoutePointsKey :: Text -> Text
+    stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId

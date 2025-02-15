@@ -18,6 +18,7 @@ import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
+import Domain.Types.FRFSRouteDetails
 import Environment
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (ServiceFlow)
@@ -55,8 +56,8 @@ type FRFSConfirmFlow m r =
     HasField "isMetroTestTransaction" r Bool
   )
 
-search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> m ()
-search merchant merchantOperatingCity bapConfig searchReq = do
+search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> m ()
+search merchant merchantOperatingCity bapConfig searchReq routeDetails = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Nothing -> do
@@ -69,7 +70,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
         void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
     Just config -> do
       fork "FRFS External SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity config bapConfig searchReq
+        onSearchReq <- Flow.search merchant merchantOperatingCity config bapConfig searchReq routeDetails
         processOnSearch onSearchReq
   where
     processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()
@@ -161,9 +162,9 @@ verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encrypte
       (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
       DOnStatus.onStatus merchant' booking' verificationOnStatusReq
 
-getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> BecknConfig -> Maybe Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
-getFares riderId merchant merchantOperatingCity bapConfig mbRouteCode startStationCode endStationCode vehicleCategory = do
+getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares riderId merchant merchantOperatingCity bapConfig routeCode startStationCode endStationCode vehicleCategory = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
-    Just config -> Flow.getFares riderId merchant merchantOperatingCity config bapConfig mbRouteCode startStationCode endStationCode vehicleCategory
+    Just config -> Flow.getFares riderId merchant merchantOperatingCity config bapConfig routeCode startStationCode endStationCode vehicleCategory
     Nothing -> return []

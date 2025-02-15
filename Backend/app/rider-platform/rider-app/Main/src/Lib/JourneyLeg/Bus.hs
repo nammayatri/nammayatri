@@ -38,5 +38,5 @@ instance JT.JourneyLeg BusLegRequest m where
   getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare merchant merchantOpCity Spec.BUS routeCode startStopCode endStopCode
+  getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare merchant merchantOpCity Spec.BUS routeDetails
   getFare _ = throwError (InternalError "Not supported")
