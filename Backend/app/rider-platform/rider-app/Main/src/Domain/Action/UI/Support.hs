@@ -92,6 +92,7 @@ validateSendIssueReq SendIssueReq {..} =
 
 type SendIssueRes = APISuccess
 
+-- Deprecated : Only used for delete account requests
 sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SendIssueReq -> m SendIssueRes
 sendIssue (personId, merchantId) request = do
   runRequestValidation validateSendIssueReq request
@@ -101,7 +102,7 @@ sendIssue (personId, merchantId) request = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue
+  ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
   ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
     Right ticketResponse' -> do
@@ -169,12 +170,12 @@ buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
         merchantId = Just merchantId
       }
 
-mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq
-mkTicket issue person phoneNumber disposition queue = do
+mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> Maybe Text -> m Ticket.CreateTicketReq
+mkTicket issue person phoneNumber disposition queue deleteAccountCategory = do
   rideDesc <- mkRideInfo Nothing person Nothing
   pure $
     Ticket.CreateTicketReq
-      { category = "Driver Related",
+      { category = fromMaybe "Delete Account" deleteAccountCategory,
         subCategory = Just issue.reason,
         disposition,
         queue,
