@@ -77,7 +77,7 @@ import Foreign.Generic (encodeJSON)
 import Helpers.API (callApiBT, callApi)
 import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo, getHvErrorMsg)
 import Helpers.Utils as HU
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, fetchPackageName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -227,11 +227,13 @@ baseAppFlow baseFlow event driverInfoResponse = do
           appSessionCount = getValueToLocalStore APP_SESSION_TRACK_COUNT
           movedToOfflineDate = getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
       versionName <- lift $ lift $ liftFlow $ getVersionName
+      packageName <- lift $ lift $ liftFlow $ fetchPackageName unit
       void $ pure $ setCleverTapUserProp [{key : "App Version", value : unsafeToForeign versionName},
                                           {key : "Bundle version", value : unsafeToForeign bundle},
                                           {key : "Platform", value : unsafeToForeign os}]
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
+      setValueToLocalStore PACKAGE_NAME packageName
       setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
       setValueToLocalStore RIDE_REQUEST_BUFFER "0"
