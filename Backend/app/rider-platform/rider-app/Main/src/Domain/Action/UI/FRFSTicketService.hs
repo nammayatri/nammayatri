@@ -776,7 +776,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-                splitSettlementDetails = Nothing
+                splitSettlementDetails = Payment.mkSplitSettlementDetails paymentOrder.amount []
               }
       DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId createOrderReq (createOrderCall merchantOperatingCityId booking)
 

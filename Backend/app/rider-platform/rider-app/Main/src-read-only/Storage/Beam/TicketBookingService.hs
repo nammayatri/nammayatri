@@ -3,6 +3,7 @@
 
 module Storage.Beam.TicketBookingService where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
@@ -30,6 +31,7 @@ data TicketBookingServiceT f = TicketBookingServiceT
     ticketBookingId :: B.C f Kernel.Prelude.Text,
     ticketServiceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     verificationCount :: B.C f Kernel.Prelude.Int,
     visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)

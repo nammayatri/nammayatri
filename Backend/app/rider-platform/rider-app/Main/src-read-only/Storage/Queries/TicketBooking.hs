@@ -4,6 +4,7 @@
 
 module Storage.Queries.TicketBooking (module Storage.Queries.TicketBooking, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.Extra.TicketBooking
 import qualified Domain.Types.MerchantOperatingCity
@@ -90,6 +91,7 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.ticketPlaceId (Kernel.Types.Id.getId ticketPlaceId),
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.visitDate visitDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]

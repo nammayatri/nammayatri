@@ -214,7 +214,9 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     mkPrice mbCurrency $ sum as
 
   let bookedSeats = sum $ ticketBookingServices <&> (.bookedSeats)
-  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats
+      vendorSplits = accumulateVendorSplits (ticketBookingServices <&> (.vendorSplitDetails))
+
+  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats vendorSplits
 
   QTBS.createMany ticketBookingServices
   QTB.create ticketBooking
@@ -239,7 +241,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails amount.amount (fromMaybe [] vendorSplits)
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
@@ -250,7 +252,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     Nothing -> do
       throwError $ InternalError "Failed to create order"
   where
-    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats = do
+    accumulateVendorSplits mbSplits = mbSplits & catMaybes & concat & Payment.groupSumVendorSplits & \l -> bool (pure l) (Nothing) (null l)
+    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats vendorSplits = do
       shortId <- generateShortId
       now <- getCurrentTime
       return $
@@ -267,7 +270,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             createdAt = now,
             updatedAt = now,
             bookedSeats,
-            cancelledSeats = Nothing
+            cancelledSeats = Nothing,
+            vendorSplitDetails = vendorSplits
           }
 
     createTicketBookingService merchantOperatingCityId ticketBookingId visitDate ticketServicesReq = do
@@ -311,7 +315,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             updatedAt = now,
             visitDate = Just visitDate,
             bookedSeats,
-            cancelledSeats = Nothing
+            cancelledSeats = Nothing,
+            vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingSCats)
           }
 
     createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId visitDate businessHour ticketServiceCReq = do
@@ -360,7 +365,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             eventCancelledBy = Nothing,
             amountToRefund = Nothing,
             visitDate = Just visitDate,
-            btype = Just businessHour.btype
+            btype = Just businessHour.btype,
+            vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingPCats)
           }
 
     createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId visitDate ticketServicePCReq = do
@@ -382,7 +388,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             amountToRefund = Nothing,
             createdAt = now,
             updatedAt = now,
-            peopleCategoryId = Just tPCatId
+            peopleCategoryId = Just tPCatId,
+            vendorSplitDetails = tServicePCat.vendorSplitDetails
           }
 
     calculateAmountAndSeats :: (MonadThrow m, Log m) => [DTB.TicketBookingPeopleCategory] -> m (Price, Int)

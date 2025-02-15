@@ -13,6 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
+import qualified Tools.Payment
 
 data TicketBookingServiceCategory = TicketBookingServiceCategory
   { amount :: Kernel.Types.Common.Price,
@@ -25,6 +26,7 @@ data TicketBookingServiceCategory = TicketBookingServiceCategory
     name :: Kernel.Prelude.Text,
     serviceCategoryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketBookingServiceId :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
+    vendorSplitDetails :: Kernel.Prelude.Maybe [Tools.Payment.VendorSplitDetails],
     visitDate :: Kernel.Prelude.Maybe Data.Time.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
