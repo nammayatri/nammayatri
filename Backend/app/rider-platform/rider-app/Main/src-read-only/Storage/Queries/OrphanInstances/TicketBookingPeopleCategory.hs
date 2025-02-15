@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.TicketBookingPeopleCategory where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TicketBookingPeopleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,6 +28,7 @@ instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingP
             peopleCategoryId = Kernel.Types.Id.Id <$> peopleCategoryId,
             pricePerUnit = Kernel.Types.Common.mkPrice currency pricePerUnit,
             ticketBookingServiceCategoryId = Kernel.Types.Id.Id ticketBookingServiceCategoryId,
+            vendorSplitDetails = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -45,6 +47,7 @@ instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeo
         Beam.currency = (Kernel.Prelude.Just . (.currency)) pricePerUnit,
         Beam.pricePerUnit = (.amount) pricePerUnit,
         Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId,
+        Beam.vendorSplitDetails = Data.Aeson.toJSON <$> vendorSplitDetails,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

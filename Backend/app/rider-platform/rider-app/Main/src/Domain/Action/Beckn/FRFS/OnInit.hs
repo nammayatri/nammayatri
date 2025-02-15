@@ -194,7 +194,7 @@ createPayments merchantOperatingCityId merchantId orderId orderShortId amount pe
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails amount []
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
