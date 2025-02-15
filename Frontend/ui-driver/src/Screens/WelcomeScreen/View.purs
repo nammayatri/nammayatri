@@ -43,8 +43,8 @@ view push state =
         , background "#FFFAED"
         , padding $ PaddingBottom 24
         ][  imageView
-            [ height $ V 50
-            , width $ V 147
+            [ height $ V 100
+            , width $ V 210
             , margin $ MarginTop 50
             , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ic_namma_yatri_logo"
             ]
