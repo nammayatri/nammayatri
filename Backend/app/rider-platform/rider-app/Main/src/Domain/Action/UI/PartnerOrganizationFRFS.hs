@@ -43,6 +43,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
@@ -422,10 +423,17 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
       routeCode
   merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
   let partnerOrgRiderId = "partnerOrg_rider_id"
+      frfsRouteDetails =
+        [ FRFSRouteDetails
+            { routeCode = routeCode,
+              startStationCode = fromStation.code,
+              endStationCode = toStation.code
+            }
+        ]
   searchReq <- mkSearchReq frfsVehicleType partnerOrgRiderId partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
-    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq
+    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails
   quotes <- mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchReq.id
   whenJust quotes $ \quotes' -> QQuote.createMany quotes'
   case quotes of

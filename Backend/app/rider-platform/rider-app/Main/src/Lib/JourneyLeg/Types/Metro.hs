@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Types.Metro where
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
@@ -70,9 +71,7 @@ data MetroLegRequest
 data MetroLegRequestGetFareData = MetroLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
-    routeCode :: Text,
-    startStopCode :: Text,
-    endStopCode :: Text,
+    routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
     merchantOpCity :: DMOC.MerchantOperatingCity
   }

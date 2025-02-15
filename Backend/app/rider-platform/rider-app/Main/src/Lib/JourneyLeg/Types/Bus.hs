@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Types.Bus where
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
@@ -60,9 +61,7 @@ data BusLegRequestGetStateData = BusLegRequestGetStateData
 data BusLegRequestGetFareData = BusLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
-    routeCode :: Text,
-    startStopCode :: Text,
-    endStopCode :: Text,
+    routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
     merchantOpCity :: DMOC.MerchantOperatingCity
   }
