@@ -17,8 +17,8 @@
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="250dp"
-                android:layout_height="120dp"
+                android:layout_width="300dp"
+                android:layout_height="140dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_launcher_with_name"/>
         </LinearLayout>
@@ -47,7 +47,7 @@
 
                 <ImageView
                     android:layout_width="350dp"
-                    android:layout_height="65dp"
+                    android:layout_height="75dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_powered_by_" />
             </LinearLayout>
