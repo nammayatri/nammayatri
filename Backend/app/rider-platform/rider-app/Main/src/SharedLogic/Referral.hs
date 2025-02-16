@@ -28,10 +28,13 @@ import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RefereeLink as DReferral
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.Person as SP
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
@@ -43,7 +46,7 @@ data ValidatedRefCode
   | -- | (refCode, mobileNumber, countryCode)
     Driver Text Text Text
 
-applyReferralCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> Text -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
+applyReferralCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, EsqDBReplicaFlow m r) => Person.Person -> Bool -> Text -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
 applyReferralCode person shouldShareReferrerInfo refCode = withPersonIdLogTag person.id $ do
   validatedCode <- validateRefCode person refCode
   res <- getReferrerInfo person shouldShareReferrerInfo validatedCode
@@ -56,7 +59,7 @@ applyReferralCode person shouldShareReferrerInfo refCode = withPersonIdLogTag pe
       _ -> return ()
   return res
 
-validateRefCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Person.Person -> Text -> m ValidatedRefCode
+validateRefCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ClickhouseFlow m r, EsqDBReplicaFlow m r) => Person.Person -> Text -> m ValidatedRefCode
 validateRefCode person refCode =
   withLogTag ("Referral Code Flow:> refCode:-" <> show refCode) $ do
     if isCustomerReferralCode refCode
@@ -68,7 +71,7 @@ validateRefCode person refCode =
         referredByPerson <- QPerson.findPersonByCustomerReferralCode (Just refCode) >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
         when (person.id == referredByPerson.id) $
           throwError $ InvalidRequest "Cannot refer yourself"
-        referrerStats <- QPS.findByPersonId referredByPerson.id >>= fromMaybeM (PersonStatsNotFound person.id.getId)
+        referrerStats <- QPS.findByPersonId referredByPerson.id >>= maybe (SP.createBackfilledPersonStats referredByPerson.id referredByPerson.merchantOperatingCityId) return
         return $ Rider refCode referredByPerson referrerStats
       else withLogTag "Driver" $ do
         unless (TU.validateAllDigitWithMinLength 6 refCode) $

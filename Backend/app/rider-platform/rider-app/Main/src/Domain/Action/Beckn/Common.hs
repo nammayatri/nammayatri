@@ -71,6 +71,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
+import qualified SharedLogic.Person as SP
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -825,14 +826,14 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
     val :: Maybe Bool <- Redis.safeGet $ makeCustomerBlockingKey booking.id.getId
     when (val == Just True) $ do
       Redis.del $ makeCustomerBlockingKey booking.id.getId
-      personStats <- QPersonStats.findByPersonId booking.riderId
-      case (personStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
-        (Just stats, Just minRides, Just threshold) -> do
+      mbPersonStats <- QPersonStats.findByPersonId booking.riderId
+      case (mbPersonStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
+        (Just stats, Just minRides, Just threshold) | stats.isBackfilled == Just True -> do
           let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
           let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
           when (totalRides > minRides && rate > threshold) $ do
             SMC.blockCustomer booking.riderId Nothing
-        _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
+        _ -> logDebug "Configs or person stats doesnt not exist/not backfilled for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
@@ -1063,7 +1064,9 @@ customerReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    ClickhouseFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   DRide.Ride ->
   Maybe Bool ->
@@ -1081,11 +1084,11 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
       let isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
       when (isConsideredForPayout && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
         whenJust person_.referredByCustomer $ \referredByCustomerId -> do
-          personStats <- getPersonStats person_.id
+          personStats <- QPersonStats.findByPersonId person_.id >>= maybe (SP.createBackfilledPersonStats person_.id merchantOperatingCityId) return
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
 
           referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
-          referredByPersonStats <- getPersonStats referredByPerson.id
+          referredByPersonStats <- QPersonStats.findByPersonId referredByPerson.id >>= maybe (SP.createBackfilledPersonStats referredByPerson.id merchantOperatingCityId) return
           handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD
           handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE
     Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found for cityId: " <> merchantOperatingCityId.getId <> " and category: " <> show vehicleCategory
@@ -1110,43 +1113,6 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
         Nothing ->
           when isReferredByPerson $ do
             QPersonStats.updateBacklogPayoutAmountAndActivations (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
-
-    getPersonStats personId = do
-      mbPersonStats <- QPersonStats.findByPersonId personId
-      case mbPersonStats of
-        Just personStats -> pure personStats
-        Nothing -> do
-          pStats <- mkPersonStats personId
-          QPersonStats.create pStats
-          pure pStats
-
-    mkPersonStats personId = do
-      now <- getCurrentTime
-      return
-        DPS.PersonStats
-          { personId = personId,
-            userCancelledRides = 0,
-            driverCancelledRides = 0,
-            completedRides = 0,
-            weekendRides = 0,
-            weekdayRides = 0,
-            offPeakRides = 0,
-            eveningPeakRides = 0,
-            morningPeakRides = 0,
-            weekendPeakRides = 0,
-            referralCount = 0,
-            createdAt = now,
-            updatedAt = now,
-            ticketsBookedInEvent = Just 0,
-            referralAmountPaid = 0,
-            referralEarnings = 0,
-            referredByEarnings = 0,
-            validActivations = 0,
-            referredByEarningsPayoutStatus = Nothing,
-            backlogPayoutStatus = Nothing,
-            backlogPayoutAmount = 0,
-            isBackfilled = Just False
-          }
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId

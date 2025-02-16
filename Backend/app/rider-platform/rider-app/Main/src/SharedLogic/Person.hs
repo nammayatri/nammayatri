@@ -25,25 +25,26 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime, logDebug)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonStats as QP
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
-personRedisKey :: Id DP.Person -> Text
-personRedisKey pId = "person_stats:" <> pId.getId <> ":"
+createBackfilledPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m, ClickhouseFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m DPS.PersonStats
+createBackfilledPersonStats personId merchantOpCityid = do
+  personStatsData <- getBackfillPersonStatsData personId merchantOpCityid
+  QPS.createPersonStats personStatsData
 
 backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m, ClickhouseFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 backfillPersonStats personId merchantOpCityid = do
   personStatsData <- getBackfillPersonStatsData personId merchantOpCityid
-  QP.incrementOrSetPersonStats personStatsData
+  QPS.updateRideData personStatsData
 
 getBackfillPersonStatsData :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m, ClickhouseFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m DPS.PersonStats
 getBackfillPersonStatsData personId merchantOpCityid = do
@@ -51,9 +52,9 @@ getBackfillPersonStatsData personId merchantOpCityid = do
   maxBookingTimeCancelled <- CHB.findMaxTimeForCancelledBookingByRiderId personId person.createdAt
   (userCancelledRides, driverCancelledRides) <- CHBCR.countCancelledBookingsByRiderIdGroupByByUserAndDriver personId person.createdAt
   completedBookingsCreatedAt <- CHB.findByRiderIdAndStatus personId DB.COMPLETED person.createdAt
+  logDebug $ "Fetched all backfill data for personId: " <> personId.getId
   let maxBookingTimeCompleted = foldl' max person.createdAt completedBookingsCreatedAt
   let maxBookingTime = max maxBookingTimeCancelled maxBookingTimeCompleted
-  Hedis.setExp (personRedisKey personId) maxBookingTime 43200
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityid Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
   let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
@@ -68,6 +69,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
           { completedRides = completedRidesCnt,
             createdAt = now,
             updatedAt = now,
+            backfilledFromCkhTill = Just maxBookingTime,
             referralCount = 0,
             ticketsBookedInEvent = Just 0,
             referralAmountPaid = 0,

@@ -65,10 +65,9 @@ countCancelledBookingsByRiderIdGroupByByUserAndDriver riderId createdAt = do
     CH.findAll $
       CH.select_
         ( \bookingCancellationReason -> do
-            let userCount = CH.count_ (CH.distinct bookingCancellationReason.bookingId)
-            let driverCount = CH.count_ (CH.distinct bookingCancellationReason.bookingId)
+            let count = CH.count_ (CH.distinct bookingCancellationReason.bookingId)
             CH.groupBy (bookingCancellationReason.source) $ \source -> do
-              (source, userCount, driverCount)
+              (source, count)
         )
         $ CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
           CH.filter_
@@ -77,6 +76,6 @@ countCancelledBookingsByRiderIdGroupByByUserAndDriver riderId createdAt = do
                   CH.&&. bookingCancellationReason.riderId CH.==. Just riderId
             )
             (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingCancellationReasonTTable)
-  let userCount = fromMaybe 0 $ listToMaybe $ map (\(_, a, _) -> a) $ filter (\(a, _, _) -> a == DBCR.ByUser) res
-  let driverCount = fromMaybe 0 $ listToMaybe $ map (\(_, _, a) -> a) $ filter (\(a, _, _) -> a == DBCR.ByDriver) res
+  let userCount = fromMaybe 0 $ listToMaybe $ map (\(_, a) -> a) $ filter (\(a, _) -> a == DBCR.ByUser) res
+  let driverCount = fromMaybe 0 $ listToMaybe $ map (\(_, a) -> a) $ filter (\(a, _) -> a == DBCR.ByDriver) res
   pure (userCount, driverCount)

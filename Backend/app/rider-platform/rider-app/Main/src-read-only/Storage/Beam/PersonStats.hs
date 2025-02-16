@@ -13,7 +13,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PersonStatsT f = PersonStatsT
-  { backlogPayoutAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+  { backfilledFromCkhTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    backlogPayoutAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     backlogPayoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus),
     completedRides :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

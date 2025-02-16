@@ -18,7 +18,8 @@ instance FromTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
     pure $
       Just
         Domain.Types.PersonStats.PersonStats
-          { backlogPayoutAmount = Kernel.Prelude.fromMaybe 0 backlogPayoutAmount,
+          { backfilledFromCkhTill = backfilledFromCkhTill,
+            backlogPayoutAmount = Kernel.Prelude.fromMaybe 0 backlogPayoutAmount,
             backlogPayoutStatus = backlogPayoutStatus,
             completedRides = completedRides,
             createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
@@ -45,7 +46,8 @@ instance FromTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
 instance ToTType' Beam.PersonStats Domain.Types.PersonStats.PersonStats where
   toTType' (Domain.Types.PersonStats.PersonStats {..}) = do
     Beam.PersonStatsT
-      { Beam.backlogPayoutAmount = Kernel.Prelude.Just backlogPayoutAmount,
+      { Beam.backfilledFromCkhTill = backfilledFromCkhTill,
+        Beam.backlogPayoutAmount = Kernel.Prelude.Just backlogPayoutAmount,
         Beam.backlogPayoutStatus = backlogPayoutStatus,
         Beam.completedRides = completedRides,
         Beam.createdAt = Kernel.Prelude.Just createdAt,

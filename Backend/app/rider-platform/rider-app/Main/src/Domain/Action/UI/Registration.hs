@@ -629,6 +629,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             createdAt = now,
             updatedAt = now,
             ticketsBookedInEvent = Just 0,
+            backfilledFromCkhTill = Nothing,
             referralAmountPaid = 0,
             referralEarnings = 0,
             referredByEarnings = 0,
