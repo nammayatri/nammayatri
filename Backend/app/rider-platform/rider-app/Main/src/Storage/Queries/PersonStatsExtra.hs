@@ -19,7 +19,7 @@ incrementOrSetPersonStats personStats = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamPS.personId (Se.Eq (getId personStats.personId))]
   case res of
-    Nothing -> pure ()
+    Nothing -> createWithKV personStats
     Just ps ->
       updateOneWithKV
         [ Se.Set BeamPS.updatedAt now,
@@ -31,9 +31,30 @@ incrementOrSetPersonStats personStats = do
           Se.Set BeamPS.offPeakRides (ps.offPeakRides + personStats.offPeakRides),
           Se.Set BeamPS.morningPeakRides (ps.morningPeakRides + personStats.morningPeakRides),
           Se.Set BeamPS.eveningPeakRides (ps.eveningPeakRides + personStats.eveningPeakRides),
-          Se.Set BeamPS.weekendPeakRides (ps.weekendPeakRides + personStats.weekendPeakRides)
+          Se.Set BeamPS.weekendPeakRides (ps.weekendPeakRides + personStats.weekendPeakRides),
+          Se.Set BeamPS.isBackfilled personStats.isBackfilled,
+          Se.Set BeamPS.backfilledFromCkhTill personStats.backfilledFromCkhTill
         ]
         [Se.Is BeamPS.personId (Se.Eq $ getId personStats.personId)]
+
+updateRideData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.PersonStats -> m ()
+updateRideData personStats = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamPS.updatedAt now,
+      Se.Set BeamPS.userCancelledRides personStats.userCancelledRides,
+      Se.Set BeamPS.driverCancelledRides personStats.driverCancelledRides,
+      Se.Set BeamPS.completedRides personStats.completedRides,
+      Se.Set BeamPS.weekdayRides personStats.weekdayRides,
+      Se.Set BeamPS.weekendRides personStats.weekendRides,
+      Se.Set BeamPS.offPeakRides personStats.offPeakRides,
+      Se.Set BeamPS.morningPeakRides personStats.morningPeakRides,
+      Se.Set BeamPS.eveningPeakRides personStats.eveningPeakRides,
+      Se.Set BeamPS.weekendPeakRides personStats.weekendPeakRides,
+      Se.Set BeamPS.isBackfilled personStats.isBackfilled,
+      Se.Set BeamPS.backfilledFromCkhTill personStats.backfilledFromCkhTill
+    ]
+    [Se.Is BeamPS.personId (Se.Eq $ getId personStats.personId)]
 
 findUserCancelledRides :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
 findUserCancelledRides (Id personId) = maybe (pure 0) (pure . Domain.userCancelledRides) =<< findOneWithKV [Se.Is BeamPS.personId (Se.Eq personId)]

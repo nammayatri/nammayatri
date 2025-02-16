@@ -19,6 +19,8 @@ PersonStats:
     weekendPeakRides : Int
     referralCount : Int
     ticketsBookedInEvent: Maybe Int
+    backfilledFromCkhTill: Maybe UTCTime
+    isBackfilled: Maybe Bool
     createdAt : UTCTime
     updatedAt : UTCTime
 

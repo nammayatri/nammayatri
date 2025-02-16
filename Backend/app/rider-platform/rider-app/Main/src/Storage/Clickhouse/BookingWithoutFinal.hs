@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Clickhouse.Booking where
+module Storage.Clickhouse.BookingWithoutFinal where
 
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Location as DL
@@ -51,80 +51,40 @@ bookingTTable =
 
 type Booking = BookingT Identity
 
-$(TH.mkClickhouseInstances ''BookingT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''BookingT 'NO_SELECT_MODIFIER)
 
-findAllCompletedRiderBookingsByMerchantInRange ::
-  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Id DM.Merchant ->
-  Id DP.Person ->
-  UTCTime ->
-  UTCTime ->
-  m [Booking]
-findAllCompletedRiderBookingsByMerchantInRange merchantId riderId from to =
-  CH.findAll $
-    CH.select $
-      CH.filter_
-        ( \booking _ ->
-            booking.merchantId CH.==. merchantId
-              CH.&&. booking.riderId CH.==. riderId
-              CH.&&. booking.status CH.==. DB.COMPLETED
-              CH.&&. booking.createdAt >=. from
-              CH.&&. booking.createdAt <=. to
-        )
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-
-findCountByRideIdStatusAndTime ::
+findMaxTimeForCancelledBookingByRiderId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DP.Person ->
-  DB.BookingStatus ->
   UTCTime ->
-  UTCTime ->
-  m Int
-findCountByRideIdStatusAndTime riderId status from to = do
+  m UTCTime
+findMaxTimeForCancelledBookingByRiderId riderId createdAt = do
   res <-
     CH.findAll $
-      CH.select_ (\booking -> CH.aggregate $ CH.count_ booking.id) $
+      CH.select_ (\booking -> CH.notGrouped (booking.createdAt)) $
         CH.filter_
           ( \booking _ ->
-              booking.status CH.==. status
-                CH.&&. booking.riderId CH.==. riderId
-                CH.&&. booking.createdAt >=. from
-                CH.&&. booking.createdAt <=. to
-          )
-          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure $ fromMaybe 0 (listToMaybe res)
-
-findCountByRiderIdAndStatus ::
-  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Id DP.Person ->
-  DB.BookingStatus ->
-  UTCTime ->
-  m (Maybe Int)
-findCountByRiderIdAndStatus riderId status createdAt = do
-  res <-
-    CH.findAll $
-      CH.select_ (\booking -> CH.aggregate $ CH.count_ booking.id) $
-        CH.filter_
-          ( \booking _ ->
-              booking.status CH.==. status
+              booking.status CH.==. DB.CANCELLED
                 CH.&&. booking.riderId CH.==. riderId
                 CH.&&. booking.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure (listToMaybe res)
+  let maxTime = foldr (\createdTS maxT -> max maxT createdTS) createdAt res
+  pure maxTime
 
-findAllCancelledBookingIdsByRider ::
+findByRiderIdAndStatus ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DP.Person ->
+  DB.BookingStatus ->
   UTCTime ->
-  m [Id DB.Booking]
-findAllCancelledBookingIdsByRider riderId createdAt = do
+  m [UTCTime]
+findByRiderIdAndStatus riderId status createdAt = do
   res <-
     CH.findAll $
-      CH.select_ (\booking -> CH.notGrouped booking.id) $
+      CH.select_ (\booking -> CH.notGrouped $ CH.distinct booking.createdAt) $
         CH.filter_
           ( \booking _ ->
-              booking.status CH.==. DB.CANCELLED
+              booking.status CH.==. status
                 CH.&&. booking.riderId CH.==. riderId
                 CH.&&. booking.createdAt >=. createdAt
           )

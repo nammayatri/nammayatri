@@ -28,3 +28,13 @@ ALTER TABLE atlas_app.person_stats ALTER COLUMN created_at DROP NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person_stats ADD COLUMN tickets_booked_in_event integer  default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ADD COLUMN backfilled_from_ckh_till timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ADD COLUMN is_backfilled boolean ;
