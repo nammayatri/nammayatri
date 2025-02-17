@@ -149,6 +149,16 @@ getPendingStuckJobs newtime = do
         ]
     ]
 
+getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime jobType scheduledAt = do
+  findAllWithKVScheduler
+    [ Se.And
+        [ Se.Is BeamST.status $ Se.Eq Pending,
+          Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc scheduledAt),
+          Se.Is BeamST.jobType $ Se.Eq jobType
+        ]
+    ]
+
 getShardIdKey :: Text
 getShardIdKey = "DriverOffer:Jobs:ShardId"
 

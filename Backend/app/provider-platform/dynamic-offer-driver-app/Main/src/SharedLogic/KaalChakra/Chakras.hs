@@ -202,11 +202,14 @@ createFetchUserDataJob ::
   LYT.KaalChakraJobData ->
   UTCTime ->
   m ()
-createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = case chakra of
-  LYT.Daily -> QAllJ.createJobByTime @_ @'Daily merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Weekly -> QAllJ.createJobByTime @_ @'Weekly merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Monthly -> QAllJ.createJobByTime @_ @'Monthly merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly merchantId merchantOperatingCityId scheduledTime jobData
+createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = do
+  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndScheduleTime (show chakra) (addUTCTime (-3600) scheduledTime)
+  when (length jobs == 0) $
+    case chakra of
+      LYT.Daily -> QAllJ.createJobByTime @_ @'Daily merchantId merchantOperatingCityId scheduledTime jobData
+      LYT.Weekly -> QAllJ.createJobByTime @_ @'Weekly merchantId merchantOperatingCityId scheduledTime jobData
+      LYT.Monthly -> QAllJ.createJobByTime @_ @'Monthly merchantId merchantOperatingCityId scheduledTime jobData
+      LYT.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly merchantId merchantOperatingCityId scheduledTime jobData
 
 createUpdateUserTagDataJob ::
   ChakraJobs m r c =>
@@ -216,8 +219,11 @@ createUpdateUserTagDataJob ::
   LYT.UpdateKaalBasedTagsData ->
   UTCTime ->
   m ()
-createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = case chakra of
-  LYT.Daily -> QAllJ.createJobByTime @_ @'DailyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Weekly -> QAllJ.createJobByTime @_ @'WeeklyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Monthly -> QAllJ.createJobByTime @_ @'MonthlyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
-  LYT.Quarterly -> QAllJ.createJobByTime @_ @'QuarterlyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
+createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData scheduledTime = do
+  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndScheduleTime (show chakra) (addUTCTime (-3600) scheduledTime)
+  when (length jobs == 0) $
+    case chakra of
+      LYT.Daily -> QAllJ.createJobByTime @_ @'DailyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
+      LYT.Weekly -> QAllJ.createJobByTime @_ @'WeeklyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
+      LYT.Monthly -> QAllJ.createJobByTime @_ @'MonthlyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
+      LYT.Quarterly -> QAllJ.createJobByTime @_ @'QuarterlyUpdateTag merchantId merchantOperatingCityId scheduledTime jobData
