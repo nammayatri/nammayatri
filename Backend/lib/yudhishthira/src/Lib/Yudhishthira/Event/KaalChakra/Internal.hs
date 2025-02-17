@@ -541,7 +541,7 @@ runQueryRequest queryRequest = do
     Right queryResult -> do
       checkForMissingFieldsInQueryResponse (queryRequest.queryResults <&> (.resultName)) queryResult
       pure queryResult
-    Left err -> throwError (InvalidRequest $ "Error while run clickhouse query: " <> T.pack err)
+    Left err -> throwError (InvalidRequest $ "Error while run clickhouse query: " <> T.pack err <> " query: " <> queryRequest.queryText)
 
 checkForMissingFieldsInQueryResponse :: (Log m, MonadThrow m) => [Text] -> [A.Object] -> m ()
 checkForMissingFieldsInQueryResponse _ [] = pure ()

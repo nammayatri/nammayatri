@@ -89,6 +89,7 @@ createJobByTime ::
 createJobByTime merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
   void $ ScheduleJob.createJobByTime @t @e merchantId merchantOperatingCityId uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
+-----  below functions aren't implemented for redis -------------
 findAll :: (JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = return []
 
@@ -97,6 +98,11 @@ findById _ = pure Nothing
 
 getTasksById :: (JobExecutor r m, JobProcessor t) => [Id AnyJob] -> m [AnyJob t]
 getTasksById _ = pure []
+
+getJobByTypeAndScheduleTime :: (JobMonad r m, JobProcessor t) => Text -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime _ _ = return []
+
+-------------------------------------------------------
 
 getShardIdKey :: Text
 getShardIdKey = "DriverOffer:Jobs:ShardId"
