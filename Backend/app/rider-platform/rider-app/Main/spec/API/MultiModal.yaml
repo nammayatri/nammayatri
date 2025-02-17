@@ -139,6 +139,14 @@ apis:
         type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
+      endpoint: multimodal/journey/{journeyId}/leg/{legOrder}/addSkippedLeg
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
       endpoint: /multimodal/extend/{journeyId}/leg                    # only applicable for current leg
       request:
         type: ExtendLegReq

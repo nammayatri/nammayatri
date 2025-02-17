@@ -9,6 +9,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalJourneyCancel,
     postMultimodalExtendLeg,
     postMultimodalJourneyLegSkip,
+    postMultimodalJourneyLegAddSkippedLeg,
     getMultimodalJourneyStatus,
     postMultimodalExtendLegGetfare,
     postMultimodalJourneyFeedback,
@@ -266,6 +267,18 @@ postMultimodalJourneyLegSkip ::
   )
 postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
   JM.skipLeg journeyId legOrder
+  pure Kernel.Types.APISuccess.Success
+
+postMultimodalJourneyLegAddSkippedLeg ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Int ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalJourneyLegAddSkippedLeg (_, _) journeyId legOrder = do
+  JM.addSkippedLeg journeyId legOrder
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::
