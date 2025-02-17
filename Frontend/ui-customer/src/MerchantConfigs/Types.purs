@@ -85,6 +85,7 @@ type AppConfigCustomer a =
   , riderRideCompletedCard :: RiderRideCompletedCard
   , enableDeliveryService :: Boolean
   , showRecommendedText :: Boolean
+  , showFasterText :: Boolean
   | a
   }
 

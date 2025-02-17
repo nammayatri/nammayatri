@@ -756,9 +756,9 @@ riderRideCompletedScreenFlow = do
 
         (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" updatedState.rideRatingState.rideId  ""
         let 
-          getOptionsRes'' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsResp.options
-          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsResp.messages
-          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsResp.messages
+          getOptionsRes'' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
+          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsRes.messages
 
         modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData {
           data {
@@ -775,7 +775,7 @@ riderRideCompletedScreenFlow = do
             , categoryType : "Category"
             , allowedRideStatuses : Nothing
           }
-          , options = getOptionsRes'
+          , options = getOptionsRes''
           , chatConfig {
               messages = messages'
             }
