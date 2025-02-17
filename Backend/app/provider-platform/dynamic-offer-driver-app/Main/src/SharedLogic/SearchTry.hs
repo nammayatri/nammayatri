@@ -169,7 +169,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       case tripQuoteDetails of
         [] -> throwError $ InternalError "No trip quote details found"
         (firstQuoteDetail : _) -> do
-          let estimatedFare = firstQuoteDetail.baseFare + fromMaybe 0 customerExtraFee
+          let estimatedFare = firstQuoteDetail.baseFare
           let tripCategory = firstQuoteDetail.tripCategory -- for fallback case
           let serviceTier = firstQuoteDetail.vehicleServiceTier -- for fallback case
           let estOrQuoteId = firstQuoteDetail.estimateOrQuoteId -- for fallback case
