@@ -45,7 +45,7 @@ Ride:
     bookingId: Id Booking
     shortId: ShortId Ride
     hasStops : Maybe Bool
-    clientId: Maybe (Id Client)
+    clientId: Maybe Text
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Id MerchantOperatingCity
     status: RideStatus
