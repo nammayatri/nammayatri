@@ -126,11 +126,15 @@ releaseSchedulerEnv SchedulerEnv {..} = do
 
 type SchedulerM = FlowR SchedulerEnv
 
-type JobCreatorEnv r = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "maxShards" r Int, HasField "schedulerSetName" r Text)
+type HasJobInfoMap r = HasField "jobInfoMap" r (M.Map Text Bool)
+
+type JobCreatorEnv r = (HasJobInfoMap r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text)
 
 type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
 
-type JobExecutor r m = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
+type JobExecutorEnv r = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text)
+
+type JobExecutor r m = (JobExecutorEnv r, JobMonad r m)
 
 type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r)
 
