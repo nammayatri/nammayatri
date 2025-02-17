@@ -752,7 +752,7 @@ public class LocationUpdateService extends Service {
             float accuracy = location != null ? location.getAccuracy() : 0;
             double latitude = location != null ? location.getLatitude() : 0.0;
             double longitude = location != null ? location.getLongitude() : 0.0;
-            double locSpeed = location.hasSpeed() ? location.getSpeed() : 0.0;
+            double locSpeed = location != null && location.hasSpeed() ? location.getSpeed() : 0.0;
             Log.d(LOG_TAG, "DriverUpdateLoc Initiated");
             Handler handler = new Handler(Looper.getMainLooper());
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -770,7 +770,7 @@ public class LocationUpdateService extends Service {
             locationData.put("ts", locTime);
             locationData.put("acc", accuracy);
             locationData.put("source", locationSource);
-            locationData.put("v", locSpeed);
+            locationData.put("v", locSpeed + "");
             if (!locationData.has("pt")) return;
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
@@ -783,7 +783,7 @@ public class LocationUpdateService extends Service {
                 MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
                 executorLocUpdate.execute(() -> {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
-                    Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);
+                    Map<String, String> baseHeaders = MobilityCallAPI.getBaseHeaders(context);
                     String baseUrl = sharedPref.getString("BASE_URL", "null");
                     String orderUrl = baseUrl + "/driver/location";
                     String result = null;
