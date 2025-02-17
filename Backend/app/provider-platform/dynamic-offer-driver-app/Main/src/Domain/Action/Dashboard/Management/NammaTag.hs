@@ -50,6 +50,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.UiDriverConfig as QUiConfig
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.CreateNammaTagResponse)
 postNammaTagTagCreate _merchantShortId _opCity req = do
@@ -219,7 +220,13 @@ getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
 
 postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Text
-postNammaTagConfigPilotGetVersion _ _ _ = throwError $ InvalidRequest $ ""
+postNammaTagConfigPilotGetVersion merchantShortId opCity uicr = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- QUiConfig.findUIConfig uicr merchantOpCityId
+  case config of
+    Just cfg -> pure $ getId cfg.id
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show merchantShortId <> " and city:" <> show opCity <> " and request:" <> show uicr
 
 postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.UiConfigResponse
 postNammaTagConfigPilotGetConfig _ _ _ = throwError $ InvalidRequest $ ""

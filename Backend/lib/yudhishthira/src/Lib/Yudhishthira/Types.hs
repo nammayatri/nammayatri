@@ -62,7 +62,7 @@ import Data.Aeson
 import Data.OpenApi as OpenApi hiding (TagName, description, name, tags, version)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
-import Kernel.External.Types (Language)
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.HideSecrets
 import Kernel.Types.Id
@@ -84,6 +84,8 @@ data ConfigType
   = DriverPoolConfig
   | TransporterConfig
   | RiderConfig
+  | UI_DRIVER
+  | UI_RIDER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 
 data ConfigVersionMap = ConfigVersionMap
@@ -165,8 +167,6 @@ data LogicDomain
   | DYNAMIC_PRICING_UNIFIED
   | FRFS_DISCOUNTS
   | CONFIG ConfigType
-  | UI_DRIVER ConfigType
-  | UI_RIDER ConfigType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance Enumerable LogicDomain where
@@ -177,8 +177,6 @@ instance Enumerable LogicDomain where
       FRFS_DISCOUNTS
     ]
       ++ map CONFIG [minBound .. maxBound]
-      ++ map UI_DRIVER [minBound .. maxBound]
-      ++ map UI_RIDER [minBound .. maxBound]
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -187,8 +185,6 @@ generateLogicDomainShowInstances =
     ++ [show DYNAMIC_PRICING_UNIFIED]
     ++ [show FRFS_DISCOUNTS]
     ++ [show (CONFIG configType) | configType <- configTypes]
-    ++ [show (UI_DRIVER configType) | configType <- configTypes]
-    ++ [show (UI_RIDER configType) | configType <- configTypes]
   where
     configTypes = [minBound .. maxBound]
 
@@ -206,8 +202,6 @@ instance Show LogicDomain where
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show FRFS_DISCOUNTS = "FRFS-DISCOUNTS"
   show (CONFIG configType) = "CONFIG_" ++ show configType
-  show (UI_DRIVER configType) = "UI-DRIVER_" ++ show configType
-  show (UI_RIDER configType) = "UI-RIDER_" ++ show configType
 
 instance Read LogicDomain where
   readsPrec _ s =
@@ -225,16 +219,6 @@ instance Read LogicDomain where
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
                   Just configType -> [(CONFIG configType, rest1)]
-                  Nothing -> []
-          "UI-DRIVER" ->
-            let (configType', rest1) = break (== '_') (drop 1 rest)
-             in case readMaybe configType' of
-                  Just configType -> [(UI_DRIVER configType, rest1)]
-                  Nothing -> []
-          "UI-RIDER" ->
-            let (configType', rest1) = break (== '_') (drop 1 rest)
-             in case readMaybe configType' of
-                  Just configType -> [(UI_RIDER configType, rest1)]
                   Nothing -> []
           _ -> []
 
@@ -496,7 +480,7 @@ data UiConfigRequest = UiConfigRequest
   { os :: Text,
     language :: Language,
     bundle :: Maybe Text,
-    toss :: Int
+    toss :: Maybe Int
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

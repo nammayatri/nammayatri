@@ -1,0 +1,31 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Language: Kernel.External.Types
+  Value: Data.Aeson
+  Merchant: Domain.Types.Merchant
+
+
+
+
+UiDriverConfig:
+  tableName: ui_driver_config
+
+
+  fields:
+    id : Id UiDriverConfig
+    config : Value
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    language : Language
+    os: Text
+    bundleVersion: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+
+  excludedFields: [merchantId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

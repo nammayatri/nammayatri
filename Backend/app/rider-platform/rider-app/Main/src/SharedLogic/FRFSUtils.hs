@@ -111,7 +111,7 @@ getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleT
   applicableDiscounts <- do
     let ticketDiscountData = FRFSTicketDiscountDynamic {aadhaarData = aadhaarVerification, discounts = availableDiscounts}
     localTime <- getLocalCurrentTime 19800 -- Fix Me
-    (allLogics, _) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.FRFS_DISCOUNTS localTime Nothing
+    (allLogics, _) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.FRFS_DISCOUNTS localTime Nothing Nothing
     response <- try @_ @SomeException $ LYTU.runLogics allLogics ticketDiscountData
     case response of
       Left e -> do
