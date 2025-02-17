@@ -269,22 +269,19 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
       Nothing -> return []
 
   let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
+
+  whenJust (onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory))) $ \vehicleCategory -> do
+    documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
+    let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
+    when (null mandatoryVehicleDocumentVerificationConfigs) $ do
+      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+      when allDriverDocsVerified $ do
+        enableDriver merchantOpCityId personId mDL
+        whenJust onboardingVehicleCategory $ \category -> do
+          DIIQuery.updateOnboardingVehicleCategory (Just category) personId
+
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
-  vehicleDocuments <-
-    case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
-      Just vehicleCategory -> do
-        documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
-        let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
-        if null mandatoryVehicleDocumentVerificationConfigs
-          then do
-            allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
-            when allDriverDocsVerified $ do
-              enableDriver merchantOpCityId personId mDL
-              whenJust onboardingVehicleCategory $ \category -> do
-                DIIQuery.updateOnboardingVehicleCategory (Just category) personId
-            return []
-          else getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
-      _ -> getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
+  vehicleDocuments <- getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
 
   (dlDetails, rcDetails) <-
     case prefillData of
