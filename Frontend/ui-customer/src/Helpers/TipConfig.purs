@@ -96,7 +96,7 @@ getTipViewProps tipViewProps vehicleVariant smartTipReason smartTipSuggestion = 
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                             , customerTipArray = customerTipArray
                             , customerTipArrayWithValues = customerTipArrWithValues
-                            , primaryButtonText = getTipViewText tipViewPropsModified vehicleVariant (getString CONTINUE_SEARCH_WITH)                            
+                            , primaryButtonText = getTipViewText tipViewPropsModified vehicleVariant (getString CONTINUE_SEARCH_WITH)
                             }
     TIP_AMOUNT_SELECTED -> tipViewPropsModified{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
@@ -111,15 +111,16 @@ getTipViewProps tipViewProps vehicleVariant smartTipReason smartTipSuggestion = 
 getTipViewText :: TipViewProps -> String-> String -> String
 getTipViewText tipViewProps vehicleVariant prefixString = do
   let tipConfig = getTipConfig vehicleVariant
-      tip = show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))
+      tip = show (fromMaybe 0 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))
   if tip == "0" then 
     case tipViewProps.stage of
       TIP_AMOUNT_SELECTED -> getString CONTINUE_SEARCH_WITH_NO_TIP
+      DEFAULT -> getString CONTINUE_SEARCH_WITH_NO_TIP
       _ -> getString SEARCHING_WITH_NO_TIP
   else  
     case (getLanguageLocale languageKey) of
-      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " +₹" else " ₹")<>tip<>" "<> (getString TIP)
-      _ -> "+₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
+      "EN_US" -> prefixString <> (if tipViewProps.stage == TIP_AMOUNT_SELECTED then " ₹" else " ₹")<>tip<>" "<> (getString TIP)
+      _ -> "₹"<>tip<>" "<>(getString TIP) <> " " <> prefixString
 
 isTipEnabled :: CustomerTip -> String -> Boolean
 isTipEnabled tipConfig vehicleVariant =
