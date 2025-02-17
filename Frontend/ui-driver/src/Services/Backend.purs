@@ -126,7 +126,6 @@ withAPIResult url f flow = do
                 else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                     _ <- pure $ deleteValueFromLocalStore VERSION_NAME
-                    _ <- pure $ deleteValueFromLocalStore BASE_URL
                     _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
                     _ <- pure $ deleteValueFromLocalStore IS_RIDE_ACTIVE
                     _ <- pure $ deleteValueFromLocalStore IS_DRIVER_ENABLED
@@ -158,7 +157,6 @@ withAPIResultBT url f errorHandler flow = do
                 else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     deleteValueFromLocalStore REGISTERATION_TOKEN
                     deleteValueFromLocalStore VERSION_NAME
-                    deleteValueFromLocalStore BASE_URL
                     deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
                     deleteValueFromLocalStore IS_RIDE_ACTIVE
                     deleteValueFromLocalStore IS_DRIVER_ENABLED
