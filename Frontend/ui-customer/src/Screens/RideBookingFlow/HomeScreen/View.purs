@@ -131,7 +131,6 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Localizable.EN (getEN)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
@@ -983,7 +982,7 @@ trackingCardCallView push state item =
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
-        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state (getString RECOMMENDED) state.data.config.showRecommendedText else labelView push state (getString FASTER) state.data.config.showFasterText
       ]
       , textView
         $
@@ -1001,15 +1000,15 @@ trackingCardCallView push state item =
         ]
     ]
 
-labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-labelView push state =
+labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean ->  PrestoDOM (Effect Unit) w
+labelView push state label toShow =
     linearLayout[
       height WRAP_CONTENT
     , width WRAP_CONTENT
     , cornerRadii $ Corners 8.0 true true true true
     , background Color.green900
     , margin (MarginHorizontal 10 10)
-    , visibility $ boolToVisibility $ state.data.config.showRecommendedText
+    , visibility $ boolToVisibility $ toShow
     ][
       textView $ [
         width WRAP_CONTENT
@@ -1018,7 +1017,7 @@ labelView push state =
       , gravity CENTER
       , padding (Padding 8 1 8 1)
       , textSize FontSize.a_13
-      , text (getString RECOMMENDED)
+      , text label
       ]
     ]
 
