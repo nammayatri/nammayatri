@@ -4046,7 +4046,6 @@ logoutFlow = do
   lift $ lift $ liftFlow $ stopLocationPollingAPI
   deleteValueFromLocalStore REGISTERATION_TOKEN
   deleteValueFromLocalStore VERSION_NAME
-  deleteValueFromLocalStore BASE_URL
   deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
   deleteValueFromLocalStore IS_DRIVER_ENABLED
   deleteValueFromLocalStore DRIVER_STATUS
