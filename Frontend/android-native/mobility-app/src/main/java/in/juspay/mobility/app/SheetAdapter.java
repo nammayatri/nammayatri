@@ -8,6 +8,11 @@
  */
 package in.juspay.mobility.app;
 
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +27,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.card.MaterialCardView;
+
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,11 +61,13 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position) {
+        holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, null);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position, @NonNull List<Object> payloads) {
+        holder.setTheme(sheetList.get(position).getRideProductType(),holder.context);
         listener.onViewHolderBind(holder, position, viewPager, payloads);
     }
 
@@ -67,6 +77,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
+        Context context;
         TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
@@ -77,6 +88,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
+            context = itemView.getContext();
             pickUpDistance = itemView.findViewById(R.id.distancePickUp);
             baseFare = itemView.findViewById(R.id.basePrice);
             currency = itemView.findViewById(R.id.currency);
@@ -139,6 +151,39 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             stopsTagText = itemView.findViewById(R.id.stopsTagText);
             roundTripRideTypeTag = itemView.findViewById(R.id.roundTripRideTypeTag);
         }
+
+        private void setTheme(String type,Context context) {
+            SheetTheme theme = SheetTheme.getTheme(type,context);
+            View mainView = itemView.findViewById(R.id.card);
+            if (mainView != null) {
+                updateBackground(theme.getPrimaryBackground(), mainView);
+            }
+            mainView = itemView.findViewById(R.id.main_sheet_layout);
+            if (mainView != null) {
+                mainView.setBackgroundColor(theme.getPrimaryBackground());
+            }
+
+            mainView = itemView.findViewById(R.id.pickupText);
+            if (mainView != null) {
+                ((TextView)mainView).setTextColor(theme.getSecondaryText());
+            }
+
+            pickUpDistance.setTextColor(theme.getPrimaryText());
+            pickUpDistance.setTextColor(theme.getPrimaryText());
+            sourceArea.setTextColor(theme.getPrimaryText());
+            rideStartTime.setTextColor(theme.getPrimaryText());
+            rideStartDate.setTextColor(theme.getPrimaryText());
+            destinationArea.setTextColor(theme.getPrimaryText());
+            sourcePinCode.setTextColor(theme.getPrimaryText());
+            destinationPinCode.setTextColor(theme.getPrimaryText());
+            sourceAddress.setTextColor(theme.getSecondaryText());
+            destinationAddress.setTextColor(theme.getSecondaryText());
+            destinationAddress.setTextColor(theme.getSecondaryText());
+            rateText.setTextColor(theme.getSecondaryText());
+            textIncludesCharges.setTextColor(theme.getSecondaryText());
+            rateViewDot.setBackgroundColor(theme.getSecondaryText());
+            tagsBlock.setBackgroundColor(theme.getSecondaryBackground());
+        }
     }
 
 
@@ -146,4 +191,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         void onViewHolderBind(SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> objects);
     }
 
+    private static void updateBackground(int color, View view) {
+        if (view instanceof CardView) {
+            CardView cardView = ((CardView)view);
+            float radius =  cardView.getRadius();
+            cardView.setCardBackgroundColor(color);
+            cardView.setRadius(radius);
+        }
+    }
 }
