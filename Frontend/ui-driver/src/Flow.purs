@@ -2497,14 +2497,16 @@ currentRideFlow activeRideResp isActiveRide mbActiveBusTrip busActiveRide = do
         setValueToLocalStore VEHICLE_VARIANT tripDetails.vehicleType
         setValueToLocalStore VEHICLE_CATEGORY "BusCategory"
         if (isJust tripDetails.endRideApprovalRequestId) 
-            then void $ pure $ setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripDetails.endRideApprovalRequestId
+            then do
+              void $ pure $ setValueToLocalStore WMB_END_TRIP_REQUEST_ID $ fromMaybe "" tripDetails.endRideApprovalRequestId
+              void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "AWAITING_APPROVAL"
             else do
               void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
               void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_STATUS
         when (not allState.homeScreen.props.statusOnline) $ changeDriverStatus Online
         if tripDetails.status == API.TRIP_ASSIGNED then do
           updateStage $ HomeScreenStage TripAssigned
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.ASSIGNED_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.TripAssigned, endRidePopUp = false}})
         else if tripDetails.status == API.IN_PROGRESS || tripDetails.status == PAUSED then do
           updateStage $ HomeScreenStage ST.RideTracking              
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { whereIsMyBusData { trip = Just $ ST.CURRENT_TRIP (API.TripTransactionDetails tripDetails)}}, props { currentStage = ST.RideTracking}})
@@ -3000,7 +3002,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "ACCEPTED"
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
           modifyScreenState $ HomeScreenStateType (\state -> state{props{endRidePopUp = true}})
-          homeScreenFlow
+          currentRideFlow Nothing Nothing Nothing Nothing
         "DRIVER_REQUEST_REJECTED" -> do
           void $ pure $ deleteValueFromLocalStore WMB_END_TRIP_REQUEST_ID
           void $ pure $ setValueToLocalStore WMB_END_TRIP_STATUS "REVOKED"
