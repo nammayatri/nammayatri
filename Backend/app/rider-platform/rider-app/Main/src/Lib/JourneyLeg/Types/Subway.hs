@@ -2,12 +2,12 @@ module Lib.JourneyLeg.Types.Subway where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import Domain.Types.FRFSQuote
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
-import Domain.Types.FRFSRouteDetails
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
