@@ -73,6 +73,7 @@ Person:
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
     driverTag: "Maybe [TagNameValueExpiry]"
+    clientId: Maybe Text
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>
@@ -208,6 +209,11 @@ Person:
     updateDeviceToken:
       kvFunction: updateOneWithKV
       params: [deviceToken]
+      where: id
+
+    updateClientId:
+      kvFunction: updateOneWithKV
+      params: [clientId]
       where: id
 
     updateWhatsappNotificationEnrollStatus:

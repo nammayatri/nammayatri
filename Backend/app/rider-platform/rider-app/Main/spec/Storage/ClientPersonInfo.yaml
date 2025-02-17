@@ -3,7 +3,6 @@ imports:
   Merchant: Domain.Types.Merchant
   Client: Domain.Types.Client
   Person: Domain.Types.Person
-  Merchant : Domain.Types.Merchant
   VehicleCategory : BecknV2.OnDemand.Enums
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
