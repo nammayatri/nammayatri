@@ -86,6 +86,7 @@ type AppConfigCustomer a =
   , enableDeliveryService :: Boolean
   , ambulanceConfig :: GeoCodeConfig
   , showRecommendedText :: Boolean
+  , showFasterText :: Boolean
   | a
   }
 

@@ -865,6 +865,7 @@ config =
       , strictBounds : false
       }
   , showRecommendedText : false
+  , showFasterText : true
 }
 
 defaultCityConfig :: CityConfig
