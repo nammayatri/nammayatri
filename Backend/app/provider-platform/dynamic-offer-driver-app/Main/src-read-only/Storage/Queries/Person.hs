@@ -62,6 +62,9 @@ findByIdentifierAndMerchant identifier merchantId = do findOneWithKV [Se.And [Se
 setIsNewFalse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 setIsNewFalse isNew id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateClientId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateClientId clientId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.clientId clientId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDeviceToken ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -107,6 +110,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientId clientId,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.description description,

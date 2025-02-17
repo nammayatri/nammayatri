@@ -187,3 +187,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_pickup_or_destination_edit
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_driver_special_loc_warrior boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ALTER COLUMN client_id TYPE text;

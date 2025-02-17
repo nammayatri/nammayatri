@@ -47,7 +47,6 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Client as DC
 import qualified Domain.Types.DeliveryDetails as DParcel
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
@@ -491,7 +490,7 @@ arrivedAtPickup rideId req = do
       TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
       QDI.updateExtraFareMitigation (Just False) driverId
 
-otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe (Id DC.Client) -> Flow DriverRideRes
+otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe Text -> Flow DriverRideRes
 otpRideCreate driver otpCode booking clientId = do
   transporter <-
     QM.findById booking.providerId
