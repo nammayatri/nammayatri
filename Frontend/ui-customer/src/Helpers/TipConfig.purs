@@ -7,6 +7,7 @@ import Data.Array (mapWithIndex, (!!), elem)
 import Data.Maybe 
 import Data.String as DS
 import Helpers.Utils as HU
+import Data.Int
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.Types (City(..), TipViewProps(..), TipViewStage(..), TipViewData(..))
 import Locale.Utils
@@ -19,7 +20,6 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import RemoteConfig (getTipConfigRC)
 import Debug (spy)
-
 type TipConfig = {
   customerTipArray :: Array String,
   customerTipArrayWithValues :: Array Int
@@ -76,7 +76,7 @@ getTipViewProps :: TipViewProps -> String -> Maybe String -> Maybe Int -> TipVie
 getTipViewProps tipViewProps vehicleVariant smartTipReason smartTipSuggestion = do
   let smartTipSuggestionValue = fromMaybe 10 smartTipSuggestion
       tipConfig = getTipConfig vehicleVariant
-      customerTipArrWithValues = if smartTipSuggestion == Nothing then tipConfig.customerTipArrayWithValues else if smartTipSuggestionValue <= 10 then [0, 10, 20, 30] else [0, roundUpToNearest10 (smartTipSuggestionValue `div` 2), smartTipSuggestionValue, smartTipSuggestionValue + 10]
+      customerTipArrWithValues = if smartTipSuggestion == Nothing then tipConfig.customerTipArrayWithValues else if smartTipSuggestionValue <= 10 then [0, 10, 20, 30] else [0, roundUpToNearest10 (smartTipSuggestionValue `div` 2), smartTipSuggestionValue, roundUpToNearest10 (ceil (toNumber smartTipSuggestionValue * 1.5))]
       customerTipArray = if smartTipSuggestion == Nothing then tipConfig.customerTipArray else getTips customerTipArrWithValues
       suggestedActiveIndex = if smartTipSuggestion == Nothing then Nothing else if smartTipSuggestionValue <= 10 then Just 1 else Just 2  
       tipViewPropsModified = tipViewProps{suggestedActiveIndex = suggestedActiveIndex, customerTipArray = if tipViewProps.customerTipArray == [] then customerTipArray else tipViewProps.customerTipArray, customerTipArrayWithValues = if tipViewProps.customerTipArrayWithValues == [] then customerTipArrWithValues else tipViewProps.customerTipArrayWithValues}
