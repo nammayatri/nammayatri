@@ -370,9 +370,10 @@ updatePersonVersionsAndMerchantOperatingCity ::
   Maybe Version ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp city = do
+updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbClientId mbDevice' mbBackendApp city = do
   let mbDevice = getDeviceFromText mbDevice'
   let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion
   let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
@@ -384,6 +385,7 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
         mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
         mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
+        mbClientId' = mbClientId <|> person.clientId
         mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
     updateOneWithKV
       [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
@@ -391,6 +393,7 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         Se.Set BeamP.clientConfigVersion mbConfigVersionText,
         Se.Set BeamP.clientOsVersion mbOsVersion,
         Se.Set BeamP.clientOsType mbOsType,
+        Se.Set BeamP.clientId mbClientId',
         Se.Set BeamP.clientModelName mbModelName,
         Se.Set BeamP.clientManufacturer mbManufacturer,
         Se.Set BeamP.backendAppVersion mbBackendApp,

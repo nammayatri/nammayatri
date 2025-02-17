@@ -151,9 +151,10 @@ auth ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
-  authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
+auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = do
+  authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
   return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId}
 
 authWithOtp ::
@@ -169,8 +170,9 @@ authWithOtp ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
+  Maybe Text ->
   m AuthWithOtpRes
-authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
+authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = do
   let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
@@ -208,7 +210,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
-  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
+  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
   let otpHash = smsCfg.credConfig.otpHash
       otpCode = SR.authValueHash token
   whenNothing_ useFakeOtpM $ do
@@ -378,7 +380,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
         useFakeOtp,
-        driverTag = Just ["SafetyCohort#New"]
+        driverTag = Just ["SafetyCohort#New"],
+        clientId = Nothing
       }
 
 makeSession ::

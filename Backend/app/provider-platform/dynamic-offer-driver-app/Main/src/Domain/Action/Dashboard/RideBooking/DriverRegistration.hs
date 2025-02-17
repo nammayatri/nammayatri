@@ -46,6 +46,7 @@ auth merchantShortId opCity req = do
       Nothing
       Nothing
       Nothing
+      Nothing
   pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}
 
 postDriverRegistrationVerify :: ShortId DM.Merchant -> Context.City -> Text -> Bool -> Text -> Common.AuthVerifyReq -> Flow APISuccess
