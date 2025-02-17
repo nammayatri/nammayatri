@@ -83,6 +83,7 @@ type AppConfigCustomer a =
   , showCheckoutRentalBanner :: Boolean
   , riderRideCompletedCard :: RiderRideCompletedCard
   , showRecommendedText :: Boolean
+  , showFasterText :: Boolean
   | a
   }
 

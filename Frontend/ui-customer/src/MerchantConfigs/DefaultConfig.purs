@@ -822,6 +822,7 @@ config =
       showAfterTime : 5
     }
 , showRecommendedText : false
+, showFasterText : true
 }
 
 defaultCityConfig :: CityConfig
