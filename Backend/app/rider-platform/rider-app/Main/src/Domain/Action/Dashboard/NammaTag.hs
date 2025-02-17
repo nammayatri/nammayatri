@@ -25,6 +25,7 @@ import qualified Dashboard.Common as Common
 import Data.Singletons
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.UiRiderConfig as DTRC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -45,6 +46,7 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.UiRiderConfig as UIRC
 import Tools.Error
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -176,10 +178,40 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
   pure Success
 
 postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow Text
-postNammaTagConfigPilotGetVersion _ _ _ = throwError $ InvalidRequest $ ""
+postNammaTagConfigPilotGetVersion merchantShortId opCity uicr = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = merchantOperatingCity.id
+  config <- UIRC.getUiConfig uicr merchantOpCityId
+  case config of
+    Just cfg -> pure $ getId cfg.id
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show merchantShortId <> " and city:" <> show opCity <> " and request:" <> show uicr
 
 postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow LYT.UiConfigResponse
-postNammaTagConfigPilotGetConfig _ _ _ = throwError $ InvalidRequest $ ""
+postNammaTagConfigPilotGetConfig merchantShortId opCity uicr = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = merchantOperatingCity.id
+  config <- UIRC.getUiConfig uicr merchantOpCityId
+  case config of
+    Just cfg -> pure $ (LYT.UiConfigResponse cfg.config)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show merchantShortId <> " and city:" <> show opCity <> " and request:" <> show uicr
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postNammaTagConfigPilotCreateUiConfig _ _ _ = throwError $ InvalidRequest $ ""
+postNammaTagConfigPilotCreateUiConfig merchantShortId opCity ccr = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = merchantOperatingCity.id
+  now <- getCurrentTime
+  id' <- generateGUID
+  UIRC.create $ cfg now merchantOpCityId id'
+  return Kernel.Types.APISuccess.Success
+  where
+    cfg now merchantOpCityId id' =
+      DTRC.UiRiderConfig
+        { bundleVersion = ccr.bundle,
+          config = ccr.config,
+          createdAt = now,
+          id = id',
+          language = ccr.language,
+          os = ccr.os,
+          updatedAt = now,
+          merchantOperatingCityId = Just merchantOpCityId
+        }

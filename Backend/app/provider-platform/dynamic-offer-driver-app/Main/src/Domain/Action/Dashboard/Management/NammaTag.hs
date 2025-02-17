@@ -27,6 +27,7 @@ import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Data.Singletons
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.UiDriverConfig as DTDC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -229,7 +230,31 @@ postNammaTagConfigPilotGetVersion merchantShortId opCity uicr = do
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show merchantShortId <> " and city:" <> show opCity <> " and request:" <> show uicr
 
 postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.UiConfigResponse
-postNammaTagConfigPilotGetConfig _ _ _ = throwError $ InvalidRequest $ ""
+postNammaTagConfigPilotGetConfig merchantShortId opCity uicr = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- QUiConfig.findUIConfig uicr merchantOpCityId
+  case config of
+    Just cfg -> pure $ (Lib.Yudhishthira.Types.UiConfigResponse cfg.config)
+    Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show merchantShortId <> " and city:" <> show opCity <> " and request:" <> show uicr
 
 postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postNammaTagConfigPilotCreateUiConfig _ _ _ = throwError $ InvalidRequest $ ""
+postNammaTagConfigPilotCreateUiConfig merchantShortId opCity ccr = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  now <- getCurrentTime
+  id' <- generateGUID
+  QUiConfig.create $ cfg merchantOpCityId now id'
+  return Kernel.Types.APISuccess.Success
+  where
+    cfg merchantOpCityId now id' =
+      DTDC.UiDriverConfig
+        { bundleVersion = ccr.bundle,
+          config = ccr.config,
+          createdAt = now,
+          id = id',
+          language = ccr.language,
+          os = ccr.os,
+          updatedAt = now,
+          merchantOperatingCityId = Just merchantOpCityId
+        }
