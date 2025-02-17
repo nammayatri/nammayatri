@@ -957,7 +957,7 @@ trackingCardCallView push state item =
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
-        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state (getString RECOMMENDED) state.data.config.showRecommendedText else linearLayout[][]
       ]
       , textView
         $
@@ -975,26 +975,26 @@ trackingCardCallView push state item =
         ]
     ]
 
-labelView :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> PrestoDOM (Effect Unit) w
-labelView push state =
-  linearLayout[
-    height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , cornerRadii $ Corners 8.0 true true true true
-  , background Color.green900
-  , margin (MarginHorizontal 10 10)
-  , visibility $ boolToVisibility $ state.data.config.showRecommendedText
-  ][
-    textView $ [
-      width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.white900
-    , gravity CENTER
-    , padding (Padding 8 1 8 1)
-    , textSize FontSize.a_13
-    , text (getString RECOMMENDED)
+labelView :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> String -> Boolean ->  PrestoDOM (Effect Unit) w
+labelView push state label toShow =
+    linearLayout[
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , cornerRadii $ Corners 8.0 true true true true
+    , background Color.green900
+    , margin (MarginHorizontal 10 10)
+    , visibility $ boolToVisibility $ toShow
+    ][
+      textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.white900
+      , gravity CENTER
+      , padding (Padding 8 1 8 1)
+      , textSize FontSize.a_13
+      , text label
+      ]
     ]
-  ]
 
 driverCallPopUpData :: RideSummaryScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
