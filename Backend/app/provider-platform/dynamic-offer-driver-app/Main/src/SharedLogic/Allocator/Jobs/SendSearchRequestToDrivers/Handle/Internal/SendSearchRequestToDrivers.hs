@@ -280,7 +280,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 isFavourite = isFavourite,
                 parcelType = searchReq.parcelType,
                 parcelQuantity = searchReq.parcelQuantity,
-                driverTagScore = dpRes.score,
+                driverTagScore = dpwRes.score,
                 ..
               }
       pure searchRequestForDriver

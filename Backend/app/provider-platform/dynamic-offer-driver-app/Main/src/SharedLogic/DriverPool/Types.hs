@@ -153,7 +153,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe Maps.LatLong,
-    driverTags :: A.Value
+    driverTags :: A.Value,
+    score :: Maybe A.Value
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -173,7 +174,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     tripDistance :: Maybe Meters,
     isForwardRequest :: Bool,
     previousDropGeoHash :: Maybe Text,
-    goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
+    goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest),
+    score :: Maybe A.Value
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -193,7 +195,8 @@ instance Default DriverPoolWithActualDistResult where
         tripDistance = Nothing,
         isForwardRequest = False,
         previousDropGeoHash = Nothing,
-        goHomeReqId = Nothing
+        goHomeReqId = Nothing,
+        score = Nothing
       }
 
 instance HasCoordinates DriverPoolWithActualDistResult where
