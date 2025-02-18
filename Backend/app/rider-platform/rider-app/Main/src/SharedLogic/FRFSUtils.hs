@@ -185,33 +185,26 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
       )
       routes
 
--- TODO :: This to be handled from OTP, Currently Hardcode for Chennai
-getPossibleTransitRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [[RouteStopInfo]]
-getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
-  case (startStationCode, endStationCode) of
-    ("MBTcSIip", "jQaLNViL") -> do
-      routes <- QRoute.findByRouteCodes ["jylLjHej", "BTuKbmBy"]
-      return $
-        [ map
-            ( \route ->
-                if route.code == "jylLjHej"
-                  then
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 6,
-                        startStopCode = "MBTcSIip",
-                        endStopCode = "TiulEaYs",
-                        travelTime = Just $ Seconds 660
-                      }
-                  else
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 8,
-                        startStopCode = "TiulEaYs",
-                        endStopCode = "jQaLNViL",
-                        travelTime = Just $ Seconds 1440
-                      }
-            )
-            routes
-        ]
-    _ -> return []
+getDiscountInfo :: Bool -> Maybe Int -> Maybe Int -> Price -> Int -> Int -> (Maybe Int, Maybe HighPrecMoney)
+getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price quantity ticketsBookedInEvent =
+  let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
+      maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
+   in if isEventOngoing
+        then
+          let perTicketCashback = min maxFreeTicketCashback price.amountInt.getMoney
+              discountedTickets = ((ticketsBookedInEvent + quantity) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
+              eventDiscountAmount = toHighPrecMoney $ discountedTickets * perTicketCashback
+           in (Just discountedTickets, Just eventDiscountAmount)
+        else (Nothing, Nothing)
+
+partnerOrgRiderId :: Id DP.Person
+partnerOrgRiderId = Id "partnerOrg_rider_id"
+
+partnerOrgBppItemId :: Text
+partnerOrgBppItemId = "partnerOrg_bpp_item_id"
+
+partnerOrgBppSubscriberId :: Text
+partnerOrgBppSubscriberId = "partnerOrg_bpp_subscriber_id"
+
+partnerOrgBppSubscriberUrl :: Text
+partnerOrgBppSubscriberUrl = "partnerOrg_bpp_subscriber_url"
