@@ -19,6 +19,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RouteStopMapping as DRouteStopMappping
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
@@ -170,6 +171,9 @@ data JourneyLegState = JourneyLegState
     statusChanged :: Bool,
     userPosition :: Maybe LatLong,
     vehiclePosition :: Maybe LatLong,
+    nextStop :: Maybe DRouteStopMappping.RouteStopMapping,
+    nextStopTravelTime :: Maybe Seconds,
+    nextStopTravelDistance :: Maybe Meters,
     legOrder :: Int
   }
   deriving stock (Show, Generic)
