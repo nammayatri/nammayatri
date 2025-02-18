@@ -166,7 +166,7 @@ eval (UpdateTracking trackingData) state = do
         finalMap =
           DA.foldl
             ( \acc item -> do
-                if Mb.maybe false (_ > item.nextStopSequence)  state.props.destinationSequenceNumber && DS.null state.data.bookingId
+                if Mb.maybe false (_ < item.nextStopSequence)  state.props.destinationSequenceNumber && DS.null state.data.bookingId
                   then acc
                 else do
                   let
