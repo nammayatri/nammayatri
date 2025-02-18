@@ -82,7 +82,7 @@ getConfigFromCacAsString context' tenant toss = do
 
 getConfigFromCACStrictCommon :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, FromJSON b, ToJSON b) => Int -> [(CacContext, Value)] -> CacPrefix -> m (Maybe b)
 getConfigFromCACStrictCommon toss context cpf = do
-  logDebug $ "Trying to find for last time for table " <> getTableName cpf <> " in cac."
+  logDebug $ "Trying to find a last time for table " <> getTableName cpf <> " in cac."
   cacConfig <- asks (.cacConfig)
   getConfigFromCac context cacConfig.tenant toss cpf
 
