@@ -19,7 +19,7 @@ import Storage.Queries.OrphanInstances.Route ()
 
 findAllMatchingRoutes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> m [Route]
 findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   routes <-
     L.runDB dbConf $
       L.findRows $
@@ -38,7 +38,7 @@ findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantO
                 $ B.all_ (BeamCommon.route BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] routes)
 findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   routes <-
     L.runDB dbConf $
       L.findRows $

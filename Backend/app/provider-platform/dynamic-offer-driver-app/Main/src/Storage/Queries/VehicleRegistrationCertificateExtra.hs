@@ -102,7 +102,7 @@ findByCertificateNumberHash certificateHash = do
 
 findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Documents.VerificationStatus -> Maybe Bool -> Integer -> Integer -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
 findAllRCByStatusForFleet fleetOwnerId status mbRcActive limitVal offsetVal (Id merchantId') = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -132,7 +132,7 @@ findAllInactiveRCForFleet fleetOwnerId limitVal offsetVal merchantId = do
   allActiveRCs <- findAllActiveRCForFleet fleetOwnerId Documents.VALID merchantId
   -- now find all the rc which are not in this list
   let allActiveRCIds = map (.id.getId) allActiveRCs
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -155,7 +155,7 @@ findAllInactiveRCForFleet fleetOwnerId limitVal offsetVal merchantId = do
 findAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Documents.VerificationStatus -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
 findAllActiveRCForFleet fleetOwnerId status (Id merchantId') = do
   now <- getCurrentTime
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -182,7 +182,7 @@ findAllActiveRCForFleet fleetOwnerId status (Id merchantId') = do
 countAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m Int
 countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
   now <- getCurrentTime
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -210,7 +210,7 @@ updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.
 
 findAllByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
 findAllByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchStringHash = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $

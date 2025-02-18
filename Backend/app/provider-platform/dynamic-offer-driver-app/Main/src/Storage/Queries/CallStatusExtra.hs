@@ -28,7 +28,7 @@ findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
 countCallsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m Int
 countCallsByEntityId entityID = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $

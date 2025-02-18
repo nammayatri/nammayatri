@@ -231,7 +231,7 @@ findAllRideItems ::
   UTCTime ->
   m [RideItem]
 findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

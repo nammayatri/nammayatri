@@ -19,7 +19,7 @@ import Storage.Queries.OrphanInstances.Rating ()
 
 findAllRatingUsersCountByPerson :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Person.Person -> m Int
 findAllRatingUsersCountByPerson (Id driverId) = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
