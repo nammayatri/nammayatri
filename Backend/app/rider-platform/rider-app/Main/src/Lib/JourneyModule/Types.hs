@@ -235,7 +235,8 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     vehicleNumber :: Maybe Text,
     otp :: Maybe Text,
     serviceTierName :: Maybe Text,
-    bookingId :: Maybe (Id DBooking.Booking)
+    bookingId :: Maybe (Id DBooking.Booking),
+    rideId :: Maybe (Id DRide.Ride)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -409,7 +410,8 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 vehicleNumber = mRide <&> (.vehicleNumber),
                 otp = mRide <&> (.otp),
                 serviceTierName = booking.serviceTierName,
-                bookingId = Just $ booking.id
+                bookingId = Just $ booking.id,
+                rideId = mRide <&> (.id)
               },
         actualDistance = mRide >>= (.traveledDistance),
         totalFare = mRide >>= (.fare)
@@ -451,7 +453,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 vehicleNumber = Nothing,
                 otp = Nothing,
                 serviceTierName = mbEstimate >>= (.serviceTierName),
-                bookingId = Nothing
+                bookingId = Nothing,
+                rideId = Nothing
               },
         actualDistance = Nothing,
         totalFare = Nothing
