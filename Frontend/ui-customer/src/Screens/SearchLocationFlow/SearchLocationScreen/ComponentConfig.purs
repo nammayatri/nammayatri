@@ -481,19 +481,19 @@ rentalRateCardConfig state =
 chooseYourRideConfig state = 
   let 
     quoteSelected = MB.maybe dummyQuote identity state.data.selectedQuote
-    tipConfig = getTipConfig quoteSelected.quoteDetails.vehicleVariant
     city = getValueToLocalStore CUSTOMER_LOCATION
+    tipViewPropss = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant MB.Nothing MB.Nothing
 
   in 
   ChooseYourRide.config {
     quoteList = map (\quote -> quote.quoteDetails) state.data.quotesList,
     rideDistance = (show state.data.rideDetails.rideDistance) <> " km",
     rideDuration = (show state.data.rideDetails.rideDuration) <> " hrs",
-    customerTipArray = tipConfig.customerTipArray,
-    customerTipArrayWithValues = tipConfig.customerTipArrayWithValues,
+    customerTipArray = tipViewPropss.customerTipArray,
+    customerTipArrayWithValues = tipViewPropss.customerTipArrayWithValues,
     enableTips = false, 
     rideTime = formatDate "D" <> " " <> formatDate "MMM" <> ", " <> formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A",
-    tipViewProps = getTipViewProps state.props.tipViewProps quoteSelected.quoteDetails.vehicleVariant MB.Nothing MB.Nothing,
+    tipViewProps = tipViewPropss,
     tipForDriver = state.props.customerTip.tipForDriver,
     fareProductType = state.props.fareProductType,
     activeIndex = quoteSelected.activeIndex ,
