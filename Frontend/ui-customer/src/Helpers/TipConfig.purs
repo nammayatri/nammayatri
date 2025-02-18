@@ -103,7 +103,7 @@ getTipViewProps tipViewProps vehicleVariant smartTipReason smartTipSuggestion = 
 
 getTipViewText :: TipViewProps -> String-> String -> String
 getTipViewText tipViewProps vehicleVariant prefixString = do
-  let tipConfig = getTipConfig vehicleVariant
+  let
       tip = show (fromMaybe 0 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))
   if tip == "0" then 
     case tipViewProps.stage of

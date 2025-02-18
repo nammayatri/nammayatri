@@ -492,7 +492,6 @@ eval (ChooseYourRideAC (ChooseYourRideController.ChangeTip tipViewProps)) state 
 eval (ChooseYourRideAC (ChooseYourRideController.TipBtnClick index value customerTipArrayWithValues)) state = do 
   let quoteSelected = MB.maybe dummyQuote identity state.data.selectedQuote
       vehicleVariant = quoteSelected.quoteDetails.vehicleVariant
-      tipConfig = getTipConfig vehicleVariant
       -- customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
       tip = MB.fromMaybe 0 (customerTipArrayWithValues DA.!! index)
       isTipSelected = tip > 0
