@@ -850,7 +850,7 @@ eval BackPressed state = do
               { data
                 { disability = state.data.disability
                 , bannerData = state.data.bannerData
-                , tripSuggestions = trips
+                , tripSuggestions = if state.data.fareProductType == FPT.AMBULANCE then [] else trips
                 , recentSearchs {predictionArray = recentlySearchedLocations}
                 , destinationSuggestions = suggestedDestinations
                 , source = state.props.currentLocation.place
