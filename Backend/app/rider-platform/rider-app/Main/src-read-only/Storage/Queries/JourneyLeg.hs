@@ -5,6 +5,7 @@
 module Storage.Queries.JourneyLeg (module Storage.Queries.JourneyLeg, module ReExport) where
 
 import qualified Domain.Types.Common
+import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions
@@ -87,7 +88,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.fromArrivalTime fromArrivalTime,
       Se.Set Beam.fromDepartureTime fromDepartureTime,
       Se.Set Beam.fromStopCode (fromStopDetails >>= (.stopCode)),
-      Se.Set Beam.fromStopGtfsId (fromStopDetails >>= (.gtfsId)),
+      Se.Set Beam.fromStopGtfsId ((fromStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
       Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
       Se.Set Beam.fromStopPlatformCode (fromStopDetails >>= (.platformCode)),
       Se.Set Beam.isDeleted isDeleted,
@@ -101,7 +102,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.toArrivalTime toArrivalTime,
       Se.Set Beam.toDepartureTime toDepartureTime,
       Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),
-      Se.Set Beam.toStopGtfsId (toStopDetails >>= (.gtfsId)),
+      Se.Set Beam.toStopGtfsId ((toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
       Se.Set Beam.toStopName (toStopDetails >>= (.name)),
       Se.Set Beam.toStopPlatformCode (toStopDetails >>= (.platformCode)),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

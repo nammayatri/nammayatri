@@ -3,6 +3,7 @@
 
 module Storage.Queries.JourneyLegExtra where
 
+import Domain.Types.FRFSRouteDetails
 import Domain.Types.JourneyLeg
 import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.RouteDetails as RouteDetails
@@ -27,9 +28,9 @@ create journeyLeg = do
     newId <- Common.generateGUID
     let fromStopDetails' = fromMaybe (MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.fromStopDetails)
         toStopDetails' = fromMaybe (MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.toStopDetails)
-    let route_details =
+    let routeDetails =
           RouteDetails.RouteDetails
-            { routeGtfsId = routeDetail.gtfsId,
+            { routeGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
               id = newId,
               routeLongName = routeDetail.longName,
               routeShortName = routeDetail.shortName,
@@ -37,18 +38,18 @@ create journeyLeg = do
               routeColorCode = routeDetail.color,
               frequency = routeDetail.frequency,
               journeyLegId = journeyLeg.id,
-              agencyGtfsId = routeDetail.gtfsId,
+              agencyGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
               agencyName = routeDetail.longName,
               subLegOrder = Just routeDetail.subLegOrder,
               --fromStopDetails:
               fromStopCode = fromStopDetails'.stopCode,
               fromStopName = fromStopDetails'.name,
-              fromStopGtfsId = fromStopDetails'.gtfsId,
+              fromStopGtfsId = fromStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
               fromStopPlatformCode = fromStopDetails'.platformCode,
               --toStopDetails:
               toStopCode = toStopDetails'.stopCode,
               toStopName = toStopDetails'.name,
-              toStopGtfsId = toStopDetails'.gtfsId,
+              toStopGtfsId = toStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
               toStopPlatformCode = toStopDetails'.platformCode,
               --Times --
               fromArrivalTime = routeDetail.fromArrivalTime,
@@ -66,6 +67,6 @@ create journeyLeg = do
               createdAt = _now,
               updatedAt = _now
             }
-    RD.create route_details
+    RD.create routeDetails
 
   create' journeyLeg
