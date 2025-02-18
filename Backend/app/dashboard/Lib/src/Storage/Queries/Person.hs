@@ -117,7 +117,7 @@ findAllWithLimitOffset ::
   Maybe (Id Person.Person) ->
   m [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
 findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personId = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

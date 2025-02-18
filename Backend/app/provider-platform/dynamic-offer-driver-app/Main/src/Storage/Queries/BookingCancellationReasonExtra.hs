@@ -21,7 +21,7 @@ import Storage.Queries.OrphanInstances.BookingCancellationReason ()
 
 findAllCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

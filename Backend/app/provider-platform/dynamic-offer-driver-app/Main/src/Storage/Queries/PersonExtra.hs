@@ -106,7 +106,7 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
 findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -262,7 +262,7 @@ data DriverWithRidesCount = DriverWithRidesCount
 
 fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
 fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail mbPersonId = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   now <- getCurrentTime
   result <- L.runDB dbConf $
     L.findRows $
@@ -418,7 +418,7 @@ findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is Be
 findAllPersonAndDriverInfoWithDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [(Person, DriverInformation)]
 findAllPersonAndDriverInfoWithDriverIds driverIds = do
   let allDriverIds = map (\driverId -> driverId.getId) driverIds
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
       B.select $

@@ -40,7 +40,7 @@ getEnabledAt driverId = do
 
 findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -225,7 +225,7 @@ findAllWithLimitOffsetByMerchantId ::
   Id Merchant ->
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -277,7 +277,7 @@ fetchDriverIDsFromInfo = map DriverInfo.driverId
 countDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
-    dbConf <- getMasterBeamConfig
+    dbConf <- getReplicaBeamConfig
     res <- L.runDB dbConf $
       L.findRows $
         B.select $
