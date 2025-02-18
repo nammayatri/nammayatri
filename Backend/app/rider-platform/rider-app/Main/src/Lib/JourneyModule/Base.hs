@@ -792,6 +792,64 @@ addSkippedLeg journeyId legOrder = do
             Just frfsJourneyData -> return (Just frfsJourneyData.skipBooking)
             Nothing -> return Nothing
 
+addSkippedLeg ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DJourney.Journey ->
+  Int ->
+  m ()
+addSkippedLeg journeyId legOrder = do
+  allLegs <- QJourneyLeg.findAllByJourneyId journeyId
+  -- skippedLeg <- find (\leg -> (leg.isSkipped == Just True && leg.sequenceNumber == legOrder)
+  --  || (leg.isDeleted == Just True && leg.sequenceNumber == legOrder && leg.mode == DTrip.Walk))
+  --  allLegs & fromMaybeM (InvalidRequest $ "Skipped Leg not found with leg Order: " <> show allLegs)
+
+  skippedLeg <-
+    find
+      (\leg -> (leg.sequenceNumber == legOrder))
+      allLegs
+      & fromMaybeM (InvalidRequest $ "Skipped Leg not found with leg Order: " <> show legOrder)
+
+  legSearchId <-
+    skippedLeg.legSearchId
+      & fromMaybeM (InvalidRequest "legSearchId is missing for skippedLeg")
+
+  isSkippedOrCancelled <- case skippedLeg.mode of
+    DTrip.Taxi -> do
+      mbBooking <- QBooking.findByTransactionId legSearchId
+      case mbBooking of
+        Just booking -> return booking.isSkipped
+        Nothing -> do
+          searchReq <- QSearchRequest.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
+          case searchReq.journeyLegInfo of
+            Just journeyData -> return (Just journeyData.skipBooking)
+            Nothing -> return Nothing
+    DTrip.Walk -> do
+      walkLeg <- QWalkLeg.findById (Id legSearchId) >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
+      case walkLeg.journeyLegInfo of
+        Just walkLegData -> return walkLegData.isDeleted
+        Nothing -> return Nothing
+    DTrip.Metro -> checkFRFSBooking legSearchId
+    DTrip.Subway -> checkFRFSBooking legSearchId
+    DTrip.Bus -> checkFRFSBooking legSearchId
+
+  when (isSkippedOrCancelled /= Just True) $
+    throwError $ InvalidRequest $ "isSkipped is not True for legOrder: " <> show legOrder
+  when (skippedLeg.mode == DTrip.Walk) $
+    QJourneyLeg.updateIsDeleted Nothing skippedLeg.legSearchId
+  QJourneyLeg.updateLegSearchId Nothing skippedLeg.id
+  QJourneyLeg.updateIsSkipped (Just False) (skippedLeg.legSearchId)
+  addAllLegs journeyId
+  where
+    checkFRFSBooking legSearchId = do
+      frfsBooking <- QTBooking.findBySearchId (Id legSearchId)
+      case frfsBooking of
+        Just booking -> return booking.isSkipped
+        Nothing -> do
+          frfsSearchReq <- QFRFSSearch.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
+          case frfsSearchReq.journeyLegInfo of
+            Just frfsJourneyData -> return (Just frfsJourneyData.skipBooking)
+            Nothing -> return Nothing
+
 checkIfCancellable ::
   ( CacheFlow m r,
     EsqDBFlow m r,

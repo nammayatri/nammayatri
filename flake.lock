@@ -1574,11 +1574,11 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1740460297,
+        "lastModified": 1740491664,
         "narHash": "sha256-4FjUqrP+63Te39UM9PctBS8cuJUiJYkZ3zIJ2IPeTA8=",
         "owner": "nammayatri",
         "repo": "hedis",
-        "rev": "089d22be67103f613bd1eecbac8c2e6d6d0576c6",
+        "rev": "bc39aa1a1f4c5e5318846b37dd005163c31c91d1",
         "type": "github"
       },
       "original": {
@@ -3602,6 +3602,7 @@
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "prodHotPush-BAP",
         "repo": "shared-kernel",
         "type": "github"
       }
