@@ -640,17 +640,18 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight nextStopTr
   
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
   [ textView
-    $ [ text $ "Next Bus in " <> (show $ Mb.fromMaybe 0 nextStopTravelTime) <> " min"
+    $ [ text $ "Next Bus in " <> (show $ (Mb.fromMaybe 0 nextStopTravelTime) / 60) <> " min"
       , margin $ MarginLeft 8
   , visibility $ boolToVisibility $ not showOnlyHeight
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   , linearLayout [weight 1.0] []
-  , textView
-    $ [ text $  extractTimeInHHMMA $ Mb.maybe (EHC.getCurrentUTC "") (\item ->  Mb.fromMaybe (EHC.getCurrentUTC "") (show <$> item.nextStopTravelTime)) $ findStopInVehicleData (API.FRFSStationAPI stop) state
-  , visibility $ boolToVisibility $ not showOnlyHeight
-      ]
-    <> FontStyle.body1 CTA.TypoGraphy
+  -- This was dummy code to show the time in the UI, should be properly handled as per backend response
+  -- , textView
+  --   $ [ text $  extractTimeInHHMMA $ Mb.maybe (EHC.getCurrentUTC "") (\item ->  Mb.fromMaybe (EHC.getCurrentUTC "") (show <$> item.nextStopTravelTime)) $ findStopInVehicleData (API.FRFSStationAPI stop) state
+  -- , visibility $ boolToVisibility $ not showOnlyHeight
+  --     ]
+  --   <> FontStyle.body1 CTA.TypoGraphy
   ]
   where
     extractTimeInHHMMA timeStr = EHC.convertUTCtoISC timeStr "hh" <> ":" <> EHC.convertUTCtoISC timeStr "mm" <> " " <> EHC.convertUTCtoISC timeStr "a"
