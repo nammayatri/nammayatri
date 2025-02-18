@@ -61,6 +61,7 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -75,6 +76,7 @@ import Kernel.Utils.Version
 import SharedLogic.Cac
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
+import qualified SharedLogic.Person as SP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -195,7 +197,7 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getPersonDetails ::
-  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ClickhouseFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
@@ -208,7 +210,7 @@ getPersonDetails ::
   m ProfileRes
 getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  personStats <- QPersonStats.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId person.merchantOperatingCityId) return
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
       totalRides = personStats.completedRides + personStats.driverCancelledRides + personStats.userCancelledRides
@@ -283,7 +285,7 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], ClickhouseFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)

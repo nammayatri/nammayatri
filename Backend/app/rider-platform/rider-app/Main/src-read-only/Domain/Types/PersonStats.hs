@@ -13,7 +13,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data PersonStats = PersonStats
-  { backlogPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
+  { backfilledFromCkhTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    backlogPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     backlogPayoutStatus :: Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus,
     completedRides :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,

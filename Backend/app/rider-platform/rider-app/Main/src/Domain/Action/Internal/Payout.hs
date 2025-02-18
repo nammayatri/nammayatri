@@ -29,6 +29,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
+import qualified SharedLogic.Person as SP
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -36,7 +37,6 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPersonStats
-import Tools.Error
 import qualified Tools.Payout as Payout
 
 payoutProcessingLockKey :: Text -> Text
@@ -81,7 +81,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                 callPayoutService payoutOrder payoutConfig
           Just DPayment.REFERRAL_AWARD_RIDE -> do
             when (isPayoutStatusSuccess payoutStatus) do
-              personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+              personStats <- QPersonStats.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId merchanOperatingCityId) return
               QPersonStats.updateReferralAmountPaid (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
             fork "Update Payout Status and Transactions for Referral Award" $ do
               callPayoutService payoutOrder payoutConfig

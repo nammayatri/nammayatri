@@ -15,6 +15,8 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Types as PT
 import qualified Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -24,20 +26,21 @@ import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified SharedLogic.Person as SP
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonStats as PStats
-import Tools.Error
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TPayout
 
 getCustomerRefferalCount :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Flow ReferredCustomers
 getCustomerRefferalCount (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  stats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  stats <- QPS.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId person.merchantOperatingCityId) return
   pure $ ReferredCustomers {count = stats.referralCount}
 
 postPersonApplyReferral :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ApplyCodeReq -> Flow ReferrerInfo
@@ -105,7 +108,9 @@ processBacklogReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    ClickhouseFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   Id Person.Person ->
   Text ->
@@ -114,7 +119,7 @@ processBacklogReferralPayout ::
 processBacklogReferralPayout personId vpa merchantOpCityId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY
-  personStats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  personStats <- QPS.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId person.merchantOperatingCityId) return
   let toPayReferredByReward = personStats.referredByEarnings > 0 && isNothing personStats.referredByEarningsPayoutStatus
       toPayBacklogAmount = personStats.backlogPayoutAmount > 0 && isNothing personStats.backlogPayoutStatus
   when (toPayReferredByReward || toPayBacklogAmount) $ do
@@ -122,9 +127,9 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
       let amount = (bool 0 personStats.backlogPayoutAmount toPayBacklogAmount) + (bool 0 personStats.referredByEarnings toPayReferredByReward)
           entityName = getEntityName toPayReferredByReward toPayBacklogAmount
       case entityName of
-        DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> PStats.updateBacklogAndReferredByPayoutStatus (Just PS.Processing) (Just PS.Processing) personId
-        DPayment.REFERRED_BY_AWARD -> PStats.updateReferredByEarningsPayoutStatus (Just PS.Processing) personId
-        DPayment.BACKLOG -> PStats.updateBacklogPayoutStatus (Just PS.Processing) personId
+        DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> QPS.updateBacklogAndReferredByPayoutStatus (Just PS.Processing) (Just PS.Processing) personId
+        DPayment.REFERRED_BY_AWARD -> QPS.updateReferredByEarningsPayoutStatus (Just PS.Processing) personId
+        DPayment.BACKLOG -> QPS.updateBacklogPayoutStatus (Just PS.Processing) personId
         _ -> pure ()
       handlePayout person amount mbPayoutConfig entityName
   where

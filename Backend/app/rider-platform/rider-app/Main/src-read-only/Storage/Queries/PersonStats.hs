@@ -97,7 +97,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.backlogPayoutAmount (Kernel.Prelude.Just backlogPayoutAmount),
+    [ Se.Set Beam.backfilledFromCkhTill backfilledFromCkhTill,
+      Se.Set Beam.backlogPayoutAmount (Kernel.Prelude.Just backlogPayoutAmount),
       Se.Set Beam.backlogPayoutStatus backlogPayoutStatus,
       Se.Set Beam.completedRides completedRides,
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),

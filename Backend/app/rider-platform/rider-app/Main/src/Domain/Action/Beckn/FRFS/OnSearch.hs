@@ -30,16 +30,18 @@ import EulerHS.Prelude (comparing, toStrict)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
+import qualified SharedLogic.Person as SP
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
-import qualified Storage.Queries.PersonStats as QPStats
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
@@ -116,7 +118,7 @@ data ValidatedDOnSearch = ValidatedDOnSearch
     mbMaxFreeTicketCashback :: Maybe Int
   }
 
-validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> m ValidatedDOnSearch
+validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, ClickhouseFlow m r) => DOnSearch -> m ValidatedDOnSearch
 validateRequest DOnSearch {..} = do
   search <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   let merchantId = search.merchantId
@@ -124,7 +126,7 @@ validateRequest DOnSearch {..} = do
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
   if frfsConfig.isEventOngoing == Just True
     then do
-      stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
+      stats <- QPS.findByPersonId search.riderId >>= maybe (SP.createBackfilledPersonStats search.riderId search.merchantOperatingCityId) return
       return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent, isEventOngoing = True, mbFreeTicketInterval = frfsConfig.freeTicketInterval, mbMaxFreeTicketCashback = frfsConfig.maxFreeTicketCashback}
     else return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = 0, isEventOngoing = False, mbFreeTicketInterval = Nothing, mbMaxFreeTicketCashback = Nothing}
 

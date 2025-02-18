@@ -47,4 +47,9 @@ ALTER TABLE atlas_app.person_stats ADD COLUMN backlog_payout_amount double preci
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.person_stats ADD COLUMN backfilled_from_ckh_till timestamp with time zone ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.person_stats ADD COLUMN is_backfilled boolean ;

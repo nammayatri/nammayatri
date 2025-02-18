@@ -59,7 +59,8 @@ data PersonStatsRes = PersonStatsRes
     weekendRidesRate :: Float,
     weekdayRidesRate :: Float,
     weekendPeakRideRate :: Float,
-    commonAppUseCase :: AppUseCase
+    commonAppUseCase :: AppUseCase,
+    isBackfilled :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -75,13 +76,13 @@ data UserCategory = POWER | REGULAR | IRREGULAR | RARE
 getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, ClickhouseFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
 getPersonStats (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  personStats_ <- runInReplica $ QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  personStats_ <- runInReplica $ QPS.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId person.merchantOperatingCityId) return
   now <- getCurrentTime
   completedRidesCount <- runInReplica $ QRide.countRidesByRiderId personId
   when (completedRidesCount > 0 && all (== 0) [personStats_.userCancelledRides, personStats_.completedRides, personStats_.weekendRides, personStats_.weekdayRides, personStats_.offPeakRides, personStats_.eveningPeakRides, personStats_.morningPeakRides, personStats_.weekendPeakRides]) $ do
     SP.backfillPersonStats personId person.merchantOperatingCityId
 
-  personStats <- runInReplica $ QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+  personStats <- runInReplica $ QPS.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId person.merchantOperatingCityId) return
   latestCompletedRide <- runInReplica $ QRide.findLatestCompletedRide personId
   favLocNum <- runInReplica $ QSRL.countAllByRiderId personId
   completedRidesInLast30DaysCount <- runInReplica $ QRide.countRidesFromDateToNowByRiderId personId (negate days30 `addUTCTime` now)
@@ -131,6 +132,7 @@ getPersonStats (personId, _) = do
         latestSearchFrom = latestSearch <&> getCoordinates . (.fromLocation),
         favoriteLocationsNum = favLocNum,
         commonAppUseCase = getCommonAppUseCase weekdayRidesRate weekendRidesRate completedRidesCount avgRidesPerWeek,
+        isBackfilled = fromMaybe False personStats.isBackfilled,
         ..
       }
   where

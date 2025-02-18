@@ -23,6 +23,7 @@ import Environment
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -42,7 +43,8 @@ type FRFSSearchFlow m r =
     EsqDBReplicaFlow m r,
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    ClickhouseFlow m r
   )
 
 type FRFSConfirmFlow m r =
@@ -53,7 +55,8 @@ type FRFSConfirmFlow m r =
     CallFRFSBPP.BecknAPICallFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    ClickhouseFlow m r
   )
 
 search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> m ()

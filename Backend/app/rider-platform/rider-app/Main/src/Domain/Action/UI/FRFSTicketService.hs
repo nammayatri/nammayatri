@@ -930,7 +930,7 @@ getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.P
 getFrfsConfig (pId, mId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   Domain.Types.FRFSConfig.FRFSConfig {..} <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityId merchantOpCity.id >>= fromMaybeM (InvalidRequest "FRFS Config not found")
-  stats <- maybe (pure Nothing) CQP.findPersonStatsById pId
+  stats <- maybe (pure Nothing) (`CQP.findPersonStatsById` merchantOpCity.id) pId
   let isEventOngoing' = fromMaybe False isEventOngoing
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
   return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}

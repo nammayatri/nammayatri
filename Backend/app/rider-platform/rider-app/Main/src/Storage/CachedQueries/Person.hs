@@ -25,10 +25,13 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.PersonStats
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Person as SP
 import qualified Storage.Queries.Person as Queries
 import qualified Storage.Queries.PersonStats as QPS
 
@@ -56,11 +59,14 @@ clearCache personId = do
 makeIdKey :: Id Person -> Text
 makeIdKey personId = "CachedQueries:Person:PersonCityInformation-" <> personId.getId
 
-findPersonStatsById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> m (Maybe PersonStats)
-findPersonStatsById personId = do
+findPersonStatsById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m (Maybe PersonStats)
+findPersonStatsById personId merchantOperatingCityId = do
   Hedis.safeGet (makePSIdKey personId) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust cachePersonStats /=<< QPS.findByPersonId personId
+    Nothing -> do
+      personStats <- QPS.findByPersonId personId >>= maybe (SP.createBackfilledPersonStats personId merchantOperatingCityId) return
+      cachePersonStats personStats
+      return $ Just personStats
 
 cachePersonStats :: (CacheFlow m r, MonadFlow m) => PersonStats -> m ()
 cachePersonStats personStats = do
