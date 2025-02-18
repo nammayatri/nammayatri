@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.PersonExtra
   ( module Storage.Queries.PersonExtra,
     module Reexport,
@@ -105,8 +103,9 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Bool ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString = do
   dbConf <- getMasterBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
@@ -118,6 +117,9 @@ findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified m
                   person.merchantId B.==?. B.val_ (getId merchant.id)
                     B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.like_ person.firstName (B.val_ ("%" <> name <> "%")))) mbNameSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\middleName -> B.sqlBool_ (B.like_ middleName (B.val_ ("%" <> name <> "%")))) person.middleName) mbNameSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\lastName -> B.sqlBool_ (B.like_ lastName (B.val_ ("%" <> name <> "%")))) person.lastName) mbNameSearchString
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
@@ -368,9 +370,10 @@ updatePersonVersionsAndMerchantOperatingCity ::
   Maybe Version ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp city = do
+updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbClientId mbDevice' mbBackendApp city = do
   let mbDevice = getDeviceFromText mbDevice'
   let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion
   let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
@@ -382,6 +385,7 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
         mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
         mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
+        mbClientId' = mbClientId <|> person.clientId
         mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
     updateOneWithKV
       [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
@@ -389,6 +393,7 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         Se.Set BeamP.clientConfigVersion mbConfigVersionText,
         Se.Set BeamP.clientOsVersion mbOsVersion,
         Se.Set BeamP.clientOsType mbOsType,
+        Se.Set BeamP.clientId mbClientId',
         Se.Set BeamP.clientModelName mbModelName,
         Se.Set BeamP.clientManufacturer mbManufacturer,
         Se.Set BeamP.backendAppVersion mbBackendApp,
@@ -448,9 +453,6 @@ findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
 
 updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]
-
-updateTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Text] -> m ()
-updateTag (Id driverId) tags = updateOneWithKV [Se.Set BeamP.driverTag $ Just tags] [Se.Is BeamP.id $ Se.Eq driverId]
 
 updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do

@@ -5,6 +5,7 @@
 module Storage.Queries.DriverPlan (module Storage.Queries.DriverPlan, module ReExport) where
 
 import qualified Domain.Types.DriverPlan
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Mandate
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
@@ -28,7 +29,7 @@ createMany = traverse_ create
 
 findByDriverIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.DriverPlan.DriverPlan))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m (Maybe Domain.Types.DriverPlan.DriverPlan))
 findByDriverIdWithServiceName driverId serviceName = do
   findOneWithKV
     [ Se.And
@@ -39,7 +40,7 @@ findByDriverIdWithServiceName driverId serviceName = do
 
 findByMandateIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate) -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.DriverPlan.DriverPlan))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate) -> Domain.Types.Extra.Plan.ServiceNames -> m (Maybe Domain.Types.DriverPlan.DriverPlan))
 findByMandateIdAndServiceName mandateId serviceName = do
   findOneWithKV
     [ Se.And
@@ -50,7 +51,7 @@ findByMandateIdAndServiceName mandateId serviceName = do
 
 updateEnableServiceUsageChargeByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
 updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -61,7 +62,7 @@ updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge 
 
 updateFreeTrialByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+  (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
 updateFreeTrialByDriverIdAndServiceName isOnFreeTrial driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -74,7 +75,7 @@ updateFreeTrialByDriverIdAndServiceName isOnFreeTrial driverId serviceName = do
 
 updateLastPaymentLinkSentAtDateByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
 updateLastPaymentLinkSentAtDateByDriverIdAndServiceName lastPaymentLinkSentAtIstDate driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -87,7 +88,7 @@ updateLastPaymentLinkSentAtDateByDriverIdAndServiceName lastPaymentLinkSentAtIst
 
 updateMandateIdByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
 updateMandateIdByDriverIdAndServiceName mandateId driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -100,7 +101,7 @@ updateMandateIdByDriverIdAndServiceName mandateId driverId serviceName = do
 
 updateMandateSetupDateByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
 updateMandateSetupDateByDriverIdAndServiceName mandateSetupDate driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -113,7 +114,7 @@ updateMandateSetupDateByDriverIdAndServiceName mandateSetupDate driverId service
 
 updatePaymentModeByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Plan.PaymentMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Plan.ServiceNames -> m ())
+  (Domain.Types.Plan.PaymentMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Extra.Plan.ServiceNames -> m ())
 updatePaymentModeByDriverIdAndServiceName planType driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -137,6 +138,7 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.enableServiceUsageCharge (Kernel.Prelude.Just enableServiceUsageCharge),
       Se.Set Beam.isCategoryLevelSubscriptionEnabled isCategoryLevelSubscriptionEnabled,
       Se.Set Beam.isOnFreeTrial (Kernel.Prelude.Just isOnFreeTrial),
+      Se.Set Beam.lastBillGeneratedAt lastBillGeneratedAt,
       Se.Set Beam.lastPaymentLinkSentAtIstDate lastPaymentLinkSentAtIstDate,
       Se.Set Beam.mandateId (Kernel.Types.Id.getId <$> mandateId),
       Se.Set Beam.mandateSetupDate mandateSetupDate,
@@ -147,6 +149,7 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.planType planType,
       Se.Set Beam.serviceName (Kernel.Prelude.Just serviceName),
       Se.Set Beam.rentedVehicleNumber (Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData),
+      Se.Set Beam.totalAmountChargedForService (Kernel.Prelude.Just totalAmountChargedForService),
       Se.Set Beam.totalCoinsConvertedCash totalCoinsConvertedCash,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleCategory vehicleCategory

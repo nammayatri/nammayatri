@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.ApprovalRequest where
@@ -36,6 +34,6 @@ instance B.Table ApprovalRequestT where
 
 type ApprovalRequest = ApprovalRequestT Identity
 
-$(enableKVPG ''ApprovalRequestT ['id] [])
+$(enableKVPG ''ApprovalRequestT ['id] [['requesteeId]])
 
 $(mkTableInstances ''ApprovalRequestT "approval_request")

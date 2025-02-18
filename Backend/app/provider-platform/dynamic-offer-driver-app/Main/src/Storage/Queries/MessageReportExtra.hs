@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.MessageReportExtra where
 
 import qualified Data.Time as T
@@ -66,6 +64,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
                 label = label,
                 likeCount = likeCount,
                 viewCount = viewCount,
+                shareable,
                 alwaysTriggerOnOnboarding = alwaysTriggerOnOnboarding,
                 mediaFiles = mediaFiles,
                 merchantId = merchantId,

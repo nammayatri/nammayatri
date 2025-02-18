@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.EstimateBP where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common

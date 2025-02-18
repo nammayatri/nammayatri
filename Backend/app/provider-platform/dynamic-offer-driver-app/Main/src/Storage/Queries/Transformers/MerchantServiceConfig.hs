@@ -45,6 +45,7 @@ getConfigJSON = \case
     Verification.FaceVerificationConfig cfg -> toJSON cfg
     Verification.GovtDataConfig -> toJSON (A.object [])
     Verification.HyperVergeVerificationConfig cfg -> toJSON cfg
+    Verification.HyperVergeVerificationConfigRCDL cfg -> toJSON cfg
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig cfg -> toJSON cfg
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -60,6 +61,9 @@ getConfigJSON = \case
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> toJSON cfg
+    Payment.StripeConfig cfg -> toJSON cfg
+  Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
@@ -99,6 +103,7 @@ getServiceName = \case
     Verification.FaceVerificationConfig _ -> Domain.VerificationService Verification.InternalScripts
     Verification.GovtDataConfig -> Domain.VerificationService Verification.GovtData
     Verification.HyperVergeVerificationConfig _ -> Domain.VerificationService Verification.HyperVerge
+    Verification.HyperVergeVerificationConfigRCDL _ -> Domain.VerificationService Verification.HyperVergeRCDL
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig _ -> Domain.DriverBackgroundVerificationService Verification.SafetyPortal
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -116,6 +121,9 @@ getServiceName = \case
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.RentalPaymentService Payment.Stripe
+  Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> Domain.CautioPaymentService Payment.Juspay
+    Payment.StripeConfig _ -> Domain.CautioPaymentService Payment.Stripe
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
@@ -150,6 +158,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.GovtData -> Right $ Domain.VerificationServiceConfig Verification.GovtDataConfig
   Domain.VerificationService Verification.HyperVerge -> Domain.VerificationServiceConfig . Verification.HyperVergeVerificationConfig <$> eitherValue configJSON
+  Domain.VerificationService Verification.HyperVergeRCDL -> Domain.VerificationServiceConfig . Verification.HyperVergeVerificationConfigRCDL <$> eitherValue configJSON
   Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> eitherValue configJSON
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
   Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON
@@ -161,6 +170,8 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
+  Domain.CautioPaymentService Payment.Juspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.CautioPaymentService Payment.Stripe -> Domain.CautioPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON

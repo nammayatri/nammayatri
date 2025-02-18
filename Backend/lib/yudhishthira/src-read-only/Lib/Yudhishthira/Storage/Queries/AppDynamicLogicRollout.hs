@@ -25,6 +25,11 @@ create = createWithKV
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] -> m ())
 createMany = traverse_ create
 
+findAllByMerchantOpCityId ::
+  (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
+
 findByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])

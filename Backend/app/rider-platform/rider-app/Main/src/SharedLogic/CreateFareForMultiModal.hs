@@ -14,32 +14,32 @@
 
 module SharedLogic.CreateFareForMultiModal where
 
-import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Id
+import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
-import qualified Lib.JourneyPlannerTypes as JPT
-import qualified Storage.Queries.Journey as QJourney
-import Tools.Error
+import qualified Lib.JourneyLeg.Types as JPT
 
 fareProcessingLockKey :: Text -> Text
 fareProcessingLockKey journeyId = "Fare:Processing:JourneyId" <> journeyId
 
-createFares :: Maybe JPT.JourneySearchData -> Price -> Flow () -> Flow ()
-createFares journeyLegInfo requiredPrice updateInSearchReqFunc = do
-  case journeyLegInfo of
-    Just journeySearchData -> do
-      Redis.withWaitOnLockRedisWithExpiry (fareProcessingLockKey journeySearchData.journeyId) 10 10 $ do
-        let journeyId = journeySearchData.journeyId
-        journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest $ "Journey not found")
-        case journey.estimatedFare of
-          Just initialEstimatedFare -> do
-            updatedEstimatedFare <- initialEstimatedFare `addPrice` requiredPrice
-            QJourney.updateEstimatedFare (Just updatedEstimatedFare) (Id journeyId)
-          Nothing -> do
-            QJourney.updateEstimatedFare (Just requiredPrice) (Id journeyId)
-        let legsDoneInitially = journey.legsDone
-        QJourney.updateNumberOfLegs (legsDoneInitially + 1) (Id journeyId)
-        updateInSearchReqFunc
-    Nothing -> pure ()
+createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Text -> Maybe JPT.JourneySearchData -> m () -> m Bool
+createFares searchId journeyLegInfo updateInSearchReqFunc = do
+  whenJust journeyLegInfo $ \_ -> updateInSearchReqFunc
+  mbShouldConfirmFare <- getConfirmOnceGetFare searchId
+  when (mbShouldConfirmFare == Just True) $ resetConfirmOnceGetFare searchId
+  return (mbShouldConfirmFare == Just True)
+
+confirmOnceGetFare :: Text -> Text
+confirmOnceGetFare searchId = "COGF:SRID-" <> searchId
+
+setConfirmOnceGetFare :: CacheFlow m r => Text -> m ()
+setConfirmOnceGetFare searchId = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (confirmOnceGetFare searchId) True 600
+
+resetConfirmOnceGetFare :: CacheFlow m r => Text -> m ()
+resetConfirmOnceGetFare searchId = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (confirmOnceGetFare searchId) False 600
+
+getConfirmOnceGetFare :: CacheFlow m r => Text -> m (Maybe Bool)
+getConfirmOnceGetFare searchId = Hedis.withCrossAppRedis (Hedis.safeGet (confirmOnceGetFare searchId))

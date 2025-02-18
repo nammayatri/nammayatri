@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.MerchantExtra where
 
 import Domain.Types.Merchant as DM

@@ -36,6 +36,7 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let hcfg =
@@ -46,6 +47,7 @@ let hcfg =
       , connectMaxConnections = rcfg.connectMaxConnections
       , connectMaxIdleTime = rcfg.connectMaxIdleTime
       , connectTimeout = rcfg.connectTimeout
+      , connectReadOnly = True
       }
 
 let smsConfig =
@@ -54,6 +56,7 @@ let smsConfig =
         { username = common.smsUserName
         , password = common.smsPassword
         , otpHash = sec.smsOtpHash
+        , token = None Text
         }
       , useFakeSms = Some 7891
       , url = "http://localhost:4343"
@@ -175,6 +178,7 @@ let hccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let kvConfigUpdateFrequency = +10
@@ -281,7 +285,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = False
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , cutOffNonCriticalHedisCluster = True
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
@@ -360,4 +364,5 @@ in  { esqDBCfg
     , nyGatewayUrl = common.nyGatewayUrl
     , ltsCfg = LocationTrackingeServiceConfig
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , googleSAPrivateKey = sec.googleSAPrivateKey
     }

@@ -26,6 +26,7 @@ data IssueOption = IssueOption
     isActive :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    igmSubCategory :: Maybe Spec.IssueSubCategory
+    igmSubCategory :: Maybe Spec.IssueSubCategory,
+    mandatoryUploads :: Maybe [Common.MandatoryUploads]
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)

@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Mobility.ARDU.MapsConfig where
 
@@ -35,21 +34,23 @@ spec = describe "Merchant maps configs" $ do
     fetchOSRMConfig
 
 -- We use direct calls to DB in this test because cache already changed for using mock-google
-fetchConfig :: forall b. (Show b, Eq b) => Maps.MapsService -> (ServiceConfig -> b) -> b -> IO ()
+fetchConfig :: forall b. (Show b, Eq b) => Maps.MapsService -> (ServiceConfig -> Maybe b) -> b -> IO ()
 fetchConfig serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runARDUFlow "" $
       QMSC.findByServiceAndCity (MapsService serviceProvider) (Id "Merchnant-op-city")
-  getterFunc cfg.serviceConfig `shouldBe` resultExpected
+  getterFunc cfg.serviceConfig `shouldBe` Just resultExpected
 
 fetchGoogleConfig :: IO ()
 fetchGoogleConfig = do
   fetchConfig Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
   where
-    func (MapsServiceConfig (GoogleConfig cfg)) = cfg.googleMapsUrl
+    func (MapsServiceConfig (GoogleConfig cfg)) = Just cfg.googleMapsUrl
+    func _ = Nothing
 
 fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
   fetchConfig OSRM func (fromJust $ parseBaseUrl "localhost:5001")
   where
-    func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl
+    func (MapsServiceConfig (OSRMConfig cfg)) = Just cfg.osrmUrl
+    func _ = Nothing

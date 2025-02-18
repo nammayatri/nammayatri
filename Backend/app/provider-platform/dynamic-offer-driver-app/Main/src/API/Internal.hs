@@ -11,6 +11,7 @@ import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
 import qualified API.Internal.CustomerCancellationDues as CancellationDues
 import qualified API.Internal.DriverCoordinates as DriverCoordinates
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
+import qualified API.Internal.DriverReachedDestination as DriverReachedDestination
 import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
@@ -44,6 +45,7 @@ type API =
            :<|> Ride.API
            :<|> StopDetection.API
            :<|> Multimodal.API
+           :<|> DriverReachedDestination.API
        )
 
 handler :: FlowServer API
@@ -65,3 +67,4 @@ handler =
     :<|> Ride.handler
     :<|> StopDetection.handler
     :<|> Multimodal.handler
+    :<|> DriverReachedDestination.handler

@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Environment where
 
@@ -63,6 +62,7 @@ import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
+import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -146,7 +146,8 @@ data AppCfg = AppCfg
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic, FromDhall)
 
@@ -245,7 +246,8 @@ data AppEnv = AppEnv
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic)
 
@@ -264,7 +266,7 @@ toConnectInfo config =
     }
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv cfg@AppCfg {..} = do
+buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, ..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion

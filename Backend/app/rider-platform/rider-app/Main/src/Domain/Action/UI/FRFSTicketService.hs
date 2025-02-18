@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.FRFSTicketService where
 
 import API.Types.UI.FRFSTicketService
@@ -18,6 +16,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
@@ -52,6 +51,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Lib.JourneyLeg.Types as JLT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -93,16 +93,35 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
       return $
         map
           ( \routeInfo ->
-              FRFSTicketService.FRFSRouteAPI
-                { code = routeInfo.route.code,
-                  shortName = routeInfo.route.shortName,
-                  longName = routeInfo.route.longName,
-                  startPoint = routeInfo.route.startPoint,
-                  endPoint = routeInfo.route.endPoint,
-                  totalStops = routeInfo.totalStops,
-                  timeBounds = Just routeInfo.route.timeBounds,
-                  waypoints = Nothing
-                }
+              let stops =
+                    ( mapWithIndex
+                        ( \idx stop ->
+                            FRFSStationAPI
+                              { name = stop.stopName,
+                                code = stop.stopName,
+                                lat = Just stop.stopPoint.lat,
+                                lon = Just stop.stopPoint.lon,
+                                stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
+                                sequenceNum = Just stop.sequenceNum,
+                                address = Nothing,
+                                distance = Nothing,
+                                color = Nothing,
+                                towards = Nothing
+                              }
+                        )
+                    )
+                      <$> routeInfo.stops
+               in FRFSTicketService.FRFSRouteAPI
+                    { code = routeInfo.route.code,
+                      shortName = routeInfo.route.shortName,
+                      longName = routeInfo.route.longName,
+                      startPoint = routeInfo.route.startPoint,
+                      endPoint = routeInfo.route.endPoint,
+                      totalStops = routeInfo.totalStops,
+                      stops = stops,
+                      timeBounds = Just routeInfo.route.timeBounds,
+                      waypoints = Nothing
+                    }
           )
           routesInfo
     _ -> do
@@ -110,9 +129,11 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
       routes <- B.runInReplica $ QRoute.findAllByMerchantOperatingCityAndVehicleType Nothing Nothing merchantOpCity.id _vehicleType
       return $
         map
-          ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, waypoints = Nothing, timeBounds = Nothing, ..}
+          ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, ..}
           )
           routes
+  where
+    mapWithIndex f xs = zipWith f [0 ..] xs
 
 data StationResult = StationResult
   { code :: Kernel.Prelude.Text,
@@ -137,6 +158,10 @@ getFrfsRoute ::
   Environment.Flow API.Types.UI.FRFSTicketService.FRFSRouteAPI
 getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
   route <- QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)
+  routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCode routeCode
+  currentTime <- getCurrentTime
+  let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+      stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
   return $
     FRFSTicketService.FRFSRouteAPI
       { code = route.code,
@@ -144,7 +169,25 @@ getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
         longName = route.longName,
         startPoint = route.startPoint,
         endPoint = route.endPoint,
-        totalStops = Nothing,
+        totalStops = Just $ length stopsSortedBySequenceNumber,
+        stops =
+          Just $
+            map
+              ( \stop ->
+                  FRFSStationAPI
+                    { name = stop.stopName,
+                      code = stop.stopName,
+                      lat = Just stop.stopPoint.lat,
+                      lon = Just stop.stopPoint.lon,
+                      stationType = Nothing,
+                      sequenceNum = Just stop.sequenceNum,
+                      address = Nothing,
+                      distance = Nothing,
+                      color = Nothing,
+                      towards = Nothing
+                    }
+              )
+              stopsSortedBySequenceNumber,
         timeBounds = Just route.timeBounds,
         waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
       }
@@ -155,7 +198,7 @@ getFrfsStations ::
   ) ->
   Kernel.Prelude.Maybe Context.City ->
   Kernel.Prelude.Maybe Text ->
-  Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) ->
+  Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Text ->
   Spec.VehicleCategory ->
@@ -311,11 +354,28 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
       Nothing -> return stations
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req =
-  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req Nothing Nothing
+postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req = do
+  let frfsRouteDetails =
+        [ FRFSRouteDetails
+            { routeCode = req.routeCode,
+              startStationCode = req.fromStationCode,
+              endStationCode = req.toStationCode
+            }
+        ]
+  postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req frfsRouteDetails Nothing Nothing []
 
-postFrfsSearchHandler :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Maybe (Id DPO.PartnerOrgTransaction) -> Maybe (Id DPO.PartnerOrganization) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId = do
+postFrfsSearchHandler ::
+  CallExternalBPP.FRFSSearchFlow m r =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Maybe Context.City ->
+  Spec.VehicleCategory ->
+  API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
+  [FRFSRouteDetails] ->
+  Maybe (Id DPO.PartnerOrgTransaction) ->
+  Maybe (Id DPO.PartnerOrganization) ->
+  [JLT.MultiModalJourneyRouteDetails] ->
+  m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbJourneyRouteDetails = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -357,10 +417,13 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
             journeyLegInfo = journeySearchData,
+            journeyLegStatus = Just JLT.InPlan,
+            journeyRouteDetails = mbJourneyRouteDetails,
+            isOnSearchReceived = Nothing,
             ..
           }
   QFRFSSearch.create searchReq
-  CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq
+  CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails
   return $ FRFSSearchAPIRes searchReqId
 
 getFrfsSearchQuote :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
@@ -391,19 +454,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     )
     quotes
 
--- /{jouneryId}/confirm
--- => create JourneyBooking
--- => loop for all journeyleg
--- 	If leg is Auto/Cab -> call select
--- if ONDC flow
--- 	create JourneyBooking
--- 	init
--- 	Skipthis: onInit (create Payment link but what about unified flow)
--- else if direct third party call
--- 	Create journeyBooking
--- 	Skip this: If they will collect the money? How will
--- => create payment link of basis how may booking confirmed
-postFrfsQuoteV2Confirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2Confirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
@@ -429,7 +480,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
     --   | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelFRFSTicketBooking booking
     --   | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelFRFSTicketBooking booking
     --   | otherwise = throwM exc
-
+    confirm :: CallExternalBPP.FRFSConfirmFlow m r => m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     confirm = do
       personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -454,9 +505,11 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
         intersectBy _ _ [] = []
         intersectBy f as bs = filter (\a -> any (f a) bs) as
 
+    buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [FRFSDiscountRes] -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} selectedDiscounts = do
       uuid <- generateGUID
       now <- getCurrentTime
+      mbSearch <- QFRFSSearch.findById searchId
       let appliedDiscountsJson = encodeToText selectedDiscounts
           totalDiscount =
             foldr
@@ -464,6 +517,8 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
               (HighPrecMoney 0.0)
               selectedDiscounts
       let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational quote.quantity)) - totalDiscount
+      let isFareChanged = isJust oldCacheDump
+      let journeyRouteDetails' = maybe [] (.journeyRouteDetails) mbSearch
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
@@ -488,6 +543,16 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
                 discountsJson = Just appliedDiscountsJson,
+                journeyLegOrder = mbSearch >>= (.journeyLegInfo) <&> (.journeyLegOrder),
+                journeyId = Id <$> (mbSearch >>= (.journeyLegInfo) <&> (.journeyId)),
+                journeyOnInitDone = Nothing,
+                journeyLegStatus = mbSearch >>= (.journeyLegStatus),
+                journeyRouteDetails = journeyRouteDetails',
+                startTime = Just now, -- TODO
+                isFareChanged = Just isFareChanged,
+                googleWalletJWTUrl = Nothing,
+                isDeleted = Just False,
+                isSkipped = Just False,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -510,10 +575,12 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
           tickets = [],
           discountedTickets = booking.discountedTickets,
           eventDiscountAmount = booking.eventDiscountAmount,
+          isFareChanged = booking.isFareChanged,
+          googleWalletJWTUrl = booking.googleWalletJWTUrl,
           ..
         }
 
-postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -715,6 +782,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
 
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSBooking
+      Spec.SUBWAY -> Payment.FRFSBooking
       Spec.BUS -> Payment.FRFSBusBooking
 
     createOrderCall merchantOperatingCityId booking = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
@@ -779,6 +847,8 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
         payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        isFareChanged = booking.isFareChanged,
+        googleWalletJWTUrl = booking.googleWalletJWTUrl,
         ..
       }
 
@@ -925,6 +995,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset opCity origin vehicle = do
                       endPoint = route.endPoint,
                       timeBounds = Just route.timeBounds,
                       totalStops = Nothing,
+                      stops = Nothing,
                       waypoints = Nothing
                     }
               )

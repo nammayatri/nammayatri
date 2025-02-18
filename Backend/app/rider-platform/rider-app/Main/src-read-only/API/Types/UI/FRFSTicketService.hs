@@ -19,7 +19,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
-import qualified Lib.JourneyPlannerTypes
+import qualified Lib.JourneyLeg.Types
 import Servant
 import Tools.Auth
 
@@ -32,7 +32,7 @@ data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
     status :: FRFSBookingPaymentStatusAPI,
     transactionId :: Data.Maybe.Maybe Data.Text.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentStatusAPI
@@ -117,6 +117,7 @@ data FRFSRouteAPI = FRFSRouteAPI
     longName :: Data.Text.Text,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
+    stops :: Data.Maybe.Maybe [FRFSStationAPI],
     timeBounds :: Data.Maybe.Maybe Kernel.Types.TimeBound.TimeBound,
     totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int,
     waypoints :: Data.Maybe.Maybe [Kernel.External.Maps.Types.LatLong]
@@ -142,7 +143,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { fromStationCode :: Data.Text.Text,
-    journeySearchData :: Data.Maybe.Maybe Lib.JourneyPlannerTypes.JourneySearchData,
+    journeySearchData :: Data.Maybe.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     quantity :: Kernel.Prelude.Int,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     toStationCode :: Data.Text.Text
@@ -188,6 +189,8 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
+    isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
@@ -200,7 +203,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketVerifyReq = FRFSTicketVerifyReq {qrData :: Data.Text.Text}

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common

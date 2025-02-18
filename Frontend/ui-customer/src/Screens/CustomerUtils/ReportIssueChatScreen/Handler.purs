@@ -155,6 +155,8 @@ selectIssueOptionHandler updatedState = do
       Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
     pure unit 
 
+  let mandatoryUploads = maybe Nothing (\option -> option.mandatoryUploads) updatedState.data.selectedOption
+
   modifyScreenState $ ReportIssueChatScreenStateType (
     \_ -> updatedState { 
       data {
@@ -164,7 +166,8 @@ selectIssueOptionHandler updatedState = do
           messages = (updatedState.data.chatConfig.messages <> messages'),
           enableSuggestionClick = false,
           chatSuggestionsList = map (_.option) getOptionsRes'
-        } 
+        }
+      , mandatoryUploads = if isJust mandatoryUploads then mandatoryUploads else updatedState.data.mandatoryUploads
       }
     , props {
         isResolved = isResolved
@@ -259,8 +262,11 @@ callDriverHandler updatedState = do
   case updatedState.data.selectedRide of
     Just ride -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-      resp <- Remote.callDriverBT ride.rideId
-      pure $ toast $ getString REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
+      case ride.driverPhoneNumber of
+        Just driverPhoneNumber -> void $ pure $ showDialer driverPhoneNumber false
+        Nothing -> do
+          pure $ toast $ getString REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
+          void $ Remote.callDriverBT ride.rideId
 
       let language = fetchLanguage $ getLanguageLocale languageKey
           rideId = fromMaybe "" updatedState.data.tripId

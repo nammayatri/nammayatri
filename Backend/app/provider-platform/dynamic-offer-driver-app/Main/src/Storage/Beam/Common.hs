@@ -42,6 +42,7 @@ import Storage.Beam.Rating (RatingT, ratingTable)
 import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
+import Storage.Beam.Route
 import Storage.Beam.Vehicle
 import Storage.Beam.VehicleRegistrationCertificate
 
@@ -76,7 +77,8 @@ atlasDB =
         messageTranslation = messageTranslationTable,
         driverGoHomeRequest = driverGoHomeRequestTable,
         driverReferral = driverReferralTable,
-        fleetDriverAssociation = fleetDriverAssociationTable
+        fleetDriverAssociation = fleetDriverAssociationTable,
+        route = routeTable
       }
 
 data AtlasDB f = AtlasDB
@@ -107,6 +109,7 @@ data AtlasDB f = AtlasDB
     driverFee :: f (B.TableEntity DriverFeeT),
     notification :: f (B.TableEntity NotificationT),
     invoice :: f (B.TableEntity InvoiceT),
-    fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT)
+    fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
+    route :: f (B.TableEntity RouteT)
   }
   deriving (Generic, B.Database be)

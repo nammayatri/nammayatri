@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.Transformers.DriverStats where
 
 import GHC.Float (int2Double)

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -28,6 +27,6 @@ data IntegratedBPPConfig = IntegratedBPPConfig
 
 data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
-  | CUMTA Domain.Types.Extra.IntegratedBPPConfig.CUMTAConfig
+  | DIRECT Domain.Types.Extra.IntegratedBPPConfig.DIRECTConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
   deriving (Generic, FromJSON, ToJSON, Eq)

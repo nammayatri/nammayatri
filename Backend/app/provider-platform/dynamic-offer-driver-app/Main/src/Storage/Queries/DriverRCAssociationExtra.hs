@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.DriverRCAssociationExtra where
 
 import qualified Data.HashMap.Strict as HashMap

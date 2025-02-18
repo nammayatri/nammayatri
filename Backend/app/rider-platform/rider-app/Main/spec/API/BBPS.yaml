@@ -1,0 +1,107 @@
+imports:
+  BBPSSessionResp: Domain.Types.BBPS
+  CreateOrderResp: Kernel.External.Payment.Interface
+  PaymentStatusResp: Lib.Payment.Domain.Action
+  BBPSPaymentStatus: Domain.Types.BBPS
+  Person: Domain.Types.Person
+  BBPS: Domain.Types.BBPS
+  BBPSSessionPayload: Domain.Types.BBPS
+  BBPSPaymentMode: Domain.Types.BBPS
+  Tag: Domain.Types.BBPS
+
+module: BBPS
+types:
+  BBPSBillDetails:
+    txnAmount: Text
+    customerParams: "Maybe [Tag]"
+    billerId: Text
+  BBPSSessionReq:
+    deviceId: Text
+    mobileNumber: Text
+  BBPSPaymentReq:
+    transType: Text
+    mobileNumber: Text
+    deviceId: Text
+    billDetails: BBPSBillDetails
+    bbpsTxnId: Text
+    appId: Text
+  BBPSPaymentStatusAPIRes:
+    status: BBPSPaymentStatus
+    paymentInformation: "Maybe [Tag]"
+    paymentMode: "Maybe BBPSPaymentMode"
+    paymentTxnId: Maybe Text
+    errorMessage: Maybe Text
+  BBPSInfoAPIRes:
+    refId: Id BBPS
+    refShortId: ShortId BBPS
+    status: BBPSPaymentStatus
+    transType: Text
+    billDetails: BBPSBillDetails
+    paymentTxnId: Maybe Text
+    paymentMode: Maybe BBPSPaymentMode
+    paymentInformation: "Maybe [Tag]"
+    errorMessage: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  BBPSServerReq:
+    mobile: Text
+    bbps_ref_id: Text
+    payment_ref_id: Text
+    amount: Text
+    bbps_payment_status: Maybe BBPSServerStatus
+  BBPSServerStatus:
+    enum: "SUCCESS,FAILURE"
+    derive: "HttpInstance"
+  BBPSServerResp:
+    status: BBPSServerStatus
+    message: Text
+
+
+apis:
+  - POST:
+      endpoint: /bbps/session
+      auth: TokenAuth
+      request:
+        type: BBPSSessionReq
+      response:
+        type: BBPSSessionPayload
+  - POST:
+      endpoint: /bbps/createOrder
+      auth: TokenAuth
+      request:
+        type: BBPSPaymentReq
+      response:
+        type: CreateOrderResp
+  - GET:
+      endpoint: /bbps/getOrderStatus/{orderId}
+      auth: TokenAuth
+      params:
+        orderId: Text
+      response:
+        type: BBPSPaymentStatusAPIRes
+  - POST:
+      endpoint: /bbps/confirm-payment
+      name: postBbpsCrossCheckPayment
+      auth: NoAuth  # Waiting for the other team to confirm which authentication they want to use
+      request:
+        type: BBPSServerReq
+      response:
+        type: BBPSServerResp
+  - POST:
+      endpoint: /bbps/payment-status
+      name: postBbpsPaymentStatus
+      auth: NoAuth # Waiting for the other team to confirm which authentication they want to use
+      request:
+        type: BBPSServerReq
+      response:
+        type: BBPSServerResp
+  - GET:
+      endpoint: /bbps/orders
+      auth: TokenAuth
+      query:
+        - limit: Int # 10 default
+        - offset: Int # 0 default
+        - active: Bool
+        - status: BBPSPaymentStatus
+      response:
+        type: "[BBPSInfoAPIRes]"

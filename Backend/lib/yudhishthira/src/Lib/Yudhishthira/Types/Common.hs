@@ -32,7 +32,7 @@ data TagValues
 $(mkBeamInstancesForEnumAndList ''TagValues)
 
 newtype TagName = TagName Text
-  deriving newtype (Eq, Ord, Show)
+  deriving newtype (Eq, Ord, Show, ToJSON, FromJSON, ToSchema)
 
 class LogicInputLink a where
   getLogicInputDef :: a -> Maybe Value

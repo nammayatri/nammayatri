@@ -55,6 +55,7 @@ baseHeaders :: Array Header
 baseHeaders = 
   [ Header "Content-Type" "application/json"
   , Header "x-client-version" (getValueToLocalStore VERSION_NAME)
+  , Header "x-package" (getValueToLocalStore PACKAGE_NAME)
   , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION)
   , Header "session_id" (getValueToLocalStore SESSION_ID)
   , Header "x-device" getDeviceDetails

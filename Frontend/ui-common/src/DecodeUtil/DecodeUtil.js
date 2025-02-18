@@ -61,3 +61,11 @@ export const unsafeSetForeign = function (key,obj,value) {
   obj[key] = value;
   return obj;
 };
+
+export const unsafeGet = function (key,obj) {
+  return obj[key];
+};
+
+export const unsafeHas = function (key,obj) {
+  return obj[key] !== undefined && obj[key] !== null;
+};

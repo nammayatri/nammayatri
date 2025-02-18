@@ -15,3 +15,6 @@ findAllByApplicationEvent event = do findAllWithKV [Se.And [Se.Is Beam.event $ S
 
 findAllByChakra :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.NammaTag.NammaTag]
 findAllByChakra chakra = do findAllWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq (Just chakra)]]
+
+findAll :: BeamFlow.BeamFlow m r => m [Lib.Yudhishthira.Types.NammaTag.NammaTag]
+findAll = findAllWithKV @Beam.NammaTagT []

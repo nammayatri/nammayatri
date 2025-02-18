@@ -274,7 +274,7 @@ coinsInfoCardConfig _ stepFunction =
 errorModalConfig :: ST.DriverEarningsScreenState -> ErrorModal.Config
 errorModalConfig state =
   let vehicleVariantLocalStore = getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys
-      isVehicleRickshaw = vehicleVariantLocalStore == "AUTO_RICKSHAW"
+      isVehicleRickshaw = vehicleVariantLocalStore `DA.elem` ["EV_AUTO_RICKSHAW", "AUTO_RICKSHAW"]
       isVehicleBike = vehicleVariantLocalStore == "BIKE"
       isVehicleAmbulance = vehicleVariantLocalStore `DA.elem` ["AMBULANCE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
       isVehicleTruck = vehicleVariantLocalStore == "DELIVERY_LIGHT_GOODS_VEHICLE"

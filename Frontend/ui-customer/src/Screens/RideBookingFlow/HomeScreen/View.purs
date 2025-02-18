@@ -133,7 +133,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.LocalizableV2.Strings (getEN)
+import Resources.LocalizableV2.Strings (getEN, getStringV2)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
@@ -169,7 +169,6 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Map as Map
 import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
-import ConfigProvider
 import Mobility.Prelude
 import Timers
 import PrestoDOM.Core
@@ -204,6 +203,7 @@ import Helpers.Utils as HU
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Screens.HomeScreen.ScreenData (dummyNewContacts)
 import Engineering.Helpers.Commons as EHC
+import Resources.LocalizableV2.Types
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -678,8 +678,9 @@ view push state =
                       , gravity CENTER
                       , onClick push $ const NoAction
                       , background Color.black9000
-                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]]
-                    else [])
+                      ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
+                    else []
+              <> if state.props.bookAmbulanceModal then [PopUpModal.view (push <<< AgreePopUp) (PopUpConfigs.bookAmbulanceModalConfig state)] else [])
         ]
   ]
   where
@@ -691,6 +692,7 @@ view push state =
                         && state.props.showAcWorkingPopup
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
                         && (not $ state.data.driverInfoCardState.serviceTierName `Arr.elem` [Just "Auto", Just "Bike Taxi"])
+                        && (not $ state.data.driverInfoCardState.vehicleVariant `Arr.elem` ["AMBULANCE_TAXI" , "AMBULANCE_TAXI_OXY"])
                         && state.data.currentCityConfig.enableAcViews
                         && state.data.fareProductType /= FPT.DELIVERY
 
@@ -1009,7 +1011,7 @@ trackingCardCallView push state item =
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
-        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state (getString RECOMMENDED) state.data.config.showRecommendedText else labelView push state (getStringV2 faster) state.data.config.showFasterText
       ]
       , textView
         $
@@ -1027,25 +1029,26 @@ trackingCardCallView push state item =
         ]
     ]
 
-labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-labelView push state =
-  linearLayout[
-    height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , cornerRadii $ Corners 8.0 true true true true
-  , background Color.green900
-  , margin (MarginHorizontal 10 10)
-  ][
-    textView $ [
-      width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.white900
-    , gravity CENTER
-    , padding (Padding 8 1 8 1)
-    , textSize FontSize.a_13
-    , text (getString RECOMMENDED)
+labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean ->  PrestoDOM (Effect Unit) w
+labelView push state label toShow =
+    linearLayout[
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , cornerRadii $ Corners 8.0 true true true true
+    , background Color.green900
+    , margin (MarginHorizontal 10 10)
+    , visibility $ boolToVisibility $ toShow
+    ][
+      textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.white900
+      , gravity CENTER
+      , padding (Padding 8 1 8 1)
+      , textSize FontSize.a_13
+      , text label
+      ]
     ]
-  ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =
@@ -3101,7 +3104,7 @@ updateRecentTrips action push response = do
 driverLocationTracking :: (Action -> Effect Unit) -> (String -> RideBookingRes -> Action) -> (String -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction driverReachedDestinationAction updateState duration trackingId state routeState expCounter = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  let hideMarkerCallback = not (state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall)
+  let hideMarkerCallback = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
   (GlobalState gbState) <- getState
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     let bookingId = if state.props.bookingId == "" then gbState.homeScreen.props.bookingId else state.props.bookingId
@@ -3530,7 +3533,7 @@ deliveryPickupAndDropLocationView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY
+    , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && state.props.currentStage /= EditPickUpLocation
     ]
     [ currentLocationView push state $ deliveryPickupLocationConfig state
     , currentLocationView push state $ deliveryDropLocationConfig state
@@ -4063,7 +4066,8 @@ mapView' push state idTag =
       -- banners = getBannerConfigs state BannerCarousel
       enableActions = isHomeScreenView state && state.props.isSrcServiceable
       buttonPadding = if os == "IOS" then Padding 16 16 16 12 else Padding 16 16 16 16
-
+      initialLottieView = getValueToLocalStore MapViewLottie == "true"
+      mapViewLottieConfig = mapLottieConfig FunctionCall
   in
   PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $
   Keyed.relativeLayout
@@ -4085,6 +4089,12 @@ mapView' push state idTag =
                 if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
                   void $ getCurrentPosition push CurrentLocation
                 else pure unit
+                if state.props.mapLottieViewVisibility && isHomeScreenView state && initialLottieView && mapViewLottieConfig.visibility
+                  then do
+                    void $ startTimer 18 "MapLottieViewTimer" "1" push ToggleMapLottieView
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = mapViewLottieConfig.lottieUrl, lottieId = getNewIDWithTag "HomeScreenLottieViewOverMap"}
+                  else 
+                    pure unit
                 _ <- showMap (getNewIDWithTag idTag) (isHomeScreenView state) "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
                 if os == "IOS" then
                   case state.props.currentStage of
@@ -4101,6 +4111,12 @@ mapView' push state idTag =
             )
             (const MapReadyAction)
           ])[]
+     , Tuple "LottieViewOverMap" $ lottieAnimationView
+        [ id (getNewIDWithTag "HomeScreenLottieViewOverMap")
+        , visibility $ boolToVisibility $ state.props.mapLottieViewVisibility && isHomeScreenView state && initialLottieView && mapViewLottieConfig.visibility
+        , width MATCH_PARENT
+        , padding $ PaddingBottom 40
+        ]
      , Tuple "BottomGradient" $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -4152,6 +4168,7 @@ mapView' push state idTag =
            , height $ V 32
            , width $ V 32
            ]
+          , highCancellationBanner push state
           ,relativeLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
@@ -4265,15 +4282,76 @@ followRideBar push followers customWidth addSafePadding useCornerRadius =
 
 getMapDimensions :: HomeScreenState -> {height :: Length, width :: Length}
 getMapDimensions state =
-  let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then
+  let mapViewLottieConfig = mapLottieConfig FunctionCall
+      mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then
                     getMapHeight state
                   else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 35)
+                    if state.props.mapLottieViewVisibility && getValueToLocalStore MapViewLottie == "true" && mapViewLottieConfig.visibility then V (getHeightFromPercent 40) else V (getHeightFromPercent 35)
                   else if (state.data.fareProductType == FPT.RENTAL) then
                     V (screenHeight unit - 100)
                   else MATCH_PARENT
       mapWidth = MATCH_PARENT
   in {height : mapHeight, width : mapWidth}
+
+highCancellationBanner :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+highCancellationBanner push state =
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in
+  linearLayout 
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.brownishYellow
+  , margin $ Margin 16 8 16 2
+  , cornerRadius 12.0
+  , visibility $ boolToVisibility $ showCancellationHighBanner state.data.cancellationRate
+  ]
+  [ linearLayout 
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ Margin 14 8 8 8
+    , id $ EHC.getNewIDWithTag "cancellationBannerText"
+    ]
+    [ textView $
+      [ text $ getString YOUR_CANCELLATION_RATE_IS_HIGH
+      , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
+      , height WRAP_CONTENT
+      ] <> FontStyle.subHeading3 TypoGraphy
+    , textView $
+      [ text $ getString $ AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName
+      , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
+      , singleLine false
+      , height WRAP_CONTENT
+      , margin $ MarginVertical 4 4
+      ] <> FontStyle.body1 TypoGraphy
+    ]
+    , linearLayout[weight 1.0][]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , orientation VERTICAL
+      , height $ V (if contentLayout.height == 0 then 80 else contentLayoutHeight)
+      ]
+      [ linearLayout[weight 1.0][]
+      , imageView
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancellation_high"
+        , accessibility DISABLE
+        , margin $ MarginRight 12
+        , height $  V 80
+        , width $ V 80
+        ]
+      ]
+    ]
+    where 
+      showCancellationHighBanner :: Maybe Number -> Boolean
+      showCancellationHighBanner cancellationRate =
+        let rate = fromMaybe 0.0 cancellationRate
+            cancellationThresholdConfig = RemoteConfig.getCancellationBannerThresholdConfig $  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+        in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
+      contentLayoutHeight = HU.getDefaultPixelSize(contentLayout.height + 20)
+      contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "cancellationBannerText"
+        
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state =
@@ -4817,7 +4895,7 @@ rentalBannerView state push =
                                       FPT.INTER_CITY -> (getString INTER_CITY_)
                                       FPT.RENTAL -> (getString RENTAL_STR)
                                       _ -> (getString SCHEDULED)
-            (getString DRIVER_ASSIGNED) <> " &#8226; " <> bookingInfoString <> "<br> <b>" <> driverName <> " &#8226; " <> vehicleNumber <> "</b>"
+            (getString DRIVER_ASSIGNED) <> " • " <> bookingInfoString <> "<br> <b>" <> driverName <> " • " <> vehicleNumber <> "</b>"
           _ -> do
             let timeUTC = rentalsInfo.rideScheduledAtUTC
                 fpt = rentalsInfo.fareProductType
@@ -5399,7 +5477,7 @@ intercityWebView push state  =
 
 pickupLocationConfig :: HomeScreenState -> CurrentLocationConfig
 pickupLocationConfig state =
-  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint && state.data.fareProductType /= FPT.DELIVERY
+  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint && (state.data.fareProductType /= FPT.DELIVERY || state.props.currentStage == EditPickUpLocation)
   in {
         isClickable: state.props.currentStage /= EditPickUpLocation,
         click: GoBackToSearchLocationModal,

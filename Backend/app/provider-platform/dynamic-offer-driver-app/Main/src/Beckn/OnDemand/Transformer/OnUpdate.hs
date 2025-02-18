@@ -111,7 +111,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+                  itemTags = Utils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -253,7 +253,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+                  itemTags = Utils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,

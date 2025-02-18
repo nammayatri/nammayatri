@@ -556,7 +556,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             driverPhoneNo = (.driverPhoneNo) =<< mbRideInfoRes,
             vehicleNo = maybe "" (.vehicleNo) mbRideInfoRes,
             vehicleCategory = show . fromJust . vehicleVariant <$> mbRideInfoRes,
-            vehicleServiceTier = (.vehicleServiceTier) =<< mbRideInfoRes,
+            vehicleServiceTier = (.vehicleServiceTierName) =<< mbRideInfoRes,
             status = maybe "" (show . (.bookingStatus)) mbRideInfoRes,
             rideCreatedAt = maybe now (.createdAt) mbRide,
             pickupLocation = mkLocation ((.customerPickupLocation) <$> mbRideInfoRes),
@@ -890,6 +890,11 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
+      vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
+      driverName = maybe "" (.driverName) mbRideInfoRes
+      driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
+      vehicleServiceTierName = fromMaybe "" $ (.vehicleServiceTierName) =<< mbRideInfoRes
+      mobileCountryCode = fromMaybe "+91" $ (.mobileCountryCode) =<< mbRideInfoRes
       merchantName =
         fromMaybe "" $
           issueConfig.messageTransformationConfig
@@ -916,10 +921,25 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "DRIVER_ADDITIONS" -> show driverAdditions
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
+        "VEHICLE_NUMBER" -> vehicleNo
+        "DRIVER_NAME" -> driverName
+        "DRIVER_MOBILE_NUMBER" -> mobileCountryCode <> " " <> driverPhoneNo
+        "VEHICLE_SERVICE_TIER" -> vehicleServiceTierName
         others -> "{#" <> others <> "#}"
   where
     getFareFromArray :: Text -> [FareBreakup] -> Maybe FareBreakup
     getFareFromArray fareKey = find (\fareBreakup -> fareBreakup.description == fareKey)
+
+    formatVehicleNo :: Text -> Text
+    formatVehicleNo vehicleNo =
+      let pattern_ = "^([A-Z]{2})([0-9]{2})([A-Z]*)([0-9]{4})$" :: String
+          vehicleStr = T.unpack vehicleNo
+          matches = vehicleStr =~ pattern_ :: (String, String, String, [String])
+       in case matches of
+            (_, _, _, [grp1, grp2, grp3, grp4]) ->
+              let formatted = unwords [grp1, grp2] ++ (if null grp3 then "" else " " ++ grp3) ++ " " ++ grp4
+               in T.pack formatted
+            _ -> vehicleNo
 
 mkIssueOptionList ::
   D.IssueConfig -> Language -> Maybe RideInfoRes -> (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
@@ -927,7 +947,8 @@ mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslat
   Common.IssueOptionRes
     { issueOptionId = issueOption.id,
       label = fromMaybe (issueOption.option & T.toUpper & T.replace " " "_") issueOption.label,
-      option = transformOption $ fromMaybe issueOption.option $ issueTranslation <&> (.translation)
+      option = transformOption $ fromMaybe issueOption.option $ issueTranslation <&> (.translation),
+      mandatoryUploads = issueOption.mandatoryUploads
     }
   where
     transformOption :: Text -> Text

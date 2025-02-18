@@ -17,6 +17,9 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Message as Beam
 import Storage.Queries.MessageExtra as ReExport
 
+updateShareable :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Message.Message -> m ())
+updateShareable shareable id = do updateOneWithKV [Se.Set Beam.shareable (Kernel.Prelude.Just shareable)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Message.Message -> m (Maybe Domain.Types.Message.Message))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -32,6 +35,7 @@ updateByPrimaryKey (Domain.Types.Message.Message {..}) = do
       Se.Set Beam.mediaFiles (Kernel.Types.Id.getId <$> mediaFiles),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOperatingCityId)),
+      Se.Set Beam.shareable (Kernel.Prelude.Just shareable),
       Se.Set Beam.shortDescription shortDescription,
       Se.Set Beam.title title,
       Se.Set Beam.viewCount viewCount

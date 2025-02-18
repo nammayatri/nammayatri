@@ -23,9 +23,11 @@ module Domain.Action.UI.Frontend
 where
 
 import Domain.Action.UI.Booking
+import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CancellationReason
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -39,6 +41,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Ride as QR
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -60,14 +63,18 @@ type NotifyEventResp = APISuccess
 
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
-  personStatus' <- QPFS.getStatus personId
-  case personStatus' of
-    Just personStatus -> do
-      case personStatus of
-        DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
-        DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-        _ -> checkForActiveBooking
-    Nothing -> checkForActiveBooking
+  activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
+  if not (null activeJourneyIds)
+    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeyIds = activeJourneyIds}) Nothing
+    else do
+      personStatus' <- QPFS.getStatus personId
+      case personStatus' of
+        Just personStatus -> do
+          case personStatus of
+            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
+            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
+            _ -> checkForActiveBooking
+        Nothing -> checkForActiveBooking
   where
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
@@ -111,6 +118,8 @@ notifyEvent personId merchantId req = do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
+      activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
+      mapM_ (QJourney.updateStatus DJ.COMPLETED) activeJourneyIds
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch

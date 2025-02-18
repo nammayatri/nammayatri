@@ -38,7 +38,8 @@ data IssueOptionT f = IssueOptionT
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory)
+    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory),
+    mandatoryUploads :: B.C f (Maybe [Common.MandatoryUploads])
   }
   deriving (Generic, B.Beamable)
 

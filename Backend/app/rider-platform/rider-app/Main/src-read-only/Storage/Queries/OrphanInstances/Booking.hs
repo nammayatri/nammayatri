@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.LocationMapping
@@ -24,7 +25,7 @@ import qualified Storage.Queries.TripTerms
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
-    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops
+    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -47,6 +48,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientId = Kernel.Types.Id.Id <$> clientId,
             clientSdkVersion = clientSdkVersion',
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             createdAt = createdAt,
             disabilityTag = disabilityTag,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
@@ -65,8 +67,12 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             isAirConditioned = isAirConditioned,
             isBookingUpdated = fromMaybe False isBookingUpdated,
             isDashboardRequest = isDashboardRequest,
+            isDeleted = isDeleted,
             isReferredRide = isReferredRide,
             isScheduled = fromMaybe False isScheduled,
+            isSkipped = isSkipped,
+            journeyId = Kernel.Types.Id.Id <$> journeyId,
+            journeyLegOrder = journeyLegOrder,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             paymentMethodId = paymentMethodId,
@@ -105,6 +111,8 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.fareProductType = getFareProductType bookingDetails,
         Beam.isUpgradedToCab = getIsUpgradedToCab bookingDetails,
         Beam.otpCode = getOtpCode bookingDetails,
+        Beam.parcelQuantity = getParcelQuantity bookingDetails,
+        Beam.parcelType = getParcelType bookingDetails,
         Beam.stopLocationId = getStopLocationId bookingDetails,
         Beam.toLocationId = getToLocationId bookingDetails,
         Beam.bppBookingId = Kernel.Types.Id.getId <$> bppBookingId,
@@ -117,6 +125,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = Kernel.Types.Id.getId <$> clientId,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
+        Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,
         Beam.disabilityTag = disabilityTag,
         Beam.discount = discount <&> (.amount),
@@ -137,8 +146,12 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.isAirConditioned = isAirConditioned,
         Beam.isBookingUpdated = Just isBookingUpdated,
         Beam.isDashboardRequest = isDashboardRequest,
+        Beam.isDeleted = isDeleted,
         Beam.isReferredRide = isReferredRide,
         Beam.isScheduled = Just isScheduled,
+        Beam.isSkipped = isSkipped,
+        Beam.journeyId = Kernel.Types.Id.getId <$> journeyId,
+        Beam.journeyLegOrder = journeyLegOrder,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.paymentMethodId = paymentMethodId,

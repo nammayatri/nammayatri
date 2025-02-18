@@ -78,3 +78,9 @@ ALTER TABLE atlas_app.merchant ADD COLUMN num_of_allowed_edit_location_attempts_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN gateway_and_registry_priority_list text[]  default '{"NY"}';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN enable_for_multiple_search_issue boolean  default true;

@@ -78,6 +78,13 @@ screen initialState =
                 $ do
                     (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
                     lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
+                    if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
+                      response <- lift $ lift $ Remote.generateReferralCode (GenerateReferralCodeReq {} )
+                      case response of
+                        Right (GenerateReferralCodeRes referralCode) -> do
+                          lift $ lift $ doAff do liftEffect $ push $ (UpdateReferralCode (GenerateReferralCodeRes referralCode))
+                        Left _ -> pure unit
+                    else pure unit
                     (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
                     lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
             void $ launchAff $ flowRunner defaultGlobalState do
@@ -446,7 +453,7 @@ driverReferralCode push state =
                 , text state.data.referralCode
                 , color Color.black900
                 , fontStyle $ FontStyle.feFont LanguageStyle
-                , textSize FontSize.a_30
+                , textSize FontSize.a_20
                 , margin $ MarginTop 10
                 ]
             , linearLayout
@@ -601,7 +608,8 @@ referralCountView showStar text' count visibility' push popupType =
 
 appQRCodeView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 appQRCodeView push state =
-  linearLayout
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , gravity CENTER
@@ -622,7 +630,7 @@ appQRCodeView push state =
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER
-              , text $ getString $ LT.DOWNLOAD_NAMMA_YATRI "DOWNLOAD_NAMMA_YATRI"
+              , text $ getString $ LT.DOWNLOAD_NAMMA_YATRI appName
               , margin $ MarginVertical 10 7
               , color Color.black800
               ]

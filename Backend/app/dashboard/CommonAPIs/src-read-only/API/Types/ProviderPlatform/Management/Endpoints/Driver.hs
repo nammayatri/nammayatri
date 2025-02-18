@@ -20,6 +20,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
@@ -257,7 +258,7 @@ data UpdateDriverNameReq = UpdateDriverNameReq {firstName :: Kernel.Prelude.Text
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDriverNameReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UpdateDriverTagReq = UpdateDriverTagReq {driverTag :: Kernel.Prelude.Text, isAddingTag :: Kernel.Prelude.Bool}
+data UpdateDriverTagReq = UpdateDriverTagReq {driverTag :: Lib.Yudhishthira.Types.TagNameValue, isAddingTag :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -320,6 +321,9 @@ type GetDriverList =
            Kernel.Prelude.Text
       :> QueryParam
            "vehicleNumberSearchString"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbNameSearchString"
            Kernel.Prelude.Text
       :> Get
            '[JSON]
@@ -514,7 +518,7 @@ data DriverAPIs = DriverAPIs
     postDriverPersonId :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
     getDriverAadhaarInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverAadhaarInfoRes,
     getDriverAadhaarInfobyMobileNumber :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverAadhaarInfoByPhoneReq,
-    getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverListRes,
+    getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverListRes,
     getDriverActivity :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverActivityRes,
     postDriverDisable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverAcRestrictionUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateACUsageRestrictionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

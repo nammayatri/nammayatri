@@ -36,7 +36,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -52,7 +52,9 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person),
     findByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
-    mbSendUnattendedTicketAlert :: Maybe (Text -> m ())
+    mbSendUnattendedTicketAlert :: Maybe (Text -> m ()),
+    findRideByRideShortId :: Id Merchant -> ShortId Ride -> m (Maybe Ride),
+    findByMobileNumberAndMerchantId :: Text -> DbHash -> Id Merchant -> m (Maybe Person)
   }
 
 -- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
@@ -109,7 +111,8 @@ issueCategoryList merchantShortId city issueHandle identifier = do
 
 issueList ::
   ( BeamFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r
   ) =>
   ShortId Merchant ->
   Context.City ->
@@ -118,14 +121,24 @@ issueList ::
   Maybe IssueStatus ->
   Maybe (Id DIC.IssueCategory) ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (ShortId Ride) ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListResponse
-issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee issueHandle identifier = do
+issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbMobileCountryCode mbPhoneNumber mbRideShortId issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
-  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee
+  mbPerson <- forM mbPhoneNumber $ \phoneNumber -> do
+    let mobileCountryCode = maybe "+91" (\code -> "+" <> T.strip code) mbMobileCountryCode
+    numHash <- getDbHash phoneNumber
+    B.runInReplica $
+      issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantOperatingCity.merchantId
+        >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
+  mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
+  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide)
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <-
@@ -134,7 +147,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
         ( \issueReport ->
             case issueReport.merchantOperatingCityId of
               Nothing -> do
-                person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
+                person <- maybe (issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)) pure mbPerson
                 if person.merchantOperatingCityId /= merchantOperatingCity.id
                   then return Nothing
                   else Just <$> mkIssueReport issueReport
@@ -581,6 +594,7 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
             igmSubCategory = igmSubCategory,
+            mandatoryUploads = mandatoryUploads,
             ..
           }
 
@@ -623,6 +637,7 @@ updateIssueOption merchantShortId city issueOptionId req issueHandle identifier 
             showOnlyWhenUserBlocked = fromMaybe False $ req.showOnlyWhenUserBlocked <|> Just showOnlyWhenUserBlocked,
             label = req.label <|> label,
             updatedAt = now,
+            mandatoryUploads = req.mandatoryUploads <|> mandatoryUploads,
             ..
           }
 

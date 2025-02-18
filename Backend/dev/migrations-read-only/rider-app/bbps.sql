@@ -1,0 +1,21 @@
+CREATE TABLE atlas_app.bbps ();
+
+ALTER TABLE atlas_app.bbps ADD COLUMN amount double precision NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN biller_id text NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN customer_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN customer_mobile_number text NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN customer_params json ;
+ALTER TABLE atlas_app.bbps ADD COLUMN error_message text ;
+ALTER TABLE atlas_app.bbps ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN payment_information json ;
+ALTER TABLE atlas_app.bbps ADD COLUMN payment_mode text ;
+ALTER TABLE atlas_app.bbps ADD COLUMN payment_txn_id text ;
+ALTER TABLE atlas_app.bbps ADD COLUMN ref_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN ref_short_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN trans_type text NOT NULL;
+ALTER TABLE atlas_app.bbps ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.bbps ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.bbps ADD PRIMARY KEY ( ref_id);
+CREATE INDEX bbps_idx_customer_id ON atlas_app.bbps USING btree (customer_id);

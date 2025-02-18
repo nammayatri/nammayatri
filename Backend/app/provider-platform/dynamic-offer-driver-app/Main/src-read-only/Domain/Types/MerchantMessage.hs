@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -66,6 +65,7 @@ data MessageKey
   | FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
   | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
   | WHATSAPP_MANUAL_PAYMENT_LINK
+  | FLEET_CONSENT_DEEPLINK_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

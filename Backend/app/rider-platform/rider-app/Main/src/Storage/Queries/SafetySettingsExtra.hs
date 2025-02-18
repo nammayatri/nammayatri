@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.SafetySettingsExtra where
 
 import Control.Applicative ((<|>))

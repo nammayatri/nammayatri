@@ -20,6 +20,41 @@ export const getFromTopWindow = function (key) {
   return top[key];
 }
 
+export const getMJOS = (fileName) => {
+  const mJOS = JSON.parse(JBridge.loadFileInDUI(fileName))
+  checkAndUpdateOverrides(mJOS);
+  return mJOS;
+}
+
+function checkAndUpdateOverrides(mJOS) {
+  const overrides = mJOS.overrides;
+  if (overrides != undefined && Array.isArray(overrides)) {
+    overrides.forEach(function (override) {
+      var shouldOverride = false;
+      try {
+        shouldOverride = eval(override.condition);
+      } catch (e) {}
+      if (shouldOverride) {
+        mergeObjects(mJOS, override.result);
+      }
+    });
+  }
+}
+
+function mergeObjects(config, result) {
+  for (var key in result) {
+    var newValue = result[key];
+    var oldValue = config[key];
+    if (typeof oldValue == typeof newValue) {
+      if (newValue != null && typeof newValue == "object") {
+        mergeObjects(oldValue, newValue);
+      } else {
+        config[key] = newValue;
+      }
+    }
+  }
+}
+
 export const getCUGUser = function () {
   const JOSFlags = JOS.getJOSflags();
   if (JOSFlags && JOSFlags.isCUGUser) {

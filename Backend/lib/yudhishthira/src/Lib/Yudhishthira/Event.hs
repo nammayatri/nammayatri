@@ -2,7 +2,6 @@ module Lib.Yudhishthira.Event where
 
 import qualified Data.Aeson as A
 import Data.Scientific
-import qualified Data.Text as T
 import JsonLogic
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -10,7 +9,7 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as SQNT
--- import Lib.Yudhishthira.Tools.Utils
+import Lib.Yudhishthira.Tools.Utils (mkTagNameValue)
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
 
@@ -44,9 +43,7 @@ yudhishthiraDecide req = do
 
     convertToTagResponse :: (MonadFlow m) => DNT.NammaTag -> m (Maybe NammaTagResponse)
     convertToTagResponse tag = do
-      let tagValidity = case tag.info of
-            DNT.KaalChakra (DNT.KaalChakraTagInfo _ validity) -> validity
-            _ -> Nothing
+      let tagValidity = tag.validity
       mbRespValue <-
         case tag.rule of
           LLM _ -> return Nothing
@@ -92,14 +89,9 @@ computeNammaTags ::
   ) =>
   ApplicationEvent ->
   a ->
-  m [Text]
+  m [TagNameValue]
 computeNammaTags event sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = YudhishthiraDecideReq {source = Application event, sourceData}
   resp <- yudhishthiraDecide req
-  resp.tags `forM` \tag -> do
-    tagValue <- case tag.tagValue of
-      TextValue text -> return text
-      NumberValue number -> return $ show number
-      ArrayValue values -> return $ T.intercalate "&" values
-    return $ tag.tagName <> "#" <> tagValue
+  pure $ resp.tags <&> (\tag -> mkTagNameValue (TagName tag.tagName) tag.tagValue)

@@ -13,14 +13,17 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.TripTransaction as BeamT
 import Storage.Queries.OrphanInstances.TripTransaction
 
+data SortType = SortAsc | SortDesc
+
 findAllTripTransactionByDriverIdStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
   Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
   Maybe Domain.Types.TripTransaction.TripStatus ->
+  SortType ->
   m [Domain.Types.TripTransaction.TripTransaction]
-findAllTripTransactionByDriverIdStatus driverId mbLimit mbOffset mbStatus = do
+findAllTripTransactionByDriverIdStatus driverId mbLimit mbOffset mbStatus sortType = do
   let limitVal = case mbLimit of
         Just val -> val
         Nothing -> 10
@@ -32,11 +35,9 @@ findAllTripTransactionByDriverIdStatus driverId mbLimit mbOffset mbStatus = do
           Just status -> [Se.Is BeamT.status $ Se.Eq status]
           Nothing -> []
   let filterSort =
-        case mbStatus of
-          Just TRIP_ASSIGNED -> (Se.Asc BeamT.sequenceNumber)
-          Just IN_PROGRESS -> (Se.Asc BeamT.sequenceNumber)
-          _ -> (Se.Desc BeamT.createdAt)
-
+        case sortType of
+          SortAsc -> Se.Asc BeamT.createdAt
+          SortDesc -> Se.Desc BeamT.createdAt
   transactions <-
     findAllWithOptionsKV
       [Se.And ([Se.Is BeamT.driverId $ Se.Eq driverId.getId] <> statusFilter)]
@@ -60,3 +61,19 @@ findAllTripTransactionByDriverIdActiveStatus driverId = do
       (Just limitVal)
       (Just offsetVal)
   pure transactions
+
+findAllTripTransactionByDriverIdWithinCreationRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Int -> Kernel.Prelude.Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.TripTransaction.TripTransaction]))
+findAllTripTransactionByDriverIdWithinCreationRange limit offset driverId mbFrom mbTo mbVehicleNumber = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+            <> [Se.Is BeamT.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is BeamT.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is BeamT.vehicleNumber $ Se.Eq (fromJust mbVehicleNumber) | isJust mbVehicleNumber]
+        )
+    ]
+    (Se.Desc BeamT.createdAt)
+    limit
+    offset

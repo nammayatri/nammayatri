@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Yudhishthira.Types.NammaTag where
@@ -18,6 +17,7 @@ data NammaTag = NammaTag
     name :: Kernel.Prelude.Text,
     possibleValues :: Lib.Yudhishthira.Types.TagValues,
     rule :: Lib.Yudhishthira.Types.TagRule,
+    validity :: Kernel.Prelude.Maybe Kernel.Types.Common.Hours,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -25,8 +25,7 @@ data NammaTag = NammaTag
 
 newtype ApplicationTagInfo = ApplicationTagInfo {event :: Lib.Yudhishthira.Types.ApplicationEvent} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-data KaalChakraTagInfo = KaalChakraTagInfo {chakra :: Lib.Yudhishthira.Types.Chakra, validity :: Kernel.Prelude.Maybe Kernel.Types.Common.Hours}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+newtype KaalChakraTagInfo = KaalChakraTagInfo {chakra :: Lib.Yudhishthira.Types.Chakra} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
 data TagInfo
   = Application Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo

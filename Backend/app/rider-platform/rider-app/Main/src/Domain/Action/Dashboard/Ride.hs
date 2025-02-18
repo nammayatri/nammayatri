@@ -387,7 +387,7 @@ rideInfo merchantId reqRideId = do
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
         vehicleVariant = ride.vehicleVariant,
-        vehicleServiceTierName = show <$> ride.vehicleServiceTierType,
+        vehicleServiceTierName = booking.serviceTierName,
         rideBookingTime = booking.createdAt,
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,
@@ -417,7 +417,8 @@ rideInfo merchantId reqRideId = do
         estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
         computedPrice = ride.totalFare <&> (.amount),
         rideCreatedAt = ride.createdAt,
-        roundTrip = booking.roundTrip
+        roundTrip = booking.roundTrip,
+        mobileCountryCode = person.mobileCountryCode
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup

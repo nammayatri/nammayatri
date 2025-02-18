@@ -5144,10 +5144,14 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void clearFocus(String id) {
         if (bridgeComponents.getActivity() != null) {
-            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
+            ExecutorManager.runOnMainThread(() -> {
+                View v = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                if (v != null) {
+                    v.clearFocus();
+                }
+            });
         }
     }
-
     @JavascriptInterface
     public void uploadMultiPartData(String filePath, String uploadUrl, String fileType, String outputField, String formDataField) {
         try {
@@ -5368,7 +5372,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Use displayBase64Image instead
     @JavascriptInterface
     public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
-        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
+        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
     }
 
     // Deprecated on 5-Jan-2024
@@ -5443,7 +5447,7 @@ public class MobilityCommonBridge extends HyperBridge {
             boolean adjustViewBounds = configObj.optBoolean("adjustViewBounds", true);
 
             // call api to get base64image
-            String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
+            String base64Image = source.startsWith("http") ? MobilityCallAPI.getInstance(bridgeComponents.getContext()).callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
 
             // convert base64Image to imageView
             ExecutorManager.runOnMainThread(() -> {

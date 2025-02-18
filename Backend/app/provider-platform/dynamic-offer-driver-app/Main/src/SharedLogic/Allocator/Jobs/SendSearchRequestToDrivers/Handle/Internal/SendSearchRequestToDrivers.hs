@@ -163,6 +163,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               actualRideDuration = Nothing,
               noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
+              estimatedCongestionCharge = Nothing,
               avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
@@ -277,6 +278,9 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 middleStopCount = Just $ length searchReq.stops,
                 upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
                 isFavourite = isFavourite,
+                parcelType = searchReq.parcelType,
+                parcelQuantity = searchReq.parcelQuantity,
+                driverTagScore = dpRes.score,
                 ..
               }
       pure searchRequestForDriver

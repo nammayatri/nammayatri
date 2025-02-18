@@ -24,15 +24,14 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PayoutConfig.PayoutConfig] -> m ())
 createMany = traverse_ create
 
-findByCityIdAndVehicleCategoryAndIsPayoutEnabled ::
+findByCityIdAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
-findByCityIdAndVehicleCategoryAndIsPayoutEnabled merchantOperatingCityId vehicleCategory isPayoutEnabled = do
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
+findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
-          Se.Is Beam.isPayoutEnabled $ Se.Eq isPayoutEnabled
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
 

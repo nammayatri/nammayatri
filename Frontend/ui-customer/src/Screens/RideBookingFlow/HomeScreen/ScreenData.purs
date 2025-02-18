@@ -208,6 +208,7 @@ initData = let
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
+    , cancellationRate : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -217,6 +218,7 @@ initData = let
     , isHomescreenExpanded : false
     , canScheduleRide : false
     , isSearchLocation : NoView
+    , mapLottieViewVisibility : true
     , bookingUpdateRequestId : Nothing
     , showConfirmEditDestPopUp : false
     , currentStage : HomeScreen
@@ -303,6 +305,7 @@ initData = let
       , customerTipArrayWithValues : []
       , activeIndex : -1
       , primaryButtonText : ""
+      , suggestedActiveIndex : Nothing
       }
     , focussedBottomIcon : MOBILITY
     , timerId : ""
@@ -413,6 +416,9 @@ initData = let
     , isContactSupportPopUp : false
     , showChatListPopUp : false
     , isSharedLocationFlow : false
+    , bookAmbulanceModal : false
+    , firstTimeAmbulanceSearch : false
+    , searchType : Nothing
     , isOtpRideFlow : false
     , safetySettings : Nothing
     , isIntercityFlow : false
@@ -571,6 +577,7 @@ dummyDriverInfo =
   , senderDetails : Nothing
   , receiverDetails : Nothing
   , estimatedTimeToReachDestination : Nothing
+  , isAirConditioned : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -657,7 +664,7 @@ dummyRideBooking = RideBookingRes
   hasDisability : Nothing,
   sosStatus: Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing,
+  isAirConditioned : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing,
   estimatedDistance : Nothing,

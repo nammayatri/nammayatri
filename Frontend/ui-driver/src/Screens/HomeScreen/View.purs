@@ -68,7 +68,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow, getFutureDate, convertUTCtoISC)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Utils (toggleLoader)
+import Engineering.Helpers.Utils (toggleLoader,getAndRemoveLatestNotificationType)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -141,13 +141,15 @@ screen initialState (GlobalState globalState) =
           when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
-          void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-            driverProfileResp <- Remote.fetchDriverProfile false
-            case driverProfileResp of
-                Right resp -> do
-                  liftFlow $ push $ ProfileDataAPIResponseAction resp
-                Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-            pure unit
+          -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+          --   driverProfileResp <- Remote.fetchDriverProfile false
+          --   case driverProfileResp of
+          --       Right resp -> do
+          --         liftFlow $ push $ ProfileDataAPIResponseAction resp
+          --       Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          --   pure unit
+          let isRideListTry = getAndRemoveLatestNotificationType unit == "DRIVER_ASSIGNMENT"
+          if isRideListTry then do push $ UpdateRetryRideList true else pure unit
 
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -162,7 +164,7 @@ screen initialState (GlobalState globalState) =
           else pure unit
 
           -- Polling to get the active ride details
-          if initialState.props.retryRideList && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
+          if (initialState.props.retryRideList || isRideListTry) && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
           
           if  initialState.props.checkUpcomingRide then do  
              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -215,7 +217,8 @@ screen initialState (GlobalState globalState) =
             "RideAccepted"   -> do
                                 void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id push
                                 void $ pure $ setValueToLocalStore RIDE_END_ODOMETER ""
-                                void $ pure $ setValueToLocalStore RIDE_START_ODOMETER "" 
+                                void $ pure $ setValueToLocalStore RIDE_START_ODOMETER ""
+                                void $ pure $ setValueToLocalStore DRIVER_RIDE_STATUS "ON_PICKUP"
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
@@ -270,6 +273,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
+                                _ <- pure $ setValueToLocalStore DRIVER_RIDE_STATUS "RIDE_STARTED"
 
                                 let advancedRideId = case initialState.data.advancedRideData of
                                                         Just advancedRideData -> Just advancedRideData.id
@@ -319,12 +323,17 @@ screen initialState (GlobalState globalState) =
                                     _ -> pure unit 
                                 void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
+                                _ <- pure $ setValueToLocalStore DRIVER_RIDE_STATUS "IDLE"
                                 _ <- pure $ JB.removeAllPolylines ""
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
+                                pushPlayEndRideAudio <- runEffectFn1 EHC.getValueFromIdMap "PlayEndRideAudio"
+                                when (pushPlayEndRideAudio.shouldPush && initialState.props.currentStage == RideCompleted) $ do
+                                  void $ pure $ runFn2  EHC.updatePushInIdMap "PlayEndRideAudio" false
+                                  void $ launchAff $ EHC.flowRunner defaultGlobalState $ playAudioOnRideEnd push
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
                                 
                                 if getValueToLocalStore GO_TO_PLANS_PAGE == "true" then do
@@ -332,6 +341,7 @@ screen initialState (GlobalState globalState) =
                                   void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
                                 pure unit
           runEffectFn1 consumeBP unit
+          pure $ runFn2 JB.refreshFlowCallback "HomeScreen" (\_ -> void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 1)
           pure $ pure unit
         )
   ]
@@ -483,9 +493,9 @@ view push state =
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
       , if state.data.favPopUp.visibility then favPopUpView push state else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
-      , if dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
-          completeYourProfile push state 
-        else dummyTextView
+      -- , if dateDiff > profileCompletionReminder.reminderDuration && state.data.completingProfileRes.completed < 4 then do
+      --     completeYourProfile push state 
+      --   else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
   ]
   where 
@@ -684,8 +694,8 @@ driverMapsHeaderView push state =
               ] $ [addAadhaarOrOTPView state push]
                 <> (if DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [metroWarriorsToggleView push state] else [])
                 <> [specialPickupZone push state]
-                <> (if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true) --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
+                <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW","BIKE"])&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
             ]
         ]
         , bottomNavBar push state
@@ -803,7 +813,7 @@ bannersCarousal view bottomMargin state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin if bottomMargin && not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW","BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"]) then MarginTop 12 else MarginVertical 12 12
+  , margin if bottomMargin && not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE"] && HU.isAmbulance state.data.linkedVehicleCategory) then MarginTop 12 else MarginVertical 12 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
 getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
@@ -1185,7 +1195,7 @@ offlineView push state =
   ]
   where
     isBookingPreferenceVisible = 
-      not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR", "DELIVERY_LIGHT_GOODS_VEHICLE"])
+      not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE"] && HU.isAmbulance state.data.linkedVehicleCategory)
       && state.props.driverStatusSet == ST.Offline
     metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
 
@@ -1199,7 +1209,7 @@ popupModelSilentAsk push state =
 
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
-  linearLayout
+ linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
@@ -1207,8 +1217,7 @@ driverDetail push state =
   , background Color.white900
   , clickable true
   , margin (MarginTop 5)
-  ] 
-  [ driverProfile push state
+  ] [ driverProfile push state
   , tripStageTopBar push state
   , accessibilityHeaderView push state (getAccessibilityHeaderText state)
   , defaultTopBar
@@ -1285,7 +1294,7 @@ tripStageTopBar push state =
       height WRAP_CONTENT,
       scrollBarX false,
       background Color.white900,
-      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag))
+      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (HU.isAmbulance state.data.linkedVehicleVariant)
     ][
       linearLayout[
         width MATCH_PARENT,
@@ -1703,7 +1712,7 @@ gotoButton push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , orientation VERTICAL
-  , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
+  , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) && (not ((RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory))
   , margin $ MarginTop 3
   ] [ linearLayout
       [ width WRAP_CONTENT
@@ -2336,21 +2345,26 @@ offlineNavigationLinks push state =
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-    , weight 1.0
-    , gravity CENTER_VERTICAL
-  ][
-    textView $
-      [  width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , ellipsize true
-        , singleLine true
-        , color Color.black800
-        , gravity CENTER_VERTICAL
-        , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
-      ] <> FontStyle.body4 TypoGraphy
-  ]
+  let locationTS = getValueToLocalStore DRIVER_LOCATION_TS
+      fallbackCode = if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER_VERTICAL
+    ][
+      textView $
+        [  width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , ellipsize true
+          , singleLine true
+          , color Color.black800
+          , gravity CENTER_VERTICAL
+          , text if (locationTS) == "__failed" 
+              then fallbackCode
+              else (convertUTCtoISC locationTS "hh:mm a")
+        ] <> FontStyle.body4 TypoGraphy
+    ]
 
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 updateButtonIconAndText push state =
@@ -2685,6 +2699,16 @@ playAudioAndLaunchMap push action state audioCompleted acRide requestedVehicleVa
       void $ delay $ Milliseconds 2000.0
       if needToTriggerMaps then liftFlow $ push $ action else pure unit
   pure unit
+
+playAudioOnRideEnd :: (Action -> Effect Unit) -> Flow GlobalState Unit
+playAudioOnRideEnd push = do
+  let city = getValueToLocalStore DRIVER_LOCATION
+      config = RC.getRideEndAudioConfig city
+  if config.enableRideEndAudio
+    then case config.rideEndAudioUrl of
+      Just url -> pure $ runFn4 JB.startAudioPlayer url push (const NoAction) "0"
+      Nothing -> pure unit
+  else pure unit
 
 checkBgLocation :: forall action. (action -> Effect Unit) ->  action -> HomeScreenState -> Boolean -> Flow GlobalState Unit
 checkBgLocation push action state bgLocPopupShown = do

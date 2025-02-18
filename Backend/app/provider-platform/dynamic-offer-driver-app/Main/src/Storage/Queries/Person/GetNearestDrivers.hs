@@ -11,7 +11,6 @@ import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
 import Domain.Utils
-import EulerHS.KVConnector.Helper.Utils
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -21,6 +20,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -28,7 +29,6 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
-import qualified Tools.Utils as TU
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -78,12 +78,9 @@ getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
-  let dIfn = Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
-  driverInfos <- measureFunctionLatencyAndReturn dIfn "GetDriverInfos" "driverInformation"
-  let vehFn = Int.getVehicles driverInfos
-  vehicle <- measureFunctionLatencyAndReturn vehFn "GetVehicles" "vehicle"
-  let drFn = Int.getDrivers vehicle
-  drivers <- measureFunctionLatencyAndReturn drFn "GetDrivers" "person"
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
+  vehicle <- Int.getVehicles driverInfos
+  drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show driverInfos
   driverBankAccounts <-
@@ -141,4 +138,28 @@ getNearestDrivers NearestDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion info.latestScheduledBooking info.latestScheduledPickup (TU.convertTags $ "NormalDriver#true" : (fromMaybe [] person.driverTag))
+          Just $
+            NearestDriversResult
+              { driverId = cast person.id,
+                driverDeviceToken = person.deviceToken,
+                language = person.language,
+                onRide = info.onRide,
+                distanceToDriver = roundToIntegral dist,
+                variant = vehicle.variant,
+                serviceTier,
+                serviceTierDowngradeLevel = maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver,
+                isAirConditioned = serviceTierInfo.isAirConditioned,
+                lat = location.lat,
+                lon = location.lon,
+                mode = info.mode,
+                clientSdkVersion = person.clientSdkVersion,
+                clientBundleVersion = person.clientBundleVersion,
+                clientConfigVersion = person.clientConfigVersion,
+                clientDevice = person.clientDevice,
+                vehicleAge = getVehicleAge vehicle.mYManufacturing now,
+                backendConfigVersion = person.backendConfigVersion,
+                backendAppVersion = person.backendAppVersion,
+                latestScheduledBooking = info.latestScheduledBooking,
+                latestScheduledPickup = info.latestScheduledPickup,
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : fromMaybe [] person.driverTag
+              }

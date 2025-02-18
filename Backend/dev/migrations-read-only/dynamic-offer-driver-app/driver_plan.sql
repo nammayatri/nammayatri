@@ -33,3 +33,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_on_free_trial boole
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_category_level_subscription_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN total_amount_charged_for_service integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN last_bill_generated_at timestamp with time zone ;

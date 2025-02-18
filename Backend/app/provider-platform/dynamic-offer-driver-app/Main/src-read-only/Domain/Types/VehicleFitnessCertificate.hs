@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.VehicleFitnessCertificate where
@@ -36,9 +35,9 @@ data VehicleFitnessCertificateE e = VehicleFitnessCertificate
   }
   deriving (Generic)
 
-type VehicleFitnessCertificate = VehicleFitnessCertificateE ('AsEncrypted)
+type VehicleFitnessCertificate = VehicleFitnessCertificateE 'AsEncrypted
 
-type DecryptedVehicleFitnessCertificate = VehicleFitnessCertificateE ('AsUnencrypted)
+type DecryptedVehicleFitnessCertificate = VehicleFitnessCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleFitnessCertificate where
   type Unencrypted VehicleFitnessCertificate = (DecryptedVehicleFitnessCertificate, HashSalt)

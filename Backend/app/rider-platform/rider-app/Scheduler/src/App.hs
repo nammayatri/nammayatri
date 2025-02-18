@@ -36,6 +36,7 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
 import "rider-app" SharedLogic.Scheduler.Jobs.CallPoliceApi
+import SharedLogic.Scheduler.Jobs.Chakras
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
@@ -72,6 +73,14 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . executePaymentIntentJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . cancelExecutePaymentIntentJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . postRideSafetyNotification)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
     }
 
 runRiderAppScheduler ::

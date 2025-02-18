@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverPanCard where
@@ -36,9 +35,9 @@ data DriverPanCardE e = DriverPanCard
   }
   deriving (Generic)
 
-type DriverPanCard = DriverPanCardE ('AsEncrypted)
+type DriverPanCard = DriverPanCardE 'AsEncrypted
 
-type DecryptedDriverPanCard = DriverPanCardE ('AsUnencrypted)
+type DecryptedDriverPanCard = DriverPanCardE 'AsUnencrypted
 
 instance EncryptedItem DriverPanCard where
   type Unencrypted DriverPanCard = (DecryptedDriverPanCard, HashSalt)
@@ -96,4 +95,4 @@ instance EncryptedItem' DriverPanCard where
 
 data VerifiedBy = FRONTEND_SDK | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VerifiedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerifiedBy)

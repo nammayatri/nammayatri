@@ -9,7 +9,6 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
     postNammaTagRunJob,
-    Handle.kaalChakraHandle,
     postNammaTagTimeBoundsCreate,
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
@@ -24,7 +23,6 @@ where
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Data.Singletons
-import qualified Domain.Action.Dashboard.Management.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
@@ -124,7 +122,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   case req.domain of
     Lib.Yudhishthira.Types.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0)
     Lib.Yudhishthira.Types.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
@@ -155,9 +153,9 @@ postNammaTagRunJob merchantShortId opCity req = do
         unless (castChakra jobType == Just req.chakra) do
           throwError (InvalidRequest "Invalid job type")
         QDBJ.markAsComplete oldJobId
-
+  let kaalChakraHandle = Chakras.mkKaalChakraHandle mbMerchantId mbMerchantOpCityId
   case req.action of
-    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
+    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
     Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
@@ -166,7 +164,7 @@ postNammaTagRunJob merchantShortId opCity req = do
         Lib.Yudhishthira.Types.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
       let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req
-      Chakras.createFetchUserDataJob mbMerchantId mbMerchantOpCityId req.chakra jobData scheduledTime
+      kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = Lib.Yudhishthira.Types.Completed}

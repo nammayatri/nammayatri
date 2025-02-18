@@ -16,6 +16,7 @@ data TrackingResp = TrackingResp {vehicleTrackingInfo :: [VehicleInfo]}
 
 data VehicleInfo = VehicleInfo
   { nextStop :: Domain.Types.RouteStopMapping.RouteStopMapping,
+    nextStopTravelDistance :: Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     vehicleId :: Kernel.Prelude.Text,
     vehicleInfo :: VehicleInfoForRoute

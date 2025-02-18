@@ -983,6 +983,7 @@ labelView push state =
   , cornerRadii $ Corners 8.0 true true true true
   , background Color.green900
   , margin (MarginHorizontal 10 10)
+  , visibility $ boolToVisibility $ state.data.config.showRecommendedText
   ][
     textView $ [
       width WRAP_CONTENT

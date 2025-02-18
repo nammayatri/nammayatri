@@ -34,7 +34,7 @@ DriverQuote:
     id : Id DriverQuote
     requestId : Id SearchRequest
     searchTryId : Id SearchTry
-    clientId : Maybe (Id Client)
+    clientId : Maybe Text
     searchRequestForDriverId : Maybe (Id SearchRequestForDriver)
     tripCategory : TripCategory
     estimateId : Id Estimate

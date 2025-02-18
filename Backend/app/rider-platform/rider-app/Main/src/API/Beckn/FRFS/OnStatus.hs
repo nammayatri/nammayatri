@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
 
 type API = Spec.OnStatusAPI
 
@@ -46,6 +47,8 @@ onStatus _ req = withFlowHandlerAPI $ do
       fork "onStatus request processing" $
         Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnStatusReq.bppOrderId) 60 $
           DOnStatus.onStatus merchant booking (DOnStatus.Booking dOnStatusReq)
+      fork "FRFS onStatus received pushing ondc logs" do
+        void $ pushLogs "on_status" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack
 
 onConfirmLockKey :: Text -> Text

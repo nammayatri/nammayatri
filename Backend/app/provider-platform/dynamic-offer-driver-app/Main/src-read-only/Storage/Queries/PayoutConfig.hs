@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.PayoutConfig where
+module Storage.Queries.PayoutConfig (module Storage.Queries.PayoutConfig, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PayoutConfig
@@ -17,6 +17,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PayoutConfig as Beam
+import Storage.Queries.PayoutConfigExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PayoutConfig.PayoutConfig -> m ())
 create = createWithKV
@@ -73,51 +74,3 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
-
-instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
-  fromTType' (Beam.PayoutConfigT {..}) = do
-    pure $
-      Just
-        Domain.Types.PayoutConfig.PayoutConfig
-          { batchLimit = batchLimit,
-            expand = expand,
-            isPayoutEnabled = isPayoutEnabled,
-            maxPayoutReferralForADay = maxPayoutReferralForADay,
-            maxRetryCount = maxRetryCount,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            orderType = orderType,
-            payoutRegistrationCgst = payoutRegistrationCgst,
-            payoutRegistrationFee = payoutRegistrationFee,
-            payoutRegistrationSgst = payoutRegistrationSgst,
-            referralRewardAmountPerRide = referralRewardAmountPerRide,
-            remark = remark,
-            thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
-            timeDiff = Kernel.Utils.Common.secondsToNominalDiffTime timeDiff,
-            vehicleCategory = vehicleCategory,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
-  toTType' (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
-    Beam.PayoutConfigT
-      { Beam.batchLimit = batchLimit,
-        Beam.expand = expand,
-        Beam.isPayoutEnabled = isPayoutEnabled,
-        Beam.maxPayoutReferralForADay = maxPayoutReferralForADay,
-        Beam.maxRetryCount = maxRetryCount,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.orderType = orderType,
-        Beam.payoutRegistrationCgst = payoutRegistrationCgst,
-        Beam.payoutRegistrationFee = payoutRegistrationFee,
-        Beam.payoutRegistrationSgst = payoutRegistrationSgst,
-        Beam.referralRewardAmountPerRide = referralRewardAmountPerRide,
-        Beam.remark = remark,
-        Beam.thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
-        Beam.timeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff,
-        Beam.vehicleCategory = vehicleCategory,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

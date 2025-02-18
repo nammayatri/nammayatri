@@ -103,7 +103,7 @@ getHotspot Maps.LatLong {..} merchantId = do
           case geoHashOfLatLong of
             Just currentGeoHash -> do
               let neighbourGeoHashes = neighboringGeohashes currentGeoHash hotSpotRadius (geoHashCellHeight precisionToGetGeohash)
-              filteredHotSpots :: [HotSpot] <- concat <$> mapMaybeM (Hedis.hGet makeHotSpotKey . Dt.pack) neighbourGeoHashes
+              filteredHotSpots :: [HotSpot] <- concat <$> mapMaybeM (\geohash -> Hedis.get (makeHotSpotKey $ Dt.pack geohash)) neighbourGeoHashes
               let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot filteredHotSpots
               filteredHotSpotWithPrecisions <- groupAndFilterHotSpotWithPrecision HotSpotConfig {..} precisionToFilterGeohash maxGeoHashToFilter finalHotSpot
               let sortedHotSpotWithFrequency = sortWithFrequency HotSpotConfig {..} filteredHotSpotWithPrecisions

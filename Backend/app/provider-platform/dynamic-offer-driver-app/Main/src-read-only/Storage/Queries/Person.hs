@@ -16,6 +16,8 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils
+import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person as Beam
 import Storage.Queries.PersonExtra as ReExport
@@ -60,13 +62,18 @@ findByIdentifierAndMerchant identifier merchantId = do findOneWithKV [Se.And [Se
 setIsNewFalse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 setIsNewFalse isNew id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateClientId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateClientId clientId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.clientId clientId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDeviceToken ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDriverTag driverTag id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.driverTag driverTag, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverTag driverTag id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.driverTag (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType driverTag), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateName firstName id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.firstName firstName, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -103,11 +110,12 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientId clientId,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.description description,
       Se.Set Beam.deviceToken deviceToken,
-      Se.Set Beam.driverTag driverTag,
+      Se.Set Beam.driverTag (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType driverTag),
       Se.Set Beam.email email,
       Se.Set Beam.faceImageId (Kernel.Types.Id.getId <$> faceImageId),
       Se.Set Beam.firstName firstName,

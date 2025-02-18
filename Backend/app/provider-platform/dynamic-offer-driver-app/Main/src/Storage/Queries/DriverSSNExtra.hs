@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.DriverSSNExtra where
 
 import Domain.Types.DriverSSN

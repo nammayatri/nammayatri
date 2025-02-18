@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module IssueManagement.Storage.Queries.Issue.IGMIssue where

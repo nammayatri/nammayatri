@@ -39,6 +39,7 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (foldl', map)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -359,7 +360,7 @@ updateAll rideId ride = do
       Se.Set BeamR.tollCharges ride.tollCharges,
       Se.Set BeamR.tollNames ride.tollNames,
       Se.Set BeamR.tollConfidence ride.tollConfidence,
-      Se.Set BeamR.rideTags ride.rideTags,
+      Se.Set BeamR.rideTags (Yudhishthira.tagsNameValueToTType ride.rideTags),
       Se.Set BeamR.updatedAt now,
       Se.Set BeamR.rideEndedBy ride.rideEndedBy
     ]

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.KioskLocationExtra where
 
 import Domain.Types.KioskLocation

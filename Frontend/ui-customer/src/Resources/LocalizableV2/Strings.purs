@@ -278,6 +278,14 @@ getProxy str =
     GETTING_ESTIMATES_FOR_YOU -> \a -> a @~ getting_estimates_for_you
     GETTING_REVISED_ESTIMATE -> \a -> a @~ getting_revised_estimate
     GETTING_STARTED_AND_FAQS -> \a -> a @~ getting_started_and_faqs
+    VERIFYING -> \a -> a @~ verifying
+    REFERRAL_CODE_VERIFIED -> \a -> a @~ referral_code_verified
+    REFERRAL_CODE_FAILED -> \a -> a @~ referral_code_failed
+    ENTER_6_DIGIT_REFERRAL_CODE -> \a -> a @~ enter_6_digit_referral_code
+    NOT_VERIFIED -> \a -> a @~ not_verified
+    OPTIONAL_BRACKETTED -> \a -> a @~ optional_bracketted
+    VERIFY -> \a -> a @~ verify
+    REFERRAL_CODE -> \a -> a @~ referral_code
     GIVE_THIS_LOCATION_A_NAME -> \a -> a @~ give_this_location_a_name
     GO_BACK_ -> \a -> a @~ go_back_
     GO_HOME_ -> \a -> a @~ go_home_
@@ -1379,6 +1387,8 @@ getProxy str =
     VIEW_FARES -> \a -> a @~ view_fares
     EXCESS_TIME_DESCRIPTION arg1 -> \a -> (a @~ excess_time_description) arg1
     ESTIMATED_CHARGES -> \a -> a @~ estimated_charges
+    YOUR_CANCELLATION_RATE_IS_HIGH -> \a -> a @~ your_cancellation_rate_is_high
+    AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP arg1 -> \a -> (a @~ avoid_further_cancellations_to_keep_using_app) arg1
     NIGHT_TIME_FEES -> \a -> a @~ night_time_fees
     PARKING_AND_OTHER_CHARGES -> \a -> a @~ parking_and_other_charges
     ADDITIONAL_CHARGES -> \a -> a @~ additional_charges
@@ -1817,4 +1827,6 @@ getProxy str =
     EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES arg1 -> \a -> (a @~ experience_our_pilot_launch_for_bus_ticketing_in_prime_routes) arg1
     NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
+    AMBULANCE_ -> \a -> a @~ ambulance_
+
 

@@ -22,7 +22,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
+  RouteStopInfo: SharedLogic.FRFSUtils
 
 module: FRFSTicketService
 types:
@@ -49,6 +50,7 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    derive: "Show"
 
   FRFSDiscountRes:
     code: Text
@@ -57,6 +59,7 @@ types:
     description: Text
     tnc: Text
     eligibility: Bool
+    derive: "Show"
 
   FRFSDiscountReq:
     code: Text
@@ -84,6 +87,9 @@ types:
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    isFareChanged: Maybe Bool
+    googleWalletJWTUrl: Maybe Text
+    derive: "Show"
 
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType
@@ -120,6 +126,7 @@ types:
     status: FRFSBookingPaymentStatusAPI
     paymentOrder: Maybe CreateOrderResp
     transactionId: Maybe Text
+    derive: "Show"
 
   FRFSBookingPaymentStatusAPI:
     enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
@@ -138,13 +145,13 @@ types:
     derive: "Show"
 
   FRFSCanCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
-    isCancellable : Maybe Bool
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isCancellable: Maybe Bool
 
   FRFSCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
 
   FRFSConfigAPIRes:
     bookingStartTime: UTCTime
@@ -169,6 +176,7 @@ types:
     startPoint: LatLong
     endPoint: LatLong
     totalStops: Maybe Int
+    stops: Maybe [FRFSStationAPI]
     waypoints: Maybe [LatLong]
     timeBounds: Maybe TimeBound
     derive: "Show"

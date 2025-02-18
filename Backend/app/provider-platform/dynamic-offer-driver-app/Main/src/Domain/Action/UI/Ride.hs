@@ -47,7 +47,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Client as DC
+import qualified Domain.Types.DeliveryDetails as DParcel
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -254,7 +254,9 @@ data DriverRideRes = DriverRideRes
     penalityCharge :: Maybe PriceAPIEntity,
     senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
     receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
-    extraFareMitigationFlag :: Maybe Bool
+    extraFareMitigationFlag :: Maybe Bool,
+    parcelType :: Maybe DParcel.ParcelType,
+    parcelQuantity :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -432,7 +434,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
         senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
         receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
-        extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag)
+        extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag),
+        parcelType = booking.parcelType,
+        parcelQuantity = booking.parcelQuantity
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
@@ -486,7 +490,7 @@ arrivedAtPickup rideId req = do
       TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
       QDI.updateExtraFareMitigation (Just False) driverId
 
-otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe (Id DC.Client) -> Flow DriverRideRes
+otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe Text -> Flow DriverRideRes
 otpRideCreate driver otpCode booking clientId = do
   transporter <-
     QM.findById booking.providerId

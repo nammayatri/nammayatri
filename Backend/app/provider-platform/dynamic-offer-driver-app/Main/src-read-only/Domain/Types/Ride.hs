@@ -1,12 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Ride where
 
 import Data.Aeson
 import qualified Domain.Types.Booking
-import qualified Domain.Types.Client
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.FareParameters
@@ -23,6 +21,7 @@ import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
@@ -34,7 +33,7 @@ data Ride = Ride
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
-    clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
+    clientId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
@@ -77,7 +76,7 @@ data Ride = Ride
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
-    rideTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,

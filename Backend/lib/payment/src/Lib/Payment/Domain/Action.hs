@@ -79,7 +79,11 @@ data PaymentStatusResp
         isRetargeted :: Maybe Bool,
         retargetLink :: Maybe Text,
         refunds :: [Payment.RefundsData],
-        payerVpa :: Maybe Text
+        payerVpa :: Maybe Text,
+        card :: Maybe Payment.CardInfo,
+        paymentMethodType :: Maybe Text,
+        authIdCode :: Maybe Text,
+        txnUUID :: Maybe Text
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -573,7 +577,7 @@ orderStatusService personId orderId orderStatusCall = do
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = (payerVpa <|> ((.payerVpa) =<< upi))}
+      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)), authIdCode = ((.authIdCode) =<< paymentGatewayResponse), txnUUID = transactionUUID, ..}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -819,7 +823,7 @@ refundService (request, refundId) merchantId refundsCall = do
   now <- getCurrentTime
   QRefunds.create $ mkRefundsEntry now
   response <- refundsCall request
-  mapM_ (\Payment.RefundsData {..} -> QRefunds.updateRefundsEntryByResponse initiatedBy (Just idAssignedByServiceProvider) errorMessage errorCode status (Kernel.Types.Id.Id requestId)) response.refunds
+  mapM_ (\Payment.RefundsData {..} -> QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Kernel.Types.Id.Id requestId)) response.refunds
   return response
   where
     mkRefundsEntry now =
@@ -841,7 +845,7 @@ refundService (request, refundId) merchantId refundsCall = do
 updateRefundStatus :: (BeamFlow m r) => Payment.RefundsData -> m ()
 updateRefundStatus Payment.RefundsData {..} = do
   Redis.whenWithLockRedis (refundProccessingKey requestId) 60 $
-    QRefunds.updateRefundsEntryByResponse initiatedBy (Just idAssignedByServiceProvider) errorMessage errorCode status (Kernel.Types.Id.Id requestId)
+    QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Kernel.Types.Id.Id requestId)
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid

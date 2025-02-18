@@ -50,6 +50,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
@@ -116,24 +117,41 @@ initiateDriverSearchBatch ::
   m ()
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just (TransactionId (Id searchReq.transactionId))) searchReq
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
   goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
   singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
   now <- getCurrentTime
+  let batchTime = fromIntegral driverPoolConfig.singleBatchProcessTime + singleBatchProcessingTempDelay
+  let totalBatchTime = fromIntegral driverPoolConfig.maxNumberOfBatches * batchTime
   let scheduleTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
       instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
   if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
     then do
       (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
       let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
-      case (res, isJust searchReq.driverIdForSearch) of
-        (_, True) -> return ()
-        (ReSchedule _, _) -> scheduleBatching searchTry inTime
+      case res of
+        (ReSchedule _) -> scheduleBatching searchTry inTime
         _ -> return ()
+      SharedRedisKeys.setBatchConfig searchReq.transactionId $
+        SharedRedisKeys.BatchConfig
+          { totalBatches = driverPoolConfig.maxNumberOfBatches,
+            batchTime = nominalDiffTimeToSeconds batchTime,
+            batchingStartedAt = now,
+            batchingExpireAt = totalBatchTime `addUTCTime` now
+          }
     else do
       mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
       case mbScheduleTime of
-        Just scheduleTime -> scheduleBatching searchTry scheduleTime
+        Just scheduleTime -> do
+          scheduleBatching searchTry scheduleTime
+          let batchingStartedAt = scheduleTime `addUTCTime` now
+          SharedRedisKeys.setBatchConfig searchReq.transactionId $
+            SharedRedisKeys.BatchConfig
+              { totalBatches = driverPoolConfig.maxNumberOfBatches,
+                batchTime = nominalDiffTimeToSeconds batchTime,
+                batchingStartedAt,
+                batchingExpireAt = totalBatchTime `addUTCTime` batchingStartedAt
+              }
         Nothing -> do
           booking <- QRB.findByQuoteId searchTry.estimateId >>= fromMaybeM (BookingDoesNotExist searchTry.estimateId)
           QST.updateStatus DST.CANCELLED searchTry.id
@@ -151,7 +169,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       case tripQuoteDetails of
         [] -> throwError $ InternalError "No trip quote details found"
         (firstQuoteDetail : _) -> do
-          let estimatedFare = firstQuoteDetail.baseFare + fromMaybe 0 customerExtraFee
+          let estimatedFare = firstQuoteDetail.baseFare
           let tripCategory = firstQuoteDetail.tripCategory -- for fallback case
           let serviceTier = firstQuoteDetail.vehicleServiceTier -- for fallback case
           let estOrQuoteId = firstQuoteDetail.estimateOrQuoteId -- for fallback case

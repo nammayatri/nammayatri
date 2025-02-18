@@ -1233,7 +1233,7 @@ getBn =
     , enter_referral_code: "রেফারেল কোড লিখুন"
     , have_a_referral_code: "একটি রেফারেল কোড আছে?"
     , complete_steps_to_apply_referral: "রেফারেল কোড প্রয়োগ করতে উপরের ধাপগুলি সম্পূর্ণ করুন"
-    , download_namma_yatri: (\_ -> "নম্মা যাত্রী ডাউনলোড করুন")
+    , download_namma_yatri: (\appName -> appName <> " ডাউনলোড করুন")
     , enter_code: "কোড লিখুন"
     , complete_registration: "সম্পূর্ণ নিবন্ধন"
     , help_faq: "সাহায্য"
@@ -1593,6 +1593,7 @@ getBn =
     , remove_eyewere: "অনুগ্রহ করে চশমা বা সানগ্লাস সরিয়ে ফেলুন যদি থেকে থাকে।"
     , image_validation_exceed_limit: "চিত্রের বৈধতা সীমা ছাড়িয়ে গেছে।"
     , parking_charges_included: (\amount -> amount <> " পার্কিং চার্জ অন্তর্ভুক্ত")
+    , invoice_generated_from_driver_to_rider: "চালক থেকে রাইডার পর্যন্ত চালান তৈরি হয়"
     , included: "অন্তর্ভুক্ত"
     , db_check_and_name_match_failed: "প্যান যাচাই ব্যর্থ হয়েছে।"
     , complete_your_profile: "আপনার প্রোফাইল সম্পূর্ণ করুন"
@@ -1710,6 +1711,7 @@ getBn =
     , your_ride_starts_in: "আপনার যাত্রা শুরু হচ্ছে"
     , away: " দূরে"
     , intercity: "আন্তঃনগর"
+    , local: "স্থানীয়"
     , intercity_return: "আন্তঃনগর প্রত্যাবর্তন"
     , rental: "ভাড়া"
     , regular: "নিয়মিত"
@@ -1783,4 +1785,8 @@ getBn =
     , search : "অনুসন্ধান করুন"  
     , bus__ : "বাস"
     , driver_unsubscribed : "ড্রাইভার প্ল্যাটফর্ম থেকে অনসাবস্ক্রাইব করা হয়েছে। প্রদান বাকি পরিমাণ প্রদান করতে সাবস্ক্রাইব করুন"
+    , canceling_this_booking_may_affect_the_emergency_medical : "এই বুকিং বাতিল করলে রোগীর জরুরি চিকিৎসা সেবাগুলিতে প্রভাব পড়তে পারে"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ড্রাইভারদের শুধুমাত্র তাদের চিকিৎসা সংক্রান্ত কারণ বা যানবাহন সমস্যার জন্যই বাতিল করার অনুমতি রয়েছে"
+    , payment_under_maintenance : "পেমেন্ট রক্ষণাবেক্ষণের অধীনে"
+    , payments_temporarily_unavailable : "পেমেন্টগুলি অস্থায়ীভাবে অনুপলব্ধ এবং শীঘ্রই ফিরে আসবে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।"
     }

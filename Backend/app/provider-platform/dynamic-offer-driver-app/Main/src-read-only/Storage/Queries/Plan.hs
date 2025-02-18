@@ -4,6 +4,7 @@
 
 module Storage.Queries.Plan (module Storage.Queries.Plan, module ReExport) where
 
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
 import qualified Domain.Types.VehicleCategory
@@ -27,7 +28,7 @@ createMany = traverse_ create
 
 findByIdAndPaymentModeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.Plan.Plan))
+  (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.PaymentMode -> Domain.Types.Extra.Plan.ServiceNames -> m (Maybe Domain.Types.Plan.Plan))
 findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
   findOneWithKV
     [ Se.And
@@ -39,13 +40,15 @@ findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
-findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName = do
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.planType $ Se.Eq planType,
-          Se.Is Beam.serviceName $ Se.Eq serviceName
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.vehicleCategory $ Se.Eq (Kernel.Prelude.Just vehicleCategory),
+          Se.Is Beam.isDeprecated $ Se.Eq isDeprecated
         ]
     ]
 
@@ -112,6 +115,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.planBaseAmount planBaseAmount,
       Se.Set Beam.planType planType,
+      Se.Set Beam.productOwnershipAmount (Kernel.Prelude.Just productOwnershipAmount),
       Se.Set Beam.registrationAmount registrationAmount,
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.sgstPercentage sgstPercentage,

@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import in.juspay.mobility.app.callbacks.CallBack;
 
@@ -44,6 +45,20 @@ public class Utils {
         startMain.addCategory(Intent.CATEGORY_HOME);
         startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(startMain);
+    }
+
+    private static final Map<String, Integer> PRIORITY_MAP = Map.of(
+            "PRIORITY_BALANCED_POWER_ACCURACY", 102,
+            "PRIORITY_HIGH_ACCURACY", 100,
+            "PRIORITY_LOW_POWER", 104,
+            "PRIORITY_PASSIVE", 105
+    );
+
+    private static final int DEFAULT_PRIORITY = 100; // Default priority to PRIORITY_HIGH_ACCURACY if invalid
+
+    public static int getPriority(String priority) {
+        Integer value = PRIORITY_MAP.get(priority);
+        return (value != null) ? value : DEFAULT_PRIORITY;
     }
 
     public static int getResIdentifier (Context context, String resName, String resType) {

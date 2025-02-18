@@ -60,7 +60,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
         Metrics.finishMetricsBap Metrics.CONFIRM "" transactionId merchantOperatingCityId
         fork "on confirm received pushing ondc logs" do
           booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-          void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId
+          void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
             DOnConfirm.onConfirm validatedReq

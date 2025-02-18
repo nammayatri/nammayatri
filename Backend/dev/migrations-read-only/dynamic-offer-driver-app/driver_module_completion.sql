@@ -13,3 +13,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_module_completion ADD COLUMN status te
 ALTER TABLE atlas_driver_offer_bpp.driver_module_completion ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_module_completion ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_module_completion ADD PRIMARY KEY ( completion_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_module_completion ADD COLUMN expiry timestamp with time zone ;

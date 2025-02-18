@@ -64,6 +64,7 @@ data BecknTagGroup
   | ROUTE_INFO
   | -- Custom tag groups
     REALLOCATION_INFO
+  | FARE_PARAMETERS_IN_RATECARD_INFO
   | DRIVER_IDENTIFIER
   | CUSTOMER_INFO
   | ESTIMATIONS
@@ -105,6 +106,7 @@ instance CompleteTagGroup BecknTagGroup where
     BUYER_FINDER_FEES -> (Just "Buyer Finder Fees Information", Nothing)
     SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
     REALLOCATION_INFO -> (Just "Reallocation Information", Nothing)
+    FARE_PARAMETERS_IN_RATECARD_INFO -> (Just "Fare Parametes in RateCard information", Nothing)
     DELIVERY -> (Just "Delivery Information", Nothing)
     DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
@@ -367,6 +369,8 @@ data BecknTag
   | ROUND_TRIP
   | -- Reallocation tags
     IS_REALLOCATION_ENABLED
+  | -- FareParametersInRatwCard tag
+    FARE_PARAMETERS_IN_RATECARD
   | -- Driver identifier tags
     DRIVER_IDENTITY
   | -- Customer info tags
@@ -447,6 +451,8 @@ data BecknTag
   | PARCEL_IMAGE_UPLOADED
   | CUSTOMER_DISABILITY_DISABLE
   | IS_VALID_RIDE
+  | PARCEL_TYPE
+  | PARCEL_QUANTITY
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -474,6 +480,7 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> (Just "Static Terms", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
+    FARE_PARAMETERS_IN_RATECARD -> (Just "Fare Parametes in RateCard information", Nothing)
     SENDER_NUMBER -> (Just "Delivery Sender Number", Nothing)
     SENDER_NAME -> (Just "Delivery Sender Name", Nothing)
     SENDER_LOCATION_INSTRUCTIONS -> (Just "Delivery Sender Location Instructions", Nothing)
@@ -486,6 +493,8 @@ instance CompleteTag BecknTag where
     ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
     SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
     UPGRADE_TO_CAB -> (Just "Request upgraded to cab", Nothing)
+    PARCEL_TYPE -> (Just "Delivery Parcel Type", Nothing)
+    PARCEL_QUANTITY -> (Just "Delivery Parcel Quantity", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -508,6 +517,7 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> SETTLEMENT_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    FARE_PARAMETERS_IN_RATECARD -> FARE_PARAMETERS_IN_RATECARD_INFO
     CUSTOMER_LANGUAGE -> CUSTOMER_INFO
     DASHBOARD_USER -> CUSTOMER_INFO
     CUSTOMER_DISABILITY -> CUSTOMER_INFO
@@ -524,6 +534,8 @@ instance CompleteTag BecknTag where
     SPECIAL_LOCATION_TAG -> GENERAL_INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
+    PARCEL_TYPE -> DELIVERY
+    PARCEL_QUANTITY -> DELIVERY
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

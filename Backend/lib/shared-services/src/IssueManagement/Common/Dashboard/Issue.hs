@@ -252,7 +252,8 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     restrictedVariants :: Maybe [VehicleVariant],
     restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool,
-    igmSubCategory :: Maybe Spec.IssueSubCategory
+    igmSubCategory :: Maybe Spec.IssueSubCategory,
+    mandatoryUploads :: Maybe [Common.MandatoryUploads]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -313,7 +314,8 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
     restrictedVariants :: Maybe [VehicleVariant],
     restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool,
-    igmCategory :: Maybe Text
+    igmCategory :: Maybe Text,
+    mandatoryUploads :: Maybe [Common.MandatoryUploads]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

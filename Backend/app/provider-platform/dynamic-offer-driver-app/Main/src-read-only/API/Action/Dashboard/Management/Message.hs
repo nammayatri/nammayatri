@@ -39,7 +39,7 @@ postMessageSend a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard
 postMessageEdit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Message.EditMessageRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMessageEdit a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Message.postMessageEdit a3 a2 a1
 
-getMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageListResponse)
+getMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageListResponse)
 getMessageList a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Message.getMessageList a4 a3 a2 a1
 
 getMessageInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Message -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageInfoResponse)
@@ -48,5 +48,5 @@ getMessageInfo a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.
 getMessageDeliveryInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Message -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageDeliveryInfoResponse)
 getMessageDeliveryInfo a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Message.getMessageDeliveryInfo a3 a2 a1
 
-getMessageReceiverList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse)
+getMessageReceiverList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse)
 getMessageReceiverList a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Message.getMessageReceiverList a7 a6 a5 a4 a3 a2 a1

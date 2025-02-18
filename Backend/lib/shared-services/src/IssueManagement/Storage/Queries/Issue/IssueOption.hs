@@ -33,6 +33,7 @@ updateByPrimaryKey IssueOption {..} =
       Set BeamIO.restrictedRideStatuses restrictedRideStatuses,
       Set BeamIO.showOnlyWhenUserBlocked showOnlyWhenUserBlocked,
       Set BeamIO.igmSubCategory igmSubCategory,
+      Set BeamIO.mandatoryUploads mandatoryUploads,
       Set BeamIO.createdAt createdAt,
       Set BeamIO.updatedAt updatedAt
     ]
@@ -122,5 +123,6 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.isActive = isActive,
         BeamIO.createdAt = createdAt,
         BeamIO.updatedAt = updatedAt,
-        BeamIO.igmSubCategory = igmSubCategory
+        BeamIO.igmSubCategory = igmSubCategory,
+        BeamIO.mandatoryUploads = mandatoryUploads
       }

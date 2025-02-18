@@ -15,7 +15,8 @@
 module Domain.Action.UI.Ride
   ( GetDriverLocResp,
     GetRideStatusResp (..),
-    EditLocation (..),
+    PickupStage (..),
+    EditLocation,
     EditLocationReq (..),
     EditLocationResp (..),
     getDriverLoc,
@@ -33,16 +34,16 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Data.Text as Text
+import Domain.Action.Beckn.Common (driverHasReachedCacheKey)
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (buildRideAPIEntity)
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Domain.Types.Extra.Ride (RideAPIEntity (..))
+import Domain.Types.Extra.Ride (EditLocation, RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -83,9 +84,13 @@ import qualified Tools.Maps as MapSearch
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
+data PickupStage = OnTheWay | Reached | Reaching
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 data GetDriverLocResp = GetDriverLocResp
   { lat :: Double,
     lon :: Double,
+    pickupStage :: Maybe PickupStage,
     lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -108,12 +113,6 @@ data EditLocationReq = EditLocationReq
 data EditLocationResp = EditLocationResp
   { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest),
     result :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data EditLocation = EditLocation
-  { gps :: Maps.LatLong,
-    address :: DLA.LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -153,31 +152,49 @@ getDriverLoc rideId = do
   mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
   mbHasReachedNotified <- Redis.get @() driverHasReached
   mbHasReachingNotified <- Redis.get @() driverReaching
-  when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
-    let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
-    mbStartDistance <- Redis.get @Meters distanceUpdates
-    case mbStartDistance of
-      Nothing -> Redis.setExp distanceUpdates distance 3600
-      Just startDistance -> when (startDistance - 50 > distance) $ do
-        unless (isJust mbIsOnTheWayNotified) $ do
-          Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory
-          Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
-        when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
-          Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
-          Redis.setExp driverHasReached () 1500
-        when (isNothing mbHasReachingNotified && distance <= distanceToMeters merchant.arrivingPickupThreshold) $ do
-          Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
-          Redis.setExp driverReaching () 1500
+  pickupStage <-
+    if ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)
+      then do
+        let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
+        mbStartDistance <- Redis.get @Meters distanceUpdates
+        case mbStartDistance of
+          Nothing -> do
+            Redis.setExp distanceUpdates distance 3600
+            return Nothing
+          Just startDistance -> do
+            if (startDistance - 50 > distance)
+              then do
+                if distance <= distanceToMeters merchant.arrivedPickupThreshold
+                  then do
+                    when (isNothing mbHasReachedNotified) $ do
+                      Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+                      Redis.setExp driverHasReached () 1500
+                    return $ Just Reached
+                  else
+                    if distance <= distanceToMeters merchant.arrivingPickupThreshold
+                      then do
+                        when (isNothing mbHasReachingNotified) $ do
+                          Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+                          Redis.setExp driverReaching () 1500
+                        return $ Just Reaching
+                      else do
+                        unless (isJust mbIsOnTheWayNotified) $ do
+                          Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory
+                          Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
+                        return $ Just OnTheWay
+              else return Nothing
+      else return Nothing
   return $
     GetDriverLocResp
       { lat = res.currPoint.lat,
         lon = res.currPoint.lon,
-        lastUpdate = res.lastUpdate
+        lastUpdate = res.lastUpdate,
+        pickupStage
       }
   where
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
-    driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
+    driverHasReached = driverHasReachedCacheKey rideId.getId
     driverReaching = "Ride:GetDriverLoc:DriverReaching " <> rideId.getId
 
 getDriverPhoto :: Text -> Flow Text

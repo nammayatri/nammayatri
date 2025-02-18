@@ -4,7 +4,7 @@ module: DriverReferral
 
 apis:
   - POST: # ReferralProgramPasswordUpdateAPI
-      endpoint: referralOpsPassword
+      endpoint: /referralOpsPassword
       auth: ApiAuthV2
       request:
         type: ReferralLinkPasswordUpdateAPIReq
@@ -15,7 +15,7 @@ apis:
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT REFERRAL REFERRAL_PROGRAM_PASSWORD_UPDATE
   - POST: # ReferralProgramLinkCodeAPI
-      endpoint: linkReferral
+      endpoint: /linkReferral
       auth: ApiAuthV2
       multipart:
         type: ReferralLinkReq

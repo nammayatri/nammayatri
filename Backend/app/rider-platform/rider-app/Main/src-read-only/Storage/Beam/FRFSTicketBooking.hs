@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.FRFSTicketBooking where
@@ -14,6 +12,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingT f = FRFSTicketBookingT
@@ -35,8 +34,16 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fromStationId :: B.C f Kernel.Prelude.Text,
+    googleWalletJWTUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isFareChanged :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
+    journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -54,6 +61,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     riderId :: B.C f Kernel.Prelude.Text,
     routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
+    startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,
@@ -70,6 +78,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['journeyId], ['quoteId], ['riderId], ['searchId]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

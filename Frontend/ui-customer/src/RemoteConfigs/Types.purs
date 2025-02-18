@@ -4,8 +4,8 @@ import Prelude
 import Prelude (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
-import Foreign.Generic (class Decode)
-import Presto.Core.Utils.Encoding (defaultDecode)
+import Foreign.Generic (class Decode, class Encode)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Maybe (Maybe)
 import Language.Types(STR(..))
 import Data.Show.Generic (genericShow)
@@ -17,11 +17,17 @@ type TipsConfigRC = {
   suv :: Array Int,
   hatchback :: Array Int,
   autoRickshaw :: Array Int,
+  evAutoRickshaw :: Array Int,
   taxi :: Array Int,
   taxiPlus :: Array Int,
   bike :: Array Int,
   suvPlus :: Array Int,
   default :: Array Int,
+  ambulanceTaxi :: Array Int,
+  ambulanceTaxiOxy :: Array Int,
+  ambulanceAc :: Array Int,
+  ambulanceAcOxy :: Array Int,
+  ambulanceVentilator :: Array Int,
   bookAny :: Array Int
 }
 
@@ -41,8 +47,10 @@ newtype DescriptionComponent = DescriptionComponent {
   fontStyle :: String
 }
 
+
 derive instance genericDescriptionComponent :: Generic DescriptionComponent _
 instance decodeDescriptionComponent :: Decode DescriptionComponent where decode = defaultDecode
+instance encodeDescriptionComponent :: Encode DescriptionComponent where encode = defaultEncode
 
 type SpecialLocationsOb = {
   locations :: Array SpecialLocation
@@ -76,6 +84,7 @@ newtype FamousDestination = FamousDestination {
 
 derive instance genericFamousDestination :: Generic FamousDestination _
 instance decodeFamousDestination :: Decode FamousDestination where decode = defaultDecode
+instance encodeFamousDestination :: Encode FamousDestination where encode = defaultEncode
 
 type Service = {
   type :: ServiceType,
@@ -87,7 +96,23 @@ type Service = {
   secondaryPillColor :: String
 }
 
-data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS
+type MapLottieConfig = {
+  lottieUrl :: String,
+  visibility :: Boolean
+}
+
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS | BIKE_TAXI | METRO | METRO_OFFER | BUS | AMBULANCE_SERVICE
+
+type SwitchCityConfigs = {
+  cities :: Array UserCity
+}
+
+type UserCity = {
+  name :: String,
+  value :: String,
+  title :: String
+}
+
 
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq
@@ -124,6 +149,7 @@ type VariantBasedBoostSearchConfig = {
   suv :: BoostSearchConfig,
   hatchback :: BoostSearchConfig,
   autoRickshaw :: BoostSearchConfig,
+  evAutoRickshaw :: BoostSearchConfig,
   taxi :: BoostSearchConfig,
   taxiPlus :: BoostSearchConfig,
   bike :: BoostSearchConfig,
@@ -151,4 +177,9 @@ type BusFlowConfig = {
 
 type AppInfoConfig = {
   website :: String
+}
+
+type CancellationThreshold = {
+  showBanner :: Boolean,
+  percentage :: Number
 }

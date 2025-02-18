@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Estimate where
@@ -30,6 +29,8 @@ data Estimate = Estimate
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     maxFare :: Kernel.Types.Common.HighPrecMoney,
+    mbActualQARCity :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    mbActualQARFromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     minFare :: Kernel.Types.Common.HighPrecMoney,

@@ -178,7 +178,10 @@ function refreshFlow(){
     }
     window.chatMessages = undefined;
     window.JBridge.setKeysInSharedPrefs("CALL_REFRESH", "false");
-    purescript.onConnectivityEvent("REFRESH")();
+    // purescript.onConnectivityEvent("REFRESH")();
+    for(let key in window.onResumeListenersMap) {
+      window.onResumeListenersMap[key].call()
+    }
   }
 }
 
@@ -249,6 +252,7 @@ window.onMerchantEvent = function (_event, payload) {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
+    window.__payload = parsedPayload;
     try {
       if (
         parsedPayload.payload &&
@@ -269,7 +273,6 @@ window.onMerchantEvent = function (_event, payload) {
       window.callPopUp(parsedPayload.payload.popType, parsedPayload.payload.entityPayload);
     }
     else {
-      window.__payload = parsedPayload;
       console.log("window Payload: ", window.__payload);
       const jpConsumingBackpress = {
         event: "jp_consuming_backpress",
@@ -341,6 +344,7 @@ window.callUICallback = function () {
 };
 
 window.onResumeListeners = [];
+window.onResumeListenersMap = {};
 window.internetListeners = {};
 
 window.onPause = function () {
@@ -452,8 +456,6 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
       console.log("Unknown Event");
   }
 }
-
-
 
 
 if (typeof window.JOS != "undefined") {

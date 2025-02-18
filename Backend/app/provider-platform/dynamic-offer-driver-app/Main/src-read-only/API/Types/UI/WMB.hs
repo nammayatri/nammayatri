@@ -18,7 +18,11 @@ data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AvailableRoute = AvailableRoute {destination :: StopInfo, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
+data ApprovalRequestResp = ApprovalRequestResp {status :: Domain.Types.ApprovalRequest.RequestStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AvailableRoute = AvailableRoute {destination :: StopInfo, roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text, routeInfo :: RouteInfo, source :: StopInfo, vehicleDetails :: VehicleDetails}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -45,7 +49,7 @@ data RouteInfo = RouteInfo {code :: Data.Text.Text, endPoint :: Kernel.External.
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data StopInfo = StopInfo {code :: Data.Text.Text, name :: Data.Text.Text, point :: Kernel.External.Maps.Types.LatLong}
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TripEndReq = TripEndReq {location :: Kernel.External.Maps.Types.LatLong}
@@ -56,7 +60,7 @@ data TripEndResp = TripEndResp {requestId :: Kernel.Prelude.Maybe Data.Text.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripLinkReq = TripLinkReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
+data TripQrStartReq = TripQrStartReq {location :: Kernel.External.Maps.Types.LatLong, routeCode :: Data.Text.Text, vehicleNumberHash :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -66,11 +70,12 @@ data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong
 
 data TripTransactionDetails = TripTransactionDetails
   { destination :: StopInfo,
+    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
     routeInfo :: RouteInfo,
     source :: StopInfo,
     status :: Domain.Types.TripTransaction.TripStatus,
     tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
-    vehicleNum :: Data.Text.Text,
+    vehicleNumber :: Data.Text.Text,
     vehicleType :: Domain.Types.Common.ServiceTierType
   }
   deriving stock (Generic)

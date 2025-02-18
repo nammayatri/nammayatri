@@ -11,12 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module SharedLogic.DynamicPricing where
 
 import Data.Aeson
 import Data.Default.Class
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
@@ -24,17 +24,25 @@ import Kernel.Utils.Common
 mkSupplyDemandRatioKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
 mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier = "S_D_ratio_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
 
+mkActualQARKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
+mkActualQARKeyWithGeohash geohash vehicleServiceTier = "A_QAR_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
+
+mkActualQARKeyWithCity :: Text -> DServiceTierType.ServiceTierType -> Text
+mkActualQARKeyWithCity city vehicleServiceTier = "A_QAR_city" <> city <> "_serviceTier_" <> show vehicleServiceTier
+
 data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
-    version :: Maybe Text
+    version :: Maybe Text,
+    congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data DynamicPricingData = DynamicPricingData
   { speedKmh :: Double,
     distanceInKm :: Double,
+    actualQAR :: Double,
     supplyDemandRatioFromLoc :: Double,
     supplyDemandRatioToLoc :: Double,
     serviceTier :: DServiceTierType.ServiceTierType,
@@ -51,5 +59,6 @@ instance Default DynamicPricingData where
         supplyDemandRatioFromLoc = 1.1,
         supplyDemandRatioToLoc = 1.1,
         serviceTier = DServiceTierType.TAXI,
+        actualQAR = 0.0,
         toss = 1 --,
       }

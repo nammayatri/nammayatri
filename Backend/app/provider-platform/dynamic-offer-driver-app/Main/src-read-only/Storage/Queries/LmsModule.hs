@@ -9,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -29,6 +30,20 @@ getAllModules ::
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LmsModule.LmsModule])
 getAllModules limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.createdAt) limit offset
 
+getAllModulesWithModuleSection ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.LmsModule.ModuleSection -> m [Domain.Types.LmsModule.LmsModule])
+getAllModulesWithModuleSection limit offset merchantOperatingCityId moduleSection = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.moduleSection $ Se.Eq moduleSection
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModule.LmsModule))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -36,13 +51,18 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.LmsModule.LmsModule {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.category category,
+    [ Se.Set Beam.bonusCoinEventFunction bonusCoinEventFunction,
+      Se.Set Beam.category category,
+      Se.Set Beam.certificationEnabled certificationEnabled,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.duration duration,
       Se.Set Beam.languagesAvailableForQuiz languagesAvailableForQuiz,
       Se.Set Beam.languagesAvailableForVideos languagesAvailableForVideos,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.moduleCompletionCriteria moduleCompletionCriteria,
+      Se.Set Beam.moduleExpiryConfig moduleExpiryConfig,
+      Se.Set Beam.moduleNameForCertificate moduleNameForCertificate,
+      Se.Set Beam.moduleSection moduleSection,
       Se.Set Beam.noOfVideos noOfVideos,
       Se.Set Beam.rank rank,
       Se.Set Beam.updatedAt _now,
@@ -56,7 +76,9 @@ instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
     pure $
       Just
         Domain.Types.LmsModule.LmsModule
-          { category = category,
+          { bonusCoinEventFunction = bonusCoinEventFunction,
+            category = category,
+            certificationEnabled = certificationEnabled,
             createdAt = createdAt,
             duration = duration,
             id = Kernel.Types.Id.Id id,
@@ -64,6 +86,9 @@ instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
             languagesAvailableForVideos = languagesAvailableForVideos,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             moduleCompletionCriteria = moduleCompletionCriteria,
+            moduleExpiryConfig = moduleExpiryConfig,
+            moduleNameForCertificate = moduleNameForCertificate,
+            moduleSection = moduleSection,
             noOfVideos = noOfVideos,
             rank = rank,
             updatedAt = updatedAt,
@@ -74,7 +99,9 @@ instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
 instance ToTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
   toTType' (Domain.Types.LmsModule.LmsModule {..}) = do
     Beam.LmsModuleT
-      { Beam.category = category,
+      { Beam.bonusCoinEventFunction = bonusCoinEventFunction,
+        Beam.category = category,
+        Beam.certificationEnabled = certificationEnabled,
         Beam.createdAt = createdAt,
         Beam.duration = duration,
         Beam.id = Kernel.Types.Id.getId id,
@@ -82,6 +109,9 @@ instance ToTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
         Beam.languagesAvailableForVideos = languagesAvailableForVideos,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.moduleCompletionCriteria = moduleCompletionCriteria,
+        Beam.moduleExpiryConfig = moduleExpiryConfig,
+        Beam.moduleNameForCertificate = moduleNameForCertificate,
+        Beam.moduleSection = moduleSection,
         Beam.noOfVideos = noOfVideos,
         Beam.rank = rank,
         Beam.updatedAt = updatedAt,

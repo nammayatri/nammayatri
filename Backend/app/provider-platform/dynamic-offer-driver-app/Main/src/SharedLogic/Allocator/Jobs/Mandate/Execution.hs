@@ -117,8 +117,9 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
   invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
   case invoice' of
     Just invoice -> do
-      vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
-      let splitSettlementDetails = mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst))
+      let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
+      vendorFees <- if splitEnabled then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
+      let splitSettlementDetails = if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) else Nothing
           executionRequest =
             PaymentInterface.MandateExecutionReq
               { orderId = invoice.invoiceShortId,
@@ -127,7 +128,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
                 notificationId = notification.shortId,
                 mandateId = mandateId.getId,
                 executionDate,
-                splitSettlementDetails = Just splitSettlementDetails
+                splitSettlementDetails = splitSettlementDetails
               }
       return $
         Just

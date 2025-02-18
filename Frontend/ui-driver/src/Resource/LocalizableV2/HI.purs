@@ -1235,7 +1235,7 @@ getHi =
     , enter_referral_code: "रेफरल कोड दर्ज करें"
     , have_a_referral_code: "क्या आपके पास रेफरल कोड है?"
     , complete_steps_to_apply_referral: "रेफरल कोड लागू करने के लिए उपरोक्त चरणों को पूरा करें"
-    , download_namma_yatri: (\_ -> "नम्मा यात्री डाउनलोड करें")
+    , download_namma_yatri: (\appName -> appName <> " डाउनलोड करें")
     , enter_code: "कोड दर्ज करें"
     , complete_registration: "पूरा पंजीकरण"
     , cant_find_option: "विकल्प नहीं मिल सका"
@@ -1593,6 +1593,7 @@ getHi =
     , remove_eyewere: "कृपया यदि कोई आईवियर या धूप का चश्मा हो तो उसे हटा दें"
     , image_validation_exceed_limit: "छवि को सत्यापित करने के प्रयासों की संख्या पार हो गई"
     , parking_charges_included: (\amount -> amount <> " पार्किंग शुल्क शामिल")
+    , invoice_generated_from_driver_to_rider: "ड्राइवर से लेकर सवार तक का चालान काटा गया"
     , included: "शामिल"
     , db_check_and_name_match_failed: "पैन सत्यापन विफल हो गया है"
     , complete_your_profile: "अपनी प्रोफ़ाइल पूरी करें"
@@ -1710,6 +1711,7 @@ getHi =
     , your_ride_starts_in: "आपकी सवारी में शुरू होती है"
     , away: " दूर"
     , intercity: "अंतर-शहर"
+    , local: "स्थानीय"
     , intercity_return: "अंतर-शहर वापसी"
     , rental: "किराया"
     , regular: "नियमित"
@@ -1783,4 +1785,8 @@ getHi =
     , search : "खोजें"  
     , bus__ : "बस"
     , driver_unsubscribed : "ड्राइवर ने प्लेटफ़ॉर्म से अनग्रहित कर दिया है। वापस सब्सक्राइब करने के लिए लंबित राशि भुगतान करें"
+    , canceling_this_booking_may_affect_the_emergency_medical : "इस बुकिंग को रद्द करने से मरीज के आपातकालीन चिकित्सा सेवाओं पर प्रभाव पड़ सकता है"
+    , drivers_are_permitted_to_cancel_ambulance_bookings :"ड्राइवरों को केवल उनके चिकित्सा कारणों या वाहन के खराब होने की स्थिति में ही रद्द करने की अनुमति है"
+    , payment_under_maintenance : "भुगतान रखरखाव में है"
+    , payments_temporarily_unavailable : "भुगतान अस्थायी रूप से अनुपलब्ध है और जल्द ही वापस आ जाएगा। कृपया बाद में पुनः प्रयास करें।"
     }

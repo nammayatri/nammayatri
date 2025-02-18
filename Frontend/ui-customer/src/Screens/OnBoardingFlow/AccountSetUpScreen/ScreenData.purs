@@ -15,7 +15,7 @@
 
 module Screens.AccountSetUpScreen.ScreenData where
 
-import Screens.Types (AccountSetUpScreenState)
+import Screens.Types (AccountSetUpScreenState, ReferralEnum(..))
 import Data.Maybe (Maybe(..))
 import ConfigProvider
 
@@ -26,6 +26,10 @@ initData =
       , email: ""
       , gender: Nothing
       , nameErrorMessage: Nothing
+      , isReferred : NotVerified
+      , referralTextFocussed : false
+      , referralTextDisabled : false
+      , referralCode : ""
       , config : getAppConfig appConfig
       , disabilityOptions : {
           activeIndex : 0

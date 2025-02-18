@@ -12,6 +12,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.Person as Beam
 import qualified Storage.Queries.Transformers.Person
 
@@ -21,6 +22,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    driverTag' <- Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType driverTag
     merchantOperatingCityId' <- Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId
     pure $
       Just
@@ -31,11 +33,12 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             description = description,
             deviceToken = deviceToken,
-            driverTag = driverTag,
+            driverTag = driverTag',
             email = email,
             faceImageId = Kernel.Types.Id.Id <$> faceImageId,
             firstName = firstName,
@@ -78,11 +81,12 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.clientModelName = clientDevice <&> (.deviceModel),
         Beam.clientOsType = clientDevice <&> (.deviceType),
         Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.description = description,
         Beam.deviceToken = deviceToken,
-        Beam.driverTag = driverTag,
+        Beam.driverTag = Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType driverTag,
         Beam.email = email,
         Beam.faceImageId = Kernel.Types.Id.getId <$> faceImageId,
         Beam.firstName = firstName,

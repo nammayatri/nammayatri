@@ -31,6 +31,12 @@ export const reboot = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ev
 
 export const showSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()
 
+export const getAndRemoveLatestNotificationType = function() {
+  const notificationType = window.notificationType;
+  window.notificationType = null;
+  return notificationType;
+}
+
 
 export const decrementMonth = function (month) {
   return function (year){

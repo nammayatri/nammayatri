@@ -139,6 +139,7 @@ getVariant variant = do
     AMBULANCE_AC_OXY -> "Ambulance Ac Oxy"
     AMBULANCE_VENTILATOR -> "Ambulance Ventilator"
     SUV_PLUS -> "Suv Plus"
+    EV_AUTO_RICKSHAW -> "EV Auto Rickshaw"
     _ -> ""
 
 getPillText :: String -> String

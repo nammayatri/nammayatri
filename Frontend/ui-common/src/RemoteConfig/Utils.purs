@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -72,6 +72,7 @@ defaultCityRemoteConfig defaultValue =
   , bhubaneshwar : Just defaultValue
   , bhubaneswar : Just defaultValue
   , cuttack : Just defaultValue
+  , nalgonda : Just defaultValue
   , puri : Just defaultValue
   , pudukkottai : Just defaultValue
   , bidar : Just defaultValue
@@ -150,6 +151,7 @@ getAppBasedConfig :: forall a. AppConfigRC a -> String -> a
 getAppBasedConfig config app = case app of
   "Namma Yatri Partner" -> fromMaybe config.default config.nammaYatriPartner
   "Odisha Yatri Partner" -> fromMaybe config.default config.odishaYatriPartner
+  "Kerala Savaari Partner" -> fromMaybe config.default config.keralaSavaariPartner
   "Yatri Driver" -> fromMaybe config.default config.yatriPartner
   "Namma Yatri" -> fromMaybe config.default config.nammaYatri
   "Odisha Yatri" -> fromMaybe config.default config.odishaYatri
@@ -193,6 +195,7 @@ getCityBasedConfig config city = case city of
   "bhubaneshwar" -> fromMaybe config.default config.bhubaneswar
   "bhubaneswar" -> fromMaybe config.default config.bhubaneswar
   "cuttack" -> fromMaybe config.default config.cuttack
+  "nalgonda" -> fromMaybe config.default config.nalgonda
   "puri" -> fromMaybe config.default config.puri
   "pudukkottai" -> fromMaybe config.default config.pudukkottai
   "bidar" -> fromMaybe config.default config.bidar
@@ -224,12 +227,18 @@ tipConfigData city variant = do
         "SUV" -> config.suv
         "HATCHBACK" -> config.hatchback
         "AUTO_RICKSHAW" -> config.autoRickshaw
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BIKE" -> config.bike
         "BOOK_ANY" -> config.bookAny
         "SUV_PLUS" -> config.suv
         "DELIVERY_BIKE" -> config.deliveryBike
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -243,6 +252,12 @@ defaultTipsConfig =
   , bike : Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }
 
@@ -257,6 +272,12 @@ defaultSubscriptionsConfigVariantLevel =
   , taxiPlus: Nothing
   , bookAny: Nothing
   , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
   , default: Nothing
   }
 
@@ -344,10 +365,16 @@ subscriptionsConfigVariantLevel city variant = do
         "SUV" -> config.suv
         "HATCHBACK" -> config.hatchback
         "AUTO_RICKSHAW" -> config.autoRickshaw
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BOOK_ANY" -> config.bookAny
         "DELIVERY_BIKE" -> config.deliveryBike
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig
@@ -370,6 +397,7 @@ defaultAppRemoteConfig defaultValue =
   , nammaYatriPartner: Just defaultValue
   , odishaYatri: Just defaultValue
   , odishaYatriPartner: Just defaultValue
+  , keralaSavaariPartner: Just defaultValue
   , yatri: Just defaultValue
   , yatriPartner: Just defaultValue
   , manaYatri: Just defaultValue
@@ -449,10 +477,16 @@ getConfigForVariant variant config =
     "SUV" -> config.suv
     "HATCHBACK" -> config.hatchback
     "AUTO_RICKSHAW" -> config.autoRickshaw
+    "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
     "TAXI" -> config.taxi
     "TAXI_PLUS" -> config.taxiPlus
     "BOOK_ANY" -> config.bookAny
     "DELIVERY_BIKE" -> config.deliveryBike
+    "AMBULANCE_AC" -> config.ambulanceAc
+    "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+    "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+    "AMBULANCE_TAXI" -> config.ambulanceTaxi
+    "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
     _ -> config.default
       
 defaultVoipConfig :: Types.VoipConfig
@@ -466,3 +500,33 @@ defaultVoipConfig = {
     enableVoipCalling : false
   }
 }
+
+getInvoiceConfig :: String -> String -> InvoiceConfig
+getInvoiceConfig variant city =
+  let remoteConfig = fetchRemoteConfigString "show_invoice_text_config"
+      decodedConfig = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultInvoiceVariantConfig
+  in
+  getVariantLevelConfig variant $ getCityBasedConfig decodedConfig $ toLower city
+  where
+    getVariantLevelConfig variant config = case getConfigForVariant variant config of
+       Nothing -> {isEnabled : Just true}
+       Just variantConfig -> variantConfig
+
+defaultInvoiceVariantConfig :: Types.DriverInvoiceConfigVariantLevel
+defaultInvoiceVariantConfig = 
+  { sedan: Nothing
+  , suv: Nothing
+  , hatchback: Nothing
+  , autoRickshaw: Nothing
+  , taxi: Nothing
+  , taxiPlus: Nothing
+  , bookAny: Nothing
+  , deliveryBike: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
+  , evAutoRickshaw: Nothing
+  , default: Nothing
+  }

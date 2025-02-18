@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module SharedLogic.EventTracking where
 
 import qualified Domain.Types.DriverFee as DDF

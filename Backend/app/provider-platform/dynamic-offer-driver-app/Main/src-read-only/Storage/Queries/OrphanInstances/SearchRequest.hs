@@ -14,6 +14,8 @@ import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
+import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.SearchRequest as Beam
 import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
@@ -43,11 +45,12 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             bapCountry = bapCountry,
             bapId = bapId,
             bapUri = bapUri',
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = customerCancellationDues,
             customerLanguage = customerLanguage,
-            customerNammaTags = customerNammaTags,
+            customerNammaTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType customerNammaTags,
             device = device,
             disabilityTag = disabilityTag,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -68,6 +71,8 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             isScheduled = fromMaybe False isScheduled,
             merchantOperatingCityId = merchantOperatingCityId',
             messageId = messageId,
+            parcelQuantity = parcelQuantity,
+            parcelType = parcelType,
             pickupZoneGateId = pickupZoneGateId,
             poolingConfigVersion = poolingConfigVersion,
             poolingLogicVersion = poolingLogicVersion,
@@ -75,7 +80,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
             roundTrip = roundTrip,
-            searchTags = searchTags,
+            searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType searchTags,
             specialLocationTag = specialLocationTag,
             startTime = startTime_,
             stops = stops',
@@ -97,11 +102,12 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,
         Beam.bapUri = Kernel.Prelude.showBaseUrl bapUri,
+        Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,
         Beam.currency = Just currency,
         Beam.customerCancellationDues = customerCancellationDues,
         Beam.customerLanguage = customerLanguage,
-        Beam.customerNammaTags = customerNammaTags,
+        Beam.customerNammaTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType customerNammaTags,
         Beam.device = device,
         Beam.disabilityTag = disabilityTag,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
@@ -123,6 +129,8 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.isScheduled = Just isScheduled,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
+        Beam.parcelQuantity = parcelQuantity,
+        Beam.parcelType = parcelType,
         Beam.pickupZoneGateId = pickupZoneGateId,
         Beam.poolingConfigVersion = poolingConfigVersion,
         Beam.poolingLogicVersion = poolingLogicVersion,
@@ -130,7 +138,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.roundTrip = roundTrip,
-        Beam.searchTags = searchTags,
+        Beam.searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags,
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,

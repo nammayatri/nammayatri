@@ -95,7 +95,8 @@ data DriverPoolResult = DriverPoolResult
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe Maps.LatLong,
     customerTags :: Maybe A.Value,
-    driverTags :: A.Value
+    driverTags :: A.Value,
+    score :: Maybe A.Value
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -124,7 +125,8 @@ instance Default DriverPoolResult where
         latestScheduledBooking = Nothing,
         latestScheduledPickup = Nothing,
         customerTags = Nothing,
-        driverTags = A.emptyObject
+        driverTags = A.emptyObject,
+        score = Nothing
       }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
@@ -211,7 +213,8 @@ instance Default IntelligentScores where
 
 data TaggedDriverPoolInput = TaggedDriverPoolInput
   { drivers :: [DriverPoolWithActualDistResult],
-    needOnRideDrivers :: Bool
+    needOnRideDrivers :: Bool,
+    batchNum :: PoolBatchNum
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

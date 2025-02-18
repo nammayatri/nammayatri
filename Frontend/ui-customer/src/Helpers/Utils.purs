@@ -69,14 +69,15 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Language.Types as LT
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>), negate,div)
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
-import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..),NotificationBody,TripTypeData,ScheduledRideDriverInfo)
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..),VehicleVariant(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..),NotificationBody,TripTypeData,ScheduledRideDriverInfo)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage,VehicleVariant(..))
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
@@ -115,6 +116,7 @@ import Debug
 import RemoteConfig as RC
 import Services.API as API
 import Data.Bounded (top)
+import Screens.Types as ST
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -227,9 +229,9 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
-foreign import getAndRemoveLatestNotificationType :: Unit -> String
-
 foreign import decodeErrorCode :: String -> String
+
+foreign import releaseBackpress :: Unit -> Unit
 
 data TimeUnit
   = HOUR
@@ -579,7 +581,9 @@ terminateApp :: Stage -> Boolean -> Unit
 terminateApp stage exitApp = emitTerminateApp (Just $ getScreenFromStage stage) exitApp
 
 emitTerminateApp :: Maybe String -> Boolean -> Unit
-emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+emitTerminateApp screen exitApp = do
+  let _ = releaseBackpress unit
+  runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
     event : "process_result"
   , payload : Just {
     action : "terminate"
@@ -720,7 +724,7 @@ getVehicleVariantImage variant viewType =
           "ECO"           -> variantConfig.hatchback.leftViewImage
           "COMFY"         -> variantConfig.sedan.leftViewImage
           "PREMIUM"       -> variantConfig.sedan.leftViewImage
-          "AUTO_RICKSHAW" -> case city of
+          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of
                               _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
                               _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
@@ -735,6 +739,11 @@ getVehicleVariantImage variant viewType =
                                       Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
           "BIKE"          -> variantConfig.bike.leftViewImage
+          "AMBULANCE_TAXI" -> variantConfig.ambulanceTaxi.leftViewImage
+          "AMBULANCE_TAXI_OXY" -> variantConfig.ambulanceTaxiOxy.leftViewImage
+          "AMBULANCE_AC" -> variantConfig.ambulanceAc.leftViewImage
+          "AMBULANCE_AC_OXY" -> variantConfig.ambulanceAcOxy.leftViewImage
+          "AMBULANCE_VENTILATOR" -> variantConfig.ambulanceVentilator.leftViewImage
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_left_side"
           "DELIVERY_BIKE" -> variantConfig.deliveryBike.leftViewImage
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
@@ -748,7 +757,7 @@ getVehicleVariantImage variant viewType =
           "ECO"           -> variantConfig.hatchback.image
           "COMFY"         -> variantConfig.sedan.image
           "PREMIUM"       -> variantConfig.sedan.image
-          "AUTO_RICKSHAW" -> case city of
+          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of
                               _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
                               _ | isTamilNaduCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
@@ -765,6 +774,11 @@ getVehicleVariantImage variant viewType =
           "BIKE"          -> variantConfig.bike.image
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_side"
           "DELIVERY_BIKE" -> variantConfig.deliveryBike.image
+          "AMBULANCE_TAXI" -> variantConfig.ambulanceTaxi.image
+          "AMBULANCE_TAXI_OXY" -> variantConfig.ambulanceTaxiOxy.image
+          "AMBULANCE_AC" -> variantConfig.ambulanceAc.image
+          "AMBULANCE_AC_OXY" -> variantConfig.ambulanceAcOxy.image
+          "AMBULANCE_VENTILATOR" -> variantConfig.ambulanceVentilator.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
 
 getVariantRideType :: String -> String
@@ -777,19 +791,20 @@ getVariantRideType variant =
                     "DELIVERY_BIKE" -> "2 Wheeler"
                     "SEDAN" -> "Sedan"
                     "HATCHBACK" -> "AC Mini"
+                    _ | isAmbulance variant -> "Ambulance"
                     _      -> "AC Cab"
     _          -> getString AC_CAB
 
 getTitleConfig :: forall w. String -> {text :: String , color :: String}
 getTitleConfig vehicleVariant =
   case vehicleVariant of
-        "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
-        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800
-        "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString LT.TAXI)) CommonColor.orange900
+        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString LT.TAXI)) Color.blue800 
+        _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> mkReturnObj ((getString LT.AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
-        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800
-  where mkReturnObj text' color' =
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800 
+  where mkReturnObj text' color' = 
           {
             text : text',
             color : color'
@@ -833,6 +848,7 @@ cityCodeMap =
   , Tuple (Just "std:08200") Udupi
   , Tuple (Just "std:0674") Bhubaneswar
   , Tuple (Just "std:0671") Cuttack
+  , Tuple (Just "std:08682") Nalgonda
   , Tuple (Just "std:06752") Puri
   , Tuple (Just "std:04322") Pudukkottai
   , Tuple (Just "std:8482") Bidar
@@ -852,7 +868,9 @@ quoteModalVariantImage variant =
         Hyderabad -> "ny_ic_no_quotes_auto_che_hyd"
         _ | isTamilNaduCity city -> "ny_ic_no_quotes_auto_che_hyd"
         _ -> "ny_ic_no_quotes_auto"
-      else  "ny_ic_no_quotes_color"
+      else if isAmbulance variant 
+          then "ny_ic_no_quotes_ambulance"
+      else "ny_ic_no_quotes_color"
 
 getCancellationImage :: String -> Int -> String
 getCancellationImage vehicleVariant distance =
@@ -861,13 +879,21 @@ getCancellationImage vehicleVariant distance =
     "AUTO_RICKSHAW" -> getAutoRickshawNearImage
     "BIKE" -> "ny_ic_driver_near_bike"
     "DELIVERY_BIKE" -> "ny_ic_driver_near_bike"
-    "AMBULANCE" -> "ny_ic_driver_near_ambulance"
+    "AMBULANCE_TAXI" -> "ny_ic_driver_near_ambulance"
+    "AMBULANCE_TAXI_OXY" -> "ny_ic_driver_near_ambulance"
+    "AMBULANCE_AC" -> "ny_ic_driver_near_ambulance"
+    "AMBULANCE_AC_OXY" -> "ny_ic_driver_near_ambulance"
+    "AMBULANCE_VENTILATOR" -> "ny_ic_driver_near_ambulance"
     _ -> "ny_ic_driver_started"
   else case vehicleVariant of
     "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
     "BIKE" -> "ny_ic_driver_started_bike"
     "DELIVERY_BIKE" -> "ny_ic_driver_started_bike"
-    "AMBULANCE" -> "ny_ic_driver_started_ambulance"
+    "AMBULANCE_TAXI" -> "ny_ic_driver_started_ambulance"
+    "AMBULANCE_TAXI_OXY" -> "ny_ic_driver_started_ambulance"
+    "AMBULANCE_AC" -> "ny_ic_driver_started_ambulance"
+    "AMBULANCE_AC_OXY" -> "ny_ic_driver_started_ambulance"
+    "AMBULANCE_VENTILATOR" -> "ny_ic_driver_started_ambulance"
     _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
 getAutoRickshawNearImage  =
@@ -922,6 +948,7 @@ getCityFromString cityString =
     "Trichy" -> Trichy
     "Bhubaneswar" -> Bhubaneswar
     "Cuttack" -> Cuttack
+    "Nalgonda" -> Nalgonda
     "Puri" -> Puri
     "Pudukkottai" -> Pudukkottai
     "Bidar" -> Bidar
@@ -1230,19 +1257,46 @@ getRouteMarkers variant city trackingType fareProductType currentStage =
   }
 
 mkSrcMarker :: City -> String ->Maybe Stage -> String
-mkSrcMarker = getCitySpecificMarker
+mkSrcMarker city variant currentStage =
+  let srcMarker = getCitySpecificMarker city variant currentStage
+  in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "ny_ic_blue_circle" -- Added local resource check for avoiding native crash
 
+fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
+fetchVehicleVariant variant = 
+  case variant of 
+    "SUV"           -> Just ST.SUV
+    "SEDAN"         -> Just ST.SEDAN
+    "HATCHBACK"     -> Just ST.HATCHBACK
+    "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+    "TAXI"          -> Just ST.TAXI 
+    "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    "BIKE"          -> Just ST.BIKE
+    "AMBULANCE_TAXI" -> Just ST.AMBULANCE_TAXI
+    "AMBULANCE_TAXI_OXY" -> Just ST.AMBULANCE_TAXI_OXY
+    "AMBULANCE_AC" -> Just ST.AMBULANCE_AC
+    "AMBULANCE_AC_OXY" -> Just ST.AMBULANCE_AC_OXY
+    "AMBULANCE_VENTILATOR" -> Just ST.AMBULANCE_VENTILATOR
+    _               -> Nothing
+
+getVehicleCapacity :: String -> String 
+getVehicleCapacity variant = 
+  case fetchVehicleVariant variant of
+    Just ST.SUV -> "6" 
+    Just ST.AUTO_RICKSHAW -> "3"
+    Just ST.BIKE -> "1"
+    _ -> "4"
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
 getCitySpecificMarker city variant currentStage =
     let isDeliveryImagePresent = (JB.getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
         variantImage = case variant of
-            "AUTO_RICKSHAW" -> getAutoImage city
+            _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getAutoImage city
             "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
             "SUV"           -> "ny_ic_suv_nav_on_map"
             "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
             "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
             "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
             "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
+            _ | isAmbulance variant -> "ny_ic_ambulance_nav_on_map"
             _               -> "ny_ic_vehicle_nav_on_map"
     in variantImage
 
@@ -1305,6 +1359,7 @@ getLanguageBasedCityName cityName =
     Odisha -> getString ODISHA
     Bhubaneswar -> getString BHUBANESWAR
     Cuttack -> "Cuttack"
+    Nalgonda -> "Nalgonda"
     Puri -> "Puri"
     Pudukkottai -> "Pudukkottai"
     Bidar -> "Bidar"
@@ -1558,3 +1613,6 @@ isTamilNaduCity city = elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, T
 isKeralaCity :: City -> Boolean 
 isKeralaCity city = elem city [Kochi, Kozhikode, Thrissur, Trivandrum]
 
+
+isAmbulance :: String -> Boolean
+isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]

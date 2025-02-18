@@ -55,6 +55,8 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - TemplateHaskell
+  - DerivingStrategies
 
 dependencies:
   - aeson

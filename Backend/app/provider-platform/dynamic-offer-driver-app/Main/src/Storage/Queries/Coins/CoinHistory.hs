@@ -61,6 +61,16 @@ getTotalCoins (Id driverId) timeDiffFromUtc = do
         ]
     ]
 
+getCoinsByEventFunction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> DriverCoinsFunctionType -> Maybe Text -> m (Maybe CoinHistory)
+getCoinsByEventFunction (Id driverId) eventFunction entityId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDC.driverId $ Se.Eq $ driverId,
+          Se.Is BeamDC.eventFunction $ Se.Eq $ eventFunction,
+          Se.Is BeamDC.entityId $ Se.Eq entityId
+        ]
+    ]
+
 getExpiringCoinsInXDay :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> NominalDiffTime -> m [CoinHistory]
 getExpiringCoinsInXDay (Id driverId) configTime timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime

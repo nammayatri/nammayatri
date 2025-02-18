@@ -4,6 +4,7 @@
 
 module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, module ReExport) where
 
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
@@ -14,6 +15,8 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Yudhishthira.Tools.Utils
+import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as Beam
 import Storage.Queries.SearchRequestExtra as ReExport
@@ -32,14 +35,19 @@ updateIsAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateWithKV [Se.
 updateIsReallocationEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateIsReallocationEnabled isReallocationEnabled id = do updateWithKV [Se.Set Beam.isReallocationEnabled isReallocationEnabled] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateParcelDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateParcelDetails parcelType parcelQuantity id = do updateWithKV [Se.Set Beam.parcelType parcelType, Se.Set Beam.parcelQuantity parcelQuantity] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePoolingConfigVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updatePoolingConfigVersion poolingConfigVersion id = do updateWithKV [Se.Set Beam.poolingConfigVersion poolingConfigVersion] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePoolingLogicVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updatePoolingLogicVersion poolingLogicVersion id = do updateWithKV [Se.Set Beam.poolingLogicVersion poolingLogicVersion] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags searchTags] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTripCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateTripCategory tripCategory id = do updateWithKV [Se.Set Beam.tripCategory tripCategory] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

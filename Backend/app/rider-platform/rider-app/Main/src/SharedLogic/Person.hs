@@ -54,7 +54,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
   let maxBookingTimeCompleted = foldl' max person.createdAt completedBookingsCreatedAt
   let maxBookingTime = max maxBookingTimeCancelled maxBookingTimeCompleted
   Hedis.setExp (personRedisKey personId) maxBookingTime 43200
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityid >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityid Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
   let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
   let completedRidesCnt = length completedBookingsCreatedAt
@@ -77,6 +77,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
             backlogPayoutAmount = 0,
+            isBackfilled = Just True,
             ..
           }
   return personStatsValues
@@ -141,7 +142,7 @@ checkSafetyCenterDisabled person safetySettings = do
         then return True
         else do
           now <- getCurrentTime
-          riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do

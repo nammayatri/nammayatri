@@ -28,6 +28,7 @@ import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location, LocationAPIEntity)
+import Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
@@ -59,6 +60,7 @@ import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
@@ -131,10 +133,12 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     rideStatus :: Maybe DRide.RideStatus,
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     driverArrivalTime :: Maybe UTCTime,
+    destinationReachedAt :: Maybe UTCTime,
     sosStatus :: Maybe DSos.SosStatus,
     driversPreviousRideDropLocLat :: Maybe Double,
     driversPreviousRideDropLocLon :: Maybe Double,
-    stopInfo :: [DSI.StopInformation]
+    stopInfo :: [DSI.StopInformation],
+    batchConfig :: Maybe SharedRedisKeys.BatchConfig
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -215,7 +219,9 @@ data DeliveryBookingAPIDetails = DeliveryBookingAPIDetails
     estimatedDistanceWithUnit :: Distance,
     senderDetails :: DeliveryPersonDetailsAPIEntity,
     receiverDetails :: DeliveryPersonDetailsAPIEntity,
-    requestorPartyRoles :: [Trip.PartyRole]
+    requestorPartyRoles :: [Trip.PartyRole],
+    parcelType :: DParcel.ParcelType,
+    parcelQuantity :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -456,6 +462,7 @@ buildBookingAPIEntity booking personId = do
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRideLite.findActiveByRBIdLite booking.id
+  batchConfig <- maybe (SharedRedisKeys.getBatchConfig booking.transactionId) (\_ -> pure Nothing) mbActiveRide
   stopsInfo <- if (fromMaybe False booking.hasStops) then maybe (pure []) (\ride -> QSI.findAllByRideId ride.id) mbActiveRide else return []
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbActiveRide
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
@@ -463,8 +470,9 @@ buildBookingStatusAPIEntity booking = do
       rideStatus = fmap (.status) mbActiveRide
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
+      destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
@@ -473,15 +481,14 @@ favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
 buildRideAPIEntity DRide.Ride {..} = do
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
-  let driverMobileNumber' = if status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
-      oneYearAgo = - (365 * 24 * 60 * 60)
+  let oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
   return $
     RideAPIEntity
       { shortRideId = shortId,
-        driverNumber = driverMobileNumber',
+        driverNumber = Just driverMobileNumber,
         driverRatings = driverRating',
         driverRegisteredAt = Just driverRegisteredAt',
         rideOtp = otp,

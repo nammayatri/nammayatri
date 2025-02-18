@@ -44,6 +44,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantSchedulerTrigger,
     postMerchantConfigClearCacheSubscription,
     postMerchantConfigFailover,
+    postMerchantPayoutConfigUpdate,
   )
 where
 
@@ -164,6 +165,7 @@ import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePol
 import qualified Storage.Queries.FareProduct as SQF
 import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import Tools.Error
@@ -1304,6 +1306,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           let fareProduct = DFareProduct.FareProduct {enabled = enabled', merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
           CQFProduct.create fareProduct
           CQFProduct.clearCache fareProduct
+          oldFareProducts `forM_` CQFProduct.clearCache
 
           return (errors, newBoundedAlreadyDeletedMap)
 
@@ -1352,6 +1355,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
+      void $ validateFarePolicyType farePolicyType tripCategory
       let platformFeeChargeFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeChargeFarePolicyLevel "Platform Fee Charge"
       let platformFeeCgstFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeCgstFarePolicyLevel "Platform Fee CGST Amount"
       let platformFeeSgstFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeSgstFarePolicyLevel "Platform Fee SGST Amount"
@@ -1547,6 +1551,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
       return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
 
+    validateFarePolicyType farePolicyType = \case
+      InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
+      Rental _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
+      _ -> pure ()
+
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
       T.intercalate ":" [cityId.getId, show vehicleServiceTier, show area, show tripCategory, show searchSource]
@@ -1573,7 +1582,23 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
       let geom = request.geom <|> mbGeometry
       id <- maybe generateGUID (return . (.id)) mbExistingSpLoc
       now <- getCurrentTime
-      merchantOperatingCity <- maybe (return Nothing) (CQMOC.findByMerchantShortIdAndCity merchantShortId) request.city
+      (merchantOperatingCityId, merchantId) <- case request.city of
+        Just opCity -> do
+          merchantOperatingCity <-
+            CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              >>= fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantShortId: " <> merchantShortId.getShortId <> ", opCity: " <> show opCity)
+          let merchantOperatingCityId = cast @DMOC.MerchantOperatingCity @SL.MerchantOperatingCity merchantOperatingCity.id
+              merchantId = cast @DM.Merchant @SL.Merchant merchantOperatingCity.merchantId
+          pure (merchantOperatingCityId, merchantId)
+        Nothing -> case (mbExistingSpLoc >>= (.merchantOperatingCityId), mbExistingSpLoc >>= (.merchantId)) of
+          (Just merchantOperatingCityId, Just merchantId) -> pure (merchantOperatingCityId, merchantId)
+          (Just merchantOperatingCityId, Nothing) -> do
+            merchantOperatingCity <-
+              CQMOC.findById (cast @SL.MerchantOperatingCity @DMOC.MerchantOperatingCity merchantOperatingCityId)
+                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId-" <> merchantOperatingCityId.getId)
+            let merchantId = cast @DM.Merchant @SL.Merchant merchantOperatingCity.merchantId
+            pure (merchantOperatingCityId, merchantId)
+          (Nothing, _) -> throwError (InvalidRequest "Valid city should be provided")
       locationName <-
         fromMaybeM (InvalidRequest "Location Name cannot be empty for a new special location") $
           request.locationName <|> (mbExistingSpLoc <&> (.locationName))
@@ -1583,10 +1608,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
           { gates = [],
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
-            merchantOperatingCityId = cast . (.id) <$> merchantOperatingCity,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
-            merchantId = cast . (.merchantId) <$> merchantOperatingCity,
+            merchantId = Just merchantId,
             ..
           }
 
@@ -2294,7 +2319,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
             CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
             CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated),
             CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing,
-            CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName,
+            CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
             CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
             CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),
             CQPlan.makeIdKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleCategory plan.isDeprecated,
@@ -2361,3 +2386,12 @@ reorderList (x : xs) = xs ++ [x]
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
 castNetworkEnums Common.NY = Domain.Types.NY
+
+postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.PayoutConfigReq -> Flow APISuccess
+postMerchantPayoutConfigUpdate merchantShortId city req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id req.vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
+  QPC.updateConfigValues req payoutConfig merchantOpCity.id
+  CPC.clearConfigCache merchantOpCity.id req.vehicleCategory
+  pure Success

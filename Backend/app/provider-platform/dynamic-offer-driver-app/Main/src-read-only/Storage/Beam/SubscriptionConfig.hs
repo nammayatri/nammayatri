@@ -1,16 +1,16 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SubscriptionConfig where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.WebhookExtra
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -25,12 +25,15 @@ data SubscriptionConfigT f = SubscriptionConfigT
     deepLinkExpiryTimeInMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultCityVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     enableCityBasedFeeSwitch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    eventsEnabledForWebhook :: B.C f (Kernel.Prelude.Maybe [Domain.Types.WebhookExtra.WebhookEvent]),
     executionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
+    extWebhookConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     freeTrialRidesApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     genericBatchSizeForJobs :: B.C f Kernel.Prelude.Int,
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     isSubscriptionEnabledAtCategoryLevel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,
+    isUIEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isVendorSplitEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     numberOfFreeTrialRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -43,8 +46,10 @@ data SubscriptionConfigT f = SubscriptionConfigT
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    subscriptionDown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     subscriptionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     useOverlayService :: B.C f Kernel.Prelude.Bool,
+    webhookConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

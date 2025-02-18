@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.JourneyBooking where
@@ -26,7 +24,7 @@ data JourneyBookingT f = JourneyBookingT
     id :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f Kernel.Prelude.Bool,
     journeyId :: B.C f Kernel.Prelude.Text,
-    modes :: B.C f [Domain.Types.Common.TravelMode],
+    modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
     numberOfPassengers :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

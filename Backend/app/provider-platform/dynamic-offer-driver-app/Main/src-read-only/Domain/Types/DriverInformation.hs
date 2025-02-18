@@ -1,11 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DriverInformation where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -39,6 +39,7 @@ data DriverInformation = DriverInformation
     canDowngradeToSedan :: Kernel.Prelude.Bool,
     canDowngradeToTaxi :: Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Bool,
+    canSwitchToIntraCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -72,9 +73,10 @@ data DriverInformation = DriverInformation
     payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
-    preferredSecondarySpecialLocIds :: [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)],
+    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    servicesEnabledForSubscription :: [Domain.Types.Extra.Plan.ServiceNames],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     softBlockStiers :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
@@ -129,10 +131,10 @@ data DriverSummary = DriverSummary
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
-$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
+$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)

@@ -58,6 +58,7 @@ postTagCreate tagRequest = do
                 rule = tagRule,
                 description = description,
                 actionEngine = Nothing,
+                validity = tagValidity,
                 createdAt = now,
                 updatedAt = now
               }
@@ -65,12 +66,13 @@ postTagCreate tagRequest = do
           return $
             DNT.NammaTag
               { category = tagCategory,
-                info = DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra tagValidity),
+                info = DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra),
                 name = tagName,
                 possibleValues = tagPossibleValues,
                 rule = tagRule,
                 description = description,
                 actionEngine,
+                validity = tagValidity,
                 createdAt = now,
                 updatedAt = now
               }
@@ -84,6 +86,7 @@ postTagCreate tagRequest = do
                 rule = Lib.Yudhishthira.Types.LLM "empty-context",
                 description = description,
                 actionEngine = Nothing,
+                validity = tagValidity,
                 createdAt = now,
                 updatedAt = now
               }
@@ -97,6 +100,9 @@ postTagUpdate tagRequest = do
   where
     buildUpdateNammaTagEntity tag = do
       now <- getCurrentTime
+      let validity = case tagRequest.resetTagValidity of
+            Just True -> Nothing
+            _ -> tagRequest.tagValidity <|> tag.validity
       return $
         DNT.NammaTag
           { category = fromMaybe tag.category tagRequest.tagCategory,
@@ -106,13 +112,14 @@ postTagUpdate tagRequest = do
             rule = fromMaybe tag.rule tagRequest.tagRule,
             description = tagRequest.description <|> tag.description,
             actionEngine = tagRequest.actionEngine <|> tag.actionEngine,
+            validity,
             createdAt = tag.createdAt,
             updatedAt = now
           }
     buildTagInfo tag = do
       case tag.info of
         DNT.Application (DNT.ApplicationTagInfo tagStage) -> DNT.Application (DNT.ApplicationTagInfo (fromMaybe tagStage tagRequest.tagStage))
-        DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra tagValidity) -> DNT.KaalChakra (DNT.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra) (tagRequest.tagValidity <|> tagValidity))
+        DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra) -> DNT.KaalChakra (DNT.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra))
         DNT.Manual -> DNT.Manual
 
 deleteTag :: BeamFlow m r => T.Text -> m Kernel.Types.APISuccess.APISuccess
@@ -157,8 +164,8 @@ postQueryCreate queryRequest = do
       let repeatedFields = filter (\f -> length (filter (== f) newQueryFieldNames) > 1) newQueryFieldNames
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
 
-verifyTag :: BeamFlow m r => Text -> m ()
-verifyTag fullTag = do
+verifyTag :: BeamFlow m r => Lib.Yudhishthira.Types.TagNameValue -> m (Maybe DNT.NammaTag)
+verifyTag (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
   case T.splitOn "#" fullTag of
     [name, tagValueText] -> do
       tag <- QNT.findByPrimaryKey name >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
@@ -176,7 +183,8 @@ verifyTag fullTag = do
                 Just (A.Number num) -> unless (num >= realToFrac start && num <= realToFrac end) $ throwError (InvalidRequest $ "Tag value should be between " <> show start <> " and " <> show end)
                 _ -> throwError $ InvalidRequest "Tag value should be a number"
             Lib.Yudhishthira.Types.AnyText -> pure ()
-    [_] -> return ()
+      return (Just tag)
+    [_] -> return Nothing
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
 
 postRunKaalChakraJob ::
@@ -378,7 +386,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
   let rolloutObjects = concat rolloutObjectsArr
   CADLR.delete (cast merchantOpCityId) domain
   CADLR.createMany rolloutObjects
-  CADLR.clearCache (cast merchantOpCityId) domain
+  CADLR.clearDomainCache (cast merchantOpCityId) domain
   return Kernel.Types.APISuccess.Success
   where
     getDomain :: Maybe Lib.Yudhishthira.Types.LogicDomain

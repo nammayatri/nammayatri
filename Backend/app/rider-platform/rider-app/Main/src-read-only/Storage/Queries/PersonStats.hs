@@ -103,6 +103,7 @@ updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.driverCancelledRides driverCancelledRides,
       Se.Set Beam.eveningPeakRides eveningPeakRides,
+      Se.Set Beam.isBackfilled isBackfilled,
       Se.Set Beam.morningPeakRides morningPeakRides,
       Se.Set Beam.offPeakRides offPeakRides,
       Se.Set Beam.referralAmountPaid (Kernel.Prelude.Just referralAmountPaid),

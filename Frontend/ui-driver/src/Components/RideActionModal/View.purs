@@ -36,7 +36,6 @@ import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoIS
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
-import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
 import Helpers.Utils (getRideTypeColor, getVariantRideType)
 import Helpers.Utils as HU
 import JBridge (getVersionCode)
@@ -47,7 +46,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>), (>>=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY,textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -66,6 +65,7 @@ import Data.String as DS
 import JBridge (fromMetersToKm)
 import Data.Maybe
 import Data.Int
+import Services.API as SA
 import Components.RateCard.Controller 
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -936,7 +936,7 @@ rideTierAndCapacity push config =
     , textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text $ RC.serviceTierMapping config.serviceTierAndAC config.acRide
+      , textFromHtml $ RC.serviceTierMapping false config.serviceTierAndAC config.acRide
       , color Color.black700
       , margin $ MarginHorizontal 6 6
       , padding $ PaddingBottom 1
@@ -982,8 +982,8 @@ rideTierAndCapacity push config =
       ] <> FontStyle.body1 TypoGraphy
   ] 
   where paddingLeft = if Maybe.isJust config.acRide then 4 else 10
-        tierName = if config.acRide == Maybe.Just true then "AC" else if config.acRide == Maybe.Just false then "Non-AC" else ""
-        tierImage = if config.acRide == Maybe.Just true then "ny_ic_ac_white" else if config.acRide == Maybe.Just false then "ny_ic_non_ac_white" else ""
+        tierName = if config.vehicleServiceTier == show SA.AMBULANCE_VENTILATOR then "" else if config.acRide == Maybe.Just true then "AC" else if config.acRide == Maybe.Just false then "Non-AC" else ""
+        tierImage = if config.vehicleServiceTier == show SA.AMBULANCE_VENTILATOR then "ny_ic_non_ac_white" else if config.acRide == Maybe.Just true then "ny_ic_ac_white" else if config.acRide == Maybe.Just false then "ny_ic_non_ac_white" else ""
         tierBackground = if config.acRide == Maybe.Just true then Color.blue800 else if config.acRide == Maybe.Just false then Color.black700 else Color.blue800
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)

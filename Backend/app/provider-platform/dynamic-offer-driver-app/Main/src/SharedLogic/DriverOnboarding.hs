@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.DriverOnboarding where
+module SharedLogic.DriverOnboarding
+  ( module SharedLogic.DriverOnboarding,
+    module Reexport,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
@@ -24,6 +28,8 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.FleetRCAssociation as FRCA
+import qualified Domain.Types.HyperVergeVerification as DHV
+import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.MerchantMessage as DMM
@@ -34,10 +40,12 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
+import Domain.Utils as Reexport
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Types (VerificationFlow)
 import Kernel.Prelude
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
@@ -129,7 +137,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
       QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing
         >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
     let jsonData = merchantMessage.jsonData
-    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
+    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
     when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
 
 enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
@@ -319,14 +327,14 @@ data CreateRCInput = CreateRCInput
     vehicleModelYear :: Maybe Int
   }
 
-buildRC :: Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> Flow (Maybe VehicleRegistrationCertificate)
+buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> m (Maybe VehicleRegistrationCertificate)
 buildRC merchantId merchantOperatingCityId input = do
   now <- getCurrentTime
   id <- generateGUID
   rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
-  let mbFitnessEpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
-  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessEpiry
+  let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
+  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessExpiry
 
 createRC ::
   Id DTM.Merchant ->
@@ -340,6 +348,10 @@ createRC ::
   VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNumber expiry = do
   let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
+      airConditioned = input.airConditioned
+      updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
+        Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
+        _ -> variant
   VehicleRegistrationCertificate
     { id,
       documentImageId = input.documentImageId,
@@ -348,7 +360,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       permitExpiry = input.permitValidityUpto,
       pucExpiry = input.pucValidityUpto,
       vehicleClass = input.vehicleClass,
-      vehicleVariant = variant,
+      vehicleVariant = updVariant,
       vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
       vehicleCapacity = input.seatingCapacity,
       vehicleModel = mbVehicleModel,
@@ -366,7 +378,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,
       userPassedVehicleCategory = input.vehicleCategory,
-      airConditioned = input.airConditioned,
+      airConditioned = airConditioned,
       oxygen = input.oxygen,
       ventilator = input.ventilator,
       luggageCapacity = Nothing,
@@ -476,11 +488,6 @@ sortMaybe = DL.sortBy compareVehicles
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
-convertTextToUTC :: Maybe Text -> Maybe UTCTime
-convertTextToUTC a = do
-  a_ <- a
-  parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
-
 convertTextToDay :: Maybe Text -> Maybe Day
 convertTextToDay a = do
   a_ <- a
@@ -488,3 +495,46 @@ convertTextToDay a = do
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (formatTime defaultTimeLocale "%d/%m/%Y" utctime)
+
+data VerificationReqRecord = VerificationReqRecord
+  { airConditioned :: Maybe Bool,
+    docType :: DVC.DocumentType,
+    documentImageId1 :: Id Domain.Image,
+    documentImageId2 :: Maybe (Id Domain.Image),
+    documentNumber :: EncryptedHashedField 'AsEncrypted Text,
+    driverDateOfBirth :: Maybe UTCTime,
+    driverId :: Id Person,
+    verificaitonResponse :: Maybe Text,
+    id :: Text,
+    imageExtractionValidation :: DIdfy.ImageExtractionValidation,
+    issueDateOnDoc :: Maybe UTCTime,
+    multipleRC :: Maybe Bool,
+    nameOnCard :: Maybe Text,
+    oxygen :: Maybe Bool,
+    requestId :: Text,
+    retryCount :: Maybe Int,
+    status :: Text,
+    vehicleCategory :: Maybe DVC.VehicleCategory,
+    ventilator :: Maybe Bool,
+    merchantId :: Maybe (Id DTM.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic)
+
+makeIdfyVerificationReqRecord :: DIdfy.IdfyVerification -> VerificationReqRecord
+makeIdfyVerificationReqRecord DIdfy.IdfyVerification {..} =
+  VerificationReqRecord
+    { id = id.getId,
+      verificaitonResponse = idfyResponse,
+      ..
+    }
+
+makeHVVerificationReqRecord :: DHV.HyperVergeVerification -> VerificationReqRecord
+makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
+  VerificationReqRecord
+    { id = id.getId,
+      verificaitonResponse = hypervergeResponse,
+      ..
+    }

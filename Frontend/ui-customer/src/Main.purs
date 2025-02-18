@@ -61,7 +61,8 @@ main event callInitUI = do
                   _ <- pure $ printLog "printLog error in main is : " err
                   _ <- liftFlow $ main event callInitUI
                   pure unit
-      _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+      -- required if we need to update Payment page assets in first run
+      -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets 
       pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do

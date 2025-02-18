@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.saved_location ADD COLUMN tag character varying(255) NOT N
 ALTER TABLE atlas_app.saved_location ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.saved_location ADD COLUMN ward character varying(255) ;
 ALTER TABLE atlas_app.saved_location ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.saved_location ADD COLUMN location_name character varying(500) ;

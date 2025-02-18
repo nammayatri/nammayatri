@@ -40,12 +40,12 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTag.NammaTag {..}) = do
       Se.Set Beam.chakra (getChakra info),
       Se.Set Beam.event (getEvent info),
       Se.Set Beam.tagType (getTag info),
-      Se.Set Beam.validity (getValidity info),
       Se.Set Beam.rangeEnd (getRangeEnd possibleValues),
       Se.Set Beam.rangeStart (getRangeStart possibleValues),
       Se.Set Beam.tags (getTags possibleValues),
       Se.Set Beam.llmContext (getLlmContext rule),
       Se.Set Beam.ruleEngine (getRuleEngine rule),
+      Se.Set Beam.validity validity,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

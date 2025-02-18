@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.VehicleInsurance where
@@ -36,9 +35,9 @@ data VehicleInsuranceE e = VehicleInsurance
   }
   deriving (Generic)
 
-type VehicleInsurance = VehicleInsuranceE ('AsEncrypted)
+type VehicleInsurance = VehicleInsuranceE 'AsEncrypted
 
-type DecryptedVehicleInsurance = VehicleInsuranceE ('AsUnencrypted)
+type DecryptedVehicleInsurance = VehicleInsuranceE 'AsUnencrypted
 
 instance EncryptedItem VehicleInsurance where
   type Unencrypted VehicleInsurance = (DecryptedVehicleInsurance, HashSalt)

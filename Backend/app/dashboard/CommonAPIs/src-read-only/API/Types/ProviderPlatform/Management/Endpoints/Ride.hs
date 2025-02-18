@@ -109,11 +109,9 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FParamsRentalDetails = FParamsRentalDetails
-  { timeBasedFare :: Kernel.Types.Common.Money,
-    distBasedFare :: Kernel.Types.Common.Money,
-    deadKmFare :: Kernel.Types.Common.PriceAPIEntity,
-    timeBasedFareWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
-    distBasedFareWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+  { deadKmFare :: Kernel.Types.Common.PriceAPIEntity,
+    timeFare :: Kernel.Types.Common.PriceAPIEntity,
+    distanceFare :: Kernel.Types.Common.PriceAPIEntity,
     extraDistance :: Kernel.Types.Common.Meters,
     extraDistanceWithUnit :: Kernel.Types.Common.Distance,
     extraDuration :: Kernel.Types.Common.Seconds
@@ -331,7 +329,8 @@ data RideInfoRes = RideInfoRes
     rideCreatedAt :: Kernel.Prelude.UTCTime,
     rideStatus :: RideStatus,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    deliveryParcelImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    deliveryParcelImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedReservedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

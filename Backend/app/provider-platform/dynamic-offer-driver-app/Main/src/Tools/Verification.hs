@@ -21,9 +21,11 @@ module Tools.Verification
     extractDLImage,
     validateFaceImage,
     verifySdkResp,
+    getTask,
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -32,6 +34,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Verification as Reexport hiding
   ( extractDLImage,
     extractRCImage,
+    getTask,
     searchAgent,
     validateFaceImage,
     validateImage,
@@ -48,6 +51,7 @@ import Storage.Beam.GovtDataRC ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Tools.Error
+import Tools.Metrics (CoreMetrics)
 
 verifyDLAsync ::
   ServiceFlow m r =>
@@ -55,17 +59,33 @@ verifyDLAsync ::
   Id DMOC.MerchantOperatingCity ->
   VerifyDLAsyncReq ->
   m VerifyDLAsyncResp
-verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync (.verificationService)
+verifyDLAsync _ merchantOpCityId req = do
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyDLAsync req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
 verifyRC ::
-  ServiceFlow m r =>
+  ( ServiceFlow m r,
+    CoreMetrics m
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe [VerificationService] ->
   VerifyRCReq ->
-  m VerifyRCResp
-verifyRC merchantId merchantOptCityId req = do
-  config <- CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
-  runWithServiceConfig (Verification.verifyRC config.verificationProvidersPriorityList) (.verificationService) merchantId merchantOptCityId req
+  m RCRespWithRemPriorityList
+verifyRC _ merchantOptCityId mbRemPriorityList req = getConfig >>= flip (Verification.verifyRC (getServiceConfig merchantOptCityId)) req . flip fromMaybe mbRemPriorityList
+  where
+    getConfig = CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing >>= ((.verificationProvidersPriorityList) <$>) . fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+
+getServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> m VerificationServiceConfig
+getServiceConfig merchantOptCityId cfg = case cfg of
+  GovtData -> return $ GovtDataConfig {}
+  _ -> do
+    merchantServiceConfig <- CQMSC.findByServiceAndCity (DMSC.VerificationService cfg) merchantOptCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
+    case merchantServiceConfig.serviceConfig of
+      DMSC.VerificationServiceConfig vsc -> return vsc
+      _ -> throwError $ InternalError "Unknown Service Config"
 
 validateImage ::
   ServiceFlow m r =>
@@ -107,6 +127,21 @@ verifySdkResp ::
   m VerifySdkDataResp
 verifySdkResp = runWithServiceConfig Verification.verifySdkResp (.sdkVerificationService)
 
+getTask ::
+  ServiceFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  VerificationService ->
+  GetTaskReq ->
+  (Text -> Maybe Text -> Text -> m ()) ->
+  m GetTaskResp
+getTask merchantOpCityId config req updateResp = do
+  merchantServiceConfig <-
+    CQMSC.findByServiceAndCity (DMSC.VerificationService config) merchantOpCityId
+      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show config))
+  case merchantServiceConfig.serviceConfig of
+    DMSC.VerificationServiceConfig vsc -> Verification.getTask vsc req updateResp
+    _ -> throwError $ InternalError "Unknown Service Config"
+
 runWithServiceConfig ::
   ServiceFlow m r =>
   (VerificationServiceConfig -> req -> m resp) ->
@@ -119,9 +154,13 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  callService merchantOpCityId (getCfg merchantServiceUsageConfig) func req
+
+callService :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> (VerificationServiceConfig -> req -> m resp) -> req -> m resp
+callService merchantOpCityId vsc func req = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
-      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
+    CQMSC.findByServiceAndCity (DMSC.VerificationService vsc) merchantOpCityId
+      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show vsc))
   case merchantServiceConfig.serviceConfig of
-    DMSC.VerificationServiceConfig vsc -> func vsc req
+    DMSC.VerificationServiceConfig vsc' -> func vsc' req
     _ -> throwError $ InternalError "Unknown Service Config"

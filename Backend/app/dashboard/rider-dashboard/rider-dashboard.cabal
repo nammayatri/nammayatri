@@ -29,7 +29,6 @@ library
       API
       API.RiderPlatform
       App
-      Domain.Action.RiderPlatform.AppManagement.HotSpot
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.IssueManagement.Issue
       Domain.Action.RiderPlatform.IssueManagement.IssueList
@@ -46,6 +45,7 @@ library
       Domain.Action.RiderPlatform.RideBooking.Confirm
       Domain.Action.RiderPlatform.RideBooking.Frontend
       Domain.Action.RiderPlatform.RideBooking.Maps
+      Domain.Action.RiderPlatform.RideBooking.NotifyRideInfo
       Domain.Action.RiderPlatform.RideBooking.Profile
       Domain.Action.RiderPlatform.RideBooking.Quote
       Domain.Action.RiderPlatform.RideBooking.Registration
@@ -53,7 +53,6 @@ library
       Domain.Action.RiderPlatform.RideBooking.Select
       Storage.Beam.CommonInstances
       API.Action.RiderPlatform.AppManagement
-      API.Action.RiderPlatform.AppManagement.HotSpot
       API.Action.RiderPlatform.AppManagement.Tickets
       API.Action.RiderPlatform.IssueManagement
       API.Action.RiderPlatform.IssueManagement.Issue
@@ -73,6 +72,7 @@ library
       API.Action.RiderPlatform.RideBooking.Confirm
       API.Action.RiderPlatform.RideBooking.Frontend
       API.Action.RiderPlatform.RideBooking.Maps
+      API.Action.RiderPlatform.RideBooking.NotifyRideInfo
       API.Action.RiderPlatform.RideBooking.Profile
       API.Action.RiderPlatform.RideBooking.Quote
       API.Action.RiderPlatform.RideBooking.Registration

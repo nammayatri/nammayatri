@@ -5,6 +5,7 @@
 module Storage.Queries.SearchRequestForDriver (module Storage.Queries.SearchRequestForDriver, module ReExport) where
 
 import qualified Data.Time
+import qualified Domain.Types.Common
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry
@@ -33,7 +34,7 @@ findAllActiveBySTId searchTryId status = do findAllWithKV [Se.And [Se.Is Beam.se
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+  (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
 updateDriverResponse response status notificationSource renderedAt respondedAt id = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -87,6 +88,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.driverSpeed driverSpeed,
       Se.Set Beam.driverStepFee (Kernel.Prelude.roundToIntegral <$> driverStepFee),
       Se.Set Beam.driverStepFeeAmount driverStepFee,
+      Se.Set Beam.driverTagScore driverTagScore,
       Se.Set Beam.driverTags driverTags,
       Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.estimateId estimateId,
@@ -104,6 +106,8 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.mode mode,
       Se.Set Beam.notificationSource notificationSource,
       Se.Set Beam.parallelSearchRequestCount parallelSearchRequestCount,
+      Se.Set Beam.parcelQuantity parcelQuantity,
+      Se.Set Beam.parcelType parcelType,
       Se.Set Beam.pickupZone pickupZone,
       Se.Set Beam.poolingConfigVersion poolingConfigVersion,
       Se.Set Beam.poolingLogicVersion poolingLogicVersion,

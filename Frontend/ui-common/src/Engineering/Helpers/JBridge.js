@@ -1007,9 +1007,8 @@ export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon,
 
 
 export const clearFocusFunction = function (id){
-  if(window.JBridge.clearFocus){
-    return JBridge.clearFocus(id)
-  }
+  const cmd = `set_view=ctx->findViewById:i_${id};get_view->clearFocus;`;
+  return window.Android.runInUI(cmd, "");
 }
 
 
@@ -1753,6 +1752,20 @@ export const storeOnResumeCallback = function (cb, action) {
     console.log ("onResumeListeners",callback);
     if (window.onResumeListeners) {
       window.onResumeListeners.push(callback);
+    }
+  } catch (error) {
+    console.log("Error occurred in storeOnResumeCallback ------", error);
+  }
+}
+
+export const refreshFlowCallback = function (key,cb) {
+  try {
+    const callback = function () {
+      cb();
+    }
+    console.log ("onResumeListenersMap",callback);
+    if (window.onResumeListenersMap) {
+      window.onResumeListenersMap[key] = callback;
     }
   } catch (error) {
     console.log("Error occurred in storeOnResumeCallback ------", error);

@@ -53,7 +53,7 @@ content-type: application/json
           sum(chargeable_distance) as totalDistance,\n
           sum(fare) as totalFare\n
         FROM atlas_driver_offer_bpp.ride\n
-        WHERE created_at >= date_sub (day, 365, toStartOfDay (now ()))\n
+        WHERE created_at >= date_sub (day, 3650, toStartOfDay (now ()))\n
           AND created_at < toStartOfDay (now ())\n
           AND {usersSetCondition}\n
         GROUP BY driver_id\n
@@ -90,7 +90,7 @@ content-type: application/json
       "SELECT driver_id as userId, count(id) as cancellationsCount\n
         FROM atlas_driver_offer_bpp.ride\n
         WHERE status = 'CANCELLED'\n
-          AND created_at >= date_sub (day, 365, toStartOfDay (now ()))\n
+          AND created_at >= date_sub (day, 3650, toStartOfDay (now ()))\n
           AND created_at < toStartOfDay (now ())\n
           AND {usersSetCondition}\n
         GROUP BY driver_id\n
@@ -240,7 +240,9 @@ content-type: application/json
         "UNSAFE_TO_SAFE_COHORT",
         "SAFE_TO_UNSAFE_COHORT"
       ]
-    }
+    },
+    "tagValidity": 3,
+    "resetTagValidity" : false
 }
 
 ###
@@ -299,8 +301,8 @@ content-type: application/json
       { "tag": "SCHEDULE",
         "contents": "2024-09-26 16:56:00Z"
       },
-    "updateUserTags": false,
-    "parseQueryResults": false,
+    "updateUserTags": true,
+    "parseQueryResults": true,
     "usersSet":
       { "tag": "ALL_USERS"
       },

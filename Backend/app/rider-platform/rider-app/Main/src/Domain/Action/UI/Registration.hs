@@ -78,7 +78,7 @@ import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -286,7 +286,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
           EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
-            riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+            riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
@@ -635,7 +635,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             validActivations = 0,
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
-            backlogPayoutAmount = 0
+            backlogPayoutAmount = 0,
+            isBackfilled = Just False
           }
 
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person
@@ -682,7 +683,7 @@ resend tokenId = do
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
       receiverEmail <- mapM decrypt person.email >>= fromMaybeM (PersonFieldNotPresent "email")
-      riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
       emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
       L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
 

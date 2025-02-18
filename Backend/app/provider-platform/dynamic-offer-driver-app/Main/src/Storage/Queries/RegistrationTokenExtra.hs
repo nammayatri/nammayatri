@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.RegistrationTokenExtra where
 
 import Domain.Types.Person

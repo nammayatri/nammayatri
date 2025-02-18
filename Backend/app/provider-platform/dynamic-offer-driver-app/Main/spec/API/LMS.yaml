@@ -1,14 +1,17 @@
 imports:
   LmsCategory: Domain.Types.LmsModule
   LmsModule: Domain.Types.LmsModule
+  LmsCertificate: Domain.Types.LmsCertificate
   LmsBonus: Domain.Types.LmsModule
   VehicleVariant: Domain.Types.VehicleVariant
+  Person : Domain.Types.Person
   Maybe: Data.Maybe
   Text: Data.Text
   Bool: Kernel.Prelude
   Language: Kernel.External.Types
   LmsModuleVideoInformation: Domain.Types.LmsModuleVideoInformation
   Int: Kernel.Prelude
+  Bool: Kernel.Prelude
   QuestionModuleMapping: Domain.Types.QuestionModuleMapping
   QuizQuestion: Domain.Types.LmsEnumTypes
   QuizOptions: Domain.Types.QuestionInformation
@@ -20,6 +23,7 @@ imports:
   ReelButtonConfig: Domain.Types.ReelsData
   ModuleCompletionCriteria: Domain.Types.LmsModule
   OptionEntity: Domain.Types.QuestionInformation
+  ModuleSection : Domain.Types.LmsModule
 
 module: LmsModule
 
@@ -44,6 +48,12 @@ types:
     moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
     languagesAvailableForVideos : "[Language]"
+    bonusCoins : Maybe Int
+    totalQuizCoins : Maybe Int
+    certificationEnabled : Maybe Bool
+    moduleSection: Maybe ModuleSection
+    bonusEarnedVal : Maybe Int
+    moduleAlreadyCompleted : Maybe Bool
 
   LmsGetVideosRes:
     completed: "[LmsVideoRes]"
@@ -102,6 +112,7 @@ types:
     question: QuizQuestion
     options: QuizOptions
     previousHistory: Maybe LmsQuizHistory
+    questionCoins : Maybe Int
 
   QuizOptions:
     enum: "SingleSelect Options, MultiSelect Options"
@@ -114,6 +125,7 @@ types:
     attemptNumber: Int
     selectedOptions : "[Text]"
     status: LmsQuestionStatus
+    coinsEarned: Maybe Int
 
   LmsQuestionStatus:
     enum: "CORRECT, INCORRECT"
@@ -135,6 +147,8 @@ types:
   QuestionConfirmRes:
     validation: QuestionValidation
     validationRes: SelectedOptionValidation
+    bonusEarned: Maybe Bool
+    coinsEarned: Maybe Bool
 
   QuestionValidation:
     enum: "CORRECT_ANSWER, INCORRECT_ANSWER"
@@ -147,6 +161,20 @@ types:
     isCorrect: Bool
     derive: "Show,Eq"
 
+  LmsCertificateRes:
+    certificateInfo : Maybe CertificateInfo
+
+  CertificateInfo:
+    certificateId : Id LmsCertificate
+    moduleId : Id LmsModule
+    driverId : Id Person
+    certificateCourseName : Text
+    certificateOwnerName : Text
+    completedAt : Maybe UTCTime
+
+  BonusRes:
+    coins : Maybe Int
+
 apis:
   - GET:
       endpoint: /lms/listAllModules
@@ -156,6 +184,7 @@ apis:
         language: Language
         limit: Int
         offset: Int
+        moduleSection: ModuleSection
       response:
         type: API.Types.UI.LmsModule.LmsGetModuleRes
 
@@ -178,6 +207,28 @@ apis:
         language: Language
       response:
         type: "API.Types.UI.LmsModule.LmsGetQuizRes"
+
+  - GET:
+      endpoint: /lms/{moduleId}/getCertificate
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        moduleId: Id LmsModule
+      response:
+        type: "API.Types.UI.LmsModule.LmsCertificateRes"
+
+  - GET:
+      endpoint: /lms/getAllCertificates
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[API.Types.UI.LmsModule.CertificateInfo]"
+
+  - GET:
+      endpoint: /lms/{moduleId}/getBonusCoins
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        moduleId: Id LmsModule
+      response:
+        type: "API.Types.UI.LmsModule.BonusRes"
 
   - POST:
       endpoint: /lms/markVideoAsStarted

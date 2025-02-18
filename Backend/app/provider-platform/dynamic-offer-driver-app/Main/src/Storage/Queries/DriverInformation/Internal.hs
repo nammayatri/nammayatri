@@ -17,13 +17,21 @@ module Storage.Queries.DriverInformation.Internal where
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Person as DP
-import Kernel.Beam.Functions (findAllWithKV, findOneWithKV)
+import Domain.Types.VehicleCategory as DV
+import Kernel.Beam.Functions (findAllWithKV, findOneWithKV, updateOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Queries.OrphanInstances.DriverInformation ()
+
+updateOnboardingVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe DV.VehicleCategory -> Id DP.Person -> m ())
+updateOnboardingVehicleCategory onboardingVehicleCategory driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.onboardingVehicleCategory onboardingVehicleCategory, Se.Set BeamDI.updatedAt _now] [Se.Is BeamDI.driverId $ Se.Eq driverId.getId]
 
 getDriverInfos ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -57,6 +65,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity 
             <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
+            <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
         )
     ]
   where
@@ -87,6 +96,7 @@ getSpecialLocWarriorDriverInfoWithCond driverLocs onlyNotOnRide onlyOnRide isRen
             <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
+            <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
             <> [Se.Is BeamDI.isSpecialLocWarrior $ Se.Eq (Just True)]
         )
     ]

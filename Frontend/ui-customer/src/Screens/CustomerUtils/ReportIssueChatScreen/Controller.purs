@@ -25,7 +25,7 @@ import Components.PrimaryButton.Controller (Action(..)) as PrimaryButton
 import Components.PrimaryEditText.Controller (Action(..)) as PrimaryEditText
 import Components.RecordAudioModel.Controller (Action(..)) as RecordAudioModel
 import Components.ViewImageModel.Controller as ViewImageModel
-import Data.Array (deleteAt, length, snoc, filter)
+import Data.Array (deleteAt, length, snoc, filter) 
 import Data.Either (Either(..))
 import Data.Foldable (find)
 import Data.Int (fromString)
@@ -61,6 +61,8 @@ import Constants as Constants
 import Data.Lens ((^.))
 import Engineering.Helpers.Accessor
 import Mobility.Prelude (startsWith)
+import Services.API (MandatoryUploads(..), MediaType(..))
+import Data.Array as DA
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -549,3 +551,12 @@ handleBackPress state =
                     RiderRideCompletedScreen -> RideEndScreen
                     HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
   ]
+
+isFileTypeRequired :: MediaType -> Maybe (Array MandatoryUploads) -> Boolean
+isFileTypeRequired fileType mandatoryUploads = do
+  case mandatoryUploads of
+    Just mUploads -> 
+      case DA.find (\(MandatoryUploads upload) -> upload.fileType == fileType) mUploads of
+        Just (MandatoryUploads upload) -> upload.limit > 0
+        Nothing -> false
+    Nothing -> false

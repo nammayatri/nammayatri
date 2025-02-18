@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.TriggerFCM (postTriggerFCMMessage) where
 
 import qualified API.Types.UI.TriggerFCM

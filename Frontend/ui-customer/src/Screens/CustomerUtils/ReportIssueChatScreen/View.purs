@@ -26,7 +26,7 @@ import Components.PrimaryButton.View (view) as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.RecordAudioModel.View (view) as RecordAudioModel
 import Components.ViewImageModel.View (view) as ViewImageModel
-import Data.Array (length, null)
+import Data.Array (length, null, all)
 import Data.Array.ST (push)
 import Data.Function.Uncurried (runFn1)
 import Data.String (length, trim) as STR
@@ -45,17 +45,19 @@ import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData, stor
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||), (&&), (/=))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||), (&&), (/=), map, (>=))
 import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView, rippleColor, accessibility, Accessiblity(..), accessibilityHint)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, id)
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig, chatConfig)
-import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval, isFileTypeRequired)
 import Styles.Colors as Color
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
+import Data.Tuple as DT
+import Services.API as SA
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -237,7 +239,16 @@ chatView push state =
 
 submitView :: (Action -> Effect Unit) -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
 submitView push state =
-  let enableSubmit = (STR.length (STR.trim state.data.messageToBeSent)) > 10 || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds) > 0
+  let checkUploadRequirements (SA.MandatoryUploads upload) = do
+        case upload.fileType of
+          SA.Image -> length state.data.uploadedImagesIds >= upload.limit
+          SA.Audio -> (maybe 0 STR.length state.data.uploadedAudioId) >= upload.limit
+          _ -> false
+
+      enableSubmit = do
+        case state.data.mandatoryUploads of
+          Nothing -> (STR.length (STR.trim state.data.messageToBeSent)) > 10 || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds) > 0
+          Just uploads -> all checkUploadRequirements uploads
   in 
   linearLayout
     [ height WRAP_CONTENT
@@ -283,11 +294,11 @@ submitView push state =
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_add_image"
                     ]
                 , textView $ 
-                    [ weight 1.0
-                    , height WRAP_CONTENT
+                    [ height WRAP_CONTENT
                     , text if not (null state.data.addedImages)  then (show $ length state.data.addedImages) <> " " <> (if length state.data.addedImages > 1 then (getString IMAGES) else (getString IMAGE)) else (getString ADD_IMAGE_S)
                     , color if not (null state.data.addedImages) then Color.blue900 else Color.black900
                     ] <> FontStyle.body1 TypoGraphy
+                , helperStarView SA.Image state
                 , imageView
                     [ width $ V 24
                     , height $ V 24
@@ -316,11 +327,11 @@ submitView push state =
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
                     ]
                 , textView $ 
-                    [ weight 1.0
-                    , height WRAP_CONTENT
+                    [ height WRAP_CONTENT
                     , text if isJust state.data.recordedAudioUrl then (getString VOICE_NOTE) else (getString ADD_VOICE_NOTE)
                     , color if isJust state.data.recordedAudioUrl then Color.blue900 else Color.black900
                     ] <> FontStyle.body1 TypoGraphy
+                , helperStarView SA.Audio state
                 , imageView
                     [ width $ V 24
                     , height $ V 24
@@ -358,6 +369,7 @@ submitView push state =
             ]
         ]
     ]
+
 
 helperView :: (Action -> Effect Unit) -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
 helperView push state =
@@ -478,3 +490,11 @@ callModel state push =
                 [ PrimaryButton.view (push <<< CancelCall) (cancelButtonConfig state) ]
             ]
         ]
+
+helperStarView :: SA.MediaType -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
+helperStarView fileType state =
+  textView $
+    [ height WRAP_CONTENT
+    , text $ if isFileTypeRequired fileType state.data.mandatoryUploads then "*" else ""
+    , color Color.red900
+    ]

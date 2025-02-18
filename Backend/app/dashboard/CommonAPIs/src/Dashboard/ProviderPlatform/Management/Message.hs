@@ -20,7 +20,11 @@ where
 
 import API.Types.ProviderPlatform.Management.Endpoints.Message
 import Dashboard.Common as Reexport
+import Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Lazy.Char8 as BLC
 import Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Kernel.Prelude
 import Kernel.ServantMultipart
 
@@ -41,25 +45,31 @@ instance ToMultipart Tmp UploadFileRequest where
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
----
--- Send Message
---
-
 instance FromMultipart Tmp SendMessageRequest where
   fromMultipart form = do
     let inputType = fmap (read . T.unpack) (lookupInput "type" form)
     csvFile <- either (helper inputType) (Right . Just . fdPayload) (lookupFile "csvFile" form)
     _type <- inputType
     messageId <- lookupInput "messageId" form
+    let scheduledT = (A.eitherDecode . LBS.fromStrict . TE.encodeUtf8) =<< lookupInput "scheduledTime" form
+    scheduledTime <- timeHelper scheduledT
     pure SendMessageRequest {..}
     where
       helper (Right AllEnabled) _ = Right Nothing
       helper _ x = Left x
+      timeHelper (Left _) = Right Nothing
+      timeHelper (Right x) = Right x
 
 instance ToMultipart Tmp SendMessageRequest where
   toMultipart form =
     MultipartData
-      [ Input "type" $ show form._type,
-        Input "messageId" form.messageId
-      ]
+      ( [ Input "type" $ show form._type,
+          Input "messageId" form.messageId
+        ]
+          <> [Input "scheduledTime" $ (TE.decodeUtf8 . BLC.toStrict . A.encode) form.scheduledTime | isMaybe form.scheduledTime]
+      )
       (maybe [] (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)
+    where
+      isMaybe :: Maybe a -> Bool
+      isMaybe Nothing = False
+      isMaybe (Just _) = True

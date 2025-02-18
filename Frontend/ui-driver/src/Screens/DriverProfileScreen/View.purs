@@ -65,7 +65,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resource.Constants (verifiedVehicleOnly, pendingVehicleOnly)
+import Resource.Constants (verifiedVehicleOnly, pendingVehicleOnly,decodeVehicleType)
 import Resource.Constants as Const
 import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
@@ -102,6 +102,13 @@ screen initialState =
                 $ do
                     driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+                driverProfileResp <- Remote.fetchDriverProfile false
+                case driverProfileResp of
+                    Right resp -> do
+                      liftFlow $ push $ ProfileDataAPIResponseAction resp
+                    Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+                pure unit
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
                     void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -1670,8 +1677,8 @@ profileOptionsLayout state push =
     ]
   where
   visibilityCondition optionItem = case optionItem.menuOptions of
-    GO_TO_LOCATIONS -> state.props.enableGoto
-    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE", "BUS_NON_AC", "BUS_AC"]) -- Temporary Fix until Ambulance Ride Flow is complete
+    GO_TO_LOCATIONS -> state.props.enableGoto && decodeVehicleType (getValueToLocalStore VEHICLE_CATEGORY) /= Just ST.AmbulanceCategory
+    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["DELIVERY_LIGHT_GOODS_VEHICLE", "BUS_NON_AC", "BUS_AC"])
     LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
     _ -> true
 
@@ -1705,7 +1712,11 @@ updateLanguageView state push =
 ---------------------------------------------- LANGUAGES SPOKEN VIEW -----------------------------------------------------------------
 languagesSpokenView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 languagesSpokenView state push =
-  linearLayout
+  scrollView
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    ]
+  [linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -1719,7 +1730,7 @@ languagesSpokenView state push =
         , color Color.black900
         ]
     , CheckListView.view (push <<< LanguageSelection) (checkListConfig state)
-    ]
+    ]]
 
 -------------------------------------------------- PRIMARY BUTTONS -----------------------------------------------------------------
 primaryButtons :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

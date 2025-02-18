@@ -96,6 +96,7 @@ view push state =
  relativeLayout
  [  height MATCH_PARENT
   , width MATCH_PARENT
+  , onBackPressed push $ const BackPressed
  ]$[linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -103,7 +104,6 @@ view push state =
     , background Color.white900
     , accessibility if state.props.showDeleteAccountView || state.props.isCallConfirmation || DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-    , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
     , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)

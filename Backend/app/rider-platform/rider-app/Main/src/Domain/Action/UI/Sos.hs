@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.Sos where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
@@ -144,7 +142,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
@@ -287,7 +286,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
   merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   fileSize <- L.runIO $ withFile payload ReadMode hFileSize
   when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
@@ -355,7 +354,7 @@ getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
   where
     processCallRecord :: Text -> Maybe Text -> Call.CallStatus -> DCall.CallStatus -> Flow ()
     processCallRecord callSid mbdigitPressed validStatus res = do
-      let digitPressed = fromMaybe "0" $ T.replace "\"" "" <$> mbdigitPressed
+      let digitPressed = fromMaybe "1" $ T.replace "\"" "" <$> mbdigitPressed
       QCallStatus.updateCustomerIvrResponse callSid (Just digitPressed) validStatus
       logDebug $ "digitPressed : " <> digitPressed
       case res.rideId of
@@ -381,7 +380,7 @@ postSosCallPolice (mbPersonId, merchantId) CallPoliceAPI {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let merchantOpCityId = booking.merchantOperatingCityId
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOpCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   if riderConfig.incidentReportSupport
     then do
       coordinates <- fetchLatLong ride merchantId
@@ -440,7 +439,7 @@ sendUnattendedSosTicketAlert ticketId = do
           return
           sos.merchantOperatingCityId
       merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+      riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
       let maybeAppId = (HM.lookup DRC.UnattendedTicketAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping
       mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentDetails)
   where

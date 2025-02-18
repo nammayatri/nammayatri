@@ -51,3 +51,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN distance_unit charact
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN client_manufacturer text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN client_id TYPE text;

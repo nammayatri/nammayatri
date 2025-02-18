@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.ProviderPlatform.Fleet.Driver
   ( module Dashboard.ProviderPlatform.Fleet.Driver,
@@ -21,7 +22,9 @@ where
 import API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
+import Data.Text as T
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -33,3 +36,66 @@ validateAddVehicleReq AddVehicleReq {..} =
       validateField "registrationNo" registrationNo $
         LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
+
+-- Create Drivers using csv --
+
+instance FromMultipart Tmp CreateDriversReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    let fleetOwnerId = lookupInput "fleetOwnerId" form
+    pure $
+      CreateDriversReq
+        { file = fdPayload fileData,
+          fleetOwnerId = case fleetOwnerId of
+            Left _ -> Nothing
+            Right x -> Just x
+        }
+
+instance ToMultipart Tmp CreateDriversReq where
+  toMultipart form = do
+    let inputArr = case form.fleetOwnerId of
+          Nothing -> []
+          Just id -> [Input "fleetOwnerId" id]
+    MultipartData inputArr [FileData "file" (T.pack form.file) "" form.file]
+
+-- Create Vehicles using csv --
+
+instance FromMultipart Tmp CreateVehiclesReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    let fleetOwnerId = lookupInput "fleetOwnerId" form
+    pure $
+      CreateVehiclesReq
+        { file = fdPayload fileData,
+          fleetOwnerId = case fleetOwnerId of
+            Left _ -> Nothing
+            Right x -> Just x
+        }
+
+instance ToMultipart Tmp CreateVehiclesReq where
+  toMultipart form = do
+    let inputArr = case form.fleetOwnerId of
+          Nothing -> []
+          Just id -> [Input "fleetOwnerId" id]
+    MultipartData inputArr [FileData "file" (T.pack form.file) "" (form.file)]
+
+-- Vehicle Driver Route mapping --
+
+instance FromMultipart Tmp CreateDriverBusRouteMappingReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    let fleetOwnerId = lookupInput "fleetOwnerId" form
+    pure $
+      CreateDriverBusRouteMappingReq
+        { file = fdPayload fileData,
+          fleetOwnerId = case fleetOwnerId of
+            Left _ -> Nothing
+            Right x -> Just x
+        }
+
+instance ToMultipart Tmp CreateDriverBusRouteMappingReq where
+  toMultipart form = do
+    let inputArr = case form.fleetOwnerId of
+          Nothing -> []
+          Just id -> [Input "fleetOwnerId" id]
+    MultipartData inputArr [FileData "file" (T.pack form.file) "" (form.file)]

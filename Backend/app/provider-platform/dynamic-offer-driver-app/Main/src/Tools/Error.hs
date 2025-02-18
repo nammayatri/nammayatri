@@ -1216,6 +1216,10 @@ data DriverOnboardingError
   | DocumentAlreadyInSync
   | NotValidatedUisngFrontendSDK
   | InvalidDocumentType Text
+  | DriverOnboardingVehicleCategoryNotFound
+  | HyperVergeWebhookPayloadRecordNotFound Text
+  | DuplicateWebhookReceived
+  | WebhookAuthFailed
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1265,6 +1269,10 @@ instance IsBaseError DriverOnboardingError where
     DocumentAlreadyInSync -> Just "Document already in sync"
     NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
     InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
+    DriverOnboardingVehicleCategoryNotFound -> Just $ "Driver Onboarding Vehicle Catgeory Not Found"
+    HyperVergeWebhookPayloadRecordNotFound reqId -> Just $ "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table. RequestId : " <> reqId
+    DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
+    WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1313,6 +1321,10 @@ instance IsHTTPError DriverOnboardingError where
     DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
     NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
     InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
+    DriverOnboardingVehicleCategoryNotFound -> "DRIVER_ONBOARDING_VEHICLE_CATEGORY_NOT_FOUND"
+    HyperVergeWebhookPayloadRecordNotFound _ -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
+    DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
+    WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1359,6 +1371,10 @@ instance IsHTTPError DriverOnboardingError where
     DocumentAlreadyInSync -> E400
     NotValidatedUisngFrontendSDK -> E400
     InvalidDocumentType _ -> E400
+    DriverOnboardingVehicleCategoryNotFound -> E500
+    HyperVergeWebhookPayloadRecordNotFound _ -> E400
+    DuplicateWebhookReceived -> E400
+    WebhookAuthFailed -> E401
 
 instance IsAPIError DriverOnboardingError
 
@@ -1471,3 +1487,188 @@ instance IsHTTPError FRFSTripErrors where
     TripInvalidStatus _ -> E400
 
 instance IsAPIError FRFSTripErrors
+
+---------- WMB ERRORS --------------------
+
+data RouteNotFoundError
+  = RouteNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RouteNotFoundError
+
+instance IsBaseError RouteNotFoundError where
+  toMessage = \case
+    RouteNotFound code -> Just $ "Requested Route does not exist : " <> code
+
+instance IsHTTPError RouteNotFoundError where
+  toErrorCode = \case
+    RouteNotFound _ -> "ROUTE_NOT_FOUND"
+  toHttpCode = \case
+    RouteNotFound _ -> E400
+
+instance IsAPIError RouteNotFoundError
+
+data FleetOwnerNotFoundError
+  = FleetOwnerNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FleetOwnerNotFoundError
+
+instance IsBaseError FleetOwnerNotFoundError where
+  toMessage = \case
+    FleetOwnerNotFound id -> Just $ "Requested Fleet Owner does not exist : " <> id
+
+instance IsHTTPError FleetOwnerNotFoundError where
+  toErrorCode = \case
+    FleetOwnerNotFound _ -> "FLEET_OWNER_NOT_FOUND"
+  toHttpCode = \case
+    FleetOwnerNotFound _ -> E400
+
+instance IsAPIError FleetOwnerNotFoundError
+
+data WMBErrors
+  = DriverNotInFleet Text Text
+  | DriverNotActiveInFleet Text Text
+  | VehicleLinkedToInvalidDriver
+  | DriverRequestNotFound Text
+  | RequestAlreadyProcessed Text
+  | FleetOwnerIdRequired
+  | MaxVehiclesLimitExceeded Int
+  | VehicleLinkedToAnotherDriver Text
+  | DriverNotLinkedToFleet Text
+  | MobileNumberAlreadyLinked Text
+  | EmailAlreadyLinked Text
+  | DeviceTokenNotFound
+  | OtpNotFound
+  | InvalidOtp
+  | RcNotValid
+  | RoundTripNotAllowedForRoute Text
+  | RoundTripFrequencyShouldBeGreaterThanZero
+  | MaxDriversLimitExceeded Int
+  | TripTransactionNotFound Text
+  | EndRideRequestAlreadyPresent
+  | RideNotEligibleForEnding
+  | ApprovalRequestIdNotFound Text
+  | NoActiveFleetAssociated Text
+  | FleetConfigNotFound Text
+  | InactiveFleetDriverAssociationNotFound Text
+  | VehicleRouteMappingNotFound Text Text
+  | InvalidTripStatus Text
+  | DriverNotFoundWithId
+  | StopNotFound
+  | RouteTripStopMappingNotFound Text
+  | VehicleRouteMappingBlocked
+  | AlreadyOnActiveTripWithAnotherVehicle Text
+  | AlreadyOnActiveTrip
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''WMBErrors
+
+instance IsBaseError WMBErrors where
+  toMessage = \case
+    AlreadyOnActiveTripWithAnotherVehicle vehicleNumber -> Just $ "Driver is already on an Active Trip with Another Vehicle : " <> vehicleNumber
+    DriverNotInFleet driverId fleetId -> Just $ "Driver :" <> driverId <> "is not part of the fleet " <> fleetId
+    DriverNotActiveInFleet id fleetId -> Just $ "Driver : " <> id <> " is not active with the fleet: " <> fleetId
+    VehicleLinkedToInvalidDriver -> Just "Vehicle is associated with a driver who is not part of the fleet: "
+    DriverRequestNotFound id -> Just $ "DriverRequest not found" <> id
+    RequestAlreadyProcessed id -> Just $ "Request already processed" <> id
+    FleetOwnerIdRequired -> Just "Fleet Owner Id is required"
+    MaxVehiclesLimitExceeded limit -> Just $ "Maximum " <> show limit <> " vehicles can be added in one go"
+    VehicleLinkedToAnotherDriver vehicleNo -> Just $ "Vehicle" <> vehicleNo <> "is linked to some other driver"
+    DriverNotLinkedToFleet id -> Just $ "Driver is not linked to the fleet, driver id :" <> id
+    MobileNumberAlreadyLinked mobile -> Just $ "Mobile number is already linked with another fleet owner: " <> mobile
+    EmailAlreadyLinked email -> Just $ "Email is already linked with another fleet owner: " <> email
+    DeviceTokenNotFound -> Just "Device Token not found"
+    OtpNotFound -> Just "OTP not found"
+    InvalidOtp -> Just "Invalid OTP"
+    RcNotValid -> Just "Cannot link to driver because Rc is not valid"
+    RoundTripNotAllowedForRoute routeCode -> Just $ "Round trip not allowed for this route: " <> routeCode
+    RoundTripFrequencyShouldBeGreaterThanZero -> Just "Round Trip Frequency should be greater than 0"
+    MaxDriversLimitExceeded limit -> Just $ "Maximum " <> show limit <> " drivers can be added in one go"
+    TripTransactionNotFound id -> Just $ "Trip transaction not found for :" <> id
+    EndRideRequestAlreadyPresent -> Just "EndRide request already present"
+    RideNotEligibleForEnding -> Just "Ride Not Eligible For Ending"
+    ApprovalRequestIdNotFound id -> Just $ "Approval Request Id not found" <> id
+    NoActiveFleetAssociated id -> Just $ "No Active Fleet Associated for driver :" <> id
+    FleetConfigNotFound id -> Just $ "Fleet Config Info not found for owner id : " <> id
+    InactiveFleetDriverAssociationNotFound id -> Just $ "Inactive Fleet Driver Association Not Found for driver : " <> id
+    VehicleRouteMappingNotFound vhclNo routeCode -> Just $ "Vehicle Route Mapping not found for vehicle no hash : " <> vhclNo <> " and route code :" <> routeCode
+    InvalidTripStatus id -> Just $ "Invalid trip status, current status : " <> id
+    DriverNotFoundWithId -> Just "Driver Not Found"
+    StopNotFound -> Just "Stop Not Found"
+    RouteTripStopMappingNotFound routeCode -> Just $ "Route trip stop mapping not found for route code : " <> routeCode
+    VehicleRouteMappingBlocked -> Just "Vehicle Route Mapping is blocked, unblock and try again."
+    AlreadyOnActiveTrip -> Just "Driver is already on an Active trip."
+
+instance IsHTTPError WMBErrors where
+  toErrorCode = \case
+    AlreadyOnActiveTripWithAnotherVehicle _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_VEHICLE"
+    DriverNotInFleet _ _ -> "DRIVER_NOT_IN_FLEET"
+    DriverNotActiveInFleet _ _ -> "DRIVER_NOT_ACTIVE_IN_FLEET"
+    VehicleLinkedToInvalidDriver -> "VEHICLE_LINKED_TO_INVALID_DRIVER"
+    DriverRequestNotFound _ -> "DRIVER_REQUEST_NOT_FOUND"
+    RequestAlreadyProcessed _ -> "REQUEST_ALREADY_PROCESSED"
+    FleetOwnerIdRequired -> "FLEET_OWNER_ID_REQUIRED"
+    MaxVehiclesLimitExceeded _ -> "MAX_VEHICLES_LIMIT_EXCEEDED"
+    VehicleLinkedToAnotherDriver _ -> "VEHICLE_LINKED_TO_ANOTHER_DRIVER"
+    DriverNotLinkedToFleet _ -> "DRIVER_NOT_LINKED_TO_FLEET"
+    MobileNumberAlreadyLinked _ -> "MOBILE_NUMBER_ALREADY_LINKED"
+    EmailAlreadyLinked _ -> "EMAIL_ALREADY_LINKED"
+    DeviceTokenNotFound -> "DEVICE_TOKEN_NOT_FOUND"
+    OtpNotFound -> "OTP_NOT_FOUND"
+    InvalidOtp -> "INVALID_OTP"
+    RcNotValid -> "RC_NOT_VALID"
+    RoundTripNotAllowedForRoute _ -> "ROUND_TRIP_NOT_ALLOWED_FOR_ROUTE"
+    RoundTripFrequencyShouldBeGreaterThanZero -> "ROUND_TRIP_FREQUENCY_SHOULD_BE_GREATER_THAN_ZERO"
+    MaxDriversLimitExceeded _ -> "MAX_DRIVERS_LIMIT_EXCEEDED"
+    TripTransactionNotFound _ -> "INVALID_TRIP_TRANSACTION_ID"
+    EndRideRequestAlreadyPresent -> "END_RIDE_REQUEST_ALREADY_PRESENT"
+    RideNotEligibleForEnding -> "RIDE_NOT_ELIGIBLE_FOR_ENDING"
+    ApprovalRequestIdNotFound _ -> "APPROVAL_REQUEST_ID_NOT_FOUND"
+    NoActiveFleetAssociated _ -> "NO_ACTIVE_FLEET_ASSOCIATED"
+    FleetConfigNotFound _ -> "FLEET_CONFIG_NOT_FOUND"
+    InactiveFleetDriverAssociationNotFound _ -> "INACTIVE_FLEET_DRIVER_ASSOCIATION_NOT_FOUND"
+    VehicleRouteMappingNotFound _ _ -> "VEHICLE_ROUTE_MAPPING_NOT_FOUND"
+    InvalidTripStatus _ -> "INVALID_TRIP_STATUS"
+    DriverNotFoundWithId -> "DRIVER_NOT_FOUND"
+    StopNotFound -> "STOP_NOT_FOUND"
+    RouteTripStopMappingNotFound _ -> "ROUTE_TRIP_STOP_MAPPING_NOT_FOUND"
+    VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
+    AlreadyOnActiveTrip -> "ALREADY_ON_ACTIVE_TRIP"
+
+  toHttpCode = \case
+    AlreadyOnActiveTripWithAnotherVehicle _ -> E400
+    DriverNotInFleet _ _ -> E400
+    DriverNotActiveInFleet _ _ -> E400
+    VehicleLinkedToInvalidDriver -> E400
+    DriverRequestNotFound _ -> E404
+    RequestAlreadyProcessed _ -> E400
+    FleetOwnerIdRequired -> E400
+    MaxVehiclesLimitExceeded _ -> E400
+    VehicleLinkedToAnotherDriver _ -> E400
+    DriverNotLinkedToFleet _ -> E400
+    MobileNumberAlreadyLinked _ -> E400
+    EmailAlreadyLinked _ -> E400
+    DeviceTokenNotFound -> E404
+    OtpNotFound -> E400
+    InvalidOtp -> E400
+    RcNotValid -> E400
+    RoundTripNotAllowedForRoute _ -> E400
+    RoundTripFrequencyShouldBeGreaterThanZero -> E400
+    MaxDriversLimitExceeded _ -> E400
+    TripTransactionNotFound _ -> E400
+    EndRideRequestAlreadyPresent -> E400
+    RideNotEligibleForEnding -> E400
+    ApprovalRequestIdNotFound _ -> E404
+    NoActiveFleetAssociated _ -> E400
+    FleetConfigNotFound _ -> E404
+    InactiveFleetDriverAssociationNotFound _ -> E404
+    VehicleRouteMappingNotFound _ _ -> E404
+    InvalidTripStatus _ -> E400
+    DriverNotFoundWithId -> E400
+    StopNotFound -> E400
+    RouteTripStopMappingNotFound _ -> E400
+    VehicleRouteMappingBlocked -> E400
+    AlreadyOnActiveTrip -> E400
+
+instance IsAPIError WMBErrors

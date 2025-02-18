@@ -68,6 +68,7 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let rccfg =
@@ -78,6 +79,7 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let smsConfig =
@@ -86,6 +88,7 @@ let smsConfig =
         { username = common.smsUserName
         , password = common.smsPassword
         , otpHash = sec.smsOtpHash
+        , token = None Text
         }
       , useFakeSms = Some 7891
       , url = "http://localhost:4343"
@@ -225,6 +228,8 @@ let AllocatorJobType =
       | QuarterlyUpdateTag
       | WeeklyUpdateTag
       | FleetAlert
+      | SendWebhookToExternal
+      | ScheduledFCMS
       >
 
 let jobInfoMapx =
@@ -266,6 +271,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
+      , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -314,7 +321,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
@@ -395,4 +402,5 @@ in  { esqDBCfg
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , urlShortnerConfig = common.urlShortnerConfig
     }

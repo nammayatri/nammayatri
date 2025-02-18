@@ -61,7 +61,7 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
           DRating.handler merchantId dRatingReq ride
       fork "rating received pushing ondc logs" do
         booking <- B.runInReplica $ QRB.findById dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
-        void $ pushLogs "rating" (toJSON reqV2) booking.providerId.getId
+        void $ pushLogs "rating" (toJSON reqV2) booking.providerId.getId "MOBILITY"
     pure Ack
 
 ratingLockKey :: Text -> Text

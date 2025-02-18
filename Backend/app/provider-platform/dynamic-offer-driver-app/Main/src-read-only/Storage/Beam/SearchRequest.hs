@@ -1,12 +1,12 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchRequest where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,6 +24,7 @@ data SearchRequestT f = SearchRequestT
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
     bapUri :: B.C f Kernel.Prelude.Text,
+    configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationDues :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
@@ -50,6 +51,8 @@ data SearchRequestT f = SearchRequestT
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType),
     pickupZoneGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

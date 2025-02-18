@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.SearchRequestForDriver where
@@ -10,6 +8,7 @@ import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -53,6 +52,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    driverTagScore :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -71,6 +71,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType),
     pickupZone :: B.C f Kernel.Prelude.Bool,
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -78,7 +80,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     requestId :: B.C f Kernel.Prelude.Text,
     respondedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    response :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse),
+    response :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse),
     rideFrequencyScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rideRequestPopupDelayDuration :: B.C f Kernel.Types.Common.Seconds,
     searchRequestValidTill :: B.C f Data.Time.LocalTime,

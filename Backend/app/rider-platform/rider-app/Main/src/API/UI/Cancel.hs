@@ -18,6 +18,7 @@ module API.UI.Cancel
     CancelAPI,
     GetCancellationDuesDetailsAPI,
     getCancellationDuesDetails,
+    cancel,
   )
 where
 

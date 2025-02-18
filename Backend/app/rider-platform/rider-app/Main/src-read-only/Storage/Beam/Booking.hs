@@ -1,16 +1,16 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Booking where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
+import qualified Domain.Types.ParcelDetails
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
@@ -29,6 +29,8 @@ data BookingT f = BookingT
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
     isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelDetails.ParcelType),
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -41,6 +43,7 @@ data BookingT f = BookingT
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
@@ -61,8 +64,12 @@ data BookingT f = BookingT
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBookingUpdated :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReferredRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),

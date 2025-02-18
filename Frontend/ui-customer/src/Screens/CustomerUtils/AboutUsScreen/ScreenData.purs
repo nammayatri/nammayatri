@@ -5,5 +5,9 @@ import ConfigProvider
 
 initData :: AboutUsScreenState
 initData = { 
-    appConfig : getAppConfig appConfig
+    appConfig : getAppConfig appConfig,
+    props : {
+        enableDemoModeCount: 0,
+        demoModePopup: false
+    }
 }

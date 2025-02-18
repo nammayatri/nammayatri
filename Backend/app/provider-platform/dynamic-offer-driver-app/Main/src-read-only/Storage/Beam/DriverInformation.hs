@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.DriverInformation where
@@ -10,6 +8,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
@@ -37,6 +36,7 @@ data DriverInformationT f = DriverInformationT
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
     canDowngradeToTaxi :: B.C f Kernel.Prelude.Bool,
     canSwitchToInterCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    canSwitchToIntraCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToRental :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     compAadhaarImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -75,6 +75,7 @@ data DriverInformationT f = DriverInformationT
     preferredSecondarySpecialLocIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    servicesEnabledForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.Plan.ServiceNames]),
     softBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     softBlockReasonFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     softBlockStiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),

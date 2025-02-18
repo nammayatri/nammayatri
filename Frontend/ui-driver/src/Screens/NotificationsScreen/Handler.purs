@@ -44,12 +44,22 @@ notifications = do
     GoBack -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ pure App.GoBack
-    GoToRidesScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_RIDE_HISTORY_SCREEN)
-    GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_HOME_SCREEN )
-    GoToProfileScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_PROFILE_SCREEN )
-    GoToReferralScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_REFERRAL_SCREEN)
-    EarningsScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_EARNINGS_SCREEN)
-    GoToCurrentRideFlow -> do
+    GoToRidesScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_RIDE_HISTORY_SCREEN)
+    GoToHomeScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_HOME_SCREEN )
+    GoToProfileScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_PROFILE_SCREEN )
+    GoToReferralScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_REFERRAL_SCREEN)
+    EarningsScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_EARNINGS_SCREEN)
+    GoToCurrentRideFlow updatedState ->  do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ App.NoBack <$> (pure $ CHECK_RIDE_FLOW_STATUS)
     SubscriptionScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ NOTIFICATION_SCREEN_NAV GoToSubscription)

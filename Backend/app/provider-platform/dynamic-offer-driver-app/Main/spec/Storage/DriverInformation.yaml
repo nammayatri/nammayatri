@@ -14,6 +14,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   Value: Data.Aeson
   VehicleCategory: Domain.Types.VehicleCategory
+  ServiceNames : Domain.Types.Extra.Plan
 
 DriverInformation:
   tableName: driver_information
@@ -44,7 +45,7 @@ DriverInformation:
       badgeCount: Int
     DriverBadges:
       recordType: NewType
-      driverBadges: '[Badges]'
+      driverBadges: "[Badges]"
 
   fields:
     driverId: Id Person
@@ -60,7 +61,7 @@ DriverInformation:
     isSpecialLocWarrior: Bool
     specialLocWarriorEnabledAt: Maybe UTCTime
     preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
-    preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
+    preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
     referralCode: Maybe Text
     referredByDriverId: Maybe (Id Person)
     totalReferred: Maybe Int
@@ -70,6 +71,7 @@ DriverInformation:
     canDowngradeToTaxi: Bool
     canSwitchToRental: Bool
     canSwitchToInterCity: Bool
+    canSwitchToIntraCity: Bool
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
@@ -93,7 +95,7 @@ DriverInformation:
     isInteroperable: Bool
     payoutRegistrationOrderId: Maybe Text
     latestScheduledPickup: Maybe LatLong
-    latestScheduledBooking : Maybe UTCTime
+    latestScheduledBooking: Maybe UTCTime
     payoutVpaStatus: Maybe PayoutVpaStatus
     payoutVpaBankAccount: Maybe Text
     dailyCancellationRateBlockingCooldown: Maybe UTCTime
@@ -109,6 +111,7 @@ DriverInformation:
     softBlockReasonFlag: Maybe Text
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
+    servicesEnabledForSubscription: "[ServiceNames]"
 
   default:
     active: "false"
@@ -125,10 +128,11 @@ DriverInformation:
     canDowngradeToTaxi: "false"
     canSwitchToRental: "false"
     canSwitchToInterCity: "false"
+    canSwitchToIntraCity: "true"
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
-    isInteroperable : "false"
+    isInteroperable: "false"
   constraints:
     driverId: PrimaryKey
 
@@ -142,26 +146,29 @@ DriverInformation:
       driverTripEndLocationLat: Maybe Double
       driverTripEndLocationLon: Maybe Double
 
-
   beamType:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
+    canSwitchToIntraCity: Maybe Bool
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
     hasAdvanceBooking: Maybe Bool
     forwardBatchingEnabled: Maybe Bool
     isInteroperable: Maybe Bool
     isSpecialLocWarrior: Maybe Bool
-    preferredSecondarySpecialLocIds : "Maybe [Text]"
+    preferredSecondarySpecialLocIds: "Maybe [Text]"
     issueBreachCooldownTimes: Maybe Value
+    servicesEnabledForSubscription: Maybe [ServiceNames]
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
     issueBreachCooldownTimes: "json"
     softBlockStiers: "text[]"
+    servicesEnabledForSubscription: "text[]"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    canSwitchToIntraCity: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
     isSpecialLocWarrior: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -172,10 +179,12 @@ DriverInformation:
     preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
     issueBreachCooldownTimes: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
+    servicesEnabledForSubscription: Storage.Queries.Transformers.DriverInformation.backfillServiceEnabledForSubscription driverId servicesEnabledForSubscription| EM
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
+    canSwitchToIntraCity: Kernel.Prelude.Just|I
     isSpecialLocWarrior: Kernel.Prelude.Just|I
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
@@ -183,10 +192,11 @@ DriverInformation:
     isInteroperable: Kernel.Prelude.Just|I
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
-    preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
+    preferredSecondarySpecialLocIds: Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
     driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
     driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
     issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
+    servicesEnabledForSubscription: Kernel.Prelude.Just|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -218,11 +228,20 @@ DriverInformation:
       where: driverId
     updateDriverInformation: #check
       kvFunction: updateOneWithKV
-      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, availableUpiApps]
+      params:
+        [
+          canDowngradeToSedan,
+          canDowngradeToHatchback,
+          canDowngradeToTaxi,
+          canSwitchToRental,
+          canSwitchToInterCity,
+          canSwitchToIntraCity,
+          availableUpiApps,
+        ]
       where: driverId
-    updateRentalAndInterCitySwitch:
+    updateRentalInterCityAndIntraCitySwitch:
       kvFunction: updateOneWithKV
-      params: [canSwitchToRental, canSwitchToInterCity]
+      params: [canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity]
       where: driverId
     updateAirConditionScore:
       kvFunction: updateOneWithKV
@@ -234,7 +253,8 @@ DriverInformation:
       where: driverId
     removeAcUsageRestriction:
       kvFunction: updateOneWithKV
-      params: [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
+      params:
+        [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
       where: driverId
     updateOnRide:
       kvFunction: updateOneWithKV
@@ -258,11 +278,11 @@ DriverInformation:
       where: driverId
     updateTollRelatedIssueCount:
       kvFunction: updateOneWithKV
-      params : [tollRelatedIssueCount]
+      params: [tollRelatedIssueCount]
       where: driverId
     updateExtraFareMitigation:
       kvFunction: updateOneWithKV
-      params : [extraFareMitigationFlag]
+      params: [extraFareMitigationFlag]
       where: driverId
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV
@@ -302,7 +322,11 @@ DriverInformation:
       where: driverId
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
-      params: [dailyCancellationRateBlockingCooldown, weeklyCancellationRateBlockingCooldown]
+      params:
+        [
+          dailyCancellationRateBlockingCooldown,
+          weeklyCancellationRateBlockingCooldown,
+        ]
       where: driverId
     updatePayoutRegAmountRefunded:
       kvFunction: updateOneWithKV
@@ -310,7 +334,13 @@ DriverInformation:
       where: driverId
     updateSpecialLocWarriorInfo:
       kvFunction: updateOneWithKV
-      params: [isSpecialLocWarrior, preferredPrimarySpecialLocId, preferredSecondarySpecialLocIds, specialLocWarriorEnabledAt]
+      params:
+        [
+          isSpecialLocWarrior,
+          preferredPrimarySpecialLocId,
+          preferredSecondarySpecialLocIds,
+          specialLocWarriorEnabledAt,
+        ]
       where: driverId
     updateTripEndLocation:
       kvFunction: updateOneWithKV
@@ -324,8 +354,8 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
       where: driverId
-    updateOnboardingVehicleCategory:
+    updateServicesEnabledForSubscription:
       kvFunction: updateOneWithKV
-      params: [onboardingVehicleCategory]
+      params: [servicesEnabledForSubscription]
       where: driverId
 

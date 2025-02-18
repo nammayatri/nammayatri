@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.Plan where
@@ -38,8 +36,9 @@ data PlanT f = PlanT
     paymentMode :: B.C f Domain.Types.Plan.PaymentMode,
     planBaseAmount :: B.C f Domain.Types.Extra.Plan.PlanBaseAmount,
     planType :: B.C f Domain.Types.Plan.PlanType,
+    productOwnershipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     registrationAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
-    serviceName :: B.C f Domain.Types.Plan.ServiceNames,
+    serviceName :: B.C f Domain.Types.Extra.Plan.ServiceNames,
     sgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: B.C f Kernel.Prelude.Bool,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),

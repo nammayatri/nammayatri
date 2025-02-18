@@ -68,7 +68,7 @@ instance FromJSON Action where
 instance ToJSON Action where
   toJSON = genericToJSON constructorsToLowerOptions
 
-data VehicleCategory = METRO | BUS
+data VehicleCategory = METRO | SUBWAY | BUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''VehicleCategory)

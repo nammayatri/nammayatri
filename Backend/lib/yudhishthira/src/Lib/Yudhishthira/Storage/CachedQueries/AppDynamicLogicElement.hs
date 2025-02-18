@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement where

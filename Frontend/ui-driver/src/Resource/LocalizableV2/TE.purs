@@ -1235,7 +1235,7 @@ getTe =
     , enter_referral_code: "రెఫరల్ కోడ్‌ని నమోదు చేయండి"
     , have_a_referral_code: "రెఫరల్ కోడ్ ఉందా?"
     , complete_steps_to_apply_referral: "రెఫరల్ కోడ్‌ని వర్తింపజేయడానికి పై దశలను పూర్తి చేయండి"
-    , download_namma_yatri: (\_ -> "డౌన్లోడ్ నమ్మ యాత్రి")
+    , download_namma_yatri: (\appName -> "డౌన్లోడ్ " <> appName)
     , enter_code: "కోడ్ వ్రాయండి"
     , complete_registration: "నమోదును పూర్తి చెయ్యండి"
     , cant_find_option: "ఎంపికను కనుగొనలేకపోయాము"
@@ -1410,7 +1410,7 @@ getTe =
     , take_two_more_rides_to_earn_points: (\coinValue -> coinValue <> " పాయింట్లను సంపాదించడానికి మరో 2 రైడ్‌లు తీసుకోండి")
     , one_more_ride_to_go: "1 more ride to go"
     , take_one_more_ride_to_earn_points: (\coinValue -> coinValue <> " పాయింట్లు సంపాదించడానికి మరో 1 రైడ్ తీసుకోండి")
-    , congratulations: "Congratulations"
+    , congratulations: "శుభాకాంక్షలు!"
     , you_have_earned_points_for_completing_eight_rides: (\coinValue -> "మీరు ఈరోజు 8 రైడ్‌లను పూర్తి చేసినందుకు " <> coinValue <> " యాత్రి పాయింట్లను సంపాదించారు")
     , refer_namma_yatri_app_to_customers_and_earn_points: (\_ -> "కస్టమర్‌లకు నమ్మ యాత్రి యాప్‌ని సిఫార్సు చేసి పాయింట్లను సంపాదించండి")
     , refer_now: "రెఫెర్ చేయండి"
@@ -1560,7 +1560,7 @@ getTe =
     , i_pledge: "✋🏼  నేను ప్రతిజ్ఞ చేస్తాను"
     , only_5_more_rides_for_n_points: (\n -> "మాత్రమే 5 రైడ్‌లు మరియు " <> n <> " పాయింట్లు")
     , only_3_more_rides_for_n_points: (\n -> "మాత్రమే 3 రైడ్‌లు మరియు " <> n <> " పాయింట్లు")
-    , only_4_more_rides_for_n_points: (\n -> "మాత్రమే 4 రైడ్‌లు మరియు " <> n <> " పాయింట్లు")
+    , only_4_more_rides_for_n_points: (\n -> n <> " నాణేలు పొందేందుకు ఇంకా 4 రైడ్లు మాత్రమే మిగిలి ఉన్నాయి!")
     , you_got_n_points: (\points -> "మీకు " <> points <> " పాయింట్లు వచ్చాయి")
     , discounted: "తగ్గింపు"
     , yatri_points_tnc: "[పాయింట్‌ల నిబంధనలు & షరతులు]"
@@ -1593,6 +1593,7 @@ getTe =
     , remove_eyewere: "దయచేసి కళ్లద్దాలు లేదా సన్ గ్లాసెస్ ఏదైనా ఉంటే తీసివేయండి"
     , image_validation_exceed_limit: "చిత్రాన్ని ధృవీకరించడానికి చేసిన ప్రయత్నాల సంఖ్య మించిపోయింది"
     , parking_charges_included: (\amount -> amount <> " పార్కింగ్ ఛార్జీలు చేర్చబడ్డాయి")
+    , invoice_generated_from_driver_to_rider: "డ్రైవర్ నుండి రైడర్‌కు ఇన్‌వాయిస్ రూపొందించబడింది"
     , included: "చేర్చబడింది"
     , db_check_and_name_match_failed: "పాన్ ధృవీకరణ విఫలమైంది"
     , complete_your_profile: "మీ ప్రొఫైల్ పూర్తిచేయండి"
@@ -1710,6 +1711,7 @@ getTe =
     , your_ride_starts_in: "మీ ప్రయాణం లో ప్రారంభమవుతుంది"
     , away: " దూరంగా"
     , intercity: "అంతర నగర"
+    , local: "స్థానిక"
     , intercity_return: "అంతర నగర తిరుగు"
     , rental: "అద్దె"
     , regular: "సాధారణ"
@@ -1783,4 +1785,8 @@ getTe =
     , search : "వెతకండి"  
     , bus__ : "బస్"
     , driver_unsubscribed : "డ్రైవర్ ప్లాట్‌ఫారం నుండి అనసబ్స్క్రైబ్ చేయబడింది. వాపస్ సబ్‌స్క్రైబ్ చేయడానికి బకాయి మొత్తాన్ని చెల్లించండి"
+    , canceling_this_booking_may_affect_the_emergency_medical : "ఈ బుకింగ్‌ను రద్దు చేస్తే, రోగికి అత్యవసర వైద్య సేవలు ప్రభావితం కావచ్చు"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "డ్రైవర్లు తమ వైద్య కారణాలు లేదా వాహన విఫలమై ఉన్న కారణాల వల్ల మాత్రమే రద్దు చేయడానికి అనుమతించబడతారు"
+    , payment_under_maintenance : "చెల్లింపు నిర్వహణలో ఉంది"
+    , payments_temporarily_unavailable : "చెల్లింపులు తాత్కాలికంగా అందుబాటులో లేవు, త్వరలో తిరిగి అందుబాటులోకి వస్తాయి. దయచేసి తరువాత ప్రయత్నించండి."
     }

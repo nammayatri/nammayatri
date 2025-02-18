@@ -33,7 +33,7 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign, Foreign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
@@ -72,7 +72,8 @@ newtype TriggerOTPReq = TriggerOTPReq {
   merchantId :: String,
   merchantOperatingCity :: Maybe String,
   registrationLat :: Maybe Number,
-  registrationLon :: Maybe Number
+  registrationLon :: Maybe Number,
+  packageName :: String
 }
 
 newtype TriggerOTPResp = TriggerOTPResp {
@@ -465,6 +466,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Maybe Boolean
+    , canSwitchToIntraCity  :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
     , payoutVpa             :: Maybe String 
@@ -487,6 +489,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , subscriptionEnabledForVehicleCategory :: Maybe Boolean
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
+    , subscriptionDown :: Maybe Boolean
     }
 
 
@@ -845,7 +848,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR_ | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC | EV_AUTO_VARIANT
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -862,11 +865,12 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode AMBULANCE_TAXI_OXY = standardEncode {}
  standardEncode AMBULANCE_AC = standardEncode {}
  standardEncode AMBULANCE_AC_OXY = standardEncode {}
- standardEncode AMBULANCE_VENTILATOR = standardEncode {}
+ standardEncode AMBULANCE_VENTILATOR_ = standardEncode {}
  standardEncode SUV_PLUS = standardEncode {}
  standardEncode DELIVERY_LIGHT_GOODS_VEHICLE = standardEncode {}
  standardEncode BUS_NON_AC = standardEncode {}
  standardEncode BUS_AC = standardEncode {}
+ standardEncode EV_AUTO_VARIANT = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
@@ -979,6 +983,7 @@ type UpdateDriverInfoReqEntity =
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
+  , canSwitchToIntraCity :: Maybe Boolean
   , canSwitchToInterCity :: Maybe Boolean
   , isSpecialLocWarrior :: Maybe Boolean
   }
@@ -1405,6 +1410,8 @@ instance standardEncodeFlowStatus :: StandardEncode FlowStatus
 
 data MessageListReq = MessageListReq String String
 
+data GetMessageReq = GetMessageReq String
+
 newtype MessageListRes = MessageListRes (Array MessageAPIEntityResponse)
 
 newtype MessageAPIEntityResponse = MessageAPIEntityResponse
@@ -1442,11 +1449,21 @@ instance makeMessageListReq :: RestEndpoint MessageListReq where
     makeRequest reqBody@(MessageListReq limit offset) headers = defaultMakeRequestWithoutLogs GET (EP.messageList limit offset) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
+instance makeGetMessageReq:: RestEndpoint GetMessageReq where
+    makeRequest reqBody@(GetMessageReq id) headers = defaultMakeRequestWithoutLogs GET (EP.getMessage id) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
 derive instance genericMessageListReq :: Generic MessageListReq _
 instance showMessageListReq :: Show MessageListReq where show = genericShow
 instance standardEncodeMessageListReq :: StandardEncode MessageListReq where standardEncode (MessageListReq _ _) = standardEncode {}
 instance decodeMessageListReq :: Decode MessageListReq where decode = defaultDecode
 instance encodeMessageListReq :: Encode MessageListReq where encode = defaultEncode
+
+derive instance genericGetMessageReq :: Generic GetMessageReq _
+instance showGetMessageReq :: Show GetMessageReq where show = genericShow
+instance standardEncodeGetMessageReq :: StandardEncode GetMessageReq where standardEncode (GetMessageReq _) = standardEncode {}
+instance decodeGetMessageReq :: Decode GetMessageReq where decode = defaultDecode
+instance encodeGetMessageReq :: Encode GetMessageReq where encode = defaultEncode
 
 derive instance genericMessageListRes :: Generic MessageListRes _
 derive instance newtypeMessageListRes :: Newtype MessageListRes _
@@ -2453,7 +2470,8 @@ newtype CreateOrderRes = CreateOrderRes
     sdk_payload :: PaymentPagePayload,
     id :: String,
     order_id :: String,
-    payment_links :: PaymentLinks
+    payment_links :: PaymentLinks,
+    sdk_payload_json :: Maybe Foreign
   }
 
 
@@ -2484,7 +2502,9 @@ instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
 derive instance genericCreateOrderRes :: Generic CreateOrderRes _
 derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
 instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
-instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance showCreateOrderRes :: Show CreateOrderRes where 
+  show (CreateOrderRes { id, order_id, payment_links, sdk_payload }) =
+    show {id, order_id, payment_links, sdk_payload}
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
 instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
 
@@ -3510,7 +3530,7 @@ data DriverCoinsFunctionType
   | BulkUploadFunction
   | BulkUploadFunctionV2
   | RidesCompleted Int
-  | MetroRideCompleted MetroRideType
+  | MetroRideCompleted MetroRideType (Maybe Int)
 
 data MetroRideType
   = ToMetro
@@ -4429,10 +4449,17 @@ data ServiceTierType
   | TAXI
   | TAXI_PLUS
   | RENTALS
+  | LOCAL
   | INTERCITY
   | BIKE_TIER
   | SUV_PLUS_TIER
   | DELIVERY_BIKE
+  | AMBULANCE_TAXI_TIER
+  | AMBULANCE_TAXI_OXY_TIER
+  | AMBULANCE_AC_TIER
+  | AMBULANCE_AC_OXY_TIER
+  | AMBULANCE_VENTILATOR
+  | EV_AUTO_RICKSHAW
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4452,6 +4479,7 @@ newtype DriverVehicleServiceTierResponse = DriverVehicleServiceTierResponse {
   tiers :: Array DriverVehicleServiceTier,
   airConditioned :: Maybe AirConditionedTier,
   canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToRental :: Maybe Boolean
 }
 
@@ -4492,9 +4520,16 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "TAXI_PLUS"    -> except $ Right TAXI_PLUS
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
+                  "LOCAL"        -> except $ Right LOCAL
                   "BIKE"         -> except $ Right BIKE_TIER
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
+                  "AMBULANCE_TAXI" -> except $ Right AMBULANCE_TAXI_TIER
+                  "AMBULANCE_TAXI_OXY" -> except $ Right AMBULANCE_TAXI_OXY_TIER
+                  "AMBULANCE_AC" -> except $ Right AMBULANCE_AC_TIER
+                  "AMBULANCE_AC_OXY" -> except $ Right AMBULANCE_AC_OXY_TIER
+                  "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR
+                  "EV_AUTO_RICKSHAW" -> except $ Right EV_AUTO_RICKSHAW
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4512,8 +4547,15 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode BIKE_TIER = standardEncode "BIKE"
     standardEncode DELIVERY_BIKE = standardEncode "DELIVERY_BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
+    standardEncode LOCAL = standardEncode "LOCAL"
     standardEncode INTERCITY = standardEncode "INTERCITY"
     standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
+    standardEncode AMBULANCE_TAXI_TIER = standardEncode "AMBULANCE_TAXI"
+    standardEncode AMBULANCE_TAXI_OXY_TIER = standardEncode "AMBULANCE_TAXI_OXY"
+    standardEncode AMBULANCE_AC_TIER = standardEncode "AMBULANCE_AC"
+    standardEncode AMBULANCE_AC_OXY_TIER = standardEncode "AMBULANCE_AC_OXY"
+    standardEncode AMBULANCE_VENTILATOR = standardEncode "AMBULANCE_VENTILATOR"
+    standardEncode EV_AUTO_RICKSHAW = standardEncode "EV_AUTO_RICKSHAW"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow

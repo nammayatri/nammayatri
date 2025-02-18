@@ -57,6 +57,8 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - TemplateHaskell
+  - DerivingStrategies
 
 dependencies:
   - base >= 4.7 && < 5

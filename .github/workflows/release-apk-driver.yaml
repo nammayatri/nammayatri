@@ -61,7 +61,7 @@ jobs:
           java-version: "17"
 
       - name: Cache Ruby - Bundler
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
@@ -69,13 +69,13 @@ jobs:
             ${{ runner.os }}-gems-
 
       - name: Cache Gradle
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/
           key: cache-clean-gradle-${{ matrix.os }}-${{ matrix.jdk }}
 
       - name: Cache Gradle Wrapper
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: ~/.gradle/wrapper/
           key: cache-clean-wrapper-${{ matrix.os }}-${{ matrix.jdk }}

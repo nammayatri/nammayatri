@@ -106,6 +106,7 @@ data Action = BackPressed
             | NoAction
             | GullakSDKResponse String
             | GullakBannerClick
+            | UpdateReferralCode GenerateReferralCodeRes
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -185,6 +186,8 @@ eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do
                 isPayoutEnabled = Just resp.referrals.isPayoutEnabled
               }
             }
+eval (UpdateReferralCode (GenerateReferralCodeRes resp)) state = do
+  continue state {data {referralCode = resp.referralCode}}
 
 eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
   let currentDriverRank = case find (\(DriversInfo driverInfo) -> driverInfo.isCurrentDriver && driverInfo.totalRides /= 0) resp.driverList of

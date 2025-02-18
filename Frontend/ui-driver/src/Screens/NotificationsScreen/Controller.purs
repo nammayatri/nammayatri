@@ -39,7 +39,7 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner, getImageUrl)
 import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer, shareTextMessage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Eval, update, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
@@ -54,6 +54,7 @@ import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
 import PrestoDOM.List as PrestoList
 import Common.Styles.Colors as Color
+import Helpers.Utils (getCityConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -66,13 +67,13 @@ data ScreenOutput
   = RefreshScreen NotificationsScreenState
   | GoBack
   | LoaderOutput NotificationsScreenState
-  | GoToHomeScreen
-  | GoToRidesScreen
-  | GoToReferralScreen
-  | GoToProfileScreen
-  | GoToCurrentRideFlow
+  | GoToHomeScreen NotificationsScreenState
+  | GoToRidesScreen NotificationsScreenState
+  | GoToReferralScreen NotificationsScreenState
+  | GoToProfileScreen NotificationsScreenState
+  | GoToCurrentRideFlow NotificationsScreenState
   | SubscriptionScreen NotificationsScreenState
-  | EarningsScreen
+  | EarningsScreen NotificationsScreenState
 
 data Action
   = OnFadeComplete String
@@ -105,7 +106,7 @@ eval BackPressed state = do
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoToHomeScreen
+    exit $ if state.deepLinkActivated then GoToCurrentRideFlow state else GoToHomeScreen state
 
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
@@ -124,6 +125,11 @@ eval (NotificationDetailModelAC NotificationDetailModel.BackArrow) state =
   continueWithCmd state
     [ pure BackPressed
     ]
+
+eval (NotificationDetailModelAC NotificationDetailModel.ShareMessage) state = do
+  let cityConfig = getCityConfig state.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
+  let _ = shareTextMessage "Share Message" $ "Hey! Check out this message from Namma Yatri " <> "\n" <> state.notificationDetailModelState.title <> "\n " <> cityConfig.referral.domain <> "/p?vp=alerts&messageId=" <> state.notificationDetailModelState.messageId
+  continue state
 
 eval (NotificationDetailModelAC (NotificationDetailModel.LikeMessage)) state = do
   let likes = if state.notificationDetailModelState.likeStatus then state.notificationDetailModelState.likeCount - 1 else state.notificationDetailModelState.likeCount + 1
@@ -245,20 +251,20 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
   case item of
     "Home" -> do
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToHomeScreen
+      exit $ GoToHomeScreen state
     "Rides" -> do
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToRidesScreen
+      exit $ GoToRidesScreen state
     "Earnings" -> do
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit EarningsScreen
+      exit $ EarningsScreen state
     "Profile" -> do
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToProfileScreen
+      exit $ GoToProfileScreen state
     "Rankings" -> do
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit $ GoToReferralScreen
+      exit $ GoToReferralScreen state
     "Join" -> do 
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
@@ -292,9 +298,11 @@ notifisDetailStateTransformer selectedItem =
   }
 
 notificationListTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardState
-notificationListTransformer notificationArray =
-  ( map
-      ( \(MessageAPIEntityResponse notificationItem) ->
+notificationListTransformer notificationArray = map notificationTransformer notificationArray
+  
+
+notificationTransformer :: MessageAPIEntityResponse -> NotificationCardState
+notificationTransformer (MessageAPIEntityResponse notificationItem) =
           let
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
           in
@@ -322,9 +330,6 @@ notificationListTransformer notificationArray =
             , viewCount : notificationItem.viewCount
             , likeStatus : notificationItem.likeStatus
             }
-      )
-      notificationArray
-  )
 
 propValueTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardPropState
 propValueTransformer notificationArray =

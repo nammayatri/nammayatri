@@ -22,6 +22,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -29,7 +31,6 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
-import qualified Tools.Utils as TU
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -180,5 +181,5 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
-                driverTags = TU.convertTags $ "OnRideDriver#true" : fromMaybe [] person.driverTag
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "OnRideDriver#true" : fromMaybe [] person.driverTag
               }

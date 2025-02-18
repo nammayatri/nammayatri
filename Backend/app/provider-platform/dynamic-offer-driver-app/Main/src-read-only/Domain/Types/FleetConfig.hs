@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FleetConfig where
@@ -14,7 +13,9 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FleetConfig = FleetConfig
-  { allowEndingMidRoute :: Kernel.Prelude.Bool,
+  { allowAutomaticRoundTripAssignment :: Kernel.Prelude.Bool,
+    allowEndingMidRoute :: Kernel.Prelude.Bool,
+    allowStartRideFromQR :: Kernel.Prelude.Bool,
     endRideDistanceThreshold :: Kernel.Types.Common.HighPrecMeters,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rideEndApproval :: Kernel.Prelude.Bool,

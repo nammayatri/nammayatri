@@ -22,3 +22,6 @@ _main = lens (unwrap >>> _.main) (\oldRec newVal -> wrap ((unwrap oldRec) { main
 
 _view_param :: forall a b c. Newtype a { view_param :: b | c } => Lens' a b
 _view_param = lens (unwrap >>> _.view_param) (\oldRec newVal -> wrap ((unwrap oldRec) { view_param = newVal }))
+
+_deepLinkJSON :: forall a b c. Newtype a { deepLinkJSON :: b | c } => Lens' a b
+_deepLinkJSON = lens (unwrap >>> _.deepLinkJSON) (\oldRec newVal -> wrap ((unwrap oldRec) { deepLinkJSON = newVal }))

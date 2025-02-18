@@ -1159,6 +1159,10 @@ defWaitingChargesConfig = {
   bike : {
     freeSeconds : 180,
     perMinCharges : 1.50
+  },
+  ambulance : {
+    freeSeconds : 480,
+    perMinCharges : 2.0
   }
 }
 
@@ -1174,6 +1178,10 @@ defRentalWaitingChargesConfig = {
   },
   bike: {
     freeSeconds : 180,
+    perMinCharges : 1.5
+  },
+  ambulance: {
+    freeSeconds : 480,
     perMinCharges : 1.5
   }
 }
@@ -1240,6 +1248,10 @@ allCitiesDefaultCityConfig = {
     bike: {
       freeSeconds : 3,
       perMinCharges : 1.50
+    },
+    ambulance: {
+      freeSeconds : 480,
+      perMinCharges : 2.0
     }
   },
   rentalWaitingChargesConfig : {
@@ -1254,6 +1266,10 @@ allCitiesDefaultCityConfig = {
     bike: {
       freeSeconds : 180,
       perMinCharges : 1.5
+    },
+    ambulance: {
+      freeSeconds : 480,
+      perMinCharges : 2.0
     }
   },
   rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
@@ -1343,6 +1359,10 @@ ysDefaultCityConfig =
           freeSeconds = 180
         , perMinCharges = 2.0
         }
+      , ambulance {
+        freeSeconds = 480,
+        perMinCharges = 2.0
+        }
       }
     , rentalWaitingChargesConfig {
         cab {
@@ -1356,7 +1376,11 @@ ysDefaultCityConfig =
       , bike {
           freeSeconds = 180
         , perMinCharges = 2.0
-        }
+        },
+    ambulance {
+      freeSeconds = 480,
+      perMinCharges = 2.0
+    }
       }
     , enableHvSdk = true -- Hyperverge Integration Activation at launch
     , enableGullak = false

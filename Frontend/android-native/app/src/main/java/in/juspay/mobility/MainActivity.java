@@ -156,8 +156,7 @@ public class MainActivity extends AppCompatActivity {
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
-    private CleverTapSignedCall cleverTapSignedCall;
-
+    private ExecutorService currentLocExecuter;
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -309,7 +308,7 @@ public class MainActivity extends AppCompatActivity {
         String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         String driverProfileUrl = baseUrl + "/driver/profile";
         try {
-            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
             Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
             MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(driverProfileUrl, baseHeaders, null, "GET", false);
             return apiResponse.getResponseBody();
@@ -377,11 +376,11 @@ public class MainActivity extends AppCompatActivity {
                 return results;
     }
 
-    protected void getCurrentLocationFlow() {
+    protected void getCurrentLocationFlow(int locationPriority) {
         if (ActivityCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
         FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+        client.getCurrentLocation(locationPriority, cancellationTokenSource.getToken())
                 .addOnSuccessListener(location -> {
                     if (location != null) {
                         try {
@@ -399,6 +398,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
         onCreateTimeStamp = System.currentTimeMillis();
+        currentLocExecuter = Executors.newSingleThreadExecutor();
         ActivityLifecycleCallback.register(this.getApplication());
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
@@ -411,9 +411,11 @@ public class MainActivity extends AppCompatActivity {
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
+        String okHttpConfig = "{}";
         try{
             isPerfEnabled = remoteConfigs.getBoolean("perf_enabled");
             isPerfEnabledCustomer = remoteConfigs.getBoolean("perf_enabled_customer");
+            okHttpConfig = remoteConfigs.getString("ok_http_config");
             Log.i("PERF", "Fetched from remote config - perf enabled : " + isPerfEnabled);
 
         }catch(Exception e){
@@ -423,8 +425,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if(isPerfEnabledCustomer){
-            ExecutorService currentLocExecuter = Executors.newSingleThreadExecutor();
-            currentLocExecuter.execute(() -> getCurrentLocationFlow());
+            String appName = getApplicationContext().getResources().getString(R.string.app_type);
+            if(appName.equals("driver")){
+                String configPriority = remoteConfigs.getString("driver_location_priority");
+                int priority = in.juspay.mobility.app.Utils.getPriority(configPriority);
+                currentLocExecuter.execute(() -> getCurrentLocationFlow(priority));
+            }else{
+                currentLocExecuter.execute(() -> getCurrentLocationFlow(Priority.PRIORITY_HIGH_ACCURACY));
+            }
         }
 
         if(isPerfEnabled) {
@@ -459,6 +467,8 @@ public class MainActivity extends AppCompatActivity {
         sharedPref.edit().putString("UNIQUE_DD", NotificationUtils.uniqueDeviceDetails()).apply();
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
         sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
+        sharedPref.edit().putString("OK_HTTP_CONFIG", okHttpConfig).apply();
+
 
         try {
             MapsInitializer.initialize(getApplicationContext());
@@ -1098,6 +1108,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (currentLocExecuter != null) {
+            currentLocExecuter.shutdown();
+            try {
+                if (!currentLocExecuter.awaitTermination(800, TimeUnit.MILLISECONDS)) {
+                    currentLocExecuter.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                currentLocExecuter.shutdownNow();
+            }
+        }
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onDestroy").apply();
         }

@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Common
@@ -30,6 +29,15 @@ data DriverMode = ONLINE | OFFLINE | SILENT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance CH.ClickhouseValue DriverMode
+
+data SearchRequestForDriverResponse = Accept | Reject | Pulled
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance CH.ClickhouseValue SearchRequestForDriverResponse
+
+$(mkHttpInstancesForEnum ''SearchRequestForDriverResponse)
+
+$(mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)
 
 $(mkHttpInstancesForEnum ''DriverMode)
 

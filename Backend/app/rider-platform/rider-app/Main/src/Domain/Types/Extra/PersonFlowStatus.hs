@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Types.Extra.PersonFlowStatus where
@@ -11,6 +10,7 @@ import qualified Domain.Types.Booking.API as SRB
 import Domain.Types.Common
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.FarePolicy.FareProductType as DFPT
+import qualified Domain.Types.Journey as DJ
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
@@ -33,6 +33,9 @@ data FlowStatus
       }
   | ACTIVE_BOOKINGS
       { list :: [SRB.BookingAPIEntity]
+      }
+  | ACTIVE_JOURNEYS
+      { journeyIds :: [Id DJ.Journey]
       }
   | FEEDBACK_PENDING SRB.BookingAPIEntity
   deriving (Show, Generic)

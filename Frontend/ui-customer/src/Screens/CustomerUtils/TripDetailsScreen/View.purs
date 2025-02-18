@@ -40,7 +40,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility, capitalize)
 import Prelude ((<>), show)
 import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||), (>))
-import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
+import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl,textFromHtml, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (PaymentMode(..), VehicleViewType(..), TripDetailsGoBackType(..), FareProductType(..), VehicleVariant(..))
@@ -49,6 +49,8 @@ import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
 import Components.CommonComponentConfig as CommonComponentConfig
 import Screens.RideSelectionScreen.Transformer as RSST
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -198,14 +200,14 @@ tripIdView push state =
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
           ][ imageView
-              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"
+              [ imageWithFallback $ fetchImage FF_ASSET if state.data.vehicleVariant == Just ST.AMBULANCE_VENTILATOR then "ny_ic_ventilator_blue" else "ny_ic_ac"
               , height $ V 18
               , width $ V 18
               , margin $ Margin 0 1 3 0
               , visibility $ boolToVisibility $ hasAirConditioned && cityConfig.enableAcViews
               ]
             , textView $
-              [ text rideTypeWithAc
+              [ textFromHtml if state.data.vehicleVariant == Just ST.AMBULANCE_VENTILATOR then getStringV2 ventilator else rideTypeWithAc
               , width WRAP_CONTENT
               , color Color.black900
               , accessibility DISABLE_DESCENDANT

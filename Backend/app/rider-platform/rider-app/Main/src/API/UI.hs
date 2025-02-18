@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.EditLocation as EditLocation
@@ -119,6 +120,7 @@ type API =
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
+           :<|> BBPS.API
        )
 
 handler :: FlowServer API
@@ -171,3 +173,4 @@ handler =
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
+    :<|> BBPS.handler

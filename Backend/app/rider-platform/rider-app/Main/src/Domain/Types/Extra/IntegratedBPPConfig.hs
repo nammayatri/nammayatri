@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 
 module Domain.Types.Extra.IntegratedBPPConfig where
 
@@ -18,7 +17,7 @@ data EBIXConfig = EBIXConfig
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-data CUMTAConfig = CUMTAConfig
+data DIRECTConfig = DIRECTConfig
   { cipherKey :: Base64,
     qrRefreshTtl :: Maybe Seconds
   }

@@ -13,6 +13,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
@@ -38,6 +39,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             bapCountry = bapCountry,
             bapId = bapId,
             bapUri = bapUri,
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             disabilityTag = disabilityTag,
@@ -45,6 +47,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             dynamicPricingLogicVersion = dynamicPricingLogicVersion,
             estimateId = Kernel.Types.Id.Id <$> estimateId,
+            estimatedCongestionCharge = estimatedCongestionCharge,
             estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
             estimatedFare = estimatedFare,
@@ -60,6 +63,8 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             isScheduled = fromMaybe False isScheduled,
             maxEstimatedDistance = maxEstimatedDistance,
             merchantOperatingCityId = merchantOperatingCityId',
+            parcelQuantity = parcelQuantity,
+            parcelType = parcelType,
             paymentId = paymentId,
             paymentMethodId = Kernel.Types.Id.Id <$> paymentMethodId,
             paymentUrl = paymentUrl,
@@ -98,6 +103,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,
         Beam.bapUri = bapUri,
+        Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,
         Beam.currency = Just currency,
         Beam.disabilityTag = disabilityTag,
@@ -105,6 +111,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.dynamicPricingLogicVersion = dynamicPricingLogicVersion,
         Beam.estimateId = Kernel.Types.Id.getId <$> estimateId,
+        Beam.estimatedCongestionCharge = estimatedCongestionCharge,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
         Beam.estimatedFare = estimatedFare,
@@ -120,6 +127,8 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.isScheduled = Just isScheduled,
         Beam.maxEstimatedDistance = maxEstimatedDistance,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.parcelQuantity = parcelQuantity,
+        Beam.parcelType = parcelType,
         Beam.paymentId = paymentId,
         Beam.paymentMethodId = Kernel.Types.Id.getId <$> paymentMethodId,
         Beam.paymentUrl = paymentUrl,

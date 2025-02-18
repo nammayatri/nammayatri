@@ -152,6 +152,8 @@ instance ClickhouseValue Time.Months
 
 instance ClickhouseValue TripCategory
 
+instance CH.ClickhouseValue PayoutFlagReason
+
 $(TH.mkClickhouseInstances ''BppTransactionJoinT 'SELECT_FINAL_MODIFIER)
 
 findAllRideItems ::

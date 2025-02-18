@@ -156,6 +156,7 @@ frfsVehicleCategoryToBecknVehicleCategory :: Spec.VehicleCategory -> BecknSpec.V
 frfsVehicleCategoryToBecknVehicleCategory = \case
   Spec.BUS -> BecknSpec.BUS
   Spec.METRO -> BecknSpec.METRO
+  Spec.SUBWAY -> BecknSpec.SUBWAY
 
 getAndValidateCancellationParams :: [Spec.QuotationBreakupInner] -> Spec.OrderStatus -> Either Text (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney)
 getAndValidateCancellationParams quoteBreakup orderStatus = do

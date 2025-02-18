@@ -616,7 +616,7 @@ footerArray state = do
     MetroStationSelectionAction -> 
       if city == Delhi
       then []
-      else [{action : MetroRouteMapAction, text : "See Metro Map", buttonType : "SetLocationOnMap", imageName : "ny_ic_metro_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_metro_map.png"}]
+      else [{action : MetroRouteMapAction, text : "See Metro Map", buttonType : "SetLocationOnMap", imageName : "ny_ic_metro_map,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_metro_map.png"}]
     BusStationSelectionAction -> []
     BusSearchSelectionAction -> []
     BusRouteSelectionAction -> []

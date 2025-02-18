@@ -66,7 +66,7 @@ onCancel _ req = withFlowHandlerBecknAPI do
             Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
               domainOnCancelAction validatedOnCancelReq
               fork "on cancel received pushing ondc logs" do
-                void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId
+                void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId "MOBILITY"
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id

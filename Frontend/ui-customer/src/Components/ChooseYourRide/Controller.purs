@@ -95,6 +95,7 @@ config =
     , customerTipArrayWithValues : []
     , activeIndex : -1
     , primaryButtonText : ""
+    , suggestedActiveIndex : Nothing
     }
   , tipForDriver : 0
   , enableTips : true

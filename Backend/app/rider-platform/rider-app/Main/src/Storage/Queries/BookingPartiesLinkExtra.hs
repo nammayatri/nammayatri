@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.BookingPartiesLinkExtra where
 
 import qualified Domain.Types.Booking

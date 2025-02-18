@@ -16,6 +16,7 @@ imports:
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
   AccountId: Kernel.External.Payment.Stripe.Types
+  ImageExtractionValidation: Domain.Types.IdfyVerification
 
 IdfyVerification:
   tableName: idfy_verification
@@ -809,3 +810,65 @@ HyperVergeSdkLogs:
       orderBy:
         field: createdAt
         order: asc
+
+
+HyperVergeVerification:
+  tableName: hyperverge_verification
+  fields:
+    id: Id HyperVergeVerification
+    documentImageId1: Id Image
+    documentImageId2: Maybe (Id Image)
+    driverId: Id Person
+    requestId: Text
+    docType: DocumentType
+    vehicleCategory: Maybe VehicleCategory
+    status: Text
+    issueDateOnDoc: Maybe UTCTime
+    driverDateOfBirth: Maybe UTCTime
+    documentNumber: EncryptedHashedField e Text
+    imageExtractionValidation: ImageExtractionValidation
+    hypervergeResponse: Maybe Text
+    multipleRC: Maybe Bool
+    retryCount: Maybe Int
+    airConditioned: Maybe Bool
+    oxygen: Maybe Bool
+    ventilator: Maybe Bool
+    nameOnCard: Maybe Text
+    transactionId: Maybe Text
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    requestId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findAllByDriverIdAndDocType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, docType]
+    findLatestByDriverIdAndDocType:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, docType]
+    findByRequestId:
+      kvFunction: findOneWithKV
+      where: requestId
+    updateResponse:
+      kvFunction: updateWithKV
+      params: [status, hypervergeResponse]
+      where: requestId
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: requestId
+    updateExtractValidationStatus:
+      kvFunction: updateWithKV
+      params: [imageExtractionValidation]
+      where: requestId
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId

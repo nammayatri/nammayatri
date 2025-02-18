@@ -30,7 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -109,7 +109,7 @@ onInit req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow decRider.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails

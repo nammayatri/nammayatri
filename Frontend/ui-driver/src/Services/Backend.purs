@@ -83,6 +83,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "x-package" (getValueToLocalStore PACKAGE_NAME),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" getDeviceDetails
                     ] <> case regToken of
@@ -97,7 +98,8 @@ getHeaders' dummy isGzipCompressionEnabled = do
     _ <- pure $ spy "import headers" regToken
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                         Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
+                        Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
+                        Header "x-package" (getValueToLocalStore PACKAGE_NAME),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
                         Header "x-device" getDeviceDetails
@@ -124,7 +126,6 @@ withAPIResult url f flow = do
                 else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                     _ <- pure $ deleteValueFromLocalStore VERSION_NAME
-                    _ <- pure $ deleteValueFromLocalStore BASE_URL
                     _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
                     _ <- pure $ deleteValueFromLocalStore IS_RIDE_ACTIVE
                     _ <- pure $ deleteValueFromLocalStore IS_DRIVER_ENABLED
@@ -156,7 +157,6 @@ withAPIResultBT url f errorHandler flow = do
                 else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     deleteValueFromLocalStore REGISTERATION_TOKEN
                     deleteValueFromLocalStore VERSION_NAME
-                    deleteValueFromLocalStore BASE_URL
                     deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
                     deleteValueFromLocalStore IS_RIDE_ACTIVE
                     deleteValueFromLocalStore IS_DRIVER_ENABLED
@@ -207,6 +207,7 @@ triggerOTPBT payload = do
 makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
 makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
+        packageName = getValueToLocalStore PACKAGE_NAME
         latitude = mkLatLon lat
         longitude = mkLatLon lng
     in
@@ -216,7 +217,8 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
       "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
       "merchantOperatingCity" : mkOperatingCity operatingCity,
       "registrationLat" : latitude,
-      "registrationLon" : longitude
+      "registrationLon" : longitude,
+      "packageName" : packageName
     }
     where 
         mkOperatingCity :: String -> Maybe String
@@ -224,6 +226,7 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
             | operatingCity `DA.elem` ["__failed", "--", ""] = Nothing
             | operatingCity == "Puducherry"          = Just "Pondicherry"
             | operatingCity == "Tamil Nadu"          = Just "TamilNaduCities"
+            | operatingCity == "Coimbatore"           = Just "TamilNaduCities"
             | operatingCity == "Odisha"              = Just "Paris"
             | otherwise                              = Just operatingCity
 
@@ -624,6 +627,7 @@ mkUpdateDriverInfoReq dummy
     , vehicleName: Nothing
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
+    , canSwitchToIntraCity : Nothing
     , canSwitchToInterCity: Nothing
     , isSpecialLocWarrior: Nothing
     }
@@ -959,6 +963,14 @@ messageSeenBT messageId = do
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
+
+--------------------------------- messageSeen  --------------------------------------------------------------------------------------------------------
+getMessageById :: String -> Flow GlobalState (Either ErrorResponse MessageAPIEntityResponse)
+getMessageById id = do
+     headers <- getHeaders "" false
+     withAPIResult (EP.getMessage id) unwrapResponse $ callAPI headers (GetMessageReq id)
+    where
+        unwrapResponse (x) = x
 
 --------------------------------- likeMessage  --------------------------------------------------------------------------------------------------------
 likeMessageBT :: String -> FlowBT String ApiSuccessResult

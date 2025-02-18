@@ -358,7 +358,7 @@ allOtherTopics state push =
               ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
-                  , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toStringJSON (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))
+                  , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toStringJSON (length (state.data.ongoingIssueList)))) else getIssueTitle optionItem.menuOptions)
                   , margin (MarginLeft 10)
                   , color Color.black800
                   ] <> FontStyle.body5 LanguageStyle

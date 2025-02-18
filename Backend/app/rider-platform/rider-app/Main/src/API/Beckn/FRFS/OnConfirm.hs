@@ -31,6 +31,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Tools.Metrics as Metrics
+import TransactionLogs.PushLogs
 
 type API = Spec.OnConfirmAPI
 
@@ -56,6 +57,8 @@ onConfirm _ req = withFlowHandlerAPI $ do
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq
+        fork "FRFS onConfirm received pushing ondc logs" do
+          void $ pushLogs "on_confirm" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
       Nothing -> DOnConfirm.onConfirmFailure bapConfig ticketBooking
   pure Utils.ack
 

@@ -1234,7 +1234,7 @@ getKn =
     , enter_referral_code: "ರೆಫರಲ್ ಕೋಡ್ ನಮೂದಿಸಿ"
     , have_a_referral_code: "ರೆಫರಲ್ ಕೋಡ್ ಹೊಂದಿರುವಿರಾ?"
     , complete_steps_to_apply_referral: "ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ಅನ್ವಯಿಸಲು ಮೇಲಿನ ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
-    , download_namma_yatri: (\_ -> "ನಮ್ಮ ಯಾತ್ರಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ")
+    , download_namma_yatri: (\appName -> appName <> " ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ")
     , enter_code: "ಕೋಡ್ ನಮೂದಿಸಿ"
     , complete_registration: "ಸಂಪೂರ್ಣ ನೋಂದಣಿ"
     , cant_find_option: "ಆಯ್ಕೆಯನ್ನು ಹುಡುಕಲಾಗಲಿಲ್ಲ"
@@ -1497,7 +1497,7 @@ getKn =
     , choose_ride_dist: "ಸವಾರಿ ದೂರವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     , rates_change_as_the_dist: "ನಿಮ್ಮ ಸವಾರಿ ದೂರವು ಬದಲಾವಣೆಯಾದಂತೆ ದರಗಳು ಬದಲಾವಣೆಯಾಗುತ್ತವೆ"
     , view_booking_pref: "ಬುಕಿಂಗ್ ಆದ್ಯತೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ"
-    , limited_time_offer_until: (\date -> "ಜೂನ್ " <> date <> " ಮಿತಿಯಾದ ಸಮಯ ಆಫರ್")
+    , limited_time_offer_until: (\date -> "ಸೀಮಿತ ಸಮಯದ ಕೊಡುಗೆ " <> date <> " ರವರೆಗೆ")
     , register_your_bike: "ನಿಮ್ಮ ಬೈಕನ್ನು ನೋಂದಣಿ ಮಾಡಿ"
     , bike_taxi: "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"
     , select_facilities: "ನಿಮ್ಮ ಎಂಬ್ಯುಲೆನ್ಸ್‌ಗೆ ಯಾವ ಸೌಲಭ್ಯಗಳಿರಬೇಕು ಎಂದು ಆರಿಸಿ ಪಡೆಯಿರಿ.\n ಗಮನಿಸಿ: ವೆಂಟಿಲೇಟರ್‌ನಲ್ಲಿ ಎಸಿ ಮತ್ತು ಆಕ್ಸಿಜನ್ ಒಳಗೊಂಡಿದೆ."
@@ -1592,6 +1592,7 @@ getKn =
     , remove_eyewere: "ದಯವಿಟ್ಟು ಕನ್ನಡಕ ಅಥವಾ ಸನ್ಗ್ಲಾಸ್ ಯಾವುದಾದರೂ ಇದ್ದರೆ ತೆಗೆದುಹಾಕಿ"
     , image_validation_exceed_limit: "ಚಿತ್ರದ ಮೌಲ್ಯೀಕರಣವು ಮಿತಿಯನ್ನು ಮೀರಿದೆ"
     , parking_charges_included: (\amount -> amount <> " ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ")
+    , invoice_generated_from_driver_to_rider: "ಡ್ರೈವರ್‌ನಿಂದ ರೈಡರ್‌ಗೆ ಸರಕುಪಟ್ಟಿ ರಚಿಸಲಾಗಿದೆ"
     , included: "ಒಳಗೊಂಡಿದೆ"
     , db_check_and_name_match_failed: "ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ"
     , complete_your_profile: "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪೂರ್ತಿಮಾಡಿ"
@@ -1710,6 +1711,7 @@ getKn =
     , your_ride_starts_in: "ನಿಮ್ಮ ಪ್ರಯಾಣ ಆರಂಭವಾಗುತ್ತದೆ"
     , away: " ದೂರ"
     , intercity: "ನಗರಾಂತರ"
+    , local: "ಸ್ಥಳೀಯ"
     , intercity_return: "ನಗರಾಂತರ ಮರಳಿ"
     , rental: "ಬಾಡಿಗೆ"
     , regular: "ನಿಯಮಿತ"
@@ -1783,4 +1785,8 @@ getKn =
     , search : "ಹುಡುಕಿ"
     , bus__ : "ಬಸ್"
     , driver_unsubscribed : "ಡ್ರೈವರ್ ಪ್ಲ್ಯಾಟ್‌ಫಾರಮ್‌ನಿಂದ ಅನಾಗರಿಕವಾಗಿದ್ದಾರೆ. ಮರುಬದಲಾಯಿಸಲು ಹಣ ಪಾವತಿಸಿ"
+    , canceling_this_booking_may_affect_the_emergency_medical : " ಈ ಬುಕ್ಕಿಂಗ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ರೋಗಿಗೆ ತುರ್ತು ವೈದ್ಯಕೀಯ ಸೇವೆಗಳ ಮೇಲೆ ಪರಿಣಾಮ ಬೀರುವ ಸಾಧ್ಯತೆಯಿದೆ"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ಡ್ರೈವರರು ತಮ್ಮ ವೈದ್ಯಕೀಯ ಕಾರಣಗಳು ಅಥವಾ ವಾಹನದ ಬೃಹತ್‌ ಕಡಿವಾಣಗಳಿಂದ ಮಾತ್ರ ರದ್ದು ಮಾಡುವುದು ಅನುಮತಿಸಲಾಗಿದೆ"
+    , payment_under_maintenance : "ಪಾವತಿ ನಿರ್ವಹಣೆಯಲ್ಲಿದೆ"
+    , payments_temporarily_unavailable : "ಪಾವತಿಗಳು ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ ಮತ್ತು ಶೀಘ್ರದಲ್ಲೇ ಮರಳಲಿವೆ. ದಯವಿಟ್ಟು ನಂತರ ಪ್ರಯತ್ನಿಸಿ."
     }

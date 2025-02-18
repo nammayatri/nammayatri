@@ -1,21 +1,19 @@
 module Tools.MarketingEvents where
 
 import qualified Data.Text as T
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import Domain.Types.VehicleCategory
 import qualified EulerHS.Prelude hiding (null)
-import qualified Kernel.External.Notification.FCM.Flow as FCM
+import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.Person as SQP
 import Tools.Error
 import Tools.Notifications
-import Utils.Common.Cac.KeyNameConstants
 
 data MarketingEventsType
   = NEW_SIGNUP
@@ -24,12 +22,10 @@ data MarketingEventsType
 
 data EventDestination = CLEVERTAP | FIREBASE deriving (Show, ToJSON, FromJSON, Generic)
 
-data PersonData = PersonId (Id Person) | PersonEntity Person
-
 data MerchantOperatingCityData = MerchantOperatingCityId (Id DMOC.MerchantOperatingCity) | MerchantOperatingCityEntity DMOC.MerchantOperatingCity
 
-notifyMarketingEvents :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => PersonData -> MarketingEventsType -> Maybe VehicleCategory -> MerchantOperatingCityData -> [EventDestination] -> m ()
-notifyMarketingEvents driverData marketingEventsType vehicleCategory cityData eventDestination = fork "marketing-events" $ do
+notifyMarketingEvents :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id Person -> Maybe FCMRecipientToken -> MarketingEventsType -> Maybe VehicleCategory -> MerchantOperatingCityData -> [EventDestination] -> m ()
+notifyMarketingEvents driverId deviceToken marketingEventsType vehicleCategory cityData eventDestination = fork "marketing-events" $ do
   (city, merchantOpCityId, shortId) <- case cityData of
     MerchantOperatingCityEntity city ->
       return (city.city, city.id, city.merchantShortId.getShortId)
@@ -38,36 +34,38 @@ notifyMarketingEvents driverData marketingEventsType vehicleCategory cityData ev
       return (mcity.city, id, mcity.merchantShortId.getShortId)
 
   let events = case vehicleCategory of
-        Just vehicleCat -> T.toLower $ shortId <> "driver" <> show marketingEventsType <> show vehicleCat <> show city
-        _ -> T.toLower $ shortId <> "driver" <> show marketingEventsType <> show city
+        Just vehicleCat -> T.toLower $ (splitFirstChars shortId) <> "_" <> show marketingEventsType <> "_" <> show vehicleCat <> "_" <> T.take 3 (T.pack (show city))
+        _ -> T.toLower $ (splitFirstChars shortId) <> "_" <> show marketingEventsType <> "_" <> T.take 3 (T.pack (show city))
   logDebug $ "the event to be triggered is :" <> events
-  case driverData of
-    PersonId driverId -> do
-      driver <- SQP.findById driverId
-      whenJust driver $ \driver' -> do
-        pingEvent driver' events merchantOpCityId
-    PersonEntity driver -> pingEvent driver events merchantOpCityId
+
+  notification <- setNotificationData events merchantOpCityId driverId eventDestination deviceToken
+  runWithServiceConfigForProviders merchantOpCityId notification EulerHS.Prelude.id (clearDeviceToken driverId)
   where
-    pingEvent :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Person.Person -> Text -> Id DMOC.MerchantOperatingCity -> m ()
-    pingEvent driver events merchantOpCityId = do
-      case driver.deviceToken of
-        Just token -> do
-          let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId
-          transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-          FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId (Just token)) EulerHS.Prelude.id
-          where
-            notificationData =
-              FCM.FCMData
-                { fcmNotificationType = FCM.MARKETING_EVENTS,
-                  fcmShowNotification = FCM.DO_NOT_SHOW,
-                  fcmEntityType = FCM.Person,
-                  fcmEntityIds = getId driver.id,
-                  fcmEntityData = eventDestination,
-                  fcmNotificationJSON = FCM.createAndroidNotification title body FCM.MARKETING_EVENTS Nothing,
-                  fcmOverlayNotificationJSON = Nothing,
-                  fcmNotificationId = Nothing
-                }
-            title = FCM.FCMNotificationTitle events
-            body =
-              FCMNotificationBody ""
-        Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
+    splitFirstChars :: T.Text -> T.Text
+    splitFirstChars shortId = T.concat $ map (T.take 1) $ T.splitOn "_" shortId
+
+setNotificationData ::
+  (Monad m, Log m) =>
+  Text ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  [EventDestination] ->
+  Maybe FCM.FCMRecipientToken ->
+  m (Notification.NotificationReq [EventDestination] EmptyDynamicParam)
+setNotificationData events merchantOpCityId driverId eventDestination deviceToken = do
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.MARKETING_EVENTS,
+            subCategory = Nothing,
+            showNotification = Notification.DO_NOT_SHOW,
+            messagePriority = Just Notification.HIGH,
+            entity = Notification.Entity Notification.Merchant merchantOpCityId.getId eventDestination,
+            dynamicParams = EmptyDynamicParam,
+            body = "",
+            title = events,
+            auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Nothing
+          }
+  logDebug $ "the notification is :" <> show notificationData
+  return notificationData

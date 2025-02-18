@@ -225,6 +225,7 @@ types:
     - rideStatus: RideStatus
     - roundTrip: Maybe Bool
     - deliveryParcelImageId: Maybe Text
+    - estimatedReservedDuration: Maybe Minutes
   LocationAPIEntity:
     - lat: Double
     - lon: Double
@@ -370,11 +371,9 @@ types:
     - sgstWithCurrency: Maybe PriceAPIEntity
     - cgstWithCurrency: Maybe PriceAPIEntity
   FParamsRentalDetails:
-    - timeBasedFare: Money
-    - distBasedFare: Money
     - deadKmFare: PriceAPIEntity
-    - timeBasedFareWithCurrency: PriceAPIEntity
-    - distBasedFareWithCurrency: PriceAPIEntity
+    - timeFare: PriceAPIEntity
+    - distanceFare: PriceAPIEntity
     - extraDistance: Meters
     - extraDistanceWithUnit: Distance
     - extraDuration: Seconds

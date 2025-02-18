@@ -58,6 +58,7 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
   - PackageImports
+  - TemplateHaskell
 
 dependencies:
   - aeson

@@ -384,6 +384,7 @@ rateSlider push state =
                 , id $ EHC.getNewIDWithTag "RateSlider"
                 , onAnimationEnd ( \action -> void $ JB.renderSlider 
                     ( \sliderAction -> do
+                        void $ pure $ JB.updateInputString "input"
                         void $ JB.debounceFunction 800 push DebounceCallBack false
                         void $ push sliderAction
                         pure unit

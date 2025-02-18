@@ -49,7 +49,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle, isAmbulance)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -131,6 +131,8 @@ rideActionModalConfig state =
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
+    vehicleType = state.data.vehicleType,
+    vehicleServiceTier = state.data.vehicleType,
     specialLocationTag = rideData.specialLocationTag,
     requestedVehicleVariant = rideData.requestedVehicleVariant,
     accessibilityTag = rideData.disabilityTag,
@@ -689,13 +691,19 @@ cancelConfirmationConfig state = let
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 24 16 20 ,
     primaryText {
-      text = case state.data.activeRide.specialLocationTag of
-              Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
-              Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
+      text = 
+        let
+          isAmbulance = RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory
+          ambulanceText =  StringsV2.getStringV2 LT2.canceling_this_booking_may_affect_the_emergency_medical
+          nonAmbulanceText = case state.data.activeRide.specialLocationTag of
+            Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
+            Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
+        in
+          if isAmbulance then ambulanceText else nonAmbulanceText
     , margin = Margin 16 24 16 0 },
     secondaryText {
-      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") then VISIBLE else GONE,
-      text = getString GO_TO_CANCELLATION_DESC,
+      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") || RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory then VISIBLE else GONE,
+      text = if state.data.activeRide.specialLocationTag == (Just "GOTO") then getString GO_TO_CANCELLATION_DESC else  StringsV2.getStringV2 LT2.drivers_are_permitted_to_cancel_ambulance_bookings,
       margin = MarginTop 6
       },
     option1 {
@@ -722,7 +730,7 @@ cancelConfirmationConfig state = let
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing) 
-                    then "ny_ic_frequent_cancellation_blocking"
+                    then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory then "ny_ic_cancel_prevention_ambulance" else "ny_ic_frequent_cancellation_blocking"
                   else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
     , visibility = VISIBLE
     , margin = Margin 16 10 16 0
@@ -1746,6 +1754,9 @@ getRideCompletedConfig state = let
     parkingChargesTitle = getString PLEASE_COLLECT_PARKING_CHARGES,
     parkingChargesDescription = getString INCURRED_DURING_TRIP
   }
+  , variant = getValueToLocalStore VEHICLE_VARIANT
+  , driverCity = getValueToLocalStore DRIVER_LOCATION
+  , driverInvoiceText = StringsV2.getStringV2 LT2.invoice_generated_from_driver_to_rider
   }
   in config'
 
@@ -2686,8 +2697,8 @@ getCoinEarnedPopupConfig state = do
     ST.ONE_MORE_RIDE -> createCoinPopupConfig (getString ONE_MORE_RIDE_TO_GO) (getString $ TAKE_ONE_MORE_RIDE_TO_EARN_POINTS $ coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride") "" "" "" false false Nothing
     ST.EIGHT_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) false (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_eight_rides_completed") "" (getString CONGRATULATIONS <> "🎉") "" true false Nothing
     ST.FIVE_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_5_MORE_RIDES_FOR_N_POINTS "50") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) false (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_five_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "20") true true (Just Color.blue800)
-    ST.SIX_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_4_MORE_RIDES_FOR_N_POINTS "50") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) false (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_six_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "20") true true (Just Color.blue800)
-    ST.TEN_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) false (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_ten_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") "" true false (Just Color.blue800)
+    ST.SIX_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_4_MORE_RIDES_FOR_N_POINTS "45") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_six_rides_completed_v2") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "15") true true (Just Color.blue800)
+    ST.TEN_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_ten_rides_completed_v5") "" (getString CONGRATULATIONS <> "🎉") "" true false (Just Color.blue800)
     ST.TWO_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_4_MORE_RIDES_FOR_N_POINTS "20") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) false (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_two_rides_completed_v5") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "5") true true (Just Color.blue800)
     ST.REFER_AND_EARN_COIN -> createCoinPopupConfig (getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS") "" false (getString REFER_NOW) (getString LATER) true (HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin") "" "" "" false false Nothing
     ST.CONVERT_COINS_TO_CASH -> createCoinPopupConfig (getString CONVERT_YOUR_POINTS_TO_DISCOUNT) (getString CONVERT_YOUR_POINTS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION) true (getString CONVERT_NOW) (getString LATER) true "" (coinsConfig.coinConversionPopupLottie) "" "" false false Nothing
@@ -2700,7 +2711,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
-    isVisible = not (state.data.linkedVehicleCategory `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]), -- Temporary Fix until Ambulance Ride Flow is completed from BE
+    isVisible = not (isAmbulance state.data.linkedVehicleCategory),
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,

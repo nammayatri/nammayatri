@@ -120,6 +120,9 @@ messageList limit offset = (getBaseUrl "") <> "/message/list?limit=" <> limit <>
 messageSeen :: String -> String
 messageSeen messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/seen"
 
+getMessage :: String -> String
+getMessage messageId = (getBaseUrl "") <> "/message/" <> messageId
+
 messageResponse :: String -> String
 messageResponse messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/response"
 

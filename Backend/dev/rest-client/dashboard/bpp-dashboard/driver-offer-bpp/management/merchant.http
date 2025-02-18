@@ -371,3 +371,34 @@ content-type: application/json
 #       "url" : "http://localhost:6235"
 #   }
 # }
+
+###
+
+# @name postMerchantSpecialLocationUpsert
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/specialLocation/upsert?specialLocationId=9h8016d0-f9cd-4f9f-886f-bc4cbh6a86e5
+token: {{juspay_admin}}
+content-type: application/x-www-form-urlencoded
+
+file=null
+&reqContentType=null
+&locationName="NewLocation"
+&category="NewCategory"
+&city=Kochi
+
+###
+
+# @name postMerchantSpecialLocationGatesUpsert
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/specialLocation/9h8016d0-f9cd-4f9f-886f-bc4cbh6a86e5/gates/upsert
+token: {{juspay_admin}}
+content-type: application/x-www-form-urlencoded
+
+file=null
+&reqContentType=null
+&name="NewGate1"
+&latitude=0.0
+&longitude=0.0
+&defaultDriverExtra=null
+&address="Address"
+&canQueueUpOnGate=null

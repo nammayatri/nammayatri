@@ -16,6 +16,8 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils
+import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person as Beam
 import Storage.Queries.PersonExtra as ReExport
@@ -70,10 +72,10 @@ updateCustomerPaymentId customerPaymentId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.customerPaymentId customerPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCustomerTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCustomerTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCustomerTags customerNammaTags id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.customerNammaTags customerNammaTags, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDefaultPaymentMethodId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -149,7 +151,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),
-      Se.Set Beam.customerNammaTags customerNammaTags,
+      Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags),
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,

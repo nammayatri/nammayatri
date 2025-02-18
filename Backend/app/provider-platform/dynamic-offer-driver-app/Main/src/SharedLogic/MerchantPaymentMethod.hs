@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 
 module SharedLogic.MerchantPaymentMethod where
 

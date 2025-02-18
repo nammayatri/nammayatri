@@ -14,11 +14,11 @@
 
 module API.UI.Search
   ( DSearch.SearchReq (..),
-    SLS.SearchRes (..),
+    DSearch.SearchRes (..),
     DSearch.SearchResp (..),
     DSearch.OneWaySearchReq (..),
     DSearch.RentalSearchReq (..),
-    SLS.SearchReqLocation (..),
+    DSearch.SearchReqLocation (..),
     API,
     search',
     search,
@@ -26,14 +26,26 @@ module API.UI.Search
   )
 where
 
+import qualified API.UI.Select as Select
+import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
+import qualified Domain.Types.Booking as Booking
+import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Estimate as Estimate
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.SearchRequest as SearchRequest
 import Environment
+import Kernel.External.Maps.Google.MapsClient.Types
+import qualified Kernel.External.MultiModal.Interface as MultiModal
+import Kernel.External.MultiModal.Interface.Types
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -47,12 +59,22 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
+import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.JourneyModule.Types as JMTypes
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
-import SharedLogic.Search as SLS
+import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
+import Tools.Error
+import qualified Tools.MultiModal as TMultiModal
 
 -------- Search Flow --------
 
@@ -79,13 +101,114 @@ search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Mayb
 search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+  merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  -- TODO : remove this code after multiple search req issue get fixed from frontend
+  --BEGIN
+  when merchant.enableForMultipleSearchIssue $ do
+    mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
+    shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
+    when shouldCancelPrevSearch $ do
+      fork "handle multiple search request issue" $ do
+        case mbSReq of
+          Just sReq -> do
+            mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
+            case mbEstimate of
+              Just estimate -> do
+                resp <- try @_ @SomeException $ Select.cancelSearch' (personId, merchantId) estimate.id
+                case resp of
+                  Left _ -> void $ handleBookingCancellation merchantId personId sReq.id
+                  Right _ -> pure ()
+              Nothing -> void $ handleBookingCancellation merchantId personId sReq.id
+          _ -> pure ()
+  -- TODO : remove this code after multiple search req issue get fixed from frontend
+  --END
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  return $ DSearch.SearchResp dSearchRes.searchId dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+  fork "Multimodal Search" $ do
+    let merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+    when riderConfig.makeMultiModalSearch $
+      case req of
+        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance riderConfig.minimumWalkDistance (fromMaybe [] riderConfig.permissibleModes) riderConfig.maxAllowedPublicTransportLegs
+        _ -> pure ()
+  return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+  where
+    -- TODO : remove this code after multiple search req issue get fixed from frontend
+    --BEGIN
+    checkValidSearchReq scheduleRideBufferTime sReq = do
+      now <- getCurrentTime
+      let isNonScheduled = diffUTCTime sReq.startTime sReq.createdAt < scheduleRideBufferTime
+          isValid = sReq.validTill > now
+      return $ isNonScheduled && isValid
+
+handleBookingCancellation :: Id Merchant.Merchant -> Id Person.Person -> Id SearchRequest.SearchRequest -> Flow ()
+handleBookingCancellation merchantId _personId sReqId = do
+  mbBooking <- QBooking.findByTransactionIdAndStatus sReqId.getId Booking.activeBookingStatus
+  case mbBooking of
+    Just booking -> do
+      let reasonCode = SCR.CancellationReasonCode "multiple search request issue"
+          reasonStage = SCR.OnSearch
+      let cancelReq =
+            DCancel.CancelReq
+              { additionalInfo = Nothing,
+                reallocate = Just False,
+                blockOnCancellationRate = Nothing,
+                ..
+              }
+      mRide <- QR.findActiveByRBId booking.id
+      dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
+      void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+    _ -> pure ()
+
+-- TODO : remove this code after multiple search req issue get fixed from frontend
+--END
+
+multiModalSearch ::
+  OneWaySearchReq ->
+  SearchRequest.SearchRequest ->
+  Id DMOC.MerchantOperatingCity ->
+  Meters ->
+  Meters ->
+  [GeneralVehicleType] ->
+  Int ->
+  Flow ()
+multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs = do
+  let transitRoutesReq =
+        GetTransitRoutesReq
+          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.origin.gps.lat, longitude = searchReq.origin.gps.lon}}},
+            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.destination.gps.lat, longitude = searchReq.destination.gps.lon}}},
+            arrivalTime = Nothing,
+            departureTime = searchReq.startTime,
+            mode = Nothing,
+            transitPreferences = Nothing,
+            transportModes = Nothing,
+            minimumWalkDistance = minimumWalkDistance,
+            permissibleModes = permissibleModes,
+            maxAllowedPublicTransportLegs = maxAllowedPublicTransportLegs
+          }
+  transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
+  otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  logDebug $ "[Multimodal - OTP Response]" <> show otpResponse
+  forM_ otpResponse.routes $ \r -> do
+    let initReq =
+          JMTypes.JourneyInitData
+            { parentSearchId = searchRequest.id,
+              merchantId = searchRequest.merchantId,
+              merchantOperatingCityId,
+              personId = searchRequest.riderId,
+              legs = r.legs,
+              estimatedDistance = r.distance,
+              estimatedDuration = r.duration,
+              startTime = r.startTime,
+              endTime = r.endTime,
+              maximumWalkDistance
+            }
+    QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
+    JM.init initReq
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

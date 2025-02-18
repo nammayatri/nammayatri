@@ -1316,6 +1316,8 @@ newtype Keymap = Keymap {
 , view_fares :: String
 , excess_time_description :: String -> String
 , estimated_charges :: String
+, your_cancellation_rate_is_high :: String
+, avoid_further_cancellations_to_keep_using_app :: String -> String
 , night_time_fees :: String
 , parking_and_other_charges :: String
 , additional_charges :: String
@@ -1474,6 +1476,14 @@ newtype Keymap = Keymap {
 , emergency_actions_sub :: String
 , current_initiatives :: String
 , current_initiatives_sub :: String
+, verifying :: String
+, referral_code_verified :: String
+, referral_code_failed :: String
+, enter_6_digit_referral_code :: String
+, not_verified :: String
+, optional_bracketted :: String
+, verify :: String
+, referral_code :: String
 , driver_verification :: String
 , driver_verification_sub :: String
 , safety_feedback :: String
@@ -1757,6 +1767,14 @@ newtype Keymap = Keymap {
 , experience_our_pilot_launch_for_bus_ticketing_in_prime_routes :: String -> String
 , note_your_ticket_is_only_valid_for :: String -> String
 , here_is_bus_ticket :: String
+, a_c :: String
+, no_oxygen :: String
+, oxygen :: String
+, ventilator :: String
+, ambulance_ :: String
+, uncomfortable_ambulance :: String
+, clean_ambulance :: String
+, ambulance_booking_disclaimer :: String
 }
 
 
@@ -1767,6 +1785,8 @@ derive instance ntK :: Newtype Keymap _
 a :: forall a. Proxy a
 a = Proxy
 
+verify :: Proxy "verify"
+verify = a
 
 about :: Proxy "about"
 about = a
@@ -1896,6 +1916,28 @@ book_ride_ = a
 
 booking_preference :: Proxy "booking_preference"
 booking_preference = a
+
+
+verifying :: Proxy "verifying"
+verifying = a
+
+referral_code_verified :: Proxy "referral_code_verified"
+referral_code_verified = a
+
+referral_code_failed :: Proxy "referral_code_failed"
+referral_code_failed = a
+
+enter_6_digit_referral_code :: Proxy "enter_6_digit_referral_code"
+enter_6_digit_referral_code = a
+
+not_verified :: Proxy "not_verified"
+not_verified = a
+
+optional_bracketted :: Proxy "optional_bracketted"
+optional_bracketted = a
+
+referral_code :: Proxy "referral_code"
+referral_code = a
 
 boost_your_ride_chances_and_help_drivers_with_tips :: Proxy "boost_your_ride_chances_and_help_drivers_with_tips"
 boost_your_ride_chances_and_help_drivers_with_tips = a
@@ -5581,6 +5623,12 @@ excess_time_description = a
 estimated_charges :: Proxy "estimated_charges"
 estimated_charges = a
 
+your_cancellation_rate_is_high :: Proxy "your_cancellation_rate_is_high"
+your_cancellation_rate_is_high = a
+
+avoid_further_cancellations_to_keep_using_app :: Proxy "avoid_further_cancellations_to_keep_using_app"
+avoid_further_cancellations_to_keep_using_app = a
+
 night_time_fees :: Proxy "night_time_fees"
 night_time_fees = a
 
@@ -6906,3 +6954,28 @@ note_your_ticket_is_only_valid_for = a
 
 here_is_bus_ticket :: Proxy "here_is_bus_ticket"
 here_is_bus_ticket = a
+
+a_c :: Proxy "a_c"
+a_c = a
+
+no_oxygen :: Proxy "no_oxygen"
+no_oxygen = a
+
+oxygen :: Proxy "oxygen"
+oxygen = a
+
+ventilator :: Proxy "ventilator"
+ventilator = a
+
+ambulance_ :: Proxy "ambulance_"
+ambulance_ = a
+
+uncomfortable_ambulance :: Proxy "uncomfortable_ambulance"
+uncomfortable_ambulance = a
+
+clean_ambulance :: Proxy "clean_ambulance"
+clean_ambulance = a
+
+ambulance_booking_disclaimer :: Proxy "ambulance_booking_disclaimer"
+ambulance_booking_disclaimer = a
+

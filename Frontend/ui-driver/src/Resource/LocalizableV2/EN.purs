@@ -1235,7 +1235,7 @@ getEn =
     , enter_referral_code: "Enter referral code"
     , have_a_referral_code: "Have a referral code?"
     , complete_steps_to_apply_referral: "Complete above steps to apply referral code"
-    , download_namma_yatri: (\_ -> "Download Namma Yatri")
+    , download_namma_yatri: (\appName -> "Download " <> appName)
     , enter_code: "Enter Code"
     , complete_registration: "Complete Registration"
     , help_faq: "Help"
@@ -1589,6 +1589,7 @@ getEn =
     , remove_eyewere: "Please remove eyewear or sunglasses if any"
     , image_validation_exceed_limit: "Image validation limit exceeded."
     , parking_charges_included: (\amount -> amount <> " Parking Charges included")
+    , invoice_generated_from_driver_to_rider: "Invoice generated from driver to rider"
     , included: "included"
     , complete_your_profile: "Complete Your Profile"
     , add_photos: "Add your Photos"
@@ -1710,6 +1711,7 @@ getEn =
     , your_ride_starts_in: "your ride starts in"
     , away: " away"
     , intercity: "Intercity"
+    , local: "Local"
     , intercity_return: "Intercity Return"
     , rental: "Rental"
     , regular: "Regular"
@@ -1783,4 +1785,8 @@ getEn =
     , search : "Search"
     , bus__ : "Bus"
     , driver_unsubscribed : "Driver has been unsubscribed from platform. Pay pending amount to subscribe back"
+    , canceling_this_booking_may_affect_the_emergency_medical : "Canceling this booking may affect the emergency medical services for the patient"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "Drivers are permitted to cancel only for their medical reasons or vehicle breakdowns"
+    , payment_under_maintenance : "Payment Under Maintenance"
+    , payments_temporarily_unavailable : "Payments are temporarily unavailable and will be back soon. Please try again later."
     }

@@ -46,7 +46,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person as CQP
 import Tools.Error
 import Tools.Event
@@ -76,7 +76,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   merchantOperatingCity <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   fork "Inserting/Updating autocomplete data" $ do
-    riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+    riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
     whenJust riderConfig $ \config -> do
       let toCollectData = fromMaybe False config.collectAutoCompleteData
       when toCollectData $ do
@@ -121,7 +121,7 @@ getPlaceDetails (personId, merchantId) req = do
 
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOperatingCityId = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   whenJust riderConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
     currentTime <- liftIO DT.getCurrentTime
     let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime

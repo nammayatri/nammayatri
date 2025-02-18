@@ -337,3 +337,18 @@ updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimated
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findAllByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Booking]
+findAllByTransactionId transactionId = findAllWithKVAndConditionalDB [Se.Is BeamB.riderTransactionId $ Se.Eq transactionId] (Just (Se.Desc BeamB.createdAt))
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
+updateIsCancelled (Id reqId) isDeleted = do
+  updateOneWithKV
+    [Se.Set BeamB.isDeleted isDeleted]
+    [Se.Is BeamB.id (Se.Eq reqId)]
+
+updateisSkipped :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
+updateisSkipped (Id reqId) isSkipped = do
+  updateOneWithKV
+    [Se.Set BeamB.isSkipped isSkipped]
+    [Se.Is BeamB.id (Se.Eq reqId)]

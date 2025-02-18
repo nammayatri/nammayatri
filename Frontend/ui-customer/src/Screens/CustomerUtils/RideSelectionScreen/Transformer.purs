@@ -30,7 +30,7 @@ import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC, os, getCurrentUTC)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage, getCityConfig)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage, getCityConfig,fetchVehicleVariant)
 import JBridge (differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getVarString)
 import Language.Types (STR(..))
@@ -38,7 +38,7 @@ import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||), (<#>), (>), (=<<))
 import PrestoDOM.Types.Core (toPropValue)
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter)
 import Resources.LocalizableV2.Strings (getEN)
 import Language.Strings (getString, getVarString)
 import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..), VehicleViewType(..))
@@ -137,12 +137,15 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
               cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
               bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
-              waitingCharges =
-                if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
+              ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
+              waitingCharges = 
+                if any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then
                     autoWaitingCharges
                 else if any (_ == rideDetails.vehicleVariant) ["BIKE", "DELIVERY_BIKE"] then
                     bikeWaitingCharges
-                else
+                else if HU.isAmbulance rideDetails.vehicleVariant then
+                    ambulanceWaitingCharges
+                else 
                     cabsWaitingCharges
               nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
               nightChargeTill = "5 AM"
@@ -173,6 +176,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               , isScheduled : if isScheduled then "visible" else "gone"
               , rating : fromMaybe 0 rideDetails.rideRating
               , driverName : rideDetails.driverName
+              , driverPhoneNumber : rideDetails.driverNumber
               , rideStartTime : convertUTCtoISC (fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime) "h:mm A"
               , rideEndTime : convertUTCtoISC endTime "h:mm A"
               , vehicleNumber : rideDetails.vehicleNumber
@@ -201,6 +205,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
               , merchantExoPhone : ride.merchantExoPhone
               , serviceTierName : ride.serviceTierName
+  , isAirConditioned : ride.isAirConditioned
               , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
               , vehicleModel : if (rideDetails.vehicleModel `DA.elem` ["", "Unkown"]) then fromMaybe (HU.getVariantRideType rideDetails.vehicleVariant) ride.serviceTierName else rideDetails.vehicleModel
               , rideStartTimeUTC : fromMaybe "" ride.rideStartTime

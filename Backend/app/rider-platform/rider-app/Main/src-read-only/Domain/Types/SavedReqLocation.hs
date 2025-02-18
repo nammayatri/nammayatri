@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SavedReqLocation where
@@ -21,6 +20,7 @@ data SavedReqLocation = SavedReqLocation
     id :: Kernel.Types.Id.Id Domain.Types.SavedReqLocation.SavedReqLocation,
     isMoved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lat :: Kernel.Prelude.Double,
+    locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -40,6 +40,7 @@ data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
     country :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     door :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lat :: Kernel.Prelude.Double,
+    locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

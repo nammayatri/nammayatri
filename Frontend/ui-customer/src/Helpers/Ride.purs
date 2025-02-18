@@ -41,7 +41,7 @@ import Screens.Types (Stage(..), PopupType(..), FlowStatusData(..),HomeScreenSta
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Helpers.Utils (getCurrentDate, getCityNameFromCode,getCityCodeFromCity,fetchDriverInformation)
+import Helpers.Utils (getCurrentDate, getCityNameFromCode,getCityCodeFromCity,fetchDriverInformation,isAmbulance)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON,encodeJSON)
@@ -98,6 +98,23 @@ acNotWorkingPill (RideBookingRes state) =
       Nothing -> []
   )
 
+feedBack :: String -> String -> String 
+feedBack id vehicleVariant  = case id of 
+                              "3" -> case vehicleVariant of 
+                                      _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getString LT.DIFFERENT_AUTO
+                                      "BIKE" -> getString LT.DIFFERENT_BIKE
+                                      _ -> getString LT.DIFFERENT_CAB
+                              "11" -> case vehicleVariant of 
+                                      _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getString LT.UNCOMFORTABLE_AUTO
+                                      "BIKE" -> getString LT.UNCOMFORTABLE_BIKE
+                                      _ -> if isAmbulance vehicleVariant then getStringV2 uncomfortable_ambulance else  getString LT.UNCOMFORTABLE_CAB
+                              "12" -> case vehicleVariant of 
+                                      _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getString CLEAN_AUTO
+                                      "BIKE" -> getString CLEAN_BIKE
+                                      _ -> if isAmbulance vehicleVariant then getStringV2 clean_ambulance else getString CLEAN_CAB
+                              _ -> ""
+                              
+
 feedbackPillDataWithRating2 :: RideBookingRes -> Array (Array ST.FeedbackItem)
 feedbackPillDataWithRating2 (RideBookingRes state) = feedbackPillDataWithRating1 (RideBookingRes state)
 
@@ -108,10 +125,10 @@ feedbackPillDataWithRating3 vehicleVariant =
     ]
   , [ { id: "3", text: getString LT.FELT_UNSAFE }
     , { id: "8", text: getString LT.RASH_DRIVING }
-    , { id: "3", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: feedBack "3" vehicleVariant }
     ]
   , [ { id: "3", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "11", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: feedBack "11" vehicleVariant }
     ]
   ]
 
@@ -122,10 +139,10 @@ feedbackPillDataWithRating4 vehicleVariant =
     , { id: "4", text: getString LT.SAFE_RIDE }
     ]
   , [ { id: "9", text: getString LT.ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: feedBack "11" vehicleVariant }
     ]
   , [ { id: "4", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "3", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: feedBack "3" vehicleVariant }
     ]
   ]
 
@@ -134,7 +151,7 @@ feedbackPillDataWithRating5 vehicleVariant =
   [ [ { id: "10", text: getString LT.POLITE_DRIVER }
     , { id: "5", text: getString LT.EXPERT_DRIVING }
     ]
-  , [ { id: "12", text : if vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB }
+  , [ { id: "12", text : feedBack "12" vehicleVariant }
     , { id: "10", text: getString LT.ON_TIME }
     ]
   , [ { id: "10", text: getString LT.SKILLED_NAVIGATOR }

@@ -24,6 +24,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
+import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
 import qualified Domain.Types.Booking as BT
@@ -35,6 +36,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -48,7 +50,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Types as PT
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -63,19 +65,22 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
@@ -88,7 +93,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
-import qualified Storage.Queries.RiderConfig as QRC
 import Tools.Constants
 import Tools.Error
 import Tools.Event
@@ -97,6 +101,7 @@ import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
+import qualified Tools.Whatsapp as Whatsapp
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
@@ -430,10 +435,14 @@ rideAssignedReqHandler req = do
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
       notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
+      riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
+        fork "Sending Dashboard Ride Flow Booking Details" $ do
+          sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
+
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         fork "Sending Delivery Details SMS to Sender And Receiver" $ do
-          riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
           mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
           senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
           receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
@@ -489,7 +498,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
   fork "ride start geohash frequencyUpdater" $ do
     case tripStartLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart Nothing
       Nothing -> return ()
   let updRideForStartReq =
         ride{status = DRide.INPROGRESS,
@@ -518,7 +527,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
     _ -> pure ()
   where
     sendDeliveryDetailsToReceiver = fork "Sending Delivery Details SMS to Receiver" $ do
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
       senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
       receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
@@ -593,7 +602,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
   fork "ride end geohash frequencyUpdater" $ do
     case tripEndLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
       Nothing -> return ()
   fork "updating total rides count" $ SMC.updateTotalRidesCounters person
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
@@ -621,7 +630,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
   fork "update first ride info" $ do
     mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
     case mbPersonFirstRideInfo of
@@ -717,12 +726,14 @@ driverArrivedReqHandler ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    ServiceFlow m r
   ) =>
   ValidatedDriverArrivedReq ->
   m ()
 driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
   unless (isJust ride.driverArrivalTime) $ do
+    void $ notifyOnDriverArrived booking ride
     void $ QRide.updateDriverArrival ride.id arrivalTime
     QPFS.clearCache booking.riderId
 
@@ -796,7 +807,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       QBPL.makeAllInactiveByBookingId booking.id
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
       person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
@@ -811,17 +822,23 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   fork "Checking lifetime blocking condition for customer based on cancellation rate" $ do
-    personStats <- QPersonStats.findByPersonId booking.riderId
-    case (personStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
-      (Just stats, Just minRides, Just threshold) -> do
-        let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
-        let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
-        when (totalRides > minRides && rate > threshold) $ do
-          SMC.blockCustomer booking.riderId Nothing
-      _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
+    val :: Maybe Bool <- Redis.safeGet $ makeCustomerBlockingKey booking.id.getId
+    when (val == Just True) $ do
+      Redis.del $ makeCustomerBlockingKey booking.id.getId
+      personStats <- QPersonStats.findByPersonId booking.riderId
+      case (personStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
+        (Just stats, Just minRides, Just threshold) -> do
+          let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
+          let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
+          when (totalRides > minRides && rate > threshold) $ do
+            SMC.blockCustomer booking.riderId Nothing
+        _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
+  when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
+    fork "Sending Dashboard Cancelled Ride Message" $ do
+      sendBookingCancelledMessageViaWhatsapp booking.riderId riderConfig
   where
     handleUpgradedToCabRideCancellation =
       case booking.bookingDetails of
@@ -829,7 +846,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           when (details.isUpgradedToCab == Just True) $ do
             person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
             let personTags = fromMaybe [] person.customerNammaTags
-            unless (rejectUpgradeTag `elem` personTags) $ QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTag]) person.id
+            unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
+              rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
+              QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
 
 mkBookingCancellationReason ::
@@ -1056,7 +1075,7 @@ customerReferralPayout ::
 customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
-  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategoryAndIsPayoutEnabled merchantOperatingCityId True vehicleCategory
+  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory
   case mbPayoutConfig of
     Just payoutConfig -> do
       let isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
@@ -1125,8 +1144,67 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             validActivations = 0,
             referredByEarningsPayoutStatus = Nothing,
             backlogPayoutStatus = Nothing,
-            backlogPayoutAmount = 0
+            backlogPayoutAmount = 0,
+            isBackfilled = Just False
           }
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
+
+sendRideBookingDetailsViaWhatsapp ::
+  ( CacheFlow m r,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r
+  ) =>
+  Id DPerson.Person ->
+  DRide.Ride ->
+  DRB.Booking ->
+  DRC.RiderConfig ->
+  m ()
+sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  bookings <- QRB.findAllByTransactionId booking.transactionId
+  let phoneNumber = countryCode <> mobileNumber
+      trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+      messageKey = bool DMM.WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE DMM.WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE (length bookings > 1)
+  shortenedTrackingUrl <- MessageBuilder.shortenTrackingUrl trackLink
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
+      fare = show booking.estimatedTotalFare.amount
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just driverNumber) (Just ride.vehicleNumber) (Just fare) (Just ride.otp) (Just shortenedTrackingUrl) (Just riderConfig.appUrl) Nothing Nothing Nothing)
+  when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Ride Booking Details Whatsapp message")
+
+sendBookingCancelledMessageViaWhatsapp ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r
+  ) =>
+  Id DPerson.Person ->
+  DRC.RiderConfig ->
+  m ()
+sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let phoneNumber = countryCode <> mobileNumber
+      messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just riderConfig.appUrl) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
+  when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
+
+notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> m ()
+notifyOnDriverArrived booking ride = do
+  mbHasReachedNotified <- Redis.safeGet @() driverHasReached
+  when (isNothing mbHasReachedNotified) $ do
+    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+    Redis.setExp driverHasReached () 1500
+  where
+    driverHasReached = driverHasReachedCacheKey ride.id.getId
+
+driverHasReachedCacheKey :: Text -> Text
+driverHasReachedCacheKey rideId = "Ride:GetDriverLoc:DriverHasReached " <> rideId

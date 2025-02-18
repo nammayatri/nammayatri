@@ -61,5 +61,5 @@ deleteMerchantSpecialLocationGatesDelete a4 a3 a2 a1 = withDashboardFlowHandlerA
 postMerchantConfigFailover :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Dashboard.Common.Merchant.ConfigNames -> Dashboard.Common.Merchant.ConfigFailoverReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigFailover a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Merchant.postMerchantConfigFailover a4 a3 a2 a1
 
-postMerchantTicketConfigUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Dashboard.Common.Merchant.UpsertTicketConfigReq -> Environment.FlowHandler Dashboard.Common.Merchant.UpsertTicketConfigResp)
+postMerchantTicketConfigUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Merchant.UpsertTicketConfigReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Merchant.UpsertTicketConfigResp)
 postMerchantTicketConfigUpsert a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Merchant.postMerchantTicketConfigUpsert a3 a2 a1

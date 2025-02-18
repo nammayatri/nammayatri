@@ -117,3 +117,15 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_referred_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dynamic_pricing_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_congestion_charge double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN config_in_experiment_versions json ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_type text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_quantity integer ;

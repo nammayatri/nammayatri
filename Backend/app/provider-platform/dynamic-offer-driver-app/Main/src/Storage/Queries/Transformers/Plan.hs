@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.Transformers.Plan where
 
 import qualified Domain.Types.Plan as DPlan

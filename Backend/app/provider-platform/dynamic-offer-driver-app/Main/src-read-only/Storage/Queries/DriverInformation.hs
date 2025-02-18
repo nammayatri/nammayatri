@@ -6,9 +6,9 @@ module Storage.Queries.DriverInformation (module Storage.Queries.DriverInformati
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -126,8 +126,8 @@ updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi driverId 
 
 updateDriverInformation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps driverId = do
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
@@ -135,6 +135,7 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
       Se.Set Beam.canDowngradeToTaxi canDowngradeToTaxi,
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
+      Se.Set Beam.canSwitchToIntraCity (Kernel.Prelude.Just canSwitchToIntraCity),
       Se.Set Beam.availableUpiApps availableUpiApps,
       Se.Set Beam.updatedAt _now
     ]
@@ -197,13 +198,6 @@ updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking lat
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateOnboardingVehicleCategory ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateOnboardingVehicleCategory onboardingVehicleCategory driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updatePayoutRegAmountRefunded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegAmountRefunded payoutRegAmountRefunded driverId = do
   _now <- getCurrentTime
@@ -231,12 +225,24 @@ updatePendingPayment paymentPending driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentPending paymentPending, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateRentalAndInterCitySwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateRentalAndInterCitySwitch canSwitchToRental canSwitchToInterCity driverId = do
+updateRentalInterCityAndIntraCitySwitch ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity canSwitchToIntraCity driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
+      Se.Set Beam.canSwitchToIntraCity (Kernel.Prelude.Just canSwitchToIntraCity),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateServicesEnabledForSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Extra.Plan.ServiceNames] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateServicesEnabledForSubscription servicesEnabledForSubscription driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.servicesEnabledForSubscription (Kernel.Prelude.Just servicesEnabledForSubscription),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
@@ -317,6 +323,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
       Se.Set Beam.canDowngradeToTaxi canDowngradeToTaxi,
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
+      Se.Set Beam.canSwitchToIntraCity (Kernel.Prelude.Just canSwitchToIntraCity),
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.compAadhaarImagePath compAadhaarImagePath,
       Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown,
@@ -354,6 +361,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
+      Se.Set Beam.servicesEnabledForSubscription (Kernel.Prelude.Just servicesEnabledForSubscription),
       Se.Set Beam.softBlockExpiryTime softBlockExpiryTime,
       Se.Set Beam.softBlockReasonFlag softBlockReasonFlag,
       Se.Set Beam.softBlockStiers softBlockStiers,

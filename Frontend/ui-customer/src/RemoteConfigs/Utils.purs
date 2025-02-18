@@ -145,10 +145,16 @@ defaultTipConfig = {
   suv : [0, 20, 30, 50],
   hatchback : [0, 20, 30, 50],
   autoRickshaw : [0, 10, 20, 30],
+  evAutoRickshaw : [0, 10, 20, 30],
   taxi : [0, 20, 30, 50],
   taxiPlus : [0, 20, 30, 50],
   bike : [0, 20, 30, 50],
   suvPlus : [0, 20, 30, 50],
+  ambulanceTaxi : [],
+  ambulanceTaxiOxy : [],
+  ambulanceAc : [],
+  ambulanceAcOxy : [],
+  ambulanceVentilator : [],
   default : [0, 10, 20, 30],
   bookAny : [0, 10, 20, 30]
 }
@@ -209,6 +215,7 @@ defaultVariantBasedBoostSearchConfig = {
   suv : defaultBoostSearchConfig,
   hatchback : defaultBoostSearchConfig,
   autoRickshaw : defaultBoostSearchConfig,
+  evAutoRickshaw : defaultBoostSearchConfig,
   taxi : defaultBoostSearchConfig,
   taxiPlus : defaultBoostSearchConfig,
   bike : defaultBoostSearchConfig,
@@ -232,6 +239,7 @@ getBoostSearchConfig city variant =
         "TAXI_PLUS" -> cityConfig.taxiPlus
         "BOOK_ANY" -> cityConfig.bookAny
         "DELIVERY_BIKE" -> cityConfig.bike
+        "EV_AUTO_RICKSHAW" -> cityConfig.evAutoRickshaw
         _ -> cityConfig.default
 
 
@@ -295,3 +303,244 @@ getCustomerVoipConfig city = do
     let config = fetchRemoteConfigString "voip_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig
     getCityBasedConfig value $ toLower city
+
+getMapViewLottieConfig :: LazyCheck -> MapLottieConfig
+getMapViewLottieConfig _ = 
+    let config = fetchRemoteConfigString "map_view_lottie"
+        value = decodeForeignObject (parseJSON config) defaultMapLottieConfig 
+    in value
+
+defaultMapLottieConfig :: MapLottieConfig
+defaultMapLottieConfig = {
+    lottieUrl : "",
+    visibility : false
+}
+
+getSwitchCityConfigs :: LazyCheck -> SwitchCityConfigs
+getSwitchCityConfigs _ = 
+    let config = fetchRemoteConfigString "switch_city_configs"
+        value = decodeForeignObject (parseJSON config) defaultSwitchCityConfigs
+    in value
+
+defaultSwitchCityConfigs :: SwitchCityConfigs
+defaultSwitchCityConfigs = {
+  cities: [
+    {
+        name: "Bangalore",
+        value: "Bangalore",
+        title: ""
+    },
+    {
+        name: "Kolkata",
+        value: "Kolkata",
+        title: ""
+    },
+    {
+        name: "Paris",
+        value: "Paris",
+        title: ""
+    },
+    {
+        name: "Kochi",
+        value: "Kochi",
+        title: ""
+    },
+    {
+        name: "Delhi",
+        value: "Delhi",
+        title: ""
+    },
+    {
+        name: "Hyderabad",
+        value: "Hyderabad",
+        title: ""
+    },
+    {
+        name: "Mumbai",
+        value: "Mumbai",
+        title: ""
+    },
+    {
+        name: "Chennai",
+        value: "Chennai",
+        title: ""
+    },
+    {
+        name: "Coimbatore",
+        value: "Coimbatore",
+        title: ""
+    },
+    {
+        name: "Pondicherry",
+        value: "Pondicherry",
+        title: ""
+    },
+    {
+        name: "Goa",
+        value: "Goa",
+        title: ""
+    },
+    {
+        name: "Pune",
+        value: "Pune",
+        title: ""
+    },
+    {
+        name: "Mysore",
+        value: "Mysore",
+        title: ""
+    },
+    {
+        name: "Tumakuru",
+        value: "Tumakuru",
+        title: ""
+    },
+    {
+        name: "Siliguri",
+        value: "Siliguri",
+        title: ""
+    },
+    {
+        name: "AnyCity",
+        value: "AnyCity",
+        title: ""
+    },
+    {
+        name: "Gurugram",
+        value: "Gurugram",
+        title: ""
+    },
+    {
+        name: "Noida",
+        value: "Noida",
+        title: ""
+    },
+    {
+        name: "Thrissur",
+        value: "Thrissur",
+        title: ""
+    },
+    {
+        name: "Trivandrum",
+        value: "Trivandrum",
+        title: ""
+    },
+    {
+        name: "Kozhikode",
+        value: "Kozhikode",
+        title: ""
+    },
+    {
+        name: "Vellore",
+        value: "Vellore",
+        title: ""
+    },
+    {
+        name: "Hosur",
+        value: "Hosur",
+        title: ""
+    },
+    {
+        name: "Madurai",
+        value: "Madurai",
+        title: ""
+    },
+    {
+        name: "Thanjavur",
+        value: "Thanjavur",
+        title: ""
+    },
+    {
+        name: "Tirunelveli",
+        value: "Tirunelveli",
+        title: ""
+    },
+    {
+        name: "Salem",
+        value: "Salem",
+        title: ""
+    },
+    {
+        name: "Trichy",
+        value: "Trichy",
+        title: ""
+    },
+    {
+        name: "Davanagere",
+        value: "Davanagere",
+        title: ""
+    },
+    {
+        name: "Shivamogga",
+        value: "Shivamogga",
+        title: ""
+    },
+    {
+        name: "Hubli",
+        value: "Hubli",
+        title: ""
+    },
+    {
+        name: "Mangalore",
+        value: "Mangalore",
+        title: ""
+    },
+    {
+        name: "Gulbarga",
+        value: "Gulbarga",
+        title: ""
+    },
+    {
+        name: "Udupi",
+        value: "Udupi",
+        title: ""
+    },
+    {
+        name: "Odisha",
+        value: "Odisha",
+        title: ""
+    },
+    {
+        name: "Bhubaneswar",
+        value: "Bhubaneswar",
+        title: ""
+    },
+    {
+        name: "Cuttack",
+        value: "Cuttack",
+        title: ""
+    },
+    {
+        name: "Nalgonda",
+        value: "Nalgonda",
+        title: ""
+    },
+    {
+        name: "Puri",
+        value: "Puri",
+        title: ""
+    },
+    {
+        name: "Pudukkottai",
+        value: "Pudukkottai",
+        title: ""
+    },
+    {
+        name: "Bidar",
+        value: "Bidar",
+        title: ""
+    }
+  ]
+}
+
+defaultCancellationBannerThresholdConfig :: CancellationThreshold 
+defaultCancellationBannerThresholdConfig = {
+    showBanner : false,
+    percentage : 100.0
+}
+
+getCancellationBannerThresholdConfig :: String -> CancellationThreshold
+getCancellationBannerThresholdConfig city =
+    let config = fetchRemoteConfigString "customer_cancellation_banner_threshold"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCancellationBannerThresholdConfig
+    in getCityBasedConfig value $ DS.toLower city 

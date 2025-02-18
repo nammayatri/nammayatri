@@ -229,7 +229,7 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus 
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus | EV_Auto
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -596,6 +596,7 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean,
   showDriverBlockedPopup :: Boolean
 }
@@ -2194,6 +2195,7 @@ type BookingOptionsScreenProps = {
   acExplanationPopup :: Boolean,
   fromDeepLink :: Boolean,
   canSwitchToInterCity :: Maybe Boolean,
+  canSwitchToIntraCity :: Maybe Boolean,
   showRateCard :: Boolean,
   rateCardLoaded :: Boolean,
   peakTime :: Boolean
@@ -2308,7 +2310,8 @@ type SubscriptionScreenData = {
   config :: AppConfig,
   switchPlanModalState :: SwitchPlanModalState,
   vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity,
-  linkedVehicleVariant :: String
+  linkedVehicleVariant :: String,
+  subscriptionDown :: Maybe Boolean
 }
 
 type SwitchPlanModalState = {

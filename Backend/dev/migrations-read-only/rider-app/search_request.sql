@@ -136,3 +136,30 @@ ALTER TABLE atlas_app.search_request ADD COLUMN driver_identifier_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN client_react_native_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN has_multimodal_search boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN is_deleted boolean ;
+
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN config_in_experiment_versions json ;
+
+
+------- SQL updates -------
+

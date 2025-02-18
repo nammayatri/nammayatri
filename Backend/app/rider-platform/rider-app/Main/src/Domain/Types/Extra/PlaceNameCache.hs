@@ -1,6 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 
 module Domain.Types.Extra.PlaceNameCache where
 

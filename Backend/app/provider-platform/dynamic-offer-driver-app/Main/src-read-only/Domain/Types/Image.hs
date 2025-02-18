@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Image where
@@ -36,6 +35,6 @@ data Image = Image
 
 data SelfieFetchStatus = APPROVED | NEEDS_REVIEW deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SelfieFetchStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SelfieFetchStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SelfieFetchStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''SelfieFetchStatus)

@@ -1221,7 +1221,7 @@ getOd =
     , enter_referral_code: "ରେଫରାଲ କୋଡ୍ ପ୍ରବେଶ କରନ୍ତୁ"
     , have_a_referral_code: "ରେଫରାଲ କୋଡ୍ ଅଛି କି?"
     , complete_steps_to_apply_referral: "ରେଫରାଲ କୋଡ୍ ଲାଗୁ କରିବାକୁ ଉପରୋକ୍ତ ପଦକ୍ଷେପଗୁଡିକ ସମାପ୍ତ କରନ୍ତୁ"
-    , download_namma_yatri: (\_ -> "ନମ୍ମା ଯାତ୍ରି ଡାଉନଲୋଡ୍ କରନ୍ତୁ")
+    , download_namma_yatri: (\appName -> appName <> " ଡାଉନଲୋଡ୍ କରନ୍ତୁ")
     , enter_code: "କୋଡ୍ ପ୍ରବେଶ କରନ୍ତୁ"
     , complete_registration: "ପଞ୍ଜିକରଣ ସମାପ୍ତ କରନ୍ତୁ"
     , help_faq: "ସହଯୋଗ"
@@ -1572,6 +1572,7 @@ getOd =
     , remove_eyewere: "ଦୟାକରି ଅନୁଷ୍ଠିତ ଆଖି ପରିଧାନ କିମ୍ବା ସନ୍ଗ୍ଲାସ୍ ହଟାନ୍ତୁ ଯଦି କିଛି ଅଛି"
     , image_validation_exceed_limit: "ଛବି ସତ୍ୟାପନ ସୀମା ଅତିକ୍ରମ ହୋଇଛି।"
     , parking_charges_included: (\amount -> amount <> " ପାର୍କିଂ ଚାର୍ଜ୍ ଅନ୍ତର୍ଭୁକ୍ତ")
+    , invoice_generated_from_driver_to_rider: "ଡ୍ରାଇଭରରୁ ଆରୋହୀ ପର୍ଯ୍ୟନ୍ତ ଇନଭଏସ୍ ସୃଷ୍ଟି |"
     , included: "ଅନ୍ତର୍ଭୁକ୍ତ"
     , complete_your_profile: "ଆପଣଙ୍କ ପ୍ରୋଫାଇଲ୍ ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ"
     , add_photos: "ଆପଣଙ୍କ ଫଟୋଗୁଡିକ ଯୋଡନ୍ତୁ"
@@ -1691,6 +1692,7 @@ getOd =
     , your_ride_starts_in: "ଆପଣଙ୍କର ରାଇଡ୍ ଆରମ୍ଭ ହେବ"
     , away: " ଦୂରେ"
     , intercity: "ଇଣ୍ଟରସିଟି"
+    , local: "ସ୍ଥାନୀୟ"
     , intercity_return: "ଇଣ୍ଟରସିଟି ଫେରିବା"
     , rental: "ଭାଡା"
     , regular: "ନିୟମିତ"
@@ -1783,4 +1785,8 @@ getOd =
     , we_are_not_able_to_fetch_your_current_location : "ଆମେ ଆପଣଙ୍କର ବର୍ତ୍ତମାନ ସ୍ଥାନ ଅନ୍ଧାର କରିପାରୁ ନାହିଁ।"
     , bus__ : "ବସ୍"
     , driver_unsubscribed : "ଡ୍ରାଇଭର ପ୍ଲାଟଫର୍ମ ଥିବା ଅନାବନ୍ଧିତ କରାଯାଇଛି। ପୁନଃ ସବସ୍କ୍ରାଇବ୍ କରିବା ପାଇଁ ବକି ଅଛି ପେଣ୍ଡିଂ ରାଶି।"  
+    , canceling_this_booking_may_affect_the_emergency_medical : "ଏହି ବୁକିଂ ରଦ୍ଦ କରିବାରୁ ରୋଗୀଙ୍କର ଆତିକ୍ରମିକ ଚିକିତ୍ସା ସେବାଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରିପାରେ"
+    , drivers_are_permitted_to_cancel_ambulance_bookings : "ଡ୍ରାଇଭର୍ମାନେ ସେମାନଙ୍କର ଚିକିତ୍ସା କାରଣ କିମ୍ବା ଗାଡ଼ିର ତ୍ରୁଟି ଦ୍ୱାରା ପରିବାହନ ବୁକିଂ ରଦ୍ଦ କରିବାକୁ ଅନୁମତି ଦିଆଯାଇଛି"
+    , payment_under_maintenance : "ଅଦାନ-ପ୍ରଦାନ ରକ୍ଷାଣବେକ୍ଷଣ ଅଧୀନରେ ଅଛି"
+    , payments_temporarily_unavailable : "ଅଦାନ-ପ୍ରଦାନ ସମୟୀନ ଭାବେ ଅପଲବ୍ଧ ନୁହଁ, ଶୀଘ୍ର ଫେରି ଆସିବ। ଦୟାକରି ପରେ ପୁଣିଥରେ ଚେଷ୍ଟା କରନ୍ତୁ।"
   }

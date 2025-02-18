@@ -18,8 +18,10 @@ module Consumer.LocationUpdate.Processor
 where
 
 import qualified Consumer.AvailabilityTime.Types as T
+import qualified Data.HashMap.Strict as HM
 import Data.Time
 import Data.Time.Clock.POSIX
+import qualified Data.UUID as UU
 import Environment
 import EulerHS.Prelude hiding (toStrict)
 import qualified Kernel.Storage.Hedis as Redis
@@ -28,27 +30,38 @@ import Kernel.Utils.Logging (logDebug)
 processLocationData :: [Text] -> [(T.LocationUpdates, T.DriverId)] -> Flow ()
 processLocationData enabledMerchantCityIds locationData = do
   logDebug $ "driver updated time locationData: " <> show locationData
-  key <- incrementCounterAndReturnShard
   let encodedVals =
         mapFilter
-          (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, driverId))
+          (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, driverId, idToIdHashNumber driverId))
           (\(T.LocationUpdates {..}, _) -> (fromMaybe "" mocid) `elem` enabledMerchantCityIds)
           locationData
-  Redis.zAdd key encodedVals
+  let encodeValsInShardMap =
+        foldl
+          ( \acc (ts, dId, dIdHashNumber) -> do
+              let updatedDIdHashNumberList =
+                    case HM.lookup dIdHashNumber acc of
+                      Just driverShardList -> (ts, dId) : driverShardList
+                      Nothing -> [(ts, dId)]
+              HM.insert dIdHashNumber updatedDIdHashNumberList acc
+          )
+          HM.empty
+          encodedVals
+  encodeValsWithShardKey <- mapM (\(dIdHashNumber, val) -> (,val) <$> getKeyWithShard dIdHashNumber) (HM.toList encodeValsInShardMap)
+  void $ mapM (\(key, val) -> Redis.zAdd key val) encodeValsWithShardKey
   where
     mapFilter :: (a -> b) -> (a -> Bool) -> [a] -> [b]
     mapFilter mapFunc filterFunc xs = [mapFunc x | x <- xs, filterFunc x]
 
-incrementCounterAndReturnShard :: Flow Text
-incrementCounterAndReturnShard = do
+idToIdHashNumber :: Text -> Integer
+idToIdHashNumber uuidTxt = fromMaybe 0 $ fromIntegral . ((\(a, b, c, d) -> a + b + c + d) . UU.toWords) <$> UU.fromText uuidTxt
+
+getKeyWithShard :: Integer -> Flow Text
+getKeyWithShard dIdHashNumber = do
   numberOfShards <- fromMaybe 10 . fmap (.numberOfShards) <$> asks (.healthCheckAppCfg)
-  getKeyWithShard . (`mod` numberOfShards) <$> Redis.incr incrementCountKey
+  pure $ makeShardKey (dIdHashNumber `mod` numberOfShards)
 
-incrementCountKey :: Text
-incrementCountKey = "driver-location-update-batch-count"
-
-getKeyWithShard :: Integer -> Text
-getKeyWithShard shardNo = "driver-last-location-update-{shard-" <> show shardNo <> "}"
+makeShardKey :: Integer -> Text
+makeShardKey shardNo = "driver-last-location-update-{shard-" <> show shardNo <> "}"
 
 utcToDouble :: UTCTime -> Double
 utcToDouble = realToFrac . utcTimeToPOSIXSeconds

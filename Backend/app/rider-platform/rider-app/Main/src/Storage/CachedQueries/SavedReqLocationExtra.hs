@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.CachedQueries.SavedReqLocationExtra where
 
 import Domain.Types.Person (Person)

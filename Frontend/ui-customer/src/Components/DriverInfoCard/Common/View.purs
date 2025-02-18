@@ -20,7 +20,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber,fetchVehicleVariant,getVehicleCapacity, getVariantRideType, getTitleConfig, getCityNameFromCode)
 import Language.Strings (getString)
 import Resources.LocalizableV2.Strings (getEN)
 import Language.Types (STR(..))
@@ -46,7 +46,6 @@ import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility, spaceSeparatedPascalCase)
 import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
-import Resources.Constants (getVehicleCapacity)
 import Screens.Types as ST
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils as HU
@@ -216,9 +215,10 @@ driverDetailsView push config uid nid =
         serviceTierConfig name = {
           name : name,
           capacity : fromString $ getVehicleCapacity config.vehicleVariant,
-          isAc : Nothing,
+          isAc : config.isAirConditioned,
           showACPill : config.showAcView,
-          fareProductType : config.fareProductType
+          fareProductType : config.fareProductType,
+          vehicleVariant : config.vehicleVariant
         }
 
 
@@ -259,39 +259,41 @@ getVehicleImage :: String -> String -> City -> String
 getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $
-    if variant == "AUTO_RICKSHAW" then mkAutoImage city
+    if Array.any (_ == variant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then mkAutoImage city
+    else if variant == "TAXI" then mkTaxiImage (getMerchant FunctionCall)
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
-      else 
-        case (getMerchant FunctionCall) of
-          YATRISATHI -> case variant of
-                          "SUV"       -> "ny_ic_suv_concept"
-                          "TAXI"      -> "ic_white_taxi"
-                          "TAXI_PLUS" -> "ny_ic_sedan_concept"
-                          "BIKE"      -> "ny_ic_bike_concept"
-                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
-                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
-                          _           -> "ny_ic_sedan_concept"
-          _          -> case variant of
-                          "TAXI"      -> "ny_ic_hatchback_concept"
-                          "TAXI_PLUS" -> "ny_ic_sedan_concept"
-                          "SUV"       -> "ny_ic_suv_concept"
-                          "SEDAN"     -> "ny_ic_sedan_concept"
-                          "HATCHBACK" -> "ny_ic_hatchback_concept"
-                          "ECO"       -> "ny_ic_hatchback_concept"
-                          "COMFY"     -> "ny_ic_sedan_concept"
-                          "BIKE"      -> "ny_ic_bike_concept"
-                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
-                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
-                          _           -> "ny_ic_sedan_concept"              
-    where 
-      mkAutoImage :: City -> String
-      mkAutoImage city = 
-        case city of 
-          Hyderabad -> "ic_auto_rickshaw_black_yellow"
-          _ | HU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
-          _ | HU.isKeralaCity city -> "ny_ic_black_auto"
-          _ -> "ic_auto_rickshaw"
+    else
+        case variant of
+              "TAXI"      -> "ny_ic_hatchback_concept"
+              "TAXI_PLUS" -> "ny_ic_sedan_concept"
+              "SUV"       -> "ny_ic_suv_concept"
+              "SEDAN"     -> "ny_ic_sedan_concept"
+              "HATCHBACK" -> "ny_ic_hatchback_concept"
+              "ECO"       -> "ny_ic_hatchback_concept"
+              "COMFY"     -> "ny_ic_sedan_concept"
+              "BIKE"      -> "ny_ic_bike_concept"
+              "AMBULANCE_TAXI" -> "ny_ic_ambulance_concept"
+              "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_concept"
+              "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_concept"
+              "AMBULANCE_AC" -> "ny_ic_ambulance_concept"
+              "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_concept"
+              "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
+              "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+              _           -> "ny_ic_sedan_concept"              
+        where 
+          mkAutoImage :: City -> String
+          mkAutoImage city = 
+            case city of 
+              Hyderabad -> "ic_auto_rickshaw_black_yellow"
+              _ | HU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
+              _ | HU.isKeralaCity city -> "ny_ic_black_auto"
+              _ -> "ic_auto_rickshaw"
+          mkTaxiImage :: Merchant -> String
+          mkTaxiImage merchant =
+            case merchant of
+              YATRISATHI -> "ic_white_taxi"
+              _ -> "ny_ic_hatchback_concept"
 
 
 ---------------------------------- tripDetailsView ---------------------------------------

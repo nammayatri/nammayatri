@@ -49,7 +49,7 @@ foreign import getAppConfigFromWindow :: Fn3 String (Maybe AppConfig) (AppConfig
 
 loadAppConfig :: String -> AppConfig
 loadAppConfig _ =
-  let defaultConfig = unsafeToForeign DefaultConfig.config
+  let defaultConfig = encode DefaultConfig.config
       merchantConfig = getConfigFromFile ReExport.configuration_file
       
       mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig

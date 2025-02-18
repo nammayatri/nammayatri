@@ -261,6 +261,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
+    estimatedCongestionCharge :: Maybe HighPrecMoney,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
@@ -300,12 +301,13 @@ calculateFareParameters params = do
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
       congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
+      finalCongestionCharge = fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
-          + congestionChargeResultWithAddition ----------Needs to be changed to congestionChargeResult
+          + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -326,7 +328,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
-            congestionCharge = Just congestionChargeResultWithAddition, ----------Needs to be changed to congestionChargeResult
+            congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
             waitingCharge = resultWaitingCharge,
@@ -630,6 +632,8 @@ calculateFareParameters params = do
             AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
             AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance.getKilometers
             SUV_PLUS -> avgSpeedOfVehicle.suvplus.getKilometers
+            HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab.getKilometers
+            EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw.getKilometers
             DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
             BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
             BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers

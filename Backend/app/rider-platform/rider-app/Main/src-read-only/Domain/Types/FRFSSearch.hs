@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSSearch where
@@ -14,13 +13,16 @@ import qualified Domain.Types.Route
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Lib.JourneyPlannerTypes
+import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
   { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
-    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyPlannerTypes.JourneySearchData,
+    isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
+    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
+    journeyRouteDetails :: [Lib.JourneyLeg.Types.MultiModalJourneyRouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.DriverStatsExtra where
 
 import Control.Applicative (liftA2)

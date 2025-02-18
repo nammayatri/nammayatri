@@ -33,13 +33,13 @@ import Data.Map (Map)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Domain.Payments as PP
-import Foreign (Foreign)
+import Foreign (Foreign,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
 import JBridge (Location)
 import Language.Types (STR(..))
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show,($))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
@@ -52,10 +52,13 @@ import JBridge (Location, Locations)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
+import Services.API (DeadKmFare)
 import Services.API as API
 import Common.RemoteConfig.Types as CRT
 import Common.Types.App (FeedbackAnswer)
 import Styles.Types
+import Control.Monad.Except (runExcept, except)
+import Data.Either (Either(..))
 
 type Contacts = {
   name :: String,
@@ -260,8 +263,11 @@ type AccountSetUpScreenStateProps =
 
 
 
-data ActiveFieldAccountSetup = DropDown | NameSection
+data ActiveFieldAccountSetup = DropDown | NameSection | ReferralSection
 
+data ReferralEnum = Verified | NotVerified | ReferralFailed | Verifying
+
+derive instance eqReferralEnum :: Eq ReferralEnum
 derive instance genericActiveFieldAccountSetup :: Generic ActiveFieldAccountSetup _
 instance eqActiveFieldAccountSetup :: Eq ActiveFieldAccountSetup where eq = genericEq
 
@@ -272,6 +278,10 @@ type AccountSetUpScreenStateData =
     , nameErrorMessage :: Maybe ErrorType
     , config :: AppConfig
     , disabilityOptions :: DisabilityData
+    , isReferred :: ReferralEnum
+    , referralTextFocussed :: Boolean
+    , referralTextDisabled :: Boolean
+    , referralCode :: String
   }
 
 
@@ -452,6 +462,7 @@ type IndividualRideCardState =
     isSuccessfull :: String,
     rating :: Int,
     driverName :: String,
+    driverPhoneNumber :: Maybe String,
     rideStartTime :: String,
     rideEndTime :: String,
     vehicleNumber :: String,
@@ -495,15 +506,15 @@ type IndividualRideCardState =
   , rideScheduledTime :: String
   , rideCreatedAt :: String
   , rideStatus :: String
+  , isAirConditioned :: Maybe Boolean
   }
 
-
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS | DELIVERY_BIKE
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE | EV_AUTO_RICKSHAW
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
-
+instance encodeVehicleVariant :: Encode VehicleVariant where encode = defaultEncode
 type ItemState =
   {
     date :: PropValue,
@@ -838,6 +849,7 @@ type HomeScreenStateData =
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)
   , boostSearchEstimate :: ChooseVehicle.Config
+  , cancellationRate :: Maybe Number
 }
 
 type UpcomingRideDetails = {
@@ -979,6 +991,7 @@ type DisabilityData = {
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , mapLottieViewVisibility :: Boolean
   , showCallPopUp :: Boolean
   , homeScreenPrimaryButtonLottie :: Boolean
   , rideRequestFlow :: Boolean
@@ -1146,6 +1159,9 @@ type HomeScreenStateProps =
   , showBoostSearch :: Boolean
   , busClicked :: Boolean
   , ticketServiceType :: API.TicketServiceType
+  , bookAmbulanceModal :: Boolean
+  , firstTimeAmbulanceSearch :: Boolean
+  , searchType :: Maybe String
   }
 
 type EditedLocation = {
@@ -1208,6 +1224,7 @@ data City
   | Odisha
   | Bhubaneswar
   | Cuttack
+  | Nalgonda
   | Puri
   | Pudukkottai
   | Bidar
@@ -1320,6 +1337,7 @@ type TipViewProps = {
   , customerTipArrayWithValues :: Array Int
   , activeIndex :: Int
   , primaryButtonText :: String
+  , suggestedActiveIndex :: Maybe Int
 }
 
 type Contact = {
@@ -1463,7 +1481,13 @@ type ContactDetail = {
 -- ############################################## AboutUsScreenState #############################
 
 type AboutUsScreenState = {
-    appConfig :: AppConfig
+    appConfig :: AppConfig,
+    props :: AboutUsScreenProps
+}
+
+type AboutUsScreenProps = {
+    enableDemoModeCount :: Int,
+    demoModePopup :: Boolean
 }
 
 -- ############################################## MyProfileScreenState #############################
@@ -1577,6 +1601,7 @@ type DriverInfoCard =
   , addressWard :: Maybe String
   , currentChatRecipient :: ChatContacts
   , hasToll :: Boolean
+  , isAirConditioned :: Maybe Boolean
   , isAlreadyFav :: Boolean
   , favCount :: Int
   , rideDuration :: Maybe Int
@@ -2015,6 +2040,7 @@ type ServiceCategory =
     allowedSeats :: Maybe Int,
     bookedSeats :: Int,
     isSelected :: Boolean,
+    isClosed :: Maybe Boolean,
     peopleCategories :: Array PeopleCategoriesData,
     operationalDays :: Array OperationalDaysData,
     operationalDate :: Maybe OperationalDate,
@@ -3107,7 +3133,7 @@ type DateTimeConfig = {
 
 ----------------------------------------------------------------------
 
-data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | DELIVERY
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY
 
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow

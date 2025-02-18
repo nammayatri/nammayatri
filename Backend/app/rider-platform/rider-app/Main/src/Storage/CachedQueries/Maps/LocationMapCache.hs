@@ -19,17 +19,20 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common (CacheFlow)
 
-makeHotSpotKey :: Text
-makeHotSpotKey = "CachedQueries:HotSpot"
+makeHotSpotKey :: Text -> Text
+makeHotSpotKey geohash = "CachedQueries:HotSpot:" <> geohash
+
+makeHotSpotKey' :: Text
+makeHotSpotKey' = "CachedQueries:HotSpot"
 
 getLocationsInCache :: CacheFlow m r => m [HotSpot]
 getLocationsInCache =
-  Hedis.safeGet makeHotSpotKey >>= \case
+  Hedis.safeGet makeHotSpotKey' >>= \case
     Just a -> return a
     Nothing -> return []
 
 setLocationInCache :: CacheFlow m r => [HotSpot] -> m ()
 setLocationInCache hotspots = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeHotSpotKey
+  let key = makeHotSpotKey'
   Hedis.setExp key hotspots expTime

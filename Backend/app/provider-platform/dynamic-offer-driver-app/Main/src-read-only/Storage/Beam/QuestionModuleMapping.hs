@@ -1,6 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.QuestionModuleMapping where
@@ -10,9 +8,16 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.DriverCoins.Types
 import Tools.Beam.UtilsTH
 
-data QuestionModuleMappingT f = QuestionModuleMappingT {moduleId :: B.C f Kernel.Prelude.Text, questionId :: B.C f Kernel.Prelude.Text, createdAt :: B.C f Kernel.Prelude.UTCTime, updatedAt :: B.C f Kernel.Prelude.UTCTime}
+data QuestionModuleMappingT f = QuestionModuleMappingT
+  { moduleId :: B.C f Kernel.Prelude.Text,
+    questionId :: B.C f Kernel.Prelude.Text,
+    quizCoinFunction :: B.C f (Kernel.Prelude.Maybe Lib.DriverCoins.Types.DriverCoinsFunctionType),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  }
   deriving (Generic, B.Beamable)
 
 instance B.Table QuestionModuleMappingT where

@@ -14,12 +14,16 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
+import Data.Aeson
+import Data.OpenApi hiding (Example, example, name, tags, url)
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.JSON
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data VehicleInfo = VehicleInfo
   { startTime :: Maybe UTCTime,
@@ -43,7 +47,16 @@ data VehicleTrackingOnRouteReq = VehicleTrackingOnRouteReq
   { routeCode :: Maybe Text,
     tripCodes :: Maybe [Text]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic)
+
+instance ToSchema VehicleTrackingOnRouteReq where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON VehicleTrackingOnRouteReq where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON VehicleTrackingOnRouteReq where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 newtype LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
   { url :: BaseUrl

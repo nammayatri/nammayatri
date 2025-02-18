@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.FareProductExtra where
 
 import qualified Domain.Types as DTC

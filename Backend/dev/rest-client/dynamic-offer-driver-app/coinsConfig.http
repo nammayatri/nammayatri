@@ -1,0 +1,85 @@
+@token1 = {{driver-offer-bpp-auto-token1}}
+@adminToken = favorit-admin-0000000000000000-token
+@driver-offer-bpp-host = http://localhost:8016
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name coinsInfo
+
+GET {{driver-offer-bpp-host}}/ui/coins/info
+content-type: application/json
+token: {{token1}}
+
+###
+
+# @name createCoinsConfig
+# CoinsConfigAPI
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/coinsConfig/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "tag" : "NewCoinsConfig",
+   "contents" : {
+        "eventFunction": {
+          "tag" : "TrainingCompleted"
+         },
+        "eventName": "EndRide",
+        "merchantId": "favorit0-0000-0000-0000-00000favorit",
+        "merchantOptCityId": "favorit0-0000-0000-0000-00000000city",
+        "coins": 1,
+        "expirationAt": 7776000,
+        "active": true,
+        "vehicleCategory": "AUTO_CATEGORY",
+        "eventMessages": [
+          {
+            "message": "Test message for Create",
+            "language": "ENGLISH"
+          }
+        ]
+        }
+}
+
+###
+
+# @name duplicateCoinsConfig
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/coinsConfig/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "tag" : "DuplicateCoinsConfig",
+   "contents" : {
+        "entriesId": "dbced2a0-d486-4778-8f59-877f8092d8d2",
+        "eventFunction": {
+          "tag" : "PurpleRideCompleted"
+         },
+        "eventMessages": [
+          {
+            "message": "Test message for Duplicate",
+            "language": "ENGLISH"
+          }
+        ]
+        }
+}
+
+###
+
+# @name updateCoinsConfig
+# CoinsConfigAPI
+
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/coinsConfig/update
+content-type: application/json
+token: {{juspay_admin}}
+
+{
+  "entriesId": "dbced2a0-d486-4778-8f59-877f8092d8d2",
+  "active": true,
+  "coins": 15,
+  "expirationAt": 8886000
+}

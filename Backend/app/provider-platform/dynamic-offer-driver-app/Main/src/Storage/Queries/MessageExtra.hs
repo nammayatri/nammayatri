@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.MessageExtra where
 
 import API.Types.ProviderPlatform.Management.Endpoints.Message as APIT

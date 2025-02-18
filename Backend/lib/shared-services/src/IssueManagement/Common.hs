@@ -12,6 +12,7 @@
 
 module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where
 
+import qualified AWS.S3 as S3
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -167,7 +168,7 @@ data RideInfoRes = RideInfoRes
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
     vehicleVariant :: Maybe VehicleVariant,
-    vehicleServiceTier :: Maybe Text,
+    vehicleServiceTierName :: Maybe Text,
     actualFare :: Maybe Money,
     bookingStatus :: Maybe BookingStatus,
     rideStatus :: RideStatus,
@@ -178,7 +179,8 @@ data RideInfoRes = RideInfoRes
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
     rideCreatedAt :: UTCTime,
-    rideStartTime :: Maybe UTCTime
+    rideStartTime :: Maybe UTCTime,
+    mobileCountryCode :: Maybe Text
   }
 
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
@@ -268,11 +270,39 @@ data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKI
   deriving stock (Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data MandatoryUploads = MandatoryUploads
+  { fileType :: S3.FileType,
+    limit :: Int
+  }
+  deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be MandatoryUploads where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance FromField MandatoryUploads where
+  fromField = fromFieldEnum
+
+instance FromField [MandatoryUploads] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [MandatoryUploads] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [MandatoryUploads]
+
+instance FromBackendRow Postgres [MandatoryUploads]
+
+instance {-# OVERLAPPING #-} ToSQLObject MandatoryUploads where
+  convertToSQLObject = SQLObjectValue . show
+
 data KaptureConfig = KaptureConfig
   { queue :: Text,
     sosQueue :: Maybe Text,
     l0FeedbackQueue :: Maybe Text,
-    disposition :: Text
+    disposition :: Text,
+    deleteAccountCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

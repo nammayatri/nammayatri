@@ -9,7 +9,7 @@ import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..), accessibilityFocusable)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..) , isAmbulance)
 import Debug
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
@@ -28,6 +28,7 @@ import Engineering.Helpers.Commons(os)
 import Common.Animation.Config (estimateExpandingAnimationConfig)
 import Data.Array as DA
 import Data.String as DS
+
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -311,6 +312,12 @@ getVehicleName config =
     "BOOK_ANY" -> "Book Any"
     "SUV_PLUS" -> "XL Plus"
     "DELIVERY_BIKE" -> "2 Wheeler"
+    "AMBULANCE_TAXI" -> "Non-AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_TAXI_OXY" -> "Non-AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_AC" -> "AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_AC_OXY" -> "AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_VENTILATOR" -> "Ventilator"
+    "EV_AUTO_RICKSHAW" -> "EV Auto Rickshaw"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -326,7 +333,7 @@ priceDetailsView push config =
     , padding $ PaddingLeft 8
     , clickable isActiveIndex
     , afterRender push (const $ NoAction config)
-    , onClick push $ case enableRateCard of
+    , onClick push $ case  enableRateCard of
                           false -> const $ NoAction config
                           true  -> const $ ShowRateCard config
     , accessibility DISABLE
@@ -428,16 +435,17 @@ capacityView push config =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ][ vehicleInfoView "ny_ic_user_filled" config.capacity
+    ][ vehicleInfoView "ny_ic_user_filled" config.capacity config.vehicleVariant
      , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
      ]
 
-vehicleInfoView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
-vehicleInfoView imageName description = do
+vehicleInfoView :: forall w. String -> String -> String -> PrestoDOM (Effect Unit) w
+vehicleInfoView imageName description vehicleVariant = do
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER_VERTICAL
+    , visibility $ boolToVisibility $ not (isAmbulance vehicleVariant)
     ][ imageView
         [ imageWithFallback $ fetchImage FF_ASSET imageName
         , width $ V 14

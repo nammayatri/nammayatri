@@ -1,9 +1,8 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.SearchRequestForDriverExtra where
 
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
+import Domain.Types.Common as Domain
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.SearchRequestForDriver as Domain

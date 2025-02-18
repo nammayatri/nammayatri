@@ -440,6 +440,15 @@ apis:
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
 
+  - POST: #D2R Payout Config
+      endpoint: /payoutConfig/update
+      auth: ApiAuthV2
+      request:
+        type: PayoutConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_PAYOUT_CONFIG
 
 types:
   MerchantUpdateReq:
@@ -783,6 +792,16 @@ types:
     - serviceName : Maybe ServiceNames
     - planId : Maybe Text
     - derive: "'HideSecrets"
+  PayoutConfigReq:
+   - toEnable : Maybe Bool
+   - referralRewardAmountPerRide : Maybe HighPrecMoney
+   - vehicleCategory : VehicleCategory
+   - payoutRegistrationFee : Maybe HighPrecMoney
+   - payoutRegistrationCgst : Maybe HighPrecMoney
+   - payoutRegistrationSgst : Maybe HighPrecMoney
+   - thresholdPayoutAmountPerPerson : Maybe HighPrecMoney
+   - remark : Maybe Text
+   - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -6,6 +6,7 @@ import Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DR
 import Environment
 import EulerHS.Prelude hiding (elem, id)
 import qualified IssueManagement.API.UI.Issue as IA
@@ -15,6 +16,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -80,27 +82,47 @@ driverIssueHandle =
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById driverId = do
   person <- runInReplica $ QP.findById (cast driverId)
-  return $ fmap castDriver person
-  where
-    castDriver person =
-      Common.Person
-        { id = cast person.id,
-          language = person.language,
-          firstName = Just person.firstName,
-          lastName = person.lastName,
-          middleName = person.middleName,
-          mobileNumber = person.mobileNumber,
-          merchantOperatingCityId = cast person.merchantOperatingCityId,
-          blocked = Nothing
-        }
+  return $ mkPerson <$> person
+
+castPersonByMobileNumberAndMerchant :: Text -> DbHash -> Id Common.Merchant -> Flow (Maybe Common.Person)
+castPersonByMobileNumberAndMerchant mobileCountryCode numHash merchantId = do
+  mbPerson <- runInReplica $ QP.findByMobileNumberAndMerchantAndRole mobileCountryCode numHash (cast merchantId) SP.DRIVER
+  return $ mkPerson <$> mbPerson
+
+mkPerson :: SP.Person -> Common.Person
+mkPerson person =
+  Common.Person
+    { id = cast person.id,
+      language = person.language,
+      firstName = Just person.firstName,
+      lastName = person.lastName,
+      middleName = person.middleName,
+      mobileNumber = person.mobileNumber,
+      merchantOperatingCityId = cast person.merchantOperatingCityId,
+      blocked = Nothing
+    }
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId merchantId = do
   ride <- runInReplica $ QR.findById (cast rideId)
-  return $ fmap castRide ride
-  where
-    castRide ride =
-      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId) (cast <$> (Just ride.driverId))
+  return $ mkRide merchantId <$> ride
+
+castRideByRideShortId :: Id Common.Merchant -> ShortId Common.Ride -> Flow (Maybe Common.Ride)
+castRideByRideShortId merchantId (ShortId rideShortId) = do
+  mbRide <- runInReplica $ QR.findRideByRideShortId (ShortId rideShortId)
+  return $ mkRide merchantId <$> mbRide
+
+mkRide :: Id Common.Merchant -> DR.Ride -> Common.Ride
+mkRide merchantId ride = do
+  Common.Ride
+    { id = cast ride.id,
+      shortId = ShortId ride.shortId.getShortId,
+      merchantOperatingCityId = cast ride.merchantOperatingCityId,
+      counterPartyRideId = Nothing,
+      createdAt = ride.createdAt,
+      merchantId = maybe merchantId cast ride.merchantId,
+      driverId = cast <$> (Just ride.driverId)
+    }
 
 castMOCityById :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -180,7 +202,7 @@ castRideInfo merchantId merchantOpCityId rideId = do
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
           vehicleVariant = res.vehicleVariant,
-          vehicleServiceTier = Just $ show res.vehicleServiceTierName,
+          vehicleServiceTierName = Just $ show res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Just $ castBookingStatus res.bookingStatus,
           merchantOperatingCityId = res.merchantOperatingCityId,
@@ -191,7 +213,8 @@ castRideInfo merchantId merchantOpCityId rideId = do
           fareBreakup = [],
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
-          rideStatus = castRideStatus res.rideStatus
+          rideStatus = castRideStatus res.rideStatus,
+          mobileCountryCode = Nothing
         }
 
     castBookingStatus :: DRide.BookingStatus -> Common.BookingStatus

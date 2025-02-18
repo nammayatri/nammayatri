@@ -28,7 +28,6 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QRB
@@ -88,10 +87,10 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     triggerIVRAndCreateCsAlertJob personId ride = do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
-      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       logDebug $ "Triggering IVR for ride with unexpected condition: " <> show ride.id
       triggerIVR person ride riderConfig
-      createSafetyCSAlertJob person ride riderConfig
+    -- createSafetyCSAlertJob person ride riderConfig
 
     triggerIVR ::
       ( EncFlow m r,
@@ -144,21 +143,3 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             updatedAt = now,
             customerIvrResponse = Nothing
           }
-
-    createSafetyCSAlertJob ::
-      ( EncFlow m r,
-        CacheFlow m r,
-        MonadFlow m,
-        EsqDBFlow m r,
-        SchedulerFlow r
-      ) =>
-      DP.Person ->
-      DRide.Ride ->
-      RiderConfig ->
-      m ()
-    createSafetyCSAlertJob person ride riderConfig = do
-      let scheduleAfter = riderConfig.csAlertTriggerDelay
-          safetyCSAlertJobData = SafetyCSAlertJobData {rideId = ride.id, personId = person.id}
-      logDebug $ "CS Safety alert scheduleAfter : " <> show scheduleAfter
-      createJobIn @_ @'SafetyCSAlert ride.merchantId ride.merchantOperatingCityId scheduleAfter (safetyCSAlertJobData :: SafetyCSAlertJobData)
-      pure ()

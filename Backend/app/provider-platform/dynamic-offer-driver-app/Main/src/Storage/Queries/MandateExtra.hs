@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.MandateExtra where
 
 import Domain.Types.Mandate as Domain

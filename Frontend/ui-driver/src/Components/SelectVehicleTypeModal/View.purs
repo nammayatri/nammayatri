@@ -117,6 +117,7 @@ imageSection item =
           Ambulance_Taxi_Oxy -> "ic_bike_ambulance"
           Ambulance_Ventilator -> "ic_bike_ambulance"
           Suv_Plus  -> "ny_ic_suv_plus_side"
+          EV_Auto   -> "ic_auto"
       ]
   ]
 
@@ -149,6 +150,7 @@ textList item =
               Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
               Ambulance_Ventilator -> "Ambulance_Ventilator"
               Suv_Plus       -> "SUV_PLUS"
+              EV_Auto        -> "EV Auto"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

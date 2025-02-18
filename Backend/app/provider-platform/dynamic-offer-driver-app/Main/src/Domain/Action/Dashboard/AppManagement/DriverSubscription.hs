@@ -24,7 +24,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
@@ -99,7 +99,7 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
           QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey mbVehicleCategory
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       OVERLAY -> do
         oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
@@ -191,7 +191,7 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo merchantShortId opCity drive
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   now <- getCurrentTime
-  let serviceName = DDriver.mapServiceName serviceName'
+  let serviceName = DCommon.mapServiceName serviceName'
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)

@@ -19,6 +19,7 @@ where
 
 import Control.Applicative (liftA2)
 import Data.Time (utctDay)
+import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverStats as DS
@@ -27,7 +28,7 @@ import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
-import qualified Domain.Types.SearchRequestForDriver as SRD
+import qualified Domain.Types.VehicleVariant as DVV
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -49,6 +50,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
+import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
 import Tools.Constants
 import Tools.Error
@@ -56,11 +58,11 @@ import Tools.MarketingEvents as TM
 import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, EncFlow m r, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchTryId
   case response of
@@ -115,8 +117,14 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
   -- mbDriverStats <- DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   updateDailyStats driverId merchantOpCityId ride fareParameter
   whenJust mbDriverStats $ \driverStats -> do
-    when (driverStats.totalRides == 0) $ do
-      TM.notifyMarketingEvents (TM.PersonId driverId) (TM.FIRST_RIDE_COMPLETED) Nothing (MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
+    logDebug $ "total rides is :" <> show driverStats.totalRides
+    when (driverStats.totalRides == 1) $ do
+      driver <- SQP.findById driverId
+      whenJust driver $ \driver' -> do
+        let vehicleVariants = ride.vehicleVariant
+        whenJust vehicleVariants $ \vehicleVariant' -> do
+          let vehicleCategory = DVV.castVehicleVariantToVehicleCategory vehicleVariant'
+          TM.notifyMarketingEvents driverId driver'.deviceToken (TM.FIRST_RIDE_COMPLETED) (Just vehicleCategory) (MerchantOperatingCityId merchantOpCityId) [TM.FIREBASE]
     (incrementTotalEarningsBy, incrementBonusEarningsBy, incrementLateNightTripsCountBy, overallPickupCharges) <- do
       if isNotBackFilled driverStats
         then do

@@ -143,6 +143,7 @@ types:
     - _type: InputType
     - messageId: Text
     - derive: "'HideSecrets"
+    - scheduledTime : Maybe UTCTime
   InputType:
     - enum: "Include, Exclude, AllEnabled"
     - derive: "Kernel.Prelude.Read"
@@ -153,6 +154,7 @@ types:
     - messageId: Id Message
     - title: Text
     - _type: MessageType
+    - shareable: Bool
   MessageInfoResponse:
     - messageId: Id Message
     - title: Text
@@ -160,6 +162,7 @@ types:
     - shortDescription: Text
     - _type: MessageType
     - mediaFiles: [MediaFile]
+    - shareable: Bool
   MessageDeliveryInfoResponse:
     - messageId: Id Message
     - success: Int

@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -48,6 +47,10 @@ data MessageKey
   | PRE_PICKUP_DELIVERY_RECEIVER
   | SEND_SCHEDULED_RIDE_DETAILS
   | SCHEDULED_RIDE_OTP
+  | WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE
+  | WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE
+  | WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
+  | METRO_TICKET_BOOKING_CANCELLED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

@@ -178,6 +178,7 @@ castVehicleVariant :: Text -> Maybe Enums.VehicleCategory
 castVehicleVariant = \case
   "METRO" -> Just Enums.METRO
   "BUS" -> Just Enums.BUS
+  "SUBWAY" -> Just Enums.SUBWAY
   _ -> Nothing
 
 castStationType :: Text -> Maybe StationType

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.FeedbackExtra where
 
 import Domain.Types.Feedback

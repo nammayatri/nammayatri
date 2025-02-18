@@ -418,3 +418,6 @@ surfaceRed = "#FDEAEA"
 
 limeGreen :: Color 
 limeGreen = "#3AA215"
+
+brownishYellow :: Color
+brownishYellow = "#FFCC6E"

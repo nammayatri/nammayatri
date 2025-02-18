@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicketBooking where
@@ -8,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -16,6 +16,7 @@ import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
@@ -37,8 +38,17 @@ data FRFSTicketBooking = FRFSTicketBooking
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    googleWalletJWTUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
+    journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
+    journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyRouteDetails :: [Lib.JourneyLeg.Types.MultiModalJourneyRouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
@@ -55,6 +65,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,

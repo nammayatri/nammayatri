@@ -92,6 +92,7 @@ dependencies:
   - postgresql-simple
   - sequelize
   - warp
+  - uuid
 
 ghc-options:
   - -Wall

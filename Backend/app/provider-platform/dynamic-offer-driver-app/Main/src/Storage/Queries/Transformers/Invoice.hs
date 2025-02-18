@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.Transformers.Invoice where
 
 import qualified Domain.Types.Invoice as Domain

@@ -75,6 +75,10 @@ AppDynamicLogicRollout:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, domain]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]
 
   extraOperations:
     - EXTRA_QUERY_FILE

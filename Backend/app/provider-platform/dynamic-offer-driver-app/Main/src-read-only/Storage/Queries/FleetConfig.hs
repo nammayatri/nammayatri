@@ -28,7 +28,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
+    [ Se.Set Beam.allowAutomaticRoundTripAssignment allowAutomaticRoundTripAssignment,
+      Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
+      Se.Set Beam.allowStartRideFromQR allowStartRideFromQR,
       Se.Set Beam.endRideDistanceThreshold (Just endRideDistanceThreshold),
       Se.Set Beam.rideEndApproval rideEndApproval,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -43,7 +45,9 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
     pure $
       Just
         Domain.Types.FleetConfig.FleetConfig
-          { allowEndingMidRoute = allowEndingMidRoute,
+          { allowAutomaticRoundTripAssignment = allowAutomaticRoundTripAssignment,
+            allowEndingMidRoute = allowEndingMidRoute,
+            allowStartRideFromQR = allowStartRideFromQR,
             endRideDistanceThreshold = fromMaybe 100 endRideDistanceThreshold,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             rideEndApproval = rideEndApproval,
@@ -56,7 +60,9 @@ instance FromTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
 instance ToTType' Beam.FleetConfig Domain.Types.FleetConfig.FleetConfig where
   toTType' (Domain.Types.FleetConfig.FleetConfig {..}) = do
     Beam.FleetConfigT
-      { Beam.allowEndingMidRoute = allowEndingMidRoute,
+      { Beam.allowAutomaticRoundTripAssignment = allowAutomaticRoundTripAssignment,
+        Beam.allowEndingMidRoute = allowEndingMidRoute,
+        Beam.allowStartRideFromQR = allowStartRideFromQR,
         Beam.endRideDistanceThreshold = Just endRideDistanceThreshold,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.rideEndApproval = rideEndApproval,

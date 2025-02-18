@@ -18,8 +18,8 @@ NammaTag:
       event: ApplicationEvent
       derive: "Eq,Ord,Read"
     KaalChakraTagInfo:
+      recordType: NewType
       chakra: Chakra
-      validity: Maybe Hours
       derive: "Eq,Ord,Read"
 
   fields:
@@ -29,8 +29,8 @@ NammaTag:
     possibleValues: TagValues
     rule: TagRule
     info: TagInfo
+    validity: Maybe Hours
     actionEngine: Maybe Value
-
   constraints:
     name: PrimaryKey
 
@@ -39,7 +39,6 @@ NammaTag:
       tagType: TagType
       event: Maybe ApplicationEvent
       chakra: Maybe Chakra
-      validity: Maybe Hours
     possibleValues:
       tags: Maybe [Text]
       rangeStart: Maybe Double
@@ -57,7 +56,6 @@ NammaTag:
     tagType: getTag
     event: getEvent
     chakra: getChakra
-    validity: getValidity
     tags: getTags
     rangeStart: getRangeStart
     rangeEnd: getRangeEnd

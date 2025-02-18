@@ -246,7 +246,30 @@ endRide ::
   Id DRide.Ride ->
   EndRideReq ->
   m EndRideResp
-endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
+endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
+  isLocked <- withLockRideId
+  if isLocked
+    then do
+      finally
+        (endRideHandler handle rideId req)
+        ( do
+            Redis.unlockRedis mkLockKey
+            logDebug $ "End ride for RideId: " <> rideId.getId <> " Unlocked"
+        )
+    else throwError (InternalError $ "End ride inprogress")
+  where
+    withLockRideId = do
+      isLocked <- Redis.tryLockRedis mkLockKey 60
+      return isLocked
+    mkLockKey = "EndTransaction:RID:-" <> rideId.getId
+
+endRideHandler ::
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  ServiceHandle m ->
+  Id DRide.Ride ->
+  EndRideReq ->
+  m EndRideResp
+endRideHandler handle@ServiceHandle {..} rideId req = do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
@@ -404,7 +427,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
                   let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
-                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
+                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && ((maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) || fromMaybe False (((,) <$> tollCharges <*> updRide.estimatedTollCharges) <&> \(tollCharges', estimatedTollCharges') -> tollCharges' /= estimatedTollCharges'))) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
 
                 let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
@@ -446,6 +469,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       let validRideTaken = isValidRide updRide
           metroRideType = determineMetroRideType booking.specialLocationTag "SureMetro" "SureWarriorMetro"
       logDebug $ "MetroRideType : " <> show metroRideType
+      when (DCT.isMetroRideType metroRideType && validRideTaken) $ do
+        DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant
@@ -516,6 +541,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
       (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams
+      destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.destinationReachedAt))
   vehicleAge <-
     if DTC.isAmbulanceTrip booking.tripCategory
       then do
@@ -539,7 +565,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               rideTime = booking.startTime,
               returnTime = booking.returnTime,
               roundTrip = fromMaybe False booking.roundTrip,
-              waitingTime = if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
+              waitingTime = fmap (destinationWaitingTime +) $ if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
               stopWaitingTimes = stopsInfo <&> (\stopInfo -> max 0 (secondsToMinutes $ roundToIntegral (diffUTCTime (fromMaybe stopInfo.waitingTimeStart stopInfo.waitingTimeEnd) stopInfo.waitingTimeStart))),
               actualRideDuration = finalDuration,
               estimatedRideDuration = booking.estimatedDuration,
@@ -547,6 +573,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               driverSelectedFare = booking.fareParams.driverSelectedFare,
               customerExtraFee = booking.fareParams.customerExtraFee,
               nightShiftCharge = booking.fareParams.nightShiftCharge,
+              estimatedCongestionCharge = booking.estimatedCongestionCharge,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
@@ -694,3 +721,9 @@ shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
       let shouldRecompute = distanceDiff > distanceThreshold.minThresholdDistance && distanceDiff.getMeters > (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100
       pure shouldRecompute
     Nothing -> pure False
+
+isUnloadingTimeRequired :: DVST.ServiceTierType -> Bool
+isUnloadingTimeRequired str =
+  str
+    `elem` [ DVST.DELIVERY_LIGHT_GOODS_VEHICLE
+           ]

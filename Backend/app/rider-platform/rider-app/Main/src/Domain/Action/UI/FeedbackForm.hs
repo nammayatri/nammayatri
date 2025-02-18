@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Domain.Action.UI.FeedbackForm where
 
@@ -42,7 +41,7 @@ makeFeedbackFormAPIEntity response = map convertGroup groupedEntities
   where
     groupedEntities = groupBy (\a b -> a.categoryName == b.categoryName) response
     convertGroup :: [FeedbackForm] -> FeedbackFormAPIEntity
-    convertGroup [] = FeedbackFormAPIEntity {}
+    convertGroup [] = FeedbackFormAPIEntity {categoryName = RIDE, feedbackForm = []} -- should we throw error instead?
     convertGroup group@(res : _) =
       FeedbackFormAPIEntity
         { categoryName = res.categoryName,

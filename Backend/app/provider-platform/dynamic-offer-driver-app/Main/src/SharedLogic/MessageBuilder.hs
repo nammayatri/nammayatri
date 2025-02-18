@@ -35,6 +35,8 @@ module SharedLogic.MessageBuilder
     buildFleetJoiningMessage,
     BuildDownloadAppMessageReq (..),
     buildFleetJoinAndDownloadAppMessage,
+    BuildFleetDeepLinkAuthMessage (..),
+    buildFleetDeepLinkAuthMessage,
   )
 where
 
@@ -45,10 +47,11 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message as Message
 import qualified Domain.Types.Person as P
 import qualified Domain.Types.VehicleCategory as DVC
-import Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -202,7 +205,7 @@ buildGenericMessage merchantOpCityId messageKey vehicleCategory _ = do
 
   pure (merchantMessage.senderHeader, msg)
 
-addBroadcastMessageToKafka :: Bool -> Message.RawMessage -> Id P.Person -> Flow ()
+addBroadcastMessageToKafka :: (HasField "broadcastMessageTopic" r KafkaTopic, HasKafkaProducer r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Message.RawMessage -> Id P.Person -> m ()
 addBroadcastMessageToKafka check msg driverId = do
   topicName <- asks (.broadcastMessageTopic)
   msgDict <- createMessageLanguageDict msg
@@ -210,7 +213,7 @@ addBroadcastMessageToKafka check msg driverId = do
     (if check then "broadcast-message-check" else topicName, Just (encodeUtf8 $ getId driverId))
     msgDict
   where
-    createMessageLanguageDict :: Message.RawMessage -> Flow Message.MessageDict
+    createMessageLanguageDict :: (HasKafkaProducer r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message.RawMessage -> m Message.MessageDict
     createMessageLanguageDict msg' = do
       translations <- B.runInReplica $ MTQuery.findByMessageId msg'.id
       pure $ Message.MessageDict msg' (M.fromList $ map (addTranslation msg') translations)
@@ -249,3 +252,15 @@ buildFleetJoinAndDownloadAppMessage merchantOperatingCityId req = do
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
 
   pure (merchantMessage.senderHeader, msg)
+
+newtype BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
+  { fleetOwnerName :: Text
+  }
+
+buildFleetDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetDeepLinkAuthMessage -> m (Maybe Text, Text)
+buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
+  (senderHeader, staticMsg) <- buildGenericMessage merchantOperatingCityId DMM.FLEET_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
+  let dynamicMsg =
+        staticMsg
+          & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+  pure (senderHeader, dynamicMsg)

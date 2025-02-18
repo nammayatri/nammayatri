@@ -17,9 +17,13 @@ module SharedLogic.FRFSUtils where
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson as A
-import Data.List (groupBy, nub)
+import Data.List (groupBy, nub, sortBy)
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Data.Time as Time
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
+import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
@@ -28,32 +32,46 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
+import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
-import EulerHS.Prelude ((+||), (||+))
+import EulerHS.Prelude (comparing, (+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Station as CQS
 import Storage.Queries.AadhaarVerification as QAV
+import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
+import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
+import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
+import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
+import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
+import Storage.Queries.RouteStopFare as QRouteStopFare
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
+import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Tools.DynamicLogic
 import Tools.Error
+import Tools.Maps as Maps
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
 
 mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Maybe (Id DPO.PartnerOrganization) -> m APITypes.FRFSStationAPI
 mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do
-  pOrgStation <- mbPOrgId `forM` \pOrgId -> B.runInReplica $ CQPOS.findByStationIdAndPOrgId id pOrgId >>= fromMaybeM (PartnerOrgStationNotFoundForStationId pOrgId.getId id.getId)
+  pOrgStation <- maybe (pure Nothing) (B.runInReplica . CQPOS.findByStationIdAndPOrgId id) mbPOrgId
   let pOrgStationName = pOrgStation <&> (.name)
   pure $ APITypes.FRFSStationAPI {name = fromMaybe name pOrgStationName, stationType = Nothing, color = Nothing, sequenceNum = Nothing, distance = Nothing, towards = Nothing, ..}
 
@@ -125,6 +143,7 @@ data RouteStopInfo = RouteStopInfo
     startStopCode :: Text,
     endStopCode :: Text,
     totalStops :: Maybe Int,
+    stops :: Maybe [RouteStopMapping.RouteStopMapping],
     travelTime :: Maybe Seconds
   }
 
@@ -141,7 +160,8 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
           catMaybes $
             map
               ( \stops ->
-                  let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
+                  let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
+                      mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stopsSortedBySequenceNumber
                    in find
                         ( \stop ->
                             maybe
@@ -149,69 +169,267 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
                               (\startStopSequence -> stop.stopCode == endStationCode && stop.sequenceNum > startStopSequence)
                               mbStartStopSequence
                         )
-                        stops
-                        <&> ( \stop -> do
+                        stopsSortedBySequenceNumber
+                        <&> ( \endStop -> do
                                 case mbStartStopSequence of
                                   Just startStopSequence ->
-                                    let totalStops = stop.sequenceNum - startStopSequence
+                                    let intermediateStops = filter (\stop -> stop.sequenceNum >= startStopSequence && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
+                                        totalStops = endStop.sequenceNum - startStopSequence
                                         totalTravelTime =
                                           foldr
-                                            ( \stop' acc ->
-                                                if stop'.sequenceNum > startStopSequence && stop'.sequenceNum <= stop.sequenceNum
-                                                  then case (acc, stop'.estimatedTravelTimeFromPreviousStop) of
+                                            ( \stop acc ->
+                                                if stop.sequenceNum > startStopSequence && stop.sequenceNum <= endStop.sequenceNum
+                                                  then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
                                                     (Just acc', Just travelTime) -> Just (acc' + travelTime)
                                                     _ -> Nothing
                                                   else acc
                                             )
                                             (Just $ Seconds 0)
                                             stops
-                                     in (stop.routeCode, Just totalStops, totalTravelTime)
-                                  Nothing -> (stop.routeCode, Nothing, Nothing)
+                                     in (endStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops)
+                                  Nothing -> (endStop.routeCode, Nothing, Nothing, Nothing)
                             )
               )
               groupedStops
-  routes <- QRoute.findByRouteCodes (map (\(routeCode, _, _) -> routeCode) possibleRoutes)
+  routes <- QRoute.findByRouteCodes (map (\(routeCode, _, _, _) -> routeCode) possibleRoutes)
   return $
     map
       ( \route ->
-          let routeData = find (\(routeCode, _, _) -> routeCode == route.code) possibleRoutes
+          let routeData = find (\(routeCode, _, _, _) -> routeCode == route.code) possibleRoutes
            in RouteStopInfo
                 { route,
-                  totalStops = (\(_, totalStops, _) -> totalStops) =<< routeData,
+                  totalStops = (\(_, totalStops, _, _) -> totalStops) =<< routeData,
+                  stops = (\(_, _, _, stops) -> stops) =<< routeData,
                   startStopCode = startStationCode,
                   endStopCode = endStationCode,
-                  travelTime = (\(_, _, travelTime) -> travelTime) =<< routeData
+                  travelTime = (\(_, _, travelTime, _) -> travelTime) =<< routeData
                 }
       )
       routes
 
--- TODO :: This to be handled from OTP, Currently Hardcode for Chennai
-getPossibleTransitRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [[RouteStopInfo]]
-getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
-  case (startStationCode, endStationCode) of
-    ("MBTcSIip", "jQaLNViL") -> do
-      routes <- QRoute.findByRouteCodes ["jylLjHej", "BTuKbmBy"]
-      return $
-        [ map
-            ( \route ->
-                if route.code == "jylLjHej"
-                  then
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 6,
-                        startStopCode = "MBTcSIip",
-                        endStopCode = "TiulEaYs",
-                        travelTime = Just $ Seconds 660
-                      }
-                  else
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 8,
-                        startStopCode = "TiulEaYs",
-                        endStopCode = "jQaLNViL",
-                        travelTime = Just $ Seconds 1440
-                      }
+data FRFSDiscount = FRFSDiscount
+  { code :: Text,
+    title :: Text,
+    description :: Text,
+    tnc :: Text,
+    price :: Price,
+    eligibility :: Bool
+  }
+
+data FRFSVehicleServiceTier = FRFSVehicleServiceTier
+  { serviceTierType :: Spec.ServiceTierType,
+    serviceTierProviderCode :: Text,
+    serviceTierShortName :: Text,
+    serviceTierDescription :: Text,
+    serviceTierLongName :: Text
+  }
+
+data FRFSFare = FRFSFare
+  { price :: Price,
+    discounts :: [FRFSDiscount],
+    vehicleServiceTier :: FRFSVehicleServiceTier
+  }
+
+getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe (Id DP.Person) -> Spec.VehicleCategory -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
+getFares mbRiderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+  currentTime <- getCurrentTime
+  fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode merchantId merchantOperatingCityId
+  let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
+  mapM
+    ( \fareProduct -> do
+        vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
+        farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+        price <-
+          case farePolicy._type of
+            DFRFSFarePolicy.MatrixBased -> do
+              routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id routeCode startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
+              return $
+                Price
+                  { amountInt = round routeStopFare.amount,
+                    amount = routeStopFare.amount,
+                    currency = routeStopFare.currency
+                  }
+            DFRFSFarePolicy.StageBased -> do
+              stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
+              startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+              endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+              let stage = abs $ endStageFare.stage - startStageFare.stage
+              stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
+              return $
+                Price
+                  { amountInt = round stageFare.amount,
+                    amount = stageFare.amount,
+                    currency = stageFare.currency
+                  }
+        discountsWithEligibility <-
+          case mbRiderId of
+            Just riderId -> getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
+            Nothing -> pure []
+        return $
+          FRFSFare
+            { price = price,
+              discounts = map (mkDiscount price) discountsWithEligibility,
+              vehicleServiceTier =
+                FRFSVehicleServiceTier
+                  { serviceTierType = vehicleServiceTier._type,
+                    serviceTierProviderCode = vehicleServiceTier.providerCode,
+                    serviceTierShortName = vehicleServiceTier.shortName,
+                    serviceTierDescription = vehicleServiceTier.description,
+                    serviceTierLongName = vehicleServiceTier.longName
+                  }
+            }
+    )
+    serviceableFareProducts
+  where
+    mkDiscount price (discount, eligibility) =
+      let discountPrice =
+            case discount.value of
+              DFRFSTicketDiscount.FixedAmount amount ->
+                Price
+                  { amountInt = round amount,
+                    amount = amount,
+                    currency = discount.currency
+                  }
+              DFRFSTicketDiscount.Percentage percent ->
+                Price
+                  { amountInt = round ((HighPrecMoney (toRational percent) * price.amount) / 100),
+                    amount = (HighPrecMoney (toRational percent) * price.amount) / 100,
+                    currency = discount.currency
+                  }
+       in FRFSDiscount
+            { code = discount.code,
+              title = discount.title,
+              description = discount.description,
+              tnc = discount.tnc,
+              price = discountPrice,
+              ..
+            }
+
+data VehicleTracking = VehicleTracking
+  { nextStop :: RouteStopMapping.RouteStopMapping,
+    nextStopTravelTime :: Maybe Seconds,
+    nextStopTravelDistance :: Meters,
+    vehicleId :: Text,
+    vehicleInfo :: VehicleInfo
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleInfo = VehicleInfo
+  { latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    scheduleRelationship :: Maybe Text,
+    speed :: Maybe Double,
+    startDate :: Maybe Text,
+    startTime :: Maybe UTCTime,
+    timestamp :: Maybe Text,
+    tripId :: Maybe Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DP.Person -> Id DM.Merchant -> Text -> m [VehicleTracking]
+trackVehicles personId merchantId routeCode = do
+  vehicleTrackingInfo <- getVehicleInfo
+  let vehicleInfoWithLatLong :: [(Text, VehicleInfo, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) vehicleTrackingInfo
+  routeStops <- QRouteStopMapping.findByRouteCode routeCode
+  let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
+      stopPairs = pairWithNext sortedStops
+  stopPairsWithWaypoints <- getStopPairsWithWaypoints stopPairs
+  forM vehicleInfoWithLatLong $ \(vehicleId, vehicleInfo, vehicleLat, vehicleLon) -> do
+    minDistancesWithWaypoints <-
+      forM stopPairsWithWaypoints $ \((_currStop, nextStop), waypoints) -> do
+        let (groupedWaypoints, _) =
+              foldr
+                ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
+                    let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
+                        subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
+                     in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
+                )
+                ([], waypoints)
+                waypoints
+        let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
+        pure (minDistanceFromVehicle, nextStop)
+    let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
+        nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
+        nextStopTravelTime = (\speed -> Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed
+    pure $
+      VehicleTracking
+        { nextStopTravelDistance = highPrecMetersToMeters nextStopTravelDistance,
+          ..
+        }
+  where
+    getStopPairsWithWaypoints stopPairs = do
+      Redis.get (stopPairRoutePointsKey routeCode)
+        >>= \case
+          Just stopPairsWithWaypoint -> pure stopPairsWithWaypoint
+          Nothing -> do
+            stopPairsWithWaypoint <-
+              forM stopPairs $ \stopPair -> do
+                let startStop = fst stopPair
+                    nextStop = snd stopPair
+                    request =
+                      Maps.GetRoutesReq
+                        { waypoints = NE.fromList [startStop.stopPoint, nextStop.stopPoint],
+                          calcPoints = True,
+                          mode = Just Maps.CAR
+                        }
+                routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
+                reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (RouteNotFound routeCode)
+                let wayPoints = reqRouteInfo.points
+                pure (stopPair, wayPoints)
+            Redis.set (stopPairRoutePointsKey routeCode) stopPairsWithWaypoint
+            pure stopPairsWithWaypoint
+
+    getVehicleInfo = do
+      vehicleInfoByRouteCode :: [(Text, VehicleInfo)] <- do
+        vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)
+        pure $ mkVehicleInfo vehicleTrackingResp
+      if null vehicleInfoByRouteCode
+        then do
+          tripIds <- map DRTM.tripCode <$> QRouteTripMapping.findAllTripIdByRouteCode routeCode
+          vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByTrips tripIds)
+          pure $ mkVehicleInfo vehicleTrackingResp
+        else pure vehicleInfoByRouteCode
+
+    mkVehicleInfo :: [LT.VehicleTrackingOnRouteResp] -> [(Text, VehicleInfo)]
+    mkVehicleInfo vehiclesInfo =
+      vehiclesInfo
+        <&> ( \vehicleInfo ->
+                ( vehicleInfo.vehicleNumber,
+                  VehicleInfo
+                    { latitude = Just vehicleInfo.vehicleInfo.latitude,
+                      longitude = Just vehicleInfo.vehicleInfo.longitude,
+                      scheduleRelationship = vehicleInfo.vehicleInfo.scheduleRelationship,
+                      speed = vehicleInfo.vehicleInfo.speed,
+                      startDate =
+                        ( \startTime ->
+                            T.pack $
+                              Time.formatTime
+                                Time.defaultTimeLocale
+                                "%d-%m-%Y"
+                                ( addUTCTime
+                                    (secondsToNominalDiffTime 19800)
+                                    startTime
+                                )
+                        )
+                          <$> vehicleInfo.vehicleInfo.startTime,
+                      startTime = vehicleInfo.vehicleInfo.startTime,
+                      timestamp = Just vehicleInfo.vehicleInfo.timestamp,
+                      tripId = vehicleInfo.vehicleInfo.tripId
+                    }
+                )
             )
-            routes
-        ]
-    _ -> return []
+
+    mkLatLong :: Double -> Double -> Maps.LatLong
+    mkLatLong lat_ lon_ =
+      Maps.LatLong
+        { lat = lat_,
+          lon = lon_
+        }
+
+    pairWithNext :: [a] -> [(a, a)]
+    pairWithNext xs = zip xs (tail xs)
+
+    stopPairRoutePointsKey :: Text -> Text
+    stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId

@@ -26,6 +26,7 @@ imports:
   PriorityListWrapperType: Dashboard.Common.Merchant
   UpsertTicketConfigReq: Dashboard.Common.Merchant
   UpsertTicketConfigResp: Dashboard.Common.Merchant
+  FilePath: EulerHS.Prelude
 
 module: Merchant
 
@@ -215,6 +216,13 @@ types:
     - fcmConfig: Maybe FCMConfigUpdateReq
     - gatewayUrl: Maybe BaseUrl
     - registryUrl: Maybe BaseUrl
+  UpsertTicketConfigReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
+  UpsertTicketConfigResp:
+    - unprocessedTicketConfigs: [Text]
+    - success: Text
 
 
 extraOperations:

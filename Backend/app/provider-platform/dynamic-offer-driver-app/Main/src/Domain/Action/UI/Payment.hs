@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
@@ -24,10 +23,12 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.UI.Driver as DADriver
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
+import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Invoice as INV
@@ -40,7 +41,9 @@ import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
+import qualified Domain.Types.WebhookExtra as WT
 import Environment
+import Kernel.Beam.Functions (runInMasterDb)
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as DPayments
@@ -48,7 +51,7 @@ import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payment.Types as Payment
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (SchedulerType, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
 import qualified Kernel.Storage.Hedis as Redis
@@ -61,13 +64,19 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import Lib.Scheduler.Environment (JobCreatorEnv)
+import Lib.Scheduler.JobStorageType.SchedulerType
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Webhook.Storage.Queries.Webhook as QWeb
+import qualified Lib.Webhook.Types.Webhook as DW
 import Servant (BasicAuthData)
+import SharedLogic.Allocator
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import Storage.Beam.Webhook ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -80,6 +89,7 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
 import Tools.Error
 import Tools.Notifications
@@ -98,8 +108,9 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing
+      splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
+  vendorFees <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing splitEnabled
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
@@ -125,7 +136,9 @@ getStatus ::
     EsqDBFlow m r,
     CacheFlow m r,
     EventStreamFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
@@ -149,7 +162,11 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
             isRetargeted = Just $ order.isRetargeted,
             retargetLink = order.retargetLink,
             refunds = [],
-            payerVpa = Nothing
+            payerVpa = Nothing,
+            card = Nothing,
+            paymentMethodType = Nothing,
+            authIdCode = Nothing,
+            txnUUID = Nothing
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
@@ -162,7 +179,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices
-          processMandate (serviceName, serviceConfig) (personId, merchantId, merchantOperatingCityId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi --- needs refactoring ----
+          processMandate (serviceName, serviceConfig) (personId, merchantId, merchantOperatingCityId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi order.shortId.getShortId --- needs refactoring ----
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode False (serviceName, serviceConfig)
         DPayment.PaymentStatus {..} -> do
@@ -209,6 +226,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'
     DMSC.RentalPaymentServiceConfig psc' -> pure psc'
+    DMSC.CautioPaymentServiceConfig psc' -> pure psc'
     _ -> throwError $ InternalError "Unknown Service Config"
   orderStatusResp <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
   osr <- case orderStatusResp of
@@ -236,13 +254,13 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         unless (transactionStatus /= Payment.CHARGED) $ do
           processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices
-        processMandate (serviceName, serviceConfig) (cast order.personId, merchantId, driver.merchantOperatingCityId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
+        processMandate (serviceName, serviceConfig) (cast order.personId, merchantId, driver.merchantOperatingCityId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi order.shortId.getShortId
         notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
         QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
     Payment.MandateStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (_, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
-      processMandate (serviceName, serviceConfig) (cast order.personId, merchantId, driver.merchantOperatingCityId) status mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount Nothing Nothing
+      processMandate (serviceName, serviceConfig) (cast order.personId, merchantId, driver.merchantOperatingCityId) status mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount Nothing Nothing order.shortId.getShortId
     Payment.PDNNotificationStatusResp {..} -> do
       notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
       let driverFeeId = notification.driverFeeId
@@ -301,11 +319,11 @@ updatePaymentStatus ::
   DP.ServiceNames ->
   m ()
 updatePaymentStatus driverId merchantOpCityId serviceName = do
-  dueInvoices <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
+  dueInvoices <- runInMasterDb $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
-  plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
+  plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
   case plan of
     Nothing -> QDI.updateSubscription True (cast driverId)
     Just plan_ -> when (totalDue < plan_.maxCreditLimit && plan_.subscribedFlagToggleAllowed) $ QDI.updateSubscription True (cast driverId)
@@ -394,7 +412,7 @@ pdnNotificationStatus (_, merchantId, opCity) notificationId = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCity driverFee.serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCity.getId $ show driverFee.serviceName)
   resp <- Payment.mandateNotificationStatus merchantId opCity subscriptionConfig.paymentServiceName (mkNotificationRequest pdnNotification.shortId)
-  let [responseCode, reponseMessage] = map (\func -> func =<< resp.providerResponse) [(.responseCode), (.responseMessage)]
+  let (responseCode, reponseMessage) = Tuple.both (\func -> func =<< resp.providerResponse) ((.responseCode), (.responseMessage))
   processNotification opCity pdnNotification resp.status responseCode reponseMessage driverFee driver False
   return resp
   where
@@ -446,7 +464,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
     QNTF.updateNotificationStatusAndResponseInfoById notificationStatus respCode respMessage notification.id
 
 processMandate ::
-  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EventStreamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EventStreamFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, EncFlow m r) =>
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Payment.MandateStatus ->
@@ -456,15 +474,24 @@ processMandate ::
   HighPrecMoney ->
   Maybe Text ->
   Maybe Payment.Upi ->
+  Text ->
   m ()
-processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId) mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do
+processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId) mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails orderId = do
   let payerApp = upiDetails >>= (.payerApp)
       payerAppName = upiDetails >>= (.payerAppName)
       mandatePaymentFlow = upiDetails >>= (.txnFlowType)
   mbExistingMandate <- QM.findById mandateId
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   now <- getCurrentTime
-  when (isNothing mbExistingMandate) $ QM.create =<< mkMandate currency payerApp payerAppName mandatePaymentFlow
+  mandateData <- do
+    case mbExistingMandate of
+      Just mandate -> return mandate
+      Nothing -> do
+        mData <- mkMandate currency payerApp payerAppName mandatePaymentFlow
+        QM.create mData
+        return mData
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  let isWebhookEventEnabled = WT.MANDATE `elem` subsConfig.eventsEnabledForWebhook
   when (mandateStatus == Payment.ACTIVE) $ do
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
@@ -475,14 +502,14 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
       QDP.updatePaymentModeByDriverIdAndServiceName DP.AUTOPAY (cast driverId) serviceName
       QDP.updateMandateSetupDateByDriverIdAndServiceName (Just now) (cast driverId) serviceName
-      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
+      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
       let subcribeToggleAllowed = maybe False (.subscribedFlagToggleAllowed) mbPlan
       when subcribeToggleAllowed $ QDI.updateSubscription True (cast driverId)
       ADPlan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (castAutoPayStatus mandateStatus) payerVpa'
       maybe (pure ()) (\plan -> fork "track autopay status" $ SEVT.trackAutoPayStatusChange plan $ show (castAutoPayStatus mandateStatus)) mbDriverPlan
       when (serviceName == DP.YATRI_SUBSCRIPTION) $ QDI.updatPayerVpa payerVpa' (cast driverId)
+      when (isWebhookEventEnabled) $ callWebhookInFork driver mandateData
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
-    driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow --- should we store driver Id in mandate table ?
       mbDriverPlan <- QDP.findByMandateIdAndServiceName (Just mandateId) serviceName
@@ -501,6 +528,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             when (subsConfig.sendInAppFcmNotifications) $ do
               PaymentNudge.notifyMandateCancelled driver
           fork "track autopay status" $ SEVT.trackAutoPayStatusChange driverPlan $ show (castAutoPayStatus mandateStatus)
+          when (isWebhookEventEnabled) $ callWebhookInFork driver mandateData
         Nothing -> do
           (autoPayStatus, mbDriverPlanByDriverId) <- ADPlan.getSubcriptionStatusWithPlan serviceName driverId
           let currentMandateId = mbDriverPlanByDriverId >>= (.mandateId)
@@ -536,3 +564,102 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       case existingMandateEntry of
         Just mandateEntry -> (mandateEntry.status /= DM.ACTIVE && autoPayStatus /= Just DI.SUSPENDED) || (mandateEntry.status == DM.ACTIVE && isNothing (mandateEntry.payerVpa))
         Nothing -> True
+    mkWebhookData webhookDataEntity = do
+      now <- getCurrentTime
+      id <- generateGUID
+      shortId <- generateShortId
+      batchId <- getBatchId WT.MANDATE
+      case subsConfig.webhookConfig of
+        Just webhookConfig -> do
+          webhookData <- do
+            return $
+              DW.Webhook
+                { batchId = batchId,
+                  city = merchantOpCityId.getId,
+                  createdAt = now,
+                  eventName = WT.MANDATE,
+                  extMerchantName = "",
+                  id = id,
+                  lastTriedAt = now,
+                  merchantId = merchantId.getId,
+                  mode = webhookConfig.webhookDeliveryMode,
+                  responseCode = Nothing,
+                  responseMessage = Nothing,
+                  retryCount = 0,
+                  shortId = shortId,
+                  status = WT.PENDING,
+                  webhookData = toJSON webhookDataEntity,
+                  updatedAt = now
+                }
+          QWeb.create webhookData
+          return $ Just webhookData
+        Nothing -> return Nothing
+
+    makeWebhookData person mandate = do
+      veh <- QVeh.findById person.id >>= fromMaybeM (VehicleNotFound $ "driverId:-" <> person.id.getId)
+      unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+      now <- getCurrentTime
+      return $
+        AWebhook.WebhookDataEntity
+          { driver_id = person.id.getId,
+            mandate_id = mandate.id.getId,
+            vehicle_number = veh.registrationNo,
+            phone_number = fromMaybe "6666666666" unencryptedMobileNumber,
+            name = person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName,
+            org_id = "",
+            mandate_created_at = mandate.createdAt,
+            order_id = orderId,
+            mandate_status = show mandate.status,
+            event_name = show WT.MANDATE,
+            last_sent_at = show now
+          }
+    callWebhookInFork driver mandateData = do
+      fork "send wehook" $ do
+        dataWebhook <- makeWebhookData driver mandateData
+        mbWebhook <- mkWebhookData dataWebhook
+        whenJust mbWebhook $ \webhook -> do
+          createWebhookJob subsConfig webhook
+
+createWebhookJob :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => DSC.SubscriptionConfig -> DW.Webhook -> m ()
+createWebhookJob subsConfig webhook = do
+  whenJust subsConfig.webhookConfig $ \webhookConfig -> do
+    case webhookConfig.webhookDeliveryMode of
+      WT.BATCHING -> mkJob Nothing webhook.batchId webhookConfig
+      WT.REAL_TIME -> mkJob (Just webhook.id) webhook.id.getId webhookConfig
+  where
+    mkJob webhookId keyId webhookConfig = do
+      whenJust subsConfig.extWebhookConfigs $ \extWebhookConfigs -> do
+        jobKeyExists :: Maybe Bool <- Hedis.get (AWebhook.mkWebhookRealTimeKey keyId)
+        unless (isJust jobKeyExists) $ do
+          let jobData =
+                AWebhook.WebhookJobInfo
+                  { mode = webhookConfig.webhookDeliveryMode,
+                    webhookId = webhookId,
+                    statusToCheck = [WT.FAILED, WT.PENDING],
+                    retryCount = Just 0,
+                    retryLimit = webhookConfig.retryLimit,
+                    event = Just WT.MANDATE,
+                    limit = webhookConfig.batchSize,
+                    webhookConfig = extWebhookConfigs,
+                    nextJobScheduleTimeThreshold = webhookConfig.nextJobScheduleTimeThreshold,
+                    rescheduleTimeThreshold = webhookConfig.rescheduleTimeThreshold,
+                    batchId = Just webhook.batchId
+                  }
+          createJobIn @_ @'SendWebhookToExternal Nothing Nothing (secondsToNominalDiffTime $ Seconds webhookConfig.nextJobScheduleTimeThreshold) $
+            SendWebhookToExternalJobData
+              { webhookData = jobData
+              }
+          Hedis.setExp (AWebhook.mkWebhookRealTimeKey keyId) True (24 * 3600)
+
+mkBatchIdKey :: WT.WebhookEvent -> Text
+mkBatchIdKey event = "BatchId:Webhook:Event: " <> show event
+
+getBatchId :: (MonadFlow m, CacheFlow m r) => WT.WebhookEvent -> m Text
+getBatchId event = do
+  batchId :: Maybe Text <- Hedis.get $ mkBatchIdKey event
+  case batchId of
+    Just batchId' -> return batchId'
+    Nothing -> do
+      shortId <- generateShortId
+      Hedis.setExp (mkBatchIdKey event) shortId.getShortId (12 * 3600)
+      return shortId.getShortId

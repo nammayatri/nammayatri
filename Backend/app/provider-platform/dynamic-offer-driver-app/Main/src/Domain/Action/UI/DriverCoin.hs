@@ -313,7 +313,7 @@ getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
   coinConfigRes <-
     mapM
       ( \activeConfg -> do
-          let id = activeConfg.eventName <> "_" <> (show activeConfg.eventFunction)
+          let id = Text.strip (activeConfg.eventName <> "_" <> (show activeConfg.eventFunction))
           translation <- SQT.findByErrorAndLanguage id language >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
           case Text.splitOn " | " translation.message of
             [title, description] ->

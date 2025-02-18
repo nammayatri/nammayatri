@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.ApprovalRequest where
@@ -10,7 +9,6 @@ import qualified Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.TripTransaction
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -44,7 +42,7 @@ data EndRideData = EndRideData
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
-    tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
+    tripTransactionId :: Data.Text.Text,
     vehicleRegistrationNumber :: Data.Text.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)

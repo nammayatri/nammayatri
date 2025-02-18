@@ -38,7 +38,7 @@ isSearchTryCancelled ::
   Id SearchTry ->
   m Bool
 isSearchTryCancelled searchTryId = do
-  fromMaybe False <$> Hedis.get (mkCancelledKey searchTryId)
+  fromMaybe False <$> (Hedis.withMasterRedis $ Hedis.get (mkCancelledKey searchTryId))
 
 lockSearchTry ::
   CacheFlow m r =>
@@ -71,14 +71,14 @@ isBookingCancelled ::
   Id Booking ->
   m Bool
 isBookingCancelled bookingId = do
-  fromMaybe False <$> Hedis.get (mkBookingCancelledKey bookingId)
+  fromMaybe False <$> (Hedis.withMasterRedis $ Hedis.get (mkBookingCancelledKey bookingId))
 
 isBookingAssignmentInprogress ::
   CacheFlow m r =>
   Id Booking ->
   m Bool
 isBookingAssignmentInprogress bookingId = do
-  fromMaybe False <$> Hedis.get (mkBookingAssignedKey bookingId)
+  fromMaybe False <$> (Hedis.withMasterRedis $ Hedis.get (mkBookingAssignedKey bookingId))
 
 whenBookingCancellable ::
   CacheFlow m r =>

@@ -231,7 +231,7 @@ tfItems booking merchant mbFarePolicy =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId booking.paymentId,
           itemPrice = tfItemPrice booking,
-          itemTags = BUtils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+          itemTags = BUtils.mkRateCardTag Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing
         }
     ]
 

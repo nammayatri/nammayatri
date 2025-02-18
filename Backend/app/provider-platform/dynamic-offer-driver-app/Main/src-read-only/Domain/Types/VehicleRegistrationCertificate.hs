@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.VehicleRegistrationCertificate where
@@ -57,9 +56,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)

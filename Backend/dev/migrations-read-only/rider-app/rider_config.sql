@@ -169,3 +169,35 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_start_date timesta
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN threshold_cancellation_percentage_to_block integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_block integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN metro_booking_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_show_cancellation_rate integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_send_booking_details_via_whatsapp boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN permissible_modes text []  default '{Walk, Bus, MetroRail, Subway}';
+ALTER TABLE atlas_app.rider_config ADD COLUMN minimum_walk_distance integer  default 100;
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_allowed_public_transport_legs integer  default 2;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN multimodal_testing boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN is_first_referred_ride_enabled boolean ;

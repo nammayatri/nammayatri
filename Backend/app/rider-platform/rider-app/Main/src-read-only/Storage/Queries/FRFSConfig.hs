@@ -50,9 +50,12 @@ updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.metroStationTtl metroStationTtl,
       Se.Set Beam.oneWayTicketLimit oneWayTicketLimit,
+      Se.Set Beam.providerId providerId,
+      Se.Set Beam.providerName providerName,
       Se.Set Beam.radius (Kernel.Prelude.Just radius),
       Se.Set Beam.roundTripTicketLimit roundTripTicketLimit,
       Se.Set Beam.straightLineDistance (Kernel.Prelude.Just straightLineDistance),
+      Se.Set Beam.validTillSeconds (Kernel.Prelude.Just validTillSeconds),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -78,9 +81,12 @@ instance FromTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             metroStationTtl = metroStationTtl,
             oneWayTicketLimit = oneWayTicketLimit,
+            providerId = providerId,
+            providerName = providerName,
             radius = Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000) radius,
             roundTripTicketLimit = roundTripTicketLimit,
             straightLineDistance = Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 5000) straightLineDistance,
+            validTillSeconds = Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300) validTillSeconds,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -103,9 +109,12 @@ instance ToTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.metroStationTtl = metroStationTtl,
         Beam.oneWayTicketLimit = oneWayTicketLimit,
+        Beam.providerId = providerId,
+        Beam.providerName = providerName,
         Beam.radius = Kernel.Prelude.Just radius,
         Beam.roundTripTicketLimit = roundTripTicketLimit,
         Beam.straightLineDistance = Kernel.Prelude.Just straightLineDistance,
+        Beam.validTillSeconds = Kernel.Prelude.Just validTillSeconds,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

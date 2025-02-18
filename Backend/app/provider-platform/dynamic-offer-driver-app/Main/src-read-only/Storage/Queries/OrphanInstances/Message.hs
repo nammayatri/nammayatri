@@ -33,6 +33,7 @@ instance FromTType' Beam.Message Domain.Types.Message.Message where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             messageTranslations = messageTranslations',
+            shareable = Kernel.Prelude.fromMaybe False shareable,
             shortDescription = shortDescription,
             title = title,
             viewCount = viewCount
@@ -51,6 +52,7 @@ instance ToTType' Beam.Message Domain.Types.Message.Message where
         Beam.mediaFiles = Kernel.Types.Id.getId <$> mediaFiles,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOperatingCityId),
+        Beam.shareable = Kernel.Prelude.Just shareable,
         Beam.shortDescription = shortDescription,
         Beam.title = title,
         Beam.viewCount = viewCount

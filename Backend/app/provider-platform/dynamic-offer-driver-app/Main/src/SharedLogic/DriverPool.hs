@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
@@ -79,9 +78,6 @@ import Domain.Types.SearchTry
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
-import EulerHS.Extra.Monitoring.Types
-import EulerHS.KVConnector.Helper.Utils
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
@@ -639,7 +635,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
-    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, ..}
+    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, score = Nothing, ..}
 
     getRoutesForAllDrivers =
       mapM
@@ -688,6 +684,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         { distanceToPickup = distanceToDriver,
           serviceTier = serviceTier',
           customerTags = Nothing,
+          score = Nothing,
           ..
         }
 
@@ -709,8 +706,7 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
   }
 
 calculateDriverPool ::
-  ( MonadIO m,
-    EncFlow m r,
+  ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -724,22 +720,15 @@ calculateDriverPool ::
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
-  uuidForLatencyId <- generateGUIDText
-  L.setOptionLocal LocalLatencyId (Just (uuidForLatencyId <> "_pool"))
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      measureFunctionLatencyAndReturn
-        ( QPG.getNearestDrivers $
-            QPG.NearestDriversReq
-              { fromLocLatLong = coord,
-                nearestRadius = radius,
-                driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-                ..
-              }
-        )
-        "GetNearestDrivers"
-        "pooling"
-  L.setOptionLocal LocalLatencyId Nothing
+      QPG.getNearestDrivers $
+        QPG.NearestDriversReq
+          { fromLocLatLong = coord,
+            nearestRadius = radius,
+            driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
+            ..
+          }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -762,6 +751,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           customerTags = Nothing,
+          score = Nothing,
           ..
         }
 
@@ -890,6 +880,8 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
   DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
+  DVeh.HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab
+  DVeh.EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw
   DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
   DVeh.BUS_NON_AC -> avgSpeedOfVehicle.busNonAc
   DVeh.BUS_AC -> avgSpeedOfVehicle.busAc
@@ -1001,10 +993,11 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
         { lat = previousRideDropLat,
           lon = previousRideDropLon,
           customerTags = Nothing,
+          score = Nothing,
           ..
         }
     calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {customerTags = Nothing, ..}
+      let temp = DriverPoolResult {customerTags = Nothing, score = Nothing, ..}
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold
@@ -1019,7 +1012,7 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
               }
         else Nothing
     calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
-      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, score = Nothing, ..}) driverPoolCurrentlyOnRide
       let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {..} -> Just $ LatLong previousRideDropLat previousRideDropLon) driverPoolCurrentlyOnRide
       let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
       computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation

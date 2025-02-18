@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.Dashboard.Invoice where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Invoice as Common

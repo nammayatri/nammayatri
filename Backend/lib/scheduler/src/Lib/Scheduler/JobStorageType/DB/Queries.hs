@@ -15,7 +15,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
@@ -147,6 +146,16 @@ getPendingStuckJobs newtime = do
     [ Se.And
         [ Se.Is BeamST.status $ Se.Eq Pending,
           Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc newtime)
+        ]
+    ]
+
+getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime jobType scheduledAt = do
+  findAllWithKVScheduler
+    [ Se.And
+        [ Se.Is BeamST.status $ Se.Eq Pending,
+          Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc scheduledAt),
+          Se.Is BeamST.jobType $ Se.Eq jobType
         ]
     ]
 

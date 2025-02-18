@@ -338,6 +338,7 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Ambulance_AC -> "Ambulance_AC"
                         Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
                         Ambulance_Ventilator -> "Ambulance_Ventilator"
+                        EV_Auto -> "EV Auto"
                         Suv_Plus  -> "SUV_PLUS")
       }
     }
@@ -493,9 +494,15 @@ eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state
 eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
   case item.identifier of
     "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
-    "call" -> do 
-                void $ pure $ showDialer (getSupportNumber "") false 
-                continue state
+    "call" ->  continueWithCmd state [do
+                let merchant = getMerchant FunctionCall
+                _ <- case merchant of
+                  NAMMAYATRI -> pure $ unsafePerformEffect $ contactSupportNumber "WHATSAPP"  -- unsafePerformEffect -> Temporary fix , need to update later
+                  YATRI -> pure $ unsafePerformEffect $ contactSupportNumber "WHATSAPP"
+                  YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+                  _ -> pure $ showDialer (getSupportNumber "") false
+                pure NoAction
+  ]
     _ -> continue state
 
 eval WhatsAppClick state = continueWithCmd state [do

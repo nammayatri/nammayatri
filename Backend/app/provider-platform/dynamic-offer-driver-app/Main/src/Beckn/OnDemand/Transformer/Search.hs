@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
@@ -43,6 +41,7 @@ buildSearchReq messageId subscriber req context = do
       device_ = Nothing
       disabilityTag_ = Beckn.OnDemand.Utils.Search.buildDisabilityTag req
       isReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
+      fareParametersInRateCard_ = Beckn.OnDemand.Utils.Search.fareParametersInRateCard req
       messageId_ = messageId
       routeDistance_ = Beckn.OnDemand.Utils.Search.getDistance req
       routeDuration_ = Beckn.OnDemand.Utils.Search.getDuration req
@@ -76,6 +75,7 @@ buildSearchReq messageId subscriber req context = do
         dropAddrress = dropAddrress_,
         dropLocation = dropLocation_,
         isReallocationEnabled = isReallocationEnabled_,
+        fareParametersInRateCard = fareParametersInRateCard_,
         messageId = messageId_,
         pickupAddress = pickupAddress_,
         pickupLocation = pickupLocation_,

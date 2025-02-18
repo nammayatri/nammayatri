@@ -32,7 +32,7 @@ import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProdu
 import Components.QuoteListItem.Controller (config) as QLI
 import Components.RateCard.Utils (getFareBreakupList)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Array (mapWithIndex, filter, head, find, foldl, (!!))
+import Data.Array (mapWithIndex, filter, head, find, foldl,any, (!!))
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.Except.Trans (lift)
 import Data.Array (mapWithIndex, filter, head, find, foldl)
@@ -51,7 +51,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices,fetchImage, FetchImageFrom(..), getCityFromString, intersection)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices,fetchImage, FetchImageFrom(..), getCityFromString, intersection ,isAmbulance)
 import JBridge (fromMetersToKm, getLatLonFromAddress)
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
@@ -65,7 +65,7 @@ import Presto.Core.Types.Language.Flow (Flow(..), getLogFields)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (Visibility(..))
 import RemoteConfig as RC
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getFaresList, getKmMeter, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..), PersonDeliveryDetails(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
@@ -74,7 +74,7 @@ import Services.API as API
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (setValueToLocalStore, getValueToLocalStore, getValueToLocalNativeStore, KeyStore(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection,getVehicleCapacity,fetchVehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths, FareList)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -95,6 +95,7 @@ import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Screens.Types as ST
 import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
+import Data.String as DS
 import Components.MessagingView.Controller as CMC
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
@@ -173,7 +174,6 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , appConfig : getAppConfig appConfig
           , city : city
         } 
-    
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
@@ -241,6 +241,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
         }
       , rideScheduledAtUTC : resp.rideScheduledTime
       , serviceTierName : resp.serviceTierName
+      , isAirConditioned : resp.isAirConditioned
       , vehicleModel : rideList.vehicleModel
       , vehicleColor : rideList.vehicleColor
       , fareProductType : fareProductType
@@ -568,13 +569,9 @@ getFareFromEstimate (EstimateAPIEntity estimate) = do
 
 
 getFilteredQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> Array OfferRes
-getFilteredQuotes quotes estimateAndQuoteConfig =
+getFilteredQuotes quotes estimateAndQuoteConfig  =
   let
-    filteredArray =
-      ( case (getMerchant FunctionCall) of
-          YATRISATHI -> DA.concat (map (\variant -> filterQuoteByVariants variant quotes) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-          _ -> quotes
-      )
+    filteredArray = quotes
   in
     sortQuoteWithVariantOrder filteredArray estimateAndQuoteConfig.variantOrder
   where
@@ -754,6 +751,7 @@ mapServiceTierName vehicleVariant isValueAddNP serviceTierName =
                 "DELIVERY_BIKE" -> Just "2 Wheeler"
                 "Delivery Bike" -> Just "2 Wheeler"
                 "SUV_PLUS" -> Just "XL Plus"
+                "EV_AUTO_RICKSHAW" -> Just "EV Auto"
                 _ -> serviceTierName
 
 mapServiceTierShortDesc :: String -> Maybe Boolean -> Maybe String -> Maybe String
@@ -785,16 +783,19 @@ getTripDetailsState (RideBookingRes ride) state = do
       autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
+      ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
       waitingCharges = 
-        if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
+        if any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then
             autoWaitingCharges
         else if rideDetails.vehicleVariant == "BIKE" || rideDetails.vehicleVariant == "DELIVERY_BIKE" then
             bikeWaitingCharges
+        else if isAmbulance rideDetails.vehicleVariant then
+            ambulanceWaitingCharges
         else 
             cabsWaitingCharges
       nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
       nightChargeTill = "5 AM"
-      nightCharges = if rideDetails.vehicleVariant == "AUTO_RICKSHAW" 
+      nightCharges = if any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] 
                           then 1.5 
                           else 1.1
       endTime = fromMaybe "" rideDetails.rideEndTime
@@ -1004,6 +1005,7 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
       , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
+      , basePrice = quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
@@ -1026,6 +1028,7 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
       , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
+      , basePrice = quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
@@ -1073,6 +1076,7 @@ getFareProductType fareProductType =
     "ONE_WAY" -> FPT.ONE_WAY
     "DRIVER_OFFER" -> FPT.DRIVER_OFFER
     "DELIVERY" -> FPT.DELIVERY
+    "AMBULANCE" -> FPT.AMBULANCE
     _ -> FPT.ONE_WAY
 
 getServiceNames :: Array EstimateAPIEntity -> String -> Array String

@@ -45,6 +45,8 @@ import Components.BottomDrawerList as BottomDrawerList
 import Data.Array as DA
 import Components.RequestInfoCard as RequestInfoCard
 import PrestoDOM.Animation as PrestoAnim
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -285,7 +287,7 @@ agreeTermsModalConfig state = let
       buttonLayoutMargin = Margin 0 0 0 0,
 
      primaryText {
-         text = getString BY_PROCEEDING_YOU_ACCEPT_FULL_RESPONSIBILITY
+         text = getStringV2 by_proceeding_you_accept_full_responsibility
         , margin = Margin 16 0 16 0
         , visibility = VISIBLE
         , gravity = CENTER
@@ -294,7 +296,7 @@ agreeTermsModalConfig state = let
         visibility = GONE
       },
       option1 {
-        text = getString A_C
+        text = getStringV2 a_c
       , color = Color.yellow900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10
@@ -305,7 +307,7 @@ agreeTermsModalConfig state = let
       , gravity = CENTER
       },
       option2 {
-        text = getString CANCEL
+        text = getStringV2 cancel
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10

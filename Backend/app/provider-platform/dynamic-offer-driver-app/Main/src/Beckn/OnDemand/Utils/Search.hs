@@ -27,6 +27,7 @@ import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
 import Tools.Error (GenericError (InvalidRequest))
 
 getPickUpTime :: Spec.SearchReqMessage -> Maybe Data.Time.UTCTime
@@ -130,11 +131,11 @@ buildCustomerLanguage req = do
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
   readMaybe . T.unpack =<< tagValue
 
-buildCustomerNammaTags :: Spec.SearchReqMessage -> Maybe [Text]
+buildCustomerNammaTags :: Spec.SearchReqMessage -> Maybe [LYT.TagNameValue]
 buildCustomerNammaTags req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_NAMMA_TAGS tagGroups
-  readMaybe . T.unpack =<< tagValue
+  fmap LYT.TagNameValue <$> (readMaybe @[Text] . T.unpack =<< tagValue)
 
 checkIfDashboardSearch :: Spec.SearchReqMessage -> Maybe Bool
 checkIfDashboardSearch req = do
@@ -158,6 +159,12 @@ getIsReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool
 getIsReallocationEnabled req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
       tagValue = Utils.getTagV2 Tag.REALLOCATION_INFO Tag.IS_REALLOCATION_ENABLED tagGroups
+  readMaybe . T.unpack =<< tagValue
+
+fareParametersInRateCard :: Spec.SearchReqMessage -> Maybe Bool
+fareParametersInRateCard req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+      tagValue = Utils.getTagV2 Tag.FARE_PARAMETERS_IN_RATECARD_INFO Tag.FARE_PARAMETERS_IN_RATECARD tagGroups
   readMaybe . T.unpack =<< tagValue
 
 buildRoutePoints :: Spec.SearchReqMessage -> Maybe [Maps.LatLong]

@@ -11,6 +11,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.ParcelDetails as DParcel
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -53,6 +54,16 @@ getOtpCode = \case
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails details -> details.otpCode
 
+getParcelQuantity :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Int
+getParcelQuantity = \case
+  DRB.DeliveryDetails details -> details.parcelQuantity
+  _ -> Nothing
+
+getParcelType :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DParcel.ParcelType
+getParcelType = \case
+  DRB.DeliveryDetails details -> Just details.parcelType
+  _ -> Nothing
+
 getIsUpgradedToCab :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Bool
 getIsUpgradedToCab = \case
   DRB.OneWayDetails details -> details.isUpgradedToCab
@@ -74,14 +85,19 @@ getStopLocationId = \case
   DRB.DeliveryDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
-getToLocationId = \case
-  DRB.OneWayDetails details -> Just (getId details.toLocation.id)
+getToLocationId bookingDetails = do
+  toLocation <- getToLocation bookingDetails
+  return $ toLocation.id.getId
+
+getToLocation :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DL.Location
+getToLocation = \case
+  DRB.OneWayDetails details -> Just details.toLocation
   DRB.RentalDetails _ -> Nothing
-  DRB.DriverOfferDetails details -> Just (getId details.toLocation.id)
-  DRB.OneWaySpecialZoneDetails details -> Just (getId details.toLocation.id)
-  DRB.InterCityDetails details -> Just (getId details.toLocation.id)
-  DRB.AmbulanceDetails details -> Just (getId details.toLocation.id)
-  DRB.DeliveryDetails details -> Just (getId details.toLocation.id)
+  DRB.DriverOfferDetails details -> Just details.toLocation
+  DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+  DRB.InterCityDetails details -> Just details.toLocation
+  DRB.AmbulanceDetails details -> Just details.toLocation
+  DRB.DeliveryDetails details -> Just details.toLocation
 
 getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
 getDeliveryBookingInfo = \case
@@ -120,8 +136,10 @@ toBookingDetailsAndFromLocation ::
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
   Maybe Bool ->
+  Maybe DParcel.ParcelType ->
+  Maybe Int ->
   m (DL.Location, BookingDetails)
-toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -243,6 +261,8 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         DRB.DeliveryBookingDetails
           { toLocation = toLocation,
             distance = distance',
+            parcelQuantity = parcelQuantity,
+            parcelType = fromMaybe (DParcel.Others "Unknown") parcelType,
             ..
           }
 

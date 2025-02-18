@@ -20,6 +20,7 @@ where
 
 import Data.Text as Text
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types.DeliveryDetails as DParcel
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
@@ -54,13 +55,14 @@ data DSelectReq = DSelectReq
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
-    disabilityDisable :: Maybe Bool
+    disabilityDisable :: Maybe Bool,
+    parcelDetails :: (Maybe Text, Maybe Int)
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
-  when (sReq.disabilityDisable == Just True) $ QSR.updateDisabilityTag searchReq.id Nothing
+  when (sReq.disabilityDisable == Just True) $ QSR.updateDisabilityTag searchReq.id Nothing searchReq.isScheduled
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
@@ -74,7 +76,7 @@ handler merchant sReq searchReq estimates = do
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
       return Nothing
-  QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId
+  QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
@@ -82,6 +84,8 @@ handler merchant sReq searchReq estimates = do
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId False
+  let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @(DParcel.ParcelType) $ unpack rpt
+  when (isJust parcelType) $ QSR.updateParcelDetails parcelType (snd sReq.parcelDetails) searchReq.id
   let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId}
   let driverSearchBatchInput =
         DriverSearchBatchInput

@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.Person as Beam
 import qualified Storage.Queries.Transformers.Person
 
@@ -23,6 +24,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    customerNammaTags' <- Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType customerNammaTags
     pure $
       Just
         Domain.Types.Person.Person
@@ -40,7 +42,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             currentCity = Kernel.Prelude.snd updateMerchantOpIdAndCity,
-            customerNammaTags = customerNammaTags,
+            customerNammaTags = customerNammaTags',
             customerPaymentId = customerPaymentId,
             customerReferralCode = customerReferralCode,
             defaultPaymentMethodId = defaultPaymentMethodId,
@@ -115,7 +117,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.currentCity = Kernel.Prelude.Just currentCity,
-        Beam.customerNammaTags = customerNammaTags,
+        Beam.customerNammaTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags,
         Beam.customerPaymentId = customerPaymentId,
         Beam.customerReferralCode = customerReferralCode,
         Beam.defaultPaymentMethodId = defaultPaymentMethodId,

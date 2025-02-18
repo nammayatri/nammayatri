@@ -66,6 +66,7 @@ buildSelectReqV2 subscriber req = do
       disabilityDisable = buildDisableDisabilityTag item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
+      parcelDetails = getParcelDetails item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
     _ -> pure Nothing
@@ -151,3 +152,9 @@ getEstimateId (Just fulfillment) item = do
     Just fulfillmentId -> Just fulfillmentId
     Nothing -> item.itemId
 getEstimateId Nothing item = item.itemId
+
+getParcelDetails :: Maybe [Spec.TagGroup] -> (Maybe Text, Maybe Int)
+getParcelDetails tagGroups = (parcelType, parcelQuantity)
+  where
+    parcelType = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_TYPE tagGroups
+    parcelQuantity = (Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_QUANTITY tagGroups) >>= \pq -> readMaybe @Int $ T.unpack pq

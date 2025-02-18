@@ -229,7 +229,7 @@ defaultGlobalFlowCache = {
   , savedScheduledRides : Nothing
 }
 
-data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
+data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK | APPLY_REFERRAL String
 
 data TRIP_DETAILS_SCREEN_OUTPUT = GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | GO_TO_REPORT_ISSUE_CHAT_SCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState | GET_CATEGORIES_LIST TripDetailsScreenState | GO_TO_ISSUE_CHAT_SCREEN TripDetailsScreenState CTA.CategoryListType | GO_TO_RIDE_COMPLETED_SCREEN
 
@@ -281,7 +281,7 @@ data HOME_SCREEN_OUTPUT = HybridAppExit
                         | ONGOING_RIDE HomeScreenState
                         | CANCEL_RIDE_REQUEST HomeScreenState CancelSearchType
                         | FCM_NOTIFICATION String NotificationBody HomeScreenState
-                        | SEARCH_LOCATION String HomeScreenState
+                        | SEARCH_LOCATION String HomeScreenState Boolean
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_

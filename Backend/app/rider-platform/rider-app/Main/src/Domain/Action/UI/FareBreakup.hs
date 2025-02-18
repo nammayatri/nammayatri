@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.UI.FareBreakup where
 
 import Domain.Types.FareBreakup

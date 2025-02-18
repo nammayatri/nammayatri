@@ -7,6 +7,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
+  ApprovalRequest: Domain.Types.ApprovalRequest
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -15,15 +16,16 @@ VehicleRouteMapping:
     fleetOwnerId: Id Person
     vehicleNumber: EncryptedHashedField e Text
     routeCode: Text
-    vehicleColor: Text
-    vehicleModel: Text
-    vehicleClass: Text
-    vehicleServiceTierType: ServiceTierType
     blocked: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
-    vehicleNumber: PrimaryKey
+    vehicleNumberHash: PrimaryKey
     routeCode: PrimaryKey
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -32,8 +34,14 @@ TripTransaction:
   tableName: trip_transaction
 
   types:
+    # Assignment Trip Status Flow : TRIP_ASSIGNED -> CANCELLED | INPROGRESS
+    # Inprogress Trip Status Flow : IN_PROGRESS -> PAUSED | COMPLETED
     TripStatus:
-      enum: "TRIP_ASSIGNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELLED"
+      enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    ActionSource:
+      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
@@ -43,20 +51,28 @@ TripTransaction:
     tripCode: Maybe Text
     driverId: Id Person
     routeCode: Text
+    roundRouteCode: Maybe Text
     status: TripStatus
     isCurrentlyDeviated: Bool
+    vehicleServiceTierType: ServiceTierType
     deviationCount: Int
     startLocation: Maybe LatLong
     endLocation: Maybe LatLong
     startedNearStopCode: Maybe Text
     endStopCode: Text
     allowEndingMidRoute: Bool
-    sequenceNumber: Int
+    tripStartTime: Maybe UTCTime
+    tripEndTime: Maybe UTCTime
+    endRideApprovalRequestId: Maybe (Id ApprovalRequest)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripTerminationSource: Maybe ActionSource
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
+    driverId: SecondaryKey
 
   beamFields:
     startLocation:
@@ -78,6 +94,8 @@ TripTransaction:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ActionSource>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ActionSource>
 
   queries:
     findByTransactionId:
@@ -85,14 +103,23 @@ TripTransaction:
       where: id
     updateOnStart:
       kvFunction: updateOneWithKV
-      params: [routeCode, startLocation, status]
+      params:
+        [tripCode, startedNearStopCode, startLocation, status, tripStartTime]
       where: id
     findAllTripTransactionByDriverId:
       kvFunction: findAllWithKV
       where: driverId
+    updateOnEnd:
+      kvFunction: updateOneWithKV
+      params: [status, endLocation, tripEndTime, tripTerminationSource]
+      where: id
     updateStatus:
       kvFunction: updateOneWithKV
-      params: [status, endLocation]
+      params: [status]
+      where: id
+    updateEndRideApprovalRequestId:
+      kvFunction: updateOneWithKV
+      params: [endRideApprovalRequestId]
       where: id
 
   extraOperations:
@@ -115,7 +142,7 @@ ApprovalRequest:
     EndRideData:
       lat: Double
       lon: Double
-      tripTransactionId: Id TripTransaction
+      tripTransactionId: Text
       tripCode: Maybe Text
       driverName: Text
       driverMobileNumber: Maybe Text
@@ -138,17 +165,13 @@ ApprovalRequest:
 
   constraints:
     id: PrimaryKey
+    requesteeId: "!SecondaryKey"
 
   queries:
     updateStatusWithReason:
       kvFunction: updateOneWithKV
       params: [status, reason]
       where: id
-
-    findByStatus:
-      kvFunction: findAllWithKV
-      where:
-        and: [requestorId, status]
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestStatus>
@@ -165,6 +188,8 @@ FleetConfig:
     allowEndingMidRoute: Bool
     fleetOwnerId: Id Person
     endRideDistanceThreshold: HighPrecMeters
+    allowStartRideFromQR: Bool
+    allowAutomaticRoundTripAssignment: Bool
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
   toTType:

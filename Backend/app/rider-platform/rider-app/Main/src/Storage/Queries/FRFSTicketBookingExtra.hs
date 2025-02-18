@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.FRFSTicketBookingExtra where
 
 import qualified BecknV2.FRFS.Enums as Spec
@@ -52,3 +50,15 @@ findAllByRiderId limit offset riderId mbVehicleCategory = do
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id FRFSTicketBooking -> Maybe Bool -> m ()
+updateIsCancelled (Id reqId) isDeleted = do
+  updateOneWithKV
+    [Se.Set Beam.isDeleted isDeleted]
+    [Se.Is Beam.id (Se.Eq reqId)]
+
+updateIsSkipped :: (MonadFlow m, EsqDBFlow m r) => Id FRFSTicketBooking -> Maybe Bool -> m ()
+updateIsSkipped (Id reqId) isSkipped = do
+  updateOneWithKV
+    [Se.Set Beam.isSkipped isSkipped]
+    [Se.Is Beam.id (Se.Eq reqId)]

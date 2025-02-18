@@ -25,12 +25,16 @@ create = Esq.create
 
 updateGate :: D.GateInfo -> SqlDB ()
 updateGate D.GateInfo {..} = Esq.update $ \tbl -> do
+  let merchantOperatingCityId' = Kernel.Types.Id.getId <$> merchantOperatingCityId
+      merchantId' = Kernel.Types.Id.getId <$> merchantId
   set
     tbl
     [ GateInfoGeomName =. val name,
       GateInfoGeomPoint =. val point,
       GateInfoGeomDefaultDriverExtra =. val defaultDriverExtra,
       GateInfoGeomAddress =. val address,
+      GateInfoGeomMerchantOperatingCityId =. val merchantOperatingCityId',
+      GateInfoGeomMerchantId =. val merchantId',
       GateInfoGeomUpdatedAt =. val updatedAt,
       GateInfoGeomCanQueueUpOnGate =. val canQueueUpOnGate,
       GateInfoGeomGeom =. val geom

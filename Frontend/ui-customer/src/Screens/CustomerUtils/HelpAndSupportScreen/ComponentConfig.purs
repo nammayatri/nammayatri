@@ -78,6 +78,7 @@ sourceToDestinationConfig state = let
       }
     , overrideSeparatorCount = 2
     , separatorLayoutMargin = (MarginTop 14)
+    , showSourceDestWithStops = true
     }
   in sourceToDestinationConfig'
 

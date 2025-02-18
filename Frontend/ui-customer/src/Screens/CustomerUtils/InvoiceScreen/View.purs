@@ -36,7 +36,7 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare, getCityFromString, formatFareType, getCityConfig)
+import Helpers.Utils (isHaveFare, getCityFromString, formatFareType, getCityConfig, isAmbulance)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Mobility.Prelude
 import Storage
@@ -122,11 +122,14 @@ referenceList state =
       autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
+      ambulanceWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.ambulance else cityConfig.waitingChargeConfig.ambulance
       waitingCharges = 
-        if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then
+        if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.AUTO_RICKSHAW, Just VV.EV_AUTO_RICKSHAW] then
             autoWaitingCharges
         else if DA.any (_ == state.data.selectedItem.vehicleVariant) [Just VV.BIKE, Just VV.DELIVERY_BIKE] then
             bikeWaitingCharges
+        else if rideType == FPT.AMBULANCE then
+            ambulanceWaitingCharges
         else 
             cabsWaitingCharges
   in

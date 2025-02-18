@@ -34,6 +34,7 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.BatteryManager;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -86,6 +87,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
@@ -116,6 +118,8 @@ public class LocationUpdateService extends Service {
     private Context context;
     private int delayForG = 500000, delayForT = 20000;
     private int delayForGNew = 500000, delayForTNew = 20000;
+    MobilityRemoteConfigs remoteConfigs;
+    private String driverRideStatus = "IDLE";
     private int maximumLimit = 60;
     private int pointsToRemove = 1;
     private Location prevLocation = null, prevAccLocation = null;
@@ -166,6 +170,23 @@ public class LocationUpdateService extends Service {
         LocationUpdateService.updateTimeCallbacks.add(timeUpdateCallback);
     }
 
+    public class LocalBinder extends Binder
+    {
+        public LocationUpdateService getService()
+        {
+            return LocationUpdateService.this;
+        }
+    }
+
+    private final LocalBinder binder = new LocalBinder();
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent)
+    {
+        return binder;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -181,6 +202,7 @@ public class LocationUpdateService extends Service {
             FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
+        remoteConfigs = new MobilityRemoteConfigs(false, false);
         updateConfigVariables();
         initialiseJSONObjects();
         isLocationUpdating = false;
@@ -296,6 +318,16 @@ public class LocationUpdateService extends Service {
         fusedLocClientForDistanceCal.requestLocationUpdates(locReq, locCallback, Looper.getMainLooper());
     }
 
+    private int getLocationPriority() {
+        int priority = Priority.PRIORITY_HIGH_ACCURACY;
+        if( !driverRideStatus.equals("ON_PICKUP")) {
+            String configPriority = remoteConfigs.getString("driver_location_priority");
+            priority = Utils.getPriority(configPriority);
+        }
+        Log.d(LOG_TAG, "Location Priority is " + priority + " for driver app and ride status " + driverRideStatus);
+        return priority;
+    }
+
     private LocationCallback getDistanceCalCallback() {
         calDistanceCallback = new LocationCallback() {
             @Override
@@ -303,7 +335,7 @@ public class LocationUpdateService extends Service {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                fusedLocClientForDistanceCal.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                fusedLocClientForDistanceCal.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
                         .addOnSuccessListener(location -> {
                             if (location != null) {
                                 isDistanceCalulation = true;
@@ -384,6 +416,7 @@ public class LocationUpdateService extends Service {
 
             String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
             maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "60"));
+            driverRideStatus = sharedPrefs.getString("DRIVER_RIDE_STATUS", "ON_PICKUP");
             String MAX_LIMIT_TO_STORE_LOCATION_PT_NOT = "MAX_LIMIT_TO_STORE_LOCATION_PT_NOT";
             maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "1"));
             // UPDATE FOR GOOGLE CALLBACK FREQUENCY
@@ -444,12 +477,6 @@ public class LocationUpdateService extends Service {
         stopSelf();
     }
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
 // MAIN FUNCTIONS
 
     @SuppressLint("MissingPermission")
@@ -482,7 +509,7 @@ public class LocationUpdateService extends Service {
             String modeStatus = status ? "ONLINE" : "OFFLINE";
             String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=" + modeStatus;
             try {
-                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
                 Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(orderUrl, baseHeaders);
                 if (!status) {
@@ -753,7 +780,7 @@ public class LocationUpdateService extends Service {
             if (canCallAPI(executorLocUpdate.isShutdown())) {
                 Log.d(LOG_TAG, "DriverUpdateLoc CanCallAPI and ExecutorShutDown Passed");
                 executorLocUpdate = Executors.newSingleThreadExecutor();
-                MobilityCallAPI callAPIHandler = new MobilityCallAPI();
+                MobilityCallAPI callAPIHandler = MobilityCallAPI.getInstance(context);
                 executorLocUpdate.execute(() -> {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
                     Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);
@@ -824,7 +851,7 @@ public class LocationUpdateService extends Service {
                                         updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude), errorCode);
                                     }
                                 }
-                            } catch (JSONException e) {
+                            } catch (Exception e) {
                                 Log.d(LOG_TAG, "exception in decoding errorPayload " + e.getMessage());
                             }
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
@@ -838,6 +865,7 @@ public class LocationUpdateService extends Service {
                                 final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                 f.setTimeZone(TimeZone.getTimeZone("UTC"));
                                 String getCurrTime = f.format(new Date());
+                                updateStorage("DRIVER_LOCATION_TS",getCurrTime);
                                 updateTimeCallbacks.get(i).triggerUpdateTimeCallBack(getCurrTime, String.valueOf(latitude), String.valueOf(longitude), "SUCCESS");
                             }
                         }
@@ -847,7 +875,7 @@ public class LocationUpdateService extends Service {
                     String finalResult = result;
                     handler.post(() -> {
                         try {
-                            JSONObject resp = new JSONObject(String.valueOf(finalResult));
+                            JSONObject resp = new JSONObject((finalResult != null && !finalResult.trim().isEmpty()) ? finalResult : "{}");
                             if (resp.has("errorCode"))
                                 Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
                             if (resp.has("errorCode") && (resp.get("errorCode").equals("INVALID_TOKEN") || resp.get("errorCode").equals("TOKEN_EXPIRED"))) {
@@ -878,14 +906,14 @@ public class LocationUpdateService extends Service {
     // HELPER FUNCTIONS
     /* creates location request */
     private LocationRequest createLocationRequest(int intervalForLocationUpdate, float minDispDistance) {
-        return new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY)
+        return new LocationRequest.Builder(getLocationPriority())
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
                 .build();
     }
 
     private LocationRequest createDistanceCalculation(int intervalForLocationUpdate, float minDispDistance, int minInterval) {
-        return new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY)
+        return new LocationRequest.Builder(getLocationPriority())
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
                 .setMinUpdateIntervalMillis(minInterval)
@@ -1058,7 +1086,7 @@ public class LocationUpdateService extends Service {
                     checkLocation();
                     if (gpsMethodSwitch.equals("CURRENT")) {
                         Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
-                        fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                        fusedLocationProviderClient.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
                                 .addOnSuccessListener(location -> {
                                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));

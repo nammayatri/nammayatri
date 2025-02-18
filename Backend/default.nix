@@ -24,6 +24,24 @@
           fi
         '';
       });
+      gtfstidy = with pkgs; buildGoModule rec {
+        pname = "gtfstidy";
+        version = "deceaaaea84c61392642bff40468ba79ef2fc9dc";
+        src = pkgs.fetchFromGitHub {
+          owner = "patrickbr";
+          repo = "gtfstidy";
+          rev = "${version}";
+          hash = "sha256-PsGENVqSelmpXkVtMy9MdJALFAv2mTW7A11QzuZ/E8w=";
+        };
+        doCheck = false;
+        vendorHash = "sha256-TH8oCyZ5ZThKwwraa/qgr0Jf4kQNOz2PZxvv1dn/yVA=";
+        meta = {
+          description = "A tool for checking, sanitizing and minimizing GTFS feeds";
+          homepage = "https://github.com/patrickbr/gtfstidy";
+          license = lib.licenses.gpl2;
+          maintainers = with lib.maintainers; [ patrickbr ];
+        };
+      };
     in
     {
       pre-commit.settings.imports = [
@@ -41,6 +59,14 @@
         devShell.tools = _: {
           inherit (self'.packages)
             arion;
+        };
+        # NOTE: aarch64-linux builds are currently experiencing an assembly error:
+        # "/build/ghc612_0/ghc_329.s:160652:0: error: conditional branch out of range"
+        # This is a known issue with GHC's code generation on ARM architectures.
+        # Temporary fix: Optimization level has been reduced for ARM Linux builds.
+        # TODO: Monitor does this optimization cause any perf issue
+        defaults.settings.defined = {
+          extraConfigureFlags = lib.mkIf (system == "aarch64-linux") [ "--ghc-options=-O1" ];
         };
         packages = {
           amazonka.source = inputs.amazonka-git + /lib/amazonka;
@@ -96,6 +122,7 @@
           };
           base32.jailbreak = true;
           amazonka-core.check = false;
+          cryptostore.check = false;
         };
       };
 
@@ -135,6 +162,7 @@
           postgis
           newman
           config.mission-control.wrapper
+          gtfstidy
         ];
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [

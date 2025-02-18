@@ -20,6 +20,7 @@ SavedReqLocation:
       tag: Text
       placeId: Maybe Text
       ward: Maybe Text
+      locationName : Maybe Text
       derive': Generic,FromJSON,ToJSON,Show,ToSchema
   fields:
     id: Id SavedReqLocation
@@ -40,6 +41,7 @@ SavedReqLocation:
     riderId: Id Person
     placeId: Maybe Text
     ward: Maybe Text
+    locationName: Maybe Text
 
   sqlType:
     ward: character varying(255)
@@ -53,6 +55,7 @@ SavedReqLocation:
     state: character varying(500)
     tag: character varying(255)
     placeId: text
+    locationName: character varying(500)
 
   excludedFields:
     - merchantId

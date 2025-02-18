@@ -18,12 +18,14 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Message as DMessage
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
@@ -67,6 +69,8 @@ data AllocatorJobType
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
   | FleetAlert
+  | SendWebhookToExternal
+  | ScheduledFCMS
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -102,6 +106,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
+  restoreAnyJobInfo SSendWebhookToExternal jobData = AnyJobInfo <$> restoreJobInfo SSendWebhookToExternal jobData
+  restoreAnyJobInfo SScheduledFCMS jobData = AnyJobInfo <$> restoreJobInfo SScheduledFCMS jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -164,6 +170,16 @@ data FleetAlertJobData = FleetAlertJobData
 instance JobInfoProcessor 'FleetAlert
 
 type instance JobContent 'FleetAlert = FleetAlertJobData
+
+data ScheduledFCMSJobData = ScheduledFCMSJobData
+  { driverIds :: [Id DP.Driver],
+    message :: DMessage.RawMessage
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduledFCMS
+
+type instance JobContent 'ScheduledFCMS = ScheduledFCMSJobData
 
 newtype UnblockSoftBlockedDriverRequestJobData = UnblockSoftBlockedDriverRequestJobData
   { driverId :: Id DP.Driver
@@ -360,3 +376,12 @@ data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBA
 instance JobInfoProcessor 'CheckExotelCallStatusAndNotifyBAP
 
 type instance JobContent 'CheckExotelCallStatusAndNotifyBAP = CheckExotelCallStatusAndNotifyBAPJobData
+
+data SendWebhookToExternalJobData = SendWebhookToExternalJobData
+  { webhookData :: AWebhook.WebhookJobInfo
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance JobInfoProcessor 'SendWebhookToExternal
+
+type instance JobContent 'SendWebhookToExternal = SendWebhookToExternalJobData

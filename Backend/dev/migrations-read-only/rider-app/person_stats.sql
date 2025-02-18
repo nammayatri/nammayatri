@@ -43,3 +43,8 @@ ALTER TABLE atlas_app.person_stats ADD COLUMN referral_amount_paid double precis
 ALTER TABLE atlas_app.person_stats ADD COLUMN referred_by_earnings_payout_status text ;
 ALTER TABLE atlas_app.person_stats ADD COLUMN backlog_payout_status text ;
 ALTER TABLE atlas_app.person_stats ADD COLUMN backlog_payout_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ADD COLUMN is_backfilled boolean ;

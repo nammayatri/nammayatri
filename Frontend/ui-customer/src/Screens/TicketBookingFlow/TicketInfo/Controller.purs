@@ -14,7 +14,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
-import Helpers.Utils (generateQR)
+import Helpers.Utils (generateQR, emitTerminateApp, isParentView)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
@@ -81,7 +81,12 @@ eval (ShareTicketQR serviceName) state = do
   void $ pure $ shareImageMessage textMessage (shareImageMessageConfig serviceName)
   continue state
 
-eval GoHome state = exit GoToHomeScreen
+eval GoHome state = 
+  if isParentView Common.FunctionCall
+    then do
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+  else exit GoToHomeScreen
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ copyToClipboard text

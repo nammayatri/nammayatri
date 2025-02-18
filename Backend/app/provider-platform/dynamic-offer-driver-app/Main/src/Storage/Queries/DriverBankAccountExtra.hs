@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.DriverBankAccountExtra where
 
 import Domain.Types.DriverBankAccount

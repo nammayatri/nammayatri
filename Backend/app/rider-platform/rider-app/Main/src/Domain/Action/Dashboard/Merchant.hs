@@ -85,6 +85,7 @@ import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -96,7 +97,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
@@ -319,7 +320,23 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
       let geom = request.geom <|> mbGeometry
       id <- maybe generateGUID (return . (.id)) mbExistingSpLoc
       now <- getCurrentTime
-      merchantOperatingCity <- maybe (return Nothing) (CQMOC.findByMerchantShortIdAndCity merchantShortId) request.city
+      (merchantOperatingCityId, merchantId) <- case request.city of
+        Just opCity -> do
+          merchantOperatingCity <-
+            CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              >>= fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantShortId: " <> merchantShortId.getShortId <> ", opCity: " <> show opCity)
+          let merchantOperatingCityId = cast @DMOC.MerchantOperatingCity @SL.MerchantOperatingCity merchantOperatingCity.id
+              merchantId = cast @DM.Merchant @SL.Merchant merchantOperatingCity.merchantId
+          pure (merchantOperatingCityId, merchantId)
+        Nothing -> case (mbExistingSpLoc >>= (.merchantOperatingCityId), mbExistingSpLoc >>= (.merchantId)) of
+          (Just merchantOperatingCityId, Just merchantId) -> pure (merchantOperatingCityId, merchantId)
+          (Just merchantOperatingCityId, Nothing) -> do
+            merchantOperatingCity <-
+              CQMOC.findById (cast @SL.MerchantOperatingCity @DMOC.MerchantOperatingCity merchantOperatingCityId)
+                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId-" <> merchantOperatingCityId.getId)
+            let merchantId = cast @DM.Merchant @SL.Merchant merchantOperatingCity.merchantId
+            pure (merchantOperatingCityId, merchantId)
+          (Nothing, _) -> throwError (InvalidRequest "Valid city should be provided")
       locationName <-
         fromMaybeM (InvalidRequest "Location Name cannot be empty for a new special location") $
           request.locationName <|> (mbExistingSpLoc <&> (.locationName))
@@ -329,10 +346,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
           { gates = [],
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
-            merchantOperatingCityId = cast . (.id) <$> merchantOperatingCity,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
-            merchantId = cast . (.merchantId) <$> merchantOperatingCity,
+            merchantId = Just merchantId,
             ..
           }
 
@@ -473,10 +490,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> return Nothing
 
   -- rider_config
-  mbRiderConfig <-
-    CQRC.findByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+  mbRiderConfig <- do
+    let baseVersion = LYT.ConfigVersionMap {version = 1, config = LYT.RiderConfig}
+    QRC.findByMerchantOperatingCityId newMerchantOperatingCityId (Just [baseVersion]) >>= \case
       Nothing -> do
-        riderConfig <- CQRC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+        riderConfig <- QRC.findByMerchantOperatingCityId baseOperatingCityId (Just [baseVersion]) >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -538,7 +556,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbMerchantServiceUsageConfig $ \mSUC -> CQMSUC.create mSUC
         whenJust mbMerchantServiceConfig $ \merchantServiceConfigs -> mapM_ SQMSC.create merchantServiceConfigs
         whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
-        whenJust mbRiderConfig $ \riderConfig -> CQRC.create riderConfig
+        whenJust mbRiderConfig $ \riderConfig -> QRC.create riderConfig
 
         whenJust mbExophone $ \exophones -> do
           whenJust (find (\ex -> ex.callService == Exotel) exophones) $ \exophone -> do
@@ -563,7 +581,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQMM.clearCacheById newMerchantOperatingCityId
         CQMPM.clearCache newMerchantOperatingCityId
         CQMSUC.clearCache newMerchantOperatingCityId
-        CQRC.clearCache newMerchantOperatingCityId
+        QRC.clearCache newMerchantOperatingCityId Nothing
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
         exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
@@ -871,7 +889,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
   void $ (processTicketConfigGroup . groupTicketEntities) flatTicketConfigs
   return $
     Common.UpsertTicketConfigResp
-      { unprocessedTicketConfig = [], -- handle race condition and errors later if needed
+      { unprocessedTicketConfigs = [], -- handle race condition and errors later if needed
         success = "Ticket configs updated successfully"
       }
   where
@@ -1125,18 +1143,30 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           Nothing -> return Unbounded
           _ -> do
             peakTimings :: [(TimeOfDay, TimeOfDay)] <- readCSVField idx row.peakTimings "Peak Timings"
-            peakDays :: [DayOfWeek] <- readCSVField idx row.peakDays "Peak Days"
-            let bounds =
-                  BoundedPeaks
-                    { monday = if Monday `elem` peakDays then peakTimings else [],
-                      tuesday = if Tuesday `elem` peakDays then peakTimings else [],
-                      wednesday = if Wednesday `elem` peakDays then peakTimings else [],
-                      thursday = if Thursday `elem` peakDays then peakTimings else [],
-                      friday = if Friday `elem` peakDays then peakTimings else [],
-                      saturday = if Saturday `elem` peakDays then peakTimings else [],
-                      sunday = if Sunday `elem` peakDays then peakTimings else []
-                    }
-            return $ BoundedByWeekday bounds
+            peakDaysRaw :: [Text] <- readCSVField idx row.peakDays "Peak Days"
+            let parsedDays = mapMaybe parseDayOrWeekday peakDaysRaw
+                weekdays = [dow | Left dow <- parsedDays]
+                specificDays = [day | Right day <- parsedDays]
+
+            if null weekdays && null specificDays
+              then return Unbounded
+              else
+                if null specificDays
+                  then do
+                    let bounds =
+                          BoundedPeaks
+                            { monday = if Monday `elem` weekdays then peakTimings else [],
+                              tuesday = if Tuesday `elem` weekdays then peakTimings else [],
+                              wednesday = if Wednesday `elem` weekdays then peakTimings else [],
+                              thursday = if Thursday `elem` weekdays then peakTimings else [],
+                              friday = if Friday `elem` weekdays then peakTimings else [],
+                              saturday = if Saturday `elem` weekdays then peakTimings else [],
+                              sunday = if Sunday `elem` weekdays then peakTimings else []
+                            }
+                    return $ BoundedByWeekday bounds
+                  else do
+                    let bounds = map (\d -> (d, peakTimings)) specificDays
+                    return $ BoundedByDay bounds
       cancellationCharges <-
         case mbCancellationType of
           Nothing -> return Nothing
@@ -1173,3 +1203,22 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
         "flatfee" -> Just $ CancellationCharge (FlatFee fee) time
         "percentage" -> Just $ CancellationCharge (Percentage (round fee)) time
         _ -> Nothing
+
+    parseDayOrWeekday :: Text -> Maybe (Either DayOfWeek Day)
+    parseDayOrWeekday txt =
+      case parseDayOfWeek txt of
+        Just dow -> Just (Left dow)
+        Nothing -> Right <$> parseDate txt
+
+    parseDayOfWeek :: Text -> Maybe DayOfWeek
+    parseDayOfWeek "Monday" = Just Monday
+    parseDayOfWeek "Tuesday" = Just Tuesday
+    parseDayOfWeek "Wednesday" = Just Wednesday
+    parseDayOfWeek "Thursday" = Just Thursday
+    parseDayOfWeek "Friday" = Just Friday
+    parseDayOfWeek "Saturday" = Just Saturday
+    parseDayOfWeek "Sunday" = Just Sunday
+    parseDayOfWeek _ = Nothing
+
+    parseDate :: Text -> Maybe Day
+    parseDate = parseTimeM True defaultTimeLocale "%Y-%m-%d" . T.unpack

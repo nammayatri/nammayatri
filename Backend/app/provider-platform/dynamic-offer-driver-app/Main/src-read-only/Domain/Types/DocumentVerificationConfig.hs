@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.DocumentVerificationConfig where
@@ -79,10 +78,10 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleClassCheckType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)

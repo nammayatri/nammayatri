@@ -27,8 +27,11 @@ imports:
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyPlannerTypes
+  JourneySearchData: Lib.JourneyLeg.Types
+  Journey: Domain.Types.Journey
+  JourneyLegStatus: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
+  MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
 
 FRFSSearch:
   tableName: frfs_search
@@ -46,6 +49,9 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    journeyLegStatus: Maybe JourneyLegStatus
+    isOnSearchReceived: Maybe Bool
+    journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
 
   beamFields:
     journeyLegInfo:
@@ -55,6 +61,8 @@ FRFSSearch:
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
+      isDeleted: Maybe Bool
+    journeyRouteDetails: {}
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -63,13 +71,21 @@ FRFSSearch:
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
+    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
+
+  intermediateTransformers:
+    fromTType:
+      - journeyRouteDetailsList: Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id id)|EM
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList|E
+
+  excludedDefaultQueries:
+    - create
 
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
-    # journeyId: "!SecondaryKey"
 
   queries:
     getTicketPlaces:
@@ -78,9 +94,43 @@ FRFSSearch:
     findById:
       kvFunction: findOneWithKV
       where: id
-
+    updateJourneyLegStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyLegStatus]
+      where: id
+    updateIsOnSearchReceivedById:
+      kvFunction: updateWithKV
+      params: [isOnSearchReceived]
+      where: id
+    updateRiderIdById:
+      kvFunction: updateWithKV
+      params: [riderId]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
+
+JourneyRouteDetails:
+  fields:
+    id: Id JourneyRouteDetails
+    searchId: Id FRFSSearch
+    lineColor: Maybe Text
+    lineColorCode: Maybe Text
+    platformNumber: Maybe Text
+    subLegOrder: Maybe Int
+    frequency: Maybe Seconds
+    routeLongName: Maybe Text
+    fromStationId: Maybe (Id Station)
+    toStationId: Maybe (Id Station)
+    routeId: Maybe (Id Route)
+
+  queries:
+    findAllBySearchId:
+      kvFunction: findAllWithKV
+      where: searchId
+
+  constraints:
+    id: PrimaryKey
+    searchId: "!SecondaryKey"
 
 Station:
   tableName: station
@@ -161,11 +211,12 @@ FRFSQuote:
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
+    oldCacheDump: Maybe Text
 
   beamFields:
     price:
@@ -202,6 +253,9 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -240,14 +294,24 @@ FRFSTicketBooking:
     customerCancelled: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
+    googleWalletJWTUrl: Maybe Text
+    journeyLegOrder: Maybe Int
+    journeyId: Maybe (Id Journey)
+    journeyOnInitDone: Maybe Bool
+    startTime: Maybe UTCTime
+    journeyLegStatus: Maybe JourneyLegStatus
+    isDeleted: Maybe Bool
+    isFareChanged: Maybe Bool
+    isSkipped: Maybe Bool
+    journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
 
   default:
     customerCancelled: "false"
@@ -260,6 +324,7 @@ FRFSTicketBooking:
       estimatedPrice: HighPrecMoney
     finalPrice:
       finalPrice: Maybe HighPrecMoney
+    journeyRouteDetails: {}
 
   types:
     FRFSTicketBookingStatus:
@@ -267,10 +332,15 @@ FRFSTicketBooking:
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
+  intermediateTransformers:
+    fromTType:
+      - journeyRouteDetailsList: Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id searchId)|EM
+
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList|E
 
   toTType:
     price: (.amount)|I
@@ -284,6 +354,7 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: "!SecondaryKey"
     quoteId: SecondaryKey
+    journeyId: "!SecondaryKey"
 
   queries:
     findById:
@@ -350,11 +421,28 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [cashbackPayoutOrderId]
       where: id
+    findAllByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    findAByJourneyIdCond:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: journeyId
+    updateOnInitDone:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
+      where: id
     updateInterestDelayedByQuoteId:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
-
+    updateJourneyLegStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyLegStatus]
+      where: id
+    updateGoogleWalletLinkById:
+      kvFunction: updateOneWithKV
+      params: [googleWalletJWTUrl]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket
@@ -376,7 +464,7 @@ FRFSTicket:
     qrRefreshAt: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
 
@@ -543,17 +631,21 @@ FRFSConfig:
     isCancellationAllowed: Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
-    customDates: '[Text]'
+    customDates: "[Text]"
     customEndTime: Text
     cancellationReasonId: Maybe Text
     straightLineDistance: Meters
     radius: Meters
+    providerId: Maybe Text
+    providerName: Maybe Text
+    validTillSeconds: Seconds
 
   beamType:
     isCancellationAllowed: Maybe Bool
     busStationTtl: Maybe Seconds
     straightLineDistance: Maybe Meters
     radius: Maybe Meters
+    validTillSeconds: Maybe Seconds
 
   queries:
     findByMerchantOperatingCityId:
@@ -571,19 +663,21 @@ FRFSConfig:
     busStationTtl: "1800"
     straightLineDistance: "5000"
     radius: "3000"
+    validTillSeconds: "300"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
-
+    validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
     busStationTtl: Kernel.Prelude.Just|I
     straightLineDistance: Kernel.Prelude.Just|I
     radius: Kernel.Prelude.Just|I
+    validTillSeconds: Kernel.Prelude.Just|I
 
 Route:
   tableName: route
@@ -650,6 +744,7 @@ Route:
 
 RouteStopMapping:
   tableName: route_stop_mapping
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
   fields:
     routeCode: Text
     stopCode: Text

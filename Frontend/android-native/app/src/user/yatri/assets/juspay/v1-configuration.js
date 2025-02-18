@@ -321,6 +321,11 @@ window.getMerchantConfig = function () {
           "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
+        "evAutoRickshaw" : {
+          "name" : "EV Auto Rickshaw",
+          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
         "bookAny" : {
           "name" : "Book Any",
           "image" : "ny_ic_auto_cab_green,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_cab_green.png"
@@ -334,6 +339,31 @@ window.getMerchantConfig = function () {
           "name" : "XL Plus",
           "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/yatri/user/images/ny_ic_suv_plus_side.png",
           "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/yatri/user/images/ny_ic_suv_plus_left_side.png"
+        },
+        "ambulanceTaxi" : {
+          "name" : "Ambulance Taxi",
+          "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+          "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+        },
+        "ambulanceTaxiOxy" : {
+          "name" : "Ambulance Taxi with Oxygen",
+          "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+          "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+        },
+        "ambulanceAc" : {
+          "name" : "Ambulance AC",
+          "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+          "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+        },
+        "ambulanceAcOxy" : {
+          "name" : "Ambulance AC with Oxygen",
+          "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+          "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+        },
+        "ambulanceVentilator" : {
+          "name" : "Ambulance with Ventilator",
+          "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+          "leftViewImage" : "ny_ic_ambulance_ventilator,"
         }
       }
     }

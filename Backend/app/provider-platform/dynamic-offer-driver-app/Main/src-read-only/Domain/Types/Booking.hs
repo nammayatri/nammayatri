@@ -1,11 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Booking where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FareParameters
@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Utils.Common
 import Kernel.Utils.TH
 import qualified Lib.Types.SpecialLocation
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data Booking = Booking
@@ -30,6 +31,7 @@ data Booking = Booking
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Text,
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -37,6 +39,7 @@ data Booking = Booking
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate),
+    estimatedCongestionCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.HighPrecMoney,
@@ -52,6 +55,8 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

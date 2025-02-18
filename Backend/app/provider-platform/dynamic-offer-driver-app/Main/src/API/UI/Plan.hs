@@ -41,24 +41,33 @@ type API =
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> QueryParam "vehicleVariant" Vehicle.VehicleVariant
+           :> QueryParam "serviceName" DPlan.ServiceNames
            :> Get '[JSON] DPlan.PlanListAPIRes
            :<|> "suspend"
              :> TokenAuth
+             :> QueryParam "serviceName" DPlan.ServiceNames
              :> Put '[JSON] APISuccess
            :<|> "resume"
              :> TokenAuth
+             :> QueryParam "serviceName" DPlan.ServiceNames
              :> Put '[JSON] APISuccess
            :<|> "currentPlan"
              :> TokenAuth
+             :> QueryParam "serviceName" DPlan.ServiceNames
              :> Get '[JSON] DPlan.CurrentPlanRes
            :<|> Capture "planId" (Id DPlan.Plan)
              :> "subscribe"
              :> TokenAuth
+             :> QueryParam "serviceName" DPlan.ServiceNames
              :> Post '[JSON] DPlan.PlanSubscribeRes
            :<|> Capture "planId" (Id DPlan.Plan)
              :> "select"
+             :> QueryParam "serviceName" DPlan.ServiceNames
              :> TokenAuth
              :> Put '[JSON] APISuccess
+           :<|> "services"
+             :> TokenAuth
+             :> Get '[JSON] DPlan.ServicesEntity
        )
 
 handler :: FlowServer API
@@ -69,29 +78,33 @@ handler =
     :<|> currentPlan
     :<|> planSubscribe
     :<|> planSelect
+    :<|> planServiceLists
 
-planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.VehicleVariant -> FlowHandler DPlan.PlanListAPIRes
-planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION mbLimit mbOffset
+planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.VehicleVariant -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanListAPIRes
+planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset vehicleVariant mbServiceName = withFlowHandlerAPI $ DPlan.planList (driverId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) mbLimit mbOffset vehicleVariant
 
-planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planSuspend = withFlowHandlerAPI . DPlan.planSuspend DPlan.YATRI_SUBSCRIPTION False
+planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler APISuccess
+planSuspend (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ DPlan.planSuspend (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) False (driverId, merchantId, merchantOpCityId)
 
-planResume :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planResume = withFlowHandlerAPI . DPlan.planResume DPlan.YATRI_SUBSCRIPTION
+planResume :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler APISuccess
+planResume (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
 
-currentPlan :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.CurrentPlanRes
-currentPlan = withFlowHandlerAPI . DPlan.currentPlan DPlan.YATRI_SUBSCRIPTION
+currentPlan :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.CurrentPlanRes
+currentPlan (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ DPlan.currentPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
 
-planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.PlanSubscribeRes
-planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ do
+planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanSubscribeRes
+planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ do
   driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan DPlan.YATRI_SUBSCRIPTION personId
+  autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) personId
   if autoPayStatus == Just DI.SUSPENDED
     then do
-      void $ DPlan.planResume DPlan.YATRI_SUBSCRIPTION (personId, merchantId, merchantOpCityId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing Nothing
+      void $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (personId, merchantId, merchantOpCityId)
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) Nothing Nothing
       return $ DPlan.PlanSubscribeRes {..}
-    else do DPlan.planSubscribe DPlan.YATRI_SUBSCRIPTION planId (False, Nothing) (personId, merchantId, merchantOpCityId) driverInfo DPlan.NoData
+    else do DPlan.planSubscribe (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (False, Nothing) (personId, merchantId, merchantOpCityId) driverInfo DPlan.NoData
 
-planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planSelect planId = withFlowHandlerAPI . DPlan.planSwitch DPlan.YATRI_SUBSCRIPTION planId
+planSelect :: Id DPlan.Plan -> Maybe DPlan.ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
+planSelect planId mbServiceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DPlan.planSwitch (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (personId, merchantId, merchantOpCityId)
+
+planServiceLists :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.ServicesEntity
+planServiceLists = withFlowHandlerAPI . DPlan.planServiceLists

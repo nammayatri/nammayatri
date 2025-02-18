@@ -352,7 +352,7 @@ notifyOnRideCompleted booking ride otherParties = do
       ]
   fork "Create Post ride safety job" $ do
     safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
-    riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
     when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
       let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
@@ -838,7 +838,7 @@ notifyRideStartToEmergencyContacts ::
   m ()
 notifyRideStartToEmergencyContacts booking ride = do
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow rider.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   personENList <- QPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
   let followingContacts = filter (\contact -> checkSafetySettingConstraint contact.shareTripWithEmergencyContactOption riderConfig now) personENList

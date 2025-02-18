@@ -70,3 +70,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_multi_modal_s
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_first_pickup_route text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_multimodal_walk_distance text  default 'OSRM';

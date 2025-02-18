@@ -285,7 +285,7 @@ const nammaYatriConfig = function () {
     ]
     , "estimateAndQuoteConfig":
     {
-      "variantTypes": [["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"]]
+      "variantTypes": [["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"], ["EV_AUTO_RICKSHAW"]]
       , "variantOrder": ["AUTO_RICKSHAW", "BOOK_ANY"]
       , "variantInfo": {
         "hatchback": {
@@ -318,6 +318,11 @@ const nammaYatriConfig = function () {
           "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
         "bookAny": {
           "name": "Book Any",
           "image": "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
@@ -337,6 +342,31 @@ const nammaYatriConfig = function () {
             "name" : "2 Wheeler",
             "image" : "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
             "leftViewImage" : "ny_ic_bike_left_side,"
+          },
+          "ambulanceTaxi" : {
+            "name" : "Ambulance Taxi",
+            "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+          },
+          "ambulanceTaxiOxy" : {
+            "name" : "Ambulance Taxi with Oxygen",
+            "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+          },
+          "ambulanceAc" : {
+            "name" : "Ambulance AC",
+            "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+          },
+          "ambulanceAcOxy" : {
+            "name" : "Ambulance AC with Oxygen",
+            "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+          },
+          "ambulanceVentilator" : {
+            "name" : "Ambulance with Ventilator",
+            "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+            "leftViewImage" : "ny_ic_ambulance_ventilator,"
           }
       }
       , "enableOnlyAuto": true
@@ -627,8 +657,8 @@ const odishaYatriConfig = function () {
       }
     ]
     , "estimateAndQuoteConfig" : 
-      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
+      { "variantTypes" : [["AUTO_RICKSHAW"], ["SUV"], ["SEDAN", "TAXI_PLUS"], ["HATCHBACK"], ["TAXI"], ["BOOK_ANY"], ["BIKE"],["SUV_PLUS"], ["AMBULANCE_VENTILATOR"],["AMBULANCE_AC_OXY"], ["AMBULANCE_AC"],["AMBULANCE_TAXI_OXY"] ,["AMBULANCE_TAXI"]]
+      , "variantOrder" : ["BIKE", "BOOK_ANY", "HATCHBACK", "TAXI", "SEDAN", "TAXI_PLUS", "SUV" , "SUV_PLUS","AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI"]
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
@@ -660,6 +690,11 @@ const odishaYatriConfig = function () {
           "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
         "bookAny" : {
           "name" : "Book Any",
           "image" : "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
@@ -674,6 +709,31 @@ const odishaYatriConfig = function () {
           "name" : "XL Plus",
           "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
           "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
+        },
+        "ambulanceTaxi" : {
+          "name" : "Ambulance Taxi",
+          "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+          "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+        },
+        "ambulanceTaxiOxy" : {
+          "name" : "Ambulance Taxi with Oxygen",
+          "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+          "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+        },
+        "ambulanceAc" : {
+          "name" : "Ambulance AC",
+          "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+          "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+        },
+        "ambulanceAcOxy" : {
+          "name" : "Ambulance AC with Oxygen",
+          "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+          "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+        },
+        "ambulanceVentilator" : {
+          "name" : "Ambulance with Ventilator",
+          "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+          "leftViewImage" : "ny_ic_ambulance_ventilator,"
         }
       }
       , "enableOnlyAuto" : true
@@ -997,6 +1057,11 @@ const manaYatriConfig = function () {
           "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
           "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
         "bookAny": {
           "name": "Book Any",
           "image": "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
@@ -1011,6 +1076,31 @@ const manaYatriConfig = function () {
           "name": "XL Plus",
           "image": "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
           "leftViewImage": "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
+        },
+        "ambulanceTaxi" : {
+          "name" : "Ambulance Taxi",
+          "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+          "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+        },
+        "ambulanceTaxiOxy" : {
+          "name" : "Ambulance Taxi with Oxygen",
+          "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+          "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+        },
+        "ambulanceAc" : {
+          "name" : "Ambulance AC",
+          "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+          "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+        },
+        "ambulanceAcOxy" : {
+          "name" : "Ambulance AC with Oxygen",
+          "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+          "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+        },
+        "ambulanceVentilator" : {
+          "name" : "Ambulance with Ventilator",
+          "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+          "leftViewImage" : "ny_ic_ambulance_ventilator,"
         }
       }
       , "enableOnlyAuto": true

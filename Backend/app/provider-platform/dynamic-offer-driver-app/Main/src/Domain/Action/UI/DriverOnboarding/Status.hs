@@ -25,13 +25,13 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Control.Monad.Extra as Extra
-import Data.List (intersect)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
+import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -56,10 +56,12 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
+import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import Storage.Queries.Person as Person
@@ -147,8 +149,8 @@ data RCDetails = RCDetails
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Flow StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory = do
   -- multipleRC flag is temporary to support backward compatibility
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -228,13 +230,15 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
 
   let processedVehicleDocuments = processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
   inprogressVehicleDocuments <- do
-    inprogressVehicle <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
-    case inprogressVehicle of
-      Just verificationReq -> do
-        registrationNoEither <- try @_ @SomeException (decrypt verificationReq.documentNumber)
+    inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
+    inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
+    let mbVerificationReqRecord = getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
+    case mbVerificationReqRecord of
+      Just verificationReqRecord -> do
+        registrationNoEither <- try @_ @SomeException (decrypt verificationReqRecord.documentNumber)
         case registrationNoEither of
           Left err -> do
-            logError $ "Error while decrypting document number: " <> (verificationReq.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
+            logError $ "Error while decrypting document number: " <> (verificationReqRecord.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
             return []
           Right registrationNo -> do
             rcNoEnc <- encrypt registrationNo
@@ -253,33 +257,31 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
                 return
                   [ VehicleDocumentItem
                       { registrationNo,
-                        userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReq.vehicleCategory,
+                        userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory,
                         verifiedVehicleCategory = Nothing,
                         isVerified = False,
                         isActive = False,
                         vehicleModel = Nothing,
                         documents,
-                        dateOfUpload = verificationReq.createdAt
+                        dateOfUpload = verificationReqRecord.createdAt
                       }
                   ]
       Nothing -> return []
 
   let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
+
+  whenJust (onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory))) $ \vehicleCategory -> do
+    documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
+    let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
+    when (null mandatoryVehicleDocumentVerificationConfigs) $ do
+      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+      when allDriverDocsVerified $ do
+        enableDriver merchantOpCityId personId mDL
+        whenJust onboardingVehicleCategory $ \category -> do
+          DIIQuery.updateOnboardingVehicleCategory (Just category) personId
+
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
-  vehicleDocuments <-
-    case mDL >>= (.vehicleCategory) of
-      Just vehicleCategory -> do
-        documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
-        let vehicleDocumentVerificationConfigs = vehicleDocumentTypes `intersect` ((.documentType) <$> documentVerificationConfigs)
-        if null vehicleDocumentVerificationConfigs
-          then do
-            allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
-            when allDriverDocsVerified $ do
-              enableDriver merchantOpCityId personId mDL
-              DIQuery.updateOnboardingVehicleCategory (Just vehicleCategory) personId
-            return []
-          else getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
-      _ -> getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
+  vehicleDocuments <- getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -519,12 +521,14 @@ checkIfImageUploadedOrInvalidated docType driverId = do
 
 checkIfUnderProgress :: DVC.DocumentType -> Id SP.Person -> Int -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfUnderProgress docType driverId onboardingTryLimit = do
-  mbVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
-  case mbVerificationReq of
-    Just verificationReq -> do
-      if verificationReq.status == "pending"
+  mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+  mbVerificationReqHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+  let mbVerificationReqRecord = getLatestVerificationRecord mbVerificationReqIdfy mbVerificationReqHV
+  case mbVerificationReqRecord of
+    Just verificationReqRecord -> do
+      if verificationReqRecord.status == "pending" || verificationReqRecord.status == "source_down_retrying"
         then return (PENDING, Nothing, Nothing)
-        else return (FAILED, verificationReq.idfyResponse, Nothing)
+        else return (FAILED, verificationReqRecord.verificaitonResponse, Nothing)
     Nothing -> do
       images <- IQuery.findRecentByPersonIdAndImageType driverId docType
       handleImages images
@@ -570,6 +574,7 @@ documentStatusMessage status mbReason docType mbVerificationUrl language = do
           | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
           | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
           | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+          | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
           | otherwise -> toVerificationMessage Other language
         Nothing -> toVerificationMessage Other language
 
@@ -652,20 +657,22 @@ verificationStatusCheck status language img = do
 
 checkIfInVerification :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
 checkIfInVerification driverId _merchantOpCityId onboardingTryLimit docType language = do
-  verificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+  idfyVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+  hvVerificationReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+  let mbVerificationReqRecord = getLatestVerificationRecord idfyVerificationReq hvVerificationReq
   images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-  verificationStatusWithMessage onboardingTryLimit (length images) verificationReq language
+  verificationStatusWithMessage onboardingTryLimit (length images) mbVerificationReqRecord language
 
-verificationStatusWithMessage :: Int -> Int -> Maybe IV.IdfyVerification -> Language -> Flow (ResponseStatus, Text)
-verificationStatusWithMessage onboardingTryLimit imagesNum verificationReq language =
-  case verificationReq of
+verificationStatusWithMessage :: Int -> Int -> Maybe VerificationReqRecord -> Language -> Flow (ResponseStatus, Text)
+verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqRecord language =
+  case mbVerificationReqRecord of
     Just req -> do
-      if req.status == "pending"
+      if req.status == "pending" || req.status == "source_down_retrying"
         then do
           msg <- toVerificationMessage VerificationInProgress language
           return (PENDING, msg)
         else do
-          message <- getMessageFromResponse language req.idfyResponse
+          message <- getMessageFromResponse language req.verificaitonResponse
           return (FAILED, message)
     Nothing -> do
       if imagesNum > onboardingTryLimit
@@ -684,6 +691,7 @@ getMessageFromResponse language response = do
       | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
       | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
       | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+      | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
       | otherwise -> toVerificationMessage Other language
     Nothing -> toVerificationMessage Other language
 
@@ -709,3 +717,11 @@ toVerificationMessage msg lang = do
   case errorTranslations of
     Just errorTranslation -> return $ errorTranslation.message
     Nothing -> return "Something went wrong"
+
+getLatestVerificationRecord :: Maybe IV.IdfyVerification -> Maybe HV.HyperVergeVerification -> Maybe VerificationReqRecord
+getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
+  case (mbIdfyVerificationReq <&> (.createdAt), mbHvVerificationReq <&> (.createdAt)) of
+    (Just idfyCreatedAt, Just hvCreatedAt) -> if idfyCreatedAt > hvCreatedAt then makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq else makeHVVerificationReqRecord <$> mbHvVerificationReq
+    (Nothing, Just _) -> makeHVVerificationReqRecord <$> mbHvVerificationReq
+    (Just _, Nothing) -> makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
+    (Nothing, Nothing) -> Nothing

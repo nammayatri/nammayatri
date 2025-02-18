@@ -17,6 +17,7 @@ module Domain.Action.Internal.Ride where
 import qualified AWS.S3 as S3
 import qualified Data.Text as T
 import Domain.Types.Ride
+import Domain.Utils
 import Environment
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions
@@ -40,7 +41,3 @@ getDeliveryImage rideId apiKey = do
   mediaFile <- QMF.findById latestDeliveryFileId >>= fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)
   mediaFilePath <- mediaFile.s3FilePath & fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)
   S3.get $ T.unpack mediaFilePath
-  where
-    safeLast [] = Nothing
-    safeLast [x] = Just x
-    safeLast (_ : xs) = safeLast xs

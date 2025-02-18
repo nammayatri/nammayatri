@@ -56,6 +56,9 @@ findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq pers
 findLatestSearchRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe SearchRequest)
 findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
 
+findLastSearchRequestInKV :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe SearchRequest)
+findLastSearchRequestInKV (Id riderId) = findAllFromKvRedis [Se.Is BeamSR.riderId $ Se.Eq riderId] (Just $ Se.Desc BeamSR.createdAt) <&> listToMaybe
+
 updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Price -> Maybe Payment.PaymentMethodId -> m ()
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId =
   updateOneWithKV
@@ -105,4 +108,10 @@ updateDisability :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Te
 updateDisability (Id searchRequestId) disability = do
   updateOneWithKV
     [Se.Set BeamSR.disabilityTag disability]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Bool -> m ()
+updateIsCancelled (Id searchRequestId) isDeleted = do
+  updateOneWithKV
+    [Se.Set BeamSR.isDeleted isDeleted]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]

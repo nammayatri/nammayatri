@@ -33,6 +33,7 @@ data VehicleCategory
   | CAB
   | MOTORCYCLE
   | METRO
+  | SUBWAY
   | BUS
   | AMBULANCE
   | TWO_WHEELER

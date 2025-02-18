@@ -28,6 +28,7 @@ data Action
   | IncreaseViewCount
   | NoAction
   | YoutubeVideoStatus String
+  | ShareMessage
 
 
 fetchTitleAndUrl :: Int -> String -> Array String

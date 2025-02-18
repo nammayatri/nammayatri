@@ -1609,6 +1609,7 @@ newtype Keymap
   , remove_eyewere :: String
   , image_validation_exceed_limit :: String
   , parking_charges_included :: String -> String
+  , invoice_generated_from_driver_to_rider :: String
   , included :: String
   , db_check_and_name_match_failed :: String
   , complete_your_profile :: String
@@ -1726,6 +1727,7 @@ newtype Keymap
   , your_ride_starts_in :: String
   , away :: String
   , intercity :: String
+  , local :: String
   , intercity_return :: String
   , rental :: String
   , regular :: String
@@ -1798,6 +1800,10 @@ newtype Keymap
   , search :: String
   , bus__ :: String 
   , driver_unsubscribed :: String
+  , canceling_this_booking_may_affect_the_emergency_medical :: String
+  , drivers_are_permitted_to_cancel_ambulance_bookings :: String
+  , payment_under_maintenance :: String
+  , payments_temporarily_unavailable :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6571,6 +6577,9 @@ image_validation_exceed_limit = a
 parking_charges_included :: Proxy "parking_charges_included"
 parking_charges_included = a
 
+invoice_generated_from_driver_to_rider :: Proxy "invoice_generated_from_driver_to_rider"
+invoice_generated_from_driver_to_rider = a
+
 included :: Proxy "included"
 included = a
 
@@ -6919,6 +6928,9 @@ away = a
 intercity :: Proxy "intercity"
 intercity = a
 
+local :: Proxy "local"
+local = a
+
 intercity_return :: Proxy "intercity_return"
 intercity_return = a
 
@@ -7140,3 +7152,15 @@ bus__ = Proxy
 
 driver_unsubscribed :: Proxy "driver_unsubscribed"
 driver_unsubscribed = Proxy
+
+drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
+drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
+
+canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
+canceling_this_booking_may_affect_the_emergency_medical = Proxy
+
+payment_under_maintenance :: Proxy "payment_under_maintenance"
+payment_under_maintenance = Proxy
+
+payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
+payments_temporarily_unavailable = Proxy

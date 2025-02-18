@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.InvoiceExtra where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)

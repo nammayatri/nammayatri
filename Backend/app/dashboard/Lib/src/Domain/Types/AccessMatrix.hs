@@ -115,7 +115,7 @@ instance Text.Read.Read UserActionTypeWrapper where
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
 instance FromJSON UserActionTypeWrapper where
-  parseJSON = A.withText "uerActionType" $ \str -> do
+  parseJSON = A.withText "userActionType" $ \str -> do
     case Text.Read.readEither @UserActionTypeWrapper (T.unpack str) of
       Left _err -> fail "Could not parse UserActionType"
       Right uat -> pure uat

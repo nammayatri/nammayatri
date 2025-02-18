@@ -60,3 +60,8 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN listing_priority integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN allow_strike_off boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN product_ownership_amount double precision ;

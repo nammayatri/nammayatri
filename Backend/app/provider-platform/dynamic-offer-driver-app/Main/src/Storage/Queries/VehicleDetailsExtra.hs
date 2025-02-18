@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.VehicleDetailsExtra where
 
 import Domain.Types.VehicleDetails

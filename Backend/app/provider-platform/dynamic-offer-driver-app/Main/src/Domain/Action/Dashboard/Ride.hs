@@ -357,7 +357,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         rideCreatedAt = ride.createdAt,
         rideStatus = mkCommonRideStatus ride.status,
         roundTrip = booking.roundTrip,
-        deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId
+        deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId,
+        estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime)
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
@@ -638,10 +639,8 @@ makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) =
 makeFareParam (DFP.RentalDetails DFP.FParamsRentalDetails {..}) =
   Common.RentalDetails
     Common.FParamsRentalDetails
-      { timeBasedFare = roundToIntegral timeBasedFare,
-        distBasedFare = roundToIntegral distBasedFare,
-        timeBasedFareWithCurrency = PriceAPIEntity timeBasedFare currency,
-        distBasedFareWithCurrency = PriceAPIEntity distBasedFare currency,
+      { timeFare = PriceAPIEntity timeBasedFare currency,
+        distanceFare = PriceAPIEntity distBasedFare currency,
         deadKmFare = PriceAPIEntity deadKmFare currency,
         extraDistanceWithUnit = convertMetersToDistance distanceUnit extraDistance,
         ..

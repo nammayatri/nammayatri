@@ -118,7 +118,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
-      mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
+      mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview) (mbDriverPlan >>= (.vehicleCategory))
       let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan <&> (.vehicleCategory)) == Just driverFee.vehicleCategory)
       mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
       let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
@@ -391,14 +391,17 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
       --- here we are only finding siblings of that particular city due to disablement of city based fee switch we need to do nub as duplicate entries can be there ----
       driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName (map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings) True
       return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ nubBy (\x y -> x.id == y.id) $ driverFeeElderSiblings <> driverFeeRestSiblings
-    YATRI_RENTAL -> do
+    YATRI_RENTAL -> generateDriverFee now enableCityBasedFeeSwitch
+    DASHCAM_RENTAL _ -> generateDriverFee now enableCityBasedFeeSwitch
+  where
+    generateDriverFee now enableCityBasedFeeSwitch = do
       when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")
       let mbStartTime = Just startTime
           mbEndTime = Just endTime
       mbtoCreateDriverFeeForService <- toCreateDriverFeeForService serviceName merchantOperatingCityId
       if fromMaybe True mbtoCreateDriverFeeForService
         then do
-          driverEligibleForRentals <- findAllDriversEligibleForService serviceName merchantId merchantOperatingCityId
+          driverEligibleForRentals <- findAllDriversEligibleForService serviceName merchantId merchantOperatingCityId endTime (fromMaybe 0 transporterConfig.driverFeeCalculatorBatchSize)
           driverFees <-
             mapMaybeM
               ( \dPlan -> do
@@ -407,6 +410,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
                     then do
                       currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
                       driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 currency transporterConfig Nothing False Nothing (Just subsConfig)
+                      updateLastBillGeneratedAt (cast dPlan.driverId) serviceName endTime
                       QDF.create driverFee
                       return $ Just driverFee
                     else return Nothing

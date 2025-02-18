@@ -5,6 +5,7 @@
 module Storage.Queries.TripTransaction (module Storage.Queries.TripTransaction, module ReExport) where
 
 import qualified Data.Text
+import qualified Domain.Types.ApprovalRequest
 import qualified Domain.Types.Person
 import qualified Domain.Types.TripTransaction
 import Kernel.Beam.Functions
@@ -31,32 +32,46 @@ findAllTripTransactionByDriverId driverId = do findAllWithKV [Se.Is Beam.driverI
 findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m (Maybe Domain.Types.TripTransaction.TripTransaction))
 findByTransactionId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateOnStart ::
+updateEndRideApprovalRequestId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Data.Text.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Domain.Types.TripTransaction.TripStatus -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
-updateOnStart routeCode startLocation status id = do
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest) -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+updateEndRideApprovalRequestId endRideApprovalRequestId id = do
   _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.routeCode routeCode,
-      Se.Set Beam.startLocationLat (Kernel.Prelude.fmap (.lat) startLocation),
-      Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),
-      Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.endRideApprovalRequestId (Kernel.Types.Id.getId <$> endRideApprovalRequestId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatus ::
+updateOnEnd ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.TripTransaction.TripStatus -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
-updateStatus status endLocation id = do
+  (Domain.Types.TripTransaction.TripStatus -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+updateOnEnd status endLocation tripEndTime tripTerminationSource id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.status status,
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
       Se.Set Beam.endLocationLon (Kernel.Prelude.fmap (.lon) endLocation),
+      Se.Set Beam.tripEndTime tripEndTime,
+      Se.Set Beam.tripTerminationSource tripTerminationSource,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateOnStart ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Domain.Types.TripTransaction.TripStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+updateOnStart tripCode startedNearStopCode startLocation status tripStartTime id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.tripCode tripCode,
+      Se.Set Beam.startedNearStopCode startedNearStopCode,
+      Se.Set Beam.startLocationLat (Kernel.Prelude.fmap (.lat) startLocation),
+      Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),
+      Se.Set Beam.status status,
+      Se.Set Beam.tripStartTime tripStartTime,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TripTransaction.TripStatus -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m (Maybe Domain.Types.TripTransaction.TripTransaction))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -66,24 +81,29 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviationCount deviationCount,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
       Se.Set Beam.endLocationLon (Kernel.Prelude.fmap (.lon) endLocation),
+      Se.Set Beam.endRideApprovalRequestId (Kernel.Types.Id.getId <$> endRideApprovalRequestId),
       Se.Set Beam.endStopCode endStopCode,
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.isCurrentlyDeviated isCurrentlyDeviated,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.roundRouteCode roundRouteCode,
       Se.Set Beam.routeCode routeCode,
-      Se.Set Beam.sequenceNumber sequenceNumber,
       Se.Set Beam.startLocationLat (Kernel.Prelude.fmap (.lat) startLocation),
       Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),
       Se.Set Beam.startedNearStopCode startedNearStopCode,
       Se.Set Beam.status status,
       Se.Set Beam.tripCode tripCode,
+      Se.Set Beam.tripEndTime tripEndTime,
+      Se.Set Beam.tripStartTime tripStartTime,
+      Se.Set Beam.tripTerminationSource tripTerminationSource,
+      Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNumber vehicleNumber,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.vehicleServiceTierType vehicleServiceTierType
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

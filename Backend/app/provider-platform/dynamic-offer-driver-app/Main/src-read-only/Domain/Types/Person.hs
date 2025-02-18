@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Person where
@@ -17,6 +16,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.TH
+import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
@@ -26,11 +26,12 @@ data PersonE e = Person
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
+    clientId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceToken :: Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken,
-    driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    driverTag :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     faceImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     firstName :: Kernel.Prelude.Text,
@@ -78,6 +79,7 @@ instance EncryptedItem Person where
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
           clientDevice = clientDevice entity,
+          clientId = clientId entity,
           clientSdkVersion = clientSdkVersion entity,
           createdAt = createdAt entity,
           description = description entity,
@@ -122,6 +124,7 @@ instance EncryptedItem Person where
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
             clientDevice = clientDevice entity,
+            clientId = clientId entity,
             clientSdkVersion = clientSdkVersion entity,
             createdAt = createdAt entity,
             description = description entity,

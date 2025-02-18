@@ -40,7 +40,7 @@ packages:
   lib/producer
   lib/utils
   lib/external
-
+  lib/webhook
 -- ## 6 parallel jobs by default.
 --
 -- # since we now use "-j4" in "ghc-options" for all packages,

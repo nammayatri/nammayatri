@@ -502,6 +502,8 @@
       "ny_ic_transaction_pending" : true,
       "ny_ic_two_more_rides" : true,
       "ny_ic_two_rides_completed" : true,
+      "ny_ic_two_rides_completed_v3" : true,
+      "ny_ic_unavailable" : true,
       "ny_ic_up_arrow_white" : true,
       "ny_ic_upi_autopay" : true,
       "ny_ic_upi_logo" : true,

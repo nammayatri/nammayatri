@@ -81,7 +81,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 import Tools.Maps as Maps
-import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 isBatchNumExceedLimit ::
@@ -362,7 +361,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion
+            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum
             Intelligent -> do
               pool <- makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
               return $ (Nothing, pool)
@@ -515,7 +514,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
               Tagged -> do
-                (_, taggedPool) <- makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags (mbVersion <|> searchReq.poolingLogicVersion) -- TODO: Fix isOnRidePool flag
+                (_, taggedPool) <- makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags (mbVersion <|> searchReq.poolingLogicVersion) batchNum -- TODO: Fix isOnRidePool flag
                 return taggedPool
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
@@ -582,15 +581,16 @@ makeTaggedDriverPool ::
   [DriverPoolWithActualDistResult] ->
   Int ->
   Bool ->
-  Maybe [Text] ->
+  Maybe [LYT.TagNameValue] ->
   Maybe Int ->
+  PoolBatchNum ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
-makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion = do
+makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
-  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool}
+  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool, batchNum}
   resp <- LYTU.runLogics allLogics taggedDriverPoolInput
   sortedPool <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
@@ -601,10 +601,10 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   return (mbVersion, take batchSize sortedPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
-      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
     updateDriverPoolResult DriverPoolResult {..} =
-      DriverPoolResult {customerTags = Just $ maybe A.emptyObject convertTags customerNammaTags, ..}
+      DriverPoolResult {customerTags = Just $ maybe A.emptyObject LYTU.convertTags customerNammaTags, ..}
 
     updateVersionInSearchReq mbVersion =
       whenJust mbVersion $ \_ -> do

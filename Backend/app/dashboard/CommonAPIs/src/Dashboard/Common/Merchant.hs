@@ -42,7 +42,6 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -277,14 +276,17 @@ getSmsServiceFromReq = \case
   GupShupConfigUpdateReq _ -> SMS.GupShup
 
 buildSmsServiceConfig ::
-  EncFlow m r =>
+  ( EncFlow m r,
+    MonadFlow m
+  ) =>
   SmsServiceConfigUpdateReq ->
   m SMS.SmsServiceConfig
 buildSmsServiceConfig = \case
   MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq {..} -> do
     username' <- encrypt username
     password' <- encrypt password
-    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', ..}
+    token' <- encrypt token
+    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', token = token', ..}
   ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq {..} -> do
     apiKey' <- encrypt apiKey
     apiToken' <- encrypt apiToken
@@ -363,7 +365,8 @@ instance HideSecrets GupShupCfgUpdateReq where
 data MyValueFirstCfgUpdateReq = MyValueFirstCfgUpdateReq
   { username :: Text,
     password :: Text,
-    url :: BaseUrl
+    url :: BaseUrl,
+    token :: Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -848,25 +851,3 @@ data PriorityListWrapperType = PriorityListWrapperType
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
----- UpsertTicketConfig ----------------------------------
-
-newtype UpsertTicketConfigReq = UpsertTicketConfigReq {file :: Kernel.Prelude.FilePath}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets UpsertTicketConfigReq where
-  hideSecrets = Kernel.Prelude.identity
-
-data UpsertTicketConfigResp = UpsertTicketConfigResp {unprocessedTicketConfig :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance FromMultipart Tmp UpsertTicketConfigReq where
-  fromMultipart form = do
-    UpsertTicketConfigReq
-      <$> fmap fdPayload (lookupFile "file" form)
-
-instance ToMultipart Tmp UpsertTicketConfigReq where
-  toMultipart form =
-    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]

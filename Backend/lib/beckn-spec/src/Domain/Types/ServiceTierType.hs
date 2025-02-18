@@ -48,6 +48,8 @@ data ServiceTierType
   | DELIVERY_LIGHT_GOODS_VEHICLE
   | BUS_NON_AC
   | BUS_AC
+  | HERITAGE_CAB
+  | EV_AUTO_RICKSHAW
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 $(mkHttpInstancesForEnum ''ServiceTierType)

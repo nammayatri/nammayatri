@@ -17,6 +17,10 @@ imports:
   DbHash: Kernel.External.Encryption
   TripCategory: Domain.Types.Trip
   Person: Domain.Types.Person
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Value: Data.Aeson
+  TagNameValue: Lib.Yudhishthira.Types
+  ParcelType: Domain.Types.DeliveryDetails
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -63,14 +67,17 @@ SearchRequest:
     roundTrip: Maybe Bool
     isAdvanceBookingEnabled: Bool
     isDashboardRequest: Bool
-    customerNammaTags: "Maybe [Text]"
-    searchTags: "Maybe [Text]"
+    customerNammaTags: "Maybe [TagNameValue]"
+    searchTags: "Maybe [TagNameValue]"
     startTime: UTCTime
     createdAt: UTCTime
     tripCategory: Maybe TripCategory
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
     driverIdForSearch: Maybe (Id Person)
+    configInExperimentVersions: "[ConfigVersionMap]"
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
 
   beamType:
     startTime: Maybe UTCTime
@@ -82,6 +89,9 @@ SearchRequest:
     isAdvanceBookingEnabled: Maybe Bool
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
+    configInExperimentVersions: Maybe Value
+    customerNammaTags: "Maybe [Text]"
+    searchTags: "Maybe [Text]"
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -106,6 +116,9 @@ SearchRequest:
     isAdvanceBookingEnabled: Just isAdvanceBookingEnabled|E
     distanceUnit: Kernel.Prelude.Just|I
     isDashboardRequest: Just isDashboardRequest|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
 
   intermediateTransformers:
     fromTType:
@@ -128,6 +141,10 @@ SearchRequest:
     isAdvanceBookingEnabled: fromMaybe False isAdvanceBookingEnabled|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     isDashboardRequest: fromMaybe False isDashboardRequest|E
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+    searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+
 
   constraints:
     id: PrimaryKey
@@ -159,6 +176,7 @@ SearchRequest:
     messageId: character varying(36)
     pickupZoneGateId: character varying(36)
     transactionId: character varying(36)
+    configInExperimentVersions: "json"
 
   default:
     autoAssignEnabled: "false"
@@ -196,6 +214,10 @@ SearchRequest:
     updatePoolingConfigVersion:
       kvFunction: updateWithKV
       params: [poolingConfigVersion]
+      where: id
+    updateParcelDetails:
+      kvFunction: updateWithKV
+      params: [parcelType, parcelQuantity]
       where: id
 
   extraOperations:

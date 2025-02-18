@@ -248,7 +248,7 @@ pendingVehicleOnly = false
 
 getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if any new vehicle category is introduced
 getCategoryFromVariant variant = case variant of
-  "AUTO_RICKSHAW" -> Just ST.AutoCategory
+  _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> Just ST.AutoCategory
   "BIKE" -> Just ST.BikeCategory
   _ | variant `DA.elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> Just ST.AmbulanceCategory
   _ -> Just ST.CarCategory
@@ -268,13 +268,23 @@ convertCoinsToCashPopupEndTime = "16:30:00"
 dayEndTime :: String
 dayEndTime = "23:59:59"
 
-serviceTierMapping :: String -> Maybe Boolean -> String
-serviceTierMapping tierName acRide = 
-  case acRide, tierName of
-    Just true, "AC Mini" -> "Mini"
-    Just false, "Non-AC Mini" -> "Mini"
-    _ , "DELIVERY_BIKE" -> "Delivery"
-    _ , _ -> tierName
+serviceTierMapping :: Boolean -> String -> Maybe Boolean -> String
+serviceTierMapping hideAcNonAc tierName acRide = 
+  case hideAcNonAc, acRide, tierName of
+    _ ,Just true, "AC Mini" -> "Mini"
+    _ , _ , "DELIVERY_BIKE" -> "Delivery"
+    false,Just true,"Ventilator" ->  "Ventilator"
+    false,Just false,"Non-AC ∙ O̶₂̶" -> "O̶2̶"
+    false,Just false,"Non-AC ∙ O₂" ->  "O₂"
+    false,Just true,"AC ∙ O̶₂̶" -> "O̶2̶"
+    false,Just true,"AC ∙ O₂" -> "O₂"
+    _ ,Just false, "Non-AC Mini" -> "Mini"
+    true,Just true,"Ventilator" ->  "Ventilator"
+    true,Just false,"Non-AC ∙ O̶₂̶" -> "Non-AC ∙ O̶₂̶"
+    true,Just false,"Non-AC ∙ O₂" ->  "Non-AC ∙ O₂"
+    true,Just true,"AC ∙ O̶₂̶" -> "AC ∙ O̶₂̶" 
+    true,Just true,"AC ∙ O₂" -> "AC ∙ O₂"
+    _ , _ , _ -> tierName
 
 defaultSliderDist :: Int
 defaultSliderDist = 4

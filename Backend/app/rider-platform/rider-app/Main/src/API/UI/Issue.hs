@@ -32,6 +32,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -48,7 +49,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
@@ -144,23 +145,34 @@ castMerchantById merchantId = do
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById personId = do
   person <- runInReplica $ QP.findById (cast personId)
-  return $ fmap castPerson person
-  where
-    castPerson person =
-      Common.Person
-        { id = cast person.id,
-          language = person.language,
-          firstName = person.firstName,
-          lastName = person.lastName,
-          middleName = person.middleName,
-          mobileNumber = person.mobileNumber,
-          merchantOperatingCityId = cast person.merchantOperatingCityId,
-          blocked = Just person.blocked
-        }
+  return $ mkPerson <$> person
+
+castPersonByMobileNumberAndMerchant :: Text -> DbHash -> Id Common.Merchant -> Flow (Maybe Common.Person)
+castPersonByMobileNumberAndMerchant mobileCountryCode numHash merchantId = do
+  mbPerson <- runInReplica $ QP.findByMobileNumberAndMerchantId mobileCountryCode numHash (cast merchantId)
+  return $ mkPerson <$> mbPerson
+
+mkPerson :: SP.Person -> Common.Person
+mkPerson person =
+  Common.Person
+    { id = cast person.id,
+      language = person.language,
+      firstName = person.firstName,
+      lastName = person.lastName,
+      middleName = person.middleName,
+      mobileNumber = person.mobileNumber,
+      merchantOperatingCityId = cast person.merchantOperatingCityId,
+      blocked = Just person.blocked
+    }
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId merchantId = do
   mbRide <- runInReplica $ QR.findById (cast rideId)
+  traverse (mkRide merchantId) mbRide
+
+castRideByRideShortId :: Id Common.Merchant -> ShortId Common.Ride -> Flow (Maybe Common.Ride)
+castRideByRideShortId merchantId (ShortId rideShortId) = do
+  mbRide <- runInReplica $ QR.findRideByRideShortId (ShortId rideShortId)
   traverse (mkRide merchantId) mbRide
 
 mkRide :: Id Common.Merchant -> DR.Ride -> Flow Common.Ride
@@ -215,7 +227,7 @@ castRideInfo merchantId _ rideId = do
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
           vehicleVariant = Just res.vehicleVariant,
-          vehicleServiceTier = res.vehicleServiceTierName,
+          vehicleServiceTierName = res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Nothing,
           merchantOperatingCityId = res.merchantOperatingCityId,
@@ -226,7 +238,8 @@ castRideInfo merchantId _ rideId = do
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
-          rideStatus = castRideStatus res.rideStatus
+          rideStatus = castRideStatus res.rideStatus,
+          mobileCountryCode = res.mobileCountryCode
         }
 
     castLocationAPIEntity ent =
@@ -291,7 +304,7 @@ reportIssue driverOfferBaseUrl driverOfferApiKey bppRideId issueReportType = do
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow MerchantConfig
 buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  riderConfig <- CQRC.findByMerchantOperatingCityId (cast merchantOpCityId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   return
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
