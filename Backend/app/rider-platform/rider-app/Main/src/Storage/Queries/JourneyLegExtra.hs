@@ -3,6 +3,7 @@
 
 module Storage.Queries.JourneyLegExtra where
 
+import Domain.Types.FRFSRouteDetails
 import Domain.Types.JourneyLeg
 import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.RouteDetails as RouteDetails
