@@ -60,7 +60,7 @@ findAllTransactionsByLimitOffset ::
 findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint = do
   let limitVal = fromMaybe 5 mbLimit
       offsetVal = fromMaybe 0 mbOffset
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

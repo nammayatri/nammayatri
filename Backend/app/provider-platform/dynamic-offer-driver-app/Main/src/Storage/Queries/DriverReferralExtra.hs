@@ -17,7 +17,7 @@ getLastRefferalCode ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
   m Integer
 getLastRefferalCode = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $

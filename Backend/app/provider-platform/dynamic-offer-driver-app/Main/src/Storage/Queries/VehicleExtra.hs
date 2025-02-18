@@ -97,7 +97,7 @@ findByAnyOf registrationNoM vehicleIdM =
 
 findAllByVariantRegNumMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Variant.VehicleVariant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id merchantId') = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   vehicles <-
     L.runDB dbConf $
       L.findRows $
