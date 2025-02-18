@@ -77,6 +77,8 @@ dependencies:
   - http-client
   - lens
   - servant
+  - servant-exceptions
+  - servant-exceptions-server
   - servant-client
   - servant-client-core
   - servant-server
