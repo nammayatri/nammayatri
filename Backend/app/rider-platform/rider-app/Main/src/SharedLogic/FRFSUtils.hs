@@ -433,3 +433,27 @@ trackVehicles personId merchantId routeCode = do
 
     stopPairRoutePointsKey :: Text -> Text
     stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
+
+getDiscountInfo :: Bool -> Maybe Int -> Maybe Int -> Price -> Int -> Int -> (Maybe Int, Maybe HighPrecMoney)
+getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price quantity ticketsBookedInEvent =
+  let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
+      maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
+   in if isEventOngoing
+        then
+          let perTicketCashback = min maxFreeTicketCashback price.amountInt.getMoney
+              discountedTickets = ((ticketsBookedInEvent + quantity) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
+              eventDiscountAmount = toHighPrecMoney $ discountedTickets * perTicketCashback
+           in (Just discountedTickets, Just eventDiscountAmount)
+        else (Nothing, Nothing)
+
+partnerOrgRiderId :: Id DP.Person
+partnerOrgRiderId = Id "partnerOrg_rider_id"
+
+partnerOrgBppItemId :: Text
+partnerOrgBppItemId = "partnerOrg_bpp_item_id"
+
+partnerOrgBppSubscriberId :: Text
+partnerOrgBppSubscriberId = "partnerOrg_bpp_subscriber_id"
+
+partnerOrgBppSubscriberUrl :: Text
+partnerOrgBppSubscriberUrl = "partnerOrg_bpp_subscriber_url"
