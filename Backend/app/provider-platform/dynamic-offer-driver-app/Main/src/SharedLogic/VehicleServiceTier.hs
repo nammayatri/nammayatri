@@ -16,6 +16,7 @@ module SharedLogic.VehicleServiceTier where
 
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Vehicle as DV
+import qualified Domain.Types.VehicleCategory as VC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 
@@ -28,8 +29,10 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehic
       let _seatingCapacityCheck = compareNumber vehicle.capacity vehicleServiceTier.seatingCapacity
           luggageCapacityCheck = compareNumber vehicle.luggageCapacity vehicleServiceTier.luggageCapacity
           airConditionedCheck =
-            (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
-              && (isNothing vehicleServiceTier.airConditionedThreshold || vehicle.airConditioned /= Just False)
+            (vehicleServiceTier.vehicleCategory == Just VC.AMBULANCE)
+              || ( (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
+                     && (isNothing vehicleServiceTier.airConditionedThreshold || vehicle.airConditioned /= Just False)
+                 )
           driverRatingCheck = compareNumber Nothing vehicleServiceTier.driverRating -- driverStats.rating (Fix this later, removed due to perf issues)
           vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
 
