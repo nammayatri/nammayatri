@@ -35,6 +35,7 @@ module Tools.Payment
     SplitType (..),
     mkSplitSettlementDetails,
     groupSumVendorSplits,
+    roundVendorFee,
   )
 where
 
@@ -222,13 +223,19 @@ $(mkHttpInstancesForEnum ''SplitType)
 data VendorSplitDetails = VendorSplitDetails {splitAmount :: HighPrecMoney, splitType :: SplitType, vendorId :: Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
+roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
+
+roundVendorFee :: VendorSplitDetails -> VendorSplitDetails
+roundVendorFee vf = vf {splitAmount = roundToTwoDecimalPlaces vf.splitAmount}
+
 mkSplitSettlementDetails :: HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
 mkSplitSettlementDetails totalAmount vendorFees = do
-  let sortedVendorFees = sortBy (compare `on` vendorId) vendorFees
+  let sortedVendorFees = sortBy (compare `on` vendorId) (roundVendorFee <$> vendorFees)
       groupedVendorFees = groupBy ((==) `on` vendorId) sortedVendorFees
       mbVendorSplits = map computeSplit groupedVendorFees
       vendorSplits = catMaybes mbVendorSplits
-  let totalVendorAmount = sum $ map (\Split {amount} -> amount) vendorSplits
+  let totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
       marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
   Just $
     SplitSettlementDetails
@@ -237,17 +244,16 @@ mkSplitSettlementDetails totalAmount vendorFees = do
         vendor = Vendor vendorSplits
       }
   where
-    roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
     computeSplit feesForVendor =
       case feesForVendor of
         [] -> Nothing
         (firstFee : _) ->
           Just $
             Split
-              { amount = sum $ map (\fee -> splitAmount fee) feesForVendor,
+              { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> splitAmount fee) feesForVendor,
                 merchantCommission = 0,
                 subMid = firstFee.vendorId
               }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
-groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))
+groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))
