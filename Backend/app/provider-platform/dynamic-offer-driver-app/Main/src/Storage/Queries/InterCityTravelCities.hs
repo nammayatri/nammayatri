@@ -47,7 +47,7 @@ updateByPrimaryKey (Domain.Types.InterCityTravelCities.InterCityTravelCities {..
 
 findInterCityAreasContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Domain.Types.InterCityTravelCities.InterCityTravelCities]
 findInterCityAreasContainingGps gps = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRows $

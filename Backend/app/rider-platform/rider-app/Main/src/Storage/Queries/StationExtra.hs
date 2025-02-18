@@ -17,7 +17,7 @@ import Storage.Queries.OrphanInstances.Station ()
 
 findAllMatchingStations :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> m [Station]
 findAllMatchingStations mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   stations <-
     L.runDB dbConf $
       L.findRows $
@@ -33,7 +33,7 @@ findAllMatchingStations mbSearchStr (Just limitVal) (Just offsetVal) (Id merchan
                 $ B.all_ (BeamCommon.station BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] stations)
 findAllMatchingStations mbSearchStr _ _ (Id merchantOperatingCityId') vehicle = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   stations <-
     L.runDB dbConf $
       L.findRows $

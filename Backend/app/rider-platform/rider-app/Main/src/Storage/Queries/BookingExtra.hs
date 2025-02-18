@@ -140,7 +140,7 @@ findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se
 
 findCountByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> m Int
 findCountByRiderIdAndStatus (Id personId) status = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -154,7 +154,7 @@ findCountByRiderIdAndStatus (Id personId) status = do
 
 findCountByRideIdStatusAndTime :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
