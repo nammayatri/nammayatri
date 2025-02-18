@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuote as Beam
 import Storage.Queries.FRFSQuoteExtra as ReExport
+import Storage.Queries.OrphanInstances.FRFSQuote
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuote.FRFSQuote -> m ())
 create = createWithKV
