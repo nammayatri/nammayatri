@@ -2785,7 +2785,7 @@ eval (ChooseYourRideAction ChooseYourRideController.SpecialZoneInfoTag) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.NoAction))) state = continueWithCmd state{data {triggerPatchCounter = state.data.triggerPatchCounter + 1}} [pure NoAction]
 
 eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value customerTipArrayWithValues)) state = do
-  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+  let
       tip = fromMaybe 0 (customerTipArrayWithValues !! index)
       customerTipArray = getTips customerTipArrayWithValues
       isZeroTipSelected = tip == value && value == 0
