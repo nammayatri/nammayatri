@@ -20,7 +20,7 @@ meterScreen = do
     SearchPlace input updatedState -> do
           modifyScreenState $ MeterScreenStateType (\meterScreen -> meterScreen)
           App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState)
-    GoToMeterMapScreen state -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_METER_MAP_FROM_METER state)
+    GoToMeterMapScreen state placeId -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_METER_MAP_FROM_METER state placeId)
     UpdatedState screenState saveToCurrLocs -> do
        modifyScreenState $ MeterScreenStateType (\meterScreen → screenState)
        App.BackT $ App.BackPoint <$> (pure $ RELOAD_STATE saveToCurrLocs)

@@ -3411,6 +3411,7 @@ type LocateOnMapProps = {
 }
 
 type MeterMapScreenData = {
+  rateCard :: Common.RateCard,
   listItem :: Maybe ListItem,
   searchString :: Maybe String,
   appConfig :: AppConfig,
@@ -3428,6 +3429,14 @@ type MeterMapScreenData = {
 }
 
 type MeterMapScreenProps = {
+  enableOtpModal :: Boolean,
+  enterOtpFocusIndex :: Int,
+  isCustomerNumberValid :: Boolean,
+  alternateMobileOtp :: String,
+  otpAttemptsExceeded :: Boolean,
+  otpIncorrect :: Boolean,
+  customerMobileNumber :: String,
+  showRateCard :: Boolean,
   locateOnMap :: Boolean,
   isRideServiceable :: Boolean,
   searchLocationModelProps :: SearchLocationModelProps,
