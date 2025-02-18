@@ -424,6 +424,9 @@ FRFSTicketBooking:
     findAllByJourneyId:
       kvFunction: findAllWithKV
       where: journeyId
+    findAByJourneyIdCond:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: journeyId
     updateOnInitDone:
       kvFunction: updateOneWithKV
       params: [journeyOnInitDone]

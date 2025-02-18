@@ -35,6 +35,7 @@ Journey:
     convenienceCost: Int
     status: JourneyStatus
     totalLegs: Int
+    isPaymentSuccess : Maybe Bool
 
   beamType:
     status: Maybe JourneyStatus
@@ -68,6 +69,10 @@ Journey:
     updateStatus:
         kvFunction: updateOneWithKV
         params: [status]
+        where: id
+    updatePaymentStatus:
+        kvFunction: updateOneWithKV
+        params: [isPaymentSuccess]
         where: id
 
   sqlType:
