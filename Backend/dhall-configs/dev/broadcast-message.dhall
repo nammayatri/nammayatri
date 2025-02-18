@@ -34,7 +34,6 @@ let hedisCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let hedisClusterCfg =
@@ -45,7 +44,6 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let consumerProperties =
@@ -79,8 +77,8 @@ in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , hedisMigrationStage = False
-    , cutOffHedisCluster = False
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = True
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig

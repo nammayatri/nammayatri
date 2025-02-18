@@ -10,7 +10,6 @@ let hcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let hccfg =
@@ -21,7 +20,6 @@ let hccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 in  { port = +8091
@@ -32,8 +30,8 @@ in  { port = +8091
     , hedisClusterCfg = hccfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
-    , hedisMigrationStage = False
-    , cutOffHedisCluster = False
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = True
     , statusWaitTimeSec = +25
     , callbackWaitTimeMilliSec = +500
     , loggerConfig =

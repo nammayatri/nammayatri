@@ -32,7 +32,6 @@ let hedisCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let hedisClusterCfg =
@@ -43,7 +42,6 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
@@ -106,7 +104,7 @@ in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , hedisMigrationStage = False
+    , hedisMigrationStage = True
     , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg

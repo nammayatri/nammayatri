@@ -10,7 +10,6 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let rccfg =
@@ -21,15 +20,14 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 in  { hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = False
-    , cutOffHedisCluster = False
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = True
     , port = +8015
     , metricsPort = +9998
     , selfId = "JUSPAY.BG.1"
