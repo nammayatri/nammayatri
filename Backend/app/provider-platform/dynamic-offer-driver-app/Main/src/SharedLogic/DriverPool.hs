@@ -635,7 +635,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
-    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, score = Nothing, ..}
+    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, ..}
 
     getRoutesForAllDrivers =
       mapM
@@ -676,7 +676,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = if ghrId.getId == "specialLocWarriorGoHomeId" then Nothing else Just ghrId,
           isForwardRequest = False,
-          previousDropGeoHash = Nothing
+          previousDropGeoHash = Nothing,
+          score = driverGoHomePoolWithActualDistance.score
         }
 
     makeDriverPoolResult QP.NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
@@ -684,7 +685,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         { distanceToPickup = distanceToDriver,
           serviceTier = serviceTier',
           customerTags = Nothing,
-          score = Nothing,
           ..
         }
 
@@ -751,7 +751,6 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           customerTags = Nothing,
-          score = Nothing,
           ..
         }
 
@@ -800,7 +799,8 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
-          previousDropGeoHash = Nothing
+          previousDropGeoHash = Nothing,
+          score = dpr.score
         }
 
     filterFunc threshold estDist distanceToPickup =
@@ -998,11 +998,10 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
         { lat = previousRideDropLat,
           lon = previousRideDropLon,
           customerTags = Nothing,
-          score = Nothing,
           ..
         }
     calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {customerTags = Nothing, score = Nothing, ..}
+      let temp = DriverPoolResult {customerTags = Nothing, ..}
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold
@@ -1017,7 +1016,7 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
               }
         else Nothing
     calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
-      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, score = Nothing, ..}) driverPoolCurrentlyOnRide
+      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
       let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {..} -> Just $ LatLong previousRideDropLat previousRideDropLon) driverPoolCurrentlyOnRide
       let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
       computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation
@@ -1084,7 +1083,8 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
-          previousDropGeoHash = prevRideDropGeoHash
+          previousDropGeoHash = prevRideDropGeoHash,
+          score = distDur.origin.score
         }
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
@@ -1137,7 +1137,8 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
-          previousDropGeoHash = prevRideDropGeoHash
+          previousDropGeoHash = prevRideDropGeoHash,
+          score = distDur.origin.score
         }
 
 refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult)
