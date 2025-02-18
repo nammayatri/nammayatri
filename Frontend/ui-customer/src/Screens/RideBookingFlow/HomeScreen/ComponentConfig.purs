@@ -623,7 +623,7 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
       popUpConfig'
   ST.TipsPopUp -> do
     let
-      tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+      tipConfig = if (DA.length state.props.tipViewProps.customerTipArrayWithValues) <= 0 then getTipConfig state.data.selectedEstimatesObject.vehicleVariant else {customerTipArray : state.props.tipViewProps.customerTipArray , customerTipArrayWithValues : state.props.tipViewProps.customerTipArrayWithValues}
 
       isTipEnabled = state.data.config.tipsEnabled && (DA.length tipConfig.customerTipArray) > 0
 
@@ -752,8 +752,8 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
     let
       tip = show (fromMaybe 0 (customerTipArrayWithValues DA.!! state.props.customerTip.tipActiveIndex))
     case (getLanguageLocale languageKey) of
-      "EN_US" -> getString SEARCH_AGAIN_WITH <> " +₹" <> tip <> " " <> getString TIP
-      _ -> "+₹" <> tip <> " " <> (getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
+      "EN_US" -> getString SEARCH_AGAIN_WITH <> " ₹" <> tip <> " " <> getString TIP
+      _ -> "₹" <> tip <> " " <> (getString TIP) <> " " <> getString SEARCH_AGAIN_WITH
 
 getBottomMargin :: Int
 getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
@@ -1381,7 +1381,6 @@ quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelSt
 quoteListModelViewState state =
   let
     vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
-    tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
     tipProps = if state.props.showBoostSearch then getTipViewProps state.props.tipViewProps state.data.boostSearchEstimate.vehicleVariant Nothing Nothing
                   else getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
@@ -1589,7 +1588,6 @@ menuButtonConfig state item =
 chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state =
   let
-    tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
     city = getValueToLocalStore CUSTOMER_LOCATION
     isIntercity = state.data.fareProductType == FPT.INTER_CITY
     startTimeUTC = if state.data.startTimeUTC == "" then Nothing else Just state.data.startTimeUTC
@@ -1613,7 +1611,7 @@ chooseYourRideConfig state =
       , tipForDriver = state.props.customerTip.tipForDriver
       , customerTipArray = tipProps.customerTipArray
       , customerTipArrayWithValues = tipProps.customerTipArrayWithValues
-      , enableTips = not isIntercity && state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
+      , enableTips = not isIntercity && state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipProps.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
       , currentEstimateHeight = state.props.currentEstimateHeight
       , fareProductType = state.data.fareProductType
       , showMultiProvider = state.data.iopState.showMultiProvider
