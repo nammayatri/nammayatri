@@ -112,6 +112,7 @@ import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
 import Tools.Error
+import qualified Tools.Payment as Payment
 
 ---------------------------------------------------------------------
 postMerchantUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantUpdateReq -> Flow APISuccess
@@ -1137,7 +1138,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
       priceAmount :: HighPrecMoney <- readCSVField idx row.priceAmount "Price Amount"
       pricingType :: PricingType <- readCSVField idx row.pricingType "Pricing Type"
       priceCurrency :: Currency <- readCSVField idx row.priceCurrency "Price Currency"
-      let vendorSplitDetails = cleanField row.vendorSplitDetails >>= JSON.decodeStrict . encodeUtf8
+      let vendorSplitDetails = (map Payment.roundVendorFee) <$> (cleanField row.vendorSplitDetails >>= JSON.decodeStrict . encodeUtf8)
           pricePerUnit = Price (round priceAmount) priceAmount priceCurrency
           mbPeakTimings = cleanField row.peakTimings
           svcPeopleCategoryId = peopleCategoryName <> separator <> svcCategoryId
