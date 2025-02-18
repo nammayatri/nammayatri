@@ -63,3 +63,18 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostNammaTagTagVerify","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_VERIFY' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'CREATE_NAMMA_TAG' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagConfigPilotGetVersion","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_VERSION' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'POST_RETRIEVE_VERSION' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagConfigPilotGetConfig","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_CONFIG","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'POST_RETRIEVE_CONFIG' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagConfigPilotCreateUiConfig","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_UI_CONFIG","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_UI_CONFIG' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'CREATE_UI_CONFIG' ) ON CONFLICT DO NOTHING;

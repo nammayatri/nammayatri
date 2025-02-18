@@ -51,6 +51,9 @@ module Lib.Yudhishthira.Types
     Config (..),
     TagNameValueExpiry (..),
     TagObject (..),
+    UiConfigRequest (..),
+    UiConfigResponse (..),
+    CreateConfigRequest (..),
   )
 where
 
@@ -59,6 +62,7 @@ import Data.Aeson
 import Data.OpenApi as OpenApi hiding (TagName, description, name, tags, version)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.HideSecrets
 import Kernel.Types.Id
@@ -80,6 +84,8 @@ data ConfigType
   = DriverPoolConfig
   | TransporterConfig
   | RiderConfig
+  | UI_DRIVER
+  | UI_RIDER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 
 data ConfigVersionMap = ConfigVersionMap
@@ -469,3 +475,30 @@ data Config a = Config
     extraDimensions :: Maybe Value
   }
   deriving (Generic, ToJSON, FromJSON, Show)
+
+data UiConfigRequest = UiConfigRequest
+  { os :: Text,
+    language :: Language,
+    bundle :: Maybe Text,
+    toss :: Maybe Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UiConfigResponse = UiConfigResponse
+  { config :: Value
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UiConfigRequest where
+  hideSecrets = identity
+
+data CreateConfigRequest = CreateConfigRequest
+  { config :: Value,
+    os :: Text,
+    language :: Language,
+    bundle :: Maybe Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateConfigRequest where
+  hideSecrets = identity
