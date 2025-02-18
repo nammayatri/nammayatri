@@ -30,7 +30,6 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let kafkaProducerCfg =
@@ -76,7 +75,6 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let specialZone =
@@ -103,8 +101,8 @@ in  { esqDBCfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = False
-    , cutOffHedisCluster = False
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = True
     , kafkaProducerCfg
     , port = +8018
     , migrationPath =

@@ -68,7 +68,6 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let rccfg =
@@ -79,7 +78,6 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let smsConfig =
@@ -331,7 +329,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"

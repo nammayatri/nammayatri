@@ -36,7 +36,6 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let hcfg =
@@ -47,7 +46,6 @@ let hcfg =
       , connectMaxConnections = rcfg.connectMaxConnections
       , connectMaxIdleTime = rcfg.connectMaxIdleTime
       , connectTimeout = rcfg.connectTimeout
-      , connectReadOnly = True
       }
 
 let ltsRedis =
@@ -189,7 +187,6 @@ let hccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let kvConfigUpdateFrequency = +10

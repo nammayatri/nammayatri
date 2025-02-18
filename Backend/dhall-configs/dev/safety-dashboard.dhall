@@ -30,7 +30,6 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -61,7 +60,6 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
       }
 
 let cacheConfig = { configsExpTime = +86400 }
@@ -87,8 +85,8 @@ in  { esqDBCfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = False
-    , cutOffHedisCluster = False
+    , hedisMigrationStage = True
+    , cutOffHedisCluster = True
     , port = +8025
     , migrationPath =
       [   env:SAFETY_DASHBOARD_MIGRATION_PATH as Text
