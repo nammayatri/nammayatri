@@ -34,6 +34,12 @@ update atlas_driver_offer_bpp.vehicle_service_tier set name = 'SUV' where servic
 update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Non-AC' where service_tier_type = 'TAXI';
 update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Bike Taxi' where service_tier_type = 'BIKE';
 update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Delivery Bike' where service_tier_type = 'DELIVERY_BIKE';
+update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Delivery Truck Mini' where service_tier_type = 'DELIVERY_TRUCK_MINI';
+update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Delivery Truck Small' where service_tier_type = 'DELIVERY_TRUCK_SMALL';
+update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Delivery Truck Medium' where service_tier_type = 'DELIVERY_TRUCK_MEDIUM';
+update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Delivery Truck Large' where service_tier_type = 'DELIVERY_TRUCK_LARGE';
+update atlas_driver_offer_bpp.vehicle_service_tier set name = 'Delivery Truck Ultra Large' where service_tier_type = 'DELIVERY_TRUCK_ULTRA_LARGE';
+
 
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'Commute friendly' where service_tier_type = 'AUTO_RICKSHAW';
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'AC, Spacious rides' where service_tier_type = 'SUV';
@@ -41,6 +47,11 @@ update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'AC, 
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'AC, Budget rides' where service_tier_type = 'HATCHBACK';
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'Commute friendly' where service_tier_type = 'BIKE';
 update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'Quick Delivery' where service_tier_type = 'DELIVERY_BIKE';
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = '350 Kg' where service_tier_type = 'DELIVERY_TRUCK_MINI';
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = '500 Kg' where service_tier_type = 'DELIVERY_TRUCK_SMALL';
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = '1000 Kg' where service_tier_type = 'DELIVERY_TRUCK_MEDIUM';
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = '1500 Kg' where service_tier_type = 'DELIVERY_TRUCK_LARGE';
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = '2500 Kg' where service_tier_type = 'DELIVERY_TRUCK_ULTRA_LARGE';
 
 -- Backfill selected_service_tiers in vehicle
 UPDATE atlas_driver_offer_bpp.vehicle
