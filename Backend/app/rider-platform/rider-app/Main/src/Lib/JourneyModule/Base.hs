@@ -52,11 +52,14 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchO
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import Tools.Maps as Maps
 
@@ -472,6 +475,64 @@ skipLeg journeyId legOrder = do
     throwError $ InvalidRequest $ "Leg cannot be skipped in status: " <> show skippingLeg.status
 
   cancelLeg skippingLeg (SCR.CancellationReasonCode "") True
+
+addSkippedLeg ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DJourney.Journey ->
+  Int ->
+  m ()
+addSkippedLeg journeyId legOrder = do
+  allLegs <- QJourneyLeg.findAllByJourneyId journeyId
+  -- skippedLeg <- find (\leg -> (leg.isSkipped == Just True && leg.sequenceNumber == legOrder)
+  --  || (leg.isDeleted == Just True && leg.sequenceNumber == legOrder && leg.mode == DTrip.Walk))
+  --  allLegs & fromMaybeM (InvalidRequest $ "Skipped Leg not found with leg Order: " <> show allLegs)
+
+  skippedLeg <-
+    find
+      (\leg -> (leg.sequenceNumber == legOrder))
+      allLegs
+      & fromMaybeM (InvalidRequest $ "Skipped Leg not found with leg Order: " <> show legOrder)
+
+  legSearchId <-
+    skippedLeg.legSearchId
+      & fromMaybeM (InvalidRequest "legSearchId is missing for skippedLeg")
+
+  isSkippedOrCancelled <- case skippedLeg.mode of
+    DTrip.Taxi -> do
+      mbBooking <- QBooking.findByTransactionId legSearchId
+      case mbBooking of
+        Just booking -> return booking.isSkipped
+        Nothing -> do
+          searchReq <- QSearchRequest.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
+          case searchReq.journeyLegInfo of
+            Just journeyData -> return (Just journeyData.skipBooking)
+            Nothing -> return Nothing
+    DTrip.Walk -> do
+      walkLeg <- QWalkLeg.findById (Id legSearchId) >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
+      case walkLeg.journeyLegInfo of
+        Just walkLegData -> return walkLegData.isDeleted
+        Nothing -> return Nothing
+    DTrip.Metro -> checkFRFSBooking legSearchId
+    DTrip.Subway -> checkFRFSBooking legSearchId
+    DTrip.Bus -> checkFRFSBooking legSearchId
+
+  when (isSkippedOrCancelled /= Just True) $
+    throwError $ InvalidRequest $ "isSkipped is not True for legOrder: " <> show legOrder
+  when (skippedLeg.mode == DTrip.Walk) $
+    QJourneyLeg.updateIsDeleted Nothing skippedLeg.legSearchId
+  QJourneyLeg.updateLegSearchId Nothing skippedLeg.id
+  QJourneyLeg.updateIsSkipped (Just False) (skippedLeg.legSearchId)
+  addAllLegs journeyId
+  where
+    checkFRFSBooking legSearchId = do
+      frfsBooking <- QTBooking.findBySearchId (Id legSearchId)
+      case frfsBooking of
+        Just booking -> return booking.isSkipped
+        Nothing -> do
+          frfsSearchReq <- QFRFSSearch.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
+          case frfsSearchReq.journeyLegInfo of
+            Just frfsJourneyData -> return (Just frfsJourneyData.skipBooking)
+            Nothing -> return Nothing
 
 checkIfCancellable ::
   ( CacheFlow m r,

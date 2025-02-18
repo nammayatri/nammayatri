@@ -673,16 +673,15 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1739352016,
-        "narHash": "sha256-L9AQrN+aACTGCBYazyHcGJSNplePbzMd5rICO56FyRM=",
+        "lastModified": 1737446700,
+        "narHash": "sha256-e5G3uZltQmkFZ8pBUorqUjMiLEuIYu9JW59HYYvJL+E=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "63d56eb128296fc135f64b6f614986d31f1d09f9",
+        "rev": "69d6077ed953ce562feddeb8f99210163a5f23f3",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/hedis-upgrade-for-zone-aware-replica-usage",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -1593,18 +1592,18 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1739351500,
-        "narHash": "sha256-8tz0dr5kTaHcsNwmSJw2HyUTRZn/ho0s7tlUWSkSYbQ=",
-        "owner": "nammayatri",
-        "repo": "hedis",
-        "rev": "c8f6434fd4076dfb6b769831c3fde6e2600ccbe9",
-        "type": "github"
+        "lastModified": 1730967537,
+        "narHash": "sha256-RDF/G/ptWazyFxCQOv+fTTQVV4hzDxTV630rnmhH3i4=",
+        "ref": "refs/heads/master",
+        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
+        "revCount": 741,
+        "type": "git",
+        "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "owner": "nammayatri",
-        "ref": "enh/zone-aware-replica-usage",
-        "repo": "hedis",
-        "type": "github"
+        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
+        "type": "git",
+        "url": "https://github.com/juspay/hedis"
       }
     },
     "hnix-store-core": {
@@ -3613,15 +3612,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1739464721,
-        "narHash": "sha256-kY2imX25QpJ+0lJYUG4LNYn9nQMOjEerIxJzaEursYk=",
+        "lastModified": 1739861117,
+        "narHash": "sha256-o8XoBAj89tbwMzdLVPsSMLlaQ7C8inoZSZPzLGe7y7I=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "ff0bc471d33081a6cee5d12d00c609e998bb13d1",
+        "rev": "d5b30c328e652d3ed8da08e9d2a2fd4ff68f2137",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "prodHotPush-BAP",
         "repo": "shared-kernel",
         "type": "github"
       }
