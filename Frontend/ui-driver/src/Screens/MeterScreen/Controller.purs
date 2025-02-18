@@ -67,7 +67,7 @@ data Action
 data ScreenOutput
   = GoToHomeScreen ST.MeterScreenState
   | SearchPlace String ST.MeterScreenState 
-  | GoToMeterMapScreen ST.MeterScreenState
+  | GoToMeterMapScreen ST.MeterScreenState String
   | UpdatedState ST.MeterScreenState Boolean
   | UpdatedLocationName ST.MeterScreenState Number Number
 
@@ -110,8 +110,12 @@ eval (DestinationChanged input) state = do
           _ <- pure $ JB.updateInputString input
           pure NoAction
       ]
-eval (LocationListItemActionController _) state = do
-  exit $ GoToMeterMapScreen state
+
+eval (LocationListItemActionController (LocationListItem.OnClick item)) state = do
+  exit $ GoToMeterMapScreen state (fromMaybe "" item.placeId)
+
+eval (LocationListItemActionController _) state = do 
+  continue state
 
 eval (ShowMap _ _ _) state = do
   let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}

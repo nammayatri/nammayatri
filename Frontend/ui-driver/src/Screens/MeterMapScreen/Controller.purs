@@ -13,6 +13,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Components.GenericHeader as GenericHeader
 import PrestoDOM.List as PList
 import Data.Maybe as Mb
+import Common.Types.App as CTA
 import Data.Array as DA
 import Data.String as DS
 import Services.API as API
@@ -25,6 +26,11 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Resource.Constants (whiteListedInputString)
 import Components.LocationListItem as LocationListItem
+import Components.RateCard as RateCard
+import Components.InAppKeyboardModal as InAppKeyboardModal
+import JBridge(hideKeyboardOnNavigation)
+import Engineering.Helpers.Utils (mobileNumberValidator)
+import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
 
 instance showAction :: Show Action where
   show _ = ""
@@ -45,6 +51,10 @@ data Action
   | EditTextFocusChanged String
   | ShowMap String String String
   | PhoneNoChanged String
+  | RateCardAction RateCard.Action
+  | ShowRateCard
+  | InAppKeyboardModalOtp InAppKeyboardModal.Action
+  | ConfirmRidePressed
 
 data ScreenOutput
   = GoToMeterScreen ST.MeterMapScreenState
@@ -122,6 +132,60 @@ eval (EditTextFocusChanged textType) state = do
     continue newState
   else
     continue state { props {  searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}}, data {isSource = Just true}}
+
+eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = CTA.DefaultRateCard}}}
+
+eval (RateCardAction RateCard.BackPressed) state = continue state { props { showRateCard = false } ,data{rateCard{onFirstPage = false,currentRateCardType = CTA.DefaultRateCard}}}
+
+eval (RateCardAction RateCard.GoToDefaultStart) state = continue state { data{rateCard{currentRateCardType = CTA.DefaultRateCard}}}
+
+eval (RateCardAction RateCard.GoToDriverAddition) state = continue state { data{rateCard{currentRateCardType = CTA.DriverAddition,onFirstPage = true}}}
+
+eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state { data{rateCard{currentRateCardType = CTA.TollOrParkingCharges,onFirstPage = true}}}
+
+eval ShowRateCard state = continue state {data { rateCard  {
+              onFirstPage = false,
+              serviceTierName = Just "Auto",
+              currentRateCardType = CTA.DefaultRateCard,
+              driverAdditions = [{key : "0km-2km", val : "Upto ₹10"}, {key : "2km-10km", val : "Upto ₹20"}, {key: "10km-17km", val : "Upto ₹30"}, {key: "17km+", val : "Upto ₹40"}],
+              fareInfoDescription = [],
+              isNightShift = false,
+              nightChargeTill = "5 am",
+              nightChargeFrom = "10 am",
+              extraFare = [{key : "Min. Fare upto 2km", val : "₹30"}, {key: "Waiting Charges", val : "₹1.50 per minute"}]
+            }}, props {showRateCard = true}}
+
+eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
+  continue state{props{enableOtpModal=true}}
+  
+
+eval (InAppKeyboardModalOtp InAppKeyboardModal.BackPressed) state = 
+  continue state{props{alternateMobileOtp = "", enableOtpModal=false, enterOtpFocusIndex = 0}}
+
+-- eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp)) state = do
+--   exit (ResendAlternateNumberOTP state)
+
+eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone otp)) state = do
+  continue state
+
+eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text)) state = do
+  let newVal = (if DS.length(text) > 0 then (DS.take (DS.length(text) - 1 ) text) else "" )
+      focusIndex = DS.length newVal
+  continue state {props { alternateMobileOtp = newVal, enterOtpFocusIndex = focusIndex,otpIncorrect = false, otpAttemptsExceeded = false}}
+
+eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index)) state = do
+  let
+    alternateMobileOtp' = if (index + 1) > (DS.length state.props.alternateMobileOtp) then ( DS.take 4 (state.props.alternateMobileOtp <> key)) else (DS.take index (state.props.alternateMobileOtp)) <> key <> (DS.take 4 (DS.drop (index+1) state.props.alternateMobileOtp))
+    focusIndex = DS.length alternateMobileOtp'
+  continue state { props { alternateMobileOtp = alternateMobileOtp', enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
+
+eval (PhoneNoChanged phoneNumber) state = do
+  let numberValidator = mobileNumberValidator "" "IN" phoneNumber
+  if DS.length phoneNumber == 10 then do
+    _ <- pure $ hideKeyboardOnNavigation true
+    if numberValidator == MVR.Valid then continue state {props {customerMobileNumber = phoneNumber, isCustomerNumberValid = true}}
+    else continue state {props {customerMobileNumber = phoneNumber, isCustomerNumberValid = false}}
+  else continue state {props {customerMobileNumber = phoneNumber, isCustomerNumberValid = false}}
 
 eval _ state = update state
 

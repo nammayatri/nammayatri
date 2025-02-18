@@ -1,16 +1,24 @@
 module Screens.MeterMapScreen.ScreenData where
 
-import Screens.Types (MeterMapScreenState, SearchLocationModelType(..), CustomerLocationSelectType(..))
+import ConfigProvider
+
+import ConfigProvider (getAppConfig, appConfig)
 import Data.Maybe as Mb
 import Halogen.VDom.DOM.Prop (PropValue)
-import Services.API as API 
-import RemoteConfig as RU 
-import ConfigProvider
 import PrestoDOM (Visibility(..))
+import Prim.TypeError as True
+import RemoteConfig as RU
+import Screens.BookingOptionsScreen.ScreenData as BOP
+import Screens.Types (MeterMapScreenState, SearchLocationModelType(..), CustomerLocationSelectType(..))
+import Services.API as API
+import Services.API (FarePolicyHour(..), ServiceTierType(..))
+import Data.Maybe (Maybe(..))
+
 
 initData :: MeterMapScreenState
 initData =
   { data: {
+    rateCard : BOP.dummyRateCard,
     listItem : Mb.Nothing,
     searchString : Mb.Nothing,
     isSearchLocation: NoView,
@@ -27,6 +35,14 @@ initData =
     savedlocationList: []
   }
   , props: {
+      enableOtpModal : false,
+      enterOtpFocusIndex : 0,
+      isCustomerNumberValid : false,
+      alternateMobileOtp : "",
+      otpAttemptsExceeded : false,
+      otpIncorrect : false,
+      customerMobileNumber : "",
+      showRateCard: false,
       locateOnMap: false,
       isSearchLocation: NoView,
       isRideServiceable: true,

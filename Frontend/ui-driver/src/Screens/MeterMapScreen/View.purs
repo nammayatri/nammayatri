@@ -29,6 +29,13 @@ import Data.Function.Uncurried (runFn3)
 import Language.Strings (getVarString)
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Components.RateCard as RateCard
+import Screens.BookingOptionsScreen.ComponentConfig as BOP
+import Components.InAppKeyboardModal as InAppKeyboardModal
+import Language.Strings (getString)
+import Data.String as DS
+import Animation (screenAnimationFadeInOut)
+import Data.String.CodeUnits (charAt)
 
 screen :: ST.MeterMapScreenState -> Screen Action ST.MeterMapScreenState ScreenOutput
 screen initialState =
@@ -50,7 +57,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.MeterMapScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  screenAnimationFadeInOut $ relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
@@ -61,7 +68,7 @@ view push state =
        _ <- showMap (EHC.getNewIDWithTag "MeterMapScreenMap") true "satellite" (17.0) 0.0 0.0 push ShowMap
        pure unit
     ) (const NoAction)
-  ][linearLayout
+  ]([linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , weight 1.0
@@ -72,9 +79,50 @@ view push state =
        [ width MATCH_PARENT
        , height WRAP_CONTENT
        ] [googleMap state
-         ,confirmPickupView push state]
+         ,confirmPickupView push state
+         ,if state.props.enableOtpModal then enterOtpModal push state else textView[height $ V 0, width $ V 0]
+         ]
      ]
-  ]
+  ] <> if state.props.showRateCard then [ rateCardView push state ] else []
+  )
+
+enterOtpModal :: forall w . (Action -> Effect Unit) -> ST.MeterMapScreenState -> PrestoDOM (Effect Unit) w
+enterOtpModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalOtp) (enterOtpState state)
+
+enterOtpState :: ST.MeterMapScreenState -> InAppKeyboardModal.InAppKeyboardModalState
+enterOtpState state =
+  let 
+    config' = InAppKeyboardModal.config
+    inAppModalConfig' = config'{
+      modalType = ST.OTP,
+      showResendOtpButton = true,
+      otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
+      otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
+    inputTextConfig {
+      text = state.props.alternateMobileOtp,
+      focusIndex = state.props.enterOtpFocusIndex
+    },
+    headingConfig {
+      text = getString (ENTER_OTP)
+    },
+    errorConfig {
+      text = if (state.props.otpIncorrect) then ((getString WRONG_OTP) ) else ""
+    , visibility = if (state.props.otpIncorrect || state.props.otpAttemptsExceeded) then VISIBLE else GONE,
+    margin = (Margin 0 0 0 8)
+    },
+    subHeadingConfig {
+      text =  getString (OTP_SENT_TO) <> state.props.customerMobileNumber,
+      color = Color.black800,
+      margin = (Margin 0 0 0 8),
+      visibility = (if not state.props.otpIncorrect then VISIBLE else GONE)
+    },
+    imageConfig {
+        alpha = if (DS.length state.props.alternateMobileOtp < 4 || state.props.otpIncorrect) then 0.3 else 1.0
+    },
+    enableDeviceKeyboard = true
+    }
+  in inAppModalConfig'
 
 underlinedTextView :: String -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 underlinedTextView value push =
@@ -90,6 +138,7 @@ underlinedTextView value push =
           , text value
           , color Color.primaryBlue
           , gravity CENTER
+          , onClick push $ const $ ShowRateCard
           ]
         <> FontStyle.subHeading1 CTA.TypoGraphy
     , linearLayout
@@ -99,8 +148,7 @@ underlinedTextView value push =
         , gravity CENTER
         ]
         []
-    ]
-
+    ] 
 confirmPickupView :: forall w. (Action -> Effect Unit) -> ST.MeterMapScreenState -> PrestoDOM (Effect Unit) w
 confirmPickupView push state = 
   linearLayout
@@ -213,24 +261,43 @@ confirmPickupView push state =
         , text  "Enter customer mobile number"
         , color Color.black800
         , gravity LEFT
-        , margin $ MarginLeft 4
+        , margin $ MarginLeft 5
         , weight 1.0
         , textSize FontSize.a_12
         ] 
       , editText [ height MATCH_PARENT
         , width $ MATCH_PARENT
         , padding $ Padding 12 12 12 12
-        , margin $ Margin 5 5 5 20
+        , margin $ Margin 5 5 5 5
         , background Color.white900
         , color Color.black 
-        , hint "+91 9931239812"
+        , hint "9931239812"
         , hintColor  "#A7A7A7"
         , weight 1.0
-        , pattern "[^\n]*,255"
+        , pattern "[0-9]*,10"
         , singleLine false 
         , stroke ("1," <> "#E5E5E5")
         , textSize FontSize.a_16
         , onChange push PhoneNoChanged
+        ]
+      ,textView $
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ Margin 5 5 5 20
+        , text  "Invalid mobile number!"
+        , color Color.red900
+        , gravity LEFT
+        , margin $ MarginLeft 5
+        , weight 1.0
+        , textSize FontSize.a_12
+        , visibility case charAt 0 state.props.customerMobileNumber of
+                        Just '0' -> VISIBLE
+                        Just '1' -> VISIBLE
+                        Just '2' -> VISIBLE
+                        Just '3' -> VISIBLE
+                        Just '4' -> VISIBLE
+                        Just '5' -> if state.props.customerMobileNumber == "5000500050" then GONE else VISIBLE
+                        _ -> GONE
         ]
         , primaryButtonView state push
       ]
@@ -246,6 +313,15 @@ googleMap state =
   , id (EHC.getNewIDWithTag "MeterMapScreenMap")
   ][]
 
+rateCardView :: forall w. (Action -> Effect Unit) -> ST.MeterMapScreenState -> PrestoDOM (Effect Unit) w
+rateCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ]
+        [ RateCard.view (push <<< RateCardAction) (BOP.rateCardConfig state.data.rateCard state.data.appConfig.rateCardScreen.showTollCharges state.data.appConfig.rateCardScreen.showDriverAdditions) ]
+
 
 primaryButtonConfig :: ST.MeterMapScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -258,11 +334,14 @@ primaryButtonConfig state =
         , height = V $ 30
         }
       , height = V $ 50
+      , width = MATCH_PARENT
+      , padding = Padding 0 0 0 0
       , gravity = CENTER
       , cornerRadius = 8.0
       , background =  "#2C2F3A"
-      , margin = (MarginHorizontal 16 16)
-      , isClickable = true
+      , margin = (MarginHorizontal 5 5)
+      , isClickable = state.props.isCustomerNumberValid
+      , alpha = if state.props.isCustomerNumberValid then 1.0 else 0.3
       , id = "ConfirmRideMeterMap"
       , enableRipple = true
       , rippleColor = Color.rippleShade
@@ -276,6 +355,5 @@ primaryButtonView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , alignParentBottom "true,-1"
-    , background Color.transparent
-    , stroke ("1," <> "#E5E5E5")
+    , cornerRadius  8.0
     ][ PrimaryButton.view (push <<< PrimaryButtonAC)(primaryButtonConfig state)]

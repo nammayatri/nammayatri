@@ -97,7 +97,6 @@ view push state =
               [ width MATCH_PARENT
               , height MATCH_PARENT
               , accessibility DISABLE
-              , clickable true
               ][linearLayout
                   [ height MATCH_PARENT
                   , width MATCH_PARENT

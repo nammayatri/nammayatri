@@ -13,7 +13,119 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Flow where
+module Flow
+  ( aadhaarVerificationFlow
+  , aboutUsFlow
+  , ackScreenFlow
+  , activateReferralCode
+  , addUPIFlow
+  , addVehicleDetailsflow
+  , appUpdatedFlow
+  , applicationSubmittedFlow
+  , authenticationFlow
+  , baseAppFlow
+  , benefitsScreenFlow
+  , bookingOptionsFlow
+  , callGetPastDaysData
+  , cancellationRateFlow
+  , changeDriverStatus
+  , checkAllPermissions
+  , checkAndUpdateRCStatus
+  , checkDriverBlockingStatus
+  , checkDriverPaymentStatus
+  , checkPaymentStatus
+  , checkPreRequisites
+  , checkRideAndInitiate
+  , checkStatusAndStartLocationUpdates
+  , checkTimeSettings
+  , checkVersion
+  , chooseCityFlow
+  , chooseLanguageFlow
+  , clearPendingDuesFlow
+  , confirmQuestionFlow
+  , constructLatLong
+  , convertToRequestStatus
+  , currentRideFlow
+  , customerReferralTrackerFlow
+  , disableGoTo
+  , documentDetailsScreen
+  , driverCompleteProfileFlow
+  , driverDetailsFlow
+  , driverEarningsFlow
+  , driverProfileFlow
+  , editBankDetailsFlow
+  , enterOTPFlow
+  , getDriverInfoDataFromCache
+  , getDriverInfoFlow
+  , getMerchantName
+  , getRetryEnabled
+  , getSdkTokenFromCache
+  , getUpiApps
+  , goToLocationFlow
+  , goToQuizNextQuestionFlow
+  , gullakDeeplinkFlow
+  , handleDeepLinksFlow
+  , handleDriverActivityResp
+  , helpAndSupportFlow
+  , homeScreenFlow
+  , hotspotScreenFlow
+  , ifNotRegistered
+  , isTokenValid
+  , issueReportChatScreenFlow
+  , lmsQuizFlow
+  , lmsVideoScreenFlow
+  , logDriverStatus
+  , loginFlow
+  , logoutFlow
+  , meterMapScreenFlow
+  , meterScreenFlow
+  , metroWarriorsScreenFlow
+  , myRidesScreenFlow
+  , noInternetScreenFlow
+  , notificationFlow
+  , nyPaymentFlow
+  , onBoardingFlow
+  , onBoardingSubscriptionScreenFlow
+  , paymentHistoryFlow
+  , permissionsScreenFlow
+  , popUpScreenFlow
+  , rateCardScreenFlow
+  , referralFlow
+  , referralScreenFlow
+  , removeChatService
+  , retakeQuizFlow
+  , rideAcceptScreenFlow
+  , rideRequestScreenFlow
+  , rideSelectionScreenFlow
+  , rideSummaryScreenFlow
+  , selectLanguageFlow
+  , selectLanguageForScreenFlow
+  , setDriverStatusInLocal
+  , setPaymentStatus
+  , setSubscriptionStatus
+  , setUPIPaymentStatus
+  , startGrpcService
+  , stopGrpcService
+  , subScriptionFlow
+  , tripDetailsScreenFlow
+  , updateAvailableAppsAndGoToSubs
+  , updateBannerAndPopupFlags
+  , updateCleverTapUserProps
+  , updateCustomerMarker
+  , updateDriverDataToStates
+  , updateDriverStatusGlobal
+  , updateDriverVersion
+  , updateInitialCleverTapUserProps
+  , updateSubscriptionForVehicleVariant
+  , updateWarriorSettings
+  , uploadDrivingLicenseFlow
+  , uploadParcelImageFlow
+  , vehicleDetailsFlow
+  , welcomeScreenFlow
+  , writeToUsFlow
+  , ysPaymentFlow
+  )
+  where
 
 import Common.Types.Config
 import ConfigProvider
@@ -4722,7 +4834,17 @@ meterScreenFlow = do
           pure unit
         Left _ -> pure unit
       meterScreenFlow
-    GO_TO_METER_MAP_FROM_METER state -> meterMapScreenFlow 
+    GO_TO_METER_MAP_FROM_METER state placeId -> do
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
+      case resp of
+        Right (API.GetPlaceNameResp placeNameResp) ->
+          case placeNameResp!!0 of 
+            Just (API.PlaceName placeName) -> do
+              let (API.LatLong latLong) = placeName.location
+              modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen{props {destinationLat = latLong.lat, destinationLng = latLong.lon}}
+            Nothing -> pure unit
+        Left _ -> pure unit
+      meterMapScreenFlow 
     RELOAD_STATE saveToCurrLocs -> meterScreenFlow
     UPDATE_LOCATION_NAME state lat lon -> meterScreenFlow
 

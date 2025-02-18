@@ -9,6 +9,7 @@ import ConfigProvider
 import PrestoDOM (Visibility(..))
 import Data.Maybe (Maybe(..))
 import Screens.Types (Address)
+import Screens.BookingOptionsScreen.ScreenData as BOP
 import JBridge (Location)
 
 initData :: MeterScreenState
