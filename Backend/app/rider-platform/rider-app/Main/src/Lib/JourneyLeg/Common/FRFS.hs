@@ -184,8 +184,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData merchantOpCity = do
-      fromStationCode <- (journeyLeg.fromStopDetails >>= (.gtfsId)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
-      toStationCode <- (journeyLeg.toStopDetails >>= (.gtfsId)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
+      fromStationCode <- ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "From station gtfsId not found")
+      toStationCode <- ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "To station gtfsId not found")
       _ <- createStationIfRequired (journeyLeg.fromStopDetails >>= (.name)) fromStationCode journeyLeg.startLocation.latitude journeyLeg.startLocation.longitude merchantOpCity
       _ <- createStationIfRequired (journeyLeg.toStopDetails >>= (.name)) toStationCode journeyLeg.endLocation.latitude journeyLeg.endLocation.longitude merchantOpCity
       let routeCode = Nothing

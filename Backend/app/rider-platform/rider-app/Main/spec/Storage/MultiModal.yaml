@@ -64,8 +64,8 @@ Journey:
 
   queries:
     findBySearchId:
-        kvFunction: findAllWithKV
-        where: searchRequestId
+      kvFunction: findAllWithKV
+      where: searchRequestId
     updateStatus:
         kvFunction: updateOneWithKV
         params: [status]
@@ -160,7 +160,7 @@ WalkLegMultimodal:
     journeyLegInfo: Maybe JourneySearchData
 
   sqlType:
-    toLocationId : character varying(36)
+    toLocationId: character varying(36)
     fromLocationId: character varying(36)
 
   queries:
@@ -244,12 +244,12 @@ JourneyLeg:
       fromStopCode: Maybe Text
       fromStopName: Maybe Text
       fromStopGtfsId: Maybe Text
-      fromStopPlatformCode : Maybe Text
+      fromStopPlatformCode: Maybe Text
     toStopDetails:
       toStopCode: Maybe Text
       toStopName: Maybe Text
       toStopGtfsId: Maybe Text
-      toStopPlatformCode : Maybe Text
+      toStopPlatformCode: Maybe Text
     routeDetails: {}
     agency: {}
     startLocation:
@@ -311,14 +311,14 @@ JourneyLeg:
   toTType:
     distance: (.value) <$> |I
     distanceUnit: (.unit) <$> |I
-    fromStopCode:  (fromStopDetails >>= (.stopCode))|E
-    fromStopName:  (fromStopDetails >>= (.name))|E
+    fromStopCode: (fromStopDetails >>= (.stopCode))|E
+    fromStopName: (fromStopDetails >>= (.name))|E
     fromStopPlatformCode: (fromStopDetails >>= (.platformCode))|E
-    fromStopGtfsId: (fromStopDetails >>= (.gtfsId))|E
-    toStopCode:  (toStopDetails >>= (.stopCode))|E
-    toStopName:  (toStopDetails >>= (.name))|E
-    toStopPlatformCode:  (toStopDetails >>= (.platformCode))|E
-    toStopGtfsId: (toStopDetails >>= (.gtfsId))|E
+    fromStopGtfsId: ((fromStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode)|E
+    toStopCode: (toStopDetails >>= (.stopCode))|E
+    toStopName: (toStopDetails >>= (.name))|E
+    toStopPlatformCode: (toStopDetails >>= (.platformCode))|E
+    toStopGtfsId: ((toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode)|E
     startLocationLat: (startLocation & (.latitude))|E
     startLocationLon: (startLocation & (.longitude))|E
     endLocationLat: (endLocation & (.latitude))|E
@@ -333,7 +333,7 @@ JourneyLeg:
     journeyId: "!SecondaryKey"
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
 RouteDetails:
   fields:
@@ -342,9 +342,9 @@ RouteDetails:
     routeGtfsId: Maybe Text
     routeLongName: Maybe Text
     routeShortName: Maybe Text
-    routeColorName : Maybe Text
-    routeColorCode : Maybe Text
-    frequency : Maybe Seconds
+    routeColorName: Maybe Text
+    routeColorCode: Maybe Text
+    frequency: Maybe Seconds
     agencyGtfsId: Maybe Text
     agencyName: Maybe Text
     subLegOrder: Maybe Int
@@ -352,12 +352,12 @@ RouteDetails:
     fromStopCode: Maybe Text
     fromStopName: Maybe Text
     fromStopGtfsId: Maybe Text
-    fromStopPlatformCode : Maybe Text
+    fromStopPlatformCode: Maybe Text
     # toStopDetails:
     toStopCode: Maybe Text
     toStopName: Maybe Text
     toStopGtfsId: Maybe Text
-    toStopPlatformCode : Maybe Text
+    toStopPlatformCode: Maybe Text
     # Times --
     fromArrivalTime: Maybe UTCTime
     fromDepartureTime: Maybe UTCTime
@@ -398,7 +398,7 @@ JourneyFeedback:
 
 JourneyLegsFeedbacks:
   fields:
-    journeyId : Id Journey
+    journeyId: Id Journey
     legOrder: Int
     isExperienceGood: Maybe Bool
     travelMode: Maybe MultimodalTravelMode
@@ -409,5 +409,5 @@ JourneyLegsFeedbacks:
       where: journeyId
 
   constraints:
-    journeyId : PrimaryKey
-    legOrder : PrimaryKey
+    journeyId: PrimaryKey
+    legOrder: PrimaryKey
