@@ -45,7 +45,7 @@ findGeometryByStateAndCity cityParam stateParam = do
 
 findGeometriesContaining :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
@@ -56,7 +56,7 @@ someGeometriesContain gps regions = do
 
 findGeometriesContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Geometry]
 findGeometriesContainingGps gps = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRows $

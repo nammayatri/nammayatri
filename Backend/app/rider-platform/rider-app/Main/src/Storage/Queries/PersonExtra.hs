@@ -193,7 +193,7 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
 
 fetchRidesCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

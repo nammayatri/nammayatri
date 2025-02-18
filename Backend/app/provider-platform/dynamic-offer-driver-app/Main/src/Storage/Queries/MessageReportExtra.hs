@@ -32,7 +32,7 @@ findByDriverIdAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id P
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -96,7 +96,7 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
 
 findByMessageIdAndStatusWithLimitAndOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Msg.Message -> Maybe DeliveryStatus -> m [(MessageReport, P.Person)]
 findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageId) mbDeliveryStatus = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRows $
@@ -127,7 +127,7 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageId) mbDel
 
 getMessageCountByStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $
@@ -139,7 +139,7 @@ getMessageCountByStatus (Id messageID) status = do
 
 getMessageCountByReadStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $

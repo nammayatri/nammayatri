@@ -369,7 +369,7 @@ updateAll rideId ride = do
 getCountByStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [(RideStatus, Int)]
 getCountByStatus merchantId = do
   -- Tricky query to be able to insert meaningful Point
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -478,7 +478,7 @@ findAllRideItems ::
   Maybe UTCTime ->
   m [RideItem]
 findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

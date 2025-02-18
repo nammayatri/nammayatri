@@ -66,7 +66,7 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
 findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> m [FleetDriverAssociation]
 findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName = do
   now <- getCurrentTime
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -120,7 +120,7 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
   now <- getCurrentTime
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $

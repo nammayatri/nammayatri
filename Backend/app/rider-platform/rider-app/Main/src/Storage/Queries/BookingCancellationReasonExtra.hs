@@ -34,7 +34,7 @@ upsert cancellationReason = do
 
 countCancelledBookingsByBookingIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> CancellationSource -> m Int
 countCancelledBookingsByBookingIds bookingIds cancellationSource = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $

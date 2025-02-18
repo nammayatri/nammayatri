@@ -59,7 +59,7 @@ data DriverDocsInfo = DriverDocsInfo
 
 imagesAggTableCTEbyDoctype :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DVC.DocumentType -> m [(Text, Int)]
 imagesAggTableCTEbyDoctype imageType' = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRows $
@@ -71,7 +71,7 @@ imagesAggTableCTEbyDoctype imageType' = do
 
 fetchDriverDocsInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> CQMOC.MerchantOperatingCity -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
 fetchDriverDocsInfo merchantId' opCity mbDriverIds = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
