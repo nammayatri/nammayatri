@@ -308,7 +308,11 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
           unless (pstatus == FRFSTicketService.SUCCESS) do
             void $ QJourney.updatePaymentStatus (Just True) journeyId
         return $ paymentOrder <&> (.status)
-      else return Nothing
+      else
+        if journey.isPaymentSuccess == Just True
+          then do
+            return (Just FRFSTicketService.SUCCESS)
+          else return Nothing
   return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
