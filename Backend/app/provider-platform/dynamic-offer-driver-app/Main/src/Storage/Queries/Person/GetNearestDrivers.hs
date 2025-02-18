@@ -52,7 +52,8 @@ data NearestDriversResult = NearestDriversResult
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe Maps.LatLong,
-    driverTags :: A.Value
+    driverTags :: A.Value,
+    score :: Maybe A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -161,5 +162,6 @@ getNearestDrivers NearestDriversReq {..} = do
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
-                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : fromMaybe [] person.driverTag
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : fromMaybe [] person.driverTag,
+                score = Nothing
               }
