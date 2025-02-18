@@ -18,6 +18,7 @@ module Domain.Action.UI.MultimodalConfirm
   )
 where
 
+import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -287,10 +288,28 @@ getMultimodalJourneyStatus ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-getMultimodalJourneyStatus (_, _) journeyId = do
+getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status}
+  paymentStatus <-
+    if journey.isPaymentSuccess /= Just True
+      then do
+        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+        allJourneyFrfsBookings <- QFRFSTicketBooking.findAByJourneyIdCond (Just journeyId)
+        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
+        let anyFirstBooking = listToMaybe frfsBookingStatusArr
+            paymentOrder =
+              anyFirstBooking >>= (.payment)
+                <&> ( \p ->
+                        ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
+                    )
+            mbPaymentStatus = paymentOrder <&> (.status)
+        whenJust mbPaymentStatus $ \pstatus -> do
+          unless (pstatus == FRFSTicketService.SUCCESS) do
+            void $ QJourney.updatePaymentStatus (Just True) journeyId
+        return $ paymentOrder <&> (.status)
+      else return Nothing
+  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus}
   where
     transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
     transformLeg legState =

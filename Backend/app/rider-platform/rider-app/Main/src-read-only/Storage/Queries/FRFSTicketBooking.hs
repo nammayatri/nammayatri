@@ -27,6 +27,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
+findAByJourneyIdCond ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAByJourneyIdCond journeyId = do findAllWithKVAndConditionalDB [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)] Nothing
+
 findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)]
 

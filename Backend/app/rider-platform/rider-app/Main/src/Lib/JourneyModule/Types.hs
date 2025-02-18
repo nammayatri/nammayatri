@@ -790,6 +790,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         estimatedDistance = estimatedDistance,
         estimatedDuration = Just estiamtedDuration,
         id = journeyId,
+        isPaymentSuccess = Nothing,
         totalLegs = journeyLegsCount,
         modes = modes,
         searchRequestId = parentSearchId,

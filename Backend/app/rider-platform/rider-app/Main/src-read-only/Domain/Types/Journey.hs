@@ -20,6 +20,7 @@ data Journey = Journey
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
