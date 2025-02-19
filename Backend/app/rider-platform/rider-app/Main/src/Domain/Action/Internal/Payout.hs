@@ -70,7 +70,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       let personId = Id payoutOrder.customerId
-      payoutConfig <- CPC.findByCityIdAndVehicleCategory merchanOperatingCityId DV.AUTO_CATEGORY >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
+      payoutConfig <- CPC.findByCityIdAndVehicleCategory merchanOperatingCityId DV.AUTO_CATEGORY Nothing >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
       unless (isPayoutStatusSuccess payoutOrder.status) do
         case payoutOrder.entityName of
           Just DPayment.METRO_BOOKING_CASHBACK -> do

@@ -143,7 +143,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           ]
 
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
-      rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent
+      rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 buildRideDetails ::

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Domain.Action.Dashboard.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagTagUpdate,
@@ -27,9 +29,15 @@ where
 
 import qualified Dashboard.Common as Common
 import Data.Singletons
+import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantConfig as DTM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantPushNotification as DTPN
+import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
+import qualified Domain.Types.RiderConfig as DTR
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -44,7 +52,9 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as LYSQADLE
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
+import SharedLogic.Merchant
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
@@ -53,6 +63,13 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as SCMR
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+
+$(YTH.generateGenericDefault ''DTR.RiderConfig)
+$(YTH.generateGenericDefault ''DTP.PayoutConfig)
+$(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
+$(YTH.generateGenericDefault ''DTM.MerchantConfig)
+$(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
+$(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagCreate _merchantShortId _opCity req = YudhishthiraFlow.postTagCreate req
@@ -74,19 +91,38 @@ deleteNammaTagQueryDelete _merchantShortId _opCity = YudhishthiraFlow.queryDelet
 
 postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.AppDynamicLogicReq -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
-  -- merchant <- findMerchantByShortId merchantShortId
-  -- let mbMerchantid = Just $ cast merchant.id
+  merchant <- findMerchantByShortId merchantShortId
+  let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
   _riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
     -- TODO add defaults for config
-
-    -- Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.RiderCfg -> do
-    --   -- fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @TagData)
-    --   let def = Prelude.listToMaybe $ Lib.Yudhishthira.Types.genDef (Proxy @DTR.RiderConfig)
-    --   logicData :: Maybe DTR.RiderConfig <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-    --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DTR.RiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
+    Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.RiderConfig -> do
+      -- fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @TagData)
+      let def = Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig)
+      logicData :: Maybe DTR.RiderConfig <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DTR.RiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
+    Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.PayoutConfig -> do
+      let def = Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig)
+      logicData :: Maybe DTP.PayoutConfig <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DTR.RiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
+    Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.RideRelatedNotificationConfig -> do
+      let def = Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig)
+      logicData :: Maybe DTRN.RideRelatedNotificationConfig <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DTR.RiderConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
+    Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.MerchantConfig -> do
+      let def = Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig)
+      logicData :: Maybe DTM.MerchantConfig <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DTM.MerchantConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
+    Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.MerchantPushNotification -> do
+      let def = Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification)
+      logicData :: Maybe DTPN.MerchantPushNotification <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DTPN.MerchantPushNotification) _riderConfig.dynamicLogicUpdatePassword req logicData
+    Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.FRFSConfig -> do
+      let def = Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig)
+      logicData :: Maybe DFRFS.FRFSConfig <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy DFRFS.FRFSConfig) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp]

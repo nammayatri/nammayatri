@@ -83,5 +83,3 @@ data RiderConfig = RiderConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON)
-
--- $(YTH.generateGenericDefault ''RiderConfig) -- TODO add defaults

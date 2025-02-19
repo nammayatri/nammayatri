@@ -46,7 +46,7 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   let totalReferredDrivers = fromMaybe 0 di.totalReferred
   mbVehicle <- QVeh.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   driverStats <- QDS.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let eligiblePayoutAmount = driverStats.totalPayoutEarnings
       totalPayoutAmountPaid = fromMaybe 0.0 driverStats.totalPayoutAmountPaid

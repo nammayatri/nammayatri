@@ -164,7 +164,7 @@ getDriverPoolConfigFromDB ::
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
 getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist searchRepeatType searchRepeatCounter stickeyKey sreq = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  configs <- CDP.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions Nothing --- Rupak: Change this
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime

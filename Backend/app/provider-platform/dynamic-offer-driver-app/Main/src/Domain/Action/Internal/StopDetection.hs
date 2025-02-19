@@ -47,7 +47,7 @@ stopDetection StopDetectionReq {..} = do
       (Just threshold, Just suppressCount) -> do
         let condition = sendNotificationCondition threshold suppressCount currStopCount
         driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-        mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "STOP_DETECTION_KEY" Nothing Nothing driver.language
+        mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "STOP_DETECTION_KEY" Nothing Nothing driver.language Nothing
         case (condition, mbMerchantPN) of
           (True, Just merchantPN) -> do
             sendStopDetectionAlert booking.merchantOperatingCityId merchantPN driver

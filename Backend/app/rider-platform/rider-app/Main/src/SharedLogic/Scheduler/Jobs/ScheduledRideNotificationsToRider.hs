@@ -86,13 +86,13 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         callStatus <- buildCallStatus callStatusId exotelResponse booking ride
         QCallStatus.create callStatus
       PN -> do
-        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing person.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
+        merchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOpCityId notificationKey Nothing Nothing person.language booking.configInExperimentVersions >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
         let entityData = generateReq merchantPN.title merchantPN.body booking ride
         notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
       SMS -> do
         smsCfg <- asks (.smsCfg)
         messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
-        merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+        merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow merchantOpCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
         let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
         let (_, smsReqBody) = formatMessageTransformer "" merchantMessage.message booking ride
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq smsReqBody phoneNumber sender) -- TODO: append SMS heading

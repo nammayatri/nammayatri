@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.Dashboard.Management.NammaTag
   ( postNammaTagTagCreate,
@@ -34,6 +35,10 @@ import Data.Singletons
 import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+-- import qualified Domain.Types.MerchantMessage as DTM
+import qualified Domain.Types.MerchantPushNotification as DTPN
+import qualified Domain.Types.PayoutConfig as DTP
+import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.TransporterConfig as DTT
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
@@ -53,6 +58,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.Types.Common as C
+import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
@@ -64,6 +70,17 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverPoolConfig as SCMD
 import qualified Storage.Queries.TransporterConfig as SCMT
+
+-- import qualified Domain.Types.DriverPoolConfig as DTDP
+
+$(YTH.generateGenericDefault ''DTP.PayoutConfig)
+$(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
+
+-- $(YTH.generateGenericDefault ''DTM.MerchantMessage)
+
+$(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
+
+-- $(YTH.generateGenericDefault ''DTDP.DriverPoolConfig)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.CreateNammaTagResponse)
 postNammaTagTagCreate _merchantShortId _opCity req = do
@@ -155,6 +172,22 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
+    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.PayoutConfig -> do
+      let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig)
+      logicData :: Maybe DTP.PayoutConfig <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTP.PayoutConfig) transporterConfig.referralLinkPassword req logicData
+    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.RideRelatedNotificationConfig -> do
+      let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig)
+      logicData :: Maybe DTRN.RideRelatedNotificationConfig <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTRN.RideRelatedNotificationConfig) transporterConfig.referralLinkPassword req logicData
+    -- Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.MerchantMessage -> do
+    --   let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantMessage)
+    --   logicData :: Maybe DTM.MerchantMessage <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
+    --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTM.MerchantMessage) transporterConfig.referralLinkPassword req logicData
+    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.MerchantPushNotification -> do
+      let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification)
+      logicData :: Maybe DTPN.MerchantPushNotification <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTPN.MerchantPushNotification) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp]

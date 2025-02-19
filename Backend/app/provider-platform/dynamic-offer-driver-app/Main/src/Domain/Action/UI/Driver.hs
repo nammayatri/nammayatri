@@ -1124,7 +1124,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory
+  mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   bankDetails <-
     if merchant.onlinePayment

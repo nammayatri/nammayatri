@@ -113,7 +113,7 @@ processBacklogReferralPayout ::
   m ()
 processBacklogReferralPayout personId vpa merchantOpCityId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY
+  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY Nothing
   personStats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   let toPayReferredByReward = personStats.referredByEarnings > 0 && isNothing personStats.referredByEarningsPayoutStatus
       toPayBacklogAmount = personStats.backlogPayoutAmount > 0 && isNothing personStats.backlogPayoutStatus

@@ -374,7 +374,7 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
   QDI.updateEnabledVerifiedState driverId True (Just True)
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
     let body = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.body
