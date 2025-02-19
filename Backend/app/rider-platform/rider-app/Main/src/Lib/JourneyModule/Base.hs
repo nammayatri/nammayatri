@@ -109,7 +109,8 @@ getAllLegsInfo ::
   m [JL.LegInfo]
 getAllLegsInfo journeyId = do
   allLegsRawData <- getJourneyLegs journeyId
-  allLegsInfo <-
+  let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
     allLegsRawData `forM` \leg -> do
       case leg.legSearchId of
         Just legSearchIdText -> do
@@ -121,7 +122,6 @@ getAllLegsInfo journeyId = do
             DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
             DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
-  return $ allLegsInfo
 
 getAllLegsStatus ::
   JL.GetStateFlow m r c =>
@@ -130,10 +130,12 @@ getAllLegsStatus ::
 getAllLegsStatus journey = do
   allLegsRawData <- getJourneyLegs journey.id
   riderLastPoints <- getLastThreePoints journey.id
-  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
-  when ((all (\st -> st.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState) && journey.status /= DJourney.CANCELLED) $ do
-    updateJourneyStatus journey DJourney.FEEDBACK_PENDING
-  return allLegsState
+  let lockKey = multimodalLegSearchIdAccessLockKey journey.id.getId
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+    (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
+    when (all (\st -> st.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState && journey.status /= DJourney.CANCELLED) $ do
+      updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+    return allLegsState
   where
     processLeg ::
       JL.GetStateFlow m r c =>
@@ -467,6 +469,9 @@ cancelRemainingLegs journeyId = do
   unless (null failures) $
     throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
 
+multimodalLegSearchIdAccessLockKey :: Text -> Text
+multimodalLegSearchIdAccessLockKey legSearchId = "Multimodal:Leg:SearchIdAccess:" <> legSearchId
+
 skipLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
@@ -523,10 +528,23 @@ addSkippedLeg journeyId legOrder = do
   when (isSkippedOrCancelled /= Just True) $
     throwError $ InvalidRequest $ "isSkipped is not True for legOrder: " <> show legOrder
   when (skippedLeg.mode == DTrip.Walk) $
-    QJourneyLeg.updateIsDeleted Nothing skippedLeg.legSearchId
-  QJourneyLeg.updateLegSearchId Nothing skippedLeg.id
-  QJourneyLeg.updateIsSkipped (Just False) (skippedLeg.legSearchId)
-  addAllLegs journeyId
+    QJourneyLeg.updateIsDeleted (Just False) skippedLeg.legSearchId
+
+  let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
+  exep <- try @_ @SomeException $ do
+    Redis.withLockRedis lockKey 5 $ do
+      QJourneyLeg.updateIsSkipped (Just False) skippedLeg.legSearchId
+      QJourneyLeg.updateLegSearchId Nothing skippedLeg.id
+      addAllLegs journeyId
+  case exep of
+    Left _ -> do
+      -- Rollback operations
+      QJourneyLeg.updateLegSearchId skippedLeg.legSearchId skippedLeg.id
+      QJourneyLeg.updateIsSkipped (Just True) skippedLeg.legSearchId
+      when (skippedLeg.mode == DTrip.Walk) $
+        QJourneyLeg.updateIsDeleted (Just True) skippedLeg.legSearchId
+      throwError $ InvalidRequest "Failed to update skipped leg, as Search operation failed"
+    Right _ -> return ()
   where
     checkFRFSBooking legSearchId = do
       frfsBooking <- QTBooking.findBySearchId (Id legSearchId)
