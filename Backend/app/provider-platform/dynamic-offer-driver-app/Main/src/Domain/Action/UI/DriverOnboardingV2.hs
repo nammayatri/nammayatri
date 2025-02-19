@@ -297,7 +297,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
               isNonOxygenDefault = oxygen /= Just 1
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
             { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || (isNonACDefault && isNonOxygenDefault),
-              isDefault = (vehicleCategory /= Just DVC.AMBULANCE) && (vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault, -- No default in Ambulance
+              isDefault = (vehicleCategory /= Just DVC.AMBULANCE) && ((vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault), -- No default in Ambulance
               isUsageRestricted = Just usageRestricted,
               priority = Just priority,
               airConditioned = airConditionedThreshold,
