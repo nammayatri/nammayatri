@@ -1428,6 +1428,7 @@ newtype MessageAPIEntityResponse = MessageAPIEntityResponse
   , likeCount :: Int
   , viewCount :: Int
   , likeStatus :: Boolean
+  , shareable :: Maybe Boolean
   }
 
 newtype MediaFileApiResponse = MediaFileApiResponse
