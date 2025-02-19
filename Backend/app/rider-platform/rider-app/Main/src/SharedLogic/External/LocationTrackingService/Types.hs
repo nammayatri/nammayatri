@@ -16,7 +16,6 @@ module SharedLogic.External.LocationTrackingService.Types where
 
 import Data.Aeson
 import Data.OpenApi hiding (Example, example, name, tags, url)
-import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
 import Kernel.Prelude
 import Kernel.Types.App
@@ -32,8 +31,7 @@ data VehicleInfo = VehicleInfo
     latitude :: Double,
     longitude :: Double,
     speed :: Maybe Double,
-    timestamp :: Text,
-    rideStatus :: DRide.RideStatus
+    timestamp :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

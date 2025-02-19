@@ -415,7 +415,7 @@ trackVehicles personId merchantId routeCode = do
                         )
                           <$> vehicleInfo.vehicleInfo.startTime,
                       startTime = vehicleInfo.vehicleInfo.startTime,
-                      timestamp = Just vehicleInfo.vehicleInfo.timestamp,
+                      timestamp = vehicleInfo.vehicleInfo.timestamp,
                       tripId = vehicleInfo.vehicleInfo.tripId
                     }
                 )
