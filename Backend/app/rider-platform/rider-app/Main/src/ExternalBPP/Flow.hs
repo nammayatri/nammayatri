@@ -173,7 +173,7 @@ search merchant merchantOperatingCity config bapConfig searchReq routeDetails = 
       startStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.startStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       endStation <- QStation.findByStationCodeAndMerchantOperatingCityId routeInfo.endStopCode merchantOperatingCityId >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for merchantOperatingCityId: " <> merchantOperatingCityId.getId)
       stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
-      fares <- return [] -- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config routeInfo.route.code startStation.code endStation.code vehicleType
+      fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity config routeInfo.route.code startStation.code endStation.code vehicleType
       return $
         map
           ( \FRFSFare {..} ->

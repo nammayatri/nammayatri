@@ -321,7 +321,10 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
         { legOrder = legState.legOrder,
           status = legState.status,
           userPosition = legState.userPosition,
-          vehiclePosition = legState.vehiclePosition
+          vehiclePosition = legState.vehiclePosition,
+          nextStop = legState.nextStop,
+          nextStopTravelTime = legState.nextStopTravelTime,
+          nextStopTravelDistance = legState.nextStopTravelDistance
         }
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
