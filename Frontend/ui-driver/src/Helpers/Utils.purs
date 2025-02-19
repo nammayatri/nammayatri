@@ -20,6 +20,9 @@ module Helpers.Utils
 
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
 import Language.Strings (getString)
+import Data.Ord (comparing, Ordering)
+import Data.Lens ((^.))
+import Services.Accessor (_distance_meters)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
@@ -132,6 +135,7 @@ foreign import convertKmToM :: String -> String
 foreign import clearTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
 foreign import decodeError :: String -> String -> String
+foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -153,6 +157,7 @@ foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
 foreign import isDateNDaysAgo :: Fn2 String Int Boolean
 foreign import isMoreThanXMs :: Fn2 String Int Boolean
+foreign import extractKeyByRegex :: Fn2 String String String
 
 foreign import isToday :: String -> Boolean
 
@@ -481,6 +486,15 @@ getAssetLink lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
 
+getAssetLinkCustomer :: LazyCheck -> String
+getAssetLinkCustomer lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
+  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/images/"
+  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/images/"
+  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/images/"
+  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/images/"
+
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
@@ -505,6 +519,16 @@ fetchImage fetchImageFrom imageName =
   else 
     case fetchImageFrom of
       FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
+      FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+      COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
+      GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
+
+fetchImageCustomer :: FetchImageFrom -> String -> String
+fetchImageCustomer fetchImageFrom imageName =   
+  if imageName  == "" then ","
+  else 
+    case fetchImageFrom of
+      FF_ASSET -> imageName <> "," <> (getAssetLinkCustomer FunctionCall) <> imageName <> ".png"
       FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
       COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
       GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
@@ -1285,3 +1309,6 @@ getSrcDestConfig state =
   }
 isAmbulance :: String -> Boolean
 isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+sortPredictionByDistance :: Array SA.Prediction -> Array SA.Prediction
+sortPredictionByDistance arr = DA.sortBy (comparing (_^._distance_meters)) arr

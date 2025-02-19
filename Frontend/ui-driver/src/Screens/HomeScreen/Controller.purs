@@ -499,6 +499,7 @@ data Action = NoAction
             | HideBusOnline
             | BusNumber String
             | ShowMeterPopUp
+            | GoToMeterScreen
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -520,6 +521,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   continue state
 
 eval ShowMeterPopUp state = continue state{props{showMeterPopup = true}}
+
+eval GoToMeterScreen state = continue state{props{showMeterPopup = false}}
 
 eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
 
@@ -1812,10 +1815,11 @@ eval (ParcelIntroductionPopup action) state = do
       continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
 
 eval (MeterPopUp action) state = do
+  let newState = state { props { showMeterPopup = false } }
   case action of
-    PopUpModal.DismissPopup -> continue state
-    PopUpModal.OnButton1Click -> exit $ MeterLocationScreen state{props{showMeterPopup = false}}
-    _ -> update state
+    PopUpModal.DismissPopup -> continue newState
+    PopUpModal.OnButton1Click -> exit $ MeterLocationScreen newState
+    _ -> update newState
 
 eval (MetroWarriorSwitchAction SwitchButtonView.OnClick) state = exit $ UpdateToggleMetroWarriors state
 

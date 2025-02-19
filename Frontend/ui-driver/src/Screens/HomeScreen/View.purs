@@ -909,7 +909,7 @@ meterPopupView push state =
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][ PopUpModal.view (push <<< ParcelIntroductionPopup) (meterPopup state)]
+    ][ PopUpModal.view (push <<< MeterPopUp) (meterPopup state)]
 
 locationUpdateView :: forall w .(Action -> Effect Unit) -> HomeScreenState  ->  PrestoDOM (Effect Unit) w
 locationUpdateView push state =
