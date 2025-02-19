@@ -224,7 +224,7 @@ tipsHorizontalView push state =
             , orientation VERTICAL
             ]
             [ linearLayout
-              [ width $ if index == 0 then WRAP_CONTENT else V 84
+              [ width $ if index == 0 then WRAP_CONTENT else if state.tipViewProps.suggestedActiveIndex == Just index then V 88 else V 84 
               , height $ V 36
               , background Color.white900
               , margin $ if index == 0 then Margin 0 12 0 0 else Margin 8 12 0 0
