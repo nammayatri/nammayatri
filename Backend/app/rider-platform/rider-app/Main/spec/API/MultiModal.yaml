@@ -43,6 +43,7 @@ types:
     nextStop: Maybe RouteStopMapping
     nextStopTravelTime: Maybe Seconds
     nextStopTravelDistance: Maybe Meters
+    mode: MultimodalTravelMode
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
