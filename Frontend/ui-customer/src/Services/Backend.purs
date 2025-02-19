@@ -1655,3 +1655,17 @@ confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
   where
     unwrapResponse x = x
+
+---------------------------------------- postBbpsSession ---------------------------------------------
+postBbpsSession :: String -> String -> Flow GlobalState (Either ErrorResponse BBPSSessionResp)
+postBbpsSession deviceId mobileNumber = do
+  let _ = spy "codex-coming-here" deviceId
+  headers <- getHeaders "" false
+  withAPIResult (EP.postBbpsSession "") unwrapResponse $ callAPI headers $ makeReqBody deviceId mobileNumber
+  where
+    makeReqBody :: String -> String -> BBPSSessionReq
+    makeReqBody deviceId mobileNumber = BBPSSessionReq {
+      deviceId : deviceId,
+      mobileNumber : mobileNumber
+    }
+    unwrapResponse x = x

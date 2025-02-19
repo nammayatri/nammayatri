@@ -32,6 +32,7 @@ import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallback;
 import in.juspay.services.HyperServices;
+import in.org.npci.bbps.BBPSService;
 
 public class PaymentPage {
 
@@ -39,6 +40,8 @@ public class PaymentPage {
     private final BridgeComponents bridgeComponents;
 
     private static final String LOG_TAG = PaymentPage.class.getSimpleName();
+
+    private BBPSService bbpsService;
 
 
     public PaymentPage(BridgeComponents bridgeComponents) {
@@ -120,6 +123,10 @@ public class PaymentPage {
             return hyperInstance.isInitialised();
         }
         return false;
+    }
+
+    public void setBBPSinPP(BBPSService bbpsService) {
+        this.bbpsService = bbpsService;
     }
 
     public JSONObject getInitiatePayload(Context context) throws JSONException {

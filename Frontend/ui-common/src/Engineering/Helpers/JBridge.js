@@ -3106,19 +3106,42 @@ export const executeJS = (params, codeString) => {
 
 }
 
-export const startBBPSMicroApp = function (viewId, mobileNumber) {
+// -------------------------------- BBPS Utils ------------------------------------------------
+
+export const startBBPSMicroApp = (viewId, mobileNumber) => {
   try {
-    const jsonObjectPayload = {
-      event : "launchBBPSSdk",
-      viewId : viewId,
-      bbpsPayload : {
-        action: "Main",
-        mobileNumber: mobileNumber
-      }
-    };
-    window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
+    if (JBridge.startBBPSMicroApp) {
+      const jsonObjectPayload = {
+        viewId : viewId,
+        bbpsPayload : {
+          action: "Main",
+          mobileNumber: mobileNumber
+        }
+      };
+      // window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
+      window.JBridge.startBBPSMicroApp((JSON.stringify(jsonObjectPayload)));
+    }
+    else {
+      console.error("startBBPSMicroApp not available");
+    }
   }
   catch (err) {
     console.error("error in startBBPSMicroApp", err);
+  }
+}
+
+export const initiateBBPS = (authToken, deviceId) => {
+  try {
+    if(JBridge.initiateBBPS) {
+      const initBBPSPayload = {
+        authToken: authToken,
+        appId: "1234567890",
+        deviceId: deviceId,
+        agentId: "1234"
+      }
+      return JBridge.initiateBBPS(JSON.stringify(initBBPSPayload));
+    }
+  } catch (err) {
+    console.error("error in initiateBBPS", err);
   }
 }

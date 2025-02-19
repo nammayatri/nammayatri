@@ -4580,3 +4580,169 @@ instance standardDiscountItem :: StandardEncode FRFSDiscountReq where
 instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
 instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
 instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
+
+ --------------------------------------------------- BBPS Integration ----------------------------------------------------
+
+-- BBPSBillDetails
+newtype BBPSBillDetails = BBPSBillDetails
+  { txnAmount :: String
+  , customerParams :: Maybe (Array String)
+  , billerId :: String
+  }
+derive instance genericBBPSBillDetails :: Generic BBPSBillDetails _
+derive instance newtypeBBPSBillDetails :: Newtype BBPSBillDetails _
+instance standardBBPSBillDetails :: StandardEncode BBPSBillDetails where standardEncode (BBPSBillDetails body) = standardEncode body
+instance decodeBBPSBillDetails :: Decode BBPSBillDetails where decode = defaultDecode
+instance encodeBBPSBillDetails :: Encode BBPSBillDetails where encode = defaultEncode
+
+-- BBPSSessionReq
+newtype BBPSSessionReq = BBPSSessionReq
+  { deviceId :: String
+  , mobileNumber :: String
+  }
+
+instance makeBBPSSessionReq :: RestEndpoint BBPSSessionReq  where
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.postBbpsSession "") headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericBBPSSessionReq :: Generic BBPSSessionReq _
+derive instance newtypeBBPSSessionReq :: Newtype BBPSSessionReq _
+instance standardBBPSSessionReq :: StandardEncode BBPSSessionReq where
+  standardEncode (BBPSSessionReq body) = standardEncode body
+instance decodeBBPSSessionReq :: Decode BBPSSessionReq where
+  decode = defaultDecode
+instance encodeBBPSSessionReq :: Encode BBPSSessionReq where
+  encode = defaultEncode
+
+-- BBPSSessionResp
+newtype BBPSSessionResp = BBPSSessionResp
+  { token :: String 
+  }
+derive instance genericBBPSSessionResp :: Generic BBPSSessionResp _
+derive instance newtypeBBPSSessionResp :: Newtype BBPSSessionResp _
+instance standardBBPSSessionResp :: StandardEncode BBPSSessionResp where
+  standardEncode (BBPSSessionResp body) = standardEncode body
+instance decodeBBPSSessionResp :: Decode BBPSSessionResp where
+  decode = defaultDecode
+instance encodeBBPSSessionResp :: Encode BBPSSessionResp where
+  encode = defaultEncode
+
+-- BBPSPaymentReq
+newtype BBPSPaymentReq = BBPSPaymentReq
+  { transType :: String
+  , mobileNumber :: String
+  , deviceId :: String
+  , billDetails :: BBPSBillDetails
+  , bbpsTxnId :: String
+  , appId :: String
+  }
+derive instance genericBBPSPaymentReq :: Generic BBPSPaymentReq _
+derive instance newtypeBBPSPaymentReq :: Newtype BBPSPaymentReq _
+instance standardBBPSPaymentReq :: StandardEncode BBPSPaymentReq where
+  standardEncode (BBPSPaymentReq body) = standardEncode body
+instance decodeBBPSPaymentReq :: Decode BBPSPaymentReq where
+  decode = defaultDecode
+instance encodeBBPSPaymentReq :: Encode BBPSPaymentReq where
+  encode = defaultEncode
+
+-- BBPSPaymentStatusAPIRes
+-- newtype BBPSPaymentStatusAPIRes = BBPSPaymentStatusAPIRes
+--   { status :: String
+--   , paymentInformation :: Maybe (Array String)
+--   , paymentMode :: Maybe BBPSPaymentMode
+--   , paymentTxnId :: Maybe String
+--   , errorMessage :: Maybe String
+--   }
+-- derive instance genericBBPSPaymentStatusAPIRes :: Generic BBPSPaymentStatusAPIRes _
+-- derive instance newtypeBBPSPaymentStatusAPIRes :: Newtype BBPSPaymentStatusAPIRes _
+-- instance standardBBPSPaymentStatusAPIRes :: StandardEncode BBPSPaymentStatusAPIRes where
+--   standardEncode (BBPSPaymentStatusAPIRes body) = standardEncode body
+-- instance decodeBBPSPaymentStatusAPIRes :: Decode BBPSPaymentStatusAPIRes where
+--   decode = defaultDecode
+-- instance encodeBBPSPaymentStatusAPIRes :: Encode BBPSPaymentStatusAPIRes where
+--   encode = defaultEncode
+
+-- BBPSInfoAPIRes
+newtype BBPSInfoAPIRes = BBPSInfoAPIRes
+  { refId :: String
+  , refShortId :: String
+  , status :: String
+  , transType :: String
+  , billDetails :: BBPSBillDetails
+  , paymentTxnId :: Maybe String
+  , paymentMode :: Maybe BBPSPaymentMode
+  , paymentInformation :: Maybe (Array String)
+  , errorMessage :: Maybe String
+  }
+derive instance genericBBPSInfoAPIRes :: Generic BBPSInfoAPIRes _
+derive instance newtypeBBPSInfoAPIRes :: Newtype BBPSInfoAPIRes _
+instance standardBBPSInfoAPIRes :: StandardEncode BBPSInfoAPIRes where standardEncode (BBPSInfoAPIRes body) = standardEncode body
+instance decodeBBPSInfoAPIRes :: Decode BBPSInfoAPIRes where decode = defaultDecode
+instance encodeBBPSInfoAPIRes :: Encode BBPSInfoAPIRes where encode = defaultEncode
+
+-- BBPSServerReq
+newtype BBPSServerReq = BBPSServerReq
+  { mobile :: String
+  , bbps_ref_id :: String
+  , payment_ref_id :: String
+  , amount :: String
+  , bbps_payment_status :: Maybe String
+  }
+derive instance genericBBPSServerReq :: Generic BBPSServerReq _
+derive instance newtypeBBPSServerReq :: Newtype BBPSServerReq _
+instance standardBBPSServerReq :: StandardEncode BBPSServerReq where
+  standardEncode (BBPSServerReq body) = standardEncode body
+instance decodeBBPSServerReq :: Decode BBPSServerReq where
+  decode = defaultDecode
+instance encodeBBPSServerReq :: Encode BBPSServerReq where
+  encode = defaultEncode
+
+-- -- BBPSServerStatus
+-- data BBPSServerStatus = SUCCESS | FAILURE
+-- derive instance genericBBPSServerStatus :: Generic BBPSServerStatus _
+-- derive instance eqBBPSServerStatus :: Eq BBPSServerStatus
+-- -- derive instance ordBBPSServerStatus :: Ord BBPSServerStatus
+-- derive instance showBBPSServerStatus :: Show BBPSServerStatus
+
+-- BBPSServerResp
+newtype BBPSServerResp = BBPSServerResp
+  { status :: String
+  , message :: String
+  }
+derive instance genericBBPSServerResp :: Generic BBPSServerResp _
+derive instance newtypeBBPSServerResp :: Newtype BBPSServerResp _
+instance standardBBPSServerResp :: StandardEncode BBPSServerResp where
+  standardEncode (BBPSServerResp body) = standardEncode body
+instance decodeBBPSServerResp :: Decode BBPSServerResp where
+  decode = defaultDecode
+instance encodeBBPSServerResp :: Encode BBPSServerResp where
+  encode = defaultEncode
+
+-- data BBPSPaymentMode = UPI | Debit_Card | Credit_Card | Others
+-- derive instance genericBBPSPaymentMode :: Generic BBPSPaymentMode _
+-- derive instance showBBPSPaymentMode :: Show BBPSPaymentMode where show = genericShow
+-- derive instance eqBBPSPaymentMode :: Eq BBPSPaymentMode
+
+data BBPSPaymentMode = UPI | Debit_Card | Credit_Card | Others
+
+derive instance genericBBPSPaymentMode :: Generic BBPSPaymentMode _
+instance standardEncodeBBPSPaymentMode :: StandardEncode BBPSPaymentMode where standardEncode _ = standardEncode {}
+instance showBBPSPaymentMode :: Show BBPSPaymentMode where show = genericShow
+instance decodeBBPSPaymentMode :: Decode BBPSPaymentMode where decode = defaultDecode
+instance encodeBBPSPaymentMode  :: Encode BBPSPaymentMode where encode = defaultEnumEncode
+instance eqBBPSPaymentMode :: Eq BBPSPaymentMode where eq = genericEq
+
+-- data BBPSPaymentStatus
+--   = NEW
+--   | PENDING
+--   | SUCCESS
+--   | FAILED
+--   | REFUND_PENDING
+--   | REFUND_FAILED
+--   | REFUNDED
+--   | CONFIRMATION_PENDING
+--   | CONFIRMATION_FAILED
+--   | AWAITING_BBPS_CONFIRMATION
+-- derive instance genericBBPSPaymentStatus :: Generic BBPSPaymentStatus _
+-- derive instance eqBBPSPaymentStatus :: Eq BBPSPaymentStatus
+-- derive instance showBBPSPaymentStatus :: Show BBPSPaymentStatus

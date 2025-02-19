@@ -218,6 +218,8 @@ import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.mobility.common.utils.CipherUtil;
 import in.juspay.mobility.common.utils.Utils;
+import in.org.npci.bbps.BBPSService;
+import in.org.npci.bbps.BBPSAgentInterface;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -292,6 +294,8 @@ public class MobilityCommonBridge extends HyperBridge {
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private ShakeDetector shakeDetector;
+    private BBPSService bbpsService;
+
     protected class PolylineDataPoints {
         public Polyline polyline = null;
         public Polyline overlayPolylines = null;
@@ -5270,6 +5274,13 @@ public class MobilityCommonBridge extends HyperBridge {
         return false;
     }
 
+//    @JavascriptInterface
+    public void setBBPSinPP(BBPSService bbpsService) {
+       if (paymentPage != null) {
+           paymentPage.setBBPSinPP(bbpsService);
+       }
+    }
+
     // endregion
 
     protected static class Receivers {
@@ -5872,6 +5883,91 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
             });
         }
+    }
+
+    // ------------------------------------------- BBPS -------------------------------------------
+    @JavascriptInterface
+    public void initiateBBPS(String bootData) {
+        JSONObject initPayload = new JSONObject();
+        try {
+            initPayload = new JSONObject(bootData);
+            bbpsService = new BBPSService(bridgeComponents.getContext().getApplicationContext(), initPayload, new BBPSAgent());
+            setBBPSinPP(bbpsService);
+            Log.d(LOG_TAG, "All completed in initiate BBPS");
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Unable to get initial payload for BBPS");
+        }
+    }
+
+    @JavascriptInterface
+    public void startBBPSMicroApp (String payload) throws JSONException {
+        Log.d(LOG_TAG, "COMING inside startBBPSMicroApp");
+        JSONObject payloadJSON = new JSONObject();
+        try {
+            payloadJSON = new JSONObject(payload);
+            View view = Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(payloadJSON.getString("viewId")));
+            JSONObject bbpsPayload = new JSONObject (payloadJSON.getString("bbpsPayload"));
+            bbpsService.process(((FragmentActivity) bridgeComponents.getActivity()), bbpsPayload);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in starting BBPS MicroApp: " + e);
+        }
+    }
+
+
+//    private void initBBPSSdk() { // BBPS SDK Integration
+//        try {
+//            String appId = "1234";
+//            String deviceId = "1234";
+//            String agentId = "";
+//            String privateKeyString = "";
+////            PrivateKey privateKey = loadPrivateKey(privateKeyString);
+////            String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
+//            JSONObject initData = new JSONObject();
+//
+//            // initData.put("email", email); // Optional
+//            initData.put("appId", appId); // Dummy for now
+//            initData.put("deviceId", deviceId); // Dummy for now
+//            initData.put("agentId", agentId); // Dummy for now
+////            initData.put("authToken", authToken); // Dummy for now
+//
+//            // Initializing and Booting up the SDK to make it ready for all the operations
+////            bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
+//            // Payment Gateway is service you will call to do transaction.
+////            PaymentGateway.setBBPSService(bbpsService);
+//
+////            startMicroForSuccessTxn()
+//        }
+//        catch (Exception e) {
+//            Log.e("Error in initiating BBPS SDK", e.toString());
+//        }
+//    }
+
+    public class BBPSAgent implements BBPSAgentInterface {
+        /*
+         *  BBPSAgent functions needs to populated by
+         *  the client. These functions will be invoked by
+         *  the SDK during processing.
+         *
+         * */
+
+        @Override
+        public void doPayment(JSONObject billDetails) {
+//            bbo
+//            Intent intent = new Intent(MainActivity.this, PaymentGateway.class);
+//            MainActivity.this.startActivity(intent);
+            Log.d(LOG_TAG,"Coming here with: "+billDetails);
+//            initiatePP("");
+        }
+
+        @Override
+        public void setTxnStatus(JSONObject txnStatus) {
+//            Intent intent = new Intent("CLOSE_PAYMENT_ACTIVITY");
+//            sendBroadcast(intent);
+            // callback from SDK to Application
+            // to store the transaction status
+        }
+
+
     }
 }
 

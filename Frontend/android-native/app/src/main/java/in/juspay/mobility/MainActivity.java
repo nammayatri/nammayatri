@@ -131,10 +131,11 @@ import java.util.Iterator;
 import co.hyperverge.hyperkyc.HyperKyc;
 import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
 import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
+//import in.juspay.mobility.BBPSUtils;
 
-import in.org.npci.bbps.BBPSService;
-import in.org.npci.bbps.BBPSAgentInterface;
-import in.juspay.mobility.PaymentGateway;
+import in.juspay.mobility.common.
+//import in.org.npci.bbps.BBPSAgentInterface;
+//import in.juspay.mobility.PaymentGateway;
 
 import android.content.Intent;
 
@@ -148,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
-    private BBPSService bbpsService;
+//    private BBPSService bbpsService;
 
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
@@ -454,7 +455,7 @@ public class MainActivity extends AppCompatActivity {
 
         handleSplashScreen();
         initApp();
-        initBBPSSdk();
+        // initBBPSSdk();
 
         WebView.setWebContentsDebuggingEnabled(true);
 
@@ -765,34 +766,6 @@ public class MainActivity extends AppCompatActivity {
         return keyFactory.generatePrivate(keySpec);
     }
 
-    private void initBBPSSdk() { // BBPS SDK Integration
-        try {
-            String appId = "1234";
-            String deviceId = "1234";
-            String agentId = "";
-            String privateKeyString = "";
-            PrivateKey privateKey = loadPrivateKey(privateKeyString);
-            String authToken = createJwtToken(agentId, appId, deviceId, appId, privateKey);
-            JSONObject initData = new JSONObject();
-
-            // initData.put("email", email); // Optional
-            initData.put("appId", appId); // Dummy for now
-            initData.put("deviceId", deviceId); // Dummy for now
-            initData.put("agentId", agentId); // Dummy for now
-            initData.put("authToken", authToken); // Dummy for now
-
-            // Initializing and Booting up the SDK to make it ready for all the operations
-            bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
-            // Payment Gateway is service you will call to do transaction.
-            PaymentGateway.setBBPSService(bbpsService);
-
-//            startMicroForSuccessTxn()
-        }
-        catch (Exception e) {
-            Log.e("Error in initiating BBPS SDK", e.toString());
-        }
-    }
-
     private void initApp() {
         long initiateTimeStamp = System.currentTimeMillis();
         Log.i("APP_PERF", "INIT_APP_START : " + System.currentTimeMillis());
@@ -943,23 +916,26 @@ public class MainActivity extends AppCompatActivity {
                             Log.e("Error Occurred while calling Hyperverge SDK ", e.toString());
                         }
                         break;
-                    case "launchBBPSSdk":
-                        try {
-                            View view = findViewById(Integer.parseInt(jsonObject.getString("viewId")));
-                            JSONObject bbpsPayload = new JSONObject();
-                            bbpsPayload.put("action", "MAIN");
-                            bbpsPayload.put("mobileNumber", "");
-                            bbpsService.process(MainActivity.this, bbpsPayload);
-                        } catch (Exception e) {
-                            Log.e("Error Occurred in launchBBPSSdk", e.toString());
-                        }
-                        break;
+//                    case "launchBBPSSdk":
+//                        try {
+//                            initBBPSSdk();
+//                            View view = findViewById(Integer.parseInt(jsonObject.getString("viewId")));
+//                            JSONObject bbpsPayload = new JSONObject(jsonObject.getString("bbpsPayload"));
+//                            // JSONObject bbpsPayload = new JSONObject();
+//                            // bbpsPayload.put("action", "MAIN");
+//                            // bbpsPayload.put("mobileNumber", "");
+//                            bbpsService.process(MainActivity.this, bbpsPayload);
+//                        } catch (Exception e) {
+//                            Log.e("Error Occurred in launchBBPSSdk", e.toString());
+//                        }
+//                        break;
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                 }
             }
         });
-        Log.i("APP_PERF", "INIT_HYPER_SERVICE_END : " + System.currentTimeMillis());
+        Log.i("APP_PERF", "INIT_HYPER_SERVICE_" +
+                "END : " + System.currentTimeMillis());
     }
 
     public void showAlertForUpdate() {
@@ -1409,32 +1385,5 @@ public class MainActivity extends AppCompatActivity {
             } else {
 
         }
-    }
-
-    public class BBPSAgent implements BBPSAgentInterface {
-        /*
-         *  BBPSAgent functions needs to populated by
-         *  the client. These functions will be invoked by
-         *  the SDK during processing.
-         *
-         * */
-
-        @Override
-        public void doPayment(JSONObject billDetails) {
-            bbpsBillDetail = billDetails;
-            //Trigger payment page
-            Intent intent = new Intent(MainActivity.this, PaymentGateway.class);
-            MainActivity.this.startActivity(intent);
-        }
-
-        @Override
-        public void setTxnStatus(JSONObject txnStatus) {
-            Intent intent = new Intent("CLOSE_PAYMENT_ACTIVITY");
-            sendBroadcast(intent);
-            // callback from SDK to Application
-            // to store the transaction status
-        }
-
-
     }
 }

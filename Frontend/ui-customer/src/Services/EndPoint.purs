@@ -365,3 +365,21 @@ frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> ro
 
 confirmMetroQuoteV2 :: String -> String
 confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId <> "/confirm"
+
+postBbpsSession :: String -> String
+postBbpsSession _ = (getBaseUrl "") <> "/bbps/session"
+
+postBbpsCreateOrder :: String -> String
+postBbpsCreateOrder _ = (getBaseUrl "") <> "/bbps/createOrder"
+
+getBbpsOrderStatus :: String -> String
+getBbpsOrderStatus orderId = (getBaseUrl "") <> "/bbps/getOrderStatus/" <> orderId
+
+postBbpsCrossCheckPayment :: String -> String
+postBbpsCrossCheckPayment _ = (getBaseUrl "") <> "/bbps/confirm-payment"
+
+postBbpsPaymentStatus :: String -> String
+postBbpsPaymentStatus _ = (getBaseUrl "") <> "/bbps/payment-status"
+
+getBbpsOrders :: String -> String
+getBbpsOrders _ = (getBaseUrl "") <> "/bbps/orders"
