@@ -47,7 +47,8 @@ initData = {
     mediaType : Nothing,
     likeCount : 0,
     likeStatus : false,
-    viewCount : 0
+    viewCount : 0,
+    shareable : false
   },
   notifsDetailModelVisibility : GONE,
   loadMore : false,
@@ -72,5 +73,6 @@ dummyNotificationCard = {
     mediaType : Nothing,
     likeCount : 0,
     viewCount : 0,
-    likeStatus : false
+    likeStatus : false,
+    shareable : false
   }
