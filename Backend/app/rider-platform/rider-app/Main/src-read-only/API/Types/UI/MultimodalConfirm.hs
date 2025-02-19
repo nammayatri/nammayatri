@@ -9,6 +9,7 @@ import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
+import qualified Domain.Types.RouteStopMapping
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.MapsClient.Types
@@ -74,6 +75,9 @@ data JourneyStatusResp = JourneyStatusResp {journeyPaymentStatus :: Kernel.Prelu
 
 data LegStatus = LegStatus
   { legOrder :: Kernel.Prelude.Int,
+    nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
+    nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
