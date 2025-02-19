@@ -104,7 +104,7 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
     Nothing -> do
       fork "FRFS ONDC Cancel Req" $ do
         frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -128,7 +128,7 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
     Just config -> do
       fork "FRFS External Confirm Req" $ do
         frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig config bapConfig (mRiderName, mRiderNumber) booking
         onConfirmHandler onConfirmReq

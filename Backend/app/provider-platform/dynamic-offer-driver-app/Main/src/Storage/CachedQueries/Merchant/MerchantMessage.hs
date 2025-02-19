@@ -16,69 +16,78 @@
 module Storage.CachedQueries.Merchant.MerchantMessage
   ( create,
     findAllByMerchantOpCityId,
+    findAllByMerchantOpCityIdInRideFlow,
     findByMerchantOpCityIdAndMessageKeyVehicleCategory,
+    findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow,
     clearCache,
     clearCacheById,
   )
 where
 
-import Data.Coerce (coerce)
-import Domain.Types.Common
 import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.MerchantMessage as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantMessage -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantMessage]
-findAllByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return $ fmap (coerce @(MerchantMessageD 'Unsafe) @MerchantMessage) a
-    Nothing -> cacheMerchantMessageForCity id /=<< Queries.findAllByMerchantOpCityId id
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [MerchantMessage]
+findAllByMerchantOpCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs (cast id) (LYT.DRIVER_CONFIG LYT.MerchantMessage) mbConfigVersionMap Nothing (Queries.findAllByMerchantOpCityId id)
 
-cacheMerchantMessageForCity :: CacheFlow m r => Id MerchantOperatingCity -> [MerchantMessage] -> m ()
-cacheMerchantMessageForCity merchantOperatingCityId cfg = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (fmap (coerce @MerchantMessage @(MerchantMessageD 'Unsafe)) cfg) expTime
-
-makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId
-
-cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
-cacheMerchantMessage merchantMessage = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey merchantMessage.vehicleCategory
-  Hedis.setExp idKey (coerce @MerchantMessage @(MerchantMessageD 'Unsafe) merchantMessage) expTime
+findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [MerchantMessage]
+findAllByMerchantOpCityIdInRideFlow id configVersionMap =
+  findAllByMerchantOpCityId id (Just configVersionMap)
 
 makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Text
 makeMerchantOpCityIdAndMessageKey id messageKey mbVehicleCategory = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory
 
-findByMerchantOpCityIdAndMessageKeyVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m (Maybe MerchantMessage)
-findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory =
-  Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey vehicleCategory) >>= \case
-    Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
+findByMerchantOpCityIdAndMessageKeyVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory mbConfigVersionMap = do
+  res <-
+    DynamicLogic.findOneConfigWithCacheKey
+      (cast id)
+      (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+      mbConfigVersionMap
+      Nothing
+      (Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory)
+      (makeMerchantOpCityIdAndMessageKey id messageKey vehicleCategory)
+  case res of
+    Just a -> return $ Just a
     Nothing -> do
-      res <- Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory
-      case res of
-        Just a -> do
-          cacheMerchantMessage a
-          return $ Just a
-        Nothing -> case vehicleCategory of
-          Nothing -> return Nothing
-          _ -> findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey Nothing
+      case vehicleCategory of
+        Nothing -> return Nothing
+        Just _ ->
+          DynamicLogic.findOneConfigWithCacheKey
+            (cast id)
+            (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+            mbConfigVersionMap
+            Nothing
+            (Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey Nothing)
+            (makeMerchantOpCityIdAndMessageKey id messageKey Nothing)
 
--- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m ()
-clearCache merchantOpCityId messageKey mbVehicleCategory = do
-  Hedis.del (makeMerchantOpCityIdAndMessageKey merchantOpCityId messageKey mbVehicleCategory)
+findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow id messageKey vehicleCategory configVersionMap =
+  findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory (Just configVersionMap)
 
-clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCacheById merchantOpCityId = do
-  Hedis.del (makeMerchantOpCityIdKey merchantOpCityId)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m ()
+clearCache merchantOpCityId messageKey mbVehicleCategory =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeMerchantOpCityIdAndMessageKey merchantOpCityId messageKey mbVehicleCategory)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+    Nothing
+
+clearCacheById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOpCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+    Nothing

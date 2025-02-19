@@ -29,49 +29,44 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
 import Domain.Types.VehicleCategory
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.PayoutConfig as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [PayoutConfig]
-findAllByMerchantOpCityId cityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeCityIdKey cityId) >>= \case
-    Just a -> return a
-    Nothing -> cachePayoutConfigForCity' cityId /=<< Queries.findAllByMerchantOpCityId cityId
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [PayoutConfig]
+findAllByMerchantOpCityId cityId mbConfigVersionMap =
+  DynamicLogic.findAllConfigs
+    (cast cityId)
+    (LYT.DRIVER_CONFIG LYT.PayoutConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityId cityId)
 
-findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m (Maybe PayoutConfig)
-findByPrimaryKey id vehicleCategory =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKeyAndCategory id vehicleCategory) >>= \case
-    Just a -> return a
-    Nothing -> cachePayoutConfigForCityAndVehicleCategory id vehicleCategory /=<< Queries.findByPrimaryKey id vehicleCategory
+findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe PayoutConfig)
+findByPrimaryKey id vehicleCategory mbConfigVersionMap =
+  DynamicLogic.findOneConfigWithCacheKey
+    (cast id)
+    (LYT.DRIVER_CONFIG LYT.PayoutConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findByPrimaryKey id vehicleCategory)
+    (makeMerchantOpCityIdKeyAndCategory id vehicleCategory)
 
-findByMerchantOpCityIdAndIsPayoutEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> m [PayoutConfig]
-findByMerchantOpCityIdAndIsPayoutEnabled id isPayoutEnabled =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id isPayoutEnabled) >>= \case
-    Just a -> return a
-    Nothing -> cachePayoutConfigForCity id isPayoutEnabled /=<< Queries.findByMerchantOpCityIdAndIsPayoutEnabled id isPayoutEnabled
-
-cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> VehicleCategory -> Maybe PayoutConfig -> m ()
-cachePayoutConfigForCityAndVehicleCategory id vehicleCategory cfg = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdKeyAndCategory id vehicleCategory
-  Hedis.setExp idKey cfg expTime
-
-cachePayoutConfigForCity :: CacheFlow m r => Id MerchantOperatingCity -> Bool -> [PayoutConfig] -> m ()
-cachePayoutConfigForCity id isPayoutEnabled cfg = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdKey id isPayoutEnabled
-  Hedis.setExp idKey cfg expTime
-
-cachePayoutConfigForCity' :: CacheFlow m r => Id MerchantOperatingCity -> [PayoutConfig] -> m ()
-cachePayoutConfigForCity' id config = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeCityIdKey id
-  Hedis.setExp idKey config expTime
+findByMerchantOpCityIdAndIsPayoutEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> Maybe [LYT.ConfigVersionMap] -> m [PayoutConfig]
+findByMerchantOpCityIdAndIsPayoutEnabled id isPayoutEnabled mbConfigVersionMap =
+  DynamicLogic.findAllConfigsWithCacheKey
+    (cast id)
+    (LYT.DRIVER_CONFIG LYT.PayoutConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findByMerchantOpCityIdAndIsPayoutEnabled id isPayoutEnabled)
+    (makeMerchantOpCityIdKey id isPayoutEnabled)
 
 makeMerchantOpCityIdKeyAndCategory :: Id MerchantOperatingCity -> VehicleCategory -> Text
 makeMerchantOpCityIdKeyAndCategory id vehicleCategory = "driver-offer:CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> ":Category-" <> show vehicleCategory
@@ -79,20 +74,30 @@ makeMerchantOpCityIdKeyAndCategory id vehicleCategory = "driver-offer:CachedQuer
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Bool -> Text
 makeMerchantOpCityIdKey id isPayoutEnabled = "driver-offer:CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> "isPayoutEnabled:" <> show isPayoutEnabled
 
-makeCityIdKey :: Id MerchantOperatingCity -> Text
-makeCityIdKey id = "driver-offer:CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> m ()
+clearCache merchantOpCityId isPayoutEnabled =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeMerchantOpCityIdKey merchantOpCityId isPayoutEnabled)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.PayoutConfig)
+    Nothing
 
--- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Bool -> m ()
-clearCache merchantOpCityId isPayoutEnabled = Hedis.del (makeMerchantOpCityIdKey merchantOpCityId isPayoutEnabled)
+clearCacheById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOpCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.PayoutConfig)
+    Nothing
 
-clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCacheById merchantOpCityId = Hedis.del (makeCityIdKey merchantOpCityId)
+clearCacheByCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m ()
+clearCacheByCategory merchantOpCityId vehicleCategory =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeMerchantOpCityIdKeyAndCategory merchantOpCityId vehicleCategory)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.PayoutConfig)
+    Nothing
 
-clearCacheByCategory :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> VehicleCategory -> m ()
-clearCacheByCategory merchantOpCityId vehicleCategory = Hedis.del (makeMerchantOpCityIdKeyAndCategory merchantOpCityId vehicleCategory)
-
-clearConfigCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> VehicleCategory -> m ()
+clearConfigCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m ()
 clearConfigCache merchantOperatingCityId vehicleCategory = do
   clearCacheById merchantOperatingCityId
   clearCacheByCategory merchantOperatingCityId vehicleCategory

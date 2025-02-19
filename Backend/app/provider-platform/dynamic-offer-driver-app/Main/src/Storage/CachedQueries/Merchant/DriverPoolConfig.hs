@@ -24,6 +24,7 @@ module Storage.CachedQueries.Merchant.DriverPoolConfig
     findByMerchantOpCityIdAndTripDistance,
     findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh,
     update,
+    findAllByMerchantOpCityIdInRideFlow,
   )
 where
 
@@ -31,39 +32,33 @@ import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.DriverPoolConfig as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
-findAllByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return a
-    Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantOpCityId Nothing Nothing id
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> Maybe Value -> m [DriverPoolConfig]
+findAllByMerchantOpCityId id mbConfigVersionMap extraDimensions =
+  DynamicLogic.findAllConfigs (cast id) (LYT.DRIVER_CONFIG LYT.DriverPoolConfig) mbConfigVersionMap extraDimensions (Queries.findAllByMerchantOpCityId Nothing Nothing id)
 
-findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
-findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId
+findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> m [DriverPoolConfig]
+findAllByMerchantOpCityIdInRideFlow id configInExperimentVersions extraDimensions =
+  findAllByMerchantOpCityId id (Just configInExperimentVersions) extraDimensions
 
-findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
-findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == serviceTier && config.tripCategory == tripCategory && config.area == area) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe [LYT.ConfigVersionMap] -> Maybe Value -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance mbConfigVersionMap extraDimensions = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap extraDimensions
 
-cacheDriverPoolConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DriverPoolConfig] -> m ()
-cacheDriverPoolConfigs merchantOpCityId cfg = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantOpCityIdKey merchantOpCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey cfg expTime
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> Maybe [LYT.ConfigVersionMap] -> Maybe Value -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area mbConfigVersionMap extraDimensions = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == serviceTier && config.tripCategory == tripCategory && config.area == area) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap extraDimensions
 
-makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:DriverPoolConfig:MerchantOperatingCityId-" <> id.getId
-
--- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache id = DynamicLogic.clearConfigCache (cast id) (LYT.DRIVER_CONFIG LYT.DriverPoolConfig) Nothing
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
 update = Queries.updateByPrimaryKey
