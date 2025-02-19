@@ -193,9 +193,9 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
 
   fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
-  fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride
+  fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
 
-  rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME
+  rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
 
   pure APISuccess.Success

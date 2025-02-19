@@ -88,43 +88,6 @@ import qualified Text.Show (show)
 class Enumerable a where
   allValues :: [a]
 
-data ConfigType
-  = DriverPoolConfig
-  | TransporterConfig
-  | RiderConfig
-  | FRFSConfig
-  | PayoutConfig
-  | MerchantServiceUsageConfig
-  | HotSpotConfig
-  | MerchantConfig
-  | BecknConfig
-  | PartnerOrgConfig
-  | RideRelatedNotificationConfig
-  | VehicleConfig
-  | MerchantMessage
-  | MerchantPushNotification
-  | Sos
-  | Station
-  | DriverIntelligentPoolConfig
-  | LeaderBoardConfig
-  | CoinsConfig
-  | DocumentVerificationConfig
-  | FleetOwnerDocumentVerificationConfig
-  | GoHomeConfig
-  | SubscriptionConfig
-  | Overlay
-  | FarePolicy
-  | FareProduct
-  | Plan
-  | PlanTranslation
-  | Toll
-  | CancellationFarePolicy
-  | SurgePricing
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''ConfigType)
-$(mkBeamInstancesForEnum ''ConfigType)
-
 data Source
   = Application ApplicationEvent
   | KaalChakra Chakra
@@ -348,12 +311,6 @@ data RevertReq = RevertReq
     domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
-
-data ConfigVersionMap = ConfigVersionMap
-  { config :: LogicDomain,
-    version :: Int
-  }
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TableDataResp = TableDataResp
   { configs :: [Value]
@@ -625,3 +582,9 @@ instance HideSecrets RunKaalChakraJobReq where
 
 instance HideSecrets RunKaalChakraJobRes where
   hideSecrets = identity
+
+data ConfigVersionMap = ConfigVersionMap
+  { config :: LogicDomain,
+    version :: Int
+  }
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

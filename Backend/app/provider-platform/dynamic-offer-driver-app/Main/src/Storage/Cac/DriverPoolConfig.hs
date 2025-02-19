@@ -30,7 +30,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -40,6 +39,7 @@ import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
@@ -187,17 +187,17 @@ getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
 create = CDP.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> Maybe Value -> m [DriverPoolConfig]
 findAllByMerchantOpCityId = CDP.findAllByMerchantOpCityId
 
-findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe [LYT.ConfigVersionMap] -> Maybe Value -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistance = CDP.findByMerchantOpCityIdAndTripDistance
 
-findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVST.ServiceTierType -> Text -> SL.Area -> Maybe [LYT.ConfigVersionMap] -> Maybe Value -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh = CDP.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
 clearCache = CDP.clearCache
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()

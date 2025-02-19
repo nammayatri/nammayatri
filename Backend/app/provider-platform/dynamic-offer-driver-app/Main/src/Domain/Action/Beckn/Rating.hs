@@ -84,7 +84,7 @@ handler merchantId req ride = do
           case mbCorrelationRes of
             Just correlationRes -> do
               when (not correlationRes.favourite) $ do
-                mbMerchantPN_ <- CPN.findMatchingMerchantPN ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language
+                mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlow ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language booking.configInExperimentVersions
                 whenJust mbMerchantPN_ $ \merchantPN_ -> do
                   let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
                       entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}
@@ -92,7 +92,7 @@ handler merchantId req ride = do
                 RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
                 SQD.incFavouriteRiderCount ride.driverId
             Nothing -> do
-              mbMerchantPN_ <- CPN.findMatchingMerchantPN ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language
+              mbMerchantPN_ <- CPN.findMatchingMerchantPNInRideFlow ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language booking.configInExperimentVersions
               whenJust mbMerchantPN_ $ \merchantPN_ -> do
                 let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
                     entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}

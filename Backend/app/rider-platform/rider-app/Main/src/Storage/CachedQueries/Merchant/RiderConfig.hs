@@ -15,20 +15,17 @@
 
 module Storage.CachedQueries.Merchant.RiderConfig
   ( create,
+    clearCache,
     findByMerchantOperatingCityId,
     findByMerchantOperatingCityIdInRideFlow,
-    clearCache,
   )
 where
 
-import Data.Aeson as A
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.RiderConfig
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.RiderConfig as Queries
@@ -38,7 +35,7 @@ create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
 create = Queries.create
 
 findByMerchantOperatingCityIdInRideFlow ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
   [LYT.ConfigVersionMap] ->
   m (Maybe RiderConfig)
@@ -46,50 +43,12 @@ findByMerchantOperatingCityIdInRideFlow id configInExperimentVersions =
   findByMerchantOperatingCityId id (Just configInExperimentVersions)
 
 findByMerchantOperatingCityId ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe [LYT.ConfigVersionMap] ->
   m (Maybe RiderConfig)
 findByMerchantOperatingCityId id mbConfigInExperimentVersions = do
-  version <- DynamicLogic.getConfigVersion (cast id) mbConfigInExperimentVersions (LYT.RIDER_CONFIG LYT.RiderConfig)
-  cachedConfig <- Hedis.safeGet (makeMerchantOperatingCityIdKey id version)
-  case cachedConfig of
-    Just riderConfig -> return (Just riderConfig)
-    Nothing -> fetchAndCacheConfig version
-  where
-    fetchAndCacheConfig version = do
-      allLogics <- DynamicLogic.getConfigLogic (cast id) version (LYT.RIDER_CONFIG LYT.RiderConfig)
-      mbConfig <- Queries.findByMerchantOperatingCityId id
-      maybe (return Nothing) (processConfig allLogics version) mbConfig
+  DynamicLogic.findOneConfig (cast id) (LYT.RIDER_CONFIG LYT.RiderConfig) mbConfigInExperimentVersions Nothing (Queries.findByMerchantOperatingCityId id)
 
-    processConfig allLogics version cfg = do
-      let configWrapper = LYT.Config cfg Nothing 0
-      response <- try @_ @SomeException $ LYTU.runLogics allLogics configWrapper
-      case response of
-        Left e -> do
-          logError $ "Error in running logics for rider config: " <> show e
-          return $ Just cfg
-        Right resp -> do
-          case (fromJSON resp.result :: Result (LYT.Config RiderConfig)) of
-            Success result -> do
-              cacheRiderConfig version result.config
-              return $ Just result.config
-            A.Error err -> do
-              logError $ "Error in running logics for rider config: " <> show err
-              return $ Just cfg
-
-cacheRiderConfig :: (CacheFlow m r) => Int -> RiderConfig -> m ()
-cacheRiderConfig version riderConfig = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let riderConfigKey = makeMerchantOperatingCityIdKey riderConfig.merchantOperatingCityId version
-  Hedis.setExp riderConfigKey riderConfig expTime
-
-makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Int -> Text
-makeMerchantOperatingCityIdKey id version = "CachedQueries:RiderConfig:MerchantOperatingCityId-" <> id.getId <> "-V-" <> show version
-
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Maybe Int -> m ()
-clearCache merchanOperatingCityId mbVersion = do
-  case mbVersion of
-    -- clear all version cache here
-    Nothing -> Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId 1) -- should we clear cache for all versions?
-    Just version -> Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId version)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache id = DynamicLogic.clearConfigCache (cast id) (LYT.RIDER_CONFIG LYT.RiderConfig) Nothing

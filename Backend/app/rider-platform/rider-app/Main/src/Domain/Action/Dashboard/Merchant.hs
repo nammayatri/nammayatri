@@ -455,9 +455,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant message
   mbMerchantMessages <-
-    CQMM.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQMM.findAllByMerchantOpCityIdInRideFlow newMerchantOperatingCityId [] >>= \case
       [] -> do
-        merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
+        merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId Nothing
         let newMerchantMessages = map (buildMerchantMessage newMerchantId newMerchantOperatingCityId now) merchantMessages
         return $ Just newMerchantMessages
       _ -> return Nothing -- ignore
@@ -581,7 +581,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQMM.clearCacheById newMerchantOperatingCityId
         CQMPM.clearCache newMerchantOperatingCityId
         CQMSUC.clearCache newMerchantOperatingCityId
-        QRC.clearCache newMerchantOperatingCityId Nothing
+        QRC.clearCache newMerchantOperatingCityId
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
         exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
         CQExophone.clearCache newMerchantOperatingCityId exoPhone

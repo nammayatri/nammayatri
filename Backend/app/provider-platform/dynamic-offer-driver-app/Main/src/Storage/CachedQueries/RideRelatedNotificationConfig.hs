@@ -16,7 +16,9 @@
 module Storage.CachedQueries.RideRelatedNotificationConfig
   ( create,
     findAllByMerchantOperatingCityId,
+    findAllByMerchantOperatingCityIdInRideFlow,
     findAllByMerchantOperatingCityIdAndTimeDiffEvent,
+    findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow,
     clearCache,
   )
 where
@@ -24,44 +26,36 @@ where
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RideRelatedNotificationConfig
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.RideRelatedNotificationConfig as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RideRelatedNotificationConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [RideRelatedNotificationConfig]
-findAllByMerchantOperatingCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return a
-    Nothing -> cacheRideRelatedNotificationConfigForCity id /=<< Queries.findAllByMerchantOperatingCityId id
+findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [RideRelatedNotificationConfig]
+findAllByMerchantOperatingCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs (cast id) (LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig) mbConfigVersionMap Nothing (Queries.findAllByMerchantOperatingCityId id)
 
-cacheRideRelatedNotificationConfigForCity :: CacheFlow m r => Id MerchantOperatingCity -> [RideRelatedNotificationConfig] -> m ()
-cacheRideRelatedNotificationConfigForCity merchantOperatingCityId cfg = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey cfg expTime
+findAllByMerchantOperatingCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [RideRelatedNotificationConfig]
+findAllByMerchantOperatingCityIdInRideFlow id configInExperimentVersions =
+  findAllByMerchantOperatingCityId id (Just configInExperimentVersions)
 
-makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:RideRelatedNotificationConfig:MerchantOperatingCityId-" <> id.getId
+findAllByMerchantOperatingCityIdAndTimeDiffEvent :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> TimeDiffEvent -> Maybe [LYT.ConfigVersionMap] -> m [RideRelatedNotificationConfig]
+findAllByMerchantOperatingCityIdAndTimeDiffEvent id timeDiffEvent mbConfigVersionMap =
+  DynamicLogic.findAllConfigsWithCacheKey (cast id) (LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig) mbConfigVersionMap Nothing (Queries.findAllByMerchantOperatingCityIdAndTimeDiffEvent id timeDiffEvent) (makeMerchantOpCityIdAndTimeDiffEventKey id timeDiffEvent)
 
-findAllByMerchantOperatingCityIdAndTimeDiffEvent :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> TimeDiffEvent -> m [RideRelatedNotificationConfig]
-findAllByMerchantOperatingCityIdAndTimeDiffEvent id timeDiffEvent =
-  Hedis.safeGet (makeMerchantOpCityIdAndTimeDiffEventKey id timeDiffEvent) >>= \case
-    Just a -> return a -- Just
-    Nothing -> cacheRideRelatedNotificationConfig (makeMerchantOpCityIdAndTimeDiffEventKey id timeDiffEvent) /=<< Queries.findAllByMerchantOperatingCityIdAndTimeDiffEvent id timeDiffEvent
-
-cacheRideRelatedNotificationConfig :: CacheFlow m r => Text -> [RideRelatedNotificationConfig] -> m ()
-cacheRideRelatedNotificationConfig key rideRelatedNotificationConfigs = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp key rideRelatedNotificationConfigs expTime
+findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> TimeDiffEvent -> [LYT.ConfigVersionMap] -> m [RideRelatedNotificationConfig]
+findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow id timeDiffEvent configInExperimentVersions =
+  findAllByMerchantOperatingCityIdAndTimeDiffEvent id timeDiffEvent (Just configInExperimentVersions)
 
 makeMerchantOpCityIdAndTimeDiffEventKey :: Id MerchantOperatingCity -> TimeDiffEvent -> Text
 makeMerchantOpCityIdAndTimeDiffEventKey id timeDiffEvent = "CachedQueries:RideRelatedNotificationConfig:MerchantOperatingCityId-" <> id.getId <> ":TimeDiffEvent-" <> show timeDiffEvent
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> TimeDiffEvent -> m ()
-clearCache merchantOpCityId timeDiffEvent = do
-  Hedis.del (makeMerchantOpCityIdAndTimeDiffEventKey merchantOpCityId timeDiffEvent)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> TimeDiffEvent -> m ()
+clearCache merchantOpCityId timeDiffEvent =
+  DynamicLogic.clearConfigCacheWithPrefix (makeMerchantOpCityIdAndTimeDiffEventKey merchantOpCityId timeDiffEvent) (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig) Nothing

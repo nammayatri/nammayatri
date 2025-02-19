@@ -85,7 +85,7 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
 buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m SmsReqBuilder
 buildSendOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
 
@@ -98,7 +98,7 @@ data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
 buildSendBookingOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m SmsReqBuilder
 buildSendBookingOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount)]
 
@@ -110,7 +110,7 @@ newtype BuildSendRideEndOTPMessageReq = BuildSendRideEndOTPMessageReq
 buildSendRideEndOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendRideEndOTPMessageReq -> m SmsReqBuilder
 buildSendRideEndOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_RIDE_END_OTP
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_RIDE_END_OTP Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_RIDE_END_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp)]
 
@@ -120,7 +120,7 @@ data BuildGenericMessageReq = BuildGenericMessageReq {}
 buildGenericMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m SmsReqBuilder
 buildGenericMessage merchantOpCityId messageKey _ = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
   let jsonData = merchantMessage.jsonData
   buildSendSmsReq merchantMessage [("var1", fromMaybe "" jsonData.var1), ("var2", fromMaybe "" jsonData.var2), ("var3", fromMaybe "" jsonData.var3)]
@@ -139,7 +139,7 @@ buildSOSAlertMessage merchantOperatingCityId req = do
   let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
       smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", shortenedTrackingUrl)]
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId $ show messageKey)
   buildSendSmsReq merchantMessage smsParams
 
@@ -151,7 +151,7 @@ newtype BuildMarkRideAsSafeMessageReq = BuildMarkRideAsSafeMessageReq
 buildMarkRideAsSafeMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m SmsReqBuilder
 buildMarkRideAsSafeMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.MARK_RIDE_AS_SAFE))
   buildSendSmsReq merchantMessage [("userName", req.userName)]
 
@@ -164,7 +164,7 @@ data BuildFollowRideMessageReq = BuildFollowRideMessageReq
 buildFollowRideStartedMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m SmsReqBuilder
 buildFollowRideStartedMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FOLLOW_RIDE))
   buildSendSmsReq merchantMessage [("userName", req.userName), ("rideLink", req.rideLink)]
 
@@ -177,7 +177,7 @@ data BuildAddedAsEmergencyContactMessageReq = BuildAddedAsEmergencyContactMessag
 buildAddedAsEmergencyContactMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildAddedAsEmergencyContactMessageReq -> m SmsReqBuilder
 buildAddedAsEmergencyContactMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.ADDED_AS_EMERGENCY_CONTACT
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.ADDED_AS_EMERGENCY_CONTACT Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.ADDED_AS_EMERGENCY_CONTACT))
   buildSendSmsReq merchantMessage [("userName", req.userName), ("appUrl", req.appUrl)]
 
@@ -190,7 +190,7 @@ data BuildTicketBookingCancelledMessageReq = BuildTicketBookingCancelledMessageR
 buildTicketBookingCancelled :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildTicketBookingCancelledMessageReq -> m SmsReqBuilder
 buildTicketBookingCancelled merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.TICKET_BOOKING_CANCELLED))
   buildSendSmsReq merchantMessage [("personName", req.personName), ("categoryName", req.categoryName)]
 
@@ -235,7 +235,7 @@ data BuildFRFSTicketCancelMessageReq = BuildFRFSTicketCancelMessageReq
 buildFRFSTicketCancelMessage :: (BuildMessageFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> BuildFRFSTicketCancelMessageReq -> m SmsReqBuilder
 buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.METRO_TICKET_BOOKING_CANCELLED))
   smsPOCfg <- do
     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
@@ -289,7 +289,7 @@ buildDeliveryDetailsMessage merchantOperatingCityId req = do
         SenderReq -> bool DMM.SMS_DELIVERY_DETAILS_SENDER DMM.POST_DELIVERY_SENDER req.hasEnded
         ReceiverReq -> bool DMM.PRE_PICKUP_DELIVERY_RECEIVER DMM.SMS_DELIVERY_DETAILS_RECEIVER req.pickedUp
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
   shortTrackingUrl <- maybe (pure mempty) shortenTrackingUrl req.trackingUrl
   buildSendSmsReq
