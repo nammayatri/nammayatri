@@ -449,6 +449,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                tripEndPos = Just tripEndPoint,
                rideEndedBy = Just rideEndedBy',
                fareParametersId = Just newFareParams.id,
+               tollCharges = mbUpdatedFareParams >>= (.tollCharges),
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
                endOdometerReading = mbOdometer
