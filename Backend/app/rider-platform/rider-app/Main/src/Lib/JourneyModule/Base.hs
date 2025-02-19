@@ -18,7 +18,6 @@ import qualified Domain.Types.LocationAddress as LA
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import Kernel.External.MultiModal.Interface.Types
@@ -905,8 +904,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
       editLocResp <- DRide.editLocation ride.id (currentLeg.personId, currentLeg.merchantId) editLocReq -- handle case if driver declines
       case editLocResp.bookingUpdateRequestId of
         Just bookingUpdateReqId -> do
-          bookingUpdateReq <- B.runInReplica $ QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest "bookingUpdateRequest not found")
-          searchForUpdateRequest bookingUpdateReq (5 :: Int) -- can set in config
+          searchForUpdateRequest bookingUpdateReqId (5 :: Int) -- can set in config
         Nothing -> throwError (InvalidRequest "bookingUpdateRequestId not found")
     (_, _) -> do
       distResp <-
@@ -958,12 +956,13 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
       longitude <- startLoc.lon & fromMaybeM (InvalidRequest "Start location not Found")
       return $ LatLong {lat = latitude, lon = longitude}
 
-    searchForUpdateRequest _ 0 = throwError (InvalidRequest "Maximum number of tries reached for editLocation results")
-    searchForUpdateRequest bookingUpdateReq count = do
+    searchForUpdateRequest bookingUpdateReqId 0 = throwError (InvalidRequest $ "Maximum number of tries reached for editLocation results for bookingUpdateReqId: " <> show bookingUpdateReqId)
+    searchForUpdateRequest bookingUpdateReqId count = do
+      bookingUpdateReq <- QBUR.findById bookingUpdateReqId >>= fromMaybeM (InvalidRequest $ "bookingUpdateRequest not found for id: " <> show bookingUpdateReqId)
       case bookingUpdateReq.estimatedFare of
         Nothing -> do
           liftIO $ threadDelaySec $ Seconds {getSeconds = 2} -- can set in config
-          searchForUpdateRequest bookingUpdateReq (count -1)
+          searchForUpdateRequest bookingUpdateReqId (count -1)
         Just estimatedFare -> do
           estimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InvalidRequest $ "EditLocation distance not Found for bookingUpdateReqId: " <> show bookingUpdateReq.id)
           return $
