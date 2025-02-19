@@ -22,6 +22,7 @@ Journey:
   types:
     JourneyStatus:
       enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED"
+      derive: "ToParamSchema"
 
   fields:
     id: Id Journey
@@ -69,6 +70,9 @@ Journey:
         kvFunction: updateOneWithKV
         params: [status]
         where: id
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <JourneyStatus>
 
   sqlType:
     modes: "text[]"

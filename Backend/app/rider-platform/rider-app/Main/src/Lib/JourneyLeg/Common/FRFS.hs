@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Common.FRFS where
 
+import API.Types.RiderPlatform.Management.Endpoints.FRFSTicket (FRFSStationAPI)
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
@@ -7,6 +8,8 @@ import BecknV2.FRFS.Utils
 import Control.Applicative
 import Data.List (sortBy)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import Domain.Action.UI.Location (makeLocationAPIEntity)
+import Domain.Types.Booking.API as DBA
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
@@ -17,6 +20,7 @@ import qualified Domain.Types.Person as DPerson
 import Domain.Types.Station
 import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
+import Domain.Utils (safeHead)
 import EulerHS.Prelude (comparing)
 import ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Maps.Types
@@ -297,3 +301,57 @@ isCancellable searchId = do
           return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
     Nothing -> do
       return $ JT.IsCancellableResponse {canCancel = True}
+
+getLegSourceAndDestination :: Maybe JT.LegInfo -> Bool -> DBA.JourneyLocation
+getLegSourceAndDestination mbLegInfo getSource =
+  case mbLegInfo of
+    Nothing -> Null
+    Just legInfo -> case legInfo.legExtraInfo of
+      JT.Walk legExtraInfo ->
+        if getSource
+          then DBA.Taxi $ makeLocationAPIEntity legExtraInfo.origin
+          else DBA.Taxi $ makeLocationAPIEntity legExtraInfo.destination
+      JT.Taxi legExtraInfo ->
+        if getSource
+          then DBA.Taxi $ makeLocationAPIEntity legExtraInfo.origin
+          else DBA.Taxi $ makeLocationAPIEntity legExtraInfo.destination
+      JT.Subway legExtraInfo ->
+        let (source, destination) = getFrfsSourceAndDestination (map Left legExtraInfo.routeInfo)
+         in if getSource
+              then case source of
+                Right _ -> Null
+                Left src -> DBA.Frfs src
+              else case destination of
+                Right _ -> Null
+                Left dst -> DBA.Frfs dst
+      JT.Metro legExtraInfo ->
+        let (source, destination) = getFrfsSourceAndDestination (map Right legExtraInfo.routeInfo)
+         in if getSource
+              then case source of
+                Right _ -> Null
+                Left src -> DBA.Frfs src
+              else case destination of
+                Right _ -> Null
+                Left dst -> DBA.Frfs dst
+      JT.Bus legExtraInfo ->
+        if getSource
+          then DBA.Frfs legExtraInfo.originStop
+          else DBA.Frfs legExtraInfo.destinationStop
+
+getFrfsSourceAndDestination :: [Either JT.SubwayLegRouteInfo JT.MetroLegRouteInfo] -> (Either FRFSStationAPI (Maybe FRFSStationAPI), Either FRFSStationAPI (Maybe FRFSStationAPI))
+getFrfsSourceAndDestination legsRouteInfo =
+  let totalLegs = length legsRouteInfo
+      source = case safeHead (filter isFirstLeg legsRouteInfo) of
+        Nothing -> Right Nothing
+        Just (Left subway) -> Left subway.originStop
+        Just (Right metro) -> Left metro.originStop
+      destination = case safeHead (filter (isLastLeg $ Just totalLegs) legsRouteInfo) of
+        Nothing -> Right Nothing
+        Just (Left subway) -> Left subway.destinationStop
+        Just (Right metro) -> Left metro.destinationStop
+   in (source, destination)
+  where
+    isFirstLeg (Left subway) = subway.subOrder == Just 1
+    isFirstLeg (Right metro) = metro.subOrder == Just 1
+    isLastLeg totalLegs (Left subway) = subway.subOrder == totalLegs
+    isLastLeg totalLegs (Right metro) = metro.subOrder == totalLegs
