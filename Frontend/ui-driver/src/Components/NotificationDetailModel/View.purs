@@ -44,6 +44,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
 import Data.Function.Uncurried (runFn5)
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -242,6 +243,7 @@ descriptionAndComment state push =
       , onClick push $ const ShareMessage
       , gravity CENTER
       , rippleColor Color.rippleShade
+      , visibility $ boolToVisibility state.shareable
       ][
         imageView
         [ height $ V 16

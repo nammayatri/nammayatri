@@ -17,6 +17,8 @@ module Screens.NotificationsScreen.Controller where
 
 import Prelude
 
+import Common.Styles.Colors as Color
+import Common.Types.App (YoutubeData)
 import Common.Types.App (YoutubeData)
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
@@ -116,6 +118,13 @@ eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
 
 eval (NotificationCardClick (NotificationCardAC.Action2Click index)) state = continue state
 
+eval (NotificationCardClick (NotificationCardAC.ShareClick index)) state = 
+  case state.notificationList Array.!! index of
+      Nothing -> update state
+      Just notificationItem -> do 
+        let _ = shareMessageWithId (notifisDetailStateTransformer notificationItem) state
+        continue state
+
 eval (NotificationCardClick (NotificationCardAC.IllutrationClick index)) state = do
   case state.notificationList Array.!! index of
     Nothing -> continue state
@@ -127,8 +136,7 @@ eval (NotificationDetailModelAC NotificationDetailModel.BackArrow) state =
     ]
 
 eval (NotificationDetailModelAC NotificationDetailModel.ShareMessage) state = do
-  let cityConfig = getCityConfig state.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
-  let _ = shareTextMessage "Share Message" $ "Hey! Check out this message from Namma Yatri " <> "\n" <> state.notificationDetailModelState.title <> "\n " <> cityConfig.referral.domain <> "/p?vp=alerts&messageId=" <> state.notificationDetailModelState.messageId
+  let _ = shareMessageWithId state.notificationDetailModelState state
   continue state
 
 eval (NotificationDetailModelAC (NotificationDetailModel.LikeMessage)) state = do
@@ -277,6 +285,12 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
 
 eval _ state = update state
 
+shareMessageWithId :: NotificationDetailModelState ->  NotificationsScreenState -> Unit
+shareMessageWithId message state = 
+  let cityConfig = getCityConfig state.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
+      _ = shareTextMessage "Share Message" $ "Hey! Check out this message from Namma Yatri " <> "\n" <> message.title <> "\n " <> cityConfig.referral.domain <> "/p?vp=alerts&messageId=" <> message.messageId
+  in unit
+
 notifisDetailStateTransformer :: NotificationCardState -> NotificationDetailModelState
 notifisDetailStateTransformer selectedItem =
   { mediaUrl: selectedItem.mediaUrl
@@ -295,6 +309,7 @@ notifisDetailStateTransformer selectedItem =
   , likeCount : selectedItem.likeCount
   , likeStatus : selectedItem.likeStatus
   , viewCount: selectedItem.viewCount
+  , shareable: selectedItem.shareable
   }
 
 notificationListTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardState
@@ -328,6 +343,7 @@ notificationTransformer (MessageAPIEntityResponse notificationItem) =
             , mediaType: Just media.fileType
             , likeCount : notificationItem.likeCount
             , viewCount : notificationItem.viewCount
+            , shareable : fromMaybe false notificationItem.shareable
             , likeStatus : notificationItem.likeStatus
             }
 
@@ -356,6 +372,9 @@ propValueTransformer notificationArray =
             , illustrationVisibility: toPropValue if Array.any (_ == media.fileType) [ VideoLink, Audio, Image, PortraitVideoLink, ImageLink ] then "visible" else "gone"
             , playBtnVisibility: toPropValue $ if media.fileType == VideoLink || media.fileType == PortraitVideoLink then "visible" else "gone"
             , playButton: toPropValue "ny_ic_play_btn"
+            , likeCountVisibility : toPropValue $ "visible"
+            , shareCountVisibility : toPropValue $ if fromMaybe false notificationItem.shareable then "visible" else "gone"
+            , viewCountVisibility : toPropValue $ "visible"
             , imageUrl:
                 toPropValue
                   $ case media.fileType of
