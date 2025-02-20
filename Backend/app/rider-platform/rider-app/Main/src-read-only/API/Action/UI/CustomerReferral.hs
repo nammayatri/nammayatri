@@ -92,10 +92,10 @@ instance (HasOpenApi api) => HasOpenApi (Throws MyCustomException :> api) where
     let apiOpenApi = toOpenApi (Proxy @api)
         errorResponses =
           [ ( "404",
-              "Person not found"
+              "PersonNotFound"
             ),
             ( "410",
-              "Person stats not found"
+              "PersonStatsNotFound"
             )
           ]
         updatedPaths = addErrorResponses (_openApiPaths apiOpenApi) errorResponses
@@ -116,9 +116,9 @@ addResponses resp _pathKey pathItem =
         updatedResponses = foldr addResponse (_operationResponses op) resp
 
 addResponse :: (Text, Text) -> Responses -> Responses
-addResponse (code, _descript) resp =
+addResponse (code, descript) resp =
   let statusCode = Kernel.Prelude.read (T.unpack code) :: HttpStatusCode
-      referencedResponse = Ref $ Reference code
+      referencedResponse = Ref $ Reference descript
    in resp {_responsesResponses = InsOrd.insert statusCode referencedResponse (_responsesResponses resp)}
 
 handler :: Environment.FlowServer API
