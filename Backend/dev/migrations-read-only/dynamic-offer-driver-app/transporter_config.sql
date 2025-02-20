@@ -349,3 +349,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN end_ride_distan
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_threshold integer ;
+
+
+------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_notifications_expire_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_check_scheduler_expire_time integer ;

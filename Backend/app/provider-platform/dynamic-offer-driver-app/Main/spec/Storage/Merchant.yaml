@@ -920,6 +920,8 @@ TransporterConfig:
     cancellationFee: HighPrecMoney
     currency: Currency
     exotelStatusCheckSchedulerDelay: Int
+    exotelStatusCheckSchedulerExpireTime: NominalDiffTime
+    scheduledRideNotificationsExpireTime: NominalDiffTime
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
@@ -1033,6 +1035,8 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Maybe Int
     scheduledRideFilterExclusionThresholdHours: Maybe Int
     exotelStatusCheckSchedulerDelay: Maybe Seconds
+    exotelStatusCheckSchedulerExpireTime: Maybe Seconds
+    scheduledRideNotificationsExpireTime: Maybe Seconds
     cachedDevicesOSForSearchRequest: "Maybe [Text]"
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
@@ -1091,6 +1095,8 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
+    exotelStatusCheckSchedulerExpireTime: Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds exotelStatusCheckSchedulerExpireTime|E
+    scheduledRideNotificationsExpireTime: Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds scheduledRideNotificationsExpireTime|E
     cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
@@ -1150,6 +1156,8 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
+    exotelStatusCheckSchedulerExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> exotelStatusCheckSchedulerExpireTime)|E
+    scheduledRideNotificationsExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> scheduledRideNotificationsExpireTime)|E
     cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
     arrivalTimeBufferOfVehicle: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
@@ -1567,3 +1575,4 @@ PayoutConfig:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+

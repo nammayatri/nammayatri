@@ -71,7 +71,7 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         case rescheduleTimeDiff of
           Just timeDiff' -> do
             logDebug "Rescheduling the Job for Next Day"
-            createJobIn @_ @'MetroIncentivePayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
+            createJobIn @_ @'MetroIncentivePayout (Just merchantId) (Just merchantOpCityId) timeDiff' Nothing $
               MetroIncentivePayoutJobData
                 { merchantOperatingCityId = merchantOpCityId,
                   toScheduleNextPayout = toScheduleNextPayout,

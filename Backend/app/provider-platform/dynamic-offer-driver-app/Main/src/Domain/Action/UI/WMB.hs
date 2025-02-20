@@ -350,7 +350,7 @@ postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId re
   let maybeAppId = (HM.lookup FleetAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping -- currently only for END_RIDE
   whenJust transporterConfig.fleetAlertThreshold $ \threshold -> do
     let triggerFleetAlertTs = secondsToNominalDiffTime threshold
-    createJobIn @_ @'FleetAlert (Just merchantId) (Just merchantOperatingCityId) triggerFleetAlertTs $
+    createJobIn @_ @'FleetAlert (Just merchantId) (Just merchantOperatingCityId) triggerFleetAlertTs Nothing $
       FleetAlertJobData
         { fleetOwnerId = Id fleetDriverAssociation.fleetOwnerId,
           entityId = driverReq.id,

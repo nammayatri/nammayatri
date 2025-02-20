@@ -140,7 +140,7 @@ postOverlaySchedule merchantShortId opCity req@DAO.ScheduleOverlay {..} = do
         if scheduledTime < now
           then diffUTCTime (addUTCTime 86400 (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime))) now
           else diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)) now
-  createJobIn @_ @'SendOverlay (Just merchant.id) (Just merchantOpCityId) jobScheduledTime $
+  createJobIn @_ @'SendOverlay (Just merchant.id) (Just merchantOpCityId) jobScheduledTime Nothing $
     SendOverlayJobData
       { merchantId = merchant.id,
         rescheduleInterval = req.rescheduleInterval,

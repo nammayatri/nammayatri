@@ -1,0 +1,2 @@
+update atlas_driver_offer_bpp.transporter_config set scheduled_ride_notifications_expire_time = 86400;
+update atlas_driver_offer_bpp.transporter_config set exotel_status_check_scheduler_expire_time = 300;

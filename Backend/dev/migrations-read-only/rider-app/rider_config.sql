@@ -191,6 +191,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN auto_send_booking_details_via_what
 ALTER TABLE atlas_app.rider_config ADD COLUMN permissible_modes text []  default '{Walk, Bus, MetroRail, Subway}';
 ALTER TABLE atlas_app.rider_config ADD COLUMN minimum_walk_distance integer  default 100;
 ALTER TABLE atlas_app.rider_config ADD COLUMN max_allowed_public_transport_legs integer  default 2;
+ALTER TABLE atlas_app.rider_config ADD COLUMN post_ride_safety_notification_expire_time integer ;
 
 
 ------- SQL updates -------
@@ -201,3 +202,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN multimodal_testing boolean  defaul
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN is_first_referred_ride_enabled boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN scheduled_ride_popup_to_rider_expire_time integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN scheduled_ride_notifications_expire_time integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN police_trigger_expire_time integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ivr_trigger_expire_time integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN exotel_status_check_scheduler_expire_time integer ;

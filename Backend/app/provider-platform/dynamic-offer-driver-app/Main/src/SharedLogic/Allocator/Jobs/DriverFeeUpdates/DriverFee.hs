@@ -474,7 +474,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
       scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
   when scheduleNotification $ do
-    createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+    createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs Nothing $
       SendPDNNotificationToDriverJobData
         { merchantId = merchantId,
           merchantOperatingCityId = Just merchantOpCityId,
@@ -484,7 +484,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
           serviceName = Just serviceName
         }
   when (subscriptionConfigs.useOverlayService && scheduleOverlay) $ do
-    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) Nothing $
       SendOverlayJobData
         { merchantId = merchantId,
           rescheduleInterval = Nothing,
@@ -502,7 +502,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
           serviceName = Just serviceName,
           vehicleCategory = Nothing
         }
-    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) Nothing $
       SendOverlayJobData
         { merchantId = merchantId,
           rescheduleInterval = Nothing,
@@ -521,7 +521,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
           vehicleCategory = Nothing
         }
   when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $ do
-    createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
+    createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs Nothing $
       SendManualPaymentLinkJobData
         { merchantId = merchantId,
           merchantOperatingCityId = merchantOpCityId,
@@ -542,7 +542,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
         case isDfCaclculationJobScheduled of
           ----- marker ---
           Nothing -> do
-            createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
+            createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' Nothing $
               CalculateDriverFeesJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = Just merchantOpCityId,

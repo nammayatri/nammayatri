@@ -158,7 +158,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           SBooking.cancelBooking booking Nothing merchant
   where
     scheduleBatching searchTry inTime = do
-      JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
+      JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime (Just searchTry.validTill) $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
             estimatedRideDistance = searchReq.estimatedDistance

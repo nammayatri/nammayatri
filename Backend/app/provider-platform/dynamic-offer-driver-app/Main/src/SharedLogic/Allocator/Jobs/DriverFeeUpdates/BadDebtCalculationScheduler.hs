@@ -38,7 +38,7 @@ badDebtCalculation Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       now <- getCurrentTime
       let diffTime = diffUTCTime scheduledTime now
       let dfCalculationJobTs = diffTime + transporterConfig.badDebtSchedulerTime
-      createJobIn @_ @'BadDebtCalculation (Just merchantId) (Just opCityId) dfCalculationJobTs $
+      createJobIn @_ @'BadDebtCalculation (Just merchantId) (Just opCityId) dfCalculationJobTs Nothing $
         BadDebtCalculationJobData
           { merchantId = merchantId,
             merchantOperatingCityId = opCityId

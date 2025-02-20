@@ -17,17 +17,19 @@ module Lib.Scheduler.ScheduleJob
   ( createJob,
     createJobByTime,
     createJobIn,
+    partitionScheduledJobs,
   )
 where
 
 import Data.Singletons
 import Data.Time.Clock.System ()
 import qualified Data.UUID as UU
+import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude hiding (mask, throwIO)
-import Kernel.Types.Common
+import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (id)
 import Lib.Scheduler.Environment
 import Lib.Scheduler.Types
 
@@ -38,12 +40,13 @@ createJob ::
   Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   (AnyJob t -> m ()) ->
+  Maybe UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJob merchantId merchantOperatingCityId uuid createJobFunc maxShards jobEntry = do
+createJob merchantId merchantOperatingCityId uuid createJobFunc jobExpireAt maxShards jobEntry = do
   now <- getCurrentTime
-  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc now maxShards jobEntry
+  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc now jobExpireAt maxShards jobEntry
 
 createJobIn ::
   forall t (e :: t) m r.
@@ -53,14 +56,15 @@ createJobIn ::
   Text ->
   (AnyJob t -> m ()) ->
   NominalDiffTime ->
+  Maybe UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobIn merchantId merchantOperatingCityId uuid createJobFunc diff maxShards jobEntry = do
+createJobIn merchantId merchantOperatingCityId uuid createJobFunc diff jobExpireAt maxShards jobEntry = do
   now <- getCurrentTime
   when (diff < 0) $ throwError $ InternalError "job can only be scheduled for now or for future"
   let scheduledAt = addUTCTime diff now
-  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards jobEntry
+  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt jobExpireAt maxShards jobEntry
 
 -- createJobIn' ::
 --   forall t (e :: t) m.
@@ -84,10 +88,11 @@ createJobByTime ::
   Text ->
   (AnyJob t -> m ()) ->
   UTCTime ->
+  Maybe UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobByTime merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards jobEntry = do
+createJobByTime merchantId merchantOperatingCityId uuid createJobFunc scheduledAt jobExpireAt maxShards jobEntry = do
   now <- getCurrentTime
   when (scheduledAt <= now) $
     throwError $
@@ -95,7 +100,7 @@ createJobByTime merchantId merchantOperatingCityId uuid createJobFunc scheduledA
         "job can only be scheduled for the future\
         \ using createJobByTime, for scheduling for\
         \ now use createJobIn function instead"
-  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards jobEntry
+  createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt jobExpireAt maxShards jobEntry
 
 createJobImpl ::
   forall t (e :: t) m r.
@@ -105,10 +110,11 @@ createJobImpl ::
   Text ->
   (AnyJob t -> m ()) ->
   UTCTime ->
+  Maybe UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt maxShards JobEntry {..} = do
+createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt jobExpireAt maxShards JobEntry {..} = do
   when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
   let id = Id uuid
@@ -131,7 +137,8 @@ createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt 
           status = Pending,
           parentJobId = id,
           merchantId,
-          merchantOperatingCityId
+          merchantOperatingCityId,
+          jobExpireAt
         }
 
 -- createJobImpl' ::
@@ -165,3 +172,17 @@ createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt 
 --           currErrors = 0,
 --           status = Pending
 --         }
+
+validateScheduledJob :: UTCTime -> AnyJob t -> Bool
+validateScheduledJob now (AnyJob job) = case job.jobExpireAt of
+  Just expireAt -> job.scheduledAt < expireAt && expireAt >= now
+  Nothing -> True
+
+partitionScheduledJobs :: UTCTime -> [Either String (AnyJob t)] -> ([AnyJob t], [(Text, Id AnyJob)])
+partitionScheduledJobs now jobs =
+  let processJob (Right job@(AnyJob j)) =
+        if validateScheduledJob now job
+          then Left job
+          else Right (show (fromSing $ jobType $ jobInfo j), id j)
+      processJob (Left _) = Right ("", Id "")
+   in partitionEithers $ map processJob jobs

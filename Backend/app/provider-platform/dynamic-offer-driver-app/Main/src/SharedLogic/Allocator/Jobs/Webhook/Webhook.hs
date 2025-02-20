@@ -45,7 +45,7 @@ sendWebhookWithRetryToExternal Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         hashedJobData <- getHash jobDataT
         duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "Webhook_Fan_out") (3600 * 12) True
         when duplicationKey do
-          createJobIn @_ @'SendWebhookToExternal Nothing Nothing (secondsToNominalDiffTime $ Seconds scheduledAtGap) $
+          createJobIn @_ @'SendWebhookToExternal Nothing Nothing (secondsToNominalDiffTime $ Seconds scheduledAtGap) Nothing $
             SendWebhookToExternalJobData
               { webhookData = newJobWebhookData
               }

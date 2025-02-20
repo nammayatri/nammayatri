@@ -182,7 +182,7 @@ scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do
   logDebug $ "Idfy Source down and no remaining service providers left in priority list, scheduling a job for future retry for requestId : " <> verificationReq.requestId
   let scheduleTime = calculateScheduleTime (fromMaybe 0 verificationReq.retryCount)
-  createJobIn @_ @'RetryDocumentVerification verificationReq.merchantId verificationReq.merchantOperatingCityId scheduleTime $
+  createJobIn @_ @'RetryDocumentVerification verificationReq.merchantId verificationReq.merchantOperatingCityId scheduleTime Nothing $
     RetryDocumentVerificationJobData
       { requestId = verificationReq.requestId
       }
