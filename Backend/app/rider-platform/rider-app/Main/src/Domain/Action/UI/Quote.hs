@@ -238,7 +238,9 @@ data RouteDetail = RouteDetail
     fromStationCode :: Maybe Text,
     toStationCode :: Maybe Text,
     color :: Maybe Text,
-    colorCode :: Maybe Text
+    colorCode :: Maybe Text,
+    fromStationLatLong :: LatLong,
+    toStationLatLong :: LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -422,5 +424,15 @@ getJourneys searchRequest = do
           fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
           toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
           color = routeDetail.shortName,
-          colorCode = routeDetail.shortName
+          colorCode = routeDetail.shortName,
+          fromStationLatLong =
+            LatLong
+              { lat = routeDetail.startLocation.latLng.latitude,
+                lon = routeDetail.startLocation.latLng.longitude
+              },
+          toStationLatLong =
+            LatLong
+              { lat = routeDetail.endLocation.latLng.latitude,
+                lon = routeDetail.endLocation.latLng.longitude
+              }
         }
