@@ -37,16 +37,17 @@ import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Monitoring.Prometheus.Servant
+-- import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
-import Network.HTTP.Types.Status (status404, status409)
+-- import Network.HTTP.Types.Status (status404, status409)
 import Servant hiding (serveDirectoryWebApp)
-import Servant.Exception (Throws, ToServantErr (..))
+-- import Servant.Exception (Throws, ToServantErr (..))
 import Servant.Exception.Server ()
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
-import Xmlbf
+
+-- import Xmlbf
 
 type DriverOfferAPI =
   MainAPI
@@ -57,69 +58,67 @@ type DriverOfferAPI =
     :<|> Raw
 
 type MainAPI =
-  Throws MyCustomException
-    :> ( UI.API
-           -- :<|> Beckn.API -- TODO : Revert after 2.x release
-           :<|> Idfy.IdfyWebhookAPI
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> Idfy.IdfyWebhookAPI
-                )
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> Capture "city" Context.City
-                    :> Idfy.IdfyWebhookAPI
-                )
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> Juspay.JuspayWebhookAPI
-                )
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> QueryParam "city" Context.City
-                    :> QueryParam "serviceName" Plan.ServiceNames
-                    :> "v2"
-                    :> Juspay.JuspayWebhookAPI
-                )
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> Capture "city" Context.City
-                    :> SafetyWebhook.SafetyWebhookAPI
-                )
-           :<|> HyperVergeWebhook.HyperVergeResultWebhookAPI
-           :<|> HyperVergeWebhook.HyperVergeVerificationWebhookAPI
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> JuspayPayout.JuspayPayoutWebhookAPI
-                )
-           :<|> ( Capture "merchantId" (ShortId DM.Merchant)
-                    :> QueryParam "city" Context.City
-                    :> QueryParam "serviceName" Plan.ServiceNames
-                    :> "v2"
-                    :> JuspayPayout.JuspayPayoutWebhookAPI
-                )
-           :<|> Dashboard.API -- TODO :: Needs to be deprecated
-           :<|> Dashboard.APIV2
-           :<|> Internal.API
-       )
+  UI.API
+    -- :<|> Beckn.API -- TODO : Revert after 2.x release
+    :<|> Idfy.IdfyWebhookAPI
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Idfy.IdfyWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Capture "city" Context.City
+             :> Idfy.IdfyWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Juspay.JuspayWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> "v2"
+             :> Juspay.JuspayWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Capture "city" Context.City
+             :> SafetyWebhook.SafetyWebhookAPI
+         )
+    :<|> HyperVergeWebhook.HyperVergeResultWebhookAPI
+    :<|> HyperVergeWebhook.HyperVergeVerificationWebhookAPI
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> JuspayPayout.JuspayPayoutWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> "v2"
+             :> JuspayPayout.JuspayPayoutWebhookAPI
+         )
+    :<|> Dashboard.API -- TODO :: Needs to be deprecated
+    :<|> Dashboard.APIV2
+    :<|> Internal.API
 
-data MyCustomException = HttpError | BaseError
-  deriving (Show, Generic) -- FIXME
+-- data MyCustomException = HttpError | BaseError
+--   deriving (Show, Generic) -- FIXME
 
-instance ToJSON MyCustomException
+-- instance ToJSON MyCustomException
 
-instance Exception MyCustomException
+-- instance Exception MyCustomException
 
-instance ToXml MyCustomException where
-  toXml HttpError = text "HttpError"
-  toXml BaseError = text "BaseError" -- FIXME
+-- instance ToXml MyCustomException where
+--   toXml HttpError = text "HttpError"
+--   toXml BaseError = text "BaseError" -- FIXME
 
-instance ToServantErr MyCustomException where
-  status BaseError = status404
-  status HttpError = status409 -- FIXME
+-- instance ToServantErr MyCustomException where
+--   status BaseError = status404
+--   status HttpError = status409 -- FIXME
 
-instance
-  SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (Throws r :> sub)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+-- instance
+--   SanitizedUrl (sub :: Type) =>
+--   SanitizedUrl (Throws r :> sub)
+--   where
+--   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
-instance HasOpenApi api => HasOpenApi (Throws a :> api) where
-  toOpenApi _ = toOpenApi (Proxy @api) -- FIXME
+-- instance HasOpenApi api => HasOpenApi (Throws a :> api) where
+--   toOpenApi _ = toOpenApi (Proxy @api) -- FIXME
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy

@@ -9,6 +9,10 @@ where
 
 import qualified API.Types.UI.CustomerReferral
 import qualified Control.Lens
+import qualified Data.HashMap.Strict.InsOrd as InsOrd
+import Data.OpenApi
+import Data.Proxy
+import qualified Data.Text as T
 import qualified Domain.Action.UI.CustomerReferral as Domain.Action.UI.CustomerReferral
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -16,14 +20,24 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Error (PersonError (PersonNotFound))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Monitoring.Prometheus.Servant
+import Network.HTTP.Types.Status (status404, status410)
 import Servant
+import Servant.Exception (Throws, ToServantErr (..))
+import Servant.Exception.Server ()
+import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.Error (PersonStatsError (..))
 
 type API =
-  ( TokenAuth :> "CustomerRefferal" :> "count" :> Get '[JSON] API.Types.UI.CustomerReferral.ReferredCustomers :<|> TokenAuth :> "person" :> "applyReferral"
+  ( Throws MyCustomException :> TokenAuth :> "CustomerRefferal" :> "count" :> Get '[JSON] API.Types.UI.CustomerReferral.ReferredCustomers
+      :<|> TokenAuth
+      :> "person"
+      :> "applyReferral"
       :> ReqBody
            '[JSON]
            API.Types.UI.CustomerReferral.ApplyCodeReq
@@ -55,6 +69,57 @@ type API =
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
+
+data MyCustomException = PersonError | PersonStatsError
+  deriving (Show, Generic)
+
+instance ToJSON MyCustomException
+
+instance Exception MyCustomException
+
+instance ToServantErr MyCustomException where
+  status PersonError = status404
+  status PersonStatsError = status410 -- FXME
+
+instance
+  SanitizedUrl (sub :: Type) =>
+  SanitizedUrl (Throws r :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+instance (HasOpenApi api) => HasOpenApi (Throws MyCustomException :> api) where
+  toOpenApi _ =
+    let apiOpenApi = toOpenApi (Proxy @api)
+        errorResponses =
+          [ ( "404",
+              "Person not found"
+            ),
+            ( "410",
+              "Person stats not found"
+            )
+          ]
+        updatedPaths = addErrorResponses (_openApiPaths apiOpenApi) errorResponses
+     in apiOpenApi {_openApiPaths = updatedPaths}
+
+addErrorResponses :: InsOrd.InsOrdHashMap FilePath PathItem -> [(Text, Text)] -> InsOrd.InsOrdHashMap FilePath PathItem
+addErrorResponses hashMapPaths resp =
+  InsOrd.mapWithKey (addResponses resp) hashMapPaths
+
+addResponses :: [(Text, Text)] -> FilePath -> PathItem -> PathItem
+addResponses resp _pathKey pathItem =
+  pathItem {_pathItemGet = updateOperation (_pathItemGet pathItem)}
+  where
+    updateOperation :: Maybe Operation -> Maybe Operation
+    updateOperation Nothing = Nothing
+    updateOperation (Just op) = Just $ op {_operationResponses = updatedResponses}
+      where
+        updatedResponses = foldr addResponse (_operationResponses op) resp
+
+addResponse :: (Text, Text) -> Responses -> Responses
+addResponse (code, _descript) resp =
+  let statusCode = Kernel.Prelude.read (T.unpack code) :: HttpStatusCode
+      referencedResponse = Ref $ Reference code
+   in resp {_responsesResponses = InsOrd.insert statusCode referencedResponse (_responsesResponses resp)}
 
 handler :: Environment.FlowServer API
 handler = getCustomerRefferalCount :<|> postPersonApplyReferral :<|> getReferralVerifyVpa :<|> getReferralPayoutHistory :<|> postPayoutVpaUpsert
