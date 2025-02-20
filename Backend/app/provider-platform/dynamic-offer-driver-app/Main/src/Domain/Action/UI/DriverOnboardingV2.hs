@@ -295,7 +295,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
-            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || isNonACDefault,
+            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || (vehicleCategory /= Just DVC.AMBULANCE && isNonACDefault),
               isDefault = (vehicleCategory /= Just DVC.AMBULANCE) && ((vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault), -- No default in Ambulance
               isUsageRestricted = Just usageRestricted,
               priority = Just priority,
