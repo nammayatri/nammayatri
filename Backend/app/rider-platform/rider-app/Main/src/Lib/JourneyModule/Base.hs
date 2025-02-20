@@ -351,8 +351,8 @@ cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `el
 getUnifiedQR :: [JL.LegInfo] -> UTCTime -> Maybe JL.UnifiedTicketQR
 getUnifiedQR legs now = do
   let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
-  let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL]
-  let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC]
+  let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL || provider == providerToText JL.DIRECT]
+  let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC || provider == providerToText JL.DIRECT]
   if null cmrlBookings && null mtcBookings
     then Nothing
     else
@@ -368,6 +368,7 @@ getUnifiedQR legs now = do
 providerToText :: JL.Provider -> Text
 providerToText JL.CMRL = "Chennai Metro Rail Limited"
 providerToText JL.MTC = "Buses"
+providerToText JL.DIRECT = "Direct Multimodal Services"
 
 getTickets :: JL.LegInfo -> Maybe (Text, JL.BookingData)
 getTickets leg =
