@@ -91,21 +91,22 @@ instance (HasOpenApi api) => HasOpenApi (Throws MyCustomException :> api) where
   toOpenApi _ =
     let apiOpenApi = toOpenApi (Proxy @api)
         errorResponses =
-          [ ( "404",
+          [ ( 404,
               "PersonNotFound"
             ),
-            ( "410",
+            ( 410,
               "PersonStatsNotFound"
             )
           ]
         updatedPaths = addErrorResponses (_openApiPaths apiOpenApi) errorResponses
-     in apiOpenApi {_openApiPaths = updatedPaths}
+        updatedComponents = addErrorDescriptions (_openApiComponents apiOpenApi) errorResponses
+     in apiOpenApi {_openApiPaths = updatedPaths, _openApiComponents = updatedComponents}
 
-addErrorResponses :: InsOrd.InsOrdHashMap FilePath PathItem -> [(Text, Text)] -> InsOrd.InsOrdHashMap FilePath PathItem
+addErrorResponses :: InsOrd.InsOrdHashMap FilePath PathItem -> [(Int, Text)] -> InsOrd.InsOrdHashMap FilePath PathItem
 addErrorResponses hashMapPaths resp =
   InsOrd.mapWithKey (addResponses resp) hashMapPaths
 
-addResponses :: [(Text, Text)] -> FilePath -> PathItem -> PathItem
+addResponses :: [(Int, Text)] -> FilePath -> PathItem -> PathItem
 addResponses resp _pathKey pathItem =
   pathItem {_pathItemGet = updateOperation (_pathItemGet pathItem)}
   where
@@ -115,11 +116,19 @@ addResponses resp _pathKey pathItem =
       where
         updatedResponses = foldr addResponse (_operationResponses op) resp
 
-addResponse :: (Text, Text) -> Responses -> Responses
+addResponse :: (Int, Text) -> Responses -> Responses
 addResponse (code, descript) resp =
-  let statusCode = Kernel.Prelude.read (T.unpack code) :: HttpStatusCode
-      referencedResponse = Ref $ Reference descript
-   in resp {_responsesResponses = InsOrd.insert statusCode referencedResponse (_responsesResponses resp)}
+  let referencedResponse = Ref $ Reference descript
+   in resp {_responsesResponses = InsOrd.insert code referencedResponse (_responsesResponses resp)}
+
+addErrorDescriptions :: Components -> [(Int, Text)] -> Components
+addErrorDescriptions comp resp =
+  foldr addErrorDescription comp resp
+
+addErrorDescription :: (Int, Text) -> Components -> Components
+addErrorDescription (_, descript) comp =
+  let resp = Response descript mempty mempty mempty
+   in comp {_componentsResponses = InsOrd.insert descript resp (_componentsResponses comp)}
 
 handler :: Environment.FlowServer API
 handler = getCustomerRefferalCount :<|> postPersonApplyReferral :<|> getReferralVerifyVpa :<|> getReferralPayoutHistory :<|> postPayoutVpaUpsert
