@@ -61,11 +61,11 @@ type Gate = {
   images :: Array PickupInstructions
 }
 
-type PickupInstructions = 
+type PickupInstructions =
   { image :: String
   , title :: String
   }
-  
+
 newtype FamousDestination = FamousDestination {
   name :: String,
   address :: String,
@@ -148,4 +148,27 @@ type RemoteCancellationReason = {
 type CancellationThreshold = {
   showBanner :: Boolean,
   percentage :: Number
+}
+
+type EnquiryBannerConfigs = {
+  question :: Maybe EnquiryBannerConfig
+, firstBtnBanner :: Maybe EnquiryBannerConfig
+, secondBtnBanner :: Maybe EnquiryBannerConfig
+, categoryId :: String
+, optionId :: Maybe String
+}
+
+type EnquiryBannerConfig = {
+  title :: String
+, background :: String
+, color :: String
+, button1 :: Maybe EnquiryBannerButtonConfig
+, button2 :: Maybe EnquiryBannerButtonConfig
+, image :: String
+}
+
+type EnquiryBannerButtonConfig = {
+  title :: String
+, background :: String
+, color :: String
 }
