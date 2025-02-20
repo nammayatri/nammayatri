@@ -192,6 +192,7 @@ confirm DConfirmReq {..} = do
 
     getBppQuoteId = \case
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
+      DQuote.MeterRideDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
       DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer
       DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer
       DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
@@ -351,6 +352,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       DQuote.DriverOfferDetails driverOffer -> DRB.DriverOfferDetails <$> (buildOneWayDetails driverOffer.isUpgradedToCab)
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
       DQuote.InterCityDetails _ -> DRB.InterCityDetails <$> buildInterCityDetails
+      DQuote.MeterRideDetails _ -> throwError (InternalError "Needs to be done")
 
     buildInterCityDetails = do
       -- we need to throw errors here because of some redundancy of our domain model

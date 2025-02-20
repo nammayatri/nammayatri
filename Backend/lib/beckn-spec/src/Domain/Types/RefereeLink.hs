@@ -57,7 +57,8 @@ instance ToJSON LinkRefereeRes where
     Left success -> toJSON success
     Right info -> toJSON info
 
-data DriverIdentifierType = REFERRAL_CODE | VEHICLE_NUMBER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data DriverIdentifierType = REFERRAL_CODE | VEHICLE_NUMBER
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data DriverIdentifier = DriverIdentifier
   { _type :: DriverIdentifierType,

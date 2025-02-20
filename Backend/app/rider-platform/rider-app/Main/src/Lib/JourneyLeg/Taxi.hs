@@ -77,6 +77,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 placeNameSource = parentSearchReq.placeNameSource,
                 driverIdentifier = Nothing,
                 stops = Just stops',
+                isMeterRideSearch = Just False,
                 ..
               }
 

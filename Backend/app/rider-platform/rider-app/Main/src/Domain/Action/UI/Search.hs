@@ -195,6 +195,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
+  let isMeterRide = getIsMeterRideSearch req
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -226,6 +227,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       journeySearchData
       driverIdentifier'
       configVersionMap
+      isMeterRide
+
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -247,10 +250,13 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard req.isMeterRideSearch,
+        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
         ..
       }
   where
+    getIsMeterRideSearch rqst = case rqst of
+      OneWaySearch reqData -> reqData.isMeterRideSearch
+      _ -> Just False
     mkDriverIdentifier :: Text -> Maybe DRL.DriverIdentifier
     mkDriverIdentifier refCode = DRL.mkDriverIdentifier (Just DRL.REFERRAL_CODE) (Just refCode)
 

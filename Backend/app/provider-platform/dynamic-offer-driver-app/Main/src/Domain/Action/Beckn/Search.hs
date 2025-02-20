@@ -772,7 +772,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           then (dsReq.pickupTime, True)
           else (now, False)
       tripCategories =
-        if dsReq.isMeterRideSearch
+        if (checkIfMeterRideSearch dsReq.isMeterRideSearch)
           then [OneWay MeterRide]
           else do
             case dsReq.dropLocation of
@@ -794,6 +794,10 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                   <> [Rental RideOtp | not isScheduled]
 
   TripOption {..}
+  where
+    checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
+      Just isMeterRide -> isMeterRide
+      Nothing -> False
 
 getDriverIdFromIdentifier :: DRL.DriverIdentifier -> Flow (Id DP.Person)
 getDriverIdFromIdentifier driverInfo =

@@ -62,7 +62,11 @@ data Quote = Quote
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
+
+data MeterRideQuoteAPIDetails = MeterRideQuoteAPIDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data MeterRideQuoteDetails = MeterRideQuoteDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   { distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters,
@@ -84,6 +88,7 @@ data QuoteAPIDetails
   | DriverOfferAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails Domain.Action.UI.SpecialZoneQuote.SpecialZoneQuoteAPIEntity
   | DeliveryAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
+  | MeterRideAPIDetails Domain.Types.Quote.MeterRideQuoteAPIDetails
   deriving (Generic, Show)
 
 data QuoteDetails
@@ -94,6 +99,7 @@ data QuoteDetails
   | DriverOfferDetails Domain.Types.DriverOffer.DriverOffer
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   | DeliveryDetails Domain.Types.DriverOffer.DriverOffer
+  | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))

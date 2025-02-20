@@ -42,6 +42,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
@@ -109,6 +110,7 @@ onSelect OnSelectValidatedReq {..} = do
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   QQuote.createMany quotes
+  merchant <- QMerchant.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
@@ -117,7 +119,7 @@ onSelect OnSelectValidatedReq {..} = do
         Just (autoAssignQuote, False) -> do
           isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
           when isLockAcquired $ do
-            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, ..}
+            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, merchant = merchant, ..}
             dConfirmRes <- SConfirm.confirm dConfirmReq
             becknInitReq <- ACL.buildInitReqV2 dConfirmRes
             handle (errHandler dConfirmRes.booking) $ do

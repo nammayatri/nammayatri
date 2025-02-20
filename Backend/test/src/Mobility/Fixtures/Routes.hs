@@ -36,7 +36,8 @@ defaultSearchReq =
         sessionToken = Nothing,
         placeNameSource = Nothing,
         driverIdentifier = Nothing,
-        fareParametersInRateCard = Nothing
+        fareParametersInRateCard = Nothing,
+        isMeterRideSearch = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -103,7 +104,8 @@ searchReqFromUpdatesList updList =
               sessionToken = Nothing,
               placeNameSource = Nothing,
               driverIdentifier = Nothing,
-              fareParametersInRateCard = Nothing
+              fareParametersInRateCard = Nothing,
+              isMeterRideSearch = Nothing
             }
    in (origin, destination, req)
 
@@ -124,7 +126,8 @@ mkSearchReqFromLocations origin destination =
               sessionToken = Nothing,
               placeNameSource = Nothing,
               driverIdentifier = Nothing,
-              fareParametersInRateCard = Nothing
+              fareParametersInRateCard = Nothing,
+              isMeterRideSearch = Nothing
             }
    in (origin, destination, req)
 

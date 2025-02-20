@@ -23,6 +23,7 @@ module Domain.Action.Beckn.OnSearch
     OneWayQuoteDetails (..),
     OneWaySpecialZoneQuoteDetails (..),
     InterCityQuoteDetails (..),
+    MeterRideQuoteDetails (..),
     RentalQuoteDetails (..),
     QuoteBreakupInfo (..),
     EstimateBreakupInfo (..),
@@ -200,6 +201,11 @@ data QuoteDetails
   | InterCityDetails InterCityQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
+  | MeterRideDetails MeterRideQuoteDetails
+
+data MeterRideQuoteDetails = MeterRideQuoteDetails
+  { quoteId :: Text
+  }
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
@@ -443,6 +449,8 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
     InterCityDetails details -> do
       DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit searchRequest.roundTrip details
+    MeterRideDetails details -> do
+      DQuote.MeterRideDetails <$> buildMeterRideQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
@@ -471,6 +479,10 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         tripCategory = Just tripCategory,
         ..
       }
+
+buildMeterRideQuoteDetails :: MonadFlow m => MeterRideQuoteDetails -> m DQuote.MeterRideQuoteDetails
+buildMeterRideQuoteDetails MeterRideQuoteDetails {..} = do
+  pure DQuote.MeterRideQuoteDetails {..}
 
 mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =

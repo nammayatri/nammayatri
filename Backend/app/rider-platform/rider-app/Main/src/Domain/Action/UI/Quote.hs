@@ -163,6 +163,7 @@ instance ToSchema QuoteAPIDetails where
 
 mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails tollCharges = \case
+  DQuote.MeterRideDetails MeterRideQuoteDetails {..} -> DQuote.MeterRideAPIDetails MeterRideQuoteAPIDetails {..}
   DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
   DQuote.OneWayDetails OneWayQuoteDetails {..} ->
     DQuote.OneWayAPIDetails
@@ -349,6 +350,7 @@ getOffers searchRequest = do
       sortBy sortFunc quoteList
     getMbDistanceToNearestDriver quote =
       case quote.quoteDetails of
+        SQuote.MeterRideDetails _ -> Nothing
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.AmbulanceDetails details -> details.distanceToPickup
         SQuote.DeliveryDetails details -> details.distanceToPickup
