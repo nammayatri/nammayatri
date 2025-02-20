@@ -328,7 +328,7 @@ data UnifiedTicketQR = UnifiedTicketQR
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data Provider = CMRL | MTC
+data Provider = CMRL | MTC | DIRECT
   deriving (Eq, Show)
 
 data IsCancellableResponse = IsCancellableResponse
