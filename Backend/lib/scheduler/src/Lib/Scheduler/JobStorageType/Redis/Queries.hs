@@ -99,8 +99,8 @@ findById _ = pure Nothing
 getTasksById :: (JobExecutor r m, JobProcessor t) => [Id AnyJob] -> m [AnyJob t]
 getTasksById _ = pure []
 
-getJobByTypeAndScheduleTime :: (JobMonad r m, JobProcessor t) => Text -> UTCTime -> m [AnyJob t]
-getJobByTypeAndScheduleTime _ _ = return []
+getJobByTypeAndScheduleTime :: (JobMonad r m, JobProcessor t) => Text -> UTCTime -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime _ _ _ = return []
 
 -------------------------------------------------------
 
