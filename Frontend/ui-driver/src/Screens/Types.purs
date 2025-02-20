@@ -1092,10 +1092,7 @@ type HomeScreenData =  {
 , onRideBannerTimer :: Int
 , scheduleRideCount :: Maybe (Tuple Int String)
 , isSpecialLocWarrior :: Boolean
-, enquiryBannerStage :: Maybe EnquiryBannerStage
 }
-
-data EnquiryBannerStage = QuestionStage | FirstBtnClickStage | SecondBtnClickStage
 
 type PlansState = {
   showSwitchPlanModal :: Boolean,

@@ -3344,9 +3344,9 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnCli
           city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
           enquiryRemoteConfig = RC.getEnquiryBannerConfig city
           postIssueBody = API.PostIssueReqBody {
-            optionId : enquiryRemoteConfig.optionId --Just "f2be173d-4ea7-46e1-8962-6e64f5293232"
+            optionId : enquiryRemoteConfig.optionId
           , rideId : Just state.data.driverInfoCardState.rideId
-          , categoryId : enquiryRemoteConfig.categoryId --"a3267872-0748-4b33-8b7b-229dc5cb102c"
+          , categoryId : enquiryRemoteConfig.categoryId
           , mediaFiles : []
           , description : ""
           , chats : []
