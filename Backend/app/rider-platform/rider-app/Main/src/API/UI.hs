@@ -49,6 +49,7 @@ import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
+import qualified API.UI.LiveActivity as LiveActivity
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
 import qualified API.UI.Payment as Payment
@@ -121,6 +122,7 @@ type API =
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> LiveActivity.API
        )
 
 handler :: FlowServer API
@@ -174,3 +176,4 @@ handler =
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> LiveActivity.handler

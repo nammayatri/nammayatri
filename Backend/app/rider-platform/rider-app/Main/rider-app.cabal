@@ -69,6 +69,7 @@ library
       API.UI.GoogleTranslate
       API.UI.HotSpot
       API.UI.Issue
+      API.UI.LiveActivity
       API.UI.Maps
       API.UI.PartnerOrganizationFRFS
       API.UI.Payment
@@ -231,6 +232,7 @@ library
       Domain.Action.UI.TrackRoute
       Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
+      Domain.Action.UI.LiveActivity
       Domain.Types.Booking.API
       Domain.Types.CacType
       Domain.Types.Common

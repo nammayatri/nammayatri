@@ -50,7 +50,7 @@ import Kernel.Storage.Esqueleto hiding (count, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (getCurrentTime)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -72,7 +72,7 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
-
+import Kernel.External.Notification.FCM.Types as FCMType
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
 
@@ -90,7 +90,6 @@ data NotificationRequest = NotificationRequest
     auth :: Maybe Notification.Auth
   }
   deriving (Show, Eq)
-
 instance Default NotificationRequest where
   def =
     NotificationRequest
@@ -125,6 +124,7 @@ notifyPerson ::
   Id MerchantOperatingCity ->
   Id Person ->
   Notification.NotificationReq a b ->
+  Maybe FCMType.LiveActivityReq ->
   m ()
 notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
 
@@ -133,20 +133,21 @@ clearDeviceToken = Person.clearDeviceTokenByPersonId
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (Notification.NotificationServiceConfig -> req -> m () -> m resp) ->
+  (Notification.NotificationServiceConfig -> req -> liveActivityReq -> m () -> m resp) ->
   (MerchantServiceUsageConfig -> Notification.NotificationService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Id Person ->
   req ->
+  liveActivityReq ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req = do
+runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req liveActivityReq = do
   merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantNotificationServiceConfig <-
     QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.NotificationService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
   case merchantNotificationServiceConfig.serviceConfig of
-    DMSC.NotificationServiceConfig msc -> func msc req (clearDeviceToken personId)
+    DMSC.NotificationServiceConfig msc -> func msc req liveActivityReq (clearDeviceToken personId)
     _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 -- dynamicNotifyPerson person notificationRequest notifyType dynamicParam entity tripCategory [varparams]
@@ -158,8 +159,9 @@ dynamicNotifyPerson ::
   Notification.Entity b ->
   Maybe TripCategory ->
   [(Text, Text)] ->
+  Maybe FCMType.LiveActivityReq ->
   m ()
-dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams = do
+dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams liveActivityReq = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language
   when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
@@ -185,7 +187,7 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
                 dynamicParams = dynamicParams
               }
       --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
 
 --------------------------------------------------------------------------------------------------
 
@@ -201,7 +203,7 @@ notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList 
   isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
   let entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList
       notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
-  dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty
+  dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty Nothing
 
 -- title = "New driver offers incoming!"
 -- body = "There are new driver offers! Check the app for details"
@@ -225,9 +227,11 @@ notifyOnRideAssigned booking ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id)
       dynamicParams = RideAssignedParam driverName booking.startTime booking.id
+      -- _ <- liveActivityToken 
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
+    -- currentTime <- getCurrentTime
     dynamicNotifyPerson
       person'
       (createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag}))
@@ -235,10 +239,14 @@ notifyOnRideAssigned booking ride = do
       entity
       booking.tripCategory
       [("driverName", driverName)]
-
--- title = "Driver assigned!"
--- body = " {#driverName#} will be your driver for this trip."
-
+      (Just $ FCMType.LiveActivityReq {
+              liveActivityToken = "80845c75bcbbb15fb2d363420776ec96ea4804d8eed6231b7e8b4c3f50cf972ffd7d1adc3fb3dc8b795cacf1576fed90ea4df4f7bedc0c13e140da69c005d3d451ee06cc9f6550363b0f6fbd453824686c0f0459f18cf6d783f1a58cbbd381fd1b85a6816a48df1ad14e3ac91da84254152b577c97779080b50e7943aade4dcd",
+              liveActivityReqType = "update",
+              liveActivityNotificationType = "DRIVER_ASSIGNMENT",
+              liveActivityContentState = "{" <> "status" <>  ":"<>"SEARCHING" <>"}",
+              timestamp = "AAAA"
+            })
+      
 notifyOnScheduledRideAccepted ::
   ServiceFlow m r =>
   SRB.Booking ->
@@ -274,7 +282,7 @@ notifyOnScheduledRideAccepted booking ride = do
             "will be your driver for your scheduled trip starting at ",
             showTimeIst booking.startTime
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 newtype RideStartedParam = RideStartedParam
   { driverName :: Text
@@ -312,6 +320,7 @@ notifyOnRideStarted booking ride = do
       [ ("driverName", driverName),
         ("serviceTierName", serviceTierName)
       ]
+      Nothing
 
 -- title = "Your {#serviceTierName#} ride has started!"
 -- body = "Your {#serviceTierName#} ride with {#driverName#} has started. Enjoy the ride!"
@@ -350,6 +359,7 @@ notifyOnRideCompleted booking ride otherParties = do
       [ ("driverName", driverName),
         ("totalFare", showPriceWithRounding totalFare)
       ]
+      Nothing
   fork "Create Post ride safety job" $ do
     safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
@@ -404,6 +414,7 @@ notifyOnExpiration searchReq = do
         entity
         tripCategory
         []
+        Nothing
     _ -> pure ()
 
 -- title = T.pack "Ride expired!"
@@ -430,6 +441,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
     entity
     Nothing
     []
+    Nothing
 
 -- title = T.pack "Registration Completed!"
 -- body =
@@ -489,6 +501,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
       [ ("bookingStartTime", showTimeIst (booking.startTime)),
         ("orgName", bppDetails.name)
       ]
+      Nothing
 
 cancellationSourceToSubCategory :: SBCR.CancellationSource -> Notification.SubCategory
 cancellationSourceToSubCategory = \case
@@ -580,6 +593,7 @@ notifyOnBookingReallocated booking = do
       entity
       booking.tripCategory
       [("bookingStartTime", showTimeIst (booking.startTime))]
+      Nothing
 
 -- title = T.pack "Ride cancelled! We are allocating another driver"
 -- body =
@@ -607,6 +621,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
     entity
     booking.tripCategory
     [("bookingStartTime", showTimeIst (booking.startTime))]
+    Nothing
 
 -- title = T.pack "Searching for a New Driver!"
 -- body = case cancellationSource of
@@ -661,7 +676,7 @@ notifyOnQuoteReceived quote = do
     entity
     tripCategory
     [("quoteFareEstimate", show quote.estimatedFare)]
-
+    Nothing
 -- title = T.pack "Quote received!"
 -- body =
 --   unwords
@@ -684,6 +699,7 @@ notifyDriverOnTheWay personId tripCategory = do
     entity
     tripCategory
     []
+    Nothing  
 
 -- title = T.pack "Driver On The Way!"
 -- body =
@@ -717,6 +733,7 @@ notifyDriverHasReached personId tripCategory otp vehicleNumber = do
     [ ("otp", otp),
       ("vehicleNumber", vehicleNumber)
     ]
+    Nothing
 
 -- title = T.pack "Driver Has Reached!"
 -- body =
@@ -742,6 +759,7 @@ notifyDriverReaching personId tripCategory otp vehicleNumber = do
     entity
     tripCategory
     []
+    Nothing
 
 -- title = T.pack "Driver Arriving Now!"
 -- body =
@@ -780,7 +798,7 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 notifySafetyAlert ::
   ServiceFlow m r =>
@@ -798,6 +816,7 @@ notifySafetyAlert booking _ = do
     entity
     booking.tripCategory
     []
+    Nothing
 
 -- title = "Everything okay?"
 -- body = "We noticed your ride is on a different route. Are you feeling safe on your trip?"
@@ -818,6 +837,7 @@ notifyDriverBirthDay personId tripCategory driverName = do
     entity
     tripCategory
     [("driverName", driverName)]
+    Nothing
 
 -- title = T.pack "Driver's Birthday!"
 -- body =
@@ -860,6 +880,7 @@ notifyRideStartToEmergencyContacts booking ride = do
               entity
               booking.tripCategory
               [("name", fromMaybe "" rider.firstName)]
+              Nothing
           -- title = T.pack "Follow Ride"
           -- body =
           --   unwords
@@ -915,6 +936,7 @@ notifyOnStopReached booking ride = do
     entity
     booking.tripCategory
     [("driverName", driverName)]
+    Nothing
 
 -- title = T.pack "Stop Reached!"
 -- body =
@@ -970,7 +992,7 @@ notifyPersonOnEvents person entityData notifType = do
         unwords
           [ entityData.message
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
@@ -984,6 +1006,7 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
     [ ("ticketBookingCategoryName", ticketBookingCategoryName),
       ("ticketBookingId", ticketBookingId)
     ]
+    Nothing
 
 -- title = ticketBookingCategoryName <> " Ticket Service is Cancelled"
 -- body =
@@ -1009,6 +1032,7 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
     entity
     tripCategory
     []
+    Nothing
 
 -- title = fromMaybe (T.pack "First Ride Event") mbTitle
 -- body = fromMaybe (unwords ["Congratulations! You have taken your first ride with us."]) mbBody
@@ -1025,6 +1049,7 @@ notifyToAllBookingParties persons tripCategory notikey =
         entity
         tripCategory
         []
+        Nothing
 
 notifyOnTripUpdate ::
   ServiceFlow m r =>
@@ -1058,7 +1083,7 @@ notifyOnTripUpdate booking ride err = do
             ttl = Nothing,
             sound = notificationSound
           }
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 --"Destination and Fare Updated" "Your edit request was accepted by your driver!"
 
@@ -1081,7 +1106,7 @@ notifyAboutScheduledRide booking title body = do
             ttl = Nothing,
             sound = notificationSound
           }
-  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
 
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do
