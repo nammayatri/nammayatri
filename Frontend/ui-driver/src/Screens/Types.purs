@@ -3380,7 +3380,8 @@ type MeterScreenData = {
   source :: String,
   locationList :: Array LocationListItemState,
   savedlocationList :: Array LocationListItemState,
-  sourceAddress :: Address
+  sourceAddress :: Address,
+  destinationAddress :: Address
 }
 
 type MeterScreenProps = {
@@ -3399,7 +3400,8 @@ type MeterScreenProps = {
   isDestServiceable :: Boolean,
   searchType :: Maybe String,
   currentLocation :: JB.Location,
-  locateOnMapProps :: LocateOnMapProps
+  locateOnMapProps :: LocateOnMapProps,
+  sourceSetUsingPin :: Boolean
 } 
 
 type LocateOnMapProps = {

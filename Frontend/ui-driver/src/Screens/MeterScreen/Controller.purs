@@ -2,44 +2,23 @@ module Screens.MeterScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge as JB
-import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude
-import PrestoDOM
+import Prelude (class Show, bind, discard, not, pure, unit, void, ($), (&&), (/=), (==), (>))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, update, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Screens (getScreen, ScreenName(..))
 import Screens.Types as ST
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.LogEvent (logEvent)
-import Components.GenericHeader as GenericHeader
-import PrestoDOM.List as PList
 import Data.Maybe as Mb
-import Data.Array as DA
-import Data.String as DS
-import Services.API as API
-import Storage (getValueToLocalStore, KeyStore(..))
-import Data.Newtype (unwrap)
-import RemoteConfig as RU
-import Components.SwitchButtonView as SwitchButtonView
+import Screens.MeterScreen.ScreenData (dummyAddress)
 import Data.String as STR
-import Data.Maybe (Maybe(..), fromMaybe)
-import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import Resource.Constants (whiteListedInputString)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Engineering.Helpers.Commons (getNewIDWithTag)
 import Components.LocationListItem as LocationListItem
 import Data.Array (any)
-import Helpers.Utils (setText, getDistanceBwCordinates)
-import Resource.Constants (encodeAddress)
-import Presto.Core.Types.Language.Flow (doAff)
-import Effect.Class (liftEffect)
-import Engineering.Helpers.BackTrack (liftFlowBT)
-import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons as EHC
-import Types.App (defaultGlobalState)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Data.Number (fromString, round) as NUM
-import Debug (spy)
-import Effect.Uncurried (runEffectFn1, runEffectFn2,runEffectFn3, runEffectFn9)
+import Helpers.Utils (setText)
+import Data.Number (fromString) as NUM
+import Effect.Uncurried (runEffectFn1)
 import Common.Resources.Constants (zoomLevel)
+import Resource.Constants (encodeAddress)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -67,7 +46,8 @@ data Action
 data ScreenOutput
   = GoToHomeScreen ST.MeterScreenState
   | SearchPlace String ST.MeterScreenState 
-  | GoToMeterMapScreen ST.MeterScreenState String
+  | GetPlaceName ST.MeterScreenState String
+  | GoToMeterMapScreen ST.MeterScreenState
   | UpdatedState ST.MeterScreenState Boolean
   | UpdatedLocationName ST.MeterScreenState Number Number
 
@@ -75,44 +55,57 @@ eval :: Action -> ST.MeterScreenState -> Eval Action ScreenOutput ST.MeterScreen
 
 eval BackPressed state = do
   void $ pure $ JB.hideKeyboardOnNavigation true
-  exit $ GoToHomeScreen state{ data{searchString = Mb.Nothing}}
+  if state.data.isSearchLocation == ST.LocateOnMap then continue state { data { isSearchLocation = ST.NoView } }
+  else exit $ GoToHomeScreen state{ data{searchString = Mb.Nothing}}
 
 eval (SourceChanged input) state = do
   let sourceSelectType = if state.props.locateOnMap then ST.MAP else state.props.rideSearchProps.sourceSelectType
       newState = state {props{ rideSearchProps{ sourceSelectType = sourceSelectType } }}
-  if (input /= state.data.source) then do
+      isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  if (input /= state.data.source && not isMapSearchLocation) then do
     continueWithCmd newState { props { isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input) > 2 then state.props.searchLocationModelProps.isAutoComplete else false}}}
       [ do
           _ <- pure $ JB.updateInputString input
           pure NoAction
       ]
   else
-    continueWithCmd newState{props {searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = false}}}
-      [ do
-          _ <- pure $ JB.updateInputString input
-          pure NoAction
-      ]
+    continue newState{props {searchLocationModelProps{crossBtnSrcVisibility = (STR.length input) > 2, isAutoComplete = false}}}
 
 eval (UpdateSource lat lng name) state = do
   exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId lat lng}, props { sourceLat = lat, sourceLng = lng, searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} } true
 
+eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
+  case state.data.isSource of
+    Just true -> if (isJust state.data.destinationAddress.area) && (isJust state.data.sourceAddress.area) then updateAndExit state {props {sourceSetUsingPin = true } } $ GoToMeterMapScreen state {props {sourceSetUsingPin = true }} else continue state {props{sourceSetUsingPin = true}, data {isSource = Just false, isSearchLocation = ST.NoView}}
+    _ ->  if state.props.sourceSetUsingPin == true && (isJust state.data.destinationAddress.area) && (isJust state.data.sourceAddress.area) then exit $ GoToMeterMapScreen state
+          else continueWithCmd state { data { isSearchLocation = ST.LocateOnMap, isSource = Just true } } [
+            do
+              JB.animateCamera state.props.sourceLat state.props.sourceLng 17.0 "ZOOM" 
+              pure NoAction
+          ]
 
 eval (DestinationChanged input) state = do
-  if (input /= state.data.destination) then do
+  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  if (input /= state.data.destination && not isMapSearchLocation) then do
     continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false}} }
       [ do
           _ <- pure $ JB.updateInputString input
           pure NoAction
       ]
   else
-    continueWithCmd state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}}
-      [ do
-          _ <- pure $ JB.updateInputString input
-          pure NoAction
-      ]
+    continue state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}}
 
 eval (LocationListItemActionController (LocationListItem.OnClick item)) state = do
-  exit $ GoToMeterMapScreen state (fromMaybe "" item.placeId)
+  let updatedState = case state.data.isSource of
+        Just true -> state {data{source = item.title}}
+        _ -> state {data{destination = item.title}}
+  updateWithCmdAndExit updatedState 
+    [ do
+        case state.data.isSource of
+          Just true -> void $ pure $ JB.showKeyboard (getNewIDWithTag "DestinationEditTextMeterSreen")
+          _ -> void $ pure $ JB.showKeyboard (getNewIDWithTag "SourceEditTextMeterSceen")
+        pure NoAction
+    ] $ GetPlaceName updatedState (fromMaybe "" item.placeId)
 
 eval (LocationListItemActionController _) state = do 
   continue state
@@ -122,29 +115,41 @@ eval (ShowMap _ _ _) state = do
   continue state
 
 eval SourceClear state = do
-  if (state.props.isSearchLocation /= ST.LocateOnMap) then do
-    _ <- pure $ JB.requestKeyboardShow (getNewIDWithTag "SourceEditText")
-    pure unit
-  else
-    pure unit
-  -- let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
-  continue state { data { source = "" , isSource = Just true}, props { isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false} } }
+  let updatedState = state { data { source = "" , isSource = Just true, sourceAddress = dummyAddress}, props { isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false} } }
+  case state.props.isSearchLocation of
+    ST.LocateOnMap -> do
+      continue updatedState
+    _ -> do
+      _ <- pure $ JB.requestKeyboardShow (getNewIDWithTag "SourceEditTextMeterSceen")
+      continue updatedState
 
-eval LocateOnMapClicked state = continue state { data { isSearchLocation = ST.LocateOnMap} }
+eval LocateOnMapClicked state = continueWithCmd state {data { isSearchLocation = ST.LocateOnMap}} [do
+  case state.data.isSource of
+    Just true -> do 
+      if state.props.sourceLat /= 0.0 && state.props.sourceLng /= 0.0 then do
+        JB.animateCamera state.props.sourceLat state.props.sourceLng 17.0 "ZOOM" 
+      else pure unit
+    _ -> do 
+      if state.props.destinationLat /= 0.0 && state.props.destinationLng /= 0.0 then do 
+        JB.animateCamera state.props.destinationLat state.props.destinationLng 17.0 "ZOOM" 
+      else pure unit
+  pure NoAction
+ ]
+
 
 eval DestinationClear state = do
   if (state.props.isSearchLocation /= ST.LocateOnMap) then do
-    _ <- pure $ JB.requestKeyboardShow (getNewIDWithTag "DestinationEditText")
+    _ <- pure $ JB.requestKeyboardShow (getNewIDWithTag "DestinationEditTextMeterSreen")
     pure unit
   else
     pure unit
   -- let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
-  continue state { data { destination = "", isSource = Just false}, props {  isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false }} }
+  continue state { data { destination = "", isSource = Just false, destinationAddress = dummyAddress}, props {  isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false }} }
 
 
 eval (DebounceCallBack searchString isSource) state = do
-  pure unit
-  if (STR.length searchString > 2) && (isSource == fromMaybe true state.data.isSource) then
+  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  if (STR.length searchString > 2) && (isSource == fromMaybe false state.data.isSource) && not isMapSearchLocation then
     validateSearchInput state searchString
   else continue state
 
@@ -157,27 +162,15 @@ eval (EditTextFocusChanged textType) state = do
 
 eval SetCurrentLocation state = do
   _ <- pure $ JB.currentPosition ""
-  pure $ setText (getNewIDWithTag "SourceEditText") (if (state.data.source == "") then "Current Location" else state.data.source)
+  pure $ setText (getNewIDWithTag "SourceEditTextMeterSceen") (if (state.data.source == "") then "Current Location" else state.data.source)
   continue state{ props{ rideSearchProps{ sourceSelectType = if state.data.isSource == Just true then ST.SEARCH else state.props.rideSearchProps.sourceSelectType }, searchLocationModelProps{isAutoComplete = false}}, data{source = if state.props.currentLocation.place /= "" then state.props.currentLocation.place else "Current Location"}}
 
 eval (LocateOnMapCallBack key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
-  let _ = spy "latlong ::" (show lat)
-  continue state
-  -- if os == "IOS" && not ((getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLng) > 5.0) then do
-  --   continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
-  --     void $ JB.animateCamera state.props.sourceLat state.props.sourceLng 25.0 "NO_ZOOM"
-  --     pure NoAction
-  --   ]
-  -- else do
-  --   let updatedState = state
-  --       sourceManuallyMoved = if updatedState.data.isSource == Just true then true else updatedState.props.rideSearchProps.sourceManuallyMoved
-  --       destManuallyMoved = if updatedState.data.isSource == Just false then true else updatedState.props.rideSearchProps.destManuallyMoved
-  --   case key of
-  --     "LatLon" -> do
-  --       -- let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot)  ) updatedState.data.nearByPickUpPoints)
-  --     _ ->  continue state
+  case key of
+    "LatLon" -> exit $ UpdatedLocationName state latitude longitude
+    _ ->  continue state
 
 eval _ state = update state
 
@@ -188,4 +181,4 @@ validateSearchInput state searchString =
   else
     continue state
   where
-  callSearchLocationAPI = updateAndExit state $ SearchPlace searchString state
+  callSearchLocationAPI = exit $ SearchPlace searchString state

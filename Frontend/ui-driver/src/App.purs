@@ -639,7 +639,7 @@ data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadP
 data METRO_WARRIOR_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_WARRIOR MetroWarriorsScreenState
                                   | UPDATE_WARRIOR_SETTINGS MetroWarriorsScreenState UpdateSpecialLocWarriorInfoReq
 
-data METER_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METER MeterScreenState | SEARCH_LOCATION String MeterScreenState | GO_TO_METER_MAP_FROM_METER MeterScreenState String | RELOAD_STATE Boolean | UPDATE_LOCATION_NAME MeterScreenState Number Number
+data METER_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METER MeterScreenState | SEARCH_LOCATION String MeterScreenState | GO_TO_METER_MAP_FROM_METER MeterScreenState | RELOAD_STATE Boolean | UPDATE_LOCATION_NAME MeterScreenState Number Number | GET_PLACE_NAME_METER_SCREEN MeterScreenState String
 
 data METER_MAP_SCREEN_OUTPUT = GO_TO_METER_SCREEN_FROM_METER_MAP MeterMapScreenState | SEARCH_LOCATION_MAP_SCREEN String MeterMapScreenState
 

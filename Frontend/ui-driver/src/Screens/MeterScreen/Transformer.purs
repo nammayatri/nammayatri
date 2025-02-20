@@ -4,7 +4,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.Types (LocItemType(..), LocationItemType(..), LocationListItemState(..))
 import Data.Int (toNumber)
-import Prelude
+import Prelude (map, (>=), (>), (+), (&&), ($), (<>), show, (<=), (/), otherwise)
 import Services.API (Prediction(..))
 import Data.Array as DA
 import Data.Lens ((^.))

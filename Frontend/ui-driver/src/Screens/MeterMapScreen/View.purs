@@ -8,34 +8,25 @@ import Prelude
 import PrestoDOM
 import Screens.MeterMapScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
-import JBridge (hideKeyboardOnNavigation, debounceFunction, showKeyboard, reallocateMapFragment, showMap)
-import Resource.Constants (getDelayForAutoComplete)
-import Components.LocationListItem as LocationListItem
-import Helpers.Utils as HU
+import JBridge (reallocateMapFragment, showMap)
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Common.Types.App as CTA
-import Mobility.Prelude as MP
 import Engineering.Helpers.Commons as EHC
-import DecodeUtil (getAnyFromWindow)
 import PrestoDOM.Properties (cornerRadii)
 import Language.Types (STR(..))
 import PrestoDOM.Animation as PrestoAnim
 import Engineering.Helpers.Commons (getNewIDWithTag, safeMarginBottom, safeMarginTop)
-import Data.Array (any, mapWithIndex, length, null)
-import Components.SeparatorView.View as SeparatorView
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Function.Uncurried (runFn3)
-import Language.Strings (getVarString)
+import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.RateCard as RateCard
 import Screens.BookingOptionsScreen.ComponentConfig as BOP
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Language.Strings (getString)
 import Data.String as DS
 import Animation (screenAnimationFadeInOut)
 import Data.String.CodeUnits (charAt)
+import Language.Strings (getString)
 
 screen :: ST.MeterMapScreenState -> Screen Action ST.MeterMapScreenState ScreenOutput
 screen initialState =
@@ -305,7 +296,7 @@ confirmPickupView push state =
   ] 
 
 googleMap :: forall w . ST.MeterMapScreenState -> PrestoDOM (Effect Unit) w
-googleMap state =
+googleMap _ =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT

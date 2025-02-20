@@ -5,7 +5,7 @@ import Data.Maybe as Mb
 import Halogen.VDom.DOM.Prop (PropValue)
 import Services.API as API 
 import RemoteConfig as RU 
-import ConfigProvider
+import ConfigProvider (getAppConfig, appConfig)
 import PrestoDOM (Visibility(..))
 import Data.Maybe (Maybe(..))
 import Screens.Types (Address)
@@ -28,6 +28,7 @@ initData =
     source: "",
     destination: "",
     sourceAddress: dummyAddress,
+    destinationAddress: dummyAddress,
     locationList: [],
     savedlocationList: []
   }
@@ -50,6 +51,7 @@ initData =
           sourceManuallyMoved : false,
           destManuallyMoved : false
       },
+      sourceSetUsingPin: false,
       locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false, cameraAnimatedToSource : true },
       searchLocationModelProps: {
         isAutoComplete : false

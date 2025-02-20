@@ -20,17 +20,14 @@ import Engineering.Helpers.Commons as EHC
 import DecodeUtil (getAnyFromWindow)
 import Language.Types (STR(..))
 import PrestoDOM.Animation as PrestoAnim
-import Engineering.Helpers.Commons (getNewIDWithTag, safeMarginBottom, safeMarginTop)
+import Engineering.Helpers.Commons (getNewIDWithTag, safeMarginTop)
 import Data.Array (any, mapWithIndex, length, null)
 import Components.SeparatorView.View as SeparatorView
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Function.Uncurried (runFn3)
 import Language.Strings (getVarString)
-import Presto.Core.Types.Language.Flow (doAff)
-import Effect.Class (liftEffect)
 import JBridge as JB
-import Effect.Uncurried (runEffectFn1, runEffectFn2)
-import Common.Resources.Constants (zoomLevel)
+import Effect.Uncurried (runEffectFn2)
 
 screen :: ST.MeterScreenState -> Screen Action ST.MeterScreenState ScreenOutput
 screen initialState =
@@ -41,6 +38,10 @@ screen initialState =
       [  \push -> do
             _ <- reallocateMapFragment (EHC.getNewIDWithTag "MeterScreenMap")
             void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ LocateOnMapCallBack key lat lon) (JB.handleLocateOnMapCallback "MeterScreen")
+            if initialState.data.source == "Current Location" then
+              HU.getLocationName push 9.9 9.9 "Current Location" UpdateSource
+            else
+              pure unit
             pure $ pure unit
       ]
   , eval:
@@ -54,41 +55,17 @@ screen initialState =
 view :: forall w. (Action -> Effect Unit) -> ST.MeterScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
-      extraPadding = if isMapSearchLocation then HU.getDefaultPixelSize 112 else 0
   in
   linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
-      , margin $ MarginBottom (if isMapSearchLocation then bottomSpacing else 0)
       , onBackPressed push (const $ BackPressed)
      ][ PrestoAnim.animationSet
           [ Anim.fadeIn true ]
           $
-          linearLayout
-          [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , background Color.gunMetalBlue
-            , padding $ PaddingVertical safeMarginTop 16
-          ][ linearLayout
-             [ width MATCH_PARENT
-               , height $ WRAP_CONTENT
-               , orientation HORIZONTAL
-               , padding $ Padding 4 4 4 4
-             ][ backPressView state push
-               , if not state.data.isEditDestination then sourceDestinationImageView state else textView[]
-               , sourceDestinationEditTextView state push
-              ]
-           ]
-          , linearLayout
-            [ height $ V 1
-            , width MATCH_PARENT
-            , background Color.white300
-            , visibility VISIBLE 
-            ]
-            []
+            topView state push
           , relativeLayout 
             [ width MATCH_PARENT
             , height MATCH_PARENT
@@ -97,68 +74,95 @@ view push state =
               [ width MATCH_PARENT
               , height MATCH_PARENT
               , accessibility DISABLE
+              , clickable isMapSearchLocation
               ][linearLayout
-                  [ height MATCH_PARENT
+                [ height MATCH_PARENT
                   , width MATCH_PARENT
                   , background Color.transparent
+                  , clickable isMapSearchLocation
                   ][googleMap state push]
-                , linearLayout
-                  [ width MATCH_PARENT
-                  , height MATCH_PARENT
-                  , background Color.transparent
-                  , padding $ PaddingBottom $ 95 + extraPadding
-                  , gravity CENTER
-                  , accessibility DISABLE
-                  , orientation VERTICAL
-                  , visibility $ MP.boolToVisibility $ isMapSearchLocation
-                  ][ imageView
-                      [ width $ V 35
-                      , height $ V 35
-                      , accessibility DISABLE
-                      , visibility $ MP.boolToInvisibility (isMapSearchLocation)
-                      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET $ "ny_ic_src_marker"
-                      , id (getNewIDWithTag "LocateOnMapPin1")
-                      ]
-                    ]
+                , mapMarker state push
+                , primaryButtonView state push
                 ]
               , bottomBtnsView state push
-             ]
+              ]
     ]
-    where
-      bottomSpacing = if safeMarginBottom == 0 then 16 else safeMarginBottom
 
-      backPressView :: forall we. ST.MeterScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) we
-      backPressView _ _ =
-       linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , disableClickFeedback true
-        , margin (Margin 5 17 0 0)
-        , gravity CENTER
-        , padding (Padding 4 4 4 4)
-        , cornerRadius 20.0
-        ][ imageView
-          [ height $ V 23
-          , width $ V 23
-          , accessibilityHint "Back : Button"
-          , rippleColor Color.rippleShade
-          , onClick push (const BackPressed)
-          , accessibility ENABLE
-          , imageWithFallback $ if state.data.isSearchLocation == ST.RouteMap then "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png" else  "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
-          , margin $ Margin 4 4 4 4
-          ]
-        , textView  $
-          [ text ""
-          , visibility $ state.data.suffixButtonVisibility
-          , color Color.white900  
-          , margin $ MarginLeft 8
-          ] <> (FontStyle.subHeading2 CTA.LanguageStyle)
-        , linearLayout 
-          [ weight 1.0
-          , height WRAP_CONTENT
-          , visibility $ state.data.suffixButtonVisibility
-          ] []
+
+mapMarker :: forall w. ST.MeterScreenState -> (Action -> Effect Unit ) -> PrestoDOM (Effect Unit) w
+mapMarker state _ = 
+  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  in
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.transparent
+    , padding $ PaddingBottom 36
+    , gravity CENTER
+    , accessibility DISABLE
+    , orientation VERTICAL
+    , visibility $ MP.boolToVisibility $ isMapSearchLocation
+    ][imageView
+      [ width $ V 35
+      , height $ V 35
+      , accessibility DISABLE
+      , visibility $ MP.boolToInvisibility (isMapSearchLocation)
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET $ (if state.data.isSource == Just true then "ny_ic_src_marker" else "ny_ic_dest_marker")
+      , id (getNewIDWithTag "LocateOnMapPin1")
       ]
+    ]
+
+topView :: forall w. ST.MeterScreenState -> (Action -> Effect Unit ) -> PrestoDOM (Effect Unit) w
+topView state push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.gunMetalBlue
+    , padding $ PaddingVertical safeMarginTop 16
+    ][linearLayout
+      [ width MATCH_PARENT
+      , height $ WRAP_CONTENT
+      , orientation HORIZONTAL
+      , padding $ Padding 4 4 4 4
+      ][backPressView state push
+        , if not state.data.isEditDestination then sourceDestinationImageView state else textView[]
+        , sourceDestinationEditTextView state push
+      ]
+    ]
+  where
+    backPressView :: forall we. ST.MeterScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) we
+    backPressView _ _ =
+     linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , disableClickFeedback true
+      , margin (Margin 5 17 0 0)
+      , gravity CENTER
+      , padding (Padding 4 4 4 4)
+      , cornerRadius 20.0
+      ][imageView
+        [ height $ V 23
+        , width $ V 23
+        , accessibilityHint "Back : Button"
+        , rippleColor Color.rippleShade
+        , onClick push (const BackPressed)
+        , accessibility ENABLE
+        , imageWithFallback $ if state.data.isSearchLocation == ST.RouteMap then "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png" else  "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+        , margin $ Margin 4 4 4 4
+        ]
+      , textView  $
+        [ text ""
+        , visibility $ state.data.suffixButtonVisibility
+        , color Color.white900  
+        , margin $ MarginLeft 8
+        ] <> (FontStyle.subHeading2 CTA.LanguageStyle)
+      , linearLayout 
+        [ weight 1.0
+        , height WRAP_CONTENT
+        , visibility $ state.data.suffixButtonVisibility
+        ] []
+    ]
 
 nonEditableTextView :: forall w. ST.MeterScreenState -> (Action -> Effect Unit ) -> PrestoDOM (Effect Unit) w
 nonEditableTextView state _ = 
@@ -183,11 +187,19 @@ sourceDestinationEditTextView state push =
   linearLayout
     [ width MATCH_PARENT
     , orientation VERTICAL
-    , margin (Margin 0 16 16 0)
-    , height $ WRAP_CONTENT
+    , margin if EHC.os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
+    , height WRAP_CONTENT
     ][if state.data.isEditDestination
         then nonEditableTextView state push 
         else editableSourceView state push
+    , linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900
+        , background if state.props.isSrcServiceable then Color.grey900 else Color.textDanger
+        , visibility if state.data.isSource == Just true && not isMapSearchLocation then VISIBLE else GONE
+        ]
+        []
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -195,7 +207,6 @@ sourceDestinationEditTextView state push =
           , orientation HORIZONTAL
           , margin $ MarginTop 10
           , background "#313440"
-          , stroke if state.data.isSource == Just false && isMapSearchLocation && state.data.isDestViewEditable then "1," <> Color.yellowText else "0," <> Color.yellowText
           ]
           [ editText
              ([  height $ V 37
@@ -208,7 +219,7 @@ sourceDestinationEditTextView state push =
               , onChange
                 ( \action -> do
                     if state.data.isDestViewEditable then do
-                      _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.data.isSource)
+                      _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack false
                       _ <- push action
                       pure unit
                     else do
@@ -218,8 +229,8 @@ sourceDestinationEditTextView state push =
               , afterRender (\_ -> do
                     if state.data.isDestViewEditable then do
                       _ <- pure $ showKeyboard case state.data.isSource of
-                                                Just true -> (getNewIDWithTag "SourceEditText")
-                                                Just false -> (getNewIDWithTag "DestinationEditText")
+                                                Just true -> (getNewIDWithTag "SourceEditTextMeterSceen")
+                                                Just false -> (getNewIDWithTag "DestinationEditTextMeterSreen")
                                                 Nothing    -> ""
                       pure unit
                     else do
@@ -231,7 +242,7 @@ sourceDestinationEditTextView state push =
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
               , accessibility ENABLE
-              , id $ getNewIDWithTag "DestinationEditText"
+              , id $ getNewIDWithTag "DestinationEditTextMeterSreen"
               , inputTypeI if isMapSearchLocation then 0 else 1
               , inputType if isMapSearchLocation then Disabled else TypeText
               , onFocus push $ const $ EditTextFocusChanged "D"
@@ -247,7 +258,7 @@ sourceDestinationEditTextView state push =
                 , margin $ MarginTop 2
                 , visibility if state.props.searchLocationModelProps.crossBtnDestVisibility && state.data.isSource == Just false then VISIBLE else GONE
                 , onClick (\action -> do
-                            _ <- if state.data.isSource == Just false then pure $ EHC.setText (getNewIDWithTag  "DestinationEditText") "" else pure unit
+                            _ <- if state.data.isSource == Just false then pure $ EHC.setText (getNewIDWithTag  "DestinationEditTextMeterSreen") "" else pure unit
                             _ <- push action
                             pure unit
                           )(const $ DestinationClear)
@@ -264,9 +275,10 @@ sourceDestinationEditTextView state push =
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
-        , margin (MarginBottom 5)
+        -- , margin (MarginBottom 5)
         , background Color.grey900
-        , visibility if state.data.isSource == Just false && not isMapSearchLocation then VISIBLE else GONE
+        -- , background if state.isDestServiceable then Color.grey900 else Color.textDanger
+        , visibility if (isNothing state.data.isSource || state.data.isSource == Just false) && not isMapSearchLocation then VISIBLE else GONE
         ]
         []
     ]
@@ -279,10 +291,9 @@ editableSourceView state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
-  , background Color.grey900
+  , background  "#313440"
   , visibility $ MP.boolToVisibility $ not state.data.isEditDestination
   , cornerRadius 4.0 
-  , stroke $ "1," <> Color.yellowText 
   ][ 
     editText $
         [ height $ V 37
@@ -298,12 +309,12 @@ editableSourceView state push =
         , accessibility ENABLE
         , hint "Start"
         , hintColor  "#A7A7A7"
-        , id $ getNewIDWithTag "SourceEditText"
+        , id $ getNewIDWithTag "SourceEditTextMeterSceen"
         , afterRender (\_ -> do
               if state.data.isDestViewEditable then do
                 _ <- pure $ showKeyboard case state.data.isSource of
-                                          Just true  -> (getNewIDWithTag "SourceEditText")
-                                          Just false -> (getNewIDWithTag "DestinationEditText")
+                                          Just true  -> (getNewIDWithTag "SourceEditTextMeterSceen")
+                                          Just false -> (getNewIDWithTag "DestinationEditTextMeterSreen")
                                           Nothing    -> ""
                 
                 pure unit
@@ -313,7 +324,7 @@ editableSourceView state push =
                 ) (const NoAction)
         , onChange
             ( \action -> do
-                _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.data.isSource)
+                _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack true
                 _ <- push action
                 pure unit
             )
@@ -330,7 +341,7 @@ editableSourceView state push =
         , gravity CENTER
         , padding $ PaddingVertical 10 2
         , onClick (\action -> do
-                    _ <- if state.data.isSource == Just true then pure $ EHC.setText (getNewIDWithTag "SourceEditText") "" else pure unit
+                    _ <- if state.data.isSource == Just true then pure $ EHC.setText (getNewIDWithTag "SourceEditTextMeterSceen") "" else pure unit
                     _ <- push action
                     pure unit
                   )(const $ SourceClear)
@@ -390,7 +401,7 @@ searchResultsView state push =
     ]
 
 sourceDestinationImageView :: forall w. ST.MeterScreenState -> PrestoDOM (Effect Unit) w
-sourceDestinationImageView state =
+sourceDestinationImageView _ =
     linearLayout
     [ height WRAP_CONTENT
     , width $ V 20
@@ -435,11 +446,14 @@ separatorConfig =
 
 searchResultsParentView :: forall w. ST.MeterScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsParentView state push =
+  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  in
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , margin $ MarginHorizontal 16 16
   , orientation VERTICAL
+  , clickable $ not isMapSearchLocation
     ][ findPlacesIllustration push state
       , searchResultsView state push
      ]
@@ -489,36 +503,40 @@ findPlacesIllustration _ state  =
 
 primaryButtonView :: forall w. ST.MeterScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 primaryButtonView state push =
+  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  in
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , alignParentBottom "true,-1"
     , background Color.transparent
-    , visibility VISIBLE
-    ][ 
-      PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
+    , visibility $ MP.boolToVisibility isMapSearchLocation
+    , gravity BOTTOM
+    , padding $ Padding 8 8 8 8
+    ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
 
 primaryButtonConfig :: ST.MeterScreenState -> PrimaryButton.Config
-primaryButtonConfig _ =
-  let
-    config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-        { text = "Confirm Pickup Location" 
-        , color = "#000000"
-        , height = V 40
+primaryButtonConfig state =
+  let buttonText = case state.data.isSource of
+        Just true -> "Confirm Pickup Location"
+        _ -> "Confirm Destination"
+      config = PrimaryButton.config
+      primaryButtonConfig' = config
+        { textConfig
+          { text = buttonText
+          , color = "#FCC32C"
+          , height = V 40
+          }
+        , height = V 50
+        , gravity = CENTER
+        , cornerRadius = 8.0
+        , background = "#2C2F3A"
+        , margin = (MarginHorizontal 16 16)
+        , isClickable = true
+        , id = "SelectLocationFromMap"
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
         }
-      , height = V 50
-      , gravity = CENTER
-      , cornerRadius = 8.0
-      , background =  Color.gunMetalBlue
-      , margin = (MarginHorizontal 16 16)
-      , isClickable = true
-      , id = "SelectLocationFromMap"
-      , enableRipple = true
-      , rippleColor = Color.rippleShade
-      }
   in primaryButtonConfig'
 
 googleMap :: forall w . ST.MeterScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -528,12 +546,10 @@ googleMap state push =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  , layoutGravity "bottom"
-  , background Color.white900
   , visibility $ MP.boolToVisibility isMapSearchLocation
   , id (EHC.getNewIDWithTag "MeterScreenMap")
   , afterRender
-      (\action -> do
+      (\_ -> do
           _ <- showMap (EHC.getNewIDWithTag "MeterScreenMap") true "satellite" (17.0) 0.0 0.0 push ShowMap
           _ <- HU.getLocationName push 9.9 9.9 "Current Location" UpdateSource
           pure unit
@@ -541,13 +557,13 @@ googleMap state push =
   ][]
 
 srcBtnData :: ST.MeterScreenState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
-srcBtnData state =
+srcBtnData _ =
   [ { text: "Select on map", imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: LocateOnMapClicked, buttonType: "LocateOnMap" }
   , { text: "Current Location", imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_current_location", action: SetCurrentLocation, buttonType: "CurrentLocation" }
   ]
 
 destBtnData :: ST.MeterScreenState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
-destBtnData state =
+destBtnData _ =
   [ { text: "Select Location on Map", imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: LocateOnMapClicked, buttonType: "LocateOnMap" }]
 
 bottomBtnsView :: forall w . ST.MeterScreenState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w

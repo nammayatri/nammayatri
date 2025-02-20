@@ -206,6 +206,7 @@ import Resource.Constants (decodeAddress)
 import Resource.Constants as RC
 import Screens as ScreenNames
 import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
+import Screens.MeterScreen.ScreenData (initData) as MeterScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
@@ -291,6 +292,7 @@ import Data.Newtype (unwrap)
 import Data.Function.Uncurried as UC
 import Screens.Benefits.BenefitsScreen.Controller as BSC
 import PrestoDOM.Core (getPushFn)
+import Resource.Constants (encodeAddress)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -4823,30 +4825,68 @@ meterScreenFlow :: FlowBT String Unit
 meterScreenFlow = do
   action <- UI.meterScreen
   case action of
-    GO_TO_HOME_SCREEN_FROM_METER state -> homeScreenFlow
+    GO_TO_HOME_SCREEN_FROM_METER state -> do
+          modifyScreenState $ MeterScreenStateType $ \meterScreen -> MeterScreenData.initData
+          homeScreenFlow
     SEARCH_LOCATION input updatedState -> do
       LatLon lat lon _ <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       resp <- lift $ lift $ Remote.autoComplete input lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey))
       case resp of 
         Right (API.AutoCompleteResp autoCompleteResp) -> do
           let locList = getLocationList autoCompleteResp.predictions
-          modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen{data {locationList = locList}}
+          modifyScreenState $ MeterScreenStateType $ \meterScreen -> updatedState{data {locationList = locList}}
           pure unit
         Left _ -> pure unit
       meterScreenFlow
-    GO_TO_METER_MAP_FROM_METER state placeId -> do
+    GET_PLACE_NAME_METER_SCREEN state placeId -> do
       resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
         Right (API.GetPlaceNameResp placeNameResp) ->
-          case placeNameResp!!0 of 
+          case placeNameResp!!0 of
             Just (API.PlaceName placeName) -> do
               let (API.LatLong latLong) = placeName.location
-              modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen{props {destinationLat = latLong.lat, destinationLng = latLong.lon}}
+              case state.data.isSource of
+                Just true -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {sourceLat = latLong.lat, sourceLng = latLong.lon}, data {sourceAddress = encodeAddress placeName.formattedAddress placeName.addressComponents (Just placeId) latLong.lat latLong.lon}}
+                _ -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon}, data {destinationAddress = encodeAddress placeName.formattedAddress placeName.addressComponents (Just placeId) latLong.lat latLong.lon}}
+            Nothing -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
+        Left _ -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
+      case state.data.isSource of
+        Just true -> do
+          if (isJust state.data.destinationAddress.area) then
+            if state.props.sourceSetUsingPin then meterMapScreenFlow
+            else do
+              modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen { data {isSearchLocation = ST.LocateOnMap} }
+              meterScreenFlow
+          else do
+            modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen { data { isSource = Just false } }
+            meterScreenFlow
+        _ ->  do
+          if state.props.sourceSetUsingPin == true then
+            if (isJust state.data.sourceAddress.area) then do
+              meterMapScreenFlow
+            else do
+              modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen { data {isSource = Just true } }
+              meterScreenFlow
+          else do
+            modifyScreenState $ MeterScreenStateType $ \meterScreen -> meterScreen { data {isSearchLocation = ST.LocateOnMap, isSource = Just true} }
+            meterScreenFlow
+      meterScreenFlow
+    GO_TO_METER_MAP_FROM_METER state -> meterMapScreenFlow
+    RELOAD_STATE saveToCurrLocs -> meterScreenFlow
+    UPDATE_LOCATION_NAME state lat lon -> do
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
+      case resp of
+        Right (API.GetPlaceNameResp placeNameResp) ->
+          case placeNameResp!!0 of
+            Just (API.PlaceName placeName) -> do
+              let (API.LatLong latLong) = placeName.location
+              case state.data.isSource of
+                Just true -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {sourceLat = latLong.lat, sourceLng = latLong.lon }, data{sourceAddress = encodeAddress placeName.formattedAddress placeName.addressComponents Nothing latLong.lat latLong.lon, source = placeName.formattedAddress}}
+                _ -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon}, data {destination = placeName.formattedAddress, destinationAddress = encodeAddress placeName.formattedAddress placeName.addressComponents Nothing latLong.lat latLong.lon}}
             Nothing -> pure unit
         Left _ -> pure unit
-      meterMapScreenFlow 
-    RELOAD_STATE saveToCurrLocs -> meterScreenFlow
-    UPDATE_LOCATION_NAME state lat lon -> meterScreenFlow
+      meterScreenFlow
+
 
 meterMapScreenFlow :: FlowBT String Unit
 meterMapScreenFlow = do
