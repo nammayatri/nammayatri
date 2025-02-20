@@ -4893,4 +4893,5 @@ meterMapScreenFlow = do
   action <- UI.meterMapScreen
   case action of
     GO_TO_METER_SCREEN_FROM_METER_MAP state -> meterScreenFlow
+    OTP_ENTERED otp -> homeScreenFlow
     _ -> meterMapScreenFlow

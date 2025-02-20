@@ -14,6 +14,7 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import JBridge(hideKeyboardOnNavigation)
 import Engineering.Helpers.Utils (mobileNumberValidator)
 import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
+import Debug (spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -35,6 +36,7 @@ data Action
 data ScreenOutput
   = GoToMeterScreen ST.MeterMapScreenState
   | SearchPlace String ST.MeterMapScreenState 
+  | OTPEntered ST.MeterMapScreenState
 
 eval :: Action -> ST.MeterMapScreenState -> Eval Action ScreenOutput ST.MeterMapScreenState
 
@@ -82,16 +84,17 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone _)) state = do
   void $ pure $ JB.hideKeyboardOnNavigation true
   exit $ OTPEntered state
 
-eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text)) state = do
-  let newVal = (if DS.length(text) > 0 then (DS.take (DS.length(text) - 1 ) text) else "" )
-      focusIndex = DS.length newVal
-  continue state {props { alternateMobileOtp = newVal, enterOtpFocusIndex = focusIndex,otpIncorrect = false, otpAttemptsExceeded = false}}
+-- eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text)) state = do
+--   let newVal = (if DS.length(text) > 0 then (DS.take (DS.length(text) - 1 ) text) else "" )
+--       focusIndex = DS.length newVal
+--   continue state {props { alternateMobileOtp = newVal, enterOtpFocusIndex = focusIndex,otpIncorrect = false, otpAttemptsExceeded = false}}
 
-eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index)) state = do
-  let
-    alternateMobileOtp' = if (index + 1) > (DS.length state.props.alternateMobileOtp) then ( DS.take 4 (state.props.alternateMobileOtp <> key)) else (DS.take index (state.props.alternateMobileOtp)) <> key <> (DS.take 4 (DS.drop (index+1) state.props.alternateMobileOtp))
-    focusIndex = DS.length alternateMobileOtp'
-  continue state { props { alternateMobileOtp = alternateMobileOtp', enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
+-- eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index)) state = do
+--   let
+--     alternateMobileOtp' = if (index + 1) > (DS.length state.props.alternateMobileOtp) then ( DS.take 4 (state.props.alternateMobileOtp <> key)) else (DS.take index (state.props.alternateMobileOtp)) <> key <> (DS.take 4 (DS.drop (index+1) state.props.alternateMobileOtp))
+--     focusIndex = DS.length alternateMobileOtp'
+--     _ = spy "STATE CHANGED " state
+--   continue state { props { alternateMobileOtp = alternateMobileOtp', enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
 
 eval (PhoneNoChanged phoneNumber) state = do
   let numberValidator = mobileNumberValidator "" "IN" phoneNumber
