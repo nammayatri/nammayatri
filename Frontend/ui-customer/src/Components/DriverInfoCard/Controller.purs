@@ -28,6 +28,7 @@ import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types
 import Screens.Types as ST
+import RemoteConfig.Types
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -50,12 +51,14 @@ data Action = NoAction
             | SpecialZoneInfoTag
             | RateCardInfo
             | RideDurationTimer String String Int
-            | AddStop 
+            | AddStop
             | RentalInfo
             | ShowEndOTP
             | ShowDirections Number Number
             | EditingLocation LocationType
             | GoToDriverProfile
+            | OnEnqFirstBtnClick
+            | OnEnqSecondBtnClick
             | ShowDeliveryImageAndOtp
 
 type DriverInfoCardState =
@@ -81,7 +84,8 @@ type DriverInfoCardProps =
     endOTPShown :: Boolean,
     showEndOTP :: Boolean,
     stageBeforeChatScreen :: Stage,
-    isOtpRideFlow :: Boolean
+    isOtpRideFlow :: Boolean,
+    enquiryBannerData ::  Maybe EnquiryBannerConfig
   }
 
 type DriverInfoCardData =
@@ -124,7 +128,7 @@ type DriverInfoCardData =
   , vehicleModel :: String
   , vehicleColor :: String
   , serviceTierName :: Maybe String
-  , providerName :: String 
+  , providerName :: String
   , providerType :: CTP.ProviderType
   , cityConfig :: CityConfig
   , rentalData :: RentalBookingConfig

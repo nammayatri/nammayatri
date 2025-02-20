@@ -30,7 +30,7 @@ import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
-import Data.Map as Map 
+import Data.Map as Map
 import JBridge (Location)
 import Data.HashMap as DHM
 import Common.Types.App as CT
@@ -165,7 +165,7 @@ initData = let
       , currentBanner : 0
       , bannerScrollState: "0"
       , currentPage : 0
-    } 
+    }
     , contactList : Nothing
     , followers : Nothing
     , manuallySharedFollowers : Nothing
@@ -183,7 +183,7 @@ initData = let
     }
     , otherSelectedEstimates : []
     , rateCardCache : Nothing
-    , rentalsInfo : Nothing 
+    , rentalsInfo : Nothing
     , startTimeUTC : ""
     , returnTimeUTC : ""
     , estReturnTimeUTC : ""
@@ -209,6 +209,7 @@ initData = let
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
     , cancellationRate : Nothing
+    , enquiryBannerStage : Just ST.QuestionStage
     },
     props: {
       rideRequestFlow : false
@@ -260,7 +261,7 @@ initData = let
     , isSrcServiceable : true
     , isDestServiceable : true
     , isRideServiceable : true
-    , userBlocked : false 
+    , userBlocked : false
     , showlocUnserviceablePopUp : false
     , autoSelecting : true
     , searchExpire : 90
@@ -393,8 +394,8 @@ initData = let
                                , referralCode : Nothing
                                , applyButtonActive : false
                                , showReferredUserInfoPopup : false
-                               , showReferralProgramInfoPopup : false 
-                               , isInvalidCode : false 
+                               , showReferralProgramInfoPopup : false
+                               , isInvalidCode : false
                                }
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false
@@ -589,7 +590,7 @@ dummySettingBar = {
 }
 
 dummyAddress :: Address
-dummyAddress = 
+dummyAddress =
   { "area"      : Nothing
   , "state"     : Nothing
   , "country"   : Nothing
@@ -659,7 +660,7 @@ dummyRideBooking = RideBookingRes
   specialLocationTag : Nothing,
   hasDisability : Nothing,
   sosStatus: Nothing,
-  serviceTierName : Nothing, 
+  serviceTierName : Nothing,
   airConditioned : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing,
@@ -709,16 +710,16 @@ dummyTrip = {
     sourceLong: 0.0,
     destLat: 0.0,
     destLong: 0.0,
-    frequencyCount: Nothing,  
-    recencyDate: Nothing,  
-    locationScore: Nothing,  
+    frequencyCount: Nothing,
+    recencyDate: Nothing,
+    locationScore: Nothing,
     isSpecialZone: true,
     vehicleVariant: Nothing,
     serviceTierNameV2 : Nothing
 }
 
 dummyRentalBookingConfig :: RentalBookingConfig
-dummyRentalBookingConfig = 
+dummyRentalBookingConfig =
   { startTimeUTC : ""
   , baseDuration : 0
   , baseDistance : 0
@@ -753,13 +754,13 @@ dummyInvalidBookingPopUpConfig = {
 initialRideCompletedData :: RideCompletedData
 initialRideCompletedData = {
   issueReportData : {
-    bannerItem : Nothing 
+    bannerItem : Nothing
   , currentBannerIndex : 0
   , currentPageIndex : 0
   , showIssueBanners : true
   , hasAccessibilityIssue : false
   , hasTollIssue : false
-  , hasSafetyIssue : false                    
+  , hasSafetyIssue : false
   , customerResponse : [
     {
       issueType : TollCharge
@@ -782,7 +783,7 @@ initialRideCompletedData = {
   }
 }
 
-initialParkingData :: ParkingData 
+initialParkingData :: ParkingData
 initialParkingData = {
   estimatedCharge : Nothing
 }
@@ -795,7 +796,7 @@ initialTollData = {
 , showIncludedPopUp : false
 }
 
-dummyNewContacts :: NewContacts 
+dummyNewContacts :: NewContacts
 dummyNewContacts = {
   name : "",
   number : "",
@@ -810,7 +811,7 @@ dummyNewContacts = {
   shareTripWithEmergencyContactOption : neverShareRideOption
 }
 
-dummyNotificationBody :: NotificationBody 
+dummyNotificationBody :: NotificationBody
 dummyNotificationBody = {
     rideTime : Nothing,
     bookingId : Nothing
