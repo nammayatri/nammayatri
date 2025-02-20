@@ -294,8 +294,9 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
+              isNonOxygenDefault = oxygen /= Just 1
           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
-            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || isNonACDefault,
+            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || (isNonACDefault && isNonOxygenDefault),
               isDefault = (vehicleCategory /= Just DVC.AMBULANCE) && ((vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault), -- No default in Ambulance
               isUsageRestricted = Just usageRestricted,
               priority = Just priority,
@@ -378,7 +379,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           mbServiceTierDriverRequest = find (\tier -> tier.serviceTierType == driverServiceTier.serviceTierType) tiers
           isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
 
-      if isSelected || isDefault
+      if isSelected || (isDefault && (vehicle.category /= Just DVC.AMBULANCE)) -- Suppressing isDefault check for Ambulance
         then return $ Just driverServiceTier
         else return Nothing
   let selectedServiceTierTypes = map (.serviceTierType) $ catMaybes mbSelectedServiceTiers
