@@ -365,3 +365,16 @@ updateIsBlockedForReferralPayout driverIds isBlocked = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+
+updateForwardBatchingEnabledOrIsInteroperable :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Bool -> Maybe Bool -> m ()
+updateForwardBatchingEnabledOrIsInteroperable driverId isAdvancedBookingEnabled isInteroperable = do
+  if isNothing isAdvancedBookingEnabled && isNothing isInteroperable
+    then pure ()
+    else do
+      now <- getCurrentTime
+      updateOneWithKV
+        ( [Se.Set BeamDI.updatedAt now]
+            <> [Se.Set BeamDI.forwardBatchingEnabled isAdvancedBookingEnabled | isJust isAdvancedBookingEnabled]
+            <> [Se.Set BeamDI.isInteroperable isInteroperable | isJust isInteroperable]
+        )
+        [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
