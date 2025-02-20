@@ -23,7 +23,6 @@ import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import Control.Applicative ((<|>))
 import qualified Data.Map as M
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
@@ -103,7 +102,7 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       OVERLAY -> do
         oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
-        manualDues <- getManualDues personId transporterConfig.timeDiffFromUtc transporterConfig.driverFeeOverlaySendingTimeLimitInDays
+        manualDues <- getManualDues personId
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing mbVehicleCategory >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
@@ -128,15 +127,9 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
     addTranslation Domain.RawMessage {..} trans =
       (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
 
-    getManualDues personId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
-      windowEndTime <- getLocalCurrentTime timeDiffFromUtc
-      let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName personId YATRI_SUBSCRIPTION
-      let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
-      return $
-        if null filteredDriverFees
-          then 0
-          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+    getManualDues personId = do
+      sum . map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst))
+        <$> QDF.findAllOverdueDriverFeeByDriverIdForServiceName personId YATRI_SUBSCRIPTION
 
     templateText txt = "{#" <> txt <> "#}"
 
