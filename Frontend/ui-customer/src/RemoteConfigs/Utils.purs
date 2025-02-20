@@ -23,6 +23,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Show(show)
 import Debug (spy)
+import LocalStorage.Cache
+import Data.Function.Uncurried
 import RemoteConfig.Types as Types
 
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
@@ -62,7 +64,7 @@ getFamousDestinations :: String -> Array FamousDestination
 getFamousDestinations city = do
     let langConfig = fetchRemoteConfigString $ "famous_destinations" <> (getLanguage $ getLanguageLocale languageKey)
         config = if not $ DS.null langConfig
-                   then langConfig 
+                   then langConfig
                    else fetchRemoteConfigString "famous_destinations_en"
         value = decodeConfig config
         famousDestinationsBasedOnLanguage = getCityBasedConfig value city
@@ -70,7 +72,7 @@ getFamousDestinations city = do
         [] -> getCityBasedConfig defaultConfigInEnglish city
         _ -> famousDestinationsBasedOnLanguage
   where
-    getLanguage lang = 
+    getLanguage lang =
       let language = DS.toLower $ DS.take 2 lang
       in if not (DS.null language) then "_" <> language else "_en"
     decodeConfig config = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
@@ -83,7 +85,7 @@ getEstimatesOrder city = do
     getCityBasedConfig value city
 
 getEstimatesOrderBaseOnServiceTier :: String -> Array String
-getEstimatesOrderBaseOnServiceTier city = do 
+getEstimatesOrderBaseOnServiceTier city = do
     let config = fetchRemoteConfigString "estimates_order_service_tier"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["Auto", "Book Any"]
     getCityBasedConfig value city
@@ -130,7 +132,7 @@ getPreferredOrderInBookAny city = do
     let config = fetchRemoteConfigString "preferred_book_any_options"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig false
     getCityBasedConfig value city
-    
+
 getBusFlowConfigs :: String -> BusFlowConfig
 getBusFlowConfigs city = do
     let config = fetchRemoteConfigString "bus_flow_config"
@@ -165,7 +167,7 @@ getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "customer_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_bundle_splash_lottie_new.json", enable : true}
 
 getSafetyConfig :: LazyCheck -> SafetyConfig
-getSafetyConfig _ = 
+getSafetyConfig _ =
     let config = fetchRemoteConfigString "safety_configs"
         value = decodeForeignObject (parseJSON config) defaultSafetyConfig
     in value
@@ -173,8 +175,8 @@ getSafetyConfig _ =
 defaultSafetyConfig :: SafetyConfig
 defaultSafetyConfig = {
     bannerAction : "",
-    bannerUrl : "", 
-    bannerPosition : 0, 
+    bannerUrl : "",
+    bannerPosition : 0,
     showOnRide : ""
 }
 
@@ -216,11 +218,11 @@ defaultVariantBasedBoostSearchConfig = {
 }
 
 getBoostSearchConfig :: String -> String -> BoostSearchConfig
-getBoostSearchConfig city variant = 
+getBoostSearchConfig city variant =
     let config = fetchRemoteConfigString "boost_search_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVariantBasedBoostSearchConfig
         cityConfig = getCityBasedConfig value city
-    in case variant of 
+    in case variant of
         "SEDAN" -> cityConfig.sedan
         "SUV" -> cityConfig.suv
         "SUV_PLUS" -> cityConfig.suvPlus
@@ -236,15 +238,15 @@ getBoostSearchConfig city variant =
 
 
 cancelBookingReasonsConfigData :: String -> Boolean -> Array OptionButtonList
-cancelBookingReasonsConfigData  language showAcReason  = 
-  let 
+cancelBookingReasonsConfigData  language showAcReason  =
+  let
     remoteConfig =  fetchRemoteConfigString ("cancel_booking_reasons_config_" <> language)
     utilsConfig = cancelReasons showAcReason
-    (decodedConfg::RemoteCancellationReason) = decodeForeignAny (parseJSON remoteConfig) $ {cancellationReasons : defaultCancelReasons} 
+    (decodedConfg::RemoteCancellationReason) = decodeForeignAny (parseJSON remoteConfig) $ {cancellationReasons : defaultCancelReasons}
     config =utilsConfig <> decodedConfg.cancellationReasons
   in
     config
-   
+
 
 defaultCancelReasons :: Array OptionButtonList
 defaultCancelReasons =
@@ -262,7 +264,7 @@ cancelReasons showAcReason =
     , textBoxRequired : false
     }
   ]) <>
-  (if showAcReason 
+  (if showAcReason
       then [ { reasonCode: "AC_NOT_TURNED_ON"
               , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
               , subtext: Just $ getString AC_NOT_WORKING_DESC
@@ -283,9 +285,9 @@ defEventsConfig = {
 }
 
 getMapViewLottieConfig :: LazyCheck -> MapLottieConfig
-getMapViewLottieConfig _ = 
+getMapViewLottieConfig _ =
     let config = fetchRemoteConfigString "map_view_lottie"
-        value = decodeForeignObject (parseJSON config) defaultMapLottieConfig 
+        value = decodeForeignObject (parseJSON config) defaultMapLottieConfig
     in value
 
 defaultMapLottieConfig :: MapLottieConfig
@@ -294,7 +296,7 @@ defaultMapLottieConfig = {
     visibility : false
 }
 
-defaultCancellationBannerThresholdConfig :: CancellationThreshold 
+defaultCancellationBannerThresholdConfig :: CancellationThreshold
 defaultCancellationBannerThresholdConfig = {
     showBanner : false,
     percentage : 100.0
@@ -304,4 +306,33 @@ getCancellationBannerThresholdConfig :: String -> CancellationThreshold
 getCancellationBannerThresholdConfig city =
     let config = fetchRemoteConfigString "customer_cancellation_banner_threshold"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCancellationBannerThresholdConfig
-    in getCityBasedConfig value $ DS.toLower city 
+    in getCityBasedConfig value $ DS.toLower city
+
+
+
+defaultGetEnquiryBannerConfig :: EnquiryBannerConfigs
+defaultGetEnquiryBannerConfig = {
+    question : Nothing,
+    firstBtnBanner: Nothing,
+    secondBtnBanner: Nothing,
+    categoryId: "",
+    optionId: Nothing
+}
+getEnquiryBannerConfig :: String -> EnquiryBannerConfigs
+getEnquiryBannerConfig city =
+    let
+        cachedValue = runFn3 getFromCache "customer_enquiry_config" Nothing Just
+        _ = spy "getEnquiryBannerConfig cachedValue" cachedValue
+    in
+        case cachedValue of
+            Just value -> value
+            Nothing ->
+                let config = fetchRemoteConfigString "customer_enquiry_config"
+                    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultGetEnquiryBannerConfig
+                    resp = getCityBasedConfig value $ DS.toLower city
+                    _ = runFn2 setInCache "customer_enquiry_config" resp
+                in
+                    resp
+
+
+
