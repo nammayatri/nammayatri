@@ -2,6 +2,7 @@ module Lib.Yudhishthira.Event.KaalChakra
   ( Handle (..),
     kaalChakraEvent,
     clearEventData,
+    decrChakraBatchNumber,
     updateUserTagsHandler,
     Template.Template (..),
     runQueryRequestTemplate,
