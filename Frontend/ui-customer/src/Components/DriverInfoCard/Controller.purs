@@ -88,6 +88,33 @@ type DriverInfoCardProps =
     enquiryBannerData ::  Maybe EnquiryBannerConfig
   }
 
+
+
+-- , backgroundColor :: String
+-- , title :: EnquiryTitleDataType
+-- , btn1 :: EnquiryBtnDataType
+-- , btn2 :: EnquiryBtnDataType
+-- , image :: EnquiryImageType
+-- }
+
+-- type EnquiryImageType = {
+--   source :: String
+-- , height :: Length
+-- , width :: Length
+-- }
+
+-- type EnquiryTitleDataType = {
+--   text :: String
+-- , color :: String
+-- }
+
+-- type EnquiryBtnDataType = {
+--   title :: String
+-- , color :: String
+-- , backgroundColor :: String
+-- }
+
+
 type DriverInfoCardData =
   { otp :: String
   , driverName :: String
