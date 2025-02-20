@@ -669,13 +669,12 @@ getInformationV2 ::
   UpdateProfileInfoPoints ->
   m DriverInformationRes
 getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context req = do
-  whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
-    QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
-  whenJust req.isInteroperable $ \isInteroperable ->
-    QDriverInformation.updateIsInteroperable isInteroperable personId
   whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
     QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
-  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context
+  driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+  when (req.isAdvancedBookingEnabled /= Just driverInfo.forwardBatchingEnabled || req.isInteroperable /= Just driverInfo.isInteroperable) $
+    QDriverInformation.updateForwardBatchingEnabledOrIsInteroperable personId req.isAdvancedBookingEnabled req.isInteroperable
+  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context (Just driverInfo)
 
 getInformation ::
   ( CacheFlow m r,
@@ -690,13 +689,14 @@ getInformation ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe DriverInformation ->
   m DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context = do
+getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context mbDriverInfo = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInfo <- maybe (QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound) return mbDriverInfo
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId)
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
@@ -718,10 +718,10 @@ setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, 
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     mbVehicle <- QVehicle.findById personId
     DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle
     let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
@@ -751,7 +751,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
             else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-  void $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
+  when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
   pure APISuccess.Success
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
