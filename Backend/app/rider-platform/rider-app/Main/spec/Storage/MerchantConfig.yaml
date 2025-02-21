@@ -5,7 +5,7 @@ imports:
 
 MerchantConfig:
   tableName: merchant_config
-
+  derives: "Generic, Show, ToJSON, FromJSON, ToSchema,Eq"
   fields:
     id : Id MerchantConfig
     merchantId : Id Merchant

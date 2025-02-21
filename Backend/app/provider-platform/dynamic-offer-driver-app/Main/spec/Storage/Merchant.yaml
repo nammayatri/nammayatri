@@ -158,7 +158,7 @@ Merchant:
     - EXTRA_QUERY_FILE
 
 MerchantMessage:
-  derives: Generic,Show,'UsageSafety
+  derives: Generic,Show,'UsageSafety,Eq
   types:
     MessageKey:
       enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE
@@ -202,7 +202,6 @@ MerchantMessage:
 
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -734,7 +733,7 @@ DriverIntelligentPoolConfig:
     cancellationAndRideFrequencyRatioWindowOption: '''{"period":7, "periodType":"Days"}'''
 
 TransporterConfig:
-  derives: Generic,Show,'UsageSafety
+  derives: Generic,Show,'UsageSafety,Eq
   types:
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
@@ -747,16 +746,18 @@ TransporterConfig:
       weeklyOffenceSuspensionTimeHours: Int
       dailyConditionCooldownTimeHours: Int
       weeklyConditionCooldownTimeHours: Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     DemandHotspotsConfig:
       enableDemandHotspots: Bool
       precisionOfGeohash: Int
       analysisDurationMinutes: Int
       resultDurationMinutes: Int
       noOfGeohashesToReturn: Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     AadhaarImageResizeConfig:
       height: Int
       width: Int
-      derive': Generic, Show, ToJSON, FromJSON, Read
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     AvgSpeedOfVechilePerKm:
       sedan: Kilometers
       suv: Kilometers
@@ -775,13 +776,13 @@ TransporterConfig:
       deliveryLightGoodsVehicle: Kilometers
       busAc: Kilometers
       busNonAc: Kilometers
-      derive': Generic, Show, ToJSON, FromJSON, Read
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DashboardMediaSendingLimit:
       sms: Int
       whatsapp: Int
       overlay: Int
       alert: Int
-      derive': Generic, Show, ToJSON, FromJSON, Read
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     ArrivalTimeBufferOfVehicle:
       sedan: Maybe Seconds
       suv: Maybe Seconds
@@ -801,12 +802,12 @@ TransporterConfig:
       deliveryLightGoodsVehicle: Maybe Seconds
       busNonAc: Maybe Seconds
       busAc: Maybe Seconds
-      derive': Generic, Show, ToJSON, FromJSON, Read
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DistanceRecomputeConfigs:
       estimatedDistanceUpper: Meters
       minThresholdPercentage: Int
       minThresholdDistance: Meters
-      derive': Generic, Show, ToJSON, FromJSON, Read
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -1441,7 +1442,7 @@ MerchantServiceConfig:
 
 MerchantPushNotification:
   tableName: merchant_push_notification
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
   fields:
     id: Id MerchantPushNotification
     key: Text
@@ -1477,7 +1478,7 @@ MerchantPushNotification:
 
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
   types:
     NotificationType:
       enum: "SMS,PN,WHATSAPP,OVERLAY,CALL"
@@ -1517,7 +1518,7 @@ RideRelatedNotificationConfig:
 
 PayoutConfig:
   tableName: payout_config
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant

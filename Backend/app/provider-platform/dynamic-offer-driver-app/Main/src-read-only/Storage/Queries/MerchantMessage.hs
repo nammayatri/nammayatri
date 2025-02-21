@@ -54,6 +54,22 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messa
         ]
     ]
 
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
+updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.containsUrlButton containsUrlButton,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.message message,
+      Se.Set Beam.senderHeader senderHeader,
+      Se.Set Beam.templateId (Just templateId),
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vehicleCategory vehicleCategory
+    ]
+    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]
+
 instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   fromTType' (Beam.MerchantMessageT {..}) = do
     pure $

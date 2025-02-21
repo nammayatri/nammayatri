@@ -38,8 +38,8 @@ import Data.Singletons
 import qualified Data.Text as Text
 import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as DTM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
--- import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
@@ -63,7 +63,6 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.Types.Common as C
@@ -76,24 +75,31 @@ import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as SCMDPC
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as SCMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMP
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCMTC
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCR
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
 import qualified Storage.Queries.DriverPoolConfig as SCMD
+import qualified Storage.Queries.MerchantMessage as SQM
+import qualified Storage.Queries.MerchantPushNotification as SQMPN
+import qualified Storage.Queries.PayoutConfig as SCP
+import qualified Storage.Queries.RideRelatedNotificationConfig as SQR
 import qualified Storage.Queries.TransporterConfig as SCMT
 import qualified Tools.DynamicLogic as TDL
 
--- import qualified Domain.Types.DriverPoolConfig as DTDP
-
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
-
--- $(YTH.generateGenericDefault ''DTM.MerchantMessage)
-
+$(YTH.generateGenericDefault ''DTT.TransporterConfig) -- TODO ERROR
+$(YTH.generateGenericDefault ''DTM.MerchantMessage) -- TODO ERROR
 $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 
--- $(YTH.generateGenericDefault ''DTDP.DriverPoolConfig)
+$(YTH.generateGenericDefault ''DTD.DriverPoolConfig) -- TODO ERROR
 
-postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.CreateNammaTagResponse)
+postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow LYT.CreateNammaTagResponse)
 postNammaTagTagCreate _merchantShortId _opCity req = do
   defaultRunResult <- runAgainstDefault
   void $ YudhishthiraFlow.postTagCreate req
@@ -101,7 +107,7 @@ postNammaTagTagCreate _merchantShortId _opCity req = do
   where
     runAgainstDefault = do
       case req of
-        Lib.Yudhishthira.Types.ApplicationTag Lib.Yudhishthira.Types.NammaTagApplication {..} -> do
+        LYT.ApplicationTag LYT.NammaTagApplication {..} -> do
           case tagRule of
             C.RuleEngine rule -> do
               let defVal = C.getLogicInputDef tagStage
@@ -109,17 +115,17 @@ postNammaTagTagCreate _merchantShortId _opCity req = do
                 Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
                 Just defaultVal -> do
                   result <- YudhishthiraFlow.verifyDynamicLogic tagPossibleValues [rule] defaultVal
-                  pure $ Lib.Yudhishthira.Types.CreateNammaTagResponse {result = Lib.Yudhishthira.Types.ApplicationTagRes (Lib.Yudhishthira.Types.CreateNammaApplicationTagResponse result defaultVal)}
+                  pure $ LYT.CreateNammaTagResponse {result = LYT.ApplicationTagRes (LYT.CreateNammaApplicationTagResponse result defaultVal)}
             _ -> throwError $ InvalidRequest "LLMContext not supported yet"
-        _ -> pure $ Lib.Yudhishthira.Types.CreateNammaTagResponse {result = Lib.Yudhishthira.Types.Success}
+        _ -> pure $ LYT.CreateNammaTagResponse {result = LYT.Success}
 
-postNammaTagTagUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UpdateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postNammaTagTagUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UpdateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpdate req
 
-postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.VerifyNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.VerifyNammaTagResponse)
-postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNammaTagRequest {..} = do
+postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.VerifyNammaTagRequest -> Environment.Flow LYT.VerifyNammaTagResponse)
+postNammaTagTagVerify _merchantShortId _opCity LYT.VerifyNammaTagRequest {..} = do
   case source of
-    Lib.Yudhishthira.Types.Application tagStage -> do
+    LYT.Application tagStage -> do
       let val =
             if useDefaultData
               then C.getLogicInputDef tagStage
@@ -129,20 +135,20 @@ postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNamm
           -- validating data provided gets parsed to Stage InputData type.
           validateInputType tagStage value
           result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
-          pure $ Lib.Yudhishthira.Types.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
+          pure $ LYT.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
         Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
     _ -> do
       throwError $ InvalidRequest $ "Available only for Application events currenlty"
   where
     validateInputType tagStage value =
       case tagStage of
-        Lib.Yudhishthira.Types.Search -> do
+        LYT.Search -> do
           _ :: Domain.Types.Yudhishthira.TagData <- parseOrThrowError value
           pure ()
-        Lib.Yudhishthira.Types.RideEnd -> do
+        LYT.RideEnd -> do
           _ :: Domain.Types.Yudhishthira.EndRideTagData <- parseOrThrowError value
           pure ()
-        Lib.Yudhishthira.Types.RideCancel -> do
+        LYT.RideCancel -> do
           _ :: Domain.Types.Yudhishthira.CancelRideTagData <- parseOrThrowError value
           pure ()
         _ -> throwError $ InvalidRequest $ "Only supported for Search, Cancel and EndRide event for now"
@@ -155,65 +161,76 @@ postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNamm
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName
 
-postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
 
-postNammaTagQueryUpdate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ChakraQueryUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagQueryUpdate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueryUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagQueryUpdate _merchantShortId _opCity = YudhishthiraFlow.postQueryUpdate
 
-deleteNammaTagQueryDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ChakraQueryDeleteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteNammaTagQueryDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueryDeleteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 deleteNammaTagQueryDelete _merchantShortId _opCity = YudhishthiraFlow.queryDelete
 
-postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.AppDynamicLogicReq -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicResp)
+postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.AppDynamicLogicReq -> Environment.Flow LYT.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbMerchantId = Just $ cast merchant.id
   case req.domain of
-    Lib.Yudhishthira.Types.POOLING -> do
+    LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0)
-    Lib.Yudhishthira.Types.DYNAMIC_PRICING_UNIFIED -> do
+    LYT.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
-    Lib.Yudhishthira.Types.CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
+    LYT.CONFIG LYT.DriverPoolConfig -> do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
-    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
-      logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
-    Lib.Yudhishthira.Types.UI_DRIVER _ _ -> do
-      let def'' = Prelude.listToMaybe $ Lib.Yudhishthira.Types.genDef (Proxy @DTDC.UiDriverConfig)
+    LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig)) >>= fromMaybeM (InvalidRequest "DriverPoolConfig config not found")
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTD.DriverPoolConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTD.DriverPoolConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.UI_DRIVER _ _ -> do
+      let def'' = Prelude.listToMaybe $ LYT.genDef (Proxy @DTDC.UiDriverConfig)
       def' <- maybe (throwError $ InvalidRequest "No default found for UiDriverConfig") pure def''
       logicData :: DTDC.UiDriverConfig <- YudhishthiraFlow.createLogicData def' (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTDC.UiDriverConfig) transporterConfig.referralLinkPassword req logicData
-    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.PayoutConfig -> do
-      let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig)
-      logicData :: Maybe DTP.PayoutConfig <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTP.PayoutConfig) transporterConfig.referralLinkPassword req logicData
-    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.RideRelatedNotificationConfig -> do
-      let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig)
-      logicData :: Maybe DTRN.RideRelatedNotificationConfig <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTRN.RideRelatedNotificationConfig) transporterConfig.referralLinkPassword req logicData
-    -- Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.MerchantMessage -> do
-    --   let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantMessage)
-    --   logicData :: Maybe DTM.MerchantMessage <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
+    LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig)) >>= fromMaybeM (InvalidRequest "PayoutConfig config not found")
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTP.PayoutConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig)) >>= fromMaybeM (InvalidRequest "RideRelatedNotificationConfig config not found")
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTRN.RideRelatedNotificationConfig)) transporterConfig.referralLinkPassword req logicData
+    -- LYT.DRIVER_CONFIG LYT.MerchantMessage -> do
+    --   defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantMessage)) >>= fromMaybeM (InvalidRequest "MerchantMessage config not found")
+    --   let configWrap = LYT.Config defaultConfig Nothing 1
+    --   logicData :: (LYT.Config DTM.MerchantMessage) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
     --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTM.MerchantMessage) transporterConfig.referralLinkPassword req logicData
-    Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.MerchantPushNotification -> do
-      let defaultType = Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification)
-      logicData :: Maybe DTPN.MerchantPushNotification <- YudhishthiraFlow.createLogicData defaultType (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTPN.MerchantPushNotification) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification)) >>= fromMaybeM (InvalidRequest "MerchantPushNotification config not found")
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) transporterConfig.referralLinkPassword req logicData
+    -- LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+    --   def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
+    --   let configWrap = LYT.Config def Nothing 1
+    --   logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+    --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTT.TransporterConfig) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
-getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp]
+getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
 getNammaTagAppDynamicLogic _ _ = YudhishthiraFlow.getAppDynamicLogicForDomain
 
 postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
-  Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
+  LYT.RunKaalChakraJobReq ->
+  Environment.Flow LYT.RunKaalChakraJobRes
 postNammaTagRunJob merchantShortId opCity req = do
   mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
   let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
@@ -230,67 +247,67 @@ postNammaTagRunJob merchantShortId opCity req = do
         QDBJ.markAsComplete oldJobId
   let kaalChakraHandle = Chakras.mkKaalChakraHandle mbMerchantId mbMerchantOpCityId
   case req.action of
-    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
-    Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
+    LYT.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
+    LYT.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
         throwError (InvalidRequest "Schedule job available only for future")
       case req.usersSet of
-        Lib.Yudhishthira.Types.ALL_USERS -> pure ()
+        LYT.ALL_USERS -> pure ()
         _ -> throwError (InvalidRequest "Schedule job available only for all users")
-      let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req (Just scheduledTime)
+      let jobData = LYT.mkKaalChakraJobData req (Just scheduledTime)
       kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
-      pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = Lib.Yudhishthira.Types.Completed}
+      pure $ LYT.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = LYT.Completed}
   where
-    castChakra :: AllocatorJobType -> Maybe Lib.Yudhishthira.Types.Chakra
-    castChakra Daily = Just Lib.Yudhishthira.Types.Daily
-    castChakra Weekly = Just Lib.Yudhishthira.Types.Weekly
-    castChakra Monthly = Just Lib.Yudhishthira.Types.Monthly
-    castChakra Quarterly = Just Lib.Yudhishthira.Types.Quarterly
+    castChakra :: AllocatorJobType -> Maybe LYT.Chakra
+    castChakra Daily = Just LYT.Daily
+    castChakra Weekly = Just LYT.Weekly
+    castChakra Monthly = Just LYT.Monthly
+    castChakra Quarterly = Just LYT.Quarterly
     castChakra _ = Nothing
 
-getNammaTagTimeBounds :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.TimeBoundResp
+getNammaTagTimeBounds :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Environment.Flow LYT.TimeBoundResp
 getNammaTagTimeBounds merchantShortId opCity domain = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.getTimeBounds (cast merchantOpCityId) domain
 
-postNammaTagTimeBoundsCreate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateTimeBoundRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagTimeBoundsCreate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateTimeBoundRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagTimeBoundsCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.createTimeBounds (cast merchantOpCityId) req
 
-deleteNammaTagTimeBoundsDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.LogicDomain -> Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteNammaTagTimeBoundsDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 deleteNammaTagTimeBoundsDelete merchantShortId opCity domain name = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.deleteTimeBounds (cast merchantOpCityId) domain name
 
-getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.LogicRolloutObject]
+getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> LYT.LogicDomain -> Environment.Flow [LYT.LogicRolloutObject]
 getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity timeBound domain = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.getLogicRollout (cast merchantOpCityId) timeBound domain
 
-postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [LYT.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq
 
-getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp
+getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYT.LogicDomain -> Environment.Flow LYT.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions
 
-getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicDomainResp
-getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ Lib.Yudhishthira.Types.allValues
+getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYT.AppDynamicLogicDomainResp
+getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ LYT.allValues
 
-getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.Chakra -> Environment.Flow Lib.Yudhishthira.Types.ChakraQueryResp
+getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.Chakra -> Environment.Flow LYT.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
 
-postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Text
+postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow Text
 postNammaTagConfigPilotGetVersion _ _ uicr = do
   merchant <- findById (Id uicr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
@@ -299,17 +316,17 @@ postNammaTagConfigPilotGetVersion _ _ uicr = do
     Just ver -> pure $ Text.pack (show ver)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
-postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.UiConfigResponse
+postNammaTagConfigPilotGetConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UiConfigRequest -> Environment.Flow LYT.UiConfigResponse
 postNammaTagConfigPilotGetConfig _ _ uicr = do
   merchant <- findById (Id uicr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just uicr.city)
   (config, version) <- QUiConfig.findUIConfig uicr merchantOpCityId
   isExp <- TDL.isExperimentRunning (cast merchantOpCityId) (LYT.UI_DRIVER uicr.os uicr.platform)
   case config of
-    Just cfg -> pure (Lib.Yudhishthira.Types.UiConfigResponse cfg.config (Text.pack .show <$> version) isExp)
+    Just cfg -> pure (LYT.UiConfigResponse cfg.config (Text.pack .show <$> version) isExp)
     Nothing -> throwError $ InternalError $ "No config found for merchant:" <> show uicr.merchantId <> " and city:" <> show uicr.city <> " and request:" <> show uicr
 
-postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateUiConfig :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateConfigRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
   merchant <- findById (Id ccr.merchantId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just ccr.city)
@@ -329,62 +346,95 @@ postNammaTagConfigPilotCreateUiConfig _ _ ccr = do
           merchantOperatingCityId = merchantOpCityId
         }
 
-getNammaTagConfigPilotAllConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Bool -> Environment.Flow [Lib.Yudhishthira.Types.ConfigType]
+getNammaTagConfigPilotAllConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Bool -> Environment.Flow [LYT.ConfigType]
 getNammaTagConfigPilotAllConfigs _merchantShortId _opCity mbUnderExp = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   YudhishthiraFlow.getNammaTagConfigPilotAllConfigsProvider (cast merchantOpCityId) mbUnderExp
 
-getNammaTagConfigPilotConfigDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ConfigType -> Environment.Flow [Lib.Yudhishthira.Types.ConfigDetailsResp]
+getNammaTagConfigPilotConfigDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow [LYT.ConfigDetailsResp]
 getNammaTagConfigPilotConfigDetails _merchantShortId _opCity configType = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   YudhishthiraFlow.getNammaTagConfigPilotConfigDetailsProvider (cast merchantOpCityId) configType
 
-getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ConfigType -> Environment.Flow Lib.Yudhishthira.Types.TableDataResp
+getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow LYT.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  logicElements <- CADLE.findByDomainAndVersion (Lib.Yudhishthira.Types.DRIVER_CONFIG configType) 1
-  let logics = map (.logic) logicElements
-  returnConfigs configType logics merchantOpCityId
+  mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) (LYT.DRIVER_CONFIG configType)
+  case mbBaseRollout of
+    Just baseRollout -> do
+      baseElements <- CADLE.findByDomainAndVersion (LYT.DRIVER_CONFIG configType) baseRollout.version
+      let logics = map (.logic) baseElements
+      returnConfigs configType logics merchantOpCityId
+    Nothing -> returnConfigs configType [] merchantOpCityId
   where
-    returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Lib.Yudhishthira.Types.ConfigType -> [Value] -> Id MerchantOperatingCity -> m Lib.Yudhishthira.Types.TableDataResp
+    returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.ConfigType -> [Value] -> Id MerchantOperatingCity -> m LYT.TableDataResp
     returnConfigs cfgType logics merchantOpCityId = do
-      -- TODO use defaults
-
-      -- allConfigs <- defaultDbCall cfgType merchantOpCityId
-      -- let wrapppedConfigs = map (\cfg -> Lib.Yudhishthira.Types.Config cfg Nothing) allConfigs
-      -- finalConfigs <- mapM (LYTU.runLogics logics) wrapppedConfigs
-      -- return Lib.Yudhishthira.Types.TableDataResp {configs = map (.result) finalConfigs}
       case cfgType of
-        Lib.Yudhishthira.Types.DriverPoolConfig -> do
-          driverPoolCfg <- SCMD.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId
-          -- driverPoolCfg<-defaultDbCall Lib.Yudhishthira.Types.DriverPoolConfig merchantOpCityId
-          let configWrapper :: [Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig] =
+        LYT.DriverPoolConfig -> do
+          driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+          let configWrapper :: [LYT.Config DTD.DriverPoolConfig] =
                 zipWith
-                  (\id cfg -> cfg {Lib.Yudhishthira.Types.identifier = id})
+                  (\id cfg -> cfg {LYT.identifier = id})
                   [0 ..]
-                  (map (\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) driverPoolCfg)
+                  (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) driverPoolCfg)
           patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return Lib.Yudhishthira.Types.TableDataResp {configs = map (.result) patchedConfigs}
-        Lib.Yudhishthira.Types.TransporterConfig -> do
-          transporterCfg <- SCMT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-          let configWrapper :: [Lib.Yudhishthira.Types.Config DTT.TransporterConfig] =
+          return LYT.TableDataResp {configs = map (.result) patchedConfigs}
+        LYT.TransporterConfig -> do
+          transporterCfg <- SCMTC.getTransporterConfigFromDB merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+          let configWrapper :: [LYT.Config DTT.TransporterConfig] =
                 zipWith
-                  (\id cfg -> cfg {Lib.Yudhishthira.Types.identifier = id})
+                  (\id cfg -> cfg {LYT.identifier = id})
                   [0 ..]
-                  [(\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
+                  [(\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
           patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
-          return Lib.Yudhishthira.Types.TableDataResp {configs = map (.result) patchedConfigs}
+          return LYT.TableDataResp {configs = map (.result) patchedConfigs}
+        LYT.PayoutConfig -> do
+          payoutCfg <- SCMP.findAllByMerchantOpCityId merchantOpCityId (Just [])
+          let configWrapper :: [LYT.Config DTP.PayoutConfig] =
+                zipWith
+                  (\id cfg -> cfg {LYT.identifier = id})
+                  [0 ..]
+                  (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) payoutCfg)
+          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
+          return LYT.TableDataResp {configs = map (.result) patchedConfigs}
+        LYT.RideRelatedNotificationConfig -> do
+          rideRelatedNotificationCfg <- SCR.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
+          let configWrapper :: [LYT.Config DTRN.RideRelatedNotificationConfig] =
+                zipWith
+                  (\id cfg -> cfg {LYT.identifier = id})
+                  [0 ..]
+                  (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) rideRelatedNotificationCfg)
+          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
+          return LYT.TableDataResp {configs = map (.result) patchedConfigs}
+        LYT.MerchantMessage -> do
+          merchantMessage <- SCMM.findAllByMerchantOpCityId merchantOpCityId (Just [])
+          let configWrapper :: [LYT.Config DTM.MerchantMessage] =
+                zipWith
+                  (\id cfg -> cfg {LYT.identifier = id})
+                  [0 ..]
+                  (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantMessage)
+          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
+          return LYT.TableDataResp {configs = map (.result) patchedConfigs}
+        LYT.MerchantPushNotification -> do
+          merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId merchantOpCityId (Just [])
+          let configWrapper :: [LYT.Config DTPN.MerchantPushNotification] =
+                zipWith
+                  (\id cfg -> cfg {LYT.identifier = id})
+                  [0 ..]
+                  (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantPushNotification)
+          patchedConfigs <- mapM (LYTU.runLogics logics) configWrapper
+          return LYT.TableDataResp {configs = map (.result) patchedConfigs}
         _ -> throwError $ InvalidRequest "Unsupported config type."
 
-postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   case req of
-    Lib.Yudhishthira.Types.Conclude concludeReq -> do
+    LYT.Conclude concludeReq -> do
       expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain (cast merchantOpCityId) "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
       logDebug $ show expRollout
       mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) concludeReq.domain
@@ -394,62 +444,179 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
           baseElements <- CADLE.findByDomainAndVersion concludeReq.domain baseRollout.version
           let baseLogics = fmap (.logic) baseElements
           case concludeReq.domain of
-            Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
-              driverPoolCfg <- SCMD.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId
-              let configWrapper :: [Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig] =
+            LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
+              driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+              let configWrapper :: [LYT.Config DTD.DriverPoolConfig] =
                     zipWith
-                      (\id cfg -> cfg {Lib.Yudhishthira.Types.identifier = id})
+                      (\id cfg -> cfg {LYT.identifier = id})
                       [0 ..]
-                      (map (\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) driverPoolCfg)
+                      (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) driverPoolCfg)
               patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              mbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig)] <-
+              cfgs :: [LYT.Config DTD.DriverPoolConfig] <-
                 mapM
                   ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig)) of
-                        A.Success dpc -> pure $ Just dpc
+                      case (A.fromJSON resp.result :: A.Result (LYT.Config DTD.DriverPoolConfig)) of
+                        A.Success dpc -> pure dpc
                         A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
                   )
                   patchedConfigs
-              when (any isNothing mbCfgs) $ throwError $ InvalidRequest "Error occurred: One or more configurations are missing in the patched configs."
-              let sortedMbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig)] = sortOn (Lib.Yudhishthira.Types.identifier . Prelude.fromJust) mbCfgs
+              let sortedCfgs :: [LYT.Config DTD.DriverPoolConfig] = sortOn LYT.identifier cfgs
                   configsToUpdate :: [DTD.DriverPoolConfig] =
                     catMaybes $
                       zipWith
-                        ( \cfg mbCfg ->
-                            case mbCfg of
-                              Just cfg' | cfg.identifier == cfg'.identifier && cfg /= cfg' -> Just cfg'.config
-                              _ -> Nothing
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
                         )
                         configWrapper
-                        sortedMbCfgs
+                        sortedCfgs
               mapM_ SCMD.updateByPrimaryKey configsToUpdate
-            Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.TransporterConfig -> do
-              transporterCfg <- SCMT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-              let configWrapper :: [Lib.Yudhishthira.Types.Config DTT.TransporterConfig] =
+              SCMDPC.clearCache merchantOpCityId
+            LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+              transporterCfg <- SCMTC.getTransporterConfigFromDB merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+              let configWrapper :: [LYT.Config DTT.TransporterConfig] =
                     zipWith
-                      (\id cfg -> cfg {Lib.Yudhishthira.Types.identifier = id})
+                      (\id cfg -> cfg {LYT.identifier = id})
                       [0 ..]
-                      [(\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
+                      [(\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
               patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              mbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTT.TransporterConfig)] <-
+              cfgs :: [LYT.Config DTT.TransporterConfig] <-
                 mapM
                   ( \resp ->
-                      case (A.fromJSON resp.result :: A.Result (Lib.Yudhishthira.Types.Config DTT.TransporterConfig)) of
-                        A.Success tc -> pure $ Just tc
+                      case (A.fromJSON resp.result :: A.Result (LYT.Config DTT.TransporterConfig)) of
+                        A.Success tc -> pure tc
                         A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
                   )
                   patchedConfigs
-              let configsToUpdate :: [DTT.TransporterConfig] =
+              let sortedCfgs :: [LYT.Config DTT.TransporterConfig] = sortOn LYT.identifier cfgs
+                  configsToUpdate :: [DTT.TransporterConfig] =
                     catMaybes $
                       zipWith
-                        ( \cfg mbCfg ->
-                            case mbCfg of
-                              Just cfg' | cfg /= cfg' -> Just cfg'.config
-                              _ -> Nothing
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
                         )
                         configWrapper
-                        mbCfgs
+                        sortedCfgs
               mapM_ SCMT.update configsToUpdate
+              SCMTC.clearCache merchantOpCityId
+            LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
+              payoutCfg <- SCMP.findAllByMerchantOpCityId merchantOpCityId (Just [])
+              let configWrapper :: [LYT.Config DTP.PayoutConfig] =
+                    zipWith
+                      (\id cfg -> cfg {LYT.identifier = id})
+                      [0 ..]
+                      (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) payoutCfg)
+              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
+              cfgs :: [LYT.Config DTP.PayoutConfig] <-
+                mapM
+                  ( \resp ->
+                      case (A.fromJSON resp.result :: A.Result (LYT.Config DTP.PayoutConfig)) of
+                        A.Success tc -> pure tc
+                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
+                  )
+                  patchedConfigs
+              let sortedCfgs :: [LYT.Config DTP.PayoutConfig] = sortOn LYT.identifier cfgs
+                  configsToUpdate :: [DTP.PayoutConfig] =
+                    catMaybes $
+                      zipWith
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
+                        )
+                        configWrapper
+                        sortedCfgs
+              mapM_ SCP.updateByPrimaryKey configsToUpdate
+              SCMP.clearCacheById merchantOpCityId -- TODO use clearConfigCache
+            LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
+              rideRelatedNotificationCfg <- SCR.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
+              let configWrapper :: [LYT.Config DTRN.RideRelatedNotificationConfig] =
+                    zipWith
+                      (\id cfg -> cfg {LYT.identifier = id})
+                      [0 ..]
+                      (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) rideRelatedNotificationCfg)
+              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
+              cfgs :: [LYT.Config DTRN.RideRelatedNotificationConfig] <-
+                mapM
+                  ( \resp ->
+                      case (A.fromJSON resp.result :: A.Result (LYT.Config DTRN.RideRelatedNotificationConfig)) of
+                        A.Success tc -> pure tc
+                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
+                  )
+                  patchedConfigs
+              let sortedCfgs :: [LYT.Config DTRN.RideRelatedNotificationConfig] = sortOn LYT.identifier cfgs
+                  configsToUpdate :: [DTRN.RideRelatedNotificationConfig] =
+                    catMaybes $
+                      zipWith
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
+                        )
+                        configWrapper
+                        sortedCfgs
+              mapM_ SQR.updateByPrimaryKey configsToUpdate
+            LYT.DRIVER_CONFIG LYT.MerchantMessage -> do
+              merchantMessage <- SCMM.findAllByMerchantOpCityId merchantOpCityId (Just [])
+              let configWrapper :: [LYT.Config DTM.MerchantMessage] =
+                    zipWith
+                      (\id cfg -> cfg {LYT.identifier = id})
+                      [0 ..]
+                      (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantMessage)
+              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
+              cfgs :: [LYT.Config DTM.MerchantMessage] <-
+                mapM
+                  ( \resp ->
+                      case (A.fromJSON resp.result :: A.Result (LYT.Config DTM.MerchantMessage)) of
+                        A.Success tc -> pure tc
+                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
+                  )
+                  patchedConfigs
+              let sortedCfgs :: [LYT.Config DTM.MerchantMessage] = sortOn LYT.identifier cfgs
+                  configsToUpdate :: [DTM.MerchantMessage] =
+                    catMaybes $
+                      zipWith
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
+                        )
+                        configWrapper
+                        sortedCfgs
+              mapM_ SQM.updateByPrimaryKey configsToUpdate
+              SCMM.clearCacheById merchantOpCityId
+            LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
+              merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId merchantOpCityId (Just [])
+              let configWrapper :: [LYT.Config DTPN.MerchantPushNotification] =
+                    zipWith
+                      (\id cfg -> cfg {LYT.identifier = id})
+                      [0 ..]
+                      (map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) merchantPushNotification)
+              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
+              cfgs :: [LYT.Config DTPN.MerchantPushNotification] <-
+                mapM
+                  ( \resp ->
+                      case (A.fromJSON resp.result :: A.Result (LYT.Config DTPN.MerchantPushNotification)) of
+                        A.Success tc -> pure tc
+                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
+                  )
+                  patchedConfigs
+              let sortedCfgs :: [LYT.Config DTPN.MerchantPushNotification] = sortOn LYT.identifier cfgs
+                  configsToUpdate :: [DTPN.MerchantPushNotification] =
+                    catMaybes $
+                      zipWith
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
+                        )
+                        configWrapper
+                        sortedCfgs
+              mapM_ SQMPN.updateByPrimaryKey configsToUpdate
+              SCMMPN.clearCacheById merchantOpCityId
 
             -- { os :: DeviceType,
             --     language :: Language,
@@ -459,18 +626,18 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
             --     city :: Kernel.Types.Beckn.Context.City,
             --     toss :: Maybe Int
 
-            -- Lib.Yudhishthira.Types.UI_DRIVER dt pt -> do
-            --   uiDriverCfg <- QUiC.findUIConfig (Lib.Yudhishthira.Types.UiConfigRequest dt Nothing Nothing pt (cast merchant.id.getId) (cast merchantOpCityId)) merchantOpCityId
-            --   let configWrapper :: [Lib.Yudhishthira.Types.Config DTT.TransporterConfig] =
+            -- LYT.UI_DRIVER dt pt -> do
+            --   uiDriverCfg <- QUiC.findUIConfig (LYT.UiConfigRequest dt Nothing Nothing pt (cast merchant.id.getId) (cast merchantOpCityId)) merchantOpCityId
+            --   let configWrapper :: [LYT.Config DTT.TransporterConfig] =
             --         zipWith
-            --           (\id cfg -> cfg {Lib.Yudhishthira.Types.identifier = id})
+            --           (\id cfg -> cfg {LYT.identifier = id})
             --           [0 ..]
-            --           [(\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
+            --           [(\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
             --   patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-            --   mbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTT.TransporterConfig)] <-
+            --   mbCfgs :: [Maybe (LYT.Config DTT.TransporterConfig)] <-
             --     mapM
             --       ( \resp ->
-            --           case (A.fromJSON resp.result :: A.Result (Lib.Yudhishthira.Types.Config DTT.TransporterConfig)) of
+            --           case (A.fromJSON resp.result :: A.Result (LYT.Config DTT.TransporterConfig)) of
             --             A.Success tc -> pure $ Just tc
             --             A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
             --       )
@@ -492,7 +659,7 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
               updatedBaseRollout =
                 baseRollout
                   { LYTADLR.isBaseVersion = Nothing,
-                    LYTADLR.experimentStatus = Just Lib.Yudhishthira.Types.CONCLUDED,
+                    LYTADLR.experimentStatus = Just LYT.CONCLUDED,
                     LYTADLR.percentageRollout = 0
                   }
           LYSQADLR.updateByPrimaryKey updatedBaseRollout

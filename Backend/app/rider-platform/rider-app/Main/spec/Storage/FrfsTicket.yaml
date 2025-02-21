@@ -616,7 +616,7 @@ FRFSRecon:
 
 FRFSConfig:
   tableName: frfs_config
-  derives: "Generic,Show,FromJSON,ToJSON"
+  derives: "Generic,Show,FromJSON,ToJSON,Eq"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant

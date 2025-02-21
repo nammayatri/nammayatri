@@ -508,7 +508,7 @@ MerchantMessage:
 
 RideRelatedNotificationConfig:
   tableName : ride_related_notification_config
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
   types:
     NotificationType:
       enum: "SMS,PN,WHATSAPP,CALL"
@@ -551,7 +551,7 @@ RideRelatedNotificationConfig:
 
 MerchantPushNotification:
   tableName: merchant_push_notification
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
   fields:
     id: Id MerchantPushNotification
     key: Text
@@ -594,7 +594,7 @@ MerchantPushNotification:
 
 PayoutConfig:
   tableName : payout_config
-  derives: "Generic,Show,ToJSON,FromJSON"
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
   fields:
     id: Id PayoutConfig
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -650,6 +650,10 @@ PayoutConfig:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, vehicleCategory]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]
 
   beamInstance:
     - MakeTableInstances

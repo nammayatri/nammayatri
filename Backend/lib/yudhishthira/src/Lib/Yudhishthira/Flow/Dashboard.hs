@@ -4,7 +4,7 @@ import qualified ConfigPilotFrontend.Common as CPFC
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
-import Data.List (groupBy, nub, sortBy, sortOn)
+import Data.List (groupBy, nub, sortBy)
 import qualified Data.List.NonEmpty as DLNE
 import Data.Scientific (toRealFloat)
 import qualified Data.Text as T
@@ -285,7 +285,7 @@ verifyEventLogic event logics data_ = do
 
 verifyAndUpdateDynamicLogic ::
   forall m r a b.
-  (BeamFlow m r, ToJSON a, FromJSON b) =>
+  (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Proxy b ->
   Text ->
@@ -513,10 +513,12 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
           LYSQADLR.updateByPrimaryKey updatedBaseRollout
           LYSQADLR.create configRolloutObject
           CADLR.clearDomainCache (cast merchantOpCityId') domain
+          CADLR.clearCityConfigsCache (cast merchantOpCityId')
           return Kernel.Types.APISuccess.Success
         Nothing -> do
           LYSQADLR.create configRolloutObject
           CADLR.clearDomainCache (cast merchantOpCityId') domain
+          CADLR.clearCityConfigsCache (cast merchantOpCityId')
           return Kernel.Types.APISuccess.Success
 
     -- Non-driver/rider config domain handling
@@ -527,6 +529,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq = do
       CADLR.delete (cast merchantOpCityId') domain
       CADLR.createMany rolloutObjects
       CADLR.clearDomainCache (cast merchantOpCityId') domain
+      CADLR.clearCityConfigsCache (cast merchantOpCityId')
       return Kernel.Types.APISuccess.Success
 
     mkAppDynamicLogicRolloutDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicRolloutObject -> m [AppDynamicLogicRollout]
@@ -631,10 +634,9 @@ getNammaTagConfigPilotAllConfigsProvider merchantOpCityId mbUnderExp = do
           allRollouts
   case mbUnderExp of
     Just True -> do
-      let groupedConfigRollouts = groupByTimeBounds (sortOn Lib.Yudhishthira.Types.AppDynamicLogicRollout.timeBounds driverConfigRollouts)
-          expDomains = nub $ concatMap (map domain) (filter (\group -> length group > 1 && all ((< 100) . percentageRollout) group) groupedConfigRollouts)
-          configTypes = mapMaybe extractDriverConfig expDomains
-      return configTypes
+      let configsInExperiment :: [Lib.Yudhishthira.Types.LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) allRollouts
+          configTypes = map extractDriverConfig configsInExperiment
+      return $ catMaybes configTypes
     _ -> do
       let allConfigDomains = nub $ map domain driverConfigRollouts
           configTypes = mapMaybe extractDriverConfig allConfigDomains
@@ -656,10 +658,9 @@ getNammaTagConfigPilotAllConfigsRider merchantOpCityId mbUnderExp = do
           allRollouts
   case mbUnderExp of
     Just True -> do
-      let groupedConfigRollouts = groupByTimeBounds (sortOn Lib.Yudhishthira.Types.AppDynamicLogicRollout.timeBounds riderConfigRollouts)
-          expDomains = nub $ concatMap (map domain) (filter (\group -> length group > 1 && all ((< 100) . percentageRollout) group) groupedConfigRollouts)
-          configTypes = mapMaybe extractRiderConfig expDomains
-      return configTypes
+      let configsInExperiment :: [Lib.Yudhishthira.Types.LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) allRollouts
+          configTypes = map extractRiderConfig configsInExperiment
+      return $ catMaybes configTypes
     _ -> do
       let allConfigDomains = nub $ map domain riderConfigRollouts
           configTypes = mapMaybe extractRiderConfig allConfigDomains
@@ -716,6 +717,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req originalBa
               }
       LYSQADLR.updateByPrimaryKey concludedRollout
       CADLR.clearDomainCache (cast merchantOpCityId) concludeReq.domain
+      CADLR.clearCityConfigsCache (cast merchantOpCityId)
       fork "push concluded_rollout to kafka" $ pushToKafka concludedRollout "concluded-rollout" ""
       pure Kernel.Types.APISuccess.Success
     Lib.Yudhishthira.Types.Abort abortReq -> do
@@ -736,6 +738,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req originalBa
       LYSQADLR.updateByPrimaryKey abortedRollout
       LYSQADLR.updateByPrimaryKey updatedBaseRollout
       CADLR.clearDomainCache (cast merchantOpCityId) abortReq.domain
+      CADLR.clearCityConfigsCache (cast merchantOpCityId)
       fork "push aborted_rollout to kafka" $ pushToKafka abortedRollout "aborted-rollout" ""
       pure Kernel.Types.APISuccess.Success
     Lib.Yudhishthira.Types.Revert revertReq -> do
@@ -759,6 +762,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req originalBa
       LYSQADLR.create newBaseRollout
       CADLE.clearCache revertReq.domain
       CADLR.clearDomainCache (cast merchantOpCityId) revertReq.domain
+      CADLR.clearCityConfigsCache (cast merchantOpCityId)
       pure Kernel.Types.APISuccess.Success
       where
         mkBaseAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> DTADLE.AppDynamicLogicElement
