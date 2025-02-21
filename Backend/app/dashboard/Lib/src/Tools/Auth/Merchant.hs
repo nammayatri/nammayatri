@@ -24,8 +24,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant (ToHttpApiData)
 
+-- import Kernel.Utils.Logging(logDebug)
+
 merchantCityAccessCheck :: MonadFlow m => ShortId DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> City.City -> m (CheckedShortId DMerchant.Merchant)
 merchantCityAccessCheck (ShortId userMerchantId) (ShortId merchantId) userCity city = do
+  logDebug $ "Data: " <> show userMerchantId <> " " <> show merchantId <> " " <> show userCity <> " " <> show city
   unless (userMerchantId == merchantId && userCity == city) $ throwError AccessDenied
   pure $ CheckedShortId merchantId
 
