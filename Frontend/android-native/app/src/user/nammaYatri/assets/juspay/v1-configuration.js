@@ -248,6 +248,7 @@ const nammaYatriConfig = function () {
     , "tipDisplayDuration": 30
     , "termsVersion": 2.0
     , "showDisabilityBanner": false
+    , "privacyLink" : "https://docs.google.com/document/d/1Di7oP7t6X-hz9MI3ZIOl4oZI5OTLGNQtunhhZQaqht4"
     , "enableContactSupport": false
     , "enableGeocoder": true
     , "isAdvancedBookingEnabled": true
@@ -977,6 +978,7 @@ const manaYatriConfig = function () {
     , "tipDisplayDuration": 30
     , "termsVersion": 2.0
     , "showDisabilityBanner": false
+    , "privacyLink" : "https://docs.google.com/document/d/1Di7oP7t6X-hz9MI3ZIOl4oZI5OTLGNQtunhhZQaqht4"
     , "enableContactSupport": false
     , "enableGeocoder": true
     , "isAdvancedBookingEnabled": true
