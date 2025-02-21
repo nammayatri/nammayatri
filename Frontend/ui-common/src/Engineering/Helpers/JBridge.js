@@ -2388,22 +2388,30 @@ export const cleverTapEvent = function (_event) {
   }
 }
 
-export const voipDialer = function (cuid,isDriver,phoneNum,isMissed,cb,action) {
+export const voipDialer = function (rideId, isDriver, phoneNum, isMissed, cb, action) {
   const callback = callbackMapper.map(function (callId, status, rideId, errorCode, driverFlag, networkType, networkQuality, merchantId) {
-    cb(action
-    (callId)
-    (status)       
-    (rideId)       
-    (errorCode)
-    (driverFlag)
-    (networkType)
-    (networkQuality)
-    (merchantId))();
-    });
-  if(JBridge.voipDialer) {
-    window.JBridge.voipDialer(cuid, isDriver, phoneNum, isMissed, callback);
+    cb(action(callId)(status)(rideId)(errorCode)(driverFlag)(networkType)(networkQuality)(merchantId))();
+  });
+  const sanitizedCuid = rideId.replace("-", "");
+  if (sanitizedCuid.length < 10) {
+    window.showDialer(phoneNum);
+    return;
   }
-}
+  const receiverCuid = isDriver ? "customer" + sanitizedCuid.substring(0, 10) : "driver" + sanitizedCuid.substring(0, 10);
+  const callerCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
+  const config = JSON.stringify({
+    rideId: rideId,
+    isDriver: isDriver,
+    isMissed: isMissed,
+    receiverCuid: receiverCuid,
+    callerCuid: callerCuid,
+    callContext: isDriver ? "Customer" : "Driver",
+    remoteContext: isDriver ? "Driver" : "Customer"
+  });
+  if (JBridge.voipDialer) {
+    window.JBridge.voipDialer(config, phoneNum, callback);
+  }
+};
 
 export const isSignedCallInitialized = function () {
   if (JBridge.isSignedCallInitialized) {
@@ -2412,11 +2420,22 @@ export const isSignedCallInitialized = function () {
   return false;
 };
 
-export const initSignedCall = function (cuid) {
+export const initSignedCall = function (rideId) {
   return function (isDriver) {
+    const sanitizedCuid = rideId.replace("-", "");
+    if (sanitizedCuid.length < 10) {
+      return;
+    }
+    const userCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
+    const config = JSON.stringify({
+      rideId: rideId,
+      cuid: userCuid,
+      isDriver: isDriver
+    });
+  
     if (JBridge.initSignedCall) {
-      return JBridge.initSignedCall(cuid,isDriver);
-    } 
+      return JBridge.initSignedCall(config);
+    }
   }
 };
 

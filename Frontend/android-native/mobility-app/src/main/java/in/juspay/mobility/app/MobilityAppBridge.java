@@ -394,14 +394,14 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void voipDialer(String cuid, boolean isDriver, String phoneNum, boolean isMissed, String callback) {
+    public void voipDialer(String config, String phoneNum, String callback) {
         cleverTapSignedCall = new CleverTapSignedCall(bridgeComponents.getContext(),bridgeComponents.getActivity());
-        cleverTapSignedCall.voipDialer(cuid,isDriver,phoneNum,isMissed,callback, bridgeComponents);
+        cleverTapSignedCall.voipDialer(config, phoneNum, callback, bridgeComponents);
     }
 
     @JavascriptInterface
-    public void initSignedCall(String cuid, boolean isDriver){
-        cleverTapSignedCall.initSignedCall(cuid,isDriver);
+    public void initSignedCall(String config){
+        cleverTapSignedCall.initSignedCall(config);
     }
     
     @JavascriptInterface

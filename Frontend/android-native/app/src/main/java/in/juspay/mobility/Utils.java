@@ -190,7 +190,9 @@ public class Utils {
         String SC_API_KEY = in.juspay.mobility.BuildConfig.CLEVERTAP_SC_API_KEY;
         CleverTapSignedCall cleverTapSignedCall = new CleverTapSignedCall(context, activity, true, SC_API_KEY, SC_ACCOUNT_ID);
         CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
-        SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
+        if (BuildConfig.DEBUG) {
+            SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
+        }        
         SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
         SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
             @Override

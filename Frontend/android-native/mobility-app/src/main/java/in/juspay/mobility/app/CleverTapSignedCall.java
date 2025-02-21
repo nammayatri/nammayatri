@@ -186,51 +186,73 @@ public class CleverTapSignedCall {
         return "Unknown";
     }
 
-    public void voipDialer(String cuid, boolean isDriver, String phoneNum, boolean isMissed, String callback, BridgeComponents bridgeComponents) {
-        phone = phoneNum;
-        this.isDriver = isDriver;
-        CleverTapSignedCall.callback = callback;
+    public void voipDialer(String configJson, String phoneNum, String callback, BridgeComponents bridgeComponents) {
         this.bridgeComponent = bridgeComponents;
+        this.phone = phoneNum;
+        CleverTapSignedCall.callback = callback;
         useFallbackDialer = sharedPrefs.getInt("USE_FALLBACK_DIALER", 0);
         callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 0);
+        
         JSONObject voipCallConfig = null;
         int fallBackThreshold = 1;
         int callAttemptsThreshold = 3;
-        if(!isSignedCallInitialized()){
-            initSignedCall(cuid, isDriver);
-        }
+        
+        String receiverCuid, callContext, remoteContext, callerCuid;
+        boolean isDriverBool, isMissed;
+        
         try {
-            voipCallConfig = new JSONObject(remoteConfig.getString("voip_call_config"));
-            fallBackThreshold = voipCallConfig.optInt("fallbackDialerThreshold",1);
-            callAttemptsThreshold = voipCallConfig.optInt("callAttemptsThreshold",3);
+            JSONObject config = new JSONObject(configJson);
+            rideId = config.optString("rideId", rideId);
+            receiverCuid = config.optString("receiverCuid", "");
+            callerCuid = config.optString("callerCuid", "");
+            callContext = config.optString("callContext", "");
+            remoteContext = config.optString("remoteContext", "");
+            isDriverBool = config.optBoolean("isDriver", false);
+            isMissed = config.optBoolean("isMissed", false);
         } catch (JSONException e) {
-            Log.d("SC","Failed to fetch voip call config");
-        }
-        if(useFallbackDialer > fallBackThreshold || callAttempts > callAttemptsThreshold ){
-            showDialer(phone);
+            Log.e("SignedCall", "Invalid JSON format in voipDialer", e);
+            showDialer(phoneNum);
             return;
         }
-        String receiverCuid, callContext, remoteContext, rideId = cuid;
-        JSONObject callOptions = new JSONObject();
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        Bundle bundle = new Bundle();
-        bundle.putString(isMissed ? "missed_voip_callback" : "ride_id", rideId);   
-        
-        if (!isMissed) {
-            cuid = cuid.replace("-", "");
-            if(cuid.length() > 10) cuid = cuid.substring(0, 10);
-            receiverCuid = (isDriver ? "customer" : "driver") + cuid;
-        } else receiverCuid = cuid;
-        
-        callContext = isDriver ? "Customer" : "Driver";
-        remoteContext = isDriver ? "Driver" : "Customer";
+        isDriver = isDriverBool;
 
+        if (!isSignedCallInitialized()) {
+            JSONObject initConfig = new JSONObject();
+            try {
+                initConfig.put("rideId", rideId);
+                initConfig.put("cuid", callerCuid);
+                initConfig.put("isDriver", isDriver);
+            } catch (JSONException e) {
+                Log.e("SignedCall", "Error creating JSON config for initSignedCall", e);
+            }
+            initSignedCall(initConfig.toString());
+        }
+    
+        try {
+            voipCallConfig = new JSONObject(remoteConfig.getString("voip_call_config"));
+            fallBackThreshold = voipCallConfig.optInt("fallbackDialerThreshold", 1);
+            callAttemptsThreshold = voipCallConfig.optInt("callAttemptsThreshold", 3);
+        } catch (JSONException e) {
+            Log.d("SC", "Failed to fetch voip call config");
+        }
+    
+        if (useFallbackDialer > fallBackThreshold || callAttempts > callAttemptsThreshold) {
+            showDialer(phoneNum);
+            return;
+        }
+    
+        JSONObject callOptions = new JSONObject();
         try {
             callOptions.put("remote_context", remoteContext);
         } catch (JSONException e) {
             Log.d("SignedCall", "JSON error when setting up VOIP call");
         }
+    
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        Bundle bundle = new Bundle();
+        bundle.putString(isMissed ? "missed_voip_callback" : "ride_id", rideId);
         String exoPhone = phone;
+        boolean IsDriver = isDriver;
         OutgoingCallResponse outgoingCallResponseListener = new OutgoingCallResponse() {
             @Override
             public void onSuccess() {
@@ -250,7 +272,7 @@ public class CleverTapSignedCall {
                     if(multipleCallAttempts > 4){
                         updateFallbackDialer();
                     }
-                    sendJavaScriptCallback(callback, "", "MULTIPLE_VOIP_CALL_ATTEMPTS", rideId, callException.getErrorCode(), isDriver,finalNetworkType, finalNetworkQuality, merchantId);
+                    sendJavaScriptCallback(callback, "", "MULTIPLE_VOIP_CALL_ATTEMPTS", rideId, callException.getErrorCode(), IsDriver, finalNetworkType, finalNetworkQuality, merchantId);
                     return;
                 } else if(callException.getErrorCode() == CallException.MicrophonePermissionNotGrantedException.getErrorCode()) {
                     if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -276,11 +298,11 @@ public class CleverTapSignedCall {
                     callbackResult = "UNKNOWN_ERROR";
                 }
                 updateFallbackDialer();
-                sendJavaScriptCallback(callback, "", callbackResult, rideId, callException.getErrorCode(), isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                sendJavaScriptCallback(callback, "", callbackResult, rideId, callException.getErrorCode(), IsDriver, finalNetworkType, finalNetworkQuality, merchantId);
             }
         };
-
-        if(checkAudioPermission()){
+    
+        if (checkAudioPermission()) {
             SignedCallAPI.getInstance().call(context, receiverCuid, callContext, callOptions, outgoingCallResponseListener);
             checkAndAskBluetoothPermission();
         } else {
@@ -302,28 +324,29 @@ public class CleverTapSignedCall {
     }
 
     @SuppressLint("RestrictedApi")
-    public void initSignedCall(String cuid, boolean isDriver){
+    public void initSignedCall(String configJson){
         if (activity != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
         }
         if(isSignedCallInitialized()) return;
-        JSONObject initOptions = new JSONObject();
-        rideId = cuid;
-        String Cuid = cuid.replace("-", "");
-        if (Cuid.length() > 10) {
-            Cuid = Cuid.substring(0, 10);
-        }
-        Cuid = (isDriver) ? "driver" + Cuid : "customer" + Cuid;
-        Bundle bundle = new Bundle();
-        bundle.putString("ride_id",rideId);
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        JSONObject initOptions = new JSONObject(), config = null;
+
         try {
+            config = new JSONObject(configJson);
+            String cuid = config.getString("cuid");
+            boolean isDriverBool = config.getBoolean("isDriver");
+            rideId = config.optString("rideId");
+            isDriver = isDriverBool;
             initOptions.put("accountId", SC_ACCOUNT_ID);
             initOptions.put("apiKey", SC_API_KEY);
-            initOptions.put("cuid", Cuid);
+            initOptions.put("cuid", cuid);
+    
         } catch (JSONException e) {
-            Log.d("SignedCall", "JSON error at setting up VOIP data");
-        };
+            Log.d("SignedCall", "JSON error at setting up SignedCall data: " + e.getMessage());
+        }
+        Bundle bundle = new Bundle();
+        bundle.putString("ride_id", rideId);
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
 
         SignedCallInitResponse signedCallInitListener = new SignedCallInitResponse() {
             @Override
