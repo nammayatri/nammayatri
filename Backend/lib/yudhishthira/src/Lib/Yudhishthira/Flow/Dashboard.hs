@@ -326,10 +326,12 @@ verifyAndUpdateDynamicLogic ::
   a ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
 verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = do
+  -- logDebug $ "Verifying logic data" <> show logicData
   resp <- runLogics req.rules logicData
   let shouldUpdateRule = fromMaybe False req.shouldUpdateRule
   let shouldVerifyOutput = fromMaybe False req.verifyOutput
   let errors = resp.errors <> (bool [] (verifyOutput resp.result) (shouldUpdateRule || shouldVerifyOutput))
+  logDebug $ "password hahaa " <> show referralLinkPassword
   (isRuleUpdated, version) <-
     if shouldUpdateRule
       then do
