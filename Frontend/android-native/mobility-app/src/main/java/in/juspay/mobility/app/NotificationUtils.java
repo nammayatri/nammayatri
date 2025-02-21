@@ -162,6 +162,8 @@ public class NotificationUtils {
 
     public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload, String source) {
         try {
+
+            System.out.println(" entity_payload- > " + entity_payload);
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
@@ -363,7 +365,6 @@ public class NotificationUtils {
                                     lastRideReq = new Bundle();
                                     lastRideReq.putAll(sheetData);
                                     lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                    startMediaPlayer(context, R.raw.allocation_request, incVol);
                                     RideRequestUtils.createRideRequestNotification(context);
                                 } catch (Exception e) {
                                     Exception exception = new Exception("Error in onCreate ride req activity " + e);

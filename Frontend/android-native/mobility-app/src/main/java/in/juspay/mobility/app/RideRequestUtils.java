@@ -25,6 +25,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.location.Address;
 import android.location.Geocoder;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -664,7 +665,7 @@ public class RideRequestUtils {
             }
             holder.tagsBlock.setVisibility(View.VISIBLE);
             holder.reqButton.setTextColor(context.getColor(R.color.white));
-            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.turquoise)));
+//            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.turquoise)));
             holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
             holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
             holder.rideStartTime.setText(model.getRideStartTime());
@@ -691,7 +692,7 @@ public class RideRequestUtils {
             }
             holder.tagsBlock.setVisibility(View.VISIBLE);
             holder.reqButton.setTextColor(context.getColor(R.color.white));
-            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
+//            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
             holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
             holder.gotoTag.setVisibility(View.GONE);
             holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
@@ -876,5 +877,37 @@ public class RideRequestUtils {
                 holder.durationToPickupImage.setVisibility(View.GONE);
             }
         });
+    }
+
+    public static void increaseVolume(Context context) {
+        AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        float currentVolume = (float) audio.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        if (currentVolume / maxVolume < 0.7) {
+            try{
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            }catch (Exception e){
+                Exception exception = new Exception("Error in increaseVolume " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_increase_volume", "increase_volume", String.valueOf(e), context);
+            }
+        }
+    }
+
+    public static int getRideRequestSound(Context context, int i) {
+        switch (i) {
+            case 1: return context.getResources().getIdentifier("ic_rental_ride","raw",context.getPackageName());
+            case 2: return context.getResources().getIdentifier("ic_outstation_ride","raw",context.getPackageName());
+            case 0:
+            default:return context.getResources().getIdentifier("allocation_request","raw",context.getPackageName());
+        }
+    }
+
+    public static int getRideRequestSoundId(String rideType) {
+        switch (rideType) {
+            case NotificationUtils.RENTAL: return  1;
+            case NotificationUtils.INTERCITY: return 2;
+            default:return 0;
+        }
     }
 }

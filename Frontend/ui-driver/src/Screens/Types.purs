@@ -2014,7 +2014,8 @@ type NotificationCardState = {
   mediaType :: Maybe MediaType,
   likeCount :: Int,
   viewCount :: Int,
-  likeStatus :: Boolean
+  likeStatus :: Boolean,
+  shareable :: Boolean
 }
 
 type NotificationCardPropState = {
@@ -2044,7 +2045,10 @@ type NotificationCardPropState = {
   imageWithUrlVisibility :: PropValue,
   backgroundHolder :: PropValue,
   likeCount :: PropValue,
-  viewCount :: PropValue
+  viewCount :: PropValue,
+  likeCountVisibility :: PropValue,
+  shareCountVisibility :: PropValue,
+  viewCountVisibility :: PropValue
 }
 
 type NotificationDetailModelState = {
@@ -2063,7 +2067,8 @@ type NotificationDetailModelState = {
   mediaType :: Maybe MediaType,
   likeCount :: Int,
   likeStatus :: Boolean,
-  viewCount :: Int
+  viewCount :: Int,
+  shareable :: Boolean
 }
 
 data YoutubeVideoStatus = PLAY | PAUSE

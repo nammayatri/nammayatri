@@ -21,7 +21,7 @@ import Data.Array (mapWithIndex)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Prelude (Unit, map, ($), (<<<), (<>), (==))
+import Prelude (Unit, map, ($), (<<<), (<>), (==), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, textSize, textView, weight, width, imageWithFallback)
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (Action(..)) as NotificationsScreen
@@ -214,35 +214,49 @@ actionAndCount push =
     ]
 
 counterView :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-counterView push = 
-    linearLayout
-    [ height WRAP_CONTENT,
-      width WRAP_CONTENT
-    ](mapWithIndex (\index (CounterData counter) -> 
-                    linearLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , cornerRadius 48.0
-                    , background Color.blue600
-                    , padding (Padding 8 4 8 4)
-                    , margin $ MarginLeft if index == 0 then 0 else 8
-                    ][ imageView
-                        [ imageWithFallback counter.icon
-                        , height $ V 16
-                        , width $ V 16
-                        , margin $ MarginRight 4
-                        ]
-                    , textView
-                        [ height WRAP_CONTENT
-                        , width WRAP_CONTENT
-                        , PrestoList.textHolder counter.value
-                        , color Color.black700
-                        , textSize FontSize.a_12
-                        , lineHeight "20"
-                        , fontStyle $ FontStyle.medium LanguageStyle
-                        ]
-                     ]
-                    ) (getCounters "") )
+counterView push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    ]
+    ( mapWithIndex
+        ( \index (CounterData counter) ->
+            linearLayout
+              ( [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , cornerRadius 48.0
+                , background Color.blue600
+                , padding (Padding 8 4 8 4)
+                , PrestoList.visibilityHolder counter.visibility
+                , margin $ MarginLeft if index == 0 then 0 else 8
+                ]
+                  <> if counter.isShare then [ PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< ShareClick ] else []
+              )
+              ( [ imageView
+                    [ imageWithFallback counter.icon
+                    , height $ V 16
+                    , width $ V 16
+                    , margin $ MarginRight 4
+                    ]
+                ]
+                  <> if not counter.isShare then
+                      [ textView
+                          [ height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          , PrestoList.textHolder counter.value
+                          , color Color.black700
+                          , textSize FontSize.a_12
+                          , lineHeight "20"
+                          , fontStyle $ FontStyle.medium LanguageStyle
+                          ]
+                      ]
+                    else
+                      []
+              )
+        )
+        (getCounters "")
+    )
+
 
 descriptionWithBulletPoints :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 descriptionWithBulletPoints push =
