@@ -37,6 +37,19 @@ findByCityIdAndVehicleCategory id vehicleCategory mbConfigVersionMap =
     (Queries.findByCityIdAndVehicleCategory id (Just vehicleCategory))
     (makeMerchantOpCityIdAndCategoryKey id vehicleCategory)
 
+findAllByMerchantOpCityId ::
+  (EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe [LYT.ConfigVersionMap] ->
+  m [PayoutConfig]
+findAllByMerchantOpCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs
+    (cast id)
+    (LYT.RIDER_CONFIG LYT.PayoutConfig)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityId id)
+
 makeMerchantOpCityIdAndCategoryKey :: Id MerchantOperatingCity -> VehicleCategory -> Text
 makeMerchantOpCityIdAndCategoryKey id vehicleCategory = "CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId <> "-vehicleCategory:" <> show vehicleCategory
 

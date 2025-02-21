@@ -221,7 +221,7 @@ getConfigVersionMapForStickiness ::
   m [ConfigVersionMap]
 getConfigVersionMapForStickiness merchantOpCityId = do
   allConfigsRollouts <- DALR.fetchAllConfigsByMerchantOpCityId merchantOpCityId -- TODO: change to fetchAllBaseConfigsByMerchantOpCityId and cache it
-  let configsInExperiment :: [LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.percentageRollout /= 0 && rollout.isBaseVersion == Just True) allConfigsRollouts
+  let configsInExperiment :: [LogicDomain] = nub $ map (.domain) $ filter (\rollout -> rollout.percentageRollout /= 100 && rollout.isBaseVersion == Just True) allConfigsRollouts
   mbConfigVersionMap <- mapM getVersion configsInExperiment
   let configVersionMap :: [ConfigVersionMap] = catMaybes mbConfigVersionMap
   return configVersionMap

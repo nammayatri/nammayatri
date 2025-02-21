@@ -33,7 +33,7 @@ data PayoutConfig = PayoutConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
 data PayoutEntity = METRO_TICKET_CASHBACK | PAYOUT_AWARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

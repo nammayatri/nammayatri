@@ -11,7 +11,7 @@ data MerchantMessageDefaultDataJSON = MerchantMessageDefaultDataJSON
     var2 :: Maybe Text,
     var3 :: Maybe Text
   }
-  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema, Eq)
 
 instance Default MerchantMessageDefaultDataJSON where
   def =

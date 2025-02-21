@@ -28,6 +28,7 @@ imports:
   ConfigType: Lib.Yudhishthira.Types
   ConfigDetailsResp: Lib.Yudhishthira.Types
   TableDataResp: Lib.Yudhishthira.Types
+  ActionChangeRequest: Lib.Yudhishthira.Types
 
 
 module: NammaTag
@@ -255,3 +256,13 @@ apis:
         type: TableDataResp
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - POST:
+      endpoint: /configPilot/actionChange
+      auth: ApiAuthV2
+      request:
+        type: ActionChangeRequest
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
