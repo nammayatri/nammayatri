@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.CustomerReferral
 import qualified Control.Lens
+import Data.Aeson (ToJSON)
 import qualified Data.HashMap.Strict.InsOrd as InsOrd
 import Data.OpenApi
 import Data.Proxy
@@ -32,6 +33,8 @@ import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 import Tools.Error (PersonStatsError (..))
+
+--import qualified Data.Text as T
 
 type API =
   ( Throws MyCustomException :> TokenAuth :> "CustomerRefferal" :> "count" :> Get '[JSON] API.Types.UI.CustomerReferral.ReferredCustomers
@@ -87,26 +90,61 @@ instance
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
+data ErrorResponse = ErrorResponse
+  { code :: Int,
+    errorTextCode :: Text,
+    shortDescription :: Text,
+    longDescription :: Text
+  }
+  deriving (Generic, ToJSON)
+
+personNotFoundError :: ErrorResponse
+personNotFoundError =
+  ErrorResponse
+    { code = 404,
+      errorTextCode = "PERSON_NOT_FOUND",
+      shortDescription = "PersonNotFound",
+      longDescription = "Person with personId {personId} not found."
+    }
+
+personStatsNotFoundError :: ErrorResponse
+personStatsNotFoundError =
+  ErrorResponse
+    { code = 410,
+      errorTextCode = "PERSON_STATS_NOT_FOUND",
+      shortDescription = "PersonStatsNotFound",
+      longDescription = "Person stats with personId {personId} not found."
+    }
+
+instance ToSchema ErrorResponse where
+  declareNamedSchema _ = do
+    let schem =
+          mempty
+            & type_ Control.Lens..~ Just OpenApiObject
+            & properties
+              Control.Lens..~ InsOrd.fromList
+                [ ("code", Inline $ toSchema (Proxy :: Proxy Int)),
+                  ("errorTextCode", Inline $ toSchema (Proxy :: Proxy Text)),
+                  ("shortDescription", Inline $ toSchema (Proxy :: Proxy Text)),
+                  ("longDescription", Inline $ toSchema (Proxy :: Proxy Text))
+                ]
+            & required Control.Lens..~ ["code", "errorTextCode", "shortDescription", "longDescription"]
+    return $ NamedSchema (Just "ErrorResponse") schem
+
 instance (HasOpenApi api) => HasOpenApi (Throws MyCustomException :> api) where
   toOpenApi _ =
     let apiOpenApi = toOpenApi (Proxy @api)
-        errorResponses =
-          [ ( 404,
-              "PersonNotFound"
-            ),
-            ( 410,
-              "PersonStatsNotFound"
-            )
-          ]
+        errorResponses = [personNotFoundError, personStatsNotFoundError]
         updatedPaths = addErrorResponses (_openApiPaths apiOpenApi) errorResponses
         updatedComponents = addErrorDescriptions (_openApiComponents apiOpenApi) errorResponses
-     in apiOpenApi {_openApiPaths = updatedPaths, _openApiComponents = updatedComponents}
+        updatedSchemas = addErrorSchemas updatedComponents
+     in apiOpenApi {_openApiPaths = updatedPaths, _openApiComponents = updatedSchemas}
 
-addErrorResponses :: InsOrd.InsOrdHashMap FilePath PathItem -> [(Int, Text)] -> InsOrd.InsOrdHashMap FilePath PathItem
+addErrorResponses :: InsOrd.InsOrdHashMap FilePath PathItem -> [ErrorResponse] -> InsOrd.InsOrdHashMap FilePath PathItem
 addErrorResponses hashMapPaths resp =
   InsOrd.mapWithKey (addResponses resp) hashMapPaths
 
-addResponses :: [(Int, Text)] -> FilePath -> PathItem -> PathItem
+addResponses :: [ErrorResponse] -> FilePath -> PathItem -> PathItem
 addResponses resp _pathKey pathItem =
   pathItem {_pathItemGet = updateOperation (_pathItemGet pathItem)}
   where
@@ -116,19 +154,47 @@ addResponses resp _pathKey pathItem =
       where
         updatedResponses = foldr addResponse (_operationResponses op) resp
 
-addResponse :: (Int, Text) -> Responses -> Responses
-addResponse (code, descript) resp =
-  let referencedResponse = Ref $ Reference descript
-   in resp {_responsesResponses = InsOrd.insert code referencedResponse (_responsesResponses resp)}
+addResponse :: ErrorResponse -> Responses -> Responses
+addResponse ErrorResponse {..} resp =
+  let mediaTypeObject =
+        MediaTypeObject
+          { _mediaTypeObjectSchema = Just . Ref . Reference $ shortDescription,
+            _mediaTypeObjectExample = Nothing,
+            _mediaTypeObjectExamples = InsOrd.empty,
+            _mediaTypeObjectEncoding = InsOrd.empty
+          }
+      response =
+        Inline $
+          Response
+            { _responseDescription = longDescription,
+              _responseContent =
+                InsOrd.fromList
+                  [ ( "application/json",
+                      mediaTypeObject
+                    )
+                  ],
+              _responseHeaders = InsOrd.empty,
+              _responseLinks = InsOrd.empty -- InsOrd.fromList [(shortDescription, Ref (Reference shortDescription))]
+            }
+   in resp {_responsesResponses = InsOrd.insert code response (_responsesResponses resp)}
 
-addErrorDescriptions :: Components -> [(Int, Text)] -> Components
+addErrorDescriptions :: Components -> [ErrorResponse] -> Components
 addErrorDescriptions comp resp =
   foldr addErrorDescription comp resp
 
-addErrorDescription :: (Int, Text) -> Components -> Components
-addErrorDescription (_, descript) comp =
-  let resp = Response descript mempty mempty mempty
-   in comp {_componentsResponses = InsOrd.insert descript resp (_componentsResponses comp)}
+addErrorDescription :: ErrorResponse -> Components -> Components
+addErrorDescription ErrorResponse {..} comp =
+  let resp = Response shortDescription mempty mempty mempty
+   in comp {_componentsResponses = InsOrd.insert shortDescription resp (_componentsResponses comp)}
+
+addErrorSchemas :: Components -> Components
+addErrorSchemas comp =
+  let newSchemas =
+        InsOrd.fromList
+          [ ("PersonNotFound", toSchema (Proxy :: Proxy ErrorResponse)),
+            ("PersonStatsNotFound", toSchema (Proxy :: Proxy ErrorResponse))
+          ]
+   in comp {_componentsSchemas = InsOrd.union newSchemas (_componentsSchemas comp)}
 
 handler :: Environment.FlowServer API
 handler = getCustomerRefferalCount :<|> postPersonApplyReferral :<|> getReferralVerifyVpa :<|> getReferralPayoutHistory :<|> postPayoutVpaUpsert
