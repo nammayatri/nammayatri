@@ -2711,7 +2711,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
-    isVisible = not (isAmbulance state.data.linkedVehicleCategory),
+    isVisible = not (isAmbulance state.data.linkedVehicleCategory || HU.isDeliveryTruckVariant state.data.linkedVehicleCategory),
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,

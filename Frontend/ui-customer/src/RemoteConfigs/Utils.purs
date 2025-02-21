@@ -152,8 +152,13 @@ defaultTipConfig = {
   ambulanceTaxiOxy : [],
   ambulanceAc : [],
   ambulanceAcOxy : [],
-  ambulanceVentilator : [],
-  default : [0, 10, 20, 30],
+  ambulanceVentilator : []
+, deliveryTruckMini: [0, 10, 20, 30]
+, deliveryTruckSmall: [0, 10, 20, 30]
+, deliveryTruckMedium: [0, 10, 20, 30]
+, deliveryTruckLarge: [0, 10, 20, 30]
+, deliveryTruckUltraLarge: [0, 10, 20, 30]
+, default : [0, 10, 20, 30],
   bookAny : [0, 10, 20, 30]
 }
 

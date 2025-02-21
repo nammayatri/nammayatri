@@ -53,5 +53,6 @@
 <string name="call_support">మద్దతుకు కాల్ చేయండి</string>
 <string name="no_additional_fare_tips_and_waiting_charges">"అదనపు చార్జీలు లేవు. టిప్స్ లేవు. వెయిటింగ్ ఛార్జీలు లేవు."</string>
 <string name="third_party_booking">"థర్డ్ పార్టీ బుకింగ్"</string>
-    <string name="round_trip">రౌండ్ ట్రిప్</string>
+<string name="round_trip">రౌండ్ ట్రిప్</string>
+<string name="delivery">డెలివరీ</string>
 </resources>

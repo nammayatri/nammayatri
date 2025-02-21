@@ -430,7 +430,8 @@ sourceDestinationView push config =
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy
       ],
-      senderReceiverAddrInstructionView config.receiverDetails config.destination false
+      senderReceiverAddrInstructionView config.receiverDetails config.destination false,
+      parcelDetailsView push config
     ]
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
@@ -665,3 +666,83 @@ senderReceiverAddrInstructionView details' address isSource =
             ]  
           ]
         ]
+
+
+parcelDetailsView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
+parcelDetailsView push config =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ]
+  [
+    separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
+  , headingSection
+  , parcelDetailsCard config.parcelType config.parcelQuantity
+  ]
+
+headingSection :: forall w. PrestoDOM (Effect Unit) w
+headingSection =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 8
+  , color Color.black700
+  ]
+  [ textView $
+    [ text "Parcel Details"
+    , color Color.black700
+    ] <> FontStyle.body3 TypoGraphy
+  ]
+
+parcelDetailsCard :: forall w. String -> Maybe Int -> PrestoDOM (Effect Unit) w
+parcelDetailsCard parcelType parcelQuantity =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background Color.blue600  -- Light blue background
+  , cornerRadius 8.0
+  , padding $ Padding 16 8 16 8
+  ]
+  [ parcelTypeSection parcelType
+  , parcelQuantitySection  parcelQuantity
+  ]
+
+parcelTypeSection :: forall w. String -> PrestoDOM (Effect Unit) w
+parcelTypeSection parcelType =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ MarginBottom 12
+  ]
+  [ textView $
+    [ text "Parcel Type"
+    , color Color.black800
+    , margin $ MarginBottom 4
+    ] <> FontStyle.body3 TypoGraphy
+  , textView $
+    [ text $ parcelType
+    , color Color.black900
+    , width MATCH_PARENT
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+parcelQuantitySection :: forall w. Maybe Int -> PrestoDOM (Effect Unit) w
+parcelQuantitySection parcelQuantity =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ]
+  [ textView $
+    [ text "Parcel Quantity"
+    , color Color.black800
+    , margin $ MarginBottom 4
+    ] <> FontStyle.body3 TypoGraphy
+  , textView $
+    [ text "3"
+    , color Color.black900
+    ] <> FontStyle.body1 TypoGraphy
+  ]

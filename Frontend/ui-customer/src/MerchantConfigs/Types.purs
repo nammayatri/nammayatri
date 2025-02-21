@@ -84,8 +84,16 @@ type AppConfigCustomer a =
   , showCheckoutRentalBanner :: Boolean
   , riderRideCompletedCard :: RiderRideCompletedCard
   , enableDeliveryService :: Boolean
+  , parcelTypeConfig :: Array DropdownOptions
+  , parcelQuantityConfig :: Array DropdownOptions
   , ambulanceConfig :: GeoCodeConfig
   | a
+  }
+
+type DropdownOptions = { 
+    id :: String
+  , title :: String
+  , subtitle :: String
   }
 
 type ReferalConfig = {
@@ -408,6 +416,11 @@ type VariantConfig = {
   ambulanceAc :: VariantInfo,
   ambulanceAcOxy :: VariantInfo,
   ambulanceVentilator :: VariantInfo
+, deliveryTruckMini :: VariantInfo
+, deliveryTruckSmall :: VariantInfo
+, deliveryTruckMedium :: VariantInfo
+, deliveryTruckLarge :: VariantInfo
+, deliveryTruckUltraLarge :: VariantInfo
 }
 
 type VariantInfo = {
@@ -490,7 +503,8 @@ type WaitingChargeConfig = {
   auto :: WaitingCharge,
   cabs :: WaitingCharge,
   bike :: WaitingCharge,
-  ambulance :: WaitingCharge
+  ambulance :: WaitingCharge,
+  deliveryTruck :: WaitingCharge
 }
 
 type WaitingCharge = {

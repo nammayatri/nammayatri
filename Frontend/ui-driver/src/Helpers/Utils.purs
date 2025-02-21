@@ -1004,6 +1004,11 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.AMBULANCE_VENTILATOR -> "AMBULANCE_VENTILATOR"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
   SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
+  SA.DELIVERY_TRUCK_MINI -> "DELIVERY_TRUCK_MINI"
+  SA.DELIVERY_TRUCK_SMALL -> "DELIVERY_TRUCK_SMALL"
+  SA.DELIVERY_TRUCK_MEDIUM -> "DELIVERY_TRUCK_MEDIUM"
+  SA.DELIVERY_TRUCK_LARGE -> "DELIVERY_TRUCK_LARGE"
+  SA.DELIVERY_TRUCK_ULTRA_LARGE -> "DELIVERY_TRUCK_ULTRA_LARGE"
   SA.EV_AUTO_RICKSHAW -> "EV_AUTO_RICKSHAW"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
@@ -1285,3 +1290,11 @@ getSrcDestConfig state =
   }
 isAmbulance :: String -> Boolean
 isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE"]

@@ -57,6 +57,11 @@ getTipConfig variant = do
     "AMBULANCE_AC" -> mkTipConfig tipsConfig.ambulanceAc
     "AMBULANCE_VENTILATOR" -> mkTipConfig tipsConfig.ambulanceVentilator
     "BIKE" -> mkTipConfig tipsConfig.bike
+    "DELIVERY_TRUCK_MINI" -> mkTipConfig tipsConfig.deliveryTruckMini
+    "DELIVERY_TRUCK_SMALL" -> mkTipConfig tipsConfig.deliveryTruckSmall
+    "DELIVERY_TRUCK_MEDIUM" -> mkTipConfig tipsConfig.deliveryTruckMedium
+    "DELIVERY_TRUCK_LARGE" -> mkTipConfig tipsConfig.deliveryTruckLarge
+    "DELIVERY_TRUCK_ULTRA_LARGE" -> mkTipConfig tipsConfig.deliveryTruckUltraLarge
     _ -> mkTipConfig tipsConfig.default
 
 mkTipConfig :: Array Int -> TipConfig

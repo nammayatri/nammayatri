@@ -842,6 +842,8 @@ type HomeScreenStateData =
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)
   , boostSearchEstimate :: ChooseVehicle.Config
+  , driverArrivalTimeUTC :: Maybe String
+  , destinationReachedAtUTC :: Maybe String
 }
 
 type UpcomingRideDetails = {
@@ -1568,6 +1570,7 @@ type DriverInfoCard =
   , driverArrivalTime :: Int
   , destinationReached :: Boolean
   , destinationReachedAt :: Int
+  , rideStartTime :: String
   , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
@@ -1599,7 +1602,10 @@ type DriverInfoCard =
   , rideScheduledAtUTC :: Maybe String
   , senderDetails :: Maybe PersonDeliveryDetails
   , receiverDetails :: Maybe PersonDeliveryDetails
+  , parcelType :: Maybe String
+  , parcelQuantity :: Maybe Int
   , estimatedTimeToReachDestination :: Maybe String 
+  , destinationWaitingTime :: Maybe String
   }
 
 type RatingCard =
@@ -3210,7 +3216,7 @@ type FaqScreenProps =
 
 -- ######################################### ParcelDeliveryFlow ####################################################
 
-data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | FINAL_DETAILS
+data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | PARCEL_DETAILS | FINAL_DETAILS
 
 derive instance genericParcelDeliveryScreenStage :: Generic ParcelDeliveryScreenStage _
 instance showParcelDeliveryScreenStage :: Show ParcelDeliveryScreenStage where show = genericShow
@@ -3238,15 +3244,31 @@ type ParcelDeliveryScreenData = {
   , rateCard :: CTA.RateCard
   , config :: AppConfig
   , tipForDriver :: Maybe Int
+  , parcelQuantity :: Maybe DropdownItem
+  , parcelType :: Maybe DropdownItem
+  , parcelOthersType :: Maybe String
 }
+
+type DropdownItem = 
+  { id :: String
+  , title :: String
+  , subtitle :: String
+  }
 
 type ParcelDeliveryScreenProps = {
   editDetails :: PersonDeliveryDetails,
+  dropdownStatus :: DropdownStatus,
   showRateCard :: Boolean,
   isEditModal :: Boolean,
   focusField :: String,
   isValidInputs :: Boolean
 }
+
+data DropdownStatus = CLOSE | DROP_DOWN_1 | DROP_DOWN_2
+
+derive instance genericDropdownStatus :: Generic DropdownStatus _
+instance showDropdownStatus :: Show DropdownStatus where show = genericShow
+instance eqDropdownStatus :: Eq DropdownStatus where eq = genericEq
 
 type PersonDeliveryDetails = {
   name :: String,
@@ -3255,6 +3277,7 @@ type PersonDeliveryDetails = {
   instructions :: Maybe String
 }
 
+type ParcelType = { tag :: String, contents :: Maybe String}
 
 newtype BookingAPIEntity = BookingAPIEntity {
   currency :: Currency,

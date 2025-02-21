@@ -138,6 +138,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
               bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
               ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
+              deliveryTruckWaitingCharges = cityConfig.waitingChargeConfig.deliveryTruck
               waitingCharges = 
                 if any (_ == rideDetails.vehicleVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] then
                     autoWaitingCharges
@@ -145,6 +146,8 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
                     bikeWaitingCharges
                 else if HU.isAmbulance rideDetails.vehicleVariant then
                     ambulanceWaitingCharges
+                else if HU.isDeliveryTruckVariant rideDetails.vehicleVariant then
+                    deliveryTruckWaitingCharges
                 else 
                     cabsWaitingCharges
               nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
