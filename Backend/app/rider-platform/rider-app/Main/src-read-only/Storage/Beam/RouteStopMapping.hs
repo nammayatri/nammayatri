@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 
 data RouteStopMappingT f = RouteStopMappingT
   { estimatedTravelTimeFromPreviousStop :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     providerCode :: B.C f Kernel.Prelude.Text,

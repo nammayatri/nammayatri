@@ -14,12 +14,12 @@
 
 module Storage.CachedQueries.Station
   ( findByStationCode,
-    findByStationCodeAndMerchantOperatingCityId,
+    findByStationCodeAndIntegratedBPPConfigId,
     findById,
   )
 where
 
-import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -27,14 +27,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Station as Queries
 
-findByStationCode :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Station)
-findByStationCode stationCode = do
+findByStationCode :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DIBC.IntegratedBPPConfig -> m (Maybe Station)
+findByStationCode stationCode integratedBPPConfigId = do
   let key = makeStationCodeKey stationCode
   Hedis.safeGet key >>= \case
     Just a -> return $ Just a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheByStationCode /=<< Queries.findByStationCode stationCode
+    findAndCache = flip whenJust cacheByStationCode /=<< Queries.findByStationCode stationCode integratedBPPConfigId
 
 makeStationCodeKey :: Text -> Text
 makeStationCodeKey stationCode = "CachedQueries:Station:StationCode:" <> stationCode
@@ -45,22 +45,22 @@ cacheByStationCode station = do
   let key = makeStationCodeKey station.code
   Hedis.setExp key station expTime
 
-findByStationCodeAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperatingCity -> m (Maybe Station)
-findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId = do
-  let key = makeStationCodeAndOpCityKey stationCode merchantOperatingCityId
+findByStationCodeAndIntegratedBPPConfigId :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DIBC.IntegratedBPPConfig -> m (Maybe Station)
+findByStationCodeAndIntegratedBPPConfigId stationCode integratedBPPConfigId = do
+  let key = makeStationCodeAndIntegratedBPPConfigIdKey stationCode integratedBPPConfigId
   Hedis.safeGet key >>= \case
     Just a -> return $ Just a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheByStationCodeAndMerchantOperatingCityId /=<< Queries.findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId
+    findAndCache = flip whenJust cacheByStationCodeAndIntegratedBPPConfigId /=<< Queries.findByStationCode stationCode integratedBPPConfigId
 
-makeStationCodeAndOpCityKey :: Text -> Id DMOC.MerchantOperatingCity -> Text
-makeStationCodeAndOpCityKey stationCode merchantOperatingCityId = "CachedQueries:Station:StationCode:" <> stationCode <> ":merchantOperatingCityId:" <> merchantOperatingCityId.getId
+makeStationCodeAndIntegratedBPPConfigIdKey :: Text -> Id DIBC.IntegratedBPPConfig -> Text
+makeStationCodeAndIntegratedBPPConfigIdKey stationCode integratedBPPConfigId = "CachedQueries:Station:StationCode:" <> stationCode <> ":integratedBPPConfigId:" <> integratedBPPConfigId.getId
 
-cacheByStationCodeAndMerchantOperatingCityId :: (CacheFlow m r) => Station -> m ()
-cacheByStationCodeAndMerchantOperatingCityId station = do
+cacheByStationCodeAndIntegratedBPPConfigId :: (CacheFlow m r) => Station -> m ()
+cacheByStationCodeAndIntegratedBPPConfigId station = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeStationCodeAndOpCityKey station.code station.merchantOperatingCityId
+  let key = makeStationCodeAndIntegratedBPPConfigIdKey station.code station.integratedBppConfigId
   Hedis.setExp key station expTime
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id Station -> m (Maybe Station)

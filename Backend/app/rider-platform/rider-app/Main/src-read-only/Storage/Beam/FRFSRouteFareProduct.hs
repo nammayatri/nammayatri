@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data FRFSRouteFareProductT f = FRFSRouteFareProductT
   { farePolicyId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     routeCode :: B.C f Kernel.Prelude.Text,
