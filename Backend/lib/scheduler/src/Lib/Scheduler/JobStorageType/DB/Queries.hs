@@ -149,12 +149,13 @@ getPendingStuckJobs newtime = do
         ]
     ]
 
-getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> UTCTime -> m [AnyJob t]
-getJobByTypeAndScheduleTime jobType scheduledAt = do
+getJobByTypeAndScheduleTime :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> UTCTime -> UTCTime -> m [AnyJob t]
+getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
   findAllWithKVScheduler
     [ Se.And
         [ Se.Is BeamST.status $ Se.Eq Pending,
-          Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc scheduledAt),
+          Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc minScheduleTime),
+          Se.Is BeamST.scheduledAt $ Se.LessThan (T.utcToLocalTime T.utc maxScheduleTime),
           Se.Is BeamST.jobType $ Se.Eq jobType
         ]
     ]
