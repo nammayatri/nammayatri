@@ -235,6 +235,7 @@ SearchRequestForDriver:
     vehicleAge: int
     driverTags: json
     customerTags: json
+    driverTagScore: json
 
   default:
     rideRequestPopupDelayDuration: 0
