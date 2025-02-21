@@ -13,7 +13,7 @@ imports:
 RiderConfig:
   tableName: rider_config
 
-  derives: "Show, Generic, ToJSON, FromJSON"
+  derives: "Show, Generic, ToJSON, FromJSON,Eq"
 
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity

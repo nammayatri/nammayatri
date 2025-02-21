@@ -27,10 +27,12 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagConfigPilotGetTableData,
     addCustomerTag,
     removeCustomerTag,
+    postNammaTagConfigPilotActionChange,
   )
 where
 
 import qualified Dashboard.Common as Common
+import qualified Data.Aeson as A
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Domain.Types.FRFSConfig as DFRFS
@@ -56,10 +58,12 @@ import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
-import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as LYSQADLE
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
@@ -71,6 +75,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as SCMR
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RiderConfig as SQR
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 
@@ -300,10 +305,13 @@ getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merch
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  logicElements <- LYSQADLE.findByDomainAndVersion Nothing Nothing (Lib.Yudhishthira.Types.RIDER_CONFIG configType) 1
-  let logics = map (.logic) logicElements
-  -- logDebug $ "logics: " <> show logics
-  returnConfigs configType logics merchantOpCityId
+  mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) (Lib.Yudhishthira.Types.RIDER_CONFIG configType)
+  case mbBaseRollout of
+    Just baseRollout -> do
+      baseElements <- CADLE.findByDomainAndVersion (Lib.Yudhishthira.Types.RIDER_CONFIG configType) baseRollout.version
+      let logics = map (.logic) baseElements
+      returnConfigs configType logics merchantOpCityId
+    Nothing -> returnConfigs configType [] merchantOpCityId
   where
     returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Lib.Yudhishthira.Types.ConfigType -> [Value] -> Id MerchantOperatingCity -> m Lib.Yudhishthira.Types.TableDataResp
     returnConfigs cfgType logics merchantOpCityId = do
@@ -315,6 +323,63 @@ getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
           -- logDebug $ "patchedConfigs: " <> show patchedConfigs
           return Lib.Yudhishthira.Types.TableDataResp {configs = map (.result) patchedConfigs}
         _ -> return $ Lib.Yudhishthira.Types.TableDataResp {configs = []}
+
+postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just _opCity)
+  case req of
+    Lib.Yudhishthira.Types.Conclude concludeReq -> do
+      expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain (cast merchantOpCityId) "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
+      logDebug $ show expRollout
+      mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) concludeReq.domain
+      case mbBaseRollout of
+        Just baseRollout -> do
+          when (concludeReq.version == baseRollout.version) $ throwError $ InvalidRequest "Cannot conclude the base rollout"
+          baseElements <- CADLE.findByDomainAndVersion concludeReq.domain baseRollout.version
+          let baseLogics = fmap (.logic) baseElements
+          case concludeReq.domain of
+            Lib.Yudhishthira.Types.RIDER_CONFIG Lib.Yudhishthira.Types.RiderConfig -> do
+              riderCfg <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigNotFound merchantOpCityId.getId)
+              let configWrapper :: [Lib.Yudhishthira.Types.Config DTR.RiderConfig] =
+                    zipWith
+                      (\id cfg -> cfg {Lib.Yudhishthira.Types.identifier = id})
+                      [0 ..]
+                      [(\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) riderCfg]
+              patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
+              cfgs :: [Lib.Yudhishthira.Types.Config DTR.RiderConfig] <-
+                mapM
+                  ( \resp ->
+                      case (A.fromJSON resp.result :: A.Result (Lib.Yudhishthira.Types.Config DTR.RiderConfig)) of
+                        A.Success dpc -> pure dpc
+                        A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
+                  )
+                  patchedConfigs
+              let sortedCfgs :: [Lib.Yudhishthira.Types.Config DTR.RiderConfig] = sortOn Lib.Yudhishthira.Types.identifier cfgs
+                  configsToUpdate :: [DTR.RiderConfig] =
+                    catMaybes $
+                      zipWith
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
+                        )
+                        configWrapper
+                        sortedCfgs
+              mapM_ SQR.updateByPrimaryKey configsToUpdate
+            _ -> throwError $ InvalidRequest $ "Logic Domain not supported" <> show concludeReq.domain
+          let originalBasePercentage = baseRollout.percentageRollout
+              updatedBaseRollout =
+                baseRollout
+                  { LYTADLR.isBaseVersion = Nothing,
+                    LYTADLR.experimentStatus = Just Lib.Yudhishthira.Types.CONCLUDED,
+                    LYTADLR.percentageRollout = 0
+                  }
+          LYSQADLR.updateByPrimaryKey updatedBaseRollout
+          YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req (Just originalBasePercentage)
+        _ -> YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req Nothing
+    _ ->
+      YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req Nothing
 
 addCustomerTag :: Maybe [Text] -> Text -> [Text]
 addCustomerTag Nothing tag = [tag]
