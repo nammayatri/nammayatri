@@ -345,10 +345,10 @@ enquiryBanner push enquiryBannerMbConfig =
         , layoutGravity "right"
         , gravity RIGHT
 =======
-          width WRAP_CONTENT
+          width MATCH_PARENT
         , height WRAP_CONTENT
-        -- , alignParentBottom "true,-1"
         , layoutGravity "right"
+        , gravity RIGHT
 >>>>>>> 03e10211b4 (feat: ekd popup hotpush)
         ][
           imageView[
