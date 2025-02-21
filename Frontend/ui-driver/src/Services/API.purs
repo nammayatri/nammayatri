@@ -4464,7 +4464,13 @@ newtype DriverVehicleServiceTier = DriverVehicleServiceTier {
 }
 
 derive instance genericServiceTierType :: Generic ServiceTierType _
-instance showServiceTierType :: Show ServiceTierType where show = genericShow
+instance showServiceTierType :: Show ServiceTierType where 
+      show AMBULANCE_AC_OXY_TIER = "AMBULANCE_AC_OXY"
+      show AMBULANCE_AC_TIER = "AMBULANCE_AC"
+      show AMBULANCE_TAXI_OXY_TIER = "AMBULANCE_TAXI_OXY"
+      show AMBULANCE_TAXI_TIER = "AMBULANCE_TAXI"
+      show AMBULANCE_VENTILATOR_TIER = "AMBULANCE_VENTILATOR"
+      show other = genericShow other
 instance decodeServiceTierType :: Decode ServiceTierType
   where decode body = case unsafeFromForeign body of
                   "COMFY"        -> except $ Right COMFY

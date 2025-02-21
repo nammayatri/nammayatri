@@ -1968,7 +1968,8 @@ bookingOptionsFlow = do
       ridePreferences' = transfromRidePreferences filterByDeliveryBike
       canSwitchToInterCity' = resp.canSwitchToInterCity
       canSwitchToRental' = resp.canSwitchToRental
-      defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
+      filterForAmbulance = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> (show item.serviceTierType) == (getValueToLocalStore VEHICLE_VARIANT)) ridePreferences'
+      defaultRide = if HU.isAmbulance (getValueToLocalStore VEHICLE_VARIANT) then filterForAmbulance else  fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
    { data { airConditioned = resp.airConditioned
