@@ -1290,6 +1290,8 @@ library
     , servant
     , servant-client
     , servant-client-core
+    , servant-exceptions
+    , servant-exceptions-server
     , servant-multipart
     , servant-openapi3
     , servant-server
@@ -1424,6 +1426,8 @@ executable dynamic-offer-driver-app-exe
     , servant
     , servant-client
     , servant-client-core
+    , servant-exceptions
+    , servant-exceptions-server
     , servant-multipart
     , servant-openapi3
     , servant-server
