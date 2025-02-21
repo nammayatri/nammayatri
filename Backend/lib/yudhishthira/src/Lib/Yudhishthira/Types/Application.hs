@@ -10,7 +10,8 @@ data NammaTagApplication = NammaTagApplication
     description :: Maybe Text,
     tagName :: Text,
     tagPossibleValues :: TagValues,
-    tagStage :: ApplicationEvent,
+    tagStage :: Maybe ApplicationEvent,
+    tagStages :: Maybe (NonEmpty ApplicationEvent), -- TODO when frontend will be updated: remove tagStage and make tagStages mandatory
     tagValidity :: Maybe Hours,
     tagRule :: TagRule
   }
