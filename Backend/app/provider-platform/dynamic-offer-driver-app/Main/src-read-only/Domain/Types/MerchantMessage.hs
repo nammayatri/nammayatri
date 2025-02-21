@@ -28,7 +28,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
