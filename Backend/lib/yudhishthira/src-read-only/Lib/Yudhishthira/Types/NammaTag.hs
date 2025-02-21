@@ -23,15 +23,9 @@ data NammaTag = NammaTag
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-newtype ApplicationTagInfo = ApplicationTagInfo {event :: Lib.Yudhishthira.Types.ApplicationEvent} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
-
 newtype KaalChakraTagInfo = KaalChakraTagInfo {chakra :: Lib.Yudhishthira.Types.Chakra} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-data TagInfo
-  = Application Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo
-  | KaalChakra Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo
-  | Manual
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data TagInfo = Application | KaalChakra Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo | Manual deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TagType = ApplicationTag | KaalChakraTag | ManualTag deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

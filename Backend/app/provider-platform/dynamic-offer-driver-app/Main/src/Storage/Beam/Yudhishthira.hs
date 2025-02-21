@@ -20,6 +20,7 @@ import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Reexport
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Reexport
 import Lib.Yudhishthira.Storage.Beam.ChakraQueries as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTag as Reexport
+import Lib.Yudhishthira.Storage.Beam.NammaTagTrigger as Reexport
 import Lib.Yudhishthira.Storage.Beam.TimeBoundConfig as Reexport
 import Lib.Yudhishthira.Storage.Beam.UserData as Reexport
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
@@ -31,6 +32,9 @@ instance HasSchemaName AppDynamicLogicRolloutT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName NammaTagT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName NammaTagTriggerT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName ChakraQueriesT where

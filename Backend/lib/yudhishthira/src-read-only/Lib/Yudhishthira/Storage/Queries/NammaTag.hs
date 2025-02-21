@@ -27,6 +27,9 @@ createMany = traverse_ create
 deleteByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ())
 deleteByPrimaryKey name = do deleteWithKV [Se.Is Beam.name $ Se.Eq name]
 
+findAllByPrimaryKeys :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Kernel.Prelude.Text] -> m [Lib.Yudhishthira.Types.NammaTag.NammaTag])
+findAllByPrimaryKeys name = do findAllWithKV [Se.And [Se.Is Beam.name $ Se.In name]]
+
 findByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Yudhishthira.Types.NammaTag.NammaTag))
 findByPrimaryKey name = do findOneWithKV [Se.And [Se.Is Beam.name $ Se.Eq name]]
 
@@ -38,7 +41,6 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTag.NammaTag {..}) = do
       Se.Set Beam.category category,
       Se.Set Beam.description description,
       Se.Set Beam.chakra (getChakra info),
-      Se.Set Beam.event (getEvent info),
       Se.Set Beam.tagType (getTag info),
       Se.Set Beam.rangeEnd (getRangeEnd possibleValues),
       Se.Set Beam.rangeStart (getRangeStart possibleValues),

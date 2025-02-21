@@ -127,6 +127,7 @@ data UpdateNammaTagRequest = UpdateNammaTagRequest
     tagValidity :: Maybe Hours,
     resetTagValidity :: Maybe Bool,
     tagStage :: Maybe ApplicationEvent,
+    tagStages :: Maybe (NonEmpty ApplicationEvent), -- TODO when frontend will be updated: remove tagStage
     tagRule :: Maybe TagRule,
     actionEngine :: Maybe Value
   }
@@ -428,7 +429,8 @@ instance HideSecrets CreateTagResp where
   hideSecrets = identity
 
 data CreateNammaTagResponse = CreateNammaTagResponse
-  { result :: CreateTagResp
+  { result :: CreateTagResp,
+    results :: NonEmpty CreateTagResp -- TODO when frontend will be updated: remove result
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
