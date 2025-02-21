@@ -16,6 +16,7 @@ import Domain.Types.BecknConfig
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicketBooking as DBooking
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -56,10 +57,12 @@ type FRFSConfirmFlow m r =
     HasField "isMetroTestTransaction" r Bool
   )
 
-search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> m ()
-search merchant merchantOperatingCity bapConfig searchReq routeDetails = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) >>= return . fmap (.providerConfig)
-  case integratedBPPConfig of
+search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> DIBC.PlatformType -> m ()
+search merchant merchantOperatingCity bapConfig searchReq routeDetails platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) (Just platformType) -- >>= return . fmap (.providerConfig)
+  providerConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) (Just platformType) >>= return . fmap (.providerConfig)
+  integratedBPPConfig' <- integratedBPPConfig & fromMaybeM (InternalError "integratedBPPConfig is missing")
+  case providerConfig of
     Nothing -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
@@ -70,7 +73,7 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails = do
         void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
     Just config -> do
       fork "FRFS External SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity config bapConfig searchReq routeDetails
+        onSearchReq <- Flow.search merchant merchantOperatingCity config integratedBPPConfig' bapConfig searchReq routeDetails
         processOnSearch onSearchReq
   where
     processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()
@@ -78,9 +81,9 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
 
-init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
+init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> m ()
+init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) (Just platformType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Nothing -> do
       providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
@@ -97,9 +100,9 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       (merchant', booking') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking'
 
-cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
-cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
+cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
+cancel merchant merchantOperatingCity bapConfig cancellationType booking platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) (Just platformType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Nothing -> do
       fork "FRFS ONDC Cancel Req" $ do
@@ -114,9 +117,9 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
     Just _config -> return ()
 
-confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
-confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
+confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
+confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) (Just platformType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Nothing -> do
       fork "FRFS ONDC Confirm Req" $ do
@@ -133,9 +136,9 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig config bapConfig (mRiderName, mRiderNumber) booking
         onConfirmHandler onConfirmReq
 
-status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> Flow ()
-status merchantId merchantOperatingCity bapConfig booking = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
+status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
+status merchantId merchantOperatingCity bapConfig booking platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) (Just platformType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Nothing -> do
       void $ CallFRFSBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId
@@ -148,9 +151,9 @@ status merchantId merchantOperatingCity bapConfig booking = do
       (merchant', booking') <- DOnStatus.validateRequest bookingOnStatusReq
       DOnStatus.onStatus merchant' booking' bookingOnStatusReq
 
-verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> Flow ()
-verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encryptedQrData = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= return . fmap (.providerConfig)
+verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Flow ()
+verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encryptedQrData platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) (Just platformType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Just config -> do
       onStatusReq <- Flow.verifyTicket merchantId merchantOperatingCity config bapConfig encryptedQrData
@@ -162,9 +165,9 @@ verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encrypte
       (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
       DOnStatus.onStatus merchant' booking' verificationOnStatusReq
 
-getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
-getFares riderId merchant merchantOperatingCity bapConfig routeCode startStationCode endStationCode vehicleCategory = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= return . fmap (.providerConfig)
+getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> DIBC.PlatformType -> m [FRFSUtils.FRFSFare]
+getFares riderId merchant merchantOperatingCity bapConfig routeCode startStationCode endStationCode vehicleCategory platformType = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) (Just platformType) >>= return . fmap (.providerConfig)
   case integratedBPPConfig of
     Just config -> Flow.getFares riderId merchant merchantOperatingCity config bapConfig routeCode startStationCode endStationCode vehicleCategory
     Nothing -> return []

@@ -19,6 +19,7 @@ module Storage.CachedQueries.Station
   )
 where
 
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Station
 import Kernel.Prelude
@@ -27,14 +28,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Station as Queries
 
-findByStationCode :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Station)
-findByStationCode stationCode = do
+findByStationCode :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DIBC.IntegratedBPPConfig -> m (Maybe Station)
+findByStationCode stationCode integratedBPPConfigId = do
   let key = makeStationCodeKey stationCode
   Hedis.safeGet key >>= \case
     Just a -> return $ Just a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheByStationCode /=<< Queries.findByStationCode stationCode
+    findAndCache = flip whenJust cacheByStationCode /=<< Queries.findByStationCode stationCode integratedBPPConfigId
 
 makeStationCodeKey :: Text -> Text
 makeStationCodeKey stationCode = "CachedQueries:Station:StationCode:" <> stationCode
@@ -45,14 +46,14 @@ cacheByStationCode station = do
   let key = makeStationCodeKey station.code
   Hedis.setExp key station expTime
 
-findByStationCodeAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperatingCity -> m (Maybe Station)
-findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId = do
+findByStationCodeAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Text -> Id DMOC.MerchantOperatingCity -> Id DIBC.IntegratedBPPConfig -> m (Maybe Station)
+findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId integratedBPPConfigId = do
   let key = makeStationCodeAndOpCityKey stationCode merchantOperatingCityId
   Hedis.safeGet key >>= \case
     Just a -> return $ Just a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheByStationCodeAndMerchantOperatingCityId /=<< Queries.findByStationCodeAndMerchantOperatingCityId stationCode merchantOperatingCityId
+    findAndCache = flip whenJust cacheByStationCodeAndMerchantOperatingCityId /=<< Queries.findByStationCode stationCode integratedBPPConfigId
 
 makeStationCodeAndOpCityKey :: Text -> Id DMOC.MerchantOperatingCity -> Text
 makeStationCodeAndOpCityKey stationCode merchantOperatingCityId = "CachedQueries:Station:StationCode:" <> stationCode <> ":merchantOperatingCityId:" <> merchantOperatingCityId.getId

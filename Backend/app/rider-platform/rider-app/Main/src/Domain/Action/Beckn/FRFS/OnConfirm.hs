@@ -31,6 +31,7 @@ import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import qualified Domain.Types.Person as Person
@@ -85,7 +86,7 @@ validateRequest DOrder {..} = do
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
-      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking
+      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking DIBC.APPLICATION
       throwM $ InvalidRequest "Booking expired, initated cancel request"
     else return (merchant, booking)
 
@@ -95,7 +96,7 @@ onConfirmFailure bapConfig ticketBooking = do
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
   void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING ticketBooking.id
-  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking
+  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking DIBC.APPLICATION
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do

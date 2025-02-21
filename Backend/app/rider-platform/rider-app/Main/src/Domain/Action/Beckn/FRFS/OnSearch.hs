@@ -16,6 +16,7 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
+import BecknV2.FRFS.Utils
 import Data.Aeson
 -- import Data.Text hiding(map,zip,find,length,null,any)
 import Data.List (sortBy)
@@ -24,6 +25,7 @@ import qualified Data.Text as T
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
 import EulerHS.Prelude (comparing, toStrict)
@@ -37,6 +39,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
@@ -171,8 +174,9 @@ mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch ->
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
-  startStation <- QStation.findByStationCodeAndMerchantOperatingCityId dStartStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
-  endStation <- QStation.findByStationCodeAndMerchantOperatingCityId dEndStation.stationCode search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and merchantOperatingCityId: " <> search.merchantOperatingCityId.getId)
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) search.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) (Just DIBC.APPLICATION) >>= fromMaybeM (InternalError "integratedBPPConfig is missing")
+  startStation <- QStation.findByStationCode dStartStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  endStation <- QStation.findByStationCode dEndStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText

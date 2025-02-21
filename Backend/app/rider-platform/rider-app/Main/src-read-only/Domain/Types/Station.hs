@@ -5,6 +5,7 @@ module Domain.Types.Station where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.StationType
@@ -17,6 +18,7 @@ data Station = Station
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     code :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

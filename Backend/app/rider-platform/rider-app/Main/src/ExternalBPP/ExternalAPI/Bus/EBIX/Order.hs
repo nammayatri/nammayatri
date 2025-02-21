@@ -1,6 +1,8 @@
 module ExternalBPP.ExternalAPI.Bus.EBIX.Order where
 
 import API.Types.UI.FRFSTicketService
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.Time as Time
@@ -17,6 +19,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
+import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
@@ -94,15 +97,19 @@ createOrder config qrTtl booking = do
 -- {tt: [{t: "37001,37017,1,0,5,10-10-2024 19:04:54,2185755416,13,5185,,,,,130,,,"}]}
 getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config qrTtl booking routeStation = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) booking.merchantOperatingCityId (BecknSpec.BUS) (Just Domain.Types.IntegratedBPPConfig.APPLICATION) >>= fromMaybeM (InternalError "integratedBPPConfig is missing")
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
       endStation = last routeStation.stations
-  fromStation <- B.runInReplica $ QStation.findByStationCodeAndMerchantOperatingCityId startStation.code booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ startStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
-  toStation <- B.runInReplica $ QStation.findByStationCodeAndMerchantOperatingCityId endStation.code booking.merchantOperatingCityId >>= fromMaybeM (StationNotFound $ endStation.code <> " for merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId)
-  route <- B.runInReplica $ QRoute.findByRouteCode routeStation.code >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code)
-  toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code)
+  fromStation <- B.runInReplica $ QStation.findByStationCode startStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- B.runInReplica $ QStation.findByStationCode endStation.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  route <- do
+    B.runInReplica $
+      QRoute.findByRouteCode routeStation.code integratedBPPConfig.id
+        >>= fromMaybeM (RouteNotFound routeStation.code)
+  fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfig.id >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfig.id.getId)
+  toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfig.id >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfig.id.getId)
   now <- addUTCTime (secondsToNominalDiffTime 19800) <$> getCurrentTime
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do

@@ -17,6 +17,7 @@ data StationT f = StationT
   { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     code :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     merchantId :: B.C f Kernel.Prelude.Text,

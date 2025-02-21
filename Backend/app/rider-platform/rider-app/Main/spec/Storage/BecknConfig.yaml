@@ -88,19 +88,23 @@ IntegratedBPPConfig:
   tableName: integrated_bpp_config
 
   fields:
+    id: Id IntegratedBPPConfig
     domain: Text
     providerConfig: ProviderConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     vehicleCategory: VehicleCategory|NoRelation
+    platformType: Maybe PlatformType
 
   beamFields:
     providerConfig:
       configJSON: Data.Aeson.Value
 
   types:
+    PlatformType:
+      enum: "MULTIMODAL, PARTNERORG, APPLICATION"
     ProviderConfig:
-      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig"
+      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig" #, ONDC ONDCConfig"
       derive': "Generic, FromJSON, ToJSON, Eq"
 
   fromTType:
@@ -111,6 +115,7 @@ IntegratedBPPConfig:
 
   sqlType:
     configJSON: json
+    platformType: text
 
   constraints:
     merchantId: PrimaryKey
@@ -130,11 +135,11 @@ IntegratedBPPConfig:
     findByDomainAndCityAndVehicleCategory:
       kvFunction: findOneWithKV
       where:
-        and: [domain, merchantOperatingCityId, vehicleCategory]
+        and: [domain, merchantOperatingCityId, vehicleCategory, platformType]
 
   cachedQueries:
     findByDomainAndCityAndVehicleCategory:
-      keyParams: [domain, merchantOperatingCityId, vehicleCategory]
+      keyParams: [domain, merchantOperatingCityId, vehicleCategory, platformType]
       dbQuery: findByDomainAndCityAndVehicleCategory
-      dbQueryParams: [domain, merchantOperatingCityId, vehicleCategory]
+      dbQueryParams: [domain, merchantOperatingCityId, vehicleCategory, platformType]
       queryType: FindAndCache
