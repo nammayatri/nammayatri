@@ -126,6 +126,9 @@ android {
             buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
             buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
 
+            buildConfigField "String", "CLEVERTAP_SC_API_KEY", properties.getProperty("CLEVERTAP_SC_API_KEY", "")
+            buildConfigField "String", "CLEVERTAP_SC_ACCOUNT_ID", properties.getProperty("CLEVERTAP_SC_ACCOUNT_ID", "")
+
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
             resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
@@ -146,6 +149,9 @@ android {
             buildConfigField "String", "RS_ALGO", properties.getProperty("RS_ALGO", "")
             buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
             buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
+
+            buildConfigField "String", "CLEVERTAP_SC_API_KEY", properties.getProperty("CLEVERTAP_SC_API_KEY","")
+            buildConfigField "String", "CLEVERTAP_SC_ACCOUNT_ID", properties.getProperty("CLEVERTAP_SC_ACCOUNT_ID","")
 
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
@@ -381,7 +387,11 @@ dependencies {
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
     implementation 'com.github.bumptech.glide:glide:4.12.0'
     implementation 'androidx.core:core:1.4.0'
-    implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
+    implementation 'com.clevertap.android:clevertap-android-sdk:6.0.0'
+    implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.7.7"
+    implementation('io.socket:socket.io-client:2.1.0') {
+        exclude group: 'org.json', module: 'json'
+    }
     implementation 'com.clevertap.android:push-templates:1.0.9'
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.2'

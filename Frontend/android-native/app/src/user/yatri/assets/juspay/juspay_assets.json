@@ -758,6 +758,8 @@
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
+      "round_corner": true,
+      "round_corner_button": true,
       "widget_close_gradient" : true,
       "zone_curve" : true,
       "ny_ic_earn_through_parcel" : true,

@@ -321,6 +321,16 @@ type BundleLottieConfig = {
 , enable :: Boolean
 }
 
+type VoipConfig = {
+  customer :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  },
+  driver :: {
+    enableVoipFeature :: Boolean,
+    enableVoipCalling :: Boolean
+  }
+}
 type InvoiceConfig = {
   isEnabled :: Maybe Boolean
 }

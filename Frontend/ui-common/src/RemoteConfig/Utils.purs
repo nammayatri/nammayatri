@@ -494,6 +494,18 @@ getConfigForVariant variant config =
     "HERITAGE_CAB" -> config.heritageCab
     _ -> config.default
       
+defaultVoipConfig :: Types.VoipConfig
+defaultVoipConfig = {
+  customer : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  },
+  driver : {
+    enableVoipFeature : false,
+    enableVoipCalling : false
+  }
+}
+
 getInvoiceConfig :: String -> String -> InvoiceConfig
 getInvoiceConfig variant city =
   let remoteConfig = fetchRemoteConfigString "show_invoice_text_config"
