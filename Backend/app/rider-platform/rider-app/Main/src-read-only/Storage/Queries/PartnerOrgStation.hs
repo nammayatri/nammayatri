@@ -16,6 +16,12 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.PartnerOrgStation as Beam
 
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PartnerOrgStation.PartnerOrgStation -> m ())
+create = createWithKV
+
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PartnerOrgStation.PartnerOrgStation] -> m ())
+createMany = traverse_ create
+
 findByPOrgIdAndPOrgStationId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> Kernel.Types.Id.Id Domain.Types.PartnerOrgStation.PartnerOrgStation -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
