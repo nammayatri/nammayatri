@@ -1,0 +1,83 @@
+
+types:
+  RideBookingResp:
+    isAlreadyFavorite: Bool
+    favCount: Int
+
+  RatingReq:
+    shouldFavDriver: Maybe Bool,
+    riderPhoneNum: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /rideBooking/list
+      auth: TokenAuth
+      response:
+        type: RideBookingResp
+
+  - POST:
+      endpoint: /feedback/rateRide
+      auth: TokenAuth
+      request: RatingReq
+      response:
+        type: APISuccess
+
+storage:
+  - bap:
+      Ride:
+        fields:
+          isAlreadyFav: Maybe Bool
+          favCount: Maybe Int
+  - bpp:
+      RiderDriverCorrelation:
+        RiderDriverCorrelation.yaml # reference to yaml file or the file here?
+      DriverStats:
+        fields:
+          favRiderCount: Int
+        queries:
+          incFavouriteRiderCount:
+            kvFunction: updateOneWithKV
+            where:
+              and: [driverId]
+          # incFavouriteRiderCount :: Id Driver -> m ()  -- existing query type as in yaml or function signature
+      Rating:
+        fields:
+          isFavourite: Bool
+
+beckntags:
+  - bppToBap:
+      DRIVER_TAGS:
+        IS_ALREADY_FAVOURITE
+        FAVOURITE_COUNT
+  - bapToBpp:
+      RATING_TAGS:
+        SHOULD_FAVOURITE_DRIVER
+        RIDER_PHONE_NUMBER
+
+screenTypes:
+  - HomeScreen:
+      DriverInfoCard:
+        isAlreadyFavorite: Bool
+        favCount: Int
+        isNowFavourite: Bool
+
+compType:
+  - RatingCardConfig:
+      data:
+        isAlreadyFavorite: Bool
+        favCount: Int
+        driverName: Text
+        isNowFavourite: Bool
+
+actions:
+  - Rating:
+      Favourite
+
+comments:
+  -bap:
+    - View:
+        - RatingCard: Change the view to show thumbs up / down and push 5 / 0 ratings.
+    - Controller:
+        -RatingCard: Show the favourite driver card if the rating is 5 and the Favourite event has been pushed
+    - Action:
+        Ride: Add driver details to the ride booking response
