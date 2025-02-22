@@ -31,6 +31,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Id as ID
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
@@ -52,20 +53,20 @@ data CallEventReq = CallEventReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-logCallEvent :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => CallEventReq -> m APISuccess.APISuccess
-logCallEvent CallEventReq {..} = do
+logCallEvent :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => CallEventReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
+logCallEvent CallEventReq {..} bundleVersion clientVersion _ _ = do
   when (callType == "ANONYMOUS_CALLER") $ callOnClickTracker rideId
-  sendCallDataToKafka Nothing (Just rideId) (Just callType) Nothing Nothing User (Just exophoneNumber)
+  sendCallDataToKafka Nothing (Just rideId) (Just callType) Nothing Nothing User (Just exophoneNumber) bundleVersion clientVersion
   pure APISuccess.Success
 
-sendCallDataToKafka :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> m ()
-sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber = do
+sendCallDataToKafka :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> Maybe Version -> Maybe Version -> m ()
+sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber bundleVersion clientVersion = do
   case mRideId of
     Just rideId -> do
       ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ getId ride.bookingId)
-      triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just booking.riderId) exophoneNumber
-    Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType Nothing callSid callStatus Nothing triggeredBy Nothing exophoneNumber
+      triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just booking.riderId) exophoneNumber bundleVersion clientVersion
+    Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType Nothing callSid callStatus Nothing triggeredBy Nothing exophoneNumber bundleVersion clientVersion
 
 callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id Ride.Ride -> m ()
 callOnClickTracker rideId = do
