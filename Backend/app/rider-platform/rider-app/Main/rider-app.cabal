@@ -1041,6 +1041,7 @@ library
     , geohash ==1.0.1
     , hashable
     , haskell-cac
+    , hedis
     , http-api-data
     , http-client
     , http-client-tls
@@ -1175,6 +1176,7 @@ executable rider-app-exe
     , filepath
     , geohash ==1.0.1
     , hashable
+    , hedis
     , http-api-data
     , http-client
     , http-client-tls

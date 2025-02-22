@@ -306,6 +306,15 @@ SeatManagement:
       params: [booked]
       where:
         and: [ticketServiceCategoryId, date]
+    safeUpdateBookedSeats:
+      kvFunction: updateWithKV
+      params: [booked]
+      where:
+        and:
+         - ticketServiceCategoryId
+         - date
+         - lt:
+            - booked
     updateBlockedSeats:
       kvFunction: updateWithKV
       params: [blocked]
@@ -336,6 +345,7 @@ TicketBooking:
     bookedSeats: Int
     cancelledSeats: Maybe Int
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    blockExpirationTime: Maybe Double
 
   beamType:
     vendorSplitDetails: Maybe Value
