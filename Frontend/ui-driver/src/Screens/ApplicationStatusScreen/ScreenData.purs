@@ -16,6 +16,7 @@
 module Screens.ApplicationStatusScreen.ScreenData where
 
 import Screens.Types
+import ConfigProvider
 
 initData :: ApplicationStatusScreenState
 initData = {
@@ -23,7 +24,8 @@ initData = {
     dlVerificationStatus : "",
     rcVerificationStatus : "",
     mobileNumber : "",
-    otpValue : ""
+    otpValue : "",
+    config : getAppConfig appConfig
     },
   props : {
       isSelected : true,

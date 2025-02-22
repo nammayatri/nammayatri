@@ -20,7 +20,7 @@ import Prelude (bind, pure, discard, ($), (<$>))
 import Screens.DocumentCaptureScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.DocumentCaptureScreen.View as DocumentCaptureScreen
 import Types.App (FlowBT, GlobalState(..), DOCUMENT_CAPTURE_SCREEN_OUTPUT(..),ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -30,7 +30,7 @@ import Resource.Constants as Const
 documentCaptureScreen :: FlowBT String DOCUMENT_CAPTURE_SCREEN_OUTPUT
 documentCaptureScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DocumentCaptureScreen.screen state.documentCaptureScreen
+  action <- lift $ lift $ runLoggableScreen $ DocumentCaptureScreen.screen state.documentCaptureScreen
   case action of
     GoBack -> App.BackT $ pure App.GoBack 
     UploadAPI updatedState -> do

@@ -31,7 +31,7 @@ import Log (printLog)
 import Presto.Core.Types.Language.Flow (doAff)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Engineering.Helpers.Events as Events
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
@@ -46,7 +46,7 @@ homeScreen = do
   logField_ <- lift $ lift $ getLogFields
   (GlobalState state) <- getState
   liftFlowBT $ markPerformance "HOME_SCREEN"
-  action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}} (GlobalState state)
+  action <- lift $ lift $ runLoggableScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}} (GlobalState state)
   (GlobalState updatedGlobalState) <- getState
   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { bgLocPopupShown = updatedGlobalState.globalProps.bgLocPopupShown || updatedGlobalState.homeScreen.props.bgLocationPopup }
   case action of

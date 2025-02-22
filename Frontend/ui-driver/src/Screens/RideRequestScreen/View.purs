@@ -29,7 +29,7 @@ import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, onScrollStateChange, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, setEnable)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, frameLayout, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout, alignParentBottom, id, onAnimationEnd, swipeRefreshLayout, onRefresh, onScroll, nestedScrollView, enableRefresh)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, LoggableScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, frameLayout, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout, alignParentBottom, id, onAnimationEnd, swipeRefreshLayout, onRefresh, onScroll, nestedScrollView, enableRefresh)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -50,7 +50,7 @@ import Data.Array (mapWithIndex , (!!), length, null)
 import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo, getHvErrorMsg)
 
 
-screen :: RideRequestScreenState -> ListItem -> Screen Action RideRequestScreenState ScreenOutput
+screen :: RideRequestScreenState -> ListItem -> LoggableScreen Action RideRequestScreenState ScreenOutput
 screen initialState listItem =
 
     { initialState
@@ -72,7 +72,12 @@ screen initialState listItem =
               _ = spy "RideRequestScreen action --------" action
             eval action state
         )
-    }
+  , parent : Nothing
+  , logWhitelist
+  }
+
+logWhitelist :: Array String
+logWhitelist = []
 
 view :: forall w. ListItem -> (Action -> Effect Unit) -> RideRequestScreenState -> PrestoDOM (Effect Unit) w
 view listItem push state =

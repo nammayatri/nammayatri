@@ -35,7 +35,19 @@ import Screens.AddVehicleDetailsScreen.Controller (dateFormat)
 import Screens.Types (AadhaarStage(..), AadhaarVerificationScreenState)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AadhaarNumberEditText _) = "AadhaarNumberEditText"
+  show (AadhaarOtpEditText _) = "AadhaarOtpEditText"
+  show (AadhaarNameEditText _) = "AadhaarNameEditText"
+  show (AadhaarGenderEditText _) = "AadhaarGenderEditText"
+  show (PrimaryButtonAC _) = "PrimaryButtonAC"
+  show (ResendOTP) = "ResendOTP"
+  show (AfterRender) = "AfterRender"
+  show (ResendTimer _) = "ResendTimer"
+  show (Logout) = "Logout"
+  show (PopUpModalAC _) = "PopUpModalAC"
+  show (SelectDateOfBirthAction) = "SelectDateOfBirthAction"
+  show (DatePicker _ _ _ _ _) = "DatePicker"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

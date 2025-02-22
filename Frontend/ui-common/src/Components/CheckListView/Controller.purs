@@ -16,8 +16,13 @@
 module Components.CheckListView.Controller where
 
 import Common.Types.App (CheckBoxOptions)
+import Prelude (class Show)
 
 data Action = NoAction | ChangeCheckBoxSate CheckBoxOptions
+
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (ChangeCheckBoxSate _) = "ChangeCheckBoxSate"
 
 type Config = { 
       optionsProvided :: Array CheckBoxOptions, 

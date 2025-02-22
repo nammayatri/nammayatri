@@ -18,7 +18,7 @@ module Screens.DriverRideRatingScreen.Controller where
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Screens.Types (DriverRideRatingScreenState, FeedbackSuggestions(..))
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, ($), bind, discard)
+import Prelude (class Show, pure, unit, ($), bind, discard, show, (<>))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import JBridge (hideKeyboardOnNavigation)
@@ -28,7 +28,13 @@ import Language.Types(STR(..))
 import Data.Maybe
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (FeedbackChanged _) = "FeedbackChanged"
+  show (FeedBackClick _) = "FeedBackClick"
+  show (Rating _) = "Rating"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_RIDE_RATING_SCREEN)

@@ -6,6 +6,8 @@ import Screens.Types as S
 import Services.API
 import Common.Types.App as CTA
 import Data.Maybe
+import ConfigProvider
+import MerchantConfig.Types (AppConfig)
 
 type ScheduleRideAcceptedScreenState = {
   data :: ScheduleRideAcceptedScreenData,
@@ -13,7 +15,7 @@ type ScheduleRideAcceptedScreenState = {
 }
 
 type ScheduleRideAcceptedScreenData = {
-
+  config :: AppConfig
 }
 
 type ScheduleRideAcceptedScreenProps ={
@@ -22,7 +24,9 @@ type ScheduleRideAcceptedScreenProps ={
 
 initData ::ScheduleRideAcceptedScreenState 
 initData  = {
- data :{},
+ data :{
+  config : getAppConfig appConfig
+ },
  props :{}
 }
 

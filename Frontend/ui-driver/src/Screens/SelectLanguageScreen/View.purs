@@ -21,13 +21,14 @@ import Common.Types.App (LazyCheck(..))
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton as MenuButton
 import Data.Array as DA
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<<<), (==), unit, not)
-import PrestoDOM (visibility, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, rippleColor, cornerRadius)
+import PrestoDOM (visibility, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, rippleColor, cornerRadius)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -41,7 +42,7 @@ import JBridge as JB
 import Mobility.Prelude(boolToVisibility)
 import Common.RemoteConfig as RC
 
-screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
+screen :: ST.SelectLanguageScreenState -> LoggableScreen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -52,6 +53,8 @@ screen initialState =
         let _ = spy "SelectLanguageScreen action " action
         let _ = spy "SelectLanguageScreen state " state
         eval action state
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.splashScreenLogWhitelist
   }
 
 view

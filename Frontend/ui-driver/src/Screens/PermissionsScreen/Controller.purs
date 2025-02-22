@@ -28,7 +28,7 @@ import JBridge (checkAndAskNotificationPermission, checkOverlayPermission, fireb
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
-import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void)
+import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void, show, (<>))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -36,7 +36,22 @@ import Screens.PermissionsScreen.ScreenData (Permissions(..))
 import Screens.Types (PermissionsScreenState)
 
 instance showAction :: Show Action where
-    show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (ItemClick _) = "ItemClick"
+  show (UpdateNotificationPermissionState) = "UpdateNotificationPermissionState"
+  show (UpdateOverlayPermissionState) = "UpdateOverlayPermissionState"
+  show (NotificationPermissionCallBack _) = "NotificationPermissionCallBack"
+  show (OverlayPermissionSwitchCallBack _) = "OverlayPermissionSwitchCallBack"
+  show (BatteryUsagePermissionCallBack _) = "BatteryUsagePermissionCallBack"
+  show (LocationPermissionCallBack _) = "LocationPermissionCallBack"
+  show (UpdateLocationPermissionState) = "UpdateLocationPermissionState"
+  show (UpdateBatteryPermissionState) = "UpdateBatteryPermissionState"
+  show (AfterRender) = "AfterRender"
+  show (UpdateAllChecks _) = "UpdateAllChecks"
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of

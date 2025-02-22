@@ -29,7 +29,13 @@ import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Data.Array (elem)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed _) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (ShowDemoPopUp) = "ShowDemoPopUp"
+  show (PopUpModalDemoModeAction var1) = "PopUpModalDemoModeAction_" <> show var1
+  show (TermsAndConditionAction) = "TermsAndConditionAction"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ABOUT_US_SCREEN)
@@ -37,7 +43,7 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen ABOUT_US_SCREEN)
       if flag then trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "in_screen" "backpress_in_demo_mode_popup"
         else trackAppEndScreen appId (getScreen ABOUT_US_SCREEN)
-    ShowDemoPopUp -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "show_demo_popup_onclick"
+    ShowDemoPopUp -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "show_demo_popup_onclick__sai_testing"
     PopUpModalDemoModeAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "button_1_onclick"
       PopUpModal.OnButton2Click -> do

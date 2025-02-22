@@ -18,6 +18,20 @@ module Components.ChatView.Controller where
 import PrestoDOM.Types.DomAttributes (Padding(..), Margin(..))
 import Data.Maybe (Maybe(..))
 
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (SendMessage) = "SendMessage"
+  show (SendSuggestion _) = "SendSuggestion"
+  show (BackPressed) = "BackPressed"
+  show (TextChanged _) = "TextChanged"
+  show (EnableSuggestions) = "EnableSuggestions"
+  show (Call) = "Call"
+  show (Navigate) = "Navigate"
+  show (NoAction) = "NoAction"
+  show (OnImageClick _) = "OnImageClick"
+  show (MessageAnimationEnd) = "MessageAnimationEnd"
+
 data Action = SendMessage
             | SendSuggestion String
             | BackPressed

@@ -21,7 +21,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard, (==), Unit)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.DriverProfileScreen.Controller (ScreenOutput(..))
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverProfileScreen.View as DriverProfileScreen
@@ -36,7 +36,7 @@ driverProfileScreen :: FlowBT String DRIVER_PROFILE_SCREEN_OUTPUT
 driverProfileScreen = do
   (GlobalState gbstate) <- getState
   logField_ <- lift $ lift $ getLogFields
-  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen gbstate.driverProfileScreen{data{logField = logField_}}
+  action <- lift $ lift $ runLoggableScreen $ DriverProfileScreen.screen gbstate.driverProfileScreen{data{logField = logField_}}
   case action of
     GoToDriverDetailsScreen updatedState -> do
       modifyScreenState $ DriverDetailsScreenStateType (\driverDetails ->

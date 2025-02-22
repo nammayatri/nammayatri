@@ -5,6 +5,7 @@ import Data.Maybe
 import Screens.Types
 import Foreign.Object (empty)
 import Screens.Types as ST
+import ConfigProvider
 
 initData :: ST.UploadParcelImageScreenState
 initData = {
@@ -12,7 +13,8 @@ initData = {
         rideId : "",
         imagePath : "",
         errorMessage : Nothing,
-        imageId : ""
+        imageId : "",
+        config : getAppConfig appConfig
     },
     props: {
         showConfirmAndUploadButton : false,

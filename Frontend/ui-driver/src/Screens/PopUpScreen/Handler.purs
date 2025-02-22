@@ -20,7 +20,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Screens.PopUpScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen, runScreenWithNameSpace,initUIWithNameSpace)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen,initUIWithNameSpace)
 import Presto.Core.Types.Language.Flow (doAff)
 import Screens.PopUpScreen.View as PopUpScreen
 import Types.App (GlobalState(..), FlowBT, POPUP_SCREEN_OUTPUT(..), ScreenType(..))
@@ -36,7 +36,7 @@ popUpScreen :: FlowBT String POPUP_SCREEN_OUTPUT
 popUpScreen = do
     (GlobalState state) <- getState
     _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PopUpScreen" Nothing
-    action <- lift $ lift $ runScreenWithNameSpace $ PopUpScreen.screen state.popUpScreen
+    action <- lift $ lift $ runLoggableScreen $ PopUpScreen.screen state.popUpScreen
     _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "PopUpScreen"
     case action of
         GoBack -> App.BackT $ pure App.GoBack

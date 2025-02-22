@@ -28,7 +28,22 @@ import Helpers.Utils as HU
 import Screens.Types as ST
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (ToggleRidePreference var1) = "ToggleRidePreference_" <> show var1
+  show (UpdateACAvailability _) = "UpdateACAvailability"
+  show (CallSupport) = "CallSupport"
+  show (ShowACVideoPopup) = "ShowACVideoPopup"
+  show (TopAcDriverAction var1) = "TopAcDriverAction_" <> show var1
+  show (OpenLink _) = "OpenLink"
+  show (ToggleRentalRide) = "ToggleRentalRide"
+  show (ToggleIntercityRide) = "ToggleIntercityRide"
+  show (UpdateRateCard var1) = "UpdateRateCard_" <> show var1
+  show (ShowRateCard var1) = "ShowRateCard_" <> show var1
+  show (RateCardAction var1) = "RateCardAction_" <> show var1
+  show (RateCardBannerClick) = "RateCardBannerClick"
+  show (ServiceTierInfoVideo var1) = "ServiceTierInfoVideo_" <> show var1
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

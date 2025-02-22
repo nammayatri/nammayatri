@@ -16,7 +16,7 @@
 
 module Screens.DocumentCaptureScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Effect (Effect)
@@ -50,8 +50,9 @@ import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
+import Data.Maybe (Maybe(..))
 
-screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
+screen :: ST.DocumentCaptureScreenState -> LoggableScreen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
   { initialState
   , view
@@ -68,7 +69,10 @@ screen initialState =
           let _ = spy "DocumentCaptureScreen --------action" action
           eval state action
         ) 
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.documentCaptureScreenLogWhitelist
   }
+
 
 view :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w 
 view push state = 

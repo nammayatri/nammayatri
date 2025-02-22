@@ -17,10 +17,12 @@ module Screens.DriverDetailsScreen.ScreenData where
 
 import Screens.Types(DriverDetailsScreenState, KeyboardModalType(..))
 import Data.Maybe
+import ConfigProvider
 
 initData :: DriverDetailsScreenState
 initData = {
   data:  {
+    config : getAppConfig appConfig,
     driverName : "",
     driverVehicleType : "",
     driverRating : Just 2.0,

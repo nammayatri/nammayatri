@@ -17,6 +17,10 @@ module Components.SelectMenuButton.Controller where
 
 import PrestoDOM (Margin(..), Padding(..))
 import Styles.Types (Color)
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (OnSelection _) = "OnSelection"
 
 data Action = OnSelection State
 

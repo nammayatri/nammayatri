@@ -3,7 +3,7 @@ import Types.App
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Prelude
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.RideRequestScreen.View as RideRequestScreen
 import Types.ModifyScreenState (modifyScreenState)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
@@ -25,7 +25,7 @@ rideRequestScreen = do
   (GlobalState state) <- getState
   push <- liftFlowBT $ getPushFn Nothing "RideRequestScreen"
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ RideRequestCard.view (push <<< RideRequestCardActionController) 
-  act <- lift $ lift $ runScreen $ RideRequestScreen.screen state.rideRequestScreen{data{pillViewArray = rideTypePills (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW")}} listItemm
+  act <- lift $ lift $ runLoggableScreen $ RideRequestScreen.screen state.rideRequestScreen{data{pillViewArray = rideTypePills (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW")}} listItemm
   case act of
     GoBack updatedState  -> do 
       modifyScreenState $ RideRequestScreenStateType (\_ -> updatedState)

@@ -64,7 +64,7 @@ import Control.Monad.Except.Trans (lift)
 import Presto.Core.Flow (doAff)
 import Effect.Class (liftEffect)
 
-screen :: RideSummaryScreenState -> Screen Action RideSummaryScreenState ScreenOutput
+screen :: RideSummaryScreenState -> LoggableScreen Action RideSummaryScreenState ScreenOutput
 screen initialState =  
   { initialState
   , view : view
@@ -121,6 +121,8 @@ screen initialState =
     let _ = spy "RideSummaryScreen state -----" state
     let _ = spy "RideSummaryScreen action --------" action
     eval action state)
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.rideSummaryScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> PrestoDOM (Effect Unit) w 

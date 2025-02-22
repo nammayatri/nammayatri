@@ -21,7 +21,11 @@ import Font.Style(Style(..))
 import Data.Maybe (Maybe(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-import Prelude (class Eq)
+import Prelude (class Eq, class Show)
+
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
+  show (NoAction) = "NoAction"
 
 
 data Action = OnClick

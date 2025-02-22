@@ -20,6 +20,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
 import Data.Maybe (Maybe(..))
+import Prelude (show, class Show, (<>))
 
 type IssueState = {
     firstTextConfig :: TextConfig ,
@@ -30,6 +31,11 @@ type IssueState = {
     headingText :: String,
     issue :: IssueInfo 
 }
+
+instance showAction :: Show Action where
+  show (Remove _) = "Remove"
+  show (CallSupportCenter) = "CallSupportCenter"
+  show (IssueClick _) = "IssueClick"
 
 data Action = Remove String
             | CallSupportCenter

@@ -15,7 +15,7 @@
 
 module Screens.VehicleDetailsScreen.Controller where
 
-import Prelude (class Show, bind, not, pure, unit, ($), (/=), discard)
+import Prelude (class Show, bind, not, pure, unit, ($), (/=), discard, (<>), show)
 import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (VehicleDetailsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
@@ -33,7 +33,18 @@ import Helpers.Utils(getVehicleType)
 import Common.Types.App
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction ) = "NoAction"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (ToggleScreenMode ) = "ToggleScreenMode"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (SelectVehicleType ) = "SelectVehicleType"
+  show (BackPressed ) = "BackPressed"
+  show (SelectVehicleTypeModalAction var1) = "SelectVehicleTypeModalAction_" <> show var1
+  show (PreviewImage ) = "PreviewImage"
+  show (RemoveImageClick ) = "RemoveImageClick"
+  show (UploadImage ) = "UploadImage"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (AfterRender ) = "AfterRender"
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen VEHICLE_DETAILS_SCREEN)

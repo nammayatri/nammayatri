@@ -4,7 +4,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard, (==), (+), not)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.DriverCompleteProfileScreen.Controller (ScreenOutput(..))
 import Screens.DriverCompleteProfileScreen.View as DriverCompleteProfileScreen
 import Types.App (DRIVER_COMPLETE_PROFILE_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
@@ -19,7 +19,7 @@ import Data.Array (null)
 driverCompleteProfileScreen :: FlowBT String DRIVER_COMPLETE_PROFILE_SCREEN_OUTPUT
 driverCompleteProfileScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverCompleteProfileScreen.screen state.driverCompleteProfileScreen (GlobalState state)
+  action <- lift $ lift $ runLoggableScreen $ DriverCompleteProfileScreen.screen state.driverCompleteProfileScreen (GlobalState state)
   case action of
     SubmitRes updatedState -> do
       let completedModules = getValueBtwRange (boolToInt (not $ null updatedState.data.pledge) + boolToInt (not $ null updatedState.data.aspirations) + boolToInt (not $ isNothing updatedState.data.drivingSince) + boolToInt (not $ isNothing updatedState.data.homeTown) + boolToInt (not $ null updatedState.data.vehicalOffer) + boolToInt (not $ null updatedState.data.uploadedImagesIds) ) 0 6 0 4

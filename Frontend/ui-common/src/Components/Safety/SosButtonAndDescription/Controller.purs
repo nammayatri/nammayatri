@@ -12,6 +12,12 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Styles.Colors as Color
 import Components.Safety.Utils (MeasureViewConfig)
 
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (CountDown _ _ _) = "CountDown"
+  show (TriggerSosCountdown) = "TriggerSosCountdown"
+  show (AddContacts) = "AddContacts"
+
 data Action = NoAction | CountDown Int String String | TriggerSosCountdown | AddContacts
 
 

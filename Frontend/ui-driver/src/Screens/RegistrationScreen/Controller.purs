@@ -76,7 +76,36 @@ import Data.Tuple
 import Control.Bind (join)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (RegistrationAction _) = "RegistrationAction"
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (ChangeVehicleAC var1) = "ChangeVehicleAC_" <> show var1
+  show (VehicleMismatchAC var1) = "VehicleMismatchAC_" <> show var1
+  show (PrimaryButtonAction var1) = "PrimaryButtonAction_" <> show var1
+  show (Refresh) = "Refresh"
+  show (ContactSupport) = "ContactSupport"
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (ReferralCodeTextChanged _) = "ReferralCodeTextChanged"
+  show (EnterReferralCode _) = "EnterReferralCode"
+  show (InAppKeyboardModalAction var1) = "InAppKeyboardModalAction_" <> show var1
+  show (SupportClick _) = "SupportClick"
+  show (WhatsAppClick) = "WhatsAppClick"
+  show (CallButtonClick) = "CallButtonClick"
+  show (ChooseVehicleCategory _ _) = "ChooseVehicleCategory"
+  show (ContinueButtonAction var1) = "ContinueButtonAction_" <> show var1
+  show (ExpandOptionalDocs) = "ExpandOptionalDocs"
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
+  show (CallHV _ _) = "CallHV"
+  show (OnActivityResult _) = "OnActivityResult"
+  show (CallWorkFlow _) = "CallWorkFlow"
+  show (UpdateApkAction) = "UpdateApkAction"
+  show (StoreDataAction _ _) = "StoreDataAction"
+  show (CallHVFlowAction _) = "CallHVFlowAction"
+  show (InitFlowTxnIdAction) = "InitFlowTxnIdAction"
 
 instance loggableAction :: Loggable Action where
    performLog action appId = case action of

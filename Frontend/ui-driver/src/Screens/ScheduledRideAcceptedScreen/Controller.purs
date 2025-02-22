@@ -11,7 +11,8 @@ import Services.API
 import Screens.ScheduledRideAcceptedScreen.ScreenData
 
 instance showAction  ::  Show Action where
-  show _ = ""
+  show (OnClick ) = "OnClick"
+  show (NoAction ) = "NoAction"
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 

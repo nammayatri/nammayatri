@@ -22,7 +22,10 @@ import Font.Style (Style (..))
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>))
+import Prelude ((<>), class Show)
+
+instance showAction :: Show Action where
+  show (OnCloseClick) = "OnCloseClick"
 
 data Action = OnCloseClick
 

@@ -27,6 +27,7 @@ initData :: DriverSavedLocationScreenState
 initData =
   { data:
       { address: ""
+      , config : getAppConfig appConfig
       , currentLat: Nothing
       , currentLon: Nothing
       , maxGotoLocations : (getAppConfig appConfig).gotoConfig.maxGotoLocations
