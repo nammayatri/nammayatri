@@ -20,7 +20,7 @@ imports:
 
 DriverPoolConfig:
   tableName: driver_pool_config
-
+  derives: Generic, Show, ToJSON, FromJSON, ToSchema,Eq
   fields:
     id: Id DriverPoolConfig
     merchantId: Id Merchant

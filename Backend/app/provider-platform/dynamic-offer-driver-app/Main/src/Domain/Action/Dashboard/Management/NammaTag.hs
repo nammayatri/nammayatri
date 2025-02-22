@@ -82,8 +82,6 @@ import qualified Storage.Queries.DriverPoolConfig as SCMD
 import qualified Storage.Queries.TransporterConfig as SCMT
 import qualified Tools.DynamicLogic as TDL
 
--- import qualified Domain.Types.DriverPoolConfig as DTDP
-
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 
@@ -345,9 +343,13 @@ getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merch
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  logicElements <- CADLE.findByDomainAndVersion (Lib.Yudhishthira.Types.DRIVER_CONFIG configType) 1
-  let logics = map (.logic) logicElements
-  returnConfigs configType logics merchantOpCityId
+  mbBaseRollout <- LYSQADLR.findByCityAndDomainAndIsBase (cast merchantOpCityId) (Lib.Yudhishthira.Types.DRIVER_CONFIG configType)
+  case mbBaseRollout of
+    Just baseRollout -> do
+      baseElements <- CADLE.findByDomainAndVersion (Lib.Yudhishthira.Types.DRIVER_CONFIG configType) baseRollout.version
+      let logics = map (.logic) baseElements
+      returnConfigs configType logics merchantOpCityId
+    Nothing -> returnConfigs configType [] merchantOpCityId
   where
     returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Lib.Yudhishthira.Types.ConfigType -> [Value] -> Id MerchantOperatingCity -> m Lib.Yudhishthira.Types.TableDataResp
     returnConfigs cfgType logics merchantOpCityId = do
@@ -402,26 +404,25 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
                       [0 ..]
                       (map (\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) driverPoolCfg)
               patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              mbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig)] <-
+              cfgs :: [Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig] <-
                 mapM
                   ( \resp ->
                       case (A.fromJSON resp.result :: A.Result (Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig)) of
-                        A.Success dpc -> pure $ Just dpc
+                        A.Success dpc -> pure dpc
                         A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to driver pool config. " <> show e
                   )
                   patchedConfigs
-              when (any isNothing mbCfgs) $ throwError $ InvalidRequest "Error occurred: One or more configurations are missing in the patched configs."
-              let sortedMbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig)] = sortOn (Lib.Yudhishthira.Types.identifier . Prelude.fromJust) mbCfgs
+              let sortedCfgs :: [Lib.Yudhishthira.Types.Config DTD.DriverPoolConfig] = sortOn Lib.Yudhishthira.Types.identifier cfgs
                   configsToUpdate :: [DTD.DriverPoolConfig] =
                     catMaybes $
                       zipWith
-                        ( \cfg mbCfg ->
-                            case mbCfg of
-                              Just cfg' | cfg.identifier == cfg'.identifier && cfg /= cfg' -> Just cfg'.config
-                              _ -> Nothing
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
                         )
                         configWrapper
-                        sortedMbCfgs
+                        sortedCfgs
               mapM_ SCMD.updateByPrimaryKey configsToUpdate
             Lib.Yudhishthira.Types.DRIVER_CONFIG Lib.Yudhishthira.Types.TransporterConfig -> do
               transporterCfg <- SCMT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -431,24 +432,25 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
                       [0 ..]
                       [(\cfg -> Lib.Yudhishthira.Types.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) transporterCfg]
               patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
-              mbCfgs :: [Maybe (Lib.Yudhishthira.Types.Config DTT.TransporterConfig)] <-
+              cfgs :: [Lib.Yudhishthira.Types.Config DTT.TransporterConfig] <-
                 mapM
                   ( \resp ->
                       case (A.fromJSON resp.result :: A.Result (Lib.Yudhishthira.Types.Config DTT.TransporterConfig)) of
-                        A.Success tc -> pure $ Just tc
+                        A.Success tc -> pure tc
                         A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to transporter config. " <> show e
                   )
                   patchedConfigs
-              let configsToUpdate :: [DTT.TransporterConfig] =
+              let sortedCfgs :: [Lib.Yudhishthira.Types.Config DTT.TransporterConfig] = sortOn Lib.Yudhishthira.Types.identifier cfgs
+                  configsToUpdate :: [DTT.TransporterConfig] =
                     catMaybes $
                       zipWith
-                        ( \cfg mbCfg ->
-                            case mbCfg of
-                              Just cfg' | cfg /= cfg' -> Just cfg'.config
-                              _ -> Nothing
+                        ( \cfg1 cfg2 ->
+                            if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                              then Just cfg2.config
+                              else Nothing
                         )
                         configWrapper
-                        mbCfgs
+                        sortedCfgs
               mapM_ SCMT.update configsToUpdate
 
             -- { os :: DeviceType,
