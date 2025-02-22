@@ -651,7 +651,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
-    createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
+    createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter Nothing (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
@@ -817,7 +817,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           let scheduleAfter = riderConfig.cancellationPaymentDelay
               cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = person.id, cancellationAmount = fee, rideId = ride.id}
           logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
-          createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
+          createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter Nothing (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
         _ -> pure ()
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason

@@ -18,7 +18,7 @@ import qualified BecknV2.OnDemand.Enums as BecknEnums
 import Data.Default.Class
 import qualified Data.List as L
 import qualified Data.Text as T
-import Data.Time hiding (secondsToNominalDiffTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Domain.Action.UI.Quote as UQuote
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -356,13 +356,15 @@ notifyOnRideCompleted booking ride otherParties = do
       ]
       (Just booking.configInExperimentVersions)
   fork "Create Post ride safety job" $ do
+    curentTime <- getCurrentTime
     safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
     when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
       let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
+      let expireAt = addUTCTime (scheduleAfter + riderConfig.postRideSafetyNotificationExpireTime) curentTime
           postRideSafetyNotificationJobData = PostRideSafetyNotificationJobData {rideId = ride.id, personId = booking.riderId}
-      createJobIn @_ @'PostRideSafetyNotification ride.merchantId ride.merchantOperatingCityId scheduleAfter (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
+      createJobIn @_ @'PostRideSafetyNotification ride.merchantId ride.merchantOperatingCityId scheduleAfter (Just expireAt) (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
 
 -- title = "Trip finished!"
 -- body = "Hope you enjoyed your trip with {#driverName#}. Total Fare {#totalFare#}"

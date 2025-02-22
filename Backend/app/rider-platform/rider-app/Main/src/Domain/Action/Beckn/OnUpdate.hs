@@ -492,7 +492,9 @@ onUpdate = \case
       let scheduleAfter = riderConfig.ivrTriggerDelay
           safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
       logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
-      createJobIn @_ @'SafetyIVR (Just booking.merchantId) (Just merchantOperatingCityId) scheduleAfter (safetyIvrJobData :: SafetyIVRJobData)
+      curentTime <- getCurrentTime
+      let expireAt = addUTCTime (scheduleAfter + riderConfig.ivrTriggerExpireTime) curentTime
+      createJobIn @_ @'SafetyIVR (Just booking.merchantId) (Just merchantOperatingCityId) scheduleAfter (Just expireAt) (safetyIvrJobData :: SafetyIVRJobData)
     Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing Nothing

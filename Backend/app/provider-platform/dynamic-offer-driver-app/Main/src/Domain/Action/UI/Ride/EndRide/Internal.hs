@@ -670,7 +670,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
           case isDfCaclculationJobScheduled of
             ----- marker ---
             Nothing -> do
-              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs Nothing $
                 CalculateDriverFeesJobData
                   { merchantId = merchantId,
                     merchantOperatingCityId = Just merchantOpCityId,

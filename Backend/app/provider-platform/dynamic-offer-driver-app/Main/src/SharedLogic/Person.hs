@@ -46,7 +46,7 @@ blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason
   let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
   void $ LTS.blockDriverLocationsTill merchantId driverId expiryTime
   let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60
-  JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOperatingCityId) unblockDriverJobTs $
+  JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOperatingCityId) unblockDriverJobTs Nothing $
     UnblockDriverRequestJobData
       { driverId = driverId
       }

@@ -23,6 +23,8 @@ import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Tools.Error
 
 pushReminderUpdatesInScheduler :: (MonadFlow m, SchedulerFlow r, EsqDBFlow m r, CacheFlow m r) => DB.Booking -> DR.Ride -> UTCTime -> DRN.RideRelatedNotificationConfig -> m ()
 pushReminderUpdatesInScheduler booking ride now DRN.RideRelatedNotificationConfig {..} = do
@@ -34,9 +36,12 @@ pushReminderUpdatesInScheduler booking ride now DRN.RideRelatedNotificationConfi
   let currentTimeDiffFromEventTime = diffUTCTime eventAt now
       toSchedule = if onScheduledBooking then booking.isScheduled else True
   when (toSchedule && (eventTime /= DRN.PreEvent || currentTimeDiffFromEventTime >= timeDiff)) do
+    curentTime <- getCurrentTime
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
     let scheduleAfter = if eventTime == DRN.PostEvent then (currentTimeDiffFromEventTime + timeDiff) else (currentTimeDiffFromEventTime - timeDiff)
         dfCalculationJobTs = max 2 scheduleAfter -- Buffer of 2 seconds in case of <=0 timeDiff
-    createJobIn @_ @'ScheduledRideNotificationsToRider (Just booking.merchantId) (Just booking.merchantOperatingCityId) dfCalculationJobTs $
+        expireAt = addUTCTime (dfCalculationJobTs + riderConfig.scheduledRideNotificationsExpireTime) curentTime
+    createJobIn @_ @'ScheduledRideNotificationsToRider (Just booking.merchantId) (Just booking.merchantOperatingCityId) dfCalculationJobTs (Just expireAt) $
       ScheduledRideNotificationsToRiderJobData
         { merchantId = booking.merchantId,
           merchantOperatingCityId = booking.merchantOperatingCityId,

@@ -20,7 +20,8 @@ data SchedulerJobT f = SchedulerJobT
     status :: B.C f ST.JobStatus,
     parentJobId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
-    merchantOperatingCityId :: B.C f (Maybe Text)
+    merchantOperatingCityId :: B.C f (Maybe Text),
+    jobExpireAt :: B.C f (Maybe LocalTime)
   }
   deriving (Generic, B.Beamable)
 

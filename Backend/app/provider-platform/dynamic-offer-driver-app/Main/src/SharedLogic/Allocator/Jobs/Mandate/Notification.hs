@@ -88,7 +88,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             return Complete
           else do
             let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
-            createJobIn @_ @'SendPDNNotificationToDriver (Just merchant.id) (Just merchantOpCityId) dfCalculationJobTs $
+            createJobIn @_ @'SendPDNNotificationToDriver (Just merchant.id) (Just merchantOpCityId) dfCalculationJobTs Nothing $
               SendPDNNotificationToDriverJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = Just merchantOpCityId,
@@ -173,7 +173,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
   let normalFlowOrderStatusTime = addUTCTime (dfStatusCheckTime + dfNotificationTime) endTime
   let dfCalculationJobTs = max (diffUTCTime normalFlowExecutionTime now) fallBackExecutionTime
   let orderAndNotificationJobTs = max (diffUTCTime normalFlowOrderStatusTime now) fallBackOrderStatusCheckTime
-  createJobIn @_ @'MandateExecution (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+  createJobIn @_ @'MandateExecution (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs Nothing $
     MandateExecutionInfo
       { merchantId = merchantId,
         merchantOperatingCityId = Just merchantOpCityId,
@@ -181,7 +181,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
         endTime = endTime,
         serviceName = Just serviceName
       }
-  createJobIn @_ @'OrderAndNotificationStatusUpdate (Just merchantId) (Just merchantOpCityId) orderAndNotificationJobTs $
+  createJobIn @_ @'OrderAndNotificationStatusUpdate (Just merchantId) (Just merchantOpCityId) orderAndNotificationJobTs Nothing $
     OrderAndNotificationStatusUpdateJobData
       { merchantId = merchantId,
         merchantOperatingCityId = Just merchantOpCityId

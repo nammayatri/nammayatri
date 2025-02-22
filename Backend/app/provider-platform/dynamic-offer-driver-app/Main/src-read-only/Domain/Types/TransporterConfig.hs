@@ -117,6 +117,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableUdfForOffers :: Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
+    exotelStatusCheckSchedulerExpireTime :: Kernel.Prelude.NominalDiffTime,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
@@ -181,6 +182,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideFilterExclusionThresholdHours :: Kernel.Types.Common.Hours,
     scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
+    scheduledRideNotificationsExpireTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideSearchRepeatLimit :: Kernel.Prelude.Int,
     searchRepeatLimit :: Kernel.Prelude.Int,
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Double,
@@ -210,9 +212,9 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show)
 
-data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -234,7 +236,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     taxi :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,
@@ -255,7 +257,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     taxi :: Kernel.Types.Common.Kilometers,
     taxiplus :: Kernel.Types.Common.Kilometers
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateThresholdDaily :: Kernel.Prelude.Int,
@@ -269,10 +271,10 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
     weeklyMinRidesforNudging :: Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data DemandHotspotsConfig = DemandHotspotsConfig
   { analysisDurationMinutes :: Kernel.Prelude.Int,
@@ -281,10 +283,10 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     precisionOfGeohash :: Kernel.Prelude.Int,
     resultDurationMinutes :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 type TransporterConfig = TransporterConfigD 'Safe
 

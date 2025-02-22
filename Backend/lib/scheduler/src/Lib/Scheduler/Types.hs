@@ -109,6 +109,7 @@ instance (JobProcessor t) => FromJSON (AnyJob t) where
     parentJobId <- obj .: "parentJobId"
     merchantId <- obj .:? "merchantId"
     merchantOperatingCityId <- obj .:? "merchantOperatingCityId"
+    jobExpireAt <- obj .:? "jobExpireAt"
     return (AnyJob (Job {..}))
   parseJSON wrongVal = typeMismatch "Object AnyJob" wrongVal
 
@@ -127,7 +128,8 @@ instance (JobProcessor t) => ToJSON (AnyJob t) where
         "status" .= status,
         "parentJobId" .= parentJobId,
         "merchantId" .= merchantId,
-        "merchantOperatingCityId" .= merchantOperatingCityId
+        "merchantOperatingCityId" .= merchantOperatingCityId,
+        "jobExpireAt" .= jobExpireAt
       ]
 
 data Job (e :: t) = JobFlow t e =>
@@ -143,10 +145,11 @@ data Job (e :: t) = JobFlow t e =>
     status :: JobStatus,
     parentJobId :: Id AnyJob,
     merchantId :: Maybe (Id (MerchantType t)),
-    merchantOperatingCityId :: Maybe (Id (MerchantOperatingCityType t))
+    merchantOperatingCityId :: Maybe (Id (MerchantOperatingCityType t)),
+    jobExpireAt :: Maybe UTCTime
   }
 
-data JobStatus = Pending | Completed | Failed | Revived
+data JobStatus = Pending | Completed | Failed | Revived | Expired
   deriving (Show, Eq, Read, Generic, FromJSON, ToJSON, Ord)
   deriving (PrettyShow) via Showable JobStatus
 

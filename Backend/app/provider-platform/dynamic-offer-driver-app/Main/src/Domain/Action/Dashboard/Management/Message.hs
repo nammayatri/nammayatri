@@ -191,7 +191,7 @@ postMessageSend merchantShortId opCity Common.SendMessageRequest {..} = do
   case scheduledTime of
     Just scheduleTime
       | now <= scheduleTime ->
-        QAllJ.createJobByTime @_ @'ScheduledFCMS (Just merchant.id) (Just merchantOpCity.id) scheduleTime $
+        QAllJ.createJobByTime @_ @'ScheduledFCMS (Just merchant.id) (Just merchantOpCity.id) scheduleTime Nothing $
           ScheduledFCMSJobData allDriverIds message
       | otherwise -> throwError (InvalidRequest "Scheduled Time cannot be in the past")
     Nothing -> fork "Adding messages to Kafka queue" $ mapM_ (addBroadcastMessageToKafka kafkaPush message) allDriverIds

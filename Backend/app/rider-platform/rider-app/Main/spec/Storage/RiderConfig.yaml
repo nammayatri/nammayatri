@@ -43,6 +43,12 @@ RiderConfig:
     executePaymentDelay: NominalDiffTime
     cancellationPaymentDelay: NominalDiffTime
     policeTriggerDelay: NominalDiffTime
+    postRideSafetyNotificationExpireTime: NominalDiffTime
+    exotelStatusCheckSchedulerExpireTime: NominalDiffTime
+    scheduledRideNotificationsExpireTime: NominalDiffTime
+    scheduledRidePopupToRiderExpireTime: NominalDiffTime
+    ivrTriggerExpireTime: NominalDiffTime
+    policeTriggerExpireTime: NominalDiffTime
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
     exotelStatusCheckSchedulerDelay: Int
@@ -77,6 +83,12 @@ RiderConfig:
   beamType:
     ivrTriggerDelay: Maybe Seconds
     policeTriggerDelay: Maybe Seconds
+    postRideSafetyNotificationExpireTime: Maybe Seconds
+    exotelStatusCheckSchedulerExpireTime: Maybe Seconds
+    scheduledRideNotificationsExpireTime: Maybe Seconds
+    scheduledRidePopupToRiderExpireTime: Maybe Seconds
+    ivrTriggerExpireTime: Maybe Seconds
+    policeTriggerExpireTime: Maybe Seconds
     hardLimitForSafetyJobs: Maybe Seconds
     exotelStatusCheckSchedulerDelay: Maybe Seconds
     incidentReportSupport: Maybe Bool
@@ -110,6 +122,12 @@ RiderConfig:
     executePaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay)|E
     cancellationPaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> cancellationPaymentDelay)|E
     policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
+    postRideSafetyNotificationExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationExpireTime)|E
+    exotelStatusCheckSchedulerExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> exotelStatusCheckSchedulerExpireTime)|E
+    scheduledRideNotificationsExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> scheduledRideNotificationsExpireTime)|E
+    scheduledRidePopupToRiderExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> scheduledRidePopupToRiderExpireTime)|E
+    ivrTriggerExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerExpireTime)|E
+    policeTriggerExpireTime: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerExpireTime)|E
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
@@ -134,6 +152,12 @@ RiderConfig:
     executePaymentDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     cancellationPaymentDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     policeTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    postRideSafetyNotificationExpireTime: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    exotelStatusCheckSchedulerExpireTime: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    scheduledRideNotificationsExpireTime: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    scheduledRidePopupToRiderExpireTime: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    ivrTriggerExpireTime: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    policeTriggerExpireTime: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: Just incidentReportSupport|E

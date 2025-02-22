@@ -366,7 +366,7 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   case req.blockTimeInHours of
     Just hrs -> do
       let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-      JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
+      JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs Nothing $
         UnblockDriverRequestJobData
           { driverId = driverId
           }

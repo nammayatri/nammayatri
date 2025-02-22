@@ -21,6 +21,7 @@
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
 import qualified Data.ByteString as BS
+import qualified Data.Map as M
 import Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
@@ -56,7 +57,8 @@ instance (JobProcessor t) => FromTType'' BeamST.SchedulerJob (AnyJob t) where
             jobInfo = anyJobInfo,
             parentJobId = Id parentJobId,
             merchantId = Id <$> merchantId,
-            merchantOperatingCityId = Id <$> merchantOperatingCityId
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            jobExpireAt = T.localTimeToUTC T.utc <$> jobExpireAt
           }
 
 instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
@@ -75,7 +77,8 @@ instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
         BeamST.status = status,
         BeamST.parentJobId = getId parentJobId,
         BeamST.merchantId = getId <$> merchantId,
-        BeamST.merchantOperatingCityId = getId <$> merchantOperatingCityId
+        BeamST.merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        BeamST.jobExpireAt = T.utcToLocalTime T.utc <$> jobExpireAt
       }
 
 createJob ::
@@ -84,12 +87,13 @@ createJob ::
   Maybe (Id (MerchantType t)) ->
   Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
+  Maybe UTCTime ->
   Int ->
   JobContent e ->
   m ()
-createJob merchantId merchantOperatingCityId uuid maxShards jobData = do
+createJob merchantId merchantOperatingCityId uuid jobExpireAt maxShards jobData = do
   void $
-    ScheduleJob.createJob @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler maxShards $
+    ScheduleJob.createJob @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler jobExpireAt maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
@@ -102,12 +106,13 @@ createJobIn ::
   Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   NominalDiffTime ->
+  Maybe UTCTime ->
   Int ->
   JobContent e ->
   m ()
-createJobIn merchantId merchantOperatingCityId uuid inTime maxShards jobData = do
+createJobIn merchantId merchantOperatingCityId uuid inTime jobExpireAt maxShards jobData = do
   void $
-    ScheduleJob.createJobIn @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler inTime maxShards $
+    ScheduleJob.createJobIn @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler inTime jobExpireAt maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
@@ -120,12 +125,13 @@ createJobByTime ::
   Maybe (Id (MerchantOperatingCityType t)) ->
   Text ->
   UTCTime ->
+  Maybe UTCTime ->
   Int ->
   JobContent e ->
   m ()
-createJobByTime merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
+createJobByTime merchantId merchantOperatingCityId uuid byTime jobExpireAt maxShards jobData = do
   void $
-    ScheduleJob.createJobByTime @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler byTime maxShards $
+    ScheduleJob.createJobByTime @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler byTime jobExpireAt maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
@@ -164,20 +170,24 @@ getShardIdKey = "DriverOffer:Jobs:ShardId"
 
 getReadyTasks ::
   forall t r m.
-  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) =>
+  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobMonad r m, HasField "jobInfoMap" r (M.Map Text Bool)) =>
   Maybe Int ->
+  (Text -> Id AnyJob -> m ()) ->
   m [(AnyJob t, BS.ByteString)]
-getReadyTasks mbMaxShards = do
+getReadyTasks mbMaxShards markAsExpiredFunc = do
   now <- getCurrentTime
   shardId <-
     case mbMaxShards of
       Just maxShards -> (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
       Nothing -> pure 0 -- wouldn't be used to fetch jobs in case of nothing
   res <- findAllWithOptionsKVScheduler [Se.And ([Se.Is BeamST.status $ Se.Eq Pending, Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc now)] <> [Se.Is BeamST.shardId $ Se.Eq shardId | isJust mbMaxShards])] (Se.Asc BeamST.scheduledAt) Nothing Nothing
-  return $ zip res (map (const "rndm") [1 .. length res])
+  let mappedJobs = map Right res
+      (validJobs, expiredJobs) = ScheduleJob.partitionScheduledJobs now mappedJobs
+  traverse_ (uncurry markAsExpiredFunc) expiredJobs
+  return $ zip validJobs (map (const "rndm") [1 .. length validJobs])
 
-getReadyTask :: (MonadThrow m, Log m) => m [(AnyJob t, BS.ByteString)]
-getReadyTask = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
+getReadyTask :: (MonadThrow m, Log m) => (Text -> Id AnyJob -> m ()) -> m [(AnyJob t, BS.ByteString)]
+getReadyTask _ = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
 
 updateStatus ::
   (JobMonad r m) =>
@@ -197,6 +207,9 @@ markAsComplete = updateStatus Completed
 
 markAsFailed :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
 markAsFailed = updateStatus Failed
+
+markAsExpired :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
+markAsExpired = updateStatus Expired
 
 updateErrorCountAndFail :: forall m r. (JobMonad r m) => Id AnyJob -> Int -> m ()
 updateErrorCountAndFail (Id jobId) fCount = do

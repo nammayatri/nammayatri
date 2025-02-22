@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.scheduler_job ADD COLUMN job_expire_at timestamp;
