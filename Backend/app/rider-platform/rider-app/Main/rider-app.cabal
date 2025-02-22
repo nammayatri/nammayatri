@@ -50,6 +50,7 @@ library
       API.IGM
       API.Internal
       API.Internal.Cac
+      API.Internal.DriverArrivalNotf
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.Rating
@@ -170,6 +171,7 @@ library
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
+      Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.Payout
