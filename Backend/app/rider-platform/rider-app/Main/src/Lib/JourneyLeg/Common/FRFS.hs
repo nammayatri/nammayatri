@@ -74,7 +74,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
             nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
             nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
             legOrder = journeyLegOrder,
-            statusChanged
+            statusChanged,
+            mode
           }
     Nothing -> do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
@@ -102,7 +103,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
             nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
             nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
             legOrder = journeyLegInfo.journeyLegOrder,
-            statusChanged
+            statusChanged,
+            mode
           }
   where
     getVehiclePosition :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DPerson.Person -> Id DMerchant.Merchant -> JPT.JourneyLegStatus -> Maybe LatLong -> Maybe [API.FRFSRouteStationsAPI] -> m (Maybe (VehicleTracking, LatLong))
