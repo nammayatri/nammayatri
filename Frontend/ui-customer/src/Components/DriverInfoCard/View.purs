@@ -270,6 +270,7 @@ enquiryBanner push enquiryBannerMbConfig =
         , background enquiryBannerConfig.background
         , cornerRadius 16.0
         , layoutGravity "bottom"
+        , alignParentBottom "true,-1"
         ][
           linearLayout[
             height WRAP_CONTENT
@@ -296,10 +297,10 @@ enquiryBanner push enquiryBannerMbConfig =
           ]
         ]
       , linearLayout[
-          width WRAP_CONTENT
+          width MATCH_PARENT
         , height WRAP_CONTENT
-        -- , alignParentBottom "true,-1"
         , layoutGravity "right"
+        , gravity RIGHT
         ][
           imageView[
             width $ V 142
