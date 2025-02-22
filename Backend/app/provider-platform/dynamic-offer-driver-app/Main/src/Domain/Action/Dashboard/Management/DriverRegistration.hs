@@ -258,7 +258,8 @@ getDriverRegistrationDocumentsInfo _merchantShortId _opCity _driverId = throwErr
 approveAndUpdateRC :: Common.RCApproveDetails -> Flow ()
 approveAndUpdateRC req = do
   let imageId = Id req.documentImageId.getId
-  rc <- QRC.findByImageId imageId >>= fromMaybeM (InternalError "RC not found by image id")
+  mbCertificateHash <- getDbHash req.certificateNumber
+  rc <- QRC.findByImageIdAndCertificateHash imageId mbCertificateHash >>= fromMaybeM (InternalError "RC not found by image id")
   certificateNumber <- mapM encrypt req.vehicleNumberPlate
   let udpatedRC =
         rc
