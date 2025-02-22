@@ -56,6 +56,7 @@ SubscriptionConfig:
     extWebhookConfigs: Maybe ExternalWebhookConfigs
     isUIEnabled : Bool
     webhookConfig : Maybe WebhookConfig
+    isFreeTrialDaysApplicable : Bool
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -67,6 +68,7 @@ SubscriptionConfig:
     sendAckForMandateEvents : Kernel.Prelude.fromMaybe False|I
     isUIEnabled : Kernel.Prelude.fromMaybe False|I
     eventsEnabledForWebhook : Kernel.Prelude.fromMaybe []|I
+    isFreeTrialDaysApplicable:  Kernel.Prelude.fromMaybe True|I
     extWebhookConfigs: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< extWebhookConfigs | E
     webhookConfig: |-
@@ -83,6 +85,7 @@ SubscriptionConfig:
     extWebhookConfigs: Kernel.Prelude.toJSON <$> extWebhookConfigs | E
     webhookConfig: Kernel.Prelude.toJSON <$> webhookConfig | E
     eventsEnabledForWebhook: Kernel.Prelude.Just|I
+    isFreeTrialDaysApplicable: Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -95,6 +98,7 @@ SubscriptionConfig:
     extWebhookConfigs: Maybe Value
     webhookConfig: Maybe Value
     eventsEnabledForWebhook: Maybe [WebhookEvent]
+    isFreeTrialDaysApplicable: Maybe Bool
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey

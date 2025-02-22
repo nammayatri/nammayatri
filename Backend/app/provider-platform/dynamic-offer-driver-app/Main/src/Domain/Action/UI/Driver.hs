@@ -667,15 +667,17 @@ getInformationV2 ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Plan.ServiceNames ->
   UpdateProfileInfoPoints ->
   m DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context req = do
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName req = do
+  whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
+    QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
+  whenJust req.isInteroperable $ \isInteroperable ->
+    QDriverInformation.updateIsInteroperable isInteroperable personId
   whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
     QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
-  driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-  when (req.isAdvancedBookingEnabled /= Just driverInfo.forwardBatchingEnabled || req.isInteroperable /= Just driverInfo.isInteroperable) $
-    QDriverInformation.updateForwardBatchingEnabledOrIsInteroperable personId req.isAdvancedBookingEnabled req.isInteroperable
-  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context (Just driverInfo)
+  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context (Just driverInfo) mbServiceName
 
 getInformation ::
   ( CacheFlow m r,
@@ -690,17 +692,19 @@ getInformation ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Plan.ServiceNames ->
   Maybe DriverInformation ->
   m DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context mbDriverInfo = do
+getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context mbDriverInfo mbServiceName = do
   let driverId = cast personId
+      serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION mbServiceName
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- maybe (QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound) return mbDriverInfo
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
-  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId)
-  dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
+  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName
+  dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
@@ -724,7 +728,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     mbVehicle <- QVehicle.findById personId
-    DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle
+    DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
     let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
     (planBasedChecks, changeBasedChecks) <- do
       if isSubscriptionEnabledAtCategoryLevel
@@ -871,11 +875,11 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> m DriverEntityRes
-buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> Plan.ServiceNames -> m DriverEntityRes
+buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName = do
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   vehicleMB <- QVehicle.findById person.id
-  DriverSpecificSubscriptionData {mbDriverPlan = driverPlan, ..} <- getDriverSpecificSubscriptionDataWithSubsConfig (person.id, transporterConfig.merchantId, merchantOpCityId) transporterConfig driverInfo vehicleMB
+  DriverSpecificSubscriptionData {mbDriverPlan = driverPlan, ..} <- getDriverSpecificSubscriptionDataWithSubsConfig (person.id, transporterConfig.merchantId, merchantOpCityId) transporterConfig driverInfo vehicleMB serviceName
   now <- getCurrentTime
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
@@ -1077,7 +1081,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId)
+  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
@@ -2697,13 +2701,14 @@ getDriverSpecificSubscriptionDataWithSubsConfig ::
   TransporterConfig ->
   DriverInformation ->
   Maybe Vehicle ->
+  Plan.ServiceNames ->
   m DriverSpecificSubscriptionData
-getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transporterConfig driverInfo mbVehicle = do
+getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transporterConfig driverInfo mbVehicle serviceName = do
   let mbVehicleCategory = mbVehicle >>= (.category)
-  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId YATRI_SUBSCRIPTION
-  (autoPayStatus, mbDriverPlan) <- DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION personId
-  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
-  let freeTrialDays = transporterConfig.freeTrialDays
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+  (autoPayStatus, mbDriverPlan) <- DAPlan.getSubcriptionStatusWithPlan serviceName personId
+  freeTrialDaysLeft <- if isFreeTrialEnabled subscriptionConfig then getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo else return 0
+  let freeTrialDays = if isFreeTrialEnabled subscriptionConfig then transporterConfig.freeTrialDays else 0
       freeTrialRides = fromMaybe 0 $ subscriptionConfig >>= (.numberOfFreeTrialRides)
       isSubscriptionEnabledAtCategoryLevel = fromMaybe False $ subscriptionConfig <&> (.isSubscriptionEnabledAtCategoryLevel)
       (isSubscriptionVehicleCategoryChanged, isSubscriptionCityChanged) = isPlanVehCategoryOrCityChanged opCityId mbDriverPlan mbVehicle
@@ -2716,3 +2721,5 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
   let planMandatoryForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       isEnabledForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.subscriptionEnabledForVehicleCategories))
   return $ DriverSpecificSubscriptionData {..}
+  where
+    isFreeTrialEnabled subscriptionConfig = ((subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True)

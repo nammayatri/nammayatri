@@ -83,3 +83,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN ext_webhook_co
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN events_enabled_for_webhook text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_free_trial_days_applicable boolean ;

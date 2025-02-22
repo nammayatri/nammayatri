@@ -31,6 +31,7 @@ data SubscriptionConfig = SubscriptionConfig
     freeTrialRidesApplicable :: Kernel.Prelude.Bool,
     genericBatchSizeForJobs :: Kernel.Prelude.Int,
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
+    isFreeTrialDaysApplicable :: Kernel.Prelude.Bool,
     isSubscriptionEnabledAtCategoryLevel :: Kernel.Prelude.Bool,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
     isUIEnabled :: Kernel.Prelude.Bool,
@@ -64,4 +65,4 @@ data WebhookConfig = WebhookConfig
     retryLimit :: Kernel.Prelude.Int,
     webhookDeliveryMode :: Domain.Types.WebhookExtra.WebhookDeliveryType
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, (Eq))

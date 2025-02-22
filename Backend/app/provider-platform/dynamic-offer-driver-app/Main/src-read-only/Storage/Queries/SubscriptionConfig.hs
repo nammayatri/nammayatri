@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllServicesUIEnabledByCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Bool -> m [Domain.Types.SubscriptionConfig.SubscriptionConfig])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Bool -> m ([Domain.Types.SubscriptionConfig.SubscriptionConfig]))
 findAllServicesUIEnabledByCity merchantOperatingCityId isUIEnabled = do
   findAllWithKV
     [ Se.And
@@ -76,6 +76,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.freeTrialRidesApplicable (Kernel.Prelude.Just freeTrialRidesApplicable),
       Se.Set Beam.genericBatchSizeForJobs genericBatchSizeForJobs,
       Se.Set Beam.genericJobRescheduleTime (Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime),
+      Se.Set Beam.isFreeTrialDaysApplicable (Kernel.Prelude.Just isFreeTrialDaysApplicable),
       Se.Set Beam.isSubscriptionEnabledAtCategoryLevel (Kernel.Prelude.Just isSubscriptionEnabledAtCategoryLevel),
       Se.Set Beam.isTriggeredAtEndRide isTriggeredAtEndRide,
       Se.Set Beam.isUIEnabled (Kernel.Prelude.Just isUIEnabled),
@@ -118,6 +119,7 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             freeTrialRidesApplicable = Kernel.Prelude.fromMaybe False freeTrialRidesApplicable,
             genericBatchSizeForJobs = genericBatchSizeForJobs,
             genericJobRescheduleTime = Kernel.Utils.Common.secondsToNominalDiffTime genericJobRescheduleTime,
+            isFreeTrialDaysApplicable = Kernel.Prelude.fromMaybe True isFreeTrialDaysApplicable,
             isSubscriptionEnabledAtCategoryLevel = Kernel.Prelude.fromMaybe False isSubscriptionEnabledAtCategoryLevel,
             isTriggeredAtEndRide = isTriggeredAtEndRide,
             isUIEnabled = Kernel.Prelude.fromMaybe False isUIEnabled,
@@ -159,6 +161,7 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.freeTrialRidesApplicable = Kernel.Prelude.Just freeTrialRidesApplicable,
         Beam.genericBatchSizeForJobs = genericBatchSizeForJobs,
         Beam.genericJobRescheduleTime = Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime,
+        Beam.isFreeTrialDaysApplicable = Kernel.Prelude.Just isFreeTrialDaysApplicable,
         Beam.isSubscriptionEnabledAtCategoryLevel = Kernel.Prelude.Just isSubscriptionEnabledAtCategoryLevel,
         Beam.isTriggeredAtEndRide = isTriggeredAtEndRide,
         Beam.isUIEnabled = Kernel.Prelude.Just isUIEnabled,
