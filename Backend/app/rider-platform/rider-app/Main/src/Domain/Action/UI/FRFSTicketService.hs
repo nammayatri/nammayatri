@@ -10,6 +10,7 @@ import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Text as T
+import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.FRFS.Common as Common
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import Domain.Types.BecknConfig
@@ -57,6 +58,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import Numeric (showHex)
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import Storage.Beam.Payment ()
@@ -643,7 +645,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
         else do
           buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
-      void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking
+      void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking -- to see: add here
       buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -825,12 +827,23 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< booking.discountsJson
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  let tickets =
-        map
-          ( \DFRFSTicket.FRFSTicket {..} ->
-              FRFSTicketService.FRFSTicketAPI {..}
-          )
-          tickets'
+  tickets <-
+    mapM
+      ( \DFRFSTicket.FRFSTicket {..} -> do
+          newQrData <-
+            case booking.providerId of
+              "BMRCL_3567_0420" -> do
+                case qrRefreshAt of
+                  Just refreshAt -> do
+                    -- now <- getCurrentTime
+                    -- if ((addUTCTime refreshAt updatedAt) < now)
+                    updateBmrclDynamicQr qrData (Just refreshAt) booking.id ticketNumber
+                  -- else return qrData
+                  Nothing -> return qrData
+              _ -> return qrData
+          return FRFSTicketService.FRFSTicketAPI {qrData = newQrData, ..}
+      )
+      tickets'
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,
@@ -849,6 +862,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
         isFareChanged = booking.isFareChanged,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
+        tickets = tickets,
         ..
       }
 
@@ -1088,3 +1102,27 @@ postFrfsTicketVerify (_mbPersonId, merchantId) opCity vehicleCategory req = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
   CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData
   return APISuccess.Success
+
+updateBmrclDynamicQr :: Text -> Maybe UTCTime -> Id DFRFSTicketBooking.FRFSTicketBooking -> Text -> Environment.Flow Text
+updateBmrclDynamicQr oldQrData qrRefreshAt bookingId ticketNumber = do
+  -- mbOldHexTime <- pure $ extractEpochTime oldQrData
+  case extractEpochTime oldQrData of
+    Just oldHexTime -> do
+      now <- liftIO getPOSIXTime
+      let newHexTime = T.pack (showHex (floor now :: Integer) "")
+      let newQrData = T.replace oldHexTime newHexTime oldQrData
+      QFRFSTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber newQrData qrRefreshAt bookingId ticketNumber
+      return newQrData
+    Nothing -> return oldQrData
+
+extractEpochTime :: Text -> Maybe Text
+extractEpochTime qrText =
+  case T.splitOn "#{" qrText of
+    [] -> Nothing
+    [_] -> Nothing
+    parts ->
+      let lastBlock = last parts
+          fields = T.splitOn "|" (T.dropEnd 1 lastBlock)
+       in case fields of
+            (epochTime : _) -> Just epochTime
+            _ -> Nothing
