@@ -2022,6 +2022,7 @@ type ServiceCategory =
     allowedSeats :: Maybe Int,
     bookedSeats :: Int,
     isSelected :: Boolean,
+    isClosed :: Maybe Boolean,
     peopleCategories :: Array PeopleCategoriesData,
     operationalDays :: Array OperationalDaysData,
     operationalDate :: Maybe OperationalDate,
