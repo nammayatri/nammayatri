@@ -206,7 +206,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
-
+  -- if serviceCatId:visitDate not present make Them
+  let _requestedUnitsCount = calculateTotalRequestedUnits req
   ticketBookingId <- generateGUID
   ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate) req.services
 
@@ -1010,3 +1011,60 @@ mkMerchantTicketBookingCancellationKey businessHourId date serviceCategoryId =
 mkUserTicketBookingCancellationKey :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Text
 mkUserTicketBookingCancellationKey businessHourId date serviceCategoryId =
   "User:ticket:booking:cancel:-" <> businessHourId.getId <> "-" <> show date <> "-" <> serviceCategoryId.getId
+
+mkTicketServiceCategoryBlockedSeatKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day ->  Text
+mkTicketServiceCategoryBlockedSeatKey categoryId visitDate = "TicketServiceCategory:blockedSet:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceCategoryBookedCountKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryBookedCountKey categoryId visitDate = "TicketServiceCategory:bookedCount:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceCategoryActiveBlockRequestKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate = "TicketServiceCategory:activeBlockQuantityRequest:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceCategoryConflictResolverKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryConflictResolverKey categoryId visitDate = "TicketServiceCategory:activeBlockConflictResolver:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceAllowedMaxCapacityKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceAllowedMaxCapacityKey categoryId visitDate = "TicketServiceCategory:allowedMaxCapacity:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkBlockMember :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Int -> Text
+mkBlockMember personId numOfUnits = "{" <> personId.getId <> "}:{" <> show numOfUnits <> "}"
+
+releaseBlock :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,Int)] -> Environment.Flow ()
+releaseBlock personId visitDate = mapM_ (\(categoryId,categoryUnit) -> Redis.zRem (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) ([mkBlockMember personId categoryUnit]))
+
+blockSeat :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,Int) -> Environment.Flow ()
+blockSeat personId visitDate (categoryId, numberOfUnits) = do
+  now <- getCurrentTimestamp
+  Redis.zAdd (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) [(now, mkBlockMember personId numberOfUnits)]
+
+tryBlockSeat :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,Int) -> Int -> Environment.Flow Bool
+tryBlockSeat personId visitDate (categoryId,numberOfUnits) requestCount = do
+  now <- floor <$> getCurrentTimestamp
+  mbAllowedMaxCapacity :: Maybe Int <- Redis.get (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate)
+  case mbAllowedMaxCapacity of
+    Just allowedMaxCapacity -> do
+      blockedCountInWindow :: Int <- length <$> Redis.zRange (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) (now - 300000) now
+      bookedCount :: Int <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate) >>= fromMaybeM (InternalError $ "Booked Count not found for categoryId " <> show categoryId <> "on date " <> show visitDate)
+      if (bookedCount + blockedCountInWindow + numberOfUnits) > mbAllowedMaxCapacity then
+        return False
+      else if
+    Nothing -> pure True
+
+withActiveRequestCounter :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> (Int -> Environment.Flow a) -> Environment.Flow a
+withActiveRequestCounter categoryId visitDate action = do
+  requestCount <- Redis.incr (mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate)
+  res <- action (fromIntegral requestCount)
+  _ <- Redis.decr (mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate)
+  return res
+
+withConflictResolverCounter :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> (Int -> Environment.Flow a) -> Environment.Flow a
+withConflictResolverCounter categoryId visitDate action = do
+  conflictResolverCount <- Redis.incr (mkTicketServiceCategoryConflictResolverKey categoryId visitDate)
+  res <- action (fromIntegral conflictResolverCount)
+  _ <- Redis.decr (mkTicketServiceCategoryConflictResolverKey categoryId visitDate)
+  return res
+
+
+calculateTotalRequestedUnits :: TicketBookingReq -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)]
+calculateTotalRequestedUnits req = Map.toList $ Map.fromListWith (+) [(c.categoryId, sum (map (.numberOfUnits) c.peopleCategories)) | s <- req.services, c <- s.categories]

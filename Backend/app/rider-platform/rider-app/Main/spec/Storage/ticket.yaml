@@ -288,6 +288,7 @@ SeatManagement:
     ticketServiceCategoryId: Id ServiceCategory
     booked: Int
     blocked: Int
+    maxSeats: Maybe Int
 
   default:
     booked: "0"
