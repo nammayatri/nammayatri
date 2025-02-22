@@ -1656,3 +1656,28 @@ confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
   where
     unwrapResponse x = x
+
+
+---------------------------------------- servicability/isIntercity ------------------------------------------
+
+mkIsIntercityReq :: Number -> Number -> Maybe Number -> Maybe Number -> IsIntercityReq
+mkIsIntercityReq slat slong dlat dlong = 
+    let req = IsIntercityReq {
+        "pickupLatLong" : LatLong {
+            lat : slat,
+            lon : slong
+        },
+        "mbDropLatLong" : case dlat of 
+                            Just dlatVal -> case dlong of 
+                                                Just dlongVal -> Just $ LatLong { lat : dlatVal , lon : dlongVal }
+                                                _ -> Nothing 
+                            _ -> Nothing
+    }
+    in req
+
+getIsIntercity :: IsIntercityReq -> Flow GlobalState (Either ErrorResponse IsIntercityResp)
+getIsIntercity reqBody = do 
+    headers <- getHeaders "" false
+    withAPIResult EP.getIsIntercity unwrapResponse $ callAPI headers reqBody
+    where
+        unwrapResponse x = x
