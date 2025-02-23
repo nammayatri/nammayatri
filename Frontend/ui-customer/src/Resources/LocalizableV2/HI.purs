@@ -1727,4 +1727,9 @@ getHi = Keymap {
 ,uncomfortable_ambulance : "असुविधाजनक एम्बुलेंस"
 ,clean_ambulance : "स्वच्छ एम्बुलेंस"
 ,ambulance_booking_disclaimer : "यात्री साथी केवल एक प्लेटफ़ॉर्म है जो एम्बुलेंस सेवा प्रदाताओं को ग्राहकों से जोड़ता है। हम एम्बुलेंस पार्टी द्वारा प्रदान की गई जानकारी के लिए जिम्मेदार नहीं हैं।"
+, parcel_details :  "पार्सल विवरण" 
+, parcel_type : "पार्सल प्रकार" 
+, parcel_quantity : "पार्सल मात्रा" 
+, unloading_time : "अनलोडिंग समय" 
+, loading_time : "लोडिंग समय" 
 }

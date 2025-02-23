@@ -22,7 +22,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber,fetchVehicleVariant,getVehicleCapacity, getVariantRideType, getTitleConfig, getCityNameFromCode)
 import Language.Strings (getString)
-import Resources.LocalizableV2.Strings (getEN)
+import Resources.LocalizableV2.Strings (getStringV2, getEN)
+import Resources.LocalizableV2.Types
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
@@ -674,6 +675,7 @@ parcelDetailsView push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , visibility $ boolToVisibility $ config.fareProductType == FPT.DELIVERY
   ]
   [
     separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
@@ -690,7 +692,7 @@ headingSection =
   , color Color.black700
   ]
   [ textView $
-    [ text "Parcel Details"
+    [ text $ getStringV2 parcel_details
     , color Color.black700
     ] <> FontStyle.body3 TypoGraphy
   ]
@@ -718,7 +720,7 @@ parcelTypeSection parcelType =
   , margin $ MarginBottom 12
   ]
   [ textView $
-    [ text "Parcel Type"
+    [ text $ getStringV2 parcel_type
     , color Color.black800
     , margin $ MarginBottom 4
     ] <> FontStyle.body3 TypoGraphy
@@ -737,7 +739,7 @@ parcelQuantitySection parcelQuantity =
   , orientation VERTICAL
   ]
   [ textView $
-    [ text "Parcel Quantity"
+    [ text $ getStringV2 parcel_quantity
     , color Color.black800
     , margin $ MarginBottom 4
     ] <> FontStyle.body3 TypoGraphy

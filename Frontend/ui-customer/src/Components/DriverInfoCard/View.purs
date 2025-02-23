@@ -62,7 +62,8 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.LocalizableV2.Strings (getEN)
+import Resources.LocalizableV2.Strings (getStringV2, getEN)
+import Resources.LocalizableV2.Types
 import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
@@ -938,8 +939,8 @@ loadingTimeView push state =
           cityConfig = getCityConfig config.cityConfig cityStr
           deliveryTruckWaitingCharges = cityConfig.waitingChargeConfig.deliveryTruck
           waitingtime = if state.data.destinationReached then 
-                          "Unloading Time: " <> fromMaybe "" state.data.destinationWaitingTime 
-                        else "Loading Time: " <> state.data.waitingTime
+                          getStringV2 unloading_time <> ": " <> fromMaybe "" state.data.destinationWaitingTime 
+                        else getStringV2 loading_time <> ": " <> state.data.waitingTime
       in waitingtime <> " / " <> toString deliveryTruckWaitingCharges.freeMinutes <> ".00"
 
     formatTimeForAccessibility :: String

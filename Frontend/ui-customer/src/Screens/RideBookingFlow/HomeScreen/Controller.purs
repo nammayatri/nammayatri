@@ -1525,9 +1525,6 @@ eval (DriverArrivedAction driverArrivalTime) state =
 
 eval (DriverReachedDestinationAction driverReachedDestinationTime) state = do
   let destinationReachedAt = (getExpiryTime driverReachedDestinationTime true) + (maybe 0 (\a -> getExpiryTime a true) state.data.driverArrivalTimeUTC) - (if state.data.startTimeUTC /= ""  then getExpiryTime state.data.startTimeUTC true else 0)
-      _ = spy "destinationReachedAt -" destinationReachedAt
-      -- _ = spy "driverArrivalTimeUTC - " (maybe 0 (\a -> getExpiryTime a true) state.data.driverArrivalTimeUTC)
-      -- _ = spy "startTimeUTC - " (maybe 0 (\a -> getExpiryTime a true) state.data.startTimeUTC)
   if any (_ == state.props.currentStage) [ RideStarted] then do
     void $ pure $ setValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION "TRIGGER_DESTINATION_WAITING_ACTION"
     exit $ RefreshHomeScreen state { data { driverInfoCardState { destinationReached = true, destinationReachedAt =destinationReachedAt } } }

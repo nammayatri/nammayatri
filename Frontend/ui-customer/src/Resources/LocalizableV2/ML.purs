@@ -1728,4 +1728,9 @@ getMl = Keymap {
 ,uncomfortable_ambulance : "അസുഖകരമായ ആംബുലൻസ്"
 ,clean_ambulance : "ശുചിത്വമായ ആംബുലൻസ്"
 ,ambulance_booking_disclaimer : "യാത്രി സഹായി എംബുലൻസ് സേവാ പ്രദാതാക്കളെ ഉപഭോക്താക്കളുമായി ബന്ധിപ്പിക്കുന്ന ഒരു പ്ലാറ്റ്‌ഫോം മാത്രമാണ്. എംബുലൻസ് പാർട്ടി നൽകിയ വിവരങ്ങൾക്ക് ഞങ്ങൾ ഉത്തരവാദികളല്ല."
+, parcel_details :  "പാഴ്സൽ വിശദാംശങ്ങൾ"
+, parcel_type : "പാഴ്സൽ തരം" 
+, parcel_quantity : "പാഴ്സൽ അളവ്" 
+, unloading_time : "അൺലോഡിംഗ് സമയം"
+, loading_time : "ലോഡിംഗ് സമയം" 
 }

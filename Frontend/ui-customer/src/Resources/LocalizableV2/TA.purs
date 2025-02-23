@@ -1727,4 +1727,9 @@ getTa = Keymap {
 ,uncomfortable_ambulance : "சிரமமான ஆம்புலன்ஸ்"
 ,clean_ambulance : "சுத்தமான ஆம்புலன்ஸ்"
 ,ambulance_booking_disclaimer : "యాత్రి సాతి అనేది కేవలం ఆంబ్యులెన్స్ సేవా ప్రొవైడర్లను కస్టమర్లతో కలుపుకునే ఒక వేదిక. ఆంబ్యులెన్స్ పార్టీ అందించే సమాచారానికి మేము బాధ్యత వహించము."
+, parcel_details :  "சாமான் விவரங்கள்"
+, parcel_type : "சாமான் வகை" 
+, parcel_quantity : "சாமான் அளவு" 
+, unloading_time : "இறக்கும் நேரம்" 
+, loading_time -> "ஏற்றும் நேரம்" 
 }

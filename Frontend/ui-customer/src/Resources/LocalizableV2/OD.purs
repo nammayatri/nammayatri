@@ -1727,5 +1727,9 @@ getOd = Keymap {
 ,uncomfortable_ambulance : "ଅସୁବିଧାଜନକ ଆମ୍ବୁଲାନ୍ସ"
 ,clean_ambulance : "ପରିଷ୍କାର ଆମ୍ବୁଲାନ୍ସ"
 ,ambulance_booking_disclaimer : "ଯାତ୍ରୀ ସାଥୀ କେବଳ ଏକ ପ୍ଲାଟଫର୍ମ ଯାହା ଆମ୍ବୁଲେନ୍ସ ସେବା ପ୍ରଦାତାମାନେ ଗ୍ରାହକଙ୍କ ସହିତ ସଂଯୋଗ କରେ। ଆମ୍ବୁଲେନ୍ସ ପକ୍ଷ ଦ୍ୱାରା ଦିଆଯାଇଥିବା ସୂଚନା ପାଇଁ ଆମେ ଦାୟୀ ନୁହେଁ।"
-
+, parcel_details :  "ପାର୍ସେଲ ବିବରଣୀ"
+, parcel_type : "ପାର୍ସେଲ ପ୍ରକାର"
+, parcel_quantity : "ପାର୍ସେଲ ପରିମାଣ"
+, unloading_time -> "ଅନଲୋଡିଂ ସମୟ" 
+, loading_time -> "ଲୋଡିଂ ସମୟ" 
 }

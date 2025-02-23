@@ -507,7 +507,7 @@ headerSection =
   textView $
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , text "Parcel Details"
+  , text $ getStringV2 parcel_details
   , color Color.black900
   , margin $ MarginBottom 16
   ] <> FontStyle.subHeading1 TypoGraphy
@@ -546,7 +546,7 @@ parcelTypeSection push state =
     [ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text "Parcel Type"
+      , text $ getStringV2 parcel_type
       , color Color.black800
       , margin $ MarginBottom 4
       ] <> (FontStyle.body3 TypoGraphy)
@@ -571,7 +571,7 @@ parcelQuantitySection push state =
   [ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text "Parcel Quantity"
+    , text $ getStringV2 parcel_quantity
     , color Color.black800
     , margin $ MarginBottom 4
     ] <> (FontStyle.body2 TypoGraphy)
