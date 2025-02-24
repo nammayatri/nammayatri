@@ -520,7 +520,7 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
 
-eval ShowMeterPopUp state = continue state{props{showMeterPopup = true}}
+eval ShowMeterPopUp state = exit $ MeterLocationScreen state
 
 eval GoToMeterScreen state = continue state{props{showMeterPopup = false}}
 

@@ -86,6 +86,7 @@ import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
 import Screens.MetroWarriorsScreen.ScreenData as MetroWarriorsScreenData
 import Screens.MeterScreen.ScreenData as MeterScreenData
+import Screens.MeterFareScreen.ScreenData as MeterFareScreenData
 import Screens.MeterMapScreen.ScreenData as MeterMapScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -152,6 +153,7 @@ newtype GlobalState = GlobalState {
   , metroWarriorsScreen :: MetroWarriorsScreenState
   , meterScreen :: MeterScreenState
   , meterMapScreen :: MeterMapScreenState
+  , meterFareScreen :: MeterFareScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -217,6 +219,7 @@ defaultGlobalState = GlobalState {
 , metroWarriorsScreen : MetroWarriorsScreenData.initData
 , meterScreen: MeterScreenData.initData
 , meterMapScreen: MeterMapScreenData.initData
+, meterFareScreen: MeterFareScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -292,6 +295,7 @@ data ScreenType =
   | MetroWarriorsScreenStateType (MetroWarriorsScreenState -> MetroWarriorsScreenState)
   | MeterScreenStateType (MeterScreenState -> MeterScreenState)
   | MeterMapScreenStateType (MeterMapScreenState -> MeterMapScreenState)
+  | MeterFareScreenStateType (MeterFareScreenState -> MeterFareScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -643,3 +647,4 @@ data METER_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METER MeterScreenState | SEARC
 
 data METER_MAP_SCREEN_OUTPUT = GO_TO_METER_SCREEN_FROM_METER_MAP MeterMapScreenState | SEARCH_LOCATION_MAP_SCREEN String MeterMapScreenState | OTP_ENTERED String
 
+data METER_FARE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METER_FARE MeterFareScreenState

@@ -3542,3 +3542,14 @@ instance eqLocItemType :: Eq LocItemType where eq = genericEq
 instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
+
+type MeterFareScreenState = {
+  data :: MeterFareScreenData,
+  props :: MeterFareScreenProps
+}
+
+type MeterFareScreenData = {
+}
+
+type MeterFareScreenProps = {
+}

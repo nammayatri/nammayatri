@@ -87,6 +87,7 @@ modifyScreenState st =
     MetroWarriorsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroWarriorsScreen = a state.metroWarriorsScreen})
     MeterScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterScreen = a state.meterScreen})
     MeterMapScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterMapScreen = a state.meterMapScreen})
+    MeterFareScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterFareScreen = a state.meterFareScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

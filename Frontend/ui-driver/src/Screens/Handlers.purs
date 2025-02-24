@@ -73,3 +73,4 @@ import Screens.UploadParcelImageScreen.Handler (uploadParcelImageScreen) as UI
 import Screens.MetroWarriorsScreen.Handler (metroWarriorsScreen) as UI
 import Screens.MeterScreen.Handler (meterScreen) as UI
 import Screens.MeterMapScreen.Handler (meterMapScreen) as UI
+import Screens.MeterFareScreen.Handler (meterFareScreen) as UI
