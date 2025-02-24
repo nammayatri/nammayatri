@@ -187,13 +187,15 @@ addErrorDescription ErrorResponse {..} comp =
   let resp = Response shortDescription mempty mempty mempty
    in comp {_componentsResponses = InsOrd.insert shortDescription resp (_componentsResponses comp)}
 
+errorResponsesLs :: [ErrorResponse]
+errorResponsesLs = [personNotFoundError, personStatsNotFoundError]
+
+errorSchemasLs :: [ErrorResponse] -> [(Text, Schema)]
+errorSchemasLs = map ((,toSchema (Proxy :: Proxy ErrorResponse)) . shortDescription)
+
 addErrorSchemas :: Components -> Components
 addErrorSchemas comp =
-  let newSchemas =
-        InsOrd.fromList
-          [ ("PersonNotFound", toSchema (Proxy :: Proxy ErrorResponse)),
-            ("PersonStatsNotFound", toSchema (Proxy :: Proxy ErrorResponse))
-          ]
+  let newSchemas = InsOrd.fromList $ errorSchemasLs errorResponsesLs
    in comp {_componentsSchemas = InsOrd.union newSchemas (_componentsSchemas comp)}
 
 handler :: Environment.FlowServer API
