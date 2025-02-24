@@ -115,6 +115,7 @@ Ride:
     tipAmount: Maybe Price
     wasRideSafe: Maybe Bool
     pickupRouteCallCount: Maybe Int
+    talkedWithDriver: Maybe Bool
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -304,6 +305,10 @@ Ride:
     updatePickupRouteCallCount:
       kvFunction: updateOneWithKV
       params: [pickupRouteCallCount]
+      where: id
+    updateTalkedWithDriver:
+      kvFunction: updateOneWithKV
+      params: [talkedWithDriver]
       where: id
 
   excludedDefaultQueries:

@@ -155,6 +155,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
     rideStatus :: Maybe DRide.RideStatus,
+    talkedWithDriver :: Bool,
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     driverArrivalTime :: Maybe UTCTime,
     destinationReachedAt :: Maybe UTCTime,
@@ -495,8 +496,9 @@ buildBookingStatusAPIEntity booking = do
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
       destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
+      talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
@@ -524,5 +526,6 @@ buildRideAPIEntity DRide.Ride {..} = do
         vehicleColor = vehicleColor',
         allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
         allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
+        talkedWithDriver = fromMaybe False talkedWithDriver,
         ..
       }

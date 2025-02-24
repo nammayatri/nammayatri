@@ -42,6 +42,7 @@ data RideAPIEntity = RideAPIEntity
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    talkedWithDriver :: Kernel.Prelude.Bool,
     onlinePayment :: Kernel.Prelude.Bool,
     feedbackSkipped :: Kernel.Prelude.Bool,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

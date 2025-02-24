@@ -34,6 +34,7 @@ module SharedLogic.CallBAP
     buildBppUrl,
     sendSafetyAlertToBAP,
     sendPhoneCallRequestUpdateToBAP,
+    sendPhoneCallCompletedUpdateToBAP,
     mkTxnIdKey,
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
@@ -776,27 +777,69 @@ sendPhoneCallRequestUpdateToBAP ::
   SRide.Ride ->
   m ()
 sendPhoneCallRequestUpdateToBAP booking ride = do
-  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  when isValueAddNP $ do
-    merchant <-
-      CQM.findById booking.providerId
-        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-    vehicle <- runInReplica $ QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    let paymentUrl = Nothing
-    riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
-    riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
-        phoneCallRequestReq = ACL.PhoneCallRequestBuildReq ACL.DPhoneCallRequestReq {..}
+  mbBookingDetails <- buildBookingDetails booking ride
+  whenJust mbBookingDetails $ \bookingDetails -> do
+    let phoneCallRequestReq = ACL.PhoneCallRequestBuildReq ACL.DPhoneCallRequestReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-    phoneCallRequestMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing phoneCallRequestReq
-    void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig merchant.id
+    phoneCallRequestMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallRequestReq
+    void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig bookingDetails.merchant.id
+
+sendPhoneCallCompletedUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m ()
+sendPhoneCallCompletedUpdateToBAP booking ride = do
+  mbBookingDetails <- buildBookingDetails booking ride
+  whenJust mbBookingDetails $ \bookingDetails -> do
+    let phoneCallCompletedReq = ACL.PhoneCallCompletedBuildReq ACL.DPhoneCallCompletedReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    phoneCallRequestMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallCompletedReq
+    void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig bookingDetails.merchant.id
+
+buildBookingDetails ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m (Maybe ACL.BookingDetails)
+buildBookingDetails booking ride = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  if isValueAddNP
+    then do
+      merchant <-
+        CQM.findById booking.providerId
+          >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+      driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+      vehicle <- runInReplica $ QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      let paymentUrl = Nothing
+      riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+      riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+      return $ Just ACL.BookingDetails {..}
+    else return Nothing
 
 sendStopArrivalUpdateToBAP ::
   ( CacheFlow m r,

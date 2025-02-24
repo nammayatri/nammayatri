@@ -40,6 +40,7 @@ data RideLite = RideLite
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
+    talkedWithDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     status :: Domain.Types.Ride.RideStatus,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -56,17 +57,12 @@ instance FromTType' RideLiteTable RideLite where
       Just
         RideLite
           { bookingId = Kernel.Types.Id.Id bookingId,
-            driverName = driverName,
-            driverRating = driverRating,
             estimatedEndTimeRange = Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            rideRating = rideRating,
             shortId = Kernel.Types.Id.ShortId shortId,
-            status = status,
-            driverArrivalTime = driverArrivalTime,
-            destinationReachedAt = destinationReachedAt,
             driversPreviousRideDropLoc = Storage.Queries.Extra.Transformers.Ride.mkLatLong driversPreviousRideDropLat driversPreviousRideDropLon,
-            showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc
+            showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc,
+            ..
           }

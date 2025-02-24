@@ -81,6 +81,7 @@ data RideT f = RideT
     showDriversPreviousRideDropLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     startOdometerReading :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     status :: B.C f Domain.Types.Ride.RideStatus,
+    talkedWithDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollConfidence :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence),
     totalFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
