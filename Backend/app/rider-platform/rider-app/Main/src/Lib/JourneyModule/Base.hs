@@ -389,7 +389,7 @@ getTickets leg =
     processTickets expectedProvider mbTickets mbProviderName bookingId = do
       tickets <- mbTickets
       provider <- mbProviderName
-      if provider == providerToText expectedProvider
+      if provider == providerToText expectedProvider || provider == providerToText JL.DIRECT
         then
           Just
             ( provider,
