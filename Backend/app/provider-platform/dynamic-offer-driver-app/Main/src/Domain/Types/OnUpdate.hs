@@ -40,6 +40,7 @@ data OnUpdateBuildReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | PhoneCallRequestBuildReq DPhoneCallRequestReq
+  | PhoneCallCompletedBuildReq DPhoneCallCompletedReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
@@ -78,6 +79,10 @@ data DNewMessageReq = DNewMessageReq
   }
 
 newtype DPhoneCallRequestReq = DPhoneCallRequestReq
+  { bookingDetails :: BookingDetails
+  }
+
+newtype DPhoneCallCompletedReq = DPhoneCallCompletedReq
   { bookingDetails :: BookingDetails
   }
 

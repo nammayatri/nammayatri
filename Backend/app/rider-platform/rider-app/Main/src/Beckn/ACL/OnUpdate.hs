@@ -111,6 +111,7 @@ parseEventV2 transactionId messageId order = do
         "NEW_MESSAGE" -> parseNewMessageEvent order
         "SAFETY_ALERT" -> parseSafetyAlertEvent order
         "PHONE_CALL_REQUEST" -> return $ DOnUpdate.OUPhoneCallRequestEventReq $ DOnUpdate.PhoneCallRequestEventReq transactionId
+        "PHONE_CALL_COMPLETED" -> return $ DOnUpdate.OUPhoneCallCompletedEventReq $ DOnUpdate.PhoneCallCompletedEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order

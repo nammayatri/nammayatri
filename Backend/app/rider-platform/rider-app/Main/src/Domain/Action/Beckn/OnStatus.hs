@@ -348,6 +348,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       wasRideSafe = Nothing
       feedbackSkipped = False
       pickupRouteCallCount = Just 0
+      talkedWithDriver = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
