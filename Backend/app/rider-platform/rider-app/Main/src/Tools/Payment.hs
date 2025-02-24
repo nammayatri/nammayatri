@@ -36,6 +36,7 @@ module Tools.Payment
     mkSplitSettlementDetails,
     groupSumVendorSplits,
     roundVendorFee,
+    getIsSplitEnabled,
   )
 where
 
@@ -59,6 +60,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     deleteCard,
     getCardList,
     getPaymentIntent,
+    isSplitEnabled,
     orderStatus,
     updateAmountInPaymentIntent,
     updatePaymentMethodInIntent,
@@ -229,20 +231,22 @@ roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 roundVendorFee :: VendorSplitDetails -> VendorSplitDetails
 roundVendorFee vf = vf {splitAmount = roundToTwoDecimalPlaces vf.splitAmount}
 
-mkSplitSettlementDetails :: HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
-mkSplitSettlementDetails totalAmount vendorFees = do
-  let sortedVendorFees = sortBy (compare `on` vendorId) (roundVendorFee <$> vendorFees)
-      groupedVendorFees = groupBy ((==) `on` vendorId) sortedVendorFees
-      mbVendorSplits = map computeSplit groupedVendorFees
-      vendorSplits = catMaybes mbVendorSplits
-  let totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
-      marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-  Just $
-    SplitSettlementDetails
-      { marketplace = Marketplace marketplaceAmount,
-        mdrBorneBy = ALL,
-        vendor = Vendor vendorSplits
-      }
+mkSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
+mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+  False -> Nothing
+  True -> do
+    let sortedVendorFees = sortBy (compare `on` vendorId) (roundVendorFee <$> vendorFees)
+        groupedVendorFees = groupBy ((==) `on` vendorId) sortedVendorFees
+        mbVendorSplits = map computeSplit groupedVendorFees
+        vendorSplits = catMaybes mbVendorSplits
+        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
+        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+    Just $
+      SplitSettlementDetails
+        { marketplace = Marketplace marketplaceAmount,
+          mdrBorneBy = ALL,
+          vendor = Vendor vendorSplits
+        }
   where
     computeSplit feesForVendor =
       case feesForVendor of
@@ -257,3 +261,32 @@ mkSplitSettlementDetails totalAmount vendorFees = do
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
 groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))
+
+getIsSplitEnabled ::
+  (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  m Bool
+getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceType = do
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Nothing -> return Nothing
+  merchantServiceConfig <-
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+  return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    _ -> False
+  where
+    getPaymentServiceByType = \case
+      Normal -> DMSC.PaymentService Payment.Juspay
+      BBPS -> DMSC.BbpsPaymentService Payment.Juspay
+      FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
+      FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
