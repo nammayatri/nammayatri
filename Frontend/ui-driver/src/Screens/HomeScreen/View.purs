@@ -185,7 +185,7 @@ screen initialState (GlobalState globalState) =
                   Left _ -> void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
              else pure unit
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
-          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "")
+          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "" && (not $ DA.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [show ST.DestinationReachedTriggered, show ST.DestinationWaitingTimeTriggered]))
             then do
               void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
               push $ UpdateWaitTime ST.NoStatus

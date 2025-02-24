@@ -2543,7 +2543,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"
-          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > chargesOb.freeSeconds then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
+          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.tripType == ST.Delivery || updatedState.data.activeRide.waitTimeSeconds > chargesOb.freeSeconds then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ setValueToLocalStore RIDE_START_TIME (getCurrentUTC "")
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           void $ lift $ lift $ toggleLoader false
