@@ -31,6 +31,8 @@ data IssueConfigT f = IssueConfigT
     onKaptMarkIssueResMsgs :: B.C f [Text],
     merchantId :: B.C f Text,
     messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig),
+    reopenCount :: B.C f Int,
+    onIssueCloseMsgs :: B.C f [Text],
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

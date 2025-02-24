@@ -85,6 +85,13 @@ updateIssueStatus ticketId status = do
     [Set BeamIR.status status, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.ticketId (Eq (Just ticketId))]
 
+updateIssueReopenedCount :: BeamFlow m r => Id IssueReport -> Int -> m ()
+updateIssueReopenedCount ticketId reopenedCount = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Set BeamIR.reopenedCount (Just reopenedCount), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Is BeamIR.id (Eq $ getId ticketId)]
+
 updateTicketId :: BeamFlow m r => Id IssueReport -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
@@ -123,6 +130,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             merchantId = Id <$> merchantId,
             becknIssueId = becknIssueId,
+            reopenedCount = fromMaybe 0 reopenedCount,
             ..
           }
 
@@ -147,5 +155,6 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamIR.chats = chats,
         BeamIR.merchantId = getId <$> merchantId,
-        BeamIR.becknIssueId = becknIssueId
+        BeamIR.becknIssueId = becknIssueId,
+        BeamIR.reopenedCount = Just reopenedCount
       }
