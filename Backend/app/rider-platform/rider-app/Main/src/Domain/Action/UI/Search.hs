@@ -269,8 +269,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         else Person.Person {..}
 
     getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard = do
-      let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled && isNothing searchRequest.driverIdentifier
-      let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard && isNothing searchRequest.driverIdentifier
+      let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
+      let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
