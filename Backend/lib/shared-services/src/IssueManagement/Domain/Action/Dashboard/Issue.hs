@@ -341,7 +341,9 @@ ticketStatusCallBack reqJson issueHandle identifier = do
           return
           issueReport.merchantOperatingCityId
       issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
-      mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
+      let shouldUseCloseMsgs = issueReport.reopenedCount >= issueConfig.reopenCount
+          selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
+      mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
       let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
       now <- getCurrentTime
       let updatedChats =
@@ -356,7 +358,7 @@ ticketStatusCallBack reqJson issueHandle identifier = do
                 )
                 issueMessageIds
       QIR.updateChats issueReport.id updatedChats
-      QIR.updateIssueStatus req.ticketId transformedStatus
+      QIR.updateIssueStatus req.ticketId (if shouldUseCloseMsgs then CLOSED else transformedStatus)
     PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
       (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
       _ -> do
