@@ -11,7 +11,7 @@ import qualified API.Types.UI.CustomerReferral
 import qualified Control.Lens
 import Data.Aeson (ToJSON)
 import qualified Data.HashMap.Strict.InsOrd as InsOrd
-import Data.OpenApi
+import Data.OpenApi hiding (description)
 import Data.Proxy
 import qualified Data.Text as T
 import qualified Domain.Action.UI.CustomerReferral as Domain.Action.UI.CustomerReferral
@@ -92,9 +92,9 @@ instance
 
 data ErrorResponse = ErrorResponse
   { code :: Int,
-    errorTextCode :: Text,
-    shortDescription :: Text,
-    longDescription :: Text
+    errorCode :: Text,
+    description :: Text,
+    errorMessage :: Text
   }
   deriving (Generic, ToJSON)
 
@@ -102,18 +102,18 @@ personNotFoundError :: ErrorResponse
 personNotFoundError =
   ErrorResponse
     { code = 404,
-      errorTextCode = "PERSON_NOT_FOUND",
-      shortDescription = "PersonNotFound",
-      longDescription = "Person with personId {personId} not found."
+      errorCode = "PERSON_NOT_FOUND",
+      description = "PersonNotFound",
+      errorMessage = "Person with personId {personId} not found."
     }
 
 personStatsNotFoundError :: ErrorResponse
 personStatsNotFoundError =
   ErrorResponse
     { code = 410,
-      errorTextCode = "PERSON_STATS_NOT_FOUND",
-      shortDescription = "PersonStatsNotFound",
-      longDescription = "Person stats with personId {personId} not found."
+      errorCode = "PERSON_STATS_NOT_FOUND",
+      description = "PersonStatsNotFound",
+      errorMessage = "Person stats with personId {personId} not found."
     }
 
 instance ToSchema ErrorResponse where
@@ -124,11 +124,11 @@ instance ToSchema ErrorResponse where
             & properties
               Control.Lens..~ InsOrd.fromList
                 [ ("code", Inline $ toSchema (Proxy :: Proxy Int)),
-                  ("errorTextCode", Inline $ toSchema (Proxy :: Proxy Text)),
-                  ("shortDescription", Inline $ toSchema (Proxy :: Proxy Text)),
-                  ("longDescription", Inline $ toSchema (Proxy :: Proxy Text))
+                  ("errorCode", Inline $ toSchema (Proxy :: Proxy Text)),
+                  ("description", Inline $ toSchema (Proxy :: Proxy Text)),
+                  ("errorMessage", Inline $ toSchema (Proxy :: Proxy Text))
                 ]
-            & required Control.Lens..~ ["code", "errorTextCode", "shortDescription", "longDescription"]
+            & required Control.Lens..~ ["code", "errorCode", "description", "errorMessage"]
     return $ NamedSchema (Just "ErrorResponse") schem
 
 instance (HasOpenApi api) => HasOpenApi (Throws MyCustomException :> api) where
@@ -158,7 +158,7 @@ addResponse :: ErrorResponse -> Responses -> Responses
 addResponse ErrorResponse {..} resp =
   let mediaTypeObject =
         MediaTypeObject
-          { _mediaTypeObjectSchema = Just . Ref . Reference $ shortDescription,
+          { _mediaTypeObjectSchema = Just . Ref . Reference $ description,
             _mediaTypeObjectExample = Nothing,
             _mediaTypeObjectExamples = InsOrd.empty,
             _mediaTypeObjectEncoding = InsOrd.empty
@@ -166,7 +166,7 @@ addResponse ErrorResponse {..} resp =
       response =
         Inline $
           Response
-            { _responseDescription = longDescription,
+            { _responseDescription = errorMessage,
               _responseContent =
                 InsOrd.fromList
                   [ ( "application/json",
@@ -174,7 +174,7 @@ addResponse ErrorResponse {..} resp =
                     )
                   ],
               _responseHeaders = InsOrd.empty,
-              _responseLinks = InsOrd.empty -- InsOrd.fromList [(shortDescription, Ref (Reference shortDescription))]
+              _responseLinks = InsOrd.empty -- InsOrd.fromList [(description, Ref (Reference description))]
             }
    in resp {_responsesResponses = InsOrd.insert code response (_responsesResponses resp)}
 
@@ -184,14 +184,14 @@ addErrorDescriptions comp resp =
 
 addErrorDescription :: ErrorResponse -> Components -> Components
 addErrorDescription ErrorResponse {..} comp =
-  let resp = Response shortDescription mempty mempty mempty
-   in comp {_componentsResponses = InsOrd.insert shortDescription resp (_componentsResponses comp)}
+  let resp = Response description mempty mempty mempty
+   in comp {_componentsResponses = InsOrd.insert description resp (_componentsResponses comp)}
 
 errorResponsesLs :: [ErrorResponse]
 errorResponsesLs = [personNotFoundError, personStatsNotFoundError]
 
 errorSchemasLs :: [ErrorResponse] -> [(Text, Schema)]
-errorSchemasLs = map ((,toSchema (Proxy :: Proxy ErrorResponse)) . shortDescription)
+errorSchemasLs = map ((,toSchema (Proxy :: Proxy ErrorResponse)) . description)
 
 addErrorSchemas :: Components -> Components
 addErrorSchemas comp =
