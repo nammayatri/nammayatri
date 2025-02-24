@@ -118,11 +118,11 @@ imageSection item =
           Ambulance_Ventilator -> "ic_bike_ambulance"
           Suv_Plus  -> "ny_ic_suv_plus_side"
           EV_Auto   -> "ic_auto"
-          Delivery_Truck_Mini -> "ic_delivery_truck" 
-          Delivery_Truck_Small -> "ic_delivery_truck"
-          Delivery_Truck_Medium -> "ic_delivery_truck"
-          Delivery_Truck_Large -> "ic_delivery_truck"
-          Delivery_Truck_Ultra_Large -> "ic_delivery_truck"
+          Delivery_Truck_Mini -> "ny_ic_truck_side" 
+          Delivery_Truck_Small -> "ny_ic_truck_side"
+          Delivery_Truck_Medium -> "ny_ic_truck_side"
+          Delivery_Truck_Large -> "ny_ic_truck_side"
+          Delivery_Truck_Ultra_Large -> "ny_ic_truck_side"
       ]
   ]
 

@@ -865,6 +865,8 @@
       "widget_close_gradient" : true,
       "ys_ic_driver_message" : true,
       "zone_curve" : true,
-      "ny_ic_earn_through_parcel" : true
+      "ny_ic_earn_through_parcel" : true,
+      "ny_ic_delivery_truck_nav_on_map": true,
+      "ny_ic_truck_delivery_concept":true
    }
 }

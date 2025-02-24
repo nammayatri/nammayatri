@@ -647,6 +647,7 @@ getVehicleVariantImage variant =
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "DELIVERY_BIKE" -> "ny_ic_parcel_box," <> commonUrl <> "ny_ic_parcel_box.png"
+      _ | isDeliveryTruckVariant variant -> "ny_ic_truck_side," <> commonUrl <> "ny_ic_truck_side.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 isKeralaCity :: String -> Boolean 

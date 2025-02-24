@@ -20,7 +20,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber,fetchVehicleVariant,getVehicleCapacity, getVariantRideType, getTitleConfig, getCityNameFromCode)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber,fetchVehicleVariant,getVehicleCapacity, getVariantRideType, getTitleConfig, getCityNameFromCode, isDeliveryTruckVariant)
 import Language.Strings (getString)
 import Resources.LocalizableV2.Strings (getStringV2, getEN)
 import Resources.LocalizableV2.Types
@@ -281,6 +281,7 @@ getVehicleImage variant vehicleDetail city = do
               "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_concept"
               "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
               "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+              _ | isDeliveryTruckVariant variant -> "ny_ic_truck_delivery_concept"
               _           -> "ny_ic_sedan_concept"              
         where 
           mkAutoImage :: City -> String

@@ -266,28 +266,28 @@ config =
         },
         deliveryTruckMini : {
           name : "Delivery Truck",
-          image : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
-          leftViewImage : "ny_ic_delivery_truck.png,"
+          image : "ny_ic_truck_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_truck_side.png",
+          leftViewImage : "ny_ic_truck_side.png,"
         }
       , deliveryTruckSmall : {
           name : "Delivery Truck",
-          image : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
-          leftViewImage : "ny_ic_delivery_truck.png,"
+          image : "ny_ic_truck_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_truck_side.png",
+          leftViewImage : "ny_ic_truck_side.png,"
         }
       , deliveryTruckMedium : {
           name : "Delivery Truck",
-          image : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
-          leftViewImage : "ny_ic_delivery_truck.png,"
+          image : "ny_ic_truck_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_truck_side.png",
+          leftViewImage : "ny_ic_truck_side.png,"
         }
       , deliveryTruckLarge : {
           name : "Delivery Truck",
-          image : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
-          leftViewImage : "ny_ic_delivery_truck.png,"
+          image : "ny_ic_truck_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_truck_side.png",
+          leftViewImage : "ny_ic_truck_side.png,"
         }
       , deliveryTruckUltraLarge : {
           name : "Delivery Truck",
-          image : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
-          leftViewImage : "ny_ic_delivery_truck.png,"
+          image : "ny_ic_truck_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_truck_side.png",
+          leftViewImage : "ny_ic_truck_side.png,"
         }
       }
       , enableOnlyAuto : false
