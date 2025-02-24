@@ -127,20 +127,7 @@ messageButton push config =
       ]
   ]
   where 
-    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) && (not config.isDelivery || config.driverVehicle /= "BIKE")
-
-getCurrentAndroidVersion :: Merchant -> Int
-getCurrentAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 54
-    YATRI -> 47
-    YATRISATHI -> 1
-    _ -> 1
-
-checkVersionForChat :: Int -> Boolean
-checkVersionForChat reqVersion =
-  let currVersion = unsafePerformEffect getVersionCode
-    in currVersion > reqVersion
+    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && (not config.isDelivery || config.driverVehicle /= "BIKE")
 
 callButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 callButton push config =
