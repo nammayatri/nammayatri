@@ -439,6 +439,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             description,
             chats = updatedChats,
             merchantId = Just merchantId,
+            reopenedCount = 0,
             becknIssueId
           }
     createJsonMessage :: Text -> T.Text
@@ -689,12 +690,12 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
   case status of
     CLOSED -> do
       QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-      updateTicketStatus issueReport TIT.CL merchantId merchantOpCityId issueHandle "Closed by person"
       pure $
         Common.IssueStatusUpdateRes
           { messages = []
           }
     REOPENED -> do
+      QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
       QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
       updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
       issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
