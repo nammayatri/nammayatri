@@ -167,7 +167,6 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Map as Map
 import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
-import ConfigProvider
 import Mobility.Prelude
 import Timers
 import PrestoDOM.Core
@@ -947,15 +946,15 @@ driverCallPopUp push state =
 
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
-  [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
-    , type: ANONYMOUS_CALLER
-    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
-    }
-  , { text: (getString DIRECT_CALL)
+  [ { text: (getString DIRECT_CALL)
     , imageWithFallback: fetchImage FF_ASSET "ic_direct_call"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
+    }
+  ,{ text: (getString ANONYMOUS_CALL)
+    , imageWithFallback: fetchImage FF_ASSET "ic_anonymous_call"
+    , type: ANONYMOUS_CALLER
+    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   ]
 
@@ -1000,7 +999,7 @@ trackingCardCallView push state item =
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
-        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state (getString RECOMMENDED) state.data.config.showRecommendedText else labelView push state (getString FASTER) state.data.config.showFasterText
       ]
       , textView
         $
@@ -1018,25 +1017,26 @@ trackingCardCallView push state item =
         ]
     ]
 
-labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-labelView push state =
-  linearLayout[
-    height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , cornerRadii $ Corners 8.0 true true true true
-  , background Color.green900
-  , margin (MarginHorizontal 10 10)
-  ][
-    textView $ [
-      width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.white900
-    , gravity CENTER
-    , padding (Padding 8 1 8 1)
-    , textSize FontSize.a_13
-    , text (getString RECOMMENDED)
+labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean ->  PrestoDOM (Effect Unit) w
+labelView push state label toShow =
+    linearLayout[
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , cornerRadii $ Corners 8.0 true true true true
+    , background Color.green900
+    , margin (MarginHorizontal 10 10)
+    , visibility $ boolToVisibility $ toShow
+    ][
+      textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.white900
+      , gravity CENTER
+      , padding (Padding 8 1 8 1)
+      , textSize FontSize.a_13
+      , text label
+      ]
     ]
-  ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =

@@ -1591,6 +1591,7 @@ makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundT
                                             "startTime" : startTime,
                                             "returnTime" : returnTime,
                                             "roundTrip" : roundTrip,
+                                            "quotesUnifiedFlow" : Just true,
                                             "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
                                             }),
                     "fareProductType" : "INTER_CITY"

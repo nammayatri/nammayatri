@@ -535,6 +535,7 @@ newtype RoundTripSearchReq = RoundTripSearchReq {
   startTime :: String,
   returnTime :: Maybe String,
   roundTrip :: Boolean,
+  quotesUnifiedFlow :: Maybe Boolean,
   isReallocationEnabled ::  Maybe Boolean
 }
 
