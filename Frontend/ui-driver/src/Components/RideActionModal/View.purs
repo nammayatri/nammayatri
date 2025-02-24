@@ -102,6 +102,8 @@ view push config = do
 
 messageButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 messageButton push config =
+  let appConfig' = getAppConfig appConfig
+  in
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -111,7 +113,7 @@ messageButton push config =
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background if config.bookingFromOtherPlatform then Color.grey700 else Color.white900
-  , stroke if config.bookingFromOtherPlatform then "1,"<> Color.grey900 else "1,"<> Color.black500
+  , stroke if config.bookingFromOtherPlatform then "1,"<> Color.grey900 else "1,"<> appConfig'.themeColors.secondaryStrokeColor
   , cornerRadius 30.0
   , afterRender push $ const $ LoadMessages
   , onClick (\action -> if config.bookingFromOtherPlatform
@@ -143,6 +145,8 @@ checkVersionForChat reqVersion =
 
 callButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 callButton push config =
+  let appConfig' = getAppConfig appConfig
+  in
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -151,7 +155,7 @@ callButton push config =
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 8
   , background Color.white900
-  , stroke $ "1,"<> Color.black500
+  , stroke $ "1,"<> appConfig'.themeColors.secondaryStrokeColor
   , cornerRadius 30.0
   , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
   , visibility $ boolToVisibility $ config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || DA.any (_ == config.rideType) [ST.Rental, ST.Delivery]
@@ -341,6 +345,8 @@ rideActionView layoutMargin push config =
 
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 openGoogleMap push config =
+  let appConfig' = getAppConfig appConfig
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -356,6 +362,7 @@ openGoogleMap push config =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
+      , stroke $ "1," <> appConfig'.themeColors.openMapsStrokeColor
       , rippleColor Color.rippleShade
       ][  imageView
           [ width $ V 20
@@ -368,7 +375,7 @@ openGoogleMap push config =
           , margin (MarginLeft 8)
           , text (getString MAPS)
           , gravity CENTER
-          , color Color.white900
+          , color appConfig'.themeColors.openMapsTextColor
           ] <> FontStyle.body1 TypoGraphy
           )
       ]
@@ -630,7 +637,7 @@ startRide push config =
   ]$ linearLayout
   [ width MATCH_PARENT
   , height (V 50)
-  , background Color.darkMint
+  , background config.appConfig.themeColors.goOnlineColor
   , cornerRadius 8.0
   , gravity CENTER
   , onClick push $ if config.isAdvanced then const NoAction else (const $ StartRide)

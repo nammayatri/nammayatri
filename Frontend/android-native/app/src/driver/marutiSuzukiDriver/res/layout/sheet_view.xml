@@ -13,7 +13,6 @@
         android:layout_marginLeft="24dp"
         android:layout_marginRight="24dp">
 
-
         <androidx.cardview.widget.CardView
             android:id="@+id/card"
             android:layout_width="match_parent"
@@ -67,352 +66,352 @@
                         android:visibility="gone"
                         android:id="@+id/tags_block"
                         android:padding="10dp">
-                    <HorizontalScrollView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@color/grey900">
-                        <LinearLayout
+                        <HorizontalScrollView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="6dp">
-
+                            android:background="@color/grey900">
                             <LinearLayout
                                 android:layout_width="wrap_content"
-                                android:background="@drawable/ic_sp_zone_tag"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:paddingHorizontal="3dp"
-                                android:visibility="gone"
-                                android:id="@+id/spZoneTag"
-                                android:layout_marginEnd="10dp"
-                                android:layout_height="wrap_content">
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_location_pin_white"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
-                                    android:id="@+id/spZoneExtraTip"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp">
+
+                                <LinearLayout
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:paddingHorizontal="2dp"
-                                    android:paddingVertical="6dp"
+                                    android:background="@drawable/ic_sp_zone_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:paddingHorizontal="3dp"
                                     android:visibility="gone"
-                                    android:text=""
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
-                                <TextView
-                                    android:id="@+id/spZoneTag_text"
+                                    android:id="@+id/spZoneTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_location_pin_white"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/spZoneExtraTip"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="2dp"
+                                        android:paddingVertical="6dp"
+                                        android:visibility="gone"
+                                        android:text=""
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                    <TextView
+                                        android:id="@+id/spZoneTag_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="3dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/zone_pickup"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
                                     android:paddingHorizontal="3dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/zone_pickup"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
+                                    android:background="@drawable/ic_favourite_rider"
+                                    android:id="@+id/isFavouriteTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:visibility="gone"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_blue_heart"
+                                        android:layout_marginTop="2dp"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="3dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="Favourite Rider"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/blue800"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
 
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:paddingHorizontal="3dp"
-                                android:background="@drawable/ic_favourite_rider"
-                                android:id="@+id/isFavouriteTag"
-                                android:layout_marginEnd="10dp"
-                                android:visibility="gone"
-                                android:layout_height="wrap_content">
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_blue_heart"
-                                    android:layout_marginTop="2dp"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
+                                <LinearLayout
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:background="@drawable/ic_tip_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
                                     android:paddingHorizontal="3dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="Favourite Rider"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/blue800"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
+                                    android:visibility="gone"
+                                    android:id="@+id/customerTipTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_tip_icon"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/tip_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="₹10 Tip"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/Black900"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
 
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:background="@drawable/ic_tip_tag"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:paddingHorizontal="3dp"
-                                android:visibility="gone"
-                                android:id="@+id/customerTipTag"
-                                android:layout_marginEnd="10dp"
-                                android:layout_height="wrap_content">
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_tip_icon"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
-                                    android:id="@+id/tip_text"
+                                <LinearLayout
+                                    android:id="@+id/rentalRideTypeTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:background="@drawable/ic_rental_variant_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="8dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:id="@+id/rentalRideTypeImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/ic_car_unfilled" />
+
+                                    <TextView
+                                        android:id="@+id/rentalRideTypeText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:paddingVertical="6dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:text="@string/rental"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/intercityRideTypeTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:background="@drawable/ic_intercity_variant_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="8dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:id="@+id/intercityRideTypeImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/intercity" />
+
+                                    <TextView
+                                        android:id="@+id/intercityRideTypeText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:paddingVertical="6dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:text="@string/intercity"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp"  />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/roundTripRideTypeTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:background="@drawable/ic_intercity_variant_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="8dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:id="@+id/roundTripRideTypeImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/ny_ic_round_trip_indicator_white" />
+
+                                    <TextView
+                                        android:id="@+id/roundTripRideTypeText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:paddingVertical="6dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:text="@string/round_trip"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp"  />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:background="@drawable/ic_orange_tag"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/testRequestTag"
+                                    android:layout_marginEnd="10dp"
+                                    android:layout_height="wrap_content">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_test_request_icon_white"
+                                        android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/test_request_text"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/test_request"
+                                        android:lineHeight="20dp"
+                                        android:textColor="@color/colorWhite"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/rideTypeTag"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:background="@drawable/ic_ac_variant_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
                                     android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="₹10 Tip"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/Black900"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
+                                    android:visibility="gone">
 
-                            <LinearLayout
-                                android:id="@+id/rentalRideTypeTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="match_parent"
-                                android:layout_marginHorizontal="8dp"
-                                android:background="@drawable/ic_rental_variant_tag"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:paddingHorizontal="8dp"
-                                android:visibility="gone">
+                                    <ImageView
+                                        android:id="@+id/rideTypeImage"
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:src="@drawable/ny_ic_snow"/>
+                                    <TextView
+                                        android:id="@+id/rideTypeText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:paddingVertical="6dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:text="AC SUV"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp"/>
+                                </LinearLayout>
 
-                                <ImageView
-                                    android:id="@+id/rentalRideTypeImage"
-                                    android:layout_width="17dp"
-                                    android:layout_height="17dp"
-                                    android:src="@drawable/ic_car_unfilled" />
-
-                                <TextView
-                                    android:id="@+id/rentalRideTypeText"
+                                <LinearLayout
+                                    android:id="@+id/accessibilityTag"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:paddingVertical="6dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:text="@string/rental"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
+                                    android:background="@drawable/ic_accessibility_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:visibility="gone">
 
-                            <LinearLayout
-                                android:id="@+id/intercityRideTypeTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="match_parent"
-                                android:layout_marginHorizontal="8dp"
-                                android:background="@drawable/ic_intercity_variant_tag"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:paddingHorizontal="8dp"
-                                android:visibility="gone">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_wheelchair" />
 
-                                <ImageView
-                                    android:id="@+id/intercityRideTypeImage"
-                                    android:layout_width="17dp"
-                                    android:layout_height="17dp"
-                                    android:src="@drawable/intercity" />
+                                    <TextView
+                                        android:id="@+id/accessibilityTagText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/assistance_required"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
 
-                                <TextView
-                                    android:id="@+id/intercityRideTypeText"
+                                <LinearLayout
+                                    android:id="@+id/gotoTag"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:paddingVertical="6dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:text="@string/intercity"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp"  />
-                            </LinearLayout>
+                                    android:layout_marginLeft="5dp"
+                                    android:background="@drawable/ic_goto_bg"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
 
-                            <LinearLayout
-                                android:id="@+id/roundTripRideTypeTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="match_parent"
-                                android:layout_marginHorizontal="8dp"
-                                android:background="@drawable/ic_intercity_variant_tag"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:paddingHorizontal="8dp"
-                                android:visibility="gone">
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_pin_check_white" />
 
-                                <ImageView
-                                    android:id="@+id/roundTripRideTypeImage"
-                                    android:layout_width="17dp"
-                                    android:layout_height="17dp"
-                                    android:src="@drawable/ny_ic_round_trip_indicator_white" />
-
-                                <TextView
-                                    android:id="@+id/roundTripRideTypeText"
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/go_to"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+                                <LinearLayout
+                                    android:id="@+id/stopsTag"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:paddingVertical="6dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:text="@string/round_trip"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp"  />
+                                    android:layout_marginLeft="5dp"
+                                    android:background="@drawable/ic_stops_bg"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_stops" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:id="@+id/stopsTagText"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
                             </LinearLayout>
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:background="@drawable/ic_orange_tag"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:paddingHorizontal="3dp"
-                                android:visibility="gone"
-                                android:id="@+id/testRequestTag"
-                                android:layout_marginEnd="10dp"
-                                android:layout_height="wrap_content">
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_test_request_icon_white"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
-                                    android:id="@+id/test_request_text"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/test_request"
-                                    android:lineHeight="20dp"
-                                    android:textColor="@color/colorWhite"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/rideTypeTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginHorizontal="8dp"
-                                android:background="@drawable/ic_ac_variant_tag"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:paddingHorizontal="8dp"
-                                android:visibility="gone">
-
-                                <ImageView
-                                    android:id="@+id/rideTypeImage"
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:src="@drawable/ny_ic_snow"/>
-                                <TextView
-                                    android:id="@+id/rideTypeText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:paddingVertical="6dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:text="AC SUV"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp"/>
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/accessibilityTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:background="@drawable/ic_accessibility_tag"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:visibility="gone">
-
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_marginLeft="8dp"
-                                    android:src="@drawable/ny_ic_wheelchair" />
-
-                                <TextView
-                                    android:id="@+id/accessibilityTagText"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/assistance_required"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/gotoTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="5dp"
-                                android:background="@drawable/ic_goto_bg"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_marginLeft="8dp"
-                                    android:src="@drawable/ny_pin_check_white" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/go_to"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
-                            <LinearLayout
-                                android:id="@+id/stopsTag"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginLeft="5dp"
-                                android:background="@drawable/ic_stops_bg"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <ImageView
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_marginLeft="8dp"
-                                    android:src="@drawable/ny_ic_stops" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:lineHeight="20dp"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:id="@+id/stopsTagText"
-                                    android:textColor="@color/white"
-                                    android:textSize="12dp" />
-                            </LinearLayout>
-                        </LinearLayout>
-                    </HorizontalScrollView>
+                        </HorizontalScrollView>
                     </LinearLayout>
 
 
@@ -535,7 +534,7 @@
                                         app:cardElevation="0dp"
                                         app:contentPaddingRight="10dp"
                                         app:contentPadding="8dp">
-                                        
+
                                         <LinearLayout
                                             android:layout_width="match_parent"
                                             android:layout_height="wrap_content"
@@ -941,12 +940,12 @@
                                         android:visibility="gone"
                                         />
                                 </LinearLayout>
-                            <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="match_parent"
-                                android:id="@+id/assetZoneDrop"
-                                android:visibility="gone"
-                                android:src="@drawable/ic_metro_shape"/>
+                                <ImageView
+                                    android:layout_width="40dp"
+                                    android:layout_height="match_parent"
+                                    android:id="@+id/assetZoneDrop"
+                                    android:visibility="gone"
+                                    android:src="@drawable/ic_metro_shape"/>
 
                             </LinearLayout>
 
@@ -1200,12 +1199,12 @@
                             android:letterSpacing="0"
                             android:text="@string/decline"
                             android:textAllCaps="false"
-                            android:textColor="#6D7280"
+                            android:textColor="@color/defaultAcceptButtonBG"
                             android:textFontWeight="600"
                             android:textSize="16dp"
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="8dp"
-                            app:strokeColor="#6D7280" />
+                            app:strokeColor="@color/defaultAcceptButtonBG" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/reqButton"
@@ -1213,7 +1212,7 @@
                             android:layout_height="match_parent"
                             android:layout_marginLeft="8dp"
                             android:layout_weight="12"
-                            android:backgroundTint="#53BB64"
+                            android:backgroundTint="@color/defaultAcceptButtonBG"
                             android:fontFamily="@font/plus_jakartasans_semibold"
                             android:letterSpacing="0"
                             android:paddingHorizontal="15dp"
@@ -1254,5 +1253,19 @@
                 android:textSize="18dp" />
         </androidx.cardview.widget.CardView>
     </RelativeLayout>
-
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_alignParentBottom="true"-->
+<!--        android:orientation="horizontal"-->
+<!--        android:gravity="center"-->
+<!--        android:background="#2E3494"-->
+<!--        >-->
+<!--        <ImageView-->
+<!--            android:layout_width="200dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_maruti_suzuki_logo"-->
+<!--            android:padding="8dp"-->
+<!--            ></ImageView>-->
+<!--    </LinearLayout>-->
 </RelativeLayout>

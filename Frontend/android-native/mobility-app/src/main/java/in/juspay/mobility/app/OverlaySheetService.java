@@ -166,7 +166,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
-                        ColorStateList.valueOf(getColor(R.color.green900)));
+                        ColorStateList.valueOf( getColor(R.color.defaultAcceptButtonBG)));
                 holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
                 holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
                 holder.stopsTagText.setText(getString(R.string.stops, model.getStops()));
@@ -787,6 +787,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             merchantLogo.setText("Yatri Driver");
         } else if (key != null && key.equals("passcultureprovider")) {
             merchantLogo.setText("Alliance Taxis");
+        } else if (key != null && key.contains("marutisuzukiprovider")) {
+            ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
+            LinearLayout.LayoutParams  layoutParams = new LinearLayout.LayoutParams(600, ViewGroup.LayoutParams.WRAP_CONTENT);
+            merchantLogoIcon.setLayoutParams(layoutParams);
+            merchantLogo.setVisibility(View.GONE);
+            LinearLayout merchantBackground = (LinearLayout) floatyView.findViewById(R.id.merchant_bottom_tag);
+            if (merchantBackground != null) merchantBackground.setBackgroundColor(getColor(R.color.defaultAcceptButtonBG)) ;
         } else if (appName.contains("Mana")) {
             merchantLogo.setText("Mana Yatri");
         } else if (appName.contains("Kerala")) {
@@ -1156,7 +1163,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     }
 
-    private void handleIndicatorVariant(int i) {
+    private void  handleIndicatorVariant(int i) {
         if (vehicleVariantList == null) return;
         String requestedVariant = sheetArrayList.get(i).getRequestedVehicleVariant();
         VariantConfig variantConfig = null;
