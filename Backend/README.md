@@ -12,11 +12,10 @@ To build or develop the project, you need to install the following.
 We use [Nix](https://nixos.asia/en/nix) to build and develop the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
 
 1. [Install **Nix**](https://nixos.asia/en/install)
-1. [Install **direnv**](https://github.com/juspay/nixos-unified-template).[^direnv]
-    - You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
+1. [Install **direnv**](https://github.com/juspay/nixos-unified-template)[^direnv] (select `home-manager` template)
 1. Enter the Nix devshell by running `ln -s .envrc.backend .envrc && direnv allow` in the project directory.
 
-[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time. Also, you need setup binary cache manually.
+[^direnv]: You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv). Even though `direnv` is not strictly required to develop nammayatri, if you do not use `direnv` you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time. Also, you need setup the binary cache manually.
 
 ### Building
 
