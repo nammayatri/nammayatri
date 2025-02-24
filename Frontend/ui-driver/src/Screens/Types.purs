@@ -1327,7 +1327,11 @@ type ActiveRide = {
   receiverInstructions :: Maybe String,
   senderPersonDetails :: Maybe API.PersonDetails,
   receiverPersonDetails :: Maybe API.PersonDetails,
-  notifiedReachedDestination :: Boolean
+  parcelType :: Maybe API.ParcelType,
+  parcelQuantity :: Maybe Int,
+  notifiedReachedDestination :: Boolean,
+  destinationWaitingTime :: Maybe Int,
+  destinationWaitTimerId :: String
 }
 
 type HomeScreenProps =  {
@@ -1483,7 +1487,7 @@ instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 
-data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus | NotTriggered | DestinationReachedTriggered
+data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus | NotTriggered | DestinationReachedTriggered | DestinationWaitingTimeTriggered
 
 derive instance genericTimerStatus :: Generic TimerStatus _
 instance eqTimerStatus :: Eq TimerStatus where eq = genericEq

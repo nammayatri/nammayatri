@@ -678,6 +678,7 @@
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
                                                 android:textSize="16dp"
+                                                android:lineHeight="20dp"
                                                 android:textColor="@color/blue800"
                                                 android:gravity="center"
                                                 android:singleLine="false"

@@ -69,6 +69,7 @@ type Config = {
   gotoTag :: Boolean,
   waitTimeStatus :: ST.TimerStatus,
   waitTimeSeconds :: Int,
+  destinationWaitingTime :: Maybe Int,
   rideType :: ST.TripType,
   rideScheduledTime :: Mb.Maybe String,
   rideStartTime :: Mb.Maybe String,
@@ -91,13 +92,23 @@ type Config = {
   isDelivery :: Boolean,
   delivery :: Mb.Maybe DeliveryDetails,
   isSourceDetailsExpanded :: Boolean,
-  isDestinationDetailsExpanded :: Boolean
+  isDestinationDetailsExpanded :: Boolean,
+  showWaitingTime :: Boolean
 }
 
 type DeliveryDetails = {
   sender :: PersonAndDeliveryInfo,
-  receiver :: PersonAndDeliveryInfo
+  receiver :: PersonAndDeliveryInfo,
+  parcelDetails :: ParcelInfo
 }
+
+type ParcelInfo = 
+  { parcelQuantity :: Maybe Int
+  , parcelType :: 
+    { tag :: String
+    , contents :: Maybe String 
+    }
+  }
 
 type PersonAndDeliveryInfo = {
   name :: String,
@@ -150,6 +161,7 @@ config = {
   gotoTag : false,
   waitTimeStatus : ST.NoStatus,
   waitTimeSeconds : -1,
+  destinationWaitingTime : Nothing,
   rideType: ST.OneWay,
   rideScheduledTime : Mb.Nothing,
   startODOReading : "0",
@@ -170,5 +182,6 @@ config = {
   isDelivery : false,
   delivery : Nothing,
   isSourceDetailsExpanded : false,
-  isDestinationDetailsExpanded : false
+  isDestinationDetailsExpanded : false,
+  showWaitingTime : false
 }

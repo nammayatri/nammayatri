@@ -1731,5 +1731,5 @@ getTa = Keymap {
 , parcel_type : "சாமான் வகை" 
 , parcel_quantity : "சாமான் அளவு" 
 , unloading_time : "இறக்கும் நேரம்" 
-, loading_time -> "ஏற்றும் நேரம்" 
+, loading_time : "ஏற்றும் நேரம்" 
 }

@@ -1730,6 +1730,6 @@ getOd = Keymap {
 , parcel_details :  "ପାର୍ସେଲ ବିବରଣୀ"
 , parcel_type : "ପାର୍ସେଲ ପ୍ରକାର"
 , parcel_quantity : "ପାର୍ସେଲ ପରିମାଣ"
-, unloading_time -> "ଅନଲୋଡିଂ ସମୟ" 
-, loading_time -> "ଲୋଡିଂ ସମୟ" 
+, unloading_time : "ଅନଲୋଡିଂ ସମୟ" 
+, loading_time : "ଲୋଡିଂ ସମୟ" 
 }

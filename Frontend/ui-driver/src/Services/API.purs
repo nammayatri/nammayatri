@@ -701,7 +701,14 @@ newtype RidesInfo = RidesInfo
       roundTrip :: Boolean,
       returnTime :: Maybe String,
       senderDetails :: Maybe PersonDetails,
-      receiverDetails :: Maybe PersonDetails
+      receiverDetails :: Maybe PersonDetails,
+      parcelType :: Maybe ParcelType,
+      parcelQuantity :: Maybe Int
+}
+
+type ParcelType = {
+  tag :: String,
+  contents :: Maybe String
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType

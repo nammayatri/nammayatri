@@ -771,5 +771,7 @@ dummyRideHistoryItem = RidesInfo {
       parkingCharge : Nothing,
       senderDetails : Nothing,
       receiverDetails : Nothing,
+      parcelType : Nothing,
+      parcelQuantity : Nothing,
       coinsEarned : Nothing 
 }

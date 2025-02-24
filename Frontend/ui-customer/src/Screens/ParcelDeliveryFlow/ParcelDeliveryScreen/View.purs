@@ -34,6 +34,8 @@ import Helpers.CommonView (dummyView)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError, storeCallBackCustomer)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
