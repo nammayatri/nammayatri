@@ -315,8 +315,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
                     )
             mbPaymentStatus = paymentOrder <&> (.status)
         whenJust mbPaymentStatus $ \pstatus -> do
-          unless (pstatus == FRFSTicketService.SUCCESS) do
-            void $ QJourney.updatePaymentStatus (Just True) journeyId
+          when (pstatus == FRFSTicketService.SUCCESS) $ void $ QJourney.updatePaymentStatus (Just True) journeyId
         return $ paymentOrder <&> (.status)
       else
         if journey.isPaymentSuccess == Just True
