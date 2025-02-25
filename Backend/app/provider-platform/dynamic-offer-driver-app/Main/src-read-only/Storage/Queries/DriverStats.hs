@@ -92,6 +92,8 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.isValidRating isValidRating,
       Se.Set Beam.lateNightTrips lateNightTrips,
       Se.Set Beam.ridesCancelled ridesCancelled,
+      Se.Set Beam.safetyPlusEarnings (Kernel.Prelude.Just safetyPlusEarnings),
+      Se.Set Beam.safetyPlusRideCount (Kernel.Prelude.Just safetyPlusRideCount),
       Se.Set Beam.totalCoinsConvertedCash (Kernel.Prelude.Just totalCoinsConvertedCash),
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),

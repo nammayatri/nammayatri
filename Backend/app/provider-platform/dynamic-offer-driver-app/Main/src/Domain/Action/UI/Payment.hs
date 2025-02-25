@@ -607,10 +607,10 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
             vehicle_number = veh.registrationNo,
             phone_number = fromMaybe "6666666666" unencryptedMobileNumber,
             name = person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName,
-            org_id = "",
+            org_id = fromMaybe "" $ subsConfig.extWebhookConfigs >>= (.merchantId),
             mandate_created_at = mandate.createdAt,
             order_id = orderId,
-            mandate_status = show mandate.status,
+            mandate_status = show $ castAutoPayStatus mandateStatus,
             event_name = show WT.MANDATE,
             last_sent_at = show now
           }

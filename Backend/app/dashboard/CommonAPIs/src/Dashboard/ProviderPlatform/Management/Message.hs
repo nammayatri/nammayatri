@@ -18,7 +18,7 @@ module Dashboard.ProviderPlatform.Management.Message
   )
 where
 
-import API.Types.ProviderPlatform.Management.Endpoints.Message
+import API.Types.ProviderPlatform.Management.Endpoints.Message as Reexport
 import Dashboard.Common as Reexport
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS

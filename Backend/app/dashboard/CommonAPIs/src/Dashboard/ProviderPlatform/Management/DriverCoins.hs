@@ -18,7 +18,7 @@ module Dashboard.ProviderPlatform.Management.DriverCoins
   )
 where
 
-import API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
+import API.Types.ProviderPlatform.Management.Endpoints.DriverCoins as Reexport
 import Dashboard.Common as ReExport
 import Dashboard.Common.DriverCoins as ReExport
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
