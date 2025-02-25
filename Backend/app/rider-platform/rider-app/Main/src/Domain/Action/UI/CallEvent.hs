@@ -74,7 +74,7 @@ callOnClickTracker rideId = do
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   buildCallStatus <- callStatusObj booking.merchantOperatingCityId booking.merchantId
   QCallStatus.create buildCallStatus
-  scheduleJobs ride booking.merchantId booking.merchantOperatingCityId (riderConfig.exotelStatusCheckSchedulerDelay)
+  scheduleJobs ride booking.merchantId booking.merchantOperatingCityId (riderConfig.exotelStatusCheckSchedulerDelay) riderConfig
   return ()
   where
     callStatusObj merchantOperatingCityId merchantId = do
@@ -100,8 +100,10 @@ callOnClickTracker rideId = do
             customerIvrResponse = Nothing
           }
 
-    scheduleJobs ride merchantId merchantOperatingCityId exotelStatusCheckSchedulerDelay = do
-      createJobIn @_ @'CheckExotelCallStatusAndNotifyBPP (Just merchantId) (Just merchantOperatingCityId) (fromIntegral exotelStatusCheckSchedulerDelay) $
+    scheduleJobs ride merchantId merchantOperatingCityId exotelStatusCheckSchedulerDelay riderConfig = do
+      curentTime <- getCurrentTime
+      let expireAt = addUTCTime ((fromIntegral exotelStatusCheckSchedulerDelay) + riderConfig.exotelStatusCheckSchedulerExpireTime) curentTime
+      createJobIn @_ @'CheckExotelCallStatusAndNotifyBPP (Just merchantId) (Just merchantOperatingCityId) (fromIntegral exotelStatusCheckSchedulerDelay) (Just expireAt) $
         CheckExotelCallStatusAndNotifyBPPJobData
           { rideId = ride.id,
             bppRideId = ride.bppRideId,

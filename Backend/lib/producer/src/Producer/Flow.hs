@@ -114,7 +114,8 @@ runReviver' = do
                 currErrors = 0,
                 status = Pending,
                 merchantId = ST.merchantId x,
-                merchantOperatingCityId = ST.merchantOperatingCityId x
+                merchantOperatingCityId = ST.merchantOperatingCityId x,
+                jobExpireAt = x.jobExpireAt
               }
       createWithKVScheduler $ AnyJob newJob
       logDebug $ "Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid

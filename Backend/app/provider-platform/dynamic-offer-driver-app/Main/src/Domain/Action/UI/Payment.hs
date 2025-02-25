@@ -646,7 +646,7 @@ createWebhookJob subsConfig webhook = do
                     rescheduleTimeThreshold = webhookConfig.rescheduleTimeThreshold,
                     batchId = Just webhook.batchId
                   }
-          createJobIn @_ @'SendWebhookToExternal Nothing Nothing (secondsToNominalDiffTime $ Seconds webhookConfig.nextJobScheduleTimeThreshold) $
+          createJobIn @_ @'SendWebhookToExternal Nothing Nothing (secondsToNominalDiffTime $ Seconds webhookConfig.nextJobScheduleTimeThreshold) Nothing $
             SendWebhookToExternalJobData
               { webhookData = jobData
               }
