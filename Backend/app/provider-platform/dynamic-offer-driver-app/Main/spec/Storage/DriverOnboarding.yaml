@@ -359,7 +359,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
   fields:
@@ -409,6 +409,19 @@ DocumentVerificationConfig:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV
       where: merchantOperatingCityId
+      orderBy:
+        field: order
+        order: asc
+    findAllMerchant:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - isMandatory
+          - not_eq:
+             [ isImageValidationRequired,
+               isDefaultEnabledOnManualVerification,
+               doStrictVerifcation
+             ]
       orderBy:
         field: order
         order: asc
