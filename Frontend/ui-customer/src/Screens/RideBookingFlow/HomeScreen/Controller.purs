@@ -3834,7 +3834,7 @@ specialZoneRideFlow  (RideBookingRes response) state = do
 
 findingQuotesSearchExpired :: Boolean -> Boolean -> Boolean -> Int
 findingQuotesSearchExpired gotQuotes isNormalRide reverse =
-  let secondsPassed = getExpiryTime (getValueToLocalStore $ if isNormalRide then FINDING_QUOTES_START_TIME else CONFIRM_QUOTES_START_TIME) reverse
+  let secondsPassed = getExpiryTime (getValueFromCache  (if isNormalRide then (show FINDING_QUOTES_START_TIME) else (show CONFIRM_QUOTES_START_TIME)) getKeyInSharedPrefKeys) reverse
       searchExpiryTime = getSearchExpiryTime isNormalRide
       secondsLeft = case gotQuotes of
                       true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
