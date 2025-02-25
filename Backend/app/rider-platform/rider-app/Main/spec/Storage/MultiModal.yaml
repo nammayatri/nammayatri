@@ -331,6 +331,8 @@ JourneyLeg:
 
   excludedDefaultQueries:
     - create
+    - updateByPrimaryKey
+    - findByPrimaryKey
 
   constraints:
     id: PrimaryKey
