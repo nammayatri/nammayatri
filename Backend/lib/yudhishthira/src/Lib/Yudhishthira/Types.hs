@@ -126,7 +126,7 @@ data UpdateNammaTagRequest = UpdateNammaTagRequest
     tagChakra :: Maybe Chakra,
     tagValidity :: Maybe Hours,
     resetTagValidity :: Maybe Bool,
-    tagStage :: Maybe ApplicationEvent,
+    tagStages :: Maybe (NonEmpty ApplicationEvent),
     tagRule :: Maybe TagRule,
     actionEngine :: Maybe Value
   }
@@ -427,10 +427,11 @@ type LogicRolloutReq = [LogicRolloutObject]
 instance HideSecrets CreateTagResp where
   hideSecrets = identity
 
-data CreateNammaTagResponse = CreateNammaTagResponse
-  { result :: CreateTagResp
+newtype CreateNammaTagResponse = CreateNammaTagResponse
+  { results :: NonEmpty CreateTagResp
   }
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets CreateNammaTagResponse where
   hideSecrets = identity

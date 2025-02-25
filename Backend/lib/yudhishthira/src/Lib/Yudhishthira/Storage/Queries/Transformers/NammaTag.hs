@@ -8,28 +8,21 @@ import qualified Lib.Yudhishthira.Types.NammaTag
 getChakra :: (Lib.Yudhishthira.Types.NammaTag.TagInfo -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra)
 getChakra tag =
   case tag of
-    Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo _) -> Kernel.Prelude.Nothing
+    Lib.Yudhishthira.Types.NammaTag.Application -> Kernel.Prelude.Nothing
     Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo chakra) -> Just chakra
-    Lib.Yudhishthira.Types.NammaTag.Manual -> Kernel.Prelude.Nothing
-
-getEvent :: (Lib.Yudhishthira.Types.NammaTag.TagInfo -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent)
-getEvent tag =
-  case tag of
-    Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo event) -> Just event
-    Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo _) -> Kernel.Prelude.Nothing
     Lib.Yudhishthira.Types.NammaTag.Manual -> Kernel.Prelude.Nothing
 
 getTag :: (Lib.Yudhishthira.Types.NammaTag.TagInfo -> Lib.Yudhishthira.Types.NammaTag.TagType)
 getTag tag =
   case tag of
-    Lib.Yudhishthira.Types.NammaTag.Application _ -> Lib.Yudhishthira.Types.NammaTag.ApplicationTag
+    Lib.Yudhishthira.Types.NammaTag.Application -> Lib.Yudhishthira.Types.NammaTag.ApplicationTag
     Lib.Yudhishthira.Types.NammaTag.KaalChakra _ -> Lib.Yudhishthira.Types.NammaTag.KaalChakraTag
     Lib.Yudhishthira.Types.NammaTag.Manual -> Lib.Yudhishthira.Types.NammaTag.ManualTag
 
-mkTagInfo :: (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent -> Lib.Yudhishthira.Types.NammaTag.TagType -> Lib.Yudhishthira.Types.NammaTag.TagInfo)
-mkTagInfo chakra event tagType =
+mkTagInfo :: (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra -> Lib.Yudhishthira.Types.NammaTag.TagType -> Lib.Yudhishthira.Types.NammaTag.TagInfo)
+mkTagInfo chakra tagType =
   case tagType of
-    Lib.Yudhishthira.Types.NammaTag.ApplicationTag -> Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo (fromMaybe Lib.Yudhishthira.Types.RideEnd event))
+    Lib.Yudhishthira.Types.NammaTag.ApplicationTag -> Lib.Yudhishthira.Types.NammaTag.Application
     Lib.Yudhishthira.Types.NammaTag.KaalChakraTag -> Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo (fromMaybe Lib.Yudhishthira.Types.Monthly chakra))
     Lib.Yudhishthira.Types.NammaTag.ManualTag -> Lib.Yudhishthira.Types.NammaTag.Manual
 

@@ -10,9 +10,6 @@ import qualified Lib.Yudhishthira.Types.NammaTag
 import Sequelize as Se
 
 -- Extra code goes here --
-findAllByApplicationEvent :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.ApplicationEvent -> m [Lib.Yudhishthira.Types.NammaTag.NammaTag]
-findAllByApplicationEvent event = do findAllWithKV [Se.And [Se.Is Beam.event $ Se.Eq (Just event)]]
-
 findAllByChakra :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.NammaTag.NammaTag]
 findAllByChakra chakra = do findAllWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq (Just chakra)]]
 

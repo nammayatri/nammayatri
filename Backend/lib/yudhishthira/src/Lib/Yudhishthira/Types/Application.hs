@@ -10,7 +10,7 @@ data NammaTagApplication = NammaTagApplication
     description :: Maybe Text,
     tagName :: Text,
     tagPossibleValues :: TagValues,
-    tagStage :: ApplicationEvent,
+    tagStages :: NonEmpty ApplicationEvent,
     tagValidity :: Maybe Hours,
     tagRule :: TagRule
   }
