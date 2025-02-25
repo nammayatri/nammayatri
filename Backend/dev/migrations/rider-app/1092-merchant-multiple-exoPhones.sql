@@ -24,7 +24,7 @@ ALTER TABLE atlas_app.merchant ALTER COLUMN exo_phones SET NOT NULL;
 UPDATE atlas_app.merchant_service_usage_config
     SET initiate_call = 'Exotel';
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN initiate_call SET NOT NULL;
-
+--NOTE : DON'T RUN THIS QUERY IN MASTER/PROD (Only For Local)
 WITH MerchantCallServiceConfigs AS (
   SELECT T1.merchant_id, T1.id, 'Call_Exotel', CAST ('{
    "exotelUrl":"https://api.exotel.com/",
@@ -32,7 +32,7 @@ WITH MerchantCallServiceConfigs AS (
    "callbackUrl":"http://localhost:8013/v1/ride/call/statusCallback",
    "apiKey":"xxxxxxx",
    "apiToken":"xxxxxxx",
-   "sid":"xxxxxxx",
+   "accountSID":"xxxxxxx",
    "callerId":"xxxxxxx"
   }' AS json)
   FROM atlas_app.merchant_operating_city AS T1
