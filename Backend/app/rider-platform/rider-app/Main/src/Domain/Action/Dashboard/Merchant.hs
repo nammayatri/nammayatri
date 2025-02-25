@@ -447,11 +447,12 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       Just newCity -> return newCity.id
       Nothing -> generateGUID
 
+  let newMerchantShortId = maybe merchantShortId (.shortId) mbNewMerchant
   -- city
   let mbNewOperatingCity =
         case cityAlreadyCreated of
           Nothing -> do
-            let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now
+            let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now newMerchantShortId
             Just newOperatingCity
           _ -> Nothing
 
@@ -632,11 +633,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           ..
         }
 
-    buildMerchantOperatingCity newMerchantId cityId currentTime = do
+    buildMerchantOperatingCity newMerchantId cityId currentTime newMerchantShortId = do
       DMOC.MerchantOperatingCity
         { id = cityId,
           merchantId = newMerchantId,
-          merchantShortId,
+          merchantShortId = newMerchantShortId,
           lat = req.lat,
           long = req.long,
           city = req.city,
