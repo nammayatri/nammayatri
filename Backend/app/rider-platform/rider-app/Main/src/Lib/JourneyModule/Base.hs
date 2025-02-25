@@ -171,7 +171,12 @@ startJourney ::
   m ()
 startJourney forcedBookedLegOrder journeyId = do
   allLegs <- getAllLegsInfo journeyId
-  mapM_ (\leg -> JLI.confirm (if (leg.order == 0) then True else (Just leg.order == forcedBookedLegOrder)) leg) allLegs
+  mapM_
+    ( \leg ->
+        when (leg.status /= JL.Skipped) $
+          JLI.confirm (if (leg.order == 0) then True else (Just leg.order == forcedBookedLegOrder)) leg
+    )
+    allLegs
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c
