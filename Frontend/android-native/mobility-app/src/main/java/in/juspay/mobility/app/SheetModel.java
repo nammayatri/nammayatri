@@ -229,7 +229,7 @@ public class SheetModel {
 
     public String getDistanceToBeCovered() {
         DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
-        df.setMaximumFractionDigits(2);
+        df.setMaximumFractionDigits(1);
         return df.format(distanceToBeCovered / 1000);
     }
 

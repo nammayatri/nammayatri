@@ -157,7 +157,7 @@
                                     android:src="@drawable/ic_line"
                                     android:visibility="gone"
                                     android:layout_marginRight="4dp" />
-                                <TextView 
+                                <TextView
                                     android:id="@+id/tip_banner_view_1"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -252,7 +252,7 @@
                                     android:src="@drawable/ic_line"
                                     android:visibility="gone"
                                     android:layout_marginRight="4dp" />
-                                <TextView 
+                                <TextView
                                     android:id="@+id/tip_banner_view_2"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -260,7 +260,7 @@
                                     android:text=""
                                     android:textColor="@color/white"
                                     android:textStyle="bold"
-                                    android:visibility="gone" />
+                                    android:visibility="invisible" />
                             </LinearLayout>
                         </com.facebook.shimmer.ShimmerFrameLayout>
 

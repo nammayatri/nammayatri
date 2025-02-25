@@ -19,17 +19,21 @@ data Action
   = Action1Click Int
   | Action2Click Int
   | IllutrationClick Int
+  | ShareClick Int
   | NoAction
 
 data CounterData = CounterData
     { 
       icon :: String,
-      value :: String
+      value :: String,
+      isShare :: Boolean,
+      visibility :: String
     }
 
 getCounters :: String -> Array CounterData
 getCounters dummy = 
     [
-       CounterData {icon : "ny_ic_heart_grey,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value : "likeCount"}, 
-       CounterData {icon : "ny_ic_eye,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_eye.png", value : "viewCount"}
+       CounterData {icon : "ny_ic_heart_grey,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value : "likeCount", isShare: false, visibility: "likeCountVisibility"}, 
+       CounterData {icon : "ny_ic_share,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_share.png", value : "shareCount", isShare: true, visibility: "shareCountVisibility"},
+       CounterData {icon : "ny_ic_eye,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_eye.png", value : "viewCount", isShare: false, visibility: "viewCountVisibility"}
     ]

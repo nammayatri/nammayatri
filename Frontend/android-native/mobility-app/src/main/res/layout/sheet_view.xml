@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/relative_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:visibility="gone"
-    android:id="@+id/relative_layout"
-    android:background="@android:color/transparent"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:background="@android:color/transparent">
 
     <RelativeLayout
         android:id="@+id/containerLayout"
@@ -24,155 +23,163 @@
 
             <ScrollView
                 android:layout_width="match_parent"
-                android:scrollbarSize="10dp"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:paddingBottom="16dp"
+                android:scrollbarSize="10dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="@color/white"
-                    android:orientation="vertical"
-                    android:paddingBottom="16dp">
-
+                    android:orientation="vertical">
                     <LinearLayout
+                        android:id="@+id/thirdPartyTag"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="#30E55454"
                         android:gravity="center"
-                        android:id="@+id/thirdPartyTag"
-                        android:visibility="gone"
-                        android:paddingLeft="6dp">
+                        android:paddingLeft="6dp"
+                        android:visibility="gone">
 
                         <ImageView
                             android:layout_width="20dp"
-                            android:layout_height="20dp"/>
+                            android:layout_height="20dp"
+                            android:src="@drawable/ny_ic_alert_hexagon_red" />
 
                         <TextView
                             android:id="@+id/thirdPartyTagText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:paddingHorizontal="6dp"
+                            android:paddingVertical="12dp"
                             android:text="@string/third_party_booking"
                             android:textColor="@color/red900"
-                            android:textSize="14dp"
                             android:textFontWeight="500"
-                            android:paddingVertical="12dp"
-                            android:paddingHorizontal="6dp"/>
+                            android:textSize="14dp" />
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/tags_block"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@color/grey900"
-                        android:visibility="gone"
-                        android:id="@+id/tags_block"
-                        android:padding="10dp">
+                        android:padding="10dp"
+                        android:visibility="gone">
+
                         <HorizontalScrollView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@color/grey900">
+                            android:id="@+id/special_tags"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginBottom="6dp">
 
                                 <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:background="@drawable/ic_sp_zone_tag"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
                                     android:id="@+id/spZoneTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
                                     android:layout_marginEnd="10dp"
-                                    android:layout_height="wrap_content">
+                                    android:background="@drawable/ic_sp_zone_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone">
+
                                     <ImageView
                                         android:layout_width="16dp"
                                         android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_location_pin_white"
-                                        android:layout_marginLeft="8dp"/>
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_location_pin_white" />
+
                                     <TextView
                                         android:id="@+id/spZoneExtraTip"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
                                         android:paddingHorizontal="2dp"
                                         android:paddingVertical="6dp"
-                                        android:visibility="gone"
-                                        android:text="₹10"
-                                        android:lineHeight="20dp"
+                                        android:text=""
                                         android:textColor="@color/white"
-                                        android:textSize="12dp" />
+                                        android:textSize="12dp"
+                                        android:visibility="gone" />
+
                                     <TextView
                                         android:id="@+id/spZoneTag_text"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
                                         android:paddingHorizontal="3dp"
                                         android:paddingVertical="6dp"
                                         android:text="@string/zone_pickup"
-                                        android:lineHeight="20dp"
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
 
                                 <LinearLayout
+                                    android:id="@+id/isFavouriteTag"
                                     android:layout_width="wrap_content"
-                                    android:background="@drawable/ic_tip_tag"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
-                                    android:id="@+id/customerTipTag"
+                                    android:layout_height="wrap_content"
                                     android:layout_marginEnd="10dp"
-                                    android:layout_height="wrap_content">
+                                    android:background="@drawable/ic_favourite_rider"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone">
+
                                     <ImageView
                                         android:layout_width="16dp"
                                         android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_tip_icon"
-                                        android:layout_marginLeft="8dp"/>
+                                        android:layout_marginLeft="8dp"
+                                        android:layout_marginTop="2dp"
+                                        android:src="@drawable/ny_ic_blue_heart" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="3dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="Favourite Rider"
+                                        android:textColor="@color/blue800"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/customerTipTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="10dp"
+                                    android:background="@drawable/ic_tip_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_tip_icon" />
+
                                     <TextView
                                         android:id="@+id/tip_text"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
                                         android:paddingVertical="6dp"
                                         android:text="₹10 Tip"
-                                        android:lineHeight="20dp"
                                         android:textColor="@color/Black900"
-                                        android:textSize="12dp" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:paddingHorizontal="3dp"
-                                    android:background="@drawable/ic_favourite_rider"
-                                    android:id="@+id/isFavouriteTag"
-                                    android:layout_marginEnd="10dp"
-                                    android:visibility="gone"
-                                    android:layout_height="wrap_content">
-                                    <ImageView
-                                        android:layout_width="16dp"
-                                        android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_blue_heart"
-                                        android:layout_marginTop="2dp"
-                                        android:layout_marginLeft="8dp"/>
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:elevation="1dp"
-                                        android:fontFamily="@font/plus_jakartasans_semibold"
-                                        android:paddingHorizontal="3dp"
-                                        android:paddingVertical="6dp"
-                                        android:text="Favourite Rider"
-                                        android:lineHeight="20dp"
-                                        android:textColor="@color/blue800"
                                         android:textSize="12dp" />
                                 </LinearLayout>
 
@@ -191,19 +198,19 @@
                                         android:id="@+id/rentalRideTypeImage"
                                         android:layout_width="17dp"
                                         android:layout_height="17dp"
-                                        android:src="@drawable/ic_car_unfilled" />
+                                        android:src="@drawable/ic_car_unfilled_green" />
 
                                     <TextView
                                         android:id="@+id/rentalRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
-                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
                                         android:text="@string/rental"
-                                        android:textColor="@color/white"
+                                        android:textColor="@color/turquoise"
                                         android:textSize="12dp" />
                                 </LinearLayout>
 
@@ -222,21 +229,22 @@
                                         android:id="@+id/intercityRideTypeImage"
                                         android:layout_width="17dp"
                                         android:layout_height="17dp"
-                                        android:src="@drawable/intercity" />
+                                        android:src="@drawable/ic_intercity_blue" />
 
                                     <TextView
                                         android:id="@+id/intercityRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
-                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
                                         android:text="@string/intercity"
-                                        android:textColor="@color/white"
-                                        android:textSize="12dp"  />
+                                        android:textColor="@color/blue800"
+                                        android:textSize="12dp" />
                                 </LinearLayout>
+
                                 <LinearLayout
                                     android:id="@+id/roundTripRideTypeTag"
                                     android:layout_width="wrap_content"
@@ -259,40 +267,42 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
-                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
                                         android:text="@string/round_trip"
                                         android:textColor="@color/white"
-                                        android:textSize="12dp"  />
+                                        android:textSize="12dp" />
                                 </LinearLayout>
 
                                 <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:background="@drawable/ic_orange_tag"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
                                     android:id="@+id/testRequestTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
                                     android:layout_marginEnd="10dp"
-                                    android:layout_height="wrap_content">
+                                    android:background="@drawable/ic_orange_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="3dp"
+                                    android:visibility="gone">
+
                                     <ImageView
                                         android:layout_width="16dp"
                                         android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_test_request_icon_white"
-                                        android:layout_marginLeft="8dp"/>
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_test_request_icon_white" />
+
                                     <TextView
                                         android:id="@+id/test_request_text"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
                                         android:paddingVertical="6dp"
                                         android:text="@string/test_request"
-                                        android:lineHeight="20dp"
                                         android:textColor="@color/colorWhite"
                                         android:textSize="12dp" />
                                 </LinearLayout>
@@ -312,19 +322,20 @@
                                         android:id="@+id/rideTypeImage"
                                         android:layout_width="16dp"
                                         android:layout_height="16dp"
-                                        android:src="@drawable/ny_ic_snow"/>
+                                        android:src="@drawable/ny_ic_snow" />
+
                                     <TextView
                                         android:id="@+id/rideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
-                                        android:paddingVertical="6dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
                                         android:text="AC SUV"
                                         android:textColor="@color/white"
-                                        android:textSize="12dp"/>
+                                        android:textSize="12dp" />
                                 </LinearLayout>
 
                                 <LinearLayout
@@ -363,6 +374,7 @@
                                     android:layout_marginLeft="5dp"
                                     android:background="@drawable/ic_goto_bg"
                                     android:gravity="center_vertical"
+                                    android:visibility="gone"
                                     android:orientation="horizontal">
 
                                     <ImageView
@@ -391,6 +403,7 @@
                                     android:layout_marginLeft="5dp"
                                     android:background="@drawable/ic_stops_bg"
                                     android:gravity="center_vertical"
+                                    android:visibility="gone"
                                     android:orientation="horizontal">
 
                                     <ImageView
@@ -400,6 +413,7 @@
                                         android:src="@drawable/ny_ic_stops" />
 
                                     <TextView
+                                        android:id="@+id/stopsTagText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:elevation="1dp"
@@ -407,7 +421,6 @@
                                         android:lineHeight="20dp"
                                         android:paddingHorizontal="8dp"
                                         android:paddingVertical="6dp"
-                                        android:id="@+id/stopsTagText"
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
@@ -419,24 +432,26 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingHorizontal="15dp"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:id="@+id/main_sheet_layout"
+                        android:paddingHorizontal="15dp">
 
                         <LinearLayout
-                            android:layout_marginTop="16dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
                             android:orientation="vertical">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal">
+                                android:orientation="vertical">
 
                                 <LinearLayout
-                                    android:layout_width="wrap_content"
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:orientation="vertical">
+                                    android:layout_gravity="center_vertical"
+                                    android:orientation="horizontal">
 
                                     <TextView
                                         android:layout_width="wrap_content"
@@ -445,59 +460,21 @@
                                         android:alpha="0.5"
                                         android:fontFamily="@font/plus_jakarta_sans_bold"
                                         android:lineHeight="20dp"
+                                        android:id="@+id/pickupText"
                                         android:text="@string/pickup"
                                         android:textColor="#2C2F3A"
                                         android:textFontWeight="600"
                                         android:textSize="16dp" />
-
                                     <LinearLayout
                                         android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content">
-                                        <TextView
-                                            android:id="@+id/distancePickUp"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:fontFamily="@font/plus_jakarta_sans_bold"
-                                            android:lineHeight="28dp"
-                                            android:text="1.2 km"
-                                            android:textColor="@color/Black800"
-                                            android:textFontWeight="600"
-                                            android:textSize="24dp" />
-                                        <TextView
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:text="•"
-                                            android:id="@+id/durationToPickupImage"
-                                            android:textSize="24dp"
-                                            android:visibility="gone"
-                                            android:textColor="#A7A7A7"
-                                            android:layout_marginHorizontal="4dp"/>
-
-                                        <TextView
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:fontFamily="@font/plus_jakarta_sans_bold"
-                                            android:lineHeight="28dp"
-                                            android:id="@+id/durationToPickup"
-                                            android:text="20 min"
-                                            android:visibility="gone"
-                                            android:textColor="@color/Black800"
-                                            android:textFontWeight="600"
-                                            android:textSize="24dp"/>
-                                    </LinearLayout>
-
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="vertical"
-                                    android:gravity="right">
+                                        android:layout_weight="1.0"
+                                        android:layout_height="wrap_content"/>
                                     <LinearLayout
                                         android:id="@+id/rideStartDateTimeTag"
                                         android:layout_width="wrap_content"
-                                        android:visibility="gone"
-                                        android:layout_height="wrap_content">
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center"
+                                        android:visibility="gone">
 
                                         <TextView
                                             android:id="@+id/rideStartDate"
@@ -511,30 +488,82 @@
                                             android:textColor="@color/Black700"
                                             android:textFontWeight="600"
                                             android:textSize="14dp" />
+
                                         <TextView
                                             android:id="@+id/rideStartTime"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
+                                            android:layout_marginLeft="5dp"
                                             android:fontFamily="@font/plus_jakartasans_semibold"
                                             android:lineHeight="28dp"
                                             android:text="12:30 PM"
-                                            android:layout_marginLeft="5dp"
                                             android:textColor="@color/Black800"
                                             android:textFontWeight="600"
                                             android:textSize="18dp" />
                                     </LinearLayout>
 
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center_vertical"
+                                    android:layout_marginTop="6dp"
+                                    android:orientation="horizontal">
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content">
+
+                                        <TextView
+                                            android:id="@+id/distancePickUp"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:fontFamily="@font/plus_jakarta_sans_bold"
+                                            android:lineHeight="28dp"
+                                            android:text="1.2 km"
+                                            android:textColor="@color/Black800"
+                                            android:textFontWeight="600"
+                                            android:textSize="24dp" />
+
+                                        <TextView
+                                            android:id="@+id/durationToPickupImage"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginHorizontal="4dp"
+                                            android:text="•"
+                                            android:textColor="#A7A7A7"
+                                            android:textSize="24dp"
+                                            android:visibility="gone" />
+
+                                        <TextView
+                                            android:id="@+id/durationToPickup"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:fontFamily="@font/plus_jakarta_sans_bold"
+                                            android:lineHeight="28dp"
+                                            android:text="20 min"
+                                            android:textColor="@color/Black800"
+                                            android:textFontWeight="600"
+                                            android:textSize="24dp"
+                                            android:visibility="gone" />
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_weight="1.0"
+                                        android:layout_height="wrap_content"/>
+
                                     <com.google.android.material.card.MaterialCardView
                                         android:id="@+id/vcTierAndACView"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        app:cardBackgroundColor="#1A0066FF"
+                                        android:layout_gravity="center"
+                                        app:cardBackgroundColor="@color/blue600"
                                         android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="28dp"
-                                        android:layout_marginTop="4dp"
+                                        app:cardCornerRadius="44dp"
                                         app:cardElevation="0dp"
-                                        app:contentPaddingRight="10dp"
-                                        app:contentPadding="8dp">
+                                        app:contentPadding="4dp"
+                                        app:contentPaddingRight="8dp">
 
                                         <LinearLayout
                                             android:layout_width="match_parent"
@@ -543,9 +572,9 @@
                                             android:orientation="horizontal">
 
                                             <LinearLayout
+                                                android:id="@+id/acNonAcView"
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:id="@+id/acNonAcView"
                                                 android:orientation="horizontal">
 
                                                 <RelativeLayout
@@ -557,12 +586,13 @@
                                                         android:layout_width="wrap_content"
                                                         android:layout_height="wrap_content"
                                                         android:layout_gravity="center"
-                                                        app:cardBackgroundColor="@color/blue800"
-                                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                                        app:cardCornerRadius="28dp"
                                                         android:layout_marginRight="6dp"
-                                                        app:contentPadding="5dp"
-                                                        app:cardElevation="0dp">
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                                        android:visibility="gone"
+                                                        app:cardBackgroundColor="@color/blue800"
+                                                        app:cardCornerRadius="28dp"
+                                                        app:cardElevation="0dp"
+                                                        app:contentPadding="5dp">
 
                                                         <LinearLayout
                                                             android:layout_width="match_parent"
@@ -578,29 +608,30 @@
                                                             <TextView
                                                                 android:layout_width="wrap_content"
                                                                 android:layout_height="wrap_content"
-                                                                android:textSize="18dp"
                                                                 android:layout_marginLeft="5dp"
-                                                                android:gravity="center"
-                                                                android:textColor="@color/white"
                                                                 android:layout_marginRight="4dp"
-                                                                android:textFontWeight="600"
                                                                 android:fontFamily="@font/dmsans_bold"
-                                                                android:text="AC"/>
+                                                                android:gravity="center"
+                                                                android:text="AC"
+                                                                android:textColor="@color/white"
+                                                                android:textFontWeight="600"
+                                                                android:textSize="18dp" />
                                                         </LinearLayout>
 
                                                     </com.google.android.material.card.MaterialCardView>
+
                                                     <com.google.android.material.card.MaterialCardView
                                                         android:id="@+id/nonAcView"
                                                         android:layout_width="wrap_content"
                                                         android:layout_height="wrap_content"
                                                         android:layout_gravity="center"
-                                                        app:cardBackgroundColor="@color/Black700"
-                                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                                        app:cardCornerRadius="28dp"
                                                         android:layout_marginRight="6dp"
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
                                                         android:visibility="gone"
-                                                        app:contentPadding="5dp"
-                                                        app:cardElevation="0dp">
+                                                        app:cardBackgroundColor="@color/Black700"
+                                                        app:cardCornerRadius="28dp"
+                                                        app:cardElevation="0dp"
+                                                        app:contentPadding="5dp">
 
                                                         <LinearLayout
                                                             android:layout_width="match_parent"
@@ -616,29 +647,30 @@
                                                             <TextView
                                                                 android:layout_width="wrap_content"
                                                                 android:layout_height="wrap_content"
-                                                                android:textSize="18dp"
                                                                 android:layout_marginLeft="5dp"
-                                                                android:gravity="center"
-                                                                android:textColor="@color/white"
                                                                 android:layout_marginRight="4dp"
-                                                                android:textFontWeight="600"
                                                                 android:fontFamily="@font/dmsans_bold"
-                                                                android:text="Non-AC"/>
+                                                                android:gravity="center"
+                                                                android:text="Non-AC"
+                                                                android:textColor="@color/white"
+                                                                android:textFontWeight="600"
+                                                                android:textSize="18dp" />
                                                         </LinearLayout>
 
                                                     </com.google.android.material.card.MaterialCardView>
-                                                            <com.google.android.material.card.MaterialCardView
+
+                                                    <com.google.android.material.card.MaterialCardView
                                                         android:id="@+id/ventilator"
                                                         android:layout_width="wrap_content"
                                                         android:layout_height="wrap_content"
                                                         android:layout_gravity="center"
-                                                        app:cardBackgroundColor="@color/blue800"
-                                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                                        app:cardCornerRadius="28dp"
-                                                        android:visibility="gone"
                                                         android:layout_marginRight="6dp"
-                                                        app:contentPadding="5dp"
-                                                        app:cardElevation="0dp">
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                                        android:visibility="gone"
+                                                        app:cardBackgroundColor="@color/blue800"
+                                                        app:cardCornerRadius="28dp"
+                                                        app:cardElevation="0dp"
+                                                        app:contentPadding="5dp">
 
                                                         <ImageView
                                                             android:layout_width="16dp"
@@ -655,15 +687,16 @@
                                                 android:id="@+id/vehicleServiceTier"
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:textSize="16dp"
-                                                android:textColor="@color/blue800"
-                                                android:gravity="center"
-                                                android:singleLine="false"
-                                                android:textFontWeight="600"
-                                                android:layout_marginLeft="1dp"
-                                                android:paddingBottom="2dp"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
-                                                android:text="Comfy"/>
+                                                android:gravity="center"
+                                                android:paddingBottom="2dp"
+                                                android:singleLine="false"
+                                                android:text="Comfy"
+                                                android:includeFontPadding="true"
+                                                android:textAlignment="center"
+                                                android:textColor="@color/blue800"
+                                                android:textFontWeight="600"
+                                                android:textSize="16dp" />
                                         </LinearLayout>
 
                                     </com.google.android.material.card.MaterialCardView>
@@ -740,11 +773,11 @@
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="5dp"
                                     android:layout_weight="1"
                                     android:gravity="center_vertical"
-                                    android:orientation="vertical"
-                                    android:layout_marginTop="5dp"
-                                    >
+                                    android:orientation="vertical">
+
                                     <TextView
                                         android:id="@+id/sourceArea"
                                         android:layout_width="wrap_content"
@@ -771,28 +804,29 @@
                                         android:text="source Address"
                                         android:textColor="#868B98"
                                         android:textFontWeight="500"
-                                        android:textSize="14dp" />
+                                        android:textSize="16dp" />
+
                                     <TextView
                                         android:id="@+id/sourcePinCode"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
                                         android:text="560065"
                                         android:textColor="#454545"
-                                        android:textSize="14dp"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:textSize="16dp"
                                         android:textStyle="bold"
-                                        android:visibility="gone"
-                                        />
+                                        android:visibility="gone" />
+
                                     <LinearLayout
                                         android:id="@+id/rentalDurationDistanceTag"
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
+                                        android:layout_marginTop="12dp"
                                         android:layout_weight="1"
                                         android:gravity="center_vertical"
                                         android:orientation="horizontal"
-                                        android:layout_marginTop="12dp"
-                                        android:visibility="gone"
-                                        >
+                                        android:visibility="gone">
+
                                         <TextView
                                             android:id="@+id/rideDuration"
                                             android:layout_width="wrap_content"
@@ -800,10 +834,10 @@
                                             android:background="@drawable/ic_roundcorner_overlay"
                                             android:elevation="1dp"
                                             android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:lineHeight="20dp"
                                             android:paddingHorizontal="8dp"
                                             android:paddingVertical="6dp"
                                             android:text="1 hr"
-                                            android:lineHeight="20dp"
                                             android:textColor="#2C2F3A"
                                             android:textSize="16dp" />
 
@@ -811,14 +845,14 @@
                                             android:id="@+id/rideDistance"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
+                                            android:layout_marginLeft="12dp"
                                             android:background="@drawable/ic_roundcorner_overlay"
                                             android:elevation="1dp"
                                             android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:lineHeight="20dp"
                                             android:paddingHorizontal="8dp"
                                             android:paddingVertical="6dp"
-                                            android:layout_marginLeft="12dp"
                                             android:text="10 Km"
-                                            android:lineHeight="20dp"
                                             android:textColor="#2C2F3A"
                                             android:textSize="16dp" />
 
@@ -826,80 +860,86 @@
                                 </LinearLayout>
 
                                 <ImageView
+                                    android:id="@+id/assetZonePickup"
                                     android:layout_width="40dp"
                                     android:layout_height="match_parent"
-                                    android:id="@+id/assetZonePickup"
-                                    android:visibility="gone"
-                                    android:src="@drawable/ic_metro_shape"/>
+                                    android:src="@drawable/ic_metro_shape"
+                                    android:visibility="gone" />
                             </LinearLayout>
 
-
-                            <LinearLayout
+                            <HorizontalScrollView
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
+                                android:layout_height="wrap_content">
 
-                                <TextView
-                                    android:id="@+id/distanceToBeCovered"
+                                <LinearLayout
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="85dp"
-                                    android:background="@drawable/ic_roundcorner_overlay"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="12Km"
-                                    android:lineHeight="20dp"
-                                    android:textColor="#2C2F3A"
-                                    android:textSize="16dp" />
+                                    android:orientation="horizontal">
 
-                                <TextView
-                                    android:id="@+id/tollTag"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="85dp"
-                                    android:background="@drawable/ic_roundcorner_overlay"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/toll_text"
-                                    android:lineHeight="20dp"
-                                    android:textColor="#2C2F3A"
-                                    android:textSize="16dp"
-                                    android:visibility="gone"
-                                    android:layout_marginLeft="8dp"/>
-                                <TextView
-                                    android:id="@+id/stopsInfo"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="85dp"
-                                    android:background="@drawable/ic_roundcorner_overlay"
-                                    android:elevation="1dp"
-                                    android:fontFamily="@font/plus_jakartasans_semibold"
-                                    android:paddingHorizontal="8dp"
-                                    android:paddingVertical="6dp"
-                                    android:text="@string/stops_info"
-                                    android:lineHeight="20dp"
-                                    android:textColor="#2C2F3A"
-                                    android:textSize="16dp"
-                                    android:visibility="gone"
-                                    android:layout_marginLeft="8dp"/>
+                                    <TextView
+                                        android:id="@+id/distanceToBeCovered"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="85dp"
+                                        android:background="@drawable/ic_roundcorner_overlay"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="12Km"
+                                        android:textColor="#2C2F3A"
+                                        android:textSize="16dp" />
 
-                            </LinearLayout>
+                                    <TextView
+                                        android:id="@+id/stopsInfo"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginLeft="8dp"
+                                        android:layout_marginTop="85dp"
+                                        android:background="@drawable/ic_roundcorner_overlay"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/stops_info"
+                                        android:textColor="#2C2F3A"
+                                        android:textSize="16dp"
+                                        android:visibility="gone" />
+
+                                    <TextView
+                                        android:id="@+id/tollTag"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginLeft="8dp"
+                                        android:layout_marginTop="85dp"
+                                        android:background="@drawable/ic_roundcorner_overlay"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/toll_text"
+                                        android:textColor="#2C2F3A"
+                                        android:textSize="16dp"
+                                        android:visibility="gone" />
+                                </LinearLayout>
+                            </HorizontalScrollView>
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginLeft="27dp"
                                 android:layout_marginTop="140dp">
+
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:gravity="center_vertical"
                                     android:orientation="vertical">
+
                                     <TextView
                                         android:id="@+id/destinationArea"
                                         android:layout_width="wrap_content"
@@ -926,25 +966,26 @@
                                         android:text="dest Address"
                                         android:textColor="#868B98"
                                         android:textFontWeight="500"
-                                        android:textSize="14dp" />
+                                        android:textSize="16dp" />
+
                                     <TextView
                                         android:id="@+id/destinationPinCode"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
                                         android:text="560065"
                                         android:textColor="#454545"
-                                        android:textSize="14dp"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:textSize="16dp"
                                         android:textStyle="bold"
-                                        android:visibility="gone"
-                                        />
+                                        android:visibility="gone" />
                                 </LinearLayout>
+
                                 <ImageView
+                                    android:id="@+id/assetZoneDrop"
                                     android:layout_width="40dp"
                                     android:layout_height="match_parent"
-                                    android:id="@+id/assetZoneDrop"
-                                    android:visibility="gone"
-                                    android:src="@drawable/ic_metro_shape"/>
+                                    android:src="@drawable/ic_metro_shape"
+                                    android:visibility="gone" />
 
                             </LinearLayout>
 
@@ -978,16 +1019,16 @@
                                         android:layout_marginBottom="2dp"
                                         android:layout_weight="1"
                                         android:layerType="software"
-                                        android:visibility="visible"
-                                        android:src="@drawable/dashed_line" />
+                                        android:src="@drawable/dashed_line"
+                                        android:visibility="visible" />
 
                                     <com.google.android.material.card.MaterialCardView
                                         android:id="@+id/locationDestinationPinTag"
                                         android:layout_width="15dp"
                                         android:layout_height="15dp"
-                                        android:visibility="visible"
                                         android:layout_marginBottom="44dp"
                                         android:theme="@style/Theme.MaterialComponents.Light"
+                                        android:visibility="visible"
                                         app:cardCornerRadius="45dp"
                                         app:strokeColor="#ED4D41"
                                         app:strokeWidth="3dp" />
@@ -1141,88 +1182,88 @@
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:gravity="center"
                                 android:layout_marginTop="12dp"
+                                android:gravity="center"
                                 android:orientation="horizontal">
 
 
                                 <TextView
+                                    android:id="@+id/rateText"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/plus_jakartasans_medium"
                                     android:text="Rate: "
                                     android:textColor="@color/Black700"
                                     android:textFontWeight="400"
-                                    android:id="@+id/rateText"
                                     android:textSize="12dp" />
 
                                 <com.google.android.material.card.MaterialCardView
+                                    android:id="@+id/rateViewDot"
                                     android:layout_width="4dp"
                                     android:layout_height="4dp"
                                     android:layout_gravity="center"
-                                    app:cardBackgroundColor="@color/Black700"
+                                    android:layout_marginHorizontal="5dp"
                                     android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardBackgroundColor="@color/Black700"
                                     app:cardCornerRadius="10dp"
-                                    android:id="@+id/rateViewDot"
-                                    app:cardElevation="0dp"
-                                    android:layout_marginHorizontal="5dp"/>
+                                    app:cardElevation="0dp" />
 
                                 <TextView
+                                    android:id="@+id/textIncludesCharges"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/plus_jakartasans_regular"
                                     android:text="@string/includes_pickup_charges_10"
                                     android:textColor="#6D7280"
                                     android:textFontWeight="400"
-                                    android:id="@+id/textIncludesCharges"
                                     android:textSize="12dp" />
 
                             </LinearLayout>
 
                         </LinearLayout>
-                    </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:paddingHorizontal="15dp"
-                        android:orientation="horizontal">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="20dp"
+                            android:orientation="horizontal">
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/rejButton"
-                            style="?attr/materialButtonOutlinedStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:letterSpacing="0"
-                            android:text="@string/decline"
-                            android:textAllCaps="false"
-                            android:textColor="#6D7280"
-                            android:textFontWeight="600"
-                            android:textSize="16dp"
-                            android:theme="@style/Theme.MaterialComponents.Light"
-                            app:cornerRadius="8dp"
-                            app:strokeColor="#6D7280" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/rejButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:backgroundTint="@color/white"
+                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                android:letterSpacing="0"
+                                android:text="@string/decline"
+                                android:textAllCaps="false"
+                                android:textColor="@color/red900"
+                                android:layout_marginRight="12dp"
+                                android:textFontWeight="600"
+                                app:strokeWidth="1px"
+                                android:textSize="16dp"
+                                android:theme="@style/Theme.MaterialComponents.Light"
+                                app:cornerRadius="8dp"
+                                android:strokeColor="#BABE60" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/reqButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:layout_marginLeft="8dp"
-                            android:layout_weight="12"
-                            android:backgroundTint="#53BB64"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:letterSpacing="0"
-                            android:paddingHorizontal="15dp"
-                            android:paddingVertical="16dp"
-                            android:shadowColor="@color/white"
-                            android:text="@string/accept_offer"
-                            android:textAllCaps="false"
-                            android:textFontWeight="700"
-                            android:textSize="18dp"
-                            android:theme="@style/Theme.MaterialComponents.Light"
-                            app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/reqButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:layout_weight="12"
+                                android:backgroundTint="#53BB64"
+                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                android:letterSpacing="0"
+                                android:paddingHorizontal="15dp"
+                                android:paddingVertical="16dp"
+                                android:shadowColor="@color/white"
+                                android:text="@string/accept_offer"
+                                android:textAllCaps="false"
+                                android:textFontWeight="700"
+                                android:textSize="18dp"
+                                android:theme="@style/Theme.MaterialComponents.Light"
+                                app:cornerRadius="8dp" />
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </ScrollView>

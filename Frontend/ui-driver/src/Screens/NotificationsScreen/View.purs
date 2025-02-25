@@ -339,4 +339,7 @@ shimmerData i =
   , likeCount : toPropValue 0
   , viewCount : toPropValue 0
   , backgroundHolder : toPropValue ""
+  , likeCountVisibility : toPropValue $ "visible"
+  , shareCountVisibility : toPropValue $ "visible"
+  , viewCountVisibility : toPropValue $ "visible"
   }
