@@ -14,13 +14,13 @@ import qualified Sequelize as Se
 
 -- Extra code goes here --
 
-deleteUserDataWithEventId :: (BeamFlow.BeamFlow m r) => Id Lib.Yudhishthira.Types.Event -> m ()
+deleteUserDataWithEventId :: BeamFlow.BeamFlow m r => Id Lib.Yudhishthira.Types.Event -> m ()
 deleteUserDataWithEventId eventId = deleteWithKV [Se.And [Se.Is Beam.eventId $ Se.Eq (Kernel.Types.Id.getId eventId)]]
 
-findAllByEventIdWithLimitOffset :: (BeamFlow.BeamFlow m r) => Id Lib.Yudhishthira.Types.Event -> Maybe Int -> Maybe Int -> m ([Lib.Yudhishthira.Types.UserData.UserData])
+findAllByEventIdWithLimitOffset :: BeamFlow.BeamFlow m r => Id Lib.Yudhishthira.Types.Event -> Int -> Int -> m [Lib.Yudhishthira.Types.UserData.UserData]
 findAllByEventIdWithLimitOffset eventId limit offset = do
   findAllWithOptionsKV
     [Se.And [Se.Is Beam.eventId $ Se.Eq (Kernel.Types.Id.getId eventId)]]
     (Se.Asc Beam.userId)
-    limit
-    offset
+    (Just limit)
+    (Just offset)

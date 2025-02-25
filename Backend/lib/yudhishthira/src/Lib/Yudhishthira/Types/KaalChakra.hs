@@ -7,6 +7,7 @@ module Lib.Yudhishthira.Types.KaalChakra where
 import Data.Aeson
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -33,6 +34,8 @@ data Chakra
 
 $(mkHttpInstancesForEnum ''Chakra)
 $(mkBeamInstancesForEnum ''Chakra)
+
+instance CH.ClickhouseValue Chakra
 
 newtype QLimit = QLimit {getQLimit :: Int}
 

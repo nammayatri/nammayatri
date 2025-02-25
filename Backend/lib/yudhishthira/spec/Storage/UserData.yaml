@@ -24,6 +24,9 @@ UserData:
       where:
         and: [userId, eventId]
 
+  excludedDefaultQueries:
+    - findByPrimaryKey
+
   extraOperations:
     - EXTRA_QUERY_FILE
 

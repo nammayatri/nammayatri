@@ -37,6 +37,7 @@ library
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Clickhouse.UserData
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra

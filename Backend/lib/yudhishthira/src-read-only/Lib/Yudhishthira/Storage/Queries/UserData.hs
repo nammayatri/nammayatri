@@ -29,9 +29,6 @@ findAllByUserIdAndEventId ::
   (Kernel.Types.Id.Id Lib.Yudhishthira.Types.Common.User -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.Event -> m [Lib.Yudhishthira.Types.UserData.UserData])
 findAllByUserIdAndEventId userId eventId = do findAllWithKV [Se.And [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId), Se.Is Beam.eventId $ Se.Eq (Kernel.Types.Id.getId eventId)]]
 
-findByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Yudhishthira.Types.UserData.UserData -> m (Maybe Lib.Yudhishthira.Types.UserData.UserData))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
 updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.UserData.UserData -> m ())
 updateByPrimaryKey (Lib.Yudhishthira.Types.UserData.UserData {..}) = do
   _now <- getCurrentTime

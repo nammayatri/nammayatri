@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Event.KaalChakra.Parse as Parse
 import qualified Lib.Yudhishthira.Event.KaalChakra.Template as Template
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Storage.Clickhouse.UserData as CHUserData
 import Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNammaTag
 import qualified Lib.Yudhishthira.Storage.Queries.UserData as QUserData
@@ -151,9 +152,12 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
 
   bn <- nextChakraBatchNumber req.chakra
   let batchNumber = bn - 1
-  let limit = Just $ req.usersInBatch
-  let offset = Just $ batchNumber * req.usersInBatch
-  batchedUserData <- QUserDataE.findAllByEventIdWithLimitOffset eventId limit offset
+  let limit = req.usersInBatch
+  let offset = batchNumber * req.usersInBatch
+  batchedUserData <-
+    if fromMaybe False req.selectClickhouseUserData
+      then CHUserData.findAllByEventIdWithLimitOffset eventId limit offset
+      else QUserData.findAllByEventIdWithLimitOffset eventId limit offset
   logDebug $ "Running update user tags batch: " <> show batchNumber <> "; users found: " <> show (length batchedUserData)
   -- getting this, but maybe limit offset will leave some part of the data of trailing guyz begind so using this just as a medium to get the userIds to do tagging for.
 
@@ -171,11 +175,11 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
               pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed}
             else do
               forM_ batchedUserData $
-                kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now . (.userId)
+                kaalChakraEventUser h req filteredTags mbAllTags eventId defaultUserDataMap now . (.userId)
               pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Continue req.batchDelayInSec}
     _ -> do
       usersAPIEntity <- forM batchedUserData $ \(DUserData.UserData {userId}) -> do
-        kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now userId
+        kaalChakraEventUser h req filteredTags mbAllTags eventId defaultUserDataMap now userId
       let tagsAPIEntity = mkTagAPIEntity <$> filteredTags
       pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity, chakraBatchState = Yudhishthira.Completed}
   endTime <- getCurrentTime
@@ -230,8 +234,15 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
 
 kaalChakraEventUser ::
   forall m r action.
-  (BeamFlow m r, Monad m, Log m, Read action, Show action) =>
+  ( BeamFlow m r,
+    Monad m,
+    Log m,
+    Read action,
+    Show action,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+  ) =>
   Handle m action ->
+  Yudhishthira.UpdateKaalBasedTagsJobReq ->
   [DNT.NammaTag] ->
   Maybe [DNT.NammaTag] ->
   Id Yudhishthira.Event ->
@@ -239,8 +250,11 @@ kaalChakraEventUser ::
   UTCTime ->
   Id Yudhishthira.User ->
   m Yudhishthira.RunKaalChakraJobResForUser
-kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now userId = withLogTag ("UserId-" <> userId.getId) do
-  userDataList <- QUserData.findAllByUserIdAndEventId userId eventId
+kaalChakraEventUser h req filteredTags mbAllTags eventId defaultUserDataMap now userId = withLogTag ("UserId-" <> userId.getId) do
+  userDataList <-
+    if fromMaybe False req.selectClickhouseUserData
+      then CHUserData.findAllByUserIdAndEventId userId eventId
+      else QUserData.findAllByUserIdAndEventId userId eventId
   -- Skip current user instead of throwing error
   let eUserData = do
         userData <- foldlM appendUserDataValue (A.Object A.empty) $ userDataList <&> (.userDataValue)

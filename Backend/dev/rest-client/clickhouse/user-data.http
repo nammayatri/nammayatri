@@ -1,0 +1,68 @@
+@empty =
+
+@clickhouse-driver-offer-bpp = http://localhost:8123
+
+@clickhouse-password = {{empty}}
+
+@dbName = atlas_driver_offer_bpp
+
+###
+
+# @name clickhouse
+
+GET {{clickhouse-driver-offer-bpp}}
+
+###
+
+# @name version
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select version()
+
+###
+
+# @name testQuery
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select 1
+
+###
+
+# @name selectAll
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT (*) from {{dbName}}.user_data
+FORMAT JSON
+
+###
+
+# @name insert
+
+@eventId = acd11b1b-b934-438d-80bf-aef627840b9f
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.user_data (batch_number, chakra, event_id, id, user_data_value, user_id, created_at, updated_at) VALUES
+  (0, 'Daily', '{{eventId}}', 'fa72d452-499f-4b31-96d7-64d1cbc4f287', '{"dailyCancellations":{"cancellationsCount":2,"userId":"favorit-auto1-0000000000000000000000"},"dailyRides":{"totalDistance":884,"totalFare":843,"totalRides":4,"userId":"favorit-auto1-0000000000000000000000"}}', 'favorit-auto1-0000000000000000000000', now (), now ()),
+  (1, 'Daily', '{{eventId}}', '6bb68058-d446-46e8-bca8-2cd1dd3404f0', '{"dailyRides":{"totalDistance":600,"totalFare":599,"totalRides":2,"userId":"favorit-bike-00000000000000000000000"}}', 'favorit-bike-00000000000000000000000', now (), now ());
+
+###
+
+# @name delete
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+DELETE FROM atlas_driver_offer_bpp.user_data WHERE true

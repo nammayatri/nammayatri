@@ -30,3 +30,14 @@ CREATE TABLE atlas_driver_offer_bpp.ride (
     `created_at` DateTime DEFAULT now(),
     `updated_at` DateTime DEFAULT now()
 ) ENGINE = MergeTree() PRIMARY KEY (id);
+
+CREATE TABLE atlas_driver_offer_bpp.user_data (
+    `batch_number` Int,
+    `chakra` String,
+    `event_id` String,
+    `id` String,
+    `user_data_value` String,
+    `user_id` String,
+    `created_at` DateTime DEFAULT now(),
+    `updated_at` DateTime DEFAULT now()
+) ENGINE = MergeTree() PRIMARY KEY (id);

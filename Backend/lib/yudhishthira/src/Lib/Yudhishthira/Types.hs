@@ -512,7 +512,9 @@ data UpdateKaalBasedTagsJobReq = UpdateKaalBasedTagsJobReq
     batchDelayInSec :: Int,
     usersSet :: UsersSet,
     chakra :: Chakra,
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    updateUserTagsDelay :: Maybe Seconds,
+    selectClickhouseUserData :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -522,7 +524,9 @@ data UpdateKaalBasedTagsData = UpdateKaalBasedTagsData
     usersInBatch :: Int,
     maxBatches :: Int,
     batchDelayInSec :: Int,
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    updateUserTagsDelay :: Maybe Seconds,
+    selectClickhouseUserData :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -538,7 +542,9 @@ data RunKaalChakraJobReq = RunKaalChakraJobReq
     usersInBatch :: Int,
     maxBatches :: Int, -- we need to avoid endless loops in case of any query is wrong
     batchDelayInSec :: Int,
-    completeOldJob :: Maybe (Id AnyJob)
+    completeOldJob :: Maybe (Id AnyJob),
+    updateUserTagsDelay :: Maybe Seconds,
+    selectClickhouseUserData :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -557,7 +563,9 @@ data KaalChakraJobData = KaalChakraJobData
     usersInBatch :: Int,
     maxBatches :: Int,
     batchDelayInSec :: Int,
-    startTime :: Maybe UTCTime
+    startTime :: Maybe UTCTime,
+    updateUserTagsDelay :: Maybe Seconds,
+    selectClickhouseUserData :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

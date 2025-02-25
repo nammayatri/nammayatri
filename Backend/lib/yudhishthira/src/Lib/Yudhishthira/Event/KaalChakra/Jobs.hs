@@ -48,7 +48,8 @@ runKaalChakraAndRescheduleJob h chakra jobData = do
       void $ Event.clearEventData chakra Nothing --- passing Nothing will only clear the batch number key, which is required for the next job from 0 again
       whenJust eventResult.eventId $ \eventId -> do
         let updateUserTagJobData = LYT.mkUpdateTagDataFromKaalChakraJobData req eventId jobData.startTime
-        h.createUpdateUserTagDataJob chakra updateUserTagJobData (addUTCTime 60 timeAfterRun) -- starting updateTags job after 60 seconds of caching UserData
+            updateUserTagsDelayDiff = maybe 60 (fromInteger @NominalDiffTime . toInteger @Seconds) jobData.updateUserTagsDelay
+        h.createUpdateUserTagDataJob chakra updateUserTagJobData (addUTCTime updateUserTagsDelayDiff timeAfterRun) -- starting updateTags job after 60 seconds of caching UserData
       pure Complete
     LYT.Failed -> do
       -- clear all event data and create new job for the next cycle
