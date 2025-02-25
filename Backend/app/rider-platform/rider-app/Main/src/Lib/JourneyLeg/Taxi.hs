@@ -12,6 +12,7 @@ import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.ServiceTierType
 import Kernel.External.Maps.Types
@@ -199,7 +200,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
               nextStopTravelDistance = Nothing,
               nextStopTravelTime = Nothing,
               legOrder = journeyLegOrder,
-              statusChanged = False
+              statusChanged = False,
+              mode = DTrip.Taxi
             }
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
@@ -215,7 +217,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
               nextStopTravelDistance = Nothing,
               nextStopTravelTime = Nothing,
               legOrder = journeyLegInfo.journeyLegOrder,
-              statusChanged = False
+              statusChanged = False,
+              mode = DTrip.Taxi
             }
   getState _ = throwError (InternalError "Not Supported")
 

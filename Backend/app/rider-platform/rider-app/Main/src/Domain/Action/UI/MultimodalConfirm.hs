@@ -23,6 +23,7 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -223,7 +224,11 @@ postMultimodalRiderLocation ::
   Environment.Flow ApiTypes.JourneyStatusResp
 postMultimodalRiderLocation personOrMerchantId journeyId req = do
   addPoint journeyId req
-  getMultimodalJourneyStatus personOrMerchantId journeyId
+  journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
+  forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
+    when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
+      void $ JM.startJourney (Just nextLeg.legOrder) journeyId
+  return journeyStatus
 
 postMultimodalJourneyCancel ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -322,6 +327,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
           status = legState.status,
           userPosition = legState.userPosition,
           vehiclePosition = legState.vehiclePosition,
+          mode = legState.mode,
           nextStop = legState.nextStop,
           nextStopTravelTime = legState.nextStopTravelTime,
           nextStopTravelDistance = legState.nextStopTravelDistance
