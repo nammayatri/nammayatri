@@ -16,6 +16,7 @@
 module Storage.Clickhouse.Ride where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
@@ -183,7 +184,17 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to limit offset s
         ( \ride -> do
             let earnings = CH.sum_ ride.fare
             let distanceTravelled = CH.sum_ ride.chargeableDistance
-            let completedRides = CH.sum_ $ CH.if_ (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED)) (CH.valColumn 1) (CH.valColumn 0)
+            -- let completedRides = CH.sum_ $ CH.if_ (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED)) (CH.valColumn 1) (CH.valColumn 0)
+            let completedRides =
+                  CH.sum_ $
+                    CH.case_
+                      ( (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED), CH.valColumn 1)
+                          NE.:| [ (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED), CH.valColumn 1),
+                                  (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED), CH.valColumn 1),
+                                  (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED), CH.valColumn 1)
+                                ]
+                      )
+                      (CH.valColumn 0)
             let cancelledRides = CH.sum_ $ CH.if_ (ride.status CH.==.. CH.valColumn (Just DRide.CANCELLED)) (CH.valColumn 1) (CH.valColumn 0)
             let duration = CH.sum_ (CH.timeDiff ride.createdAt ride.updatedAt)
             CH.groupBy ride.driverId $ \driverId -> do
