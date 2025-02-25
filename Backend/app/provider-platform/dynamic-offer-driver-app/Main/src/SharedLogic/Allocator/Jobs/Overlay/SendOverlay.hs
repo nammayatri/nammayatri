@@ -178,13 +178,14 @@ freeTrialDaysSetKey = "SendOverlayScheduler:FreeTrialDaysSet:"
 
 getLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> TimeOfDay -> Seconds -> m UTCTime
 getLastScheduledJobTime merchantOpCityId vehicleCategory jobId scheduledTime timeDiffFromUtc = do
-  Hedis.get (makeLastScheduledTimeJobKey merchantOpCityId vehicleCategory jobId) >>= \case
-    Nothing -> do
-      now <- getLocalCurrentTime timeDiffFromUtc
-      let lastScheduledTime = addUTCTime (fromIntegral $ -1 * timeDiffFromUtc) (UTCTime (utctDay now) (timeOfDayToTime scheduledTime))
-      setLastScheduledJobTime merchantOpCityId vehicleCategory jobId lastScheduledTime
-      pure lastScheduledTime
-    Just lastScheduledTime -> pure lastScheduledTime
+  Hedis.withMasterRedis $
+    Hedis.get (makeLastScheduledTimeJobKey merchantOpCityId vehicleCategory jobId) >>= \case
+      Nothing -> do
+        now <- getLocalCurrentTime timeDiffFromUtc
+        let lastScheduledTime = addUTCTime (fromIntegral $ -1 * timeDiffFromUtc) (UTCTime (utctDay now) (timeOfDayToTime scheduledTime))
+        setLastScheduledJobTime merchantOpCityId vehicleCategory jobId lastScheduledTime
+        pure lastScheduledTime
+      Just lastScheduledTime -> pure lastScheduledTime
 
 setLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> UTCTime -> m ()
 setLastScheduledJobTime merchantOpCityId vehicleCategory jobId = Hedis.set (makeLastScheduledTimeJobKey merchantOpCityId vehicleCategory jobId)

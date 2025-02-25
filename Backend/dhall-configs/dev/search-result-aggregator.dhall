@@ -8,6 +8,7 @@ let hcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let kafkaConsumerCfgs =
@@ -27,6 +28,7 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 in  { port = +8025
@@ -35,8 +37,8 @@ in  { port = +8025
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , hedisMigrationStage = False
+    , cutOffHedisCluster = False
     , kafkaConsumerCfgs
     , loggerConfig =
             common.loggerConfig

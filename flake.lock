@@ -673,15 +673,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1737446700,
-        "narHash": "sha256-e5G3uZltQmkFZ8pBUorqUjMiLEuIYu9JW59HYYvJL+E=",
+        "lastModified": 1740461572,
+        "narHash": "sha256-kTcrUDW99AoGSPB8OxP4VKK/CJCWJRdT/4hncjnAS0s=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "69d6077ed953ce562feddeb8f99210163a5f23f3",
+        "rev": "9aabd552e31847cede4aea1a1b20cf26ec6f4f1b",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/hedis-upgrade-for-zone-aware-replica-usage",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -1592,18 +1593,18 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1730967537,
-        "narHash": "sha256-RDF/G/ptWazyFxCQOv+fTTQVV4hzDxTV630rnmhH3i4=",
-        "ref": "refs/heads/master",
-        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
-        "revCount": 741,
-        "type": "git",
-        "url": "https://github.com/juspay/hedis"
+        "lastModified": 1740460297,
+        "narHash": "sha256-4FjUqrP+63Te39UM9PctBS8cuJUiJYkZ3zIJ2IPeTA8=",
+        "owner": "nammayatri",
+        "repo": "hedis",
+        "rev": "089d22be67103f613bd1eecbac8c2e6d6d0576c6",
+        "type": "github"
       },
       "original": {
-        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
-        "type": "git",
-        "url": "https://github.com/juspay/hedis"
+        "owner": "nammayatri",
+        "ref": "enh/zone-aware-replica-usage",
+        "repo": "hedis",
+        "type": "github"
       }
     },
     "hnix-store-core": {
@@ -3612,11 +3613,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1740402452,
-        "narHash": "sha256-ZdS9Ala54hRZ4ZUZ0Bhbkx7ywfso3OjxPTuWVP1wGLo=",
+        "lastModified": 1740632208,
+        "narHash": "sha256-hgqdSVcT+qBTkbaramB2votZjbHmux4wigmsS9d+VI4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "055b8a7ac1128f0c1dc94228731b14e946822dbc",
+        "rev": "f7846939714052e87dc5ed63f8e843f1f7643249",
         "type": "github"
       },
       "original": {
