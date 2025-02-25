@@ -19,7 +19,7 @@ module Dashboard.ProviderPlatform.Management.Driver
   )
 where
 
-import API.Types.ProviderPlatform.Management.Endpoints.Driver
+import API.Types.ProviderPlatform.Management.Endpoints.Driver as Reexport
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
 import Kernel.Prelude

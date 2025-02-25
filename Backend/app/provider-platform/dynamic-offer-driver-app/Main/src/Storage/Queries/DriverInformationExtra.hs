@@ -10,6 +10,7 @@ import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
+import Domain.Types.Plan as P
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
 import Kernel.Beam.Functions
@@ -378,3 +379,12 @@ updateForwardBatchingEnabledOrIsInteroperable driverId isAdvancedBookingEnabled 
             <> [Se.Set BeamDI.isInteroperable isInteroperable | isJust isInteroperable]
         )
         [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateServicesEnabled :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> [P.ServiceNames] -> m ()
+updateServicesEnabled driverIds services = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.servicesEnabledForSubscription (Just services),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In driverIds)]

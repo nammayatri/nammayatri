@@ -481,6 +481,16 @@ apis:
         type: ([PanAadharSelfieDetailsListResp])
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS_LIST
+  - POST:
+      endpoint: /bulk/subscriptionServiceUpdate
+      auth: ApiAuthV2
+      request:
+        type: BulkServiceUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_SERVICE_UPDATE
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -666,6 +676,10 @@ types:
     - updatedAt: UTCTime
     - imageId1: Maybe Text
     - imageId2: Maybe Text
+  BulkServiceUpdateReq:
+    - driverIds : [Text]
+    - serviceNames : [ServiceNames]
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

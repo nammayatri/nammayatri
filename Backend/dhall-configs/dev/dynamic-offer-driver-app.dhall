@@ -231,6 +231,7 @@ let AllocatorJobType =
       | FleetAlert
       | SendWebhookToExternal
       | ScheduledFCMS
+      | CheckDashCamInstallationStatusJob
       >
 
 let jobInfoMapx =
@@ -277,6 +278,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
+      , { mapKey = AllocatorJobType.CheckDashCamInstallationStatusJob
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

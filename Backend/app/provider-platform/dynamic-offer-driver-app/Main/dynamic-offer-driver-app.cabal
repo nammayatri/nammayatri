@@ -308,6 +308,7 @@ library
       Lib.LocationUpdates
       Lib.Schema
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
@@ -628,6 +629,7 @@ library
       Tools.ChatCompletion
       Tools.ConfigPilot
       Tools.Constants
+      Tools.Dashcam
       Tools.DriverBackgroundVerification
       Tools.Error
       Tools.Event
@@ -1254,6 +1256,7 @@ library
     , containers
     , cryptonite
     , dashboard-helper-api
+    , dashcam
     , data-default-class
     , either
     , esqueleto
