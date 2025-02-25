@@ -744,7 +744,7 @@ Route:
 
 RouteStopMapping:
   tableName: route_stop_mapping
-  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema,Ord"
   fields:
     routeCode: Text
     stopCode: Text
