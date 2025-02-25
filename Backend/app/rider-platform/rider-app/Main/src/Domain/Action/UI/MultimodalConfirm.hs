@@ -76,10 +76,15 @@ postMultimodalConfirm ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm (_, _) journeyId forcedBookLegOrder = do
+postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
+  let confirmElements = journeyConfirmReq.journeyConfirmReqElements
+  forM_ confirmElements $ \element ->
+    when (element.skipBooking) $
+      JM.skipLeg journeyId element.journeyLegOrder
   void $ JM.startJourney forcedBookLegOrder journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   pure Kernel.Types.APISuccess.Success

@@ -99,6 +99,12 @@ types:
     isExperienceGood: Maybe Bool
     legOrder: Int
 
+  JourneyConfirmReq:
+    journeyConfirmReqElements: "[JourneyConfirmReqElement]"
+  JourneyConfirmReqElement:
+    journeyLegOrder: Int
+    skipBooking: Bool
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -110,6 +116,8 @@ apis:
       endpoint: /multimodal/{journeyId}/confirm
       params:
         journeyId: Id Journey
+      request:
+        type: JourneyConfirmReq
       query:
         forceBookLegOrder: Int
       response:
