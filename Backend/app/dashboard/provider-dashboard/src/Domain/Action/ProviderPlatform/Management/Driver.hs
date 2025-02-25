@@ -51,6 +51,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
+    postDriverBulkSubscriptionServiceUpdate,
   )
 where
 
@@ -325,3 +326,9 @@ getDriverPanAadharSelfieDetailsList :: (ShortId DM.Merchant -> City.City -> ApiT
 getDriverPanAadharSelfieDetailsList merchantShortId opCity apiTokenInfo docType driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverPanAadharSelfieDetailsList) docType driverId
+
+postDriverBulkSubscriptionServiceUpdate :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkServiceUpdateReq -> Environment.Flow APISuccess)
+postDriverBulkSubscriptionServiceUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverBulkSubscriptionServiceUpdate) req)

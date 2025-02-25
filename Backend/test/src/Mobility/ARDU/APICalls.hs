@@ -22,6 +22,7 @@ import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
+import qualified "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "dynamic-offer-driver-app" Domain.Types.SearchTry as DTST
 import EulerHS.Prelude
@@ -47,7 +48,7 @@ data RideAPIs = RideAPIs
   }
 
 data DriverAPIs = DriverAPIs
-  { getDriverInfo :: Text -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> ClientM DriverAPI.DriverInformationRes,
+  { getDriverInfo :: Text -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> ClientM DriverAPI.DriverInformationRes,
     getNearbySearchRequests :: RegToken -> Maybe (Id DTST.SearchTry) -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> Maybe Text -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
     respondQuote :: RegToken -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverAPI.DriverRespondReq -> ClientM APISuccess,

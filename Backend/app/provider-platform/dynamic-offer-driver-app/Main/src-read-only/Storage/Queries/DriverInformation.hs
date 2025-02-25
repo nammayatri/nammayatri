@@ -6,7 +6,6 @@ module Storage.Queries.DriverInformation (module Storage.Queries.DriverInformati
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
-import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
@@ -234,15 +233,6 @@ updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity c
     [ Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.canSwitchToIntraCity (Kernel.Prelude.Just canSwitchToIntraCity),
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
-updateServicesEnabledForSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Extra.Plan.ServiceNames] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateServicesEnabledForSubscription servicesEnabledForSubscription driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.servicesEnabledForSubscription (Kernel.Prelude.Just servicesEnabledForSubscription),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]

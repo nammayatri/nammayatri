@@ -51,6 +51,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
+    postDriverBulkSubscriptionServiceUpdate,
   )
 where
 
@@ -61,7 +62,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
 import Data.Csv
 import qualified Data.HashSet as HS
-import Data.List (partition, sortOn)
+import Data.List (nub, partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
 import Data.Ord (Down (..))
@@ -1097,3 +1098,12 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
       "AadhaarCard" -> return DomainDVC.AadhaarCard
       "ProfilePhoto" -> return DomainDVC.ProfilePhoto
       _ -> throwError $ InvalidDocumentType docType
+
+postDriverBulkSubscriptionServiceUpdate :: ShortId DM.Merchant -> Context.City -> Common.BulkServiceUpdateReq -> Flow APISuccess
+postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  when (length req.driverIds > 200) $ throwError (InvalidRequest "driver ids limit exceeded")
+  let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
+  QDriverInfo.updateServicesEnabled req.driverIds services
+  return Success

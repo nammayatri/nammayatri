@@ -72,6 +72,7 @@ data AllocatorJobType
   | FleetAlert
   | SendWebhookToExternal
   | ScheduledFCMS
+  | CheckDashCamInstallationStatus
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -110,6 +111,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SFleetAlert jobData = AnyJobInfo <$> restoreJobInfo SFleetAlert jobData
   restoreAnyJobInfo SSendWebhookToExternal jobData = AnyJobInfo <$> restoreJobInfo SSendWebhookToExternal jobData
   restoreAnyJobInfo SScheduledFCMS jobData = AnyJobInfo <$> restoreJobInfo SScheduledFCMS jobData
+  restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -400,3 +402,13 @@ data SendWebhookToExternalJobData = SendWebhookToExternalJobData
 instance JobInfoProcessor 'SendWebhookToExternal
 
 type instance JobContent 'SendWebhookToExternal = SendWebhookToExternalJobData
+
+data CheckDashCamInstallationStatusJobData = CheckDashCamInstallationStatusJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckDashCamInstallationStatus
+
+type instance JobContent 'CheckDashCamInstallationStatus = CheckDashCamInstallationStatusJobData
