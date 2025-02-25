@@ -1208,6 +1208,9 @@ data City
   | Udupi
   | Odisha
   | Bhubaneswar
+  | Asansol
+  | Durgapur
+  | Petrapole
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
