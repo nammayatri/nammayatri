@@ -19,7 +19,7 @@ module Dashboard.ProviderPlatform.Fleet.Driver
   )
 where
 
-import API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+import API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Reexport
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
 import Data.Text as T

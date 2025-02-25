@@ -35,6 +35,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
 import Domain.Types.SubscriptionConfig
+import qualified Domain.Types.SubscriptionConfig as SubsConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
@@ -143,7 +144,8 @@ data CurrentPlanRes = CurrentPlanRes
     isLocalized :: Maybe Bool,
     payoutVpa :: Maybe Text,
     askForPlanSwitchByCity :: Bool,
-    askForPlanSwitchByVehicle :: Bool
+    askForPlanSwitchByVehicle :: Bool,
+    safetyPlusData :: Maybe SafetyPlusData
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -208,6 +210,12 @@ data ServicesEntity = ServicesEntity
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
+data SafetyPlusData = SafetyPlusData
+  { safetyPlusTrips :: Int,
+    safetyPlusEarnings :: PriceAPIEntity
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
 planServiceLists ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -222,7 +230,7 @@ planServiceLists (driverId, _, merchantOpCityId) = do
 class Subscription a where
   getSubcriptionStatusWithPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
   updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
-  createDriverPlan :: a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Plan -> SubscriptionServiceRelatedData -> Flow ()
+  createDriverPlan :: a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Plan -> SubscriptionServiceRelatedData -> SubscriptionConfig -> Flow ()
   planSubscribe :: a -> Id Plan -> (Bool, Maybe MessageKey.MediaChannel) -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DI.DriverInformation -> SubscriptionServiceRelatedData -> Flow PlanSubscribeRes
   planSwitch :: a -> Id Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
   planSuspend :: a -> Bool -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
@@ -235,11 +243,11 @@ instance Subscription ServiceNames where
       YATRI_SUBSCRIPTION -> getSubcriptionStatusWithPlanGeneric YATRI_SUBSCRIPTION driverId
       YATRI_RENTAL -> getSubcriptionStatusWithPlanGeneric YATRI_RENTAL driverId
       DASHCAM_RENTAL _ -> getSubcriptionStatusWithPlanGeneric serviceName driverId
-  createDriverPlan serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData = do
+  createDriverPlan serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig = do
     case serviceName of
-      YATRI_SUBSCRIPTION -> createDriverPlanGeneric YATRI_SUBSCRIPTION (driverId, merchantId, opCity) plan subscriptionServiceRelatedData
-      YATRI_RENTAL -> createDriverPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) plan subscriptionServiceRelatedData
-      DASHCAM_RENTAL _ -> createDriverPlanGeneric serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData
+      YATRI_SUBSCRIPTION -> createDriverPlanGeneric YATRI_SUBSCRIPTION (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
+      YATRI_RENTAL -> createDriverPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
+      DASHCAM_RENTAL _ -> createDriverPlanGeneric serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
   planSubscribe serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planSubscribeGeneric YATRI_SUBSCRIPTION
@@ -306,8 +314,9 @@ createDriverPlanGeneric ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Plan ->
   SubscriptionServiceRelatedData ->
+  SubscriptionConfig ->
   Flow ()
-createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData = do
+createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData subsConfig = do
   now <- getCurrentTime
   let dPlan =
         DriverPlan
@@ -322,7 +331,7 @@ createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) pla
             totalCoinsConvertedCash = 0.0,
             serviceName = serviceName,
             autoPayStatus = Just DI.PENDING,
-            enableServiceUsageCharge = True,
+            enableServiceUsageCharge = subsConfig.enableServiceUsageChargeDefault,
             subscriptionServiceRelatedData = subscriptionServiceRelatedData,
             payerVpa = Nothing,
             lastPaymentLinkSentAtIstDate = Just now,
@@ -396,6 +405,9 @@ currentPlan ::
   Flow CurrentPlanRes
 currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverStats <- QDS.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
   (autoPayStatus, mDriverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentModeWithServiceName p.planId (maybe AUTOPAY (.planType) mDriverPlan) serviceName) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
@@ -416,6 +428,17 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
       Nothing -> return (Nothing, Nothing)
   let askForPlanSwitchByCity = maybe False (merchantOperatingCityId /=) (mDriverPlan <&> (.merchantOpCityId))
   let askForPlanSwitchByVehicle = (vehicleCategory >>= (.category)) /= (mDriverPlan >>= (.vehicleCategory)) && isJust mDriverPlan
+  safetyPlusData <- do
+    if (SubsConfig.SAFETY_PLUS `elem` subscriptionConfig.dataEntityToSend)
+      then do
+        return
+          ( Just $
+              SafetyPlusData
+                { safetyPlusTrips = driverStats.safetyPlusRideCount,
+                  safetyPlusEarnings = PriceAPIEntity driverStats.safetyPlusEarnings currency
+                }
+          )
+      else return Nothing
   return $
     CurrentPlanRes
       { currentPlanDetails = currentPlanEntity,
@@ -430,6 +453,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         isLocalized = Just True,
         isEligibleForCharge,
         payoutVpa = driverInfo.payoutVpa,
+        safetyPlusData = safetyPlusData,
         ..
       }
   where
@@ -471,7 +495,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
   unless (autoPayStatus == Just DI.PENDING) $ do
     updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (Just DI.PENDING) Nothing
   when (isNothing driverPlan) $ do
-    createDriverPlan serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData
+    createDriverPlan serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData subscriptionConfig
   when (isJust driverPlan) $ do
     unless (autoPayStatus == Just DI.PENDING && isSamePlan) $ do
       QDF.updateRegisterationFeeStatusByDriverIdForServiceName DF.INACTIVE driverId serviceName

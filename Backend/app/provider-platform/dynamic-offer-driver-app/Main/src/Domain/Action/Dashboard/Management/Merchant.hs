@@ -2338,6 +2338,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     castServiceName = \case
       Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
       Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION
+      Common.DASHCAM_RENTAL_CAUTIO -> Plan.DASHCAM_RENTAL Plan.CAUTIO
 
 postMerchantConfigFailover :: ShortId DM.Merchant -> Context.City -> Common.ConfigNames -> Common.ConfigFailoverReq -> Flow APISuccess
 postMerchantConfigFailover merchantShortId city configNames req = do

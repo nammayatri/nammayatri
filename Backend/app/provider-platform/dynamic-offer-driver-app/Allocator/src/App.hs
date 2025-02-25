@@ -40,6 +40,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
@@ -123,6 +124,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runScheduledFCMS)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
     }
 
 runDriverOfferAllocator ::

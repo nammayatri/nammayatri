@@ -25,6 +25,8 @@ import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Lib.Dashcam.Domain.Interface as DashcamInter
+import qualified Lib.Dashcam.Domain.Types as Dashcam
 
 getConfigJSON :: Domain.ServiceConfig -> Data.Aeson.Value
 getConfigJSON = \case
@@ -83,6 +85,8 @@ getConfigJSON = \case
   Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
     CIT.AzureOpenAI cfg -> toJSON cfg
     CIT.Gemini cfg -> toJSON cfg
+  Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
+    DashcamInter.CautioConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -141,6 +145,8 @@ getServiceName = \case
   Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
     CIT.AzureOpenAI _ -> Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI
     CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
+  Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
+    DashcamInter.CautioConfig _ -> Domain.DashCamService Dashcam.Cautio
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -183,6 +189,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
+  Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a
     eitherValue value = case A.fromJSON value of

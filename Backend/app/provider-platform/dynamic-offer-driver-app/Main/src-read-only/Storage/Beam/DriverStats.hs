@@ -25,6 +25,8 @@ data DriverStatsT f = DriverStatsT
     isValidRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lateNightTrips :: B.C f Kernel.Prelude.Int,
     ridesCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    safetyPlusEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    safetyPlusRideCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalCoinsConvertedCash :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalDistance :: B.C f Kernel.Prelude.Double,
     totalEarnings :: B.C f Kernel.Types.Common.Money,
