@@ -835,6 +835,9 @@ cityCodeMap =
   , Tuple (Just "std:0824") Mangalore
   , Tuple (Just "std:08472") Gulbarga
   , Tuple (Just "std:08200") Udupi
+  , Tuple (Just "std:0341") Asansol
+  , Tuple (Just "std:0342") Durgapur
+  , Tuple (Just "std:03215") Petrapole
   , Tuple Nothing AnyCity
   ]
 
@@ -929,6 +932,9 @@ getCityFromString cityString =
     "Tirunelveli" -> Tirunelveli
     "Salem" -> Salem
     "Trichy" -> Trichy
+    "Asansol" -> Asansol
+    "Durgapur" -> Durgapur
+    "Petrapole" -> Petrapole
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -1362,6 +1368,9 @@ getLanguageBasedCityName cityName =
     Udupi -> getString UDUPI
     Odisha -> getString ODISHA
     Paris -> getString ODISHA
+    Asansol -> "Asansol"
+    Durgapur -> "Durgapur"
+    Petrapole -> "Petrapole"
     Bhubaneswar -> getString BHUBANESWAR
     AnyCity -> ""
 

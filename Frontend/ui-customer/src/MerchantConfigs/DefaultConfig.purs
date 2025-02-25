@@ -722,6 +722,126 @@ config =
             }
           },
         defaultCityConfig
+          { cityName = "Asansol",
+            cityCode = "std:0341",
+            referral
+              { domain = "https://www.yatrisathi.in",
+                customerAppId = "in.juspay.jatrisaathi"
+              }
+            , enableRentals = true
+            , enableIntercity = true
+            , enableCabs = true
+            , enableAcViews = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = true
+              }
+            , featureConfig {
+                enableCabBanner = true
+              }
+            , waitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                },
+                ambulance {
+                  freeMinutes = 8.0
+                , perMinCharges = 2.0
+               }
+            }
+            , rentalWaitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                }
+              }
+            , intercityWaitingChargeConfig {
+              cabs {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              }
+            }
+          },
+        defaultCityConfig
+          { cityName = "Durgapur",
+            cityCode = "std:0351",
+            referral
+              { domain = "https://www.yatrisathi.in",
+                customerAppId = "in.juspay.jatrisaathi"
+              }
+            , enableRentals = true
+            , enableIntercity = true
+            , enableCabs = true
+            , enableAcViews = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = true
+              }
+            , featureConfig {
+                enableCabBanner = true
+              }
+            , waitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                },
+                ambulance {
+                  freeMinutes = 8.0
+                , perMinCharges = 2.0
+               }
+            }
+            , rentalWaitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                }
+              }
+            , intercityWaitingChargeConfig {
+              cabs {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              }
+            }
+          },
+        defaultCityConfig
+          { cityName = "Petrapole",
+            cityCode = "std:03215",
+            referral
+              { domain = "https://www.yatrisathi.in",
+                customerAppId = "in.juspay.jatrisaathi"
+              }
+            , enableRentals = true
+            , enableIntercity = true
+            , enableCabs = true
+            , enableAcViews = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = true
+              }
+            , featureConfig {
+                enableCabBanner = true
+              }
+            , waitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                },
+                ambulance {
+                  freeMinutes = 8.0
+                , perMinCharges = 2.0
+               }
+            }
+            , rentalWaitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                }
+              }
+            , intercityWaitingChargeConfig {
+              cabs {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              }
+            }
+          },
+        defaultCityConfig
           { cityName = "Siliguri",
             cityCode = "std:0353",
             referral
@@ -885,7 +1005,7 @@ allCitiesDefCityConfig =
       , perMinCharges : 2.0
       },
       ambulance : {
-        freeMinutes : 480.0
+        freeMinutes : 8.0
       , perMinCharges : 2.0
       }
     },
@@ -903,7 +1023,7 @@ allCitiesDefCityConfig =
       , perMinCharges : 2.0
       },
       ambulance : {
-        freeMinutes : 480.0
+        freeMinutes : 8.0
       , perMinCharges : 2.0
       }
     },
@@ -921,7 +1041,7 @@ allCitiesDefCityConfig =
       , perMinCharges : 2.0
       },
       ambulance : {
-        freeMinutes : 480.0
+        freeMinutes : 8.0
       , perMinCharges : 2.0
       }
     },
