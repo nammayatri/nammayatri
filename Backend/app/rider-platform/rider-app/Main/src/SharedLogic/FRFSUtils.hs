@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Domain.Types.AadhaarVerification as DAadhaarVerification
@@ -309,10 +310,21 @@ data VehicleTracking = VehicleTracking
   { nextStop :: RouteStopMapping.RouteStopMapping,
     nextStopTravelTime :: Maybe Seconds,
     nextStopTravelDistance :: Meters,
+    upcomingStops :: [UpcomingStop],
     vehicleId :: Text,
-    vehicleInfo :: VehicleInfo
+    vehicleInfo :: VehicleInfo,
+    delay :: Maybe Seconds
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpcomingStop = UpcomingStop
+  { stop :: RouteStopMapping.RouteStopMapping,
+    estimatedTravelTime :: Maybe Seconds,
+    actualTravelTime :: Maybe Seconds,
+    distance :: Meters
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehicleInfo = VehicleInfo
@@ -336,9 +348,11 @@ trackVehicles personId merchantId routeCode = do
   let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
       stopPairs = pairWithNext sortedStops
   stopPairsWithWaypoints <- getStopPairsWithWaypoints stopPairs
+  let segmentDistances = [(stopPair, (sum $ zipWith distanceBetweenInMeters waypoints (tail waypoints), duration)) | (stopPair, (waypoints, duration)) <- stopPairsWithWaypoints]
+      segmentDistancesMap = Map.fromList segmentDistances
   forM vehicleInfoWithLatLong $ \(vehicleId, vehicleInfo, vehicleLat, vehicleLon) -> do
     minDistancesWithWaypoints <-
-      forM stopPairsWithWaypoints $ \((_currStop, nextStop), waypoints) -> do
+      forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
         let (groupedWaypoints, _) =
               foldr
                 ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
@@ -353,33 +367,88 @@ trackVehicles personId merchantId routeCode = do
     let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
         nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
         nextStopTravelTime = (\speed -> Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed
-    pure $
-      VehicleTracking
-        { nextStopTravelDistance = highPrecMetersToMeters nextStopTravelDistance,
-          ..
-        }
+        upcomingStopsList = dropWhile (/= nextStop) sortedStops
+        upcomingStopPairs = pairWithNext upcomingStopsList
+
+        (segmentDistancesForUpcoming, segmentDurationsForUpcoming :: [Maybe Seconds]) = unzip $ map (\pair -> fromMaybe (HighPrecMeters 0, Nothing) (Map.lookup pair segmentDistancesMap)) upcomingStopPairs
+
+        cumulativeDistances = scanl (+) nextStopTravelDistance segmentDistancesForUpcoming
+
+        upcomingStopsEntries =
+          zipWith3
+            ( \stop cumulativeDist duration -> do
+                UpcomingStop
+                  { stop = stop,
+                    estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
+                    actualTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed else duration,
+                    distance = highPrecMetersToMeters cumulativeDist
+                  }
+            )
+            upcomingStopsList
+            cumulativeDistances
+            segmentDurationsForUpcoming
+    currentTime <- liftIO getCurrentTime
+    let delay
+          | nextStopTravelDistance <= 100 =
+            case (nextStopTravelTime, vehicleInfo.startTime) of
+              (Just (Seconds estimatedSeconds), Just startTime) ->
+                let actualDiff = diffUTCTime currentTime startTime
+                    actualSeconds = fromIntegral (nominalDiffTimeToSeconds actualDiff)
+                 in Just $ Seconds (actualSeconds - estimatedSeconds)
+              _ -> Nothing
+          | otherwise = Nothing
+
+    let vehicleTracking =
+          VehicleTracking
+            { nextStopTravelDistance = highPrecMetersToMeters nextStopTravelDistance,
+              upcomingStops = upcomingStopsEntries,
+              ..
+            }
+    updatedVehicleTracking <- updateVehicleTrackingFromCache vehicleId vehicleTracking
+    pure updatedVehicleTracking
   where
+    updateVehicleTrackingFromCache vehicleId vehicleTracking = do
+      mbCachedVehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
+      updatedTracking <- case mbCachedVehicleTracking of
+        Just cachedVehicleTracking -> do
+          let cachedStopMap =
+                Map.fromList
+                  [ (RouteStopMapping.stopCode (stop cachedStop), estimatedTravelTime cachedStop)
+                    | cachedStop <- upcomingStops cachedVehicleTracking
+                  ]
+              updatedUpcomingStops =
+                map
+                  ( \newStop ->
+                      case Map.lookup (RouteStopMapping.stopCode (stop newStop)) cachedStopMap of
+                        Just cachedEstimatedTime -> newStop {estimatedTravelTime = cachedEstimatedTime}
+                        Nothing -> newStop
+                  )
+                  (upcomingStops vehicleTracking)
+              finalDelay = maybe cachedVehicleTracking.delay (\_ -> vehicleTracking.delay) vehicleTracking.delay
+          pure $ vehicleTracking {upcomingStops = updatedUpcomingStops, delay = finalDelay}
+        Nothing -> pure vehicleTracking
+      Redis.set (mkVehicleTrackingKey vehicleId routeCode) updatedTracking
+      pure updatedTracking
+
     getStopPairsWithWaypoints stopPairs = do
       Redis.get (stopPairRoutePointsKey routeCode)
         >>= \case
-          Just stopPairsWithWaypoint -> pure stopPairsWithWaypoint
+          Just stopPairsWithWaypointAndDuration -> pure stopPairsWithWaypointAndDuration
           Nothing -> do
-            stopPairsWithWaypoint <-
-              forM stopPairs $ \stopPair -> do
-                let startStop = fst stopPair
-                    nextStop = snd stopPair
-                    request =
+            stopPairsWithWaypointAndDuration <-
+              forM stopPairs $ \(currStop, nextStop) -> do
+                let request =
                       Maps.GetRoutesReq
-                        { waypoints = NE.fromList [startStop.stopPoint, nextStop.stopPoint],
+                        { waypoints = NE.fromList [currStop.stopPoint, nextStop.stopPoint],
                           calcPoints = True,
                           mode = Just Maps.CAR
                         }
                 routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
                 reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (RouteNotFound routeCode)
                 let wayPoints = reqRouteInfo.points
-                pure (stopPair, wayPoints)
-            Redis.set (stopPairRoutePointsKey routeCode) stopPairsWithWaypoint
-            pure stopPairsWithWaypoint
+                pure ((currStop, nextStop), (wayPoints, reqRouteInfo.duration :: Maybe Seconds))
+            Redis.set (stopPairRoutePointsKey routeCode) stopPairsWithWaypointAndDuration
+            pure stopPairsWithWaypointAndDuration
 
     getVehicleInfo = do
       vehicleInfoByRouteCode :: [(Text, VehicleInfo)] <- do
@@ -433,6 +502,9 @@ trackVehicles personId merchantId routeCode = do
 
     stopPairRoutePointsKey :: Text -> Text
     stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
+
+mkVehicleTrackingKey :: Text -> Text -> Text
+mkVehicleTrackingKey vehicleId routeCode = "FRFS:VehicleTracking:" <> vehicleId <> ":" <> routeCode
 
 getDiscountInfo :: Bool -> Maybe Int -> Maybe Int -> Price -> Int -> Int -> (Maybe Int, Maybe HighPrecMoney)
 getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price quantity ticketsBookedInEvent =
