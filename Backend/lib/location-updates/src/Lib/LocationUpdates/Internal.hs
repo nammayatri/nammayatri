@@ -94,7 +94,7 @@ getFailedDistanceCalculationKey :: Id person -> Text
 getFailedDistanceCalculationKey driverId = mconcat [driverId.getId, ":locationUpdatesFailed"]
 
 isDistanceCalculationFailedImplementation :: (HedisFlow m r) => Id person -> m Bool
-isDistanceCalculationFailedImplementation driverId = isJust <$> Hedis.get @() (getFailedDistanceCalculationKey driverId)
+isDistanceCalculationFailedImplementation driverId = isJust <$> (Hedis.withMasterRedis $ Hedis.get @() (getFailedDistanceCalculationKey driverId))
 
 resetFailedDistanceCalculationFlag :: (HedisFlow m r) => Id person -> m ()
 resetFailedDistanceCalculationFlag driverId = Hedis.del $ getFailedDistanceCalculationKey driverId

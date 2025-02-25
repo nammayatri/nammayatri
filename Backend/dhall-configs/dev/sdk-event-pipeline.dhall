@@ -13,6 +13,7 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 in  { kafkaProducerCfg
