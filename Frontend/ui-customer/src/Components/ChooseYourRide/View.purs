@@ -686,7 +686,8 @@ quoteListView push config =
                     , orientation VERTICAL
                     ] $ mapWithIndex
                         ( \index item -> do
-                            let userCity = DS.toLower $ ST.getValueToLocalStore ST.CUSTOMER_LOCATION
+                            let _ = spy "DEBUG: ChooseYourRide" item
+                                userCity = DS.toLower $ ST.getValueToLocalStore ST.CUSTOMER_LOCATION
                                 estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) topProviderList else []
                                 services = if item.vehicleVariant == "BOOK_ANY" then RC.getBookAnyServices userCity else []
                                 bookAnyConfig = getBookAnyProps estimates
