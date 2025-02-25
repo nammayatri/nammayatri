@@ -78,6 +78,7 @@ data LegStatus = LegStatus
     nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
     nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong

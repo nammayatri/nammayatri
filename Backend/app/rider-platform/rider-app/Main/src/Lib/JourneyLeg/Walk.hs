@@ -88,7 +88,8 @@ instance JT.JourneyLeg WalkLegRequest m where
           nextStopTravelDistance = Nothing,
           nextStopTravelTime = Nothing,
           legOrder = journeyLegInfo.journeyLegOrder,
-          statusChanged
+          statusChanged,
+          mode = DTrip.Walk
         }
   getState _ = throwError (InternalError "Not supported")
 

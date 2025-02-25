@@ -175,7 +175,8 @@ data JourneyLegState = JourneyLegState
     nextStop :: Maybe DRouteStopMappping.RouteStopMapping,
     nextStopTravelTime :: Maybe Seconds,
     nextStopTravelDistance :: Maybe Meters,
-    legOrder :: Int
+    legOrder :: Int,
+    mode :: DTrip.MultimodalTravelMode
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
