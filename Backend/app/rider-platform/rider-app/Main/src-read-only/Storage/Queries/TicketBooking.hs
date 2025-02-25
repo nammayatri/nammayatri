@@ -82,6 +82,7 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
   updateWithKV
     [ Se.Set Beam.amount ((.amount) amount),
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
+      Se.Set Beam.blockExpirationTime blockExpirationTime,
       Se.Set Beam.bookedSeats bookedSeats,
       Se.Set Beam.cancelledSeats cancelledSeats,
       Se.Set Beam.createdAt createdAt,
