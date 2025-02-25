@@ -347,6 +347,9 @@ data DriverInformationRes = DriverInformationRes
     isSpecialLocWarrior :: Bool,
     safetyTag :: Maybe DA.Value,
     safetyScore :: Maybe DA.Value,
+    overchargingTag :: Maybe DA.Value,
+    ridesWithFareIssues :: Maybe DA.Value,
+    totalRidesConsideredForFareIssues :: Maybe DA.Value,
     blockedReasonFlag :: Maybe BlockReasonFlag,
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
@@ -411,6 +414,9 @@ data DriverEntityRes = DriverEntityRes
     isSpecialLocWarrior :: Bool,
     safetyTag :: Maybe DA.Value,
     safetyScore :: Maybe DA.Value,
+    overchargingTag :: Maybe DA.Value,
+    ridesWithFareIssues :: Maybe DA.Value,
+    totalRidesConsideredForFareIssues :: Maybe DA.Value,
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
@@ -707,7 +713,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
-  frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId toss tnant' context' else return $ Just DAKM.empty
+  frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId toss tnant' context' else return Nothing
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   merchant <-
     CQM.findById merchantId
@@ -918,6 +924,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
   let driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag
   let mbDriverSafetyTag = Yudhishthira.accessTagKey (LYT.TagName "SafetyCohort") driverTags
       mbDriverSafetyScore = Yudhishthira.accessTagKey (LYT.TagName "SafetyScore") driverTags
+      mbDriverOverchargingTag = Yudhishthira.accessTagKey (LYT.TagName "DriverChargingBehaviour") driverTags
+      mbTotalRidesConsideredForFareIssues = Yudhishthira.accessTagKey (LYT.TagName "TotalRidesConsideredForFareIssues") driverTags
+      mbRidesWithFareIssues = Yudhishthira.accessTagKey (LYT.TagName "RidesWithFareIssue") driverTags
   return $
     DriverEntityRes
       { id = person.id,
@@ -966,6 +975,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
         safetyTag = mbDriverSafetyTag,
         safetyScore = mbDriverSafetyScore,
+        overchargingTag = mbDriverOverchargingTag,
+        ridesWithFareIssues = mbRidesWithFareIssues,
+        totalRidesConsideredForFareIssues = mbTotalRidesConsideredForFareIssues,
         softBlockStiers = driverInfo.softBlockStiers,
         softBlockExpiryTime = driverInfo.softBlockExpiryTime,
         softBlockReasonFlag = driverInfo.softBlockReasonFlag,
