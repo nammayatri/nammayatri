@@ -5,8 +5,7 @@
 module Storage.Queries.FRFSRouteFareProduct where
 
 import qualified Domain.Types.FRFSRouteFareProduct
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,13 +24,12 @@ createMany = traverse_ create
 
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
-findByRouteCode routeCode merchantId merchantOperatingCityId = do
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
+findByRouteCode routeCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.routeCode $ Se.Eq routeCode,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
         ]
     ]
 
@@ -45,6 +43,7 @@ updateByPrimaryKey (Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.farePolicyId (Kernel.Types.Id.getId farePolicyId),
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.routeCode routeCode,
@@ -63,6 +62,7 @@ instance FromTType' Beam.FRFSRouteFareProduct Domain.Types.FRFSRouteFareProduct.
         Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct
           { farePolicyId = Kernel.Types.Id.Id farePolicyId,
             id = Kernel.Types.Id.Id id,
+            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
@@ -78,6 +78,7 @@ instance ToTType' Beam.FRFSRouteFareProduct Domain.Types.FRFSRouteFareProduct.FR
     Beam.FRFSRouteFareProductT
       { Beam.farePolicyId = Kernel.Types.Id.getId farePolicyId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,

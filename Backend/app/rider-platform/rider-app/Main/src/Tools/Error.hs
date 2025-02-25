@@ -390,7 +390,7 @@ data RouteError
   | RouteDoesNotExist Text
   | RouteFareNotFound Text Text Text
   | RouteMappingNotFound Text
-  | RouteMappingDoesNotExist Text Text
+  | RouteMappingDoesNotExist Text Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RouteError
@@ -400,7 +400,7 @@ instance IsBaseError RouteError where
     RouteNotFound msg -> Just $ "Route Not Found:-" <> msg
     RouteDoesNotExist msg -> Just $ "Route Does Not Exist:-" <> msg
     RouteMappingNotFound msg -> Just $ "Route Mapping Not Found:-" <> msg
-    RouteMappingDoesNotExist routeCode startStop -> Just $ "Route Mapping Does Not Exist:-" <> routeCode <> ", " <> startStop
+    RouteMappingDoesNotExist routeCode startStop integratedBppConfigId -> Just $ "Route Mapping Does Not Exist:-" <> routeCode <> ", " <> startStop <> ", " <> integratedBppConfigId
     RouteFareNotFound routeCode startStop endStop -> Just $ "Route Fare Not Found:-" <> routeCode <> ", " <> startStop <> ", " <> endStop
 
 instance IsHTTPError RouteError where
@@ -408,14 +408,14 @@ instance IsHTTPError RouteError where
     RouteNotFound _ -> "ROUTE_NOT_FOUND"
     RouteDoesNotExist _ -> "ROUTE_DOES_NOT_EXIST"
     RouteMappingNotFound _ -> "ROUTE_MAPPING_NOT_FOUND"
-    RouteMappingDoesNotExist _ _ -> "ROUTE_MAPPING_DOES_NOT_EXIST"
+    RouteMappingDoesNotExist _ _ _ -> "ROUTE_MAPPING_DOES_NOT_EXIST"
     RouteFareNotFound _ _ _ -> "ROUTE_FARE_NOT_FOUND"
 
   toHttpCode = \case
     RouteNotFound _ -> E500
     RouteDoesNotExist _ -> E400
     RouteFareNotFound _ _ _ -> E500
-    RouteMappingDoesNotExist _ _ -> E500
+    RouteMappingDoesNotExist _ _ _ -> E500
     RouteMappingNotFound _ -> E500
 
 instance IsAPIError RouteError
@@ -592,6 +592,25 @@ instance IsHTTPError BecknConfigError where
     BecknConfigNotFound _ -> E500
 
 instance IsAPIError BecknConfigError
+
+newtype IntegratedBPPConfigError
+  = IntegratedBPPConfigNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
+
+instance IsBaseError IntegratedBPPConfigError where
+  toMessage = \case
+    IntegratedBPPConfigNotFound msg -> Just $ "IntegratedBPPConfig Config not found:-" <> msg
+
+instance IsHTTPError IntegratedBPPConfigError where
+  toErrorCode = \case
+    IntegratedBPPConfigNotFound _ -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+
+  toHttpCode = \case
+    IntegratedBPPConfigNotFound _ -> E500
+
+instance IsAPIError IntegratedBPPConfigError
 
 data PaymentError
   = PaymentMethodRequired

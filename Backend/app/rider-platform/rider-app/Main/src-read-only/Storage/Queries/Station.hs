@@ -5,7 +5,7 @@
 module Storage.Queries.Station (module Storage.Queries.Station, module ReExport) where
 
 import qualified BecknV2.FRFS.Enums
-import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,39 +24,30 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Station.Station] -> m ())
 createMany = traverse_ create
 
-deleteByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
-deleteByStationCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
+deleteByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
+deleteByStationCode code integratedBppConfigId = do deleteWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
-findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-findByMerchantOperatingCityIdAndVehicleType ::
+findAllByVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Station.Station])
-findByMerchantOperatingCityIdAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  (Maybe Int -> Maybe Int -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.Station.Station])
+findAllByVehicleType limit offset vehicleType integratedBppConfigId = do
   findAllWithOptionsKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        [ Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
         ]
     ]
     (Se.Desc Beam.createdAt)
     limit
     offset
 
-findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
-findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByStationCodeAndMerchantOperatingCityId ::
+findByStationCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.Station.Station))
-findByStationCodeAndMerchantOperatingCityId code merchantOperatingCityId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.code $ Se.Eq code,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
-        ]
-    ]
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.Station.Station))
+findByStationCode code integratedBppConfigId = do findOneWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -67,6 +58,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   updateWithKV
     [ Se.Set Beam.address address,
       Se.Set Beam.code code,
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

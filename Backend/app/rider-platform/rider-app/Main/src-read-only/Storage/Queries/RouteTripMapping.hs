@@ -4,6 +4,7 @@
 
 module Storage.Queries.RouteTripMapping where
 
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RouteTripMapping
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -21,8 +22,16 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteTripMapping.RouteTripMapping] -> m ())
 createMany = traverse_ create
 
-findAllTripIdByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteTripMapping.RouteTripMapping])
-findAllTripIdByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+findAllTripIdByRouteCode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteTripMapping.RouteTripMapping])
+findAllTripIdByRouteCode routeCode integratedBppConfigId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteTripMapping.RouteTripMapping))
 findByPrimaryKey tripCode = do findOneWithKV [Se.And [Se.Is Beam.tripCode $ Se.Eq tripCode]]
@@ -32,6 +41,7 @@ updateByPrimaryKey (Domain.Types.RouteTripMapping.RouteTripMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.routeCode routeCode,
@@ -48,6 +58,7 @@ instance FromTType' Beam.RouteTripMapping Domain.Types.RouteTripMapping.RouteTri
       Just
         Domain.Types.RouteTripMapping.RouteTripMapping
           { createdAt = createdAt,
+            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
@@ -62,6 +73,7 @@ instance ToTType' Beam.RouteTripMapping Domain.Types.RouteTripMapping.RouteTripM
   toTType' (Domain.Types.RouteTripMapping.RouteTripMapping {..}) = do
     Beam.RouteTripMappingT
       { Beam.createdAt = createdAt,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,

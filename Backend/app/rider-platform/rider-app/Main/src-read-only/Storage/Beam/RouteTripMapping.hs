@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 
 data RouteTripMappingT f = RouteTripMappingT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     routeCode :: B.C f Kernel.Prelude.Text,

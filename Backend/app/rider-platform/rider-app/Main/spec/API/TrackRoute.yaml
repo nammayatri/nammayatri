@@ -4,6 +4,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   UTCTime: Kernel.Prelude
   Double: Kernel.Prelude
+  VehicleCategory: BecknV2.FRFS.Enums
 
 module: TrackRoute
 
@@ -32,6 +33,8 @@ types:
 apis:
   - GET:
       endpoint: /track/{routeCode}/vehicles
+      query:
+        vehicleType: VehicleCategory
       params:
         routeCode: Text
       response:

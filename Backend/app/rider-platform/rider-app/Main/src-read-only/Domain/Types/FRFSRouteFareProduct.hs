@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSFarePolicy
 import qualified Domain.Types.FRFSVehicleServiceTier
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -17,6 +18,7 @@ import qualified Tools.Beam.UtilsTH
 data FRFSRouteFareProduct = FRFSRouteFareProduct
   { farePolicyId :: Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     routeCode :: Kernel.Prelude.Text,

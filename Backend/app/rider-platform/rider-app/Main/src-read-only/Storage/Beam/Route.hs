@@ -18,6 +18,7 @@ data RouteT f = RouteT
     endLat :: B.C f Kernel.Prelude.Double,
     endLon :: B.C f Kernel.Prelude.Double,
     id :: B.C f Kernel.Prelude.Text,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     longName :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

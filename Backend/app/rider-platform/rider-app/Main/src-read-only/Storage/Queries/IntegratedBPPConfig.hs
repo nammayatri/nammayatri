@@ -27,23 +27,25 @@ createMany = traverse_ create
 
 findByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
-findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory = do
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> Domain.Types.IntegratedBPPConfig.PlatformType -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.platformType $ Se.Eq platformType
         ]
     ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
-findByPrimaryKey domain merchantId merchantOperatingCityId vehicleCategory = do
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByPrimaryKey domain id merchantId merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
           Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
@@ -54,12 +56,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
+    [ Se.Set Beam.platformType platformType,
+      Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
           Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
@@ -73,8 +77,10 @@ instance FromTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.In
       Just
         Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig
           { domain = domain,
+            id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            platformType = platformType,
             providerConfig = providerConfig',
             vehicleCategory = vehicleCategory,
             createdAt = createdAt,
@@ -85,8 +91,10 @@ instance ToTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.Inte
   toTType' (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) = do
     Beam.IntegratedBPPConfigT
       { Beam.domain = domain,
+        Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.platformType = platformType,
         Beam.configJSON = Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig,
         Beam.vehicleCategory = vehicleCategory,
         Beam.createdAt = createdAt,
