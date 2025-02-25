@@ -38,6 +38,8 @@ DriverStats:
     validDriverCancellationTagCount: Int
     validCustomerCancellationTagCount: Int
     validCancellationTagsStatsStartDate: Maybe UTCTime
+    safetyPlusRideCount : Int
+    safetyPlusEarnings : HighPrecMoney
 
   beamFields:
     totalEarnings:
@@ -67,6 +69,8 @@ DriverStats:
     totalPayoutEarnings: Maybe HighPrecMoney
     validDriverCancellationTagCount: Maybe Int
     validCustomerCancellationTagCount: Maybe Int
+    safetyPlusRideCount: Maybe Int
+    safetyPlusEarnings:  Maybe HighPrecMoney
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
@@ -83,6 +87,8 @@ DriverStats:
     totalReferralCounts: Kernel.Prelude.fromMaybe 0|I
     validDriverCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
     validCustomerCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
+    safetyPlusRideCount:  Kernel.Prelude.fromMaybe 0|I
+    safetyPlusEarnings:  Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalDistance: getTotalDistance
@@ -102,6 +108,8 @@ DriverStats:
     totalReferralCounts: Kernel.Prelude.Just|I
     validDriverCancellationTagCount: Kernel.Prelude.Just|I
     validCustomerCancellationTagCount: Kernel.Prelude.Just|I
+    safetyPlusRideCount: Kernel.Prelude.Just|I
+    safetyPlusEarnings:  Kernel.Prelude.Just|I
 
   constraints:
     driverId: PrimaryKey

@@ -358,4 +358,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [servicesEnabledForSubscription]
       where: driverId
+    updateServicesEnabledForSubscription:
+      kv
 

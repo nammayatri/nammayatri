@@ -57,7 +57,9 @@ createInitialDriverStats currency distanceUnit driverId = do
             updatedAt = now,
             validCustomerCancellationTagCount = 0,
             validDriverCancellationTagCount = 0,
-            validCancellationTagsStatsStartDate = Just now
+            validCancellationTagsStatsStartDate = Just now,
+            safetyPlusEarnings = 0.0,
+            safetyPlusRideCount = 0
           }
   createWithKV dStats
 

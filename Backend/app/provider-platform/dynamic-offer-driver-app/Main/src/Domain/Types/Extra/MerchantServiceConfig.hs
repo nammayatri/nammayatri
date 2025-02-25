@@ -25,6 +25,8 @@ import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
+import Lib.Dashcam.Domain.Interface as DashcamInter
+import Lib.Dashcam.Domain.Types as Dashcam
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -49,6 +51,7 @@ data ServiceName
   | BackgroundVerificationService BackgroundVerification.BackgroundVerificationService
   | IncidentReportService IncidentReport.IncidentReportService
   | LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
+  | DashCamService Dashcam.DashcamService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -73,6 +76,7 @@ instance Show ServiceName where
   show (BackgroundVerificationService s) = "BackgroundVerification_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
   show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
+  show (DashCamService s) = "DashCamService_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -151,6 +155,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "LLMChatCompletion_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (DashCamService v1, r2)
+                 | r1 <- stripPrefix "DashCamService_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -175,6 +183,7 @@ data ServiceConfigD (s :: UsageSafety)
   | BackgroundVerificationServiceConfig !BackgroundVerification.BackgroundVerificationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   | LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
+  | DashCamServiceConfig !DashcamInter.DashCamServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

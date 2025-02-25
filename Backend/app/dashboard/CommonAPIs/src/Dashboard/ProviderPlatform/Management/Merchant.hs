@@ -19,7 +19,7 @@ module Dashboard.ProviderPlatform.Management.Merchant
   )
 where
 
-import API.Types.ProviderPlatform.Management.Endpoints.Merchant
+import API.Types.ProviderPlatform.Management.Endpoints.Merchant as Reexport
 import Dashboard.Common as ReExport
 import Dashboard.Common.Merchant
 import Data.Aeson
