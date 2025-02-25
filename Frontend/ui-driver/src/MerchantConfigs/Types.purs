@@ -29,6 +29,7 @@ type AppConfigDriver a =
     flowConfig :: FlowConfig,
     permissions :: PermissionsConfig,
     homeScreen :: HomeScreenConfig,
+    themeColors :: ThemeColors,
     feature :: Features,
     vehicle :: VVConfig,
     allowAllMobileNumber ::Boolean,
@@ -113,6 +114,15 @@ type SubscriptionConfig =  {
   noChargesTillDate :: String,
   lowestFeesFromDate :: String
  }
+
+type ThemeColors = {
+  goOnlineColor :: String,
+  navBarBackground :: String,
+  primaryStrokeColor :: String,
+  openMapsStrokeColor :: String,
+  secondaryStrokeColor :: String,
+  openMapsTextColor :: String
+}
 
 type SubscriptionOfferBannerConfig = {
   showDUOfferBanner :: Boolean,

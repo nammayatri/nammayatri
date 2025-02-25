@@ -46,7 +46,6 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString if state.props.manageVehicle then ADD_VEHICLE else COMPLETE_REGISTRATION }
       , width = MATCH_PARENT
-      , background = Color.black900
       , height = V 48
       , id = "RegistrationScreenButton"
       }

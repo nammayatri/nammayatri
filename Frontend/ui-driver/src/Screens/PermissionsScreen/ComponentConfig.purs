@@ -45,9 +45,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig
       { text = (getString CONTINUE)
-      , color = Color.primaryButtonColor
       }
-      , background = Color.black900
       , height = (V 50)
       , alpha = if isEnabled then 1.0 else 0.7
       , isClickable = isEnabled

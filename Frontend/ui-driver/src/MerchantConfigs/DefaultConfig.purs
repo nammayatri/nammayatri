@@ -1059,6 +1059,14 @@ config =
     showGenderBanner : true
   }
   , colors : defaultColors
+  , themeColors : {
+    goOnlineColor : "#53BB6F",
+    navBarBackground : "#FFFFFF",
+    primaryStrokeColor : "#E5E7EB",
+    openMapsStrokeColor : "",
+    secondaryStrokeColor : "#B9BABE",
+    openMapsTextColor : "#FFFFFF"
+  }
   , primaryButtonConfig : defaultPrimaryButtonConfig
   , fontConfig : defaultFontConfig
   , loaderConfig : defaultLoaderConfig

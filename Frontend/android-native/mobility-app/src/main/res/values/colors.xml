@@ -18,6 +18,7 @@
     <color name="Black800">#454545</color>
     <color name="Black900">#2C2F3A</color>
     <color name="Black500">#B9BABE</color>
+    <color name="defaultAcceptButtonBG">#53BB6F</color>
     <color name="green">#268C6E</color>
     <color name="green900">#53BB6F</color>
     <color name="red900">#E55454</color>

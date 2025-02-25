@@ -17,6 +17,7 @@ module Components.BottomNavBar.View where
 
 import Common.Types.App
 import Components.BottomNavBar.Controller
+import ConfigProvider
 
 import Data.Array (mapWithIndex)
 import Data.Monoid.Split (Split(..))
@@ -37,7 +38,9 @@ import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
 
 view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
-view push state =
+view push state = 
+    let config = getAppConfig appConfig
+    in
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -46,8 +49,8 @@ view push state =
     ][ linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , stroke ("1,"<> Color.grey900)
-       , background Color.white900
+       , stroke ("1,"<> config.themeColors.primaryStrokeColor)
+       , background config.themeColors.navBarBackground
        ](mapWithIndex
          (\index item ->
           linearLayout
