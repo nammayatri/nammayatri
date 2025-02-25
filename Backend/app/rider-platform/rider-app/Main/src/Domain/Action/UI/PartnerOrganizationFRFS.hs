@@ -403,7 +403,7 @@ shareTicketInfo ticketBookingId = do
           B.runInReplica $
             CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
               >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
-        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
+        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking -- to see
 
 getFareV2 :: PartnerOrganization -> Station -> Station -> Maybe (Id PartnerOrgTransaction) -> Maybe Text -> Flow GetFareRespV2
 getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = do
