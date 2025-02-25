@@ -71,3 +71,4 @@ import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
 import Screens.ScheduledRideAcceptedScreen.Handler (scheduledRideAcceptedScreen) as UI
 import Screens.UploadParcelImageScreen.Handler (uploadParcelImageScreen) as UI
 import Screens.MetroWarriorsScreen.Handler (metroWarriorsScreen) as UI
+import Screens.MeterScreen.Handler (meterScreen) as UI

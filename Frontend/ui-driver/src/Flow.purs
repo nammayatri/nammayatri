@@ -94,6 +94,7 @@ import Resource.Constants (decodeAddress)
 import Resource.Constants as RC
 import Screens as ScreenNames
 import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
+import Screens.MeterScreen.ScreenData (initData) as MeterScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
@@ -112,6 +113,7 @@ import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.DocumentCaptureScreen.ScreenData (initData) as DocumentCaptureData
 import Screens.AcknowledgementScreen.ScreenData (initData) as AckScreenInitData
 import Screens.HomeScreen.Transformer (getDisabledLocById)
+import Screens.MeterScreen.Transformer (getLocationList)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
 import Screens.PaymentHistoryScreen.Transformer (buildTransactionDetails)
@@ -138,7 +140,7 @@ import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..))
+import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), METER_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -180,6 +182,7 @@ import Screens.Benefits.BenefitsScreen.Controller as BSC
 import PrestoDOM.Core (getPushFn)
 import Screens.NotificationsScreen.Controller (notificationTransformer, notifisDetailStateTransformer)
 import Engineering.Helpers.Utils as EHU
+import Resource.Constants (encodeAddress)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -210,7 +213,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit  
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
     when baseFlow $ showParcelIntroductionPopup
-    initialFlow    
+    initialFlow
     where
     updateOperatingCity :: FlowBT String Unit
     updateOperatingCity = do
@@ -2474,21 +2477,21 @@ homeScreenFlow = do
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   setValueToLocalStore LOGS_TRACKING "false"
-  Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
+  Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do
     void $ pure $ cleverTapSetLocation unit
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
-      then do  
+      then do
         currentRideFlow Nothing Nothing
-      else do 
+      else do
         pure unit
-    (GlobalState globalState) <- getState  
+    (GlobalState globalState) <- getState
     getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
     checkDriverBlockingStatus getDriverInfoResp globalState.homeScreen.data.config.subscriptionConfig.enableBlocking
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-    updateBannerAndPopupFlags  
+    updateBannerAndPopupFlags
     void $ lift $ lift $ toggleLoader false
-    liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED        
-  liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration" 
+    liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED
+  liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
   action <- UI.homeScreen 
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case action of             
@@ -2534,7 +2537,7 @@ homeScreenFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } } )
       helpAndSupportFlow
     GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
-    
+
     GO_TO_START_RIDE {id, otp ,startOdometerReading, startOdometerImage, lat, lon, ts} updatedState -> do
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
@@ -3240,7 +3243,7 @@ homeScreenFlow = do
               pure unit
         Left err -> pure unit
       void $ lift $ lift $ toggleLoader false
-  homeScreenFlow
+    GO_TO_METER_SCREEN -> meterScreenFlow
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
 clearPendingDuesFlow showLoader = do
@@ -4817,3 +4820,48 @@ updateWarriorSettings newSpecialLocationWarriorValue = do
           codeMessage = HU.decodeErrorCode errResp.errorMessage
       void $ pure $ toast $ if err.code == 500 then getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else codeMessage
       pure unit
+
+meterScreenFlow :: FlowBT String Unit
+meterScreenFlow = do
+  action <- UI.meterScreen
+  case action of
+    GO_TO_HOME_SCREEN_FROM_METER state -> do
+          modifyScreenState $ MeterScreenStateType $ \meterScreen -> MeterScreenData.initData
+          homeScreenFlow
+    SEARCH_LOCATION input updatedState -> do
+      LatLon lat lon _ <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
+      resp <- lift $ lift $ Remote.autoComplete input lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey))
+      case resp of 
+        Right (API.AutoCompleteResp autoCompleteResp) -> do
+          let locList = getLocationList autoCompleteResp.predictions
+          modifyScreenState $ MeterScreenStateType $ \meterScreen -> updatedState{data {locationList = locList}}
+          pure unit
+        Left _ -> pure unit
+      meterScreenFlow
+    GET_PLACE_NAME_METER_SCREEN state placeId -> do
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
+      case resp of
+        Right (API.GetPlaceNameResp placeNameResp) ->
+          case placeNameResp!!0 of
+            Just (API.PlaceName placeName) -> do
+              let (API.LatLong latLong) = placeName.location
+              void $ liftFlowBT $ JB.animateCamera latLong.lat latLong.lon 17.0 "ZOOM"
+              modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon}, data {destinationAddress = encodeAddress placeName.formattedAddress placeName.addressComponents (Just placeId) latLong.lat latLong.lon, isSearchLocation = ST.LocateOnMap}}
+            Nothing -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
+        Left _ -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
+      meterScreenFlow
+    GO_TO_METER_MAP_FROM_METER state -> meterScreenFlow
+    RELOAD_STATE saveToCurrLocs -> meterScreenFlow
+    UPDATE_LOCATION_NAME state lat lon -> do
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
+      case resp of
+        Right (API.GetPlaceNameResp placeNameResp) ->
+          case placeNameResp!!0 of
+            Just (API.PlaceName placeName) -> do
+              let (API.LatLong latLong) = placeName.location
+              let encodedAddress = encodeAddress placeName.formattedAddress placeName.addressComponents Nothing latLong.lat latLong.lon
+              let updatedDestination = fromMaybe "" encodedAddress.area
+              modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon}, data {destination = placeName.formattedAddress, destinationAddress = encodedAddress}}
+            Nothing -> pure unit
+        Left _ -> pure unit
+      meterScreenFlow

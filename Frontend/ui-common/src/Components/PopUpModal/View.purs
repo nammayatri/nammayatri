@@ -1,4 +1,5 @@
 {-
+JB
 
   Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -38,7 +39,7 @@ import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
 import Control.Monad.Trans.Class (lift)
 import Data.Function.Uncurried (runFn5)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -106,6 +107,7 @@ view push state =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dismiss" 
             ]
         ]
+     , maybe noView (\layout -> layout) state.externalHeader
      , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -173,7 +175,15 @@ view push state =
             , cornerRadii state.cornerRadius
             , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
-            ][  textView $
+            , id state.voiceToTextConfig.id
+            , afterRender
+                ( \action -> do
+                if state.voiceToTextConfig.enabled then do
+                    setupVoiceRecognitionView state.voiceToTextConfig.id
+                else pure unit
+            )(const NoAction)
+            ]if not state.voiceToTextConfig.enabled then 
+              [textView $
                 [ width state.topTitle.width
                 , height state.topTitle.height
                 , margin state.topTitle.margin
@@ -191,7 +201,8 @@ view push state =
                 , visibility state.coverImageConfig.visibility
                 , onClick push $ const OnCoverImageClick
                 ]
-            ]
+              ]
+              else []
         ,   Anim.screenAnimationFadeInOut
             $ lottieAnimationView
                 [ id state.coverLottieConfig.id
