@@ -3095,3 +3095,22 @@ export const executeJS = (params, codeString) => {
   }
 
 }
+
+export const voiceToTextImpl = function (cb, action) {
+  const callbackFallback = function () {
+    cb("Failed")();
+  };
+  if (window.JBridge.voiceToText){
+    try {
+      const callback = callbackMapper.map(function (text) {
+        cb(action(text))();
+      });
+      return JBridge.voiceToText(callback);
+    } catch (err) {
+      callbackFallback();
+      console.log("Error in voiceToText", err);
+    }
+  }else{
+    callbackFallback();
+  }
+}

@@ -13,6 +13,7 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.REQUEST_COMPANION_SELF_MANAGED;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
@@ -81,6 +82,8 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.ContactsContract;
 import android.provider.MediaStore;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -107,6 +110,7 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.speech.SpeechRecognizer;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -280,10 +284,12 @@ public class MobilityCommonBridge extends HyperBridge {
     protected  String LOG_TAG = MobilityCommonBridge.class.getSimpleName();
     private static String storeContactsCallBack = null;
     protected String phoneNumber;
+    private static final int REQUEST_MIC_PERMISSION = 1;
     protected String invoice;
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     private int lastFocusedEditView;
     private int lastFocusedEditText;
+    private SpeechRecognizer speechRecognizer;
 
     private Queue<String> callbackQueue = new LinkedList<>();
     // Others
@@ -5872,6 +5878,112 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
             });
         }
+    }
+    @JavascriptInterface
+    public void voiceToText(String callback) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            Context context = bridgeComponents.getContext();
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context);
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                    != PackageManager.PERMISSION_GRANTED) {
+                if (bridgeComponents.getActivity() != null) {
+                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(),
+                            new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_MIC_PERMISSION);
+                }
+            }
+
+            speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                @Override
+                public void onReadyForSpeech(Bundle params) {
+                }
+
+                @Override
+                public void onBeginningOfSpeech() {
+                }
+
+                @Override
+                public void onRmsChanged(float rmsdB) {
+                }
+
+                @Override
+                public void onBufferReceived(byte[] buffer) {
+                }
+
+                @Override
+                public void onEndOfSpeech() {
+                }
+
+                @Override
+                public void onError(int error) {
+                    String errorMessage;
+                    switch (error) {
+                        case SpeechRecognizer.ERROR_AUDIO:
+                            errorMessage = "Audio recording error";
+                            break;
+                        case SpeechRecognizer.ERROR_CLIENT:
+                            errorMessage = "Client-side error";
+                            break;
+                        case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                            errorMessage = "Insufficient permissions";
+                            break;
+                        case SpeechRecognizer.ERROR_NETWORK:
+                            errorMessage = "Network error";
+                            break;
+                        case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+                            errorMessage = "Network timeout";
+                            break;
+                        case SpeechRecognizer.ERROR_NO_MATCH:
+                            errorMessage = "No match found";
+                            break;
+                        case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                            errorMessage = "RecognitionService is busy";
+                            break;
+                        case SpeechRecognizer.ERROR_SERVER:
+                            errorMessage = "Server error";
+                            break;
+                        case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                            errorMessage = "No speech input";
+                            break;
+                        default:
+                            errorMessage = "Unknown error";
+                            break;
+                    }
+                    Log.e(LOG_TAG, "Speech recognition error: " + errorMessage);
+
+//                    String js = String.format(Locale.ENGLISH, "window.callUICallback('%s', '%s');", callback, errorMessage);
+//                    bridgeComponents.getJsCallback().addJsToWebView(js);
+                }
+
+                @Override
+                public void onResults(Bundle results) {
+                    ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (matches != null && !matches.isEmpty()) {
+                        String match = matches.get(0);
+                        Log.i(LOG_TAG, "Voice Results: " + match);
+                        String js = String.format(Locale.ENGLISH, "window.callUICallback('%s', '%s');", callback, match);
+                        bridgeComponents.getJsCallback().addJsToWebView(js);
+                    }
+                    try {
+                        speechRecognizer.destroy();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onPartialResults(Bundle partialResults) {
+                }
+
+                @Override
+                public void onEvent(int eventType, Bundle params) {
+                }
+            });
+
+            speechRecognizer.startListening(intent);
+        });
     }
 }
 

@@ -317,6 +317,7 @@ foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> E
 foreign import pickContact :: EffectFn1 String Boolean
 foreign import getResourceIdentifier :: String -> String -> Int
 foreign import executeJS :: Fn2 (Array String) String String
+foreign import voiceToTextImpl :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) String
 
 type SliderConfig = {
   id :: String,
@@ -1107,3 +1108,6 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
 foreign import triggerReloadApp :: String ->Effect Unit
 
 foreign import rsEncryption :: String -> String
+
+voiceToText :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect String
+voiceToText = runEffectFn2 voiceToTextImpl

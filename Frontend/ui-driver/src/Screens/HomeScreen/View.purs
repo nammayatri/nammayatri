@@ -860,7 +860,8 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][ locationUpdateView push state
+        ][  meterBooking state push
+          , locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
           , if hotspotsRemoteConfig.enableHotspotsFeature then seeNearbyHotspots state push else noView
@@ -873,6 +874,35 @@ gotoRecenterAndSupport state push =
   where 
     showReportText = state.props.currentStage == ST.HomeScreen
     centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen && state.data.config.gotoConfig.enableGoto
+
+meterBooking :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+meterBooking state push = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , cornerRadius 22.0
+    , onClick push $ const ShowMeterFare
+    , background Color.white900
+    , padding $ Padding 15 11 15 11
+    , gravity CENTER
+    , stroke $ "1,"<> Color.grey900
+    , rippleColor Color.rippleShade
+    , margin $ MarginRight 8
+    ][ imageView
+        [ width $ V 15
+        , height $ V 15
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_odometer"
+        ]
+      , textView $
+        [ weight 1.0
+        , text $ "Meter Rides"
+        , gravity CENTER
+        , margin $ MarginLeft 10
+        , color Color.blue800
+        , padding $ PaddingBottom 3
+        ] <> FontStyle.tags TypoGraphy
+    ]
 
 locationUpdateView :: forall w .(Action -> Effect Unit) -> HomeScreenState  ->  PrestoDOM (Effect Unit) w
 locationUpdateView push state =

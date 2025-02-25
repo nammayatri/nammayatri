@@ -15,6 +15,7 @@ to generate this file without the comments in this block.
   [ "aff"
   , "argonaut-codecs"
   , "argonaut-core"
+  , "argonaut-generic"
   , "arrays"
   , "backtrack"
   , "beckn-common"

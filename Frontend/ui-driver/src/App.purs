@@ -85,6 +85,7 @@ import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
 import Screens.MetroWarriorsScreen.ScreenData as MetroWarriorsScreenData
+import Screens.MeterScreen.ScreenData as MeterScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -148,6 +149,7 @@ newtype GlobalState = GlobalState {
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
   , uploadParcelImageScreen :: UploadParcelImageScreenState
   , metroWarriorsScreen :: MetroWarriorsScreenState
+  , meterScreen :: MeterScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -211,6 +213,7 @@ defaultGlobalState = GlobalState {
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
 , uploadParcelImageScreen : UploadParcelImageScreenData.initData
 , metroWarriorsScreen : MetroWarriorsScreenData.initData
+, meterScreen: MeterScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -284,6 +287,7 @@ data ScreenType =
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
   | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
   | MetroWarriorsScreenStateType (MetroWarriorsScreenState -> MetroWarriorsScreenState)
+  | MeterScreenStateType (MeterScreenState -> MeterScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -489,6 +493,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
                           | UPDATE_METRO_WARRIOR HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
+                          | GO_TO_METER_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -629,3 +634,5 @@ data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadP
 
 data METRO_WARRIOR_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_WARRIOR MetroWarriorsScreenState
                                   | UPDATE_WARRIOR_SETTINGS MetroWarriorsScreenState UpdateSpecialLocWarriorInfoReq
+
+data METER_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METER MeterScreenState | SEARCH_LOCATION String MeterScreenState | GO_TO_METER_MAP_FROM_METER MeterScreenState | RELOAD_STATE Boolean | UPDATE_LOCATION_NAME MeterScreenState Number Number | GET_PLACE_NAME_METER_SCREEN MeterScreenState String

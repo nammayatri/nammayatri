@@ -330,6 +330,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
+                    | MeterFareScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -496,6 +497,7 @@ data Action = NoAction
             | UpdateState ST.HomeScreenState
             | HideBusOnline
             | BusNumber String
+            | ShowMeterFare
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -515,6 +517,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
+
+eval ShowMeterFare state = exit $ MeterFareScreen state
 
 eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
 
@@ -616,7 +620,7 @@ eval (BannerChanged item) state = do
 
 eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
-  continue newState
+  update newState
 
 
 eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
