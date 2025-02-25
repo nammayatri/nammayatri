@@ -1709,9 +1709,10 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- city
   baseOperatingCity <- CQMOC.findById baseOperatingCityId >>= fromMaybeM (InvalidRequest "Base Operating City not found")
+  let newMerchantShortId = maybe merchantShortId (.shortId) mbNewMerchant
   let mbNewOperatingCity =
         case cityAlreadyCreated of
-          Nothing -> Just $ buildMerchantOperatingCity newMerchantId baseOperatingCity newMerchantOperatingCityId
+          Nothing -> Just $ buildMerchantOperatingCity newMerchantId baseOperatingCity newMerchantOperatingCityId newMerchantShortId
           _ -> Nothing
 
   -- intelligent pool config
@@ -2014,11 +2015,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           ..
         }
 
-    buildMerchantOperatingCity merchantId baseCity newCityId = do
+    buildMerchantOperatingCity merchantId baseCity newCityId newMerchantShortId = do
       DMOC.MerchantOperatingCity
         { id = newCityId,
           merchantId,
-          merchantShortId,
+          merchantShortId = newMerchantShortId,
           location = Maps.LatLong req.lat req.long,
           city = req.city,
           state = req.state,
