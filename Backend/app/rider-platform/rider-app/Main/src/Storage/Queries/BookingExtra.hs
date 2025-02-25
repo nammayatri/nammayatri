@@ -48,6 +48,7 @@ createBooking booking = do
       DRB.InterCityDetails detail -> return (Just detail.toLocation, [])
       DRB.AmbulanceDetails detail -> return (Just detail.toLocation, [])
       DRB.DeliveryDetails detail -> return (Just detail.toLocation, [])
+      DRB.MeterRideDetails detail -> return (Just detail.toLocation, detail.stops)
   when (notNull stops) $ processMultipleLocations stops
   whenJust mbToLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   createBooking' booking

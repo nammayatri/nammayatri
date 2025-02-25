@@ -45,6 +45,7 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon isPickUpRoute = do
         DRB.InterCityDetails details -> Just details.toLocation
         DRB.AmbulanceDetails details -> Just details.toLocation
         DRB.DeliveryDetails details -> Just details.toLocation
+        DRB.MeterRideDetails details -> Just details.toLocation
       merchantOperatingCityId = booking.merchantOperatingCityId
       fromLocation = LatLong pickupLocationLat pickupLocationLon
   targetLocation <-

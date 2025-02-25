@@ -162,6 +162,7 @@ data BookingAPIDetails
   | InterCityAPIDetails InterCityBookingAPIDetails
   | AmbulanceAPIDetails AmbulanceBookingAPIDetails
   | DeliveryAPIDetails DeliveryBookingAPIDetails
+  | MeterRideAPIDetails OneWayBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -324,6 +325,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
   InterCityDetails details -> return $ InterCityAPIDetails . mkInterCityAPIDetails $ details
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
   DeliveryDetails details -> DeliveryAPIDetails <$> mkDeliveryAPIDetails details
+  MeterRideDetails details -> return $ MeterRideAPIDetails . mkOneWayAPIDetails $ details
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails

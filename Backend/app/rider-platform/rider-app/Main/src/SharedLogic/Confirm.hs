@@ -352,7 +352,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       DQuote.DriverOfferDetails driverOffer -> DRB.DriverOfferDetails <$> (buildOneWayDetails driverOffer.isUpgradedToCab)
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
       DQuote.InterCityDetails _ -> DRB.InterCityDetails <$> buildInterCityDetails
-      DQuote.MeterRideDetails _ -> throwError (InternalError "Needs to be done")
+      DQuote.MeterRideDetails _ -> DRB.MeterRideDetails <$> buildOneWayDetails Nothing
 
     buildInterCityDetails = do
       -- we need to throw errors here because of some redundancy of our domain model

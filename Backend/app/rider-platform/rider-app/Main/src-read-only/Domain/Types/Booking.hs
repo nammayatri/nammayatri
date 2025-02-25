@@ -105,6 +105,7 @@ data BookingDetails
   | InterCityDetails Domain.Types.Booking.InterCityBookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
+  | MeterRideDetails Domain.Types.Booking.OneWayBookingDetails
   deriving (Show)
 
 data DeliveryBookingDetails = DeliveryBookingDetails
