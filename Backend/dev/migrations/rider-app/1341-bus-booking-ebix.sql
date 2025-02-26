@@ -83,20 +83,24 @@ VALUES
 -- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.integrated_bpp_config(
+    id,
     domain,
     merchant_id,
     merchant_operating_city_id,
     vehicle_category,
+    platform_type,
     config_json,
     created_at,
     updated_at
   )
 VALUES
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'FRFS',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'BUS',
+    'APPLICATION',
     '{"tag": "EBIX", "contents": {"agentId": "5185", "username": "ATKT", "password": "0.1.0|0|QXWuKw1yei1Pn8G/PcGhwzaRtAWh47owbNnEYNZc0Gbo1qnDmJtwONUzNoPImof7Mw48OQrwdgZsG1I=", "networkHostUrl": "https://app.pmpml.in/CstcTestApi"}}',
     now(),
     now()
@@ -209,6 +213,7 @@ VALUES
 -- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.route (
+    integrated_bpp_config_id,
     code,
     end_lat,
     end_lon,
@@ -227,6 +232,7 @@ INSERT INTO
   )
 VALUES
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'Route:1:SHUTTLE-U',
     22.64223,
     88.43121,
@@ -247,6 +253,7 @@ VALUES
 -- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.station (
+    integrated_bpp_config_id,
     address,
     code,
     id,
@@ -261,6 +268,7 @@ INSERT INTO
   )
 VALUES
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     NULL,
     'Stop:1:18465',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
@@ -274,6 +282,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     NULL,
     'Stop:1:18024',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
@@ -287,6 +296,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     NULL,
     'Stop:1:18304',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
@@ -300,6 +310,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     NULL,
     'Stop:1:18705',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
@@ -313,6 +324,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     NULL,
     'Stop:1:18058',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
@@ -329,6 +341,7 @@ VALUES
 -- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.route_stop_mapping (
+    integrated_bpp_config_id,
     provider_code,
     route_code,
     stop_code,
@@ -345,6 +358,7 @@ INSERT INTO
   )
 VALUES
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     '1',
     'Route:1:SHUTTLE-U',
     'Stop:1:18465',
@@ -360,6 +374,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     '2',
     'Route:1:SHUTTLE-U',
     'Stop:1:18024',
@@ -375,6 +390,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     '3',
     'Route:1:SHUTTLE-U',
     'Stop:1:18304',
@@ -390,6 +406,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     '4',
     'Route:1:SHUTTLE-U',
     'Stop:1:18705',
@@ -405,6 +422,7 @@ VALUES
     now()
   ),
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     '5',
     'Route:1:SHUTTLE-U',
     'Stop:1:18058',
@@ -629,6 +647,7 @@ VALUES
 -- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.frfs_route_fare_product (
+    integrated_bpp_config_id,
     id,
     route_code,
     fare_policy_id,
@@ -642,6 +661,7 @@ INSERT INTO
   )
 VALUES
   (
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
     'Route:1:SHUTTLE-U',
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',

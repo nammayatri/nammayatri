@@ -4,6 +4,7 @@
 
 module Storage.Queries.RouteStopMapping where
 
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RouteStopMapping
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -22,17 +23,44 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopMapping.RouteStopMapping] -> m ())
 createMany = traverse_ create
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+findByRouteCode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCode routeCode integratedBppConfigId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
+        ]
+    ]
 
-findByRouteCodeAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
-findByRouteCodeAndStopCode routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
+findByRouteCodeAndStopCode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
+findByRouteCodeAndStopCode routeCode stopCode integratedBppConfigId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.stopCode $ Se.Eq stopCode,
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
+        ]
+    ]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByRouteCodes routeCode = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.In routeCode]]
+findByRouteCodes ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Prelude.Text] -> [Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCodes routeCode integratedBppConfigId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.In routeCode,
+          Se.Is Beam.integratedBppConfigId $ Se.In (Kernel.Types.Id.getId <$> integratedBppConfigId)
+        ]
+    ]
 
-findByStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
-findByStopCode stopCode = do findAllWithKV [Se.Is Beam.stopCode $ Se.Eq stopCode]
+findByStopCode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByStopCode stopCode integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.stopCode $ Se.Eq stopCode, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
 findByPrimaryKey routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
@@ -42,6 +70,7 @@ updateByPrimaryKey (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.estimatedTravelTimeFromPreviousStop estimatedTravelTimeFromPreviousStop,
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.providerCode providerCode,
@@ -62,6 +91,7 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
       Just
         Domain.Types.RouteStopMapping.RouteStopMapping
           { estimatedTravelTimeFromPreviousStop = estimatedTravelTimeFromPreviousStop,
+            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             providerCode = providerCode,
@@ -80,6 +110,7 @@ instance ToTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopM
   toTType' (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
     Beam.RouteStopMappingT
       { Beam.estimatedTravelTimeFromPreviousStop = estimatedTravelTimeFromPreviousStop,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.providerCode = providerCode,

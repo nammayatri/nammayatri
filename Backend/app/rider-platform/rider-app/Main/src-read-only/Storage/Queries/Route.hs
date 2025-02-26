@@ -5,7 +5,7 @@
 module Storage.Queries.Route (module Storage.Queries.Route, module ReExport) where
 
 import qualified BecknV2.FRFS.Enums
-import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Route
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,28 +24,30 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Route.Route] -> m ())
 createMany = traverse_ create
 
-deleteByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
-deleteByRouteCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
+deleteByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ())
+deleteByRouteCode code integratedBppConfigId = do deleteWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
-findAllByMerchantOperatingCityAndVehicleType ::
+findAllByVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Route.Route])
-findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  (Maybe Int -> Maybe Int -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.Route.Route])
+findAllByVehicleType limit offset vehicleType integratedBppConfigId = do
   findAllWithOptionsKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        [ Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
         ]
     ]
     (Se.Desc Beam.createdAt)
     limit
     offset
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
-findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.Route.Route))
+findByRouteCode code integratedBppConfigId = do findOneWithKV [Se.And [Se.Is Beam.code $ Se.Eq code, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
-findByRouteCodes code = do findAllWithKV [Se.And [Se.Is Beam.code $ Se.In code]]
+findByRouteCodes ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Prelude.Text] -> [Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig] -> m [Domain.Types.Route.Route])
+findByRouteCodes code integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.code $ Se.In code, Se.Is Beam.integratedBppConfigId $ Se.In (Kernel.Types.Id.getId <$> integratedBppConfigId)]]
 
 findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Route.Route -> m (Maybe Domain.Types.Route.Route))
 findByRouteId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -61,6 +63,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.color color,
       Se.Set Beam.endLat ((.lat) endPoint),
       Se.Set Beam.endLon ((.lon) endPoint),
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.longName longName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

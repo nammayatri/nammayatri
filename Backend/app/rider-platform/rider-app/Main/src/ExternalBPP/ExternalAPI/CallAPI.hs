@@ -31,14 +31,17 @@ import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import Tools.Error
 
-getProviderName :: ProviderConfig -> Text
-getProviderName (CMRL _) = "Chennai Metro Rail Limited"
-getProviderName (EBIX _) = "Kolkata Buses"
-getProviderName (DIRECT _) = "Direct Multimodal Services"
+getProviderName :: IntegratedBPPConfig -> Text
+getProviderName integrationBPPConfig =
+  case integrationBPPConfig.providerConfig of
+    CMRL _ -> "Chennai Metro Rail Limited"
+    EBIX _ -> "Kolkata Buses"
+    DIRECT _ -> "Direct Multimodal Services"
+    Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> ProviderConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
-getFares mbRiderId merchant merchanOperatingCity config routeCode startStopCode endStopCode vehicleCategory = do
-  case config of
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares mbRiderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' ->
       CMRLFareByOriginDest.getFareByOriginDest config' $
         CMRLFareByOriginDest.FareByOriginDestReq
@@ -47,56 +50,59 @@ getFares mbRiderId merchant merchanOperatingCity config routeCode startStopCode 
             destination = endStopCode,
             ticketType = "SJT"
           }
-    EBIX _ -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    DIRECT _ -> FRFSUtils.getFares mbRiderId vehicleCategory merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    EBIX _ -> FRFSUtils.getFares mbRiderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    DIRECT _ -> FRFSUtils.getFares mbRiderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    _ -> throwError $ InternalError "Unimplemented!"
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
-createOrder config qrTtl (_mRiderName, mRiderNumber) booking = do
-  case config of
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
+createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLOrder.createOrder config' booking mRiderNumber
-    EBIX config' -> EBIXOrder.createOrder config' qrTtl booking
-    DIRECT config' -> DIRECTOrder.createOrder config' qrTtl booking
+    EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig.id qrTtl booking
+    DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig.id qrTtl booking
+    _ -> throwError $ InternalError "Unimplemented!"
 
-getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> FRFSTicketBooking -> m [ProviderTicket]
-getTicketStatus config booking = do
-  case config of
+getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
+getTicketStatus integrationBPPConfig booking = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStatus.getTicketStatus config' booking
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
+    _ -> throwError $ InternalError "Unimplemented!"
 
-verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> Text -> m TicketPayload
-verifyTicket config encryptedQrData = do
-  case config of
+verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Text -> m TicketPayload
+verifyTicket integrationBPPConfig encryptedQrData = do
+  case integrationBPPConfig.providerConfig of
     DIRECT config' -> DIRECTVerify.verifyTicket config' encryptedQrData
     _ -> throwError $ InternalError "Unimplemented!"
 
-getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => ProviderConfig -> m CMRLBusinessHour.BusinessHourResult
-getBusinessHour config = do
-  case config of
+getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> m CMRLBusinessHour.BusinessHourResult
+getBusinessHour integrationBPPConfig = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLBusinessHour.getBusinessHour config'
     _ -> throwError $ InternalError "Unimplemented!"
 
-getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
-getDurationDetails config req = do
-  case config of
+getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
+getDurationDetails integrationBPPConfig req = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLDurationDetails.getDurationDetails config' req
     _ -> throwError $ InternalError "Unimplemented!"
 
-getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> m [CMRLFareMatrix.FareMatrixRes]
-getFareMatrix config = do
-  case config of
+getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> m [CMRLFareMatrix.FareMatrixRes]
+getFareMatrix integrationBPPConfig = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLFareMatrix.getFareMatrix config'
     _ -> throwError $ InternalError "Unimplemented!"
 
-getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLPassengerViewStatus.PassengerViewStatusReq -> m [CMRLPassengerViewStatus.TicketDetails]
-getPassengerViewStatus config req = do
-  case config of
+getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> CMRLPassengerViewStatus.PassengerViewStatusReq -> m [CMRLPassengerViewStatus.TicketDetails]
+getPassengerViewStatus integrationBPPConfig req = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLPassengerViewStatus.getPassengerViewStatus config' req
     _ -> throwError $ InternalError "Unimplemented!"
 
-getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> m [CMRLStationList.Station]
-getStationList config = do
-  case config of
+getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> m [CMRLStationList.Station]
+getStationList integrationBPPConfig = do
+  case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStationList.getStationList config'
     _ -> throwError $ InternalError "Unimplemented!"
 

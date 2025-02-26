@@ -13,10 +13,10 @@ DELETE FROM atlas_app.station where code in ('LC5TKn9rGqWQHwXxWbdzeEZ6vXjdNV', '
 UPDATE atlas_app.beckn_config SET vehicle_category = 'METRO' WHERE vehicle_category = 'CAB' and domain = 'FRFS';
 
 INSERT INTO atlas_app.station
-    (address, code, id, lat, lon, name, vehicle_type, merchant_id, merchant_operating_city_id, created_at, updated_at)
+    (integrated_bpp_config_id, address, code, id, lat, lon, name, vehicle_type, merchant_id, merchant_operating_city_id, created_at, updated_at)
 VALUES
-    (null, 'LC5TKn9rGqWQHwXxWbdzeEZ6vXjdNV', atlas_app.uuid_generate_v4(), 9.9834, 76.2823, 'MG Road', 'METRO', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'namma-yatri-0-0000-0000-00000000city', now(), now()),
-    (null, '6ZVHrYAsHdGxShBlNypUstSxs5wRk4', atlas_app.uuid_generate_v4(), 10.0251, 76.3083, 'Edapally Jn.', 'METRO', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'namma-yatri-0-0000-0000-00000000city', now(), now());
+    ('abcd23a5-3ce6-4c37-8b9b-41377c3c1a52', null, 'LC5TKn9rGqWQHwXxWbdzeEZ6vXjdNV', atlas_app.uuid_generate_v4(), 9.9834, 76.2823, 'MG Road', 'METRO', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'namma-yatri-0-0000-0000-00000000city', now(), now()),
+    ('abcd23a5-3ce6-4c37-8b9b-41377c3c1a52', null, '6ZVHrYAsHdGxShBlNypUstSxs5wRk4', atlas_app.uuid_generate_v4(), 10.0251, 76.3083, 'Edapally Jn.', 'METRO', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'namma-yatri-0-0000-0000-00000000city', now(), now());
 
 WITH MGS AS (SELECT * from atlas_app.station WHERE code = 'LC5TKn9rGqWQHwXxWbdzeEZ6vXjdNV' and merchant_id = 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52'),
 POrg AS (SELECT * from atlas_app.partner_organization WHERE name = 'GOOGLE_MAPS_METRO')
