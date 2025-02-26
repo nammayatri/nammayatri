@@ -1351,6 +1351,7 @@ filterServiceDataAccordingToOpDay selectedOpDay services = do
       let operationalDaysAccToSelOpDay = maybe [] (\elem -> [elem]) (find (\opDayElem -> selectedOpDay `elem` opDayElem.operationalDays) serviceCategory.operationalDays)
       in
       if DA.null operationalDaysAccToSelOpDay then []
+      else if fromMaybe false serviceCategory.isClosed then []
       else [serviceCategory { operationalDays = operationalDaysAccToSelOpDay}]
 
 
