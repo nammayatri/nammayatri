@@ -202,22 +202,24 @@ postMultimodalSwitch (_, _) journeyId req = do
   legData <- find (\leg -> leg.order == req.legOrder) remainingLegs & fromMaybeM (InvalidRequest ("Journey Leg not Present" <> show req.legOrder))
   canSwitch <- JM.canBeSwitched legData req.newMode
   isCancellable <- JM.checkIfCancellable legData
-  if isCancellable
-    then do
-      if canSwitch
-        then do
-          isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
-          if not isExtendLeg
-            then do
-              JM.cancelLeg legData (SCR.CancellationReasonCode "") False
-              newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
-              QJourneyLeg.create newJourneyLeg
-              addAllLegs journeyId
-              when (legData.status /= JL.InPlan) $
-                fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
-            else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
-        else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
-    else throwError $ JourneyLegCannotBeCancelled journeyLeg.id.getId
+  let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
+  Redis.whenWithLockRedis lockKey 5 $ do
+    if isCancellable
+      then do
+        if canSwitch
+          then do
+            isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
+            if not isExtendLeg
+              then do
+                JM.cancelLeg legData (SCR.CancellationReasonCode "") False
+                newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
+                QJourneyLeg.create newJourneyLeg
+                addAllLegs journeyId
+                when (legData.status /= JL.InPlan) $
+                  fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
+              else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
+          else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
+      else throwError $ JourneyLegCannotBeCancelled journeyLeg.id.getId
   pure Kernel.Types.APISuccess.Success
 
 postMultimodalRiderLocation ::
