@@ -441,7 +441,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 
     mkAdditionalProgressiveBreakups det = do
-      let perExtraKmFareSections = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
+      let perExtraKmFareSections = NE.nubBy (\x y -> x.perExtraKmRate == y.perExtraKmRate) $ NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
 
           mkPerExtraKmFareItem section = do
             let perExtraKmFareCaption = show Tags.EXTRA_PER_KM_FARE

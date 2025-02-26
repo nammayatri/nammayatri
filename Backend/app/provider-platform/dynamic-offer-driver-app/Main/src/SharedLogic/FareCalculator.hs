@@ -500,15 +500,15 @@ calculateFareParameters params = do
             (fromMaybe 0 params.actualDistance) - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
           mbEstimatedRideDurationInMins = ceiling . (fromIntegral @_ @Double) . (`div` 60) . (.getSeconds) <$> params.estimatedRideDuration
-          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
+          (extraKmFare, baseFareDepreciation) = maybe (HighPrecMoney 0.0, HighPrecMoney 0.0) (processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections) mbExtraDistance
           (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections) mbEstimatedRideDurationInMins
       ( debugLogs,
-        baseFare,
+        baseFare + baseFareDepreciation,
         nightShiftCharge,
         waitingChargeInfo,
         DFParams.ProgressiveDetails $
           DFParams.FParamsProgressiveDetails
-            { extraKmFare = mbExtraKmFare,
+            { extraKmFare = if extraKmFare == 0.0 then Nothing else Just extraKmFare,
               rideDurationFare = mbRideDurationFare,
               ..
             }
@@ -518,15 +518,15 @@ calculateFareParameters params = do
       let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
       processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
       where
-        processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: HighPrecMoney
+        processFPProgressiveDetailsPerExtraKmFare' _ 0 = (0 :: HighPrecMoney, 0 :: HighPrecMoney)
         processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Meters) =
           case sortedPerExtraKmFareSectionsLeft of
-            aSection :| [] -> HighPrecMoney $ toRational extraDistanceLeft * (getPerExtraMRate aSection.perExtraKmRate).getHighPrecMoney
+            aSection :| [] -> (HighPrecMoney $ (toRational extraDistanceLeft * (getPerExtraMRate aSection.perExtraKmRate).getHighPrecMoney), aSection.baseFareDepreciation)
             aSection :| bSection : leftSections -> do
               let sectionDistance = bSection.startDistance - aSection.startDistance
                   extraDistanceWithinSection = min sectionDistance extraDistanceLeft
-              HighPrecMoney (toRational extraDistanceWithinSection * (getPerExtraMRate aSection.perExtraKmRate).getHighPrecMoney)
-                + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
+                  (extraFare, depreciation) = processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
+              (HighPrecMoney ((toRational extraDistanceWithinSection * (getPerExtraMRate aSection.perExtraKmRate).getHighPrecMoney) + extraFare.getHighPrecMoney), aSection.baseFareDepreciation + depreciation)
         getPerExtraMRate perExtraKmRate = perExtraKmRate / 1000
 
     processFPProgressiveDetailsPerRideDurationMinFare mbPerMinRateSections rideDurationInMins =

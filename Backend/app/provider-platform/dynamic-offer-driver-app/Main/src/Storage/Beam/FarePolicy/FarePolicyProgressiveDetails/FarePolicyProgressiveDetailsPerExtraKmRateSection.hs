@@ -27,6 +27,7 @@ data FarePolicyProgressiveDetailsPerExtraKmRateSectionT f = FarePolicyProgressiv
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     distanceUnit :: B.C f (Maybe DistanceUnit),
+    baseFareDepreciation :: B.C f (Maybe HighPrecMoney),
     perExtraKmRate :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)
