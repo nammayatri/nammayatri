@@ -238,6 +238,11 @@ tipConfigData city variant = do
         "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+        "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+        "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+        "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+        "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -257,6 +262,11 @@ defaultTipsConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
 
@@ -277,6 +287,11 @@ defaultSubscriptionsConfigVariantLevel =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
 
@@ -374,6 +389,11 @@ subscriptionsConfigVariantLevel city variant = do
         "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+        "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+        "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+        "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+        "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig
@@ -485,6 +505,11 @@ getConfigForVariant variant config =
     "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
     "AMBULANCE_TAXI" -> config.ambulanceTaxi
     "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+    "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+    "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+    "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+    "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+    "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
     _ -> config.default
       
 getInvoiceConfig :: String -> String -> InvoiceConfig
@@ -514,5 +539,18 @@ defaultInvoiceVariantConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , evAutoRickshaw: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
+
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE"]

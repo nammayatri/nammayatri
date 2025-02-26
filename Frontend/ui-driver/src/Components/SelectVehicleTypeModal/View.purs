@@ -118,6 +118,11 @@ imageSection item =
           Ambulance_Ventilator -> "ic_bike_ambulance"
           Suv_Plus  -> "ny_ic_suv_plus_side"
           EV_Auto   -> "ic_auto"
+          Delivery_Truck_Mini -> "ny_ic_truck_side" 
+          Delivery_Truck_Small -> "ny_ic_truck_side"
+          Delivery_Truck_Medium -> "ny_ic_truck_side"
+          Delivery_Truck_Large -> "ny_ic_truck_side"
+          Delivery_Truck_Ultra_Large -> "ny_ic_truck_side"
       ]
   ]
 
@@ -151,6 +156,11 @@ textList item =
               Ambulance_Ventilator -> "Ambulance_Ventilator"
               Suv_Plus       -> "SUV_PLUS"
               EV_Auto        -> "EV Auto"
+              Delivery_Truck_Mini -> "Delivery Truck Mini" 
+              Delivery_Truck_Small -> "Delivery Truck Small"
+              Delivery_Truck_Medium -> "Delivery Truck Medium"
+              Delivery_Truck_Large -> "Delivery Truck Large"
+              Delivery_Truck_Ultra_Large -> "Delivery Truck Ultra Large"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

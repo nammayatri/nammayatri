@@ -1283,6 +1283,9 @@ driverInfoTransformer state =
     , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
     , requestorPartyRoles : state.data.requestorPartyRoles
     , isAirConditioned : cardState.isAirConditioned
+    , parcelType : cardState.parcelType
+    , parcelQuantity : cardState.parcelQuantity
+    , destinationWaitingTime : cardState.destinationWaitingTime
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -2717,6 +2720,8 @@ deliveryParcelImageAndOtpConfig state =
         , otp = state.data.driverInfoCardState.otp
         , rideStarted = state.props.currentStage == ST.RideStarted
         , refreshAnimation = state.props.loadingDeliveryImage
+        , parcelType = state.data.driverInfoCardState.parcelType
+        , parcelQuantity = state.data.driverInfoCardState.parcelQuantity
         }
   in
     deliveryParcelImageAndOtpConfig'

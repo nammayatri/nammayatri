@@ -15,7 +15,7 @@ import Constants.Configs (getPolylineAnimationConfig)
 import Data.String.Regex (regex, replace)
 import Data.String.Regex.Flags (global)
 import Data.Array as DA
-import Data.Maybe( Maybe(..), fromMaybe, maybe)
+import Data.Maybe( Maybe(..), fromMaybe, maybe, isJust)
 import Data.Tuple
 import Debug (spy)
 import Data.String as DS
@@ -45,7 +45,7 @@ instance loggableAction :: Loggable Action where
 
 data Action 
   = NoAction
-  | EditAddress Boolean
+  | EditAddress ST.ParcelDeliveryScreenStage
   | ExpandInstructions
   | GoBack
   | GenericHeaderAC GenericHeaderController.Action
@@ -59,6 +59,7 @@ data Action
   | ValidateInputFields
   | Refresh
   | GoToSelectContactScreen
+  | InsuranceToggle
 
 data ScreenOutput
   = GoToHomeScreen ST.ParcelDeliveryScreenState
@@ -74,6 +75,7 @@ eval GoBack state =
   case state.data.currentStage of
    ST.SENDER_DETAILS -> updateAndExit state $ GoToChooseYourRide state
    ST.RECEIVER_DETAILS -> continue state { data { currentStage = ST.SENDER_DETAILS } }
+   ST.PARCEL_DETAILS -> continue state { data { currentStage = ST.PARCEL_DETAILS}}
    ST.FINAL_DETAILS -> updateAndExit state $ GoToChooseYourRide state
    ST.DELIVERY_INSTRUCTIONS -> if HU.isParentView FunctionCall then do 
                                   void $ pure $ HU.emitTerminateApp Nothing true
@@ -110,10 +112,12 @@ eval (MapViewLoaded _ _ _) state =
     pure NoAction
   ] 
 
-eval (EditAddress isSource) state =
-  if isSource == true
-    then continue $ state {data {currentStage = ST.SENDER_DETAILS}, props { isEditModal = true}}
-    else continue $ state {data {currentStage = ST.RECEIVER_DETAILS}, props { isEditModal = true}}
+eval (EditAddress stage) state =
+  case stage of
+    ST.SENDER_DETAILS -> continue $ state {data {currentStage = ST.SENDER_DETAILS}, props { isEditModal = true}}
+    ST.RECEIVER_DETAILS -> continue $ state {data {currentStage = ST.RECEIVER_DETAILS}, props { isEditModal = true}}
+    ST.PARCEL_DETAILS -> continue $ state {data {currentStage = ST.PARCEL_DETAILS}, props { isEditModal = true}}
+    _ -> continue state
 
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state =
@@ -165,13 +169,14 @@ eval (DeliveryDetailAction (PopUpModalController.CheckBoxClick)) state = do
     in continueWithCmd newState $ [do pure $ UpdateNameAndNumber userName mobileNumber false]
 
 eval (DeliveryDetailAction (PopUpModalController.OnButton1Click)) state = do
-  if state.data.currentStage == ST.SENDER_DETAILS then do
-    if state.props.isEditModal then 
-      continue state { data { currentStage = ST.FINAL_DETAILS}, props { isEditModal = false}} 
-    else 
-      updateAndExit state $ GoToChooseYourRide state
-  else do
-    if state.props.isEditModal then continue state { data { currentStage = ST.FINAL_DETAILS }, props { isEditModal = false}} else continue $ state { props { editDetails = state.data.senderDetails}, data { currentStage = ST.SENDER_DETAILS, receiverDetails = state.props.editDetails } }
+  if state.props.isEditModal then 
+    continue state { data { currentStage = ST.FINAL_DETAILS }, props { isEditModal = false}}
+  else
+    case state.data.currentStage of
+      ST.SENDER_DETAILS -> updateAndExit state $ GoToChooseYourRide state
+      ST.RECEIVER_DETAILS -> continue $ state { props { editDetails = state.data.senderDetails}, data { currentStage = ST.SENDER_DETAILS, receiverDetails = state.props.editDetails } }
+      ST.PARCEL_DETAILS -> continue $ state {data {currentStage = ST.RECEIVER_DETAILS}}
+      _ -> continue state
     
 
 eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
@@ -181,9 +186,27 @@ eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
     let nextStage = if state.props.isEditModal then ST.FINAL_DETAILS else ST.RECEIVER_DETAILS 
         newState = state { props { editDetails = state.data.receiverDetails, isEditModal = false}, data { currentStage = nextStage, senderDetails = state.props.editDetails, receiverDetails { instructions = if state.data.receiverDetails.instructions == Nothing then Just " " else state.data.receiverDetails.instructions } }}
     continueWithCmd newState $ [do pure Refresh] 
+  else if state.data.currentStage == ST.RECEIVER_DETAILS then do
+    let nextStage = if state.props.isEditModal then ST.FINAL_DETAILS else ST.PARCEL_DETAILS 
+        newState = state { data { currentStage = nextStage, receiverDetails = state.props.editDetails } }
+    continue newState
   else do
     let newState = state { data { currentStage = ST.FINAL_DETAILS, receiverDetails = state.props.editDetails } }
     continue newState
+
+eval (DeliveryDetailAction (PopUpModalController.Dropdown1 dropdownAction)) state = do
+  case dropdownAction of
+    PopUpModalController.Toggle -> continue state { props { dropdownStatus = if state.props.dropdownStatus == ST.DROP_DOWN_1 then ST.CLOSE else ST.DROP_DOWN_1 }}
+    PopUpModalController.SelectItem dropdownItem -> continue state { props { dropdownStatus = ST.CLOSE }, data { parcelType = Just dropdownItem} }
+    PopUpModalController.ExtraInput (PrimaryEditTextController.TextChanged valId newVal) -> update state { data { parcelOthersType = Just newVal}}
+    _ -> continue state
+
+eval (DeliveryDetailAction (PopUpModalController.Dropdown2 dropdownAction)) state = do
+  case dropdownAction of
+    PopUpModalController.Toggle -> continue state { props { dropdownStatus = if state.props.dropdownStatus == ST.DROP_DOWN_2 then ST.CLOSE else ST.DROP_DOWN_2 }}
+    PopUpModalController.SelectItem dropdownItem -> continue state { props { dropdownStatus = ST.CLOSE }, data { parcelQuantity = Just dropdownItem}}
+    PopUpModalController.ExtraInput (PrimaryEditTextController.TextChanged valId newVal) -> continue state
+    _ -> continue state
 
 eval (PickContactCallBack userName contactNo) state = do
   let eiRegexPattern = regex "\\D" global
@@ -253,7 +276,11 @@ validateInput state =
     details = state.props.editDetails
     firstLetter = slice 0 1 details.phone
     isValidNumber = firstLetter >= "6" && firstLetter <= "9"
-    isValidInputs = DS.length details.name > 2 && DS.length details.phone == 10 && isValidNumber && DS.length details.extras > 2
+    isParcelTypeValid = isJust state.data.parcelType
+    isParcelQuantityValid = isJust state.data.parcelQuantity
+    isParcelOtherTypesValid = maybe false (\parcelType -> if parcelType.id == "Other" then maybe false (\a -> (DS.length a) > 3) state.data.parcelOthersType else true) state.data.parcelType
+    isValidParcelDetails = state.data.currentStage /= ST.PARCEL_DETAILS || (isParcelTypeValid && isParcelQuantityValid && isParcelOtherTypesValid)
+    isValidInputs = DS.length details.name > 2 && DS.length details.phone == 10 && isValidNumber && DS.length details.extras > 2 && isValidParcelDetails
   in
     isValidInputs
 

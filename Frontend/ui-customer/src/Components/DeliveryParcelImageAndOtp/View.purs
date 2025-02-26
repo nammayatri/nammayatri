@@ -23,10 +23,12 @@ import Animation.Config (translateYAnimConfig)
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Data.String (length)
 import Components.PrimaryButton as PrimaryButton
+import Components.DriverInfoCard.Common.View as DriverInfoCardCommonView
 import Mobility.Prelude
 import Data.Array (any)
 import ConfigProvider
 import Debug (spy)
+import Data.Maybe
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -94,7 +96,7 @@ view push config =
                     width MATCH_PARENT,
                     height $ V 314,
                     gravity CENTER,
-                    margin $ MarginTop 8,
+                    margin $ Margin 0 8 0 8 ,
                     id $ EHC.getNewIDWithTag "parcelImageLayout",
                     visibility $ boolToVisibility config.imageVisibility,
                     afterRender push $ const DisplayDeliveryImageAction
@@ -104,7 +106,7 @@ view push config =
                 , height $ if config.imageVisibility then WRAP_CONTENT else V 180
                 , height WRAP_CONTENT
                 , cornerRadius 8.0
-                , margin $ Margin 0 8 0 0 
+                , margin $ Margin 0 8 0 8 
                 , background Color.grey900
                 , padding $ Padding 25 25 25 25
                 , orientation VERTICAL
@@ -128,6 +130,7 @@ view push config =
                     , gravity CENTER
                     ] <> FontStyle.paragraphText LanguageStyle
                 ],
+                DriverInfoCardCommonView.parcelDetailsCard (fromMaybe "" config.parcelType) (config.parcelQuantity),
                 textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT

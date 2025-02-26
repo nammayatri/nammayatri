@@ -383,3 +383,18 @@ _requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -
 
 _vehicleType :: forall a b c. Newtype a { vehicleType :: b | c } => Lens' a b
 _vehicleType = lens (unwrap >>> _.vehicleType) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleType = newVal }))
+
+_parcelQuantity :: forall a b c. Newtype a { parcelQuantity :: b | c } => Lens' a b
+_parcelQuantity = lens (unwrap >>> _.parcelQuantity) (\oldRec newVal -> wrap ((unwrap oldRec) { parcelQuantity = newVal }))
+
+_parcelType :: forall a b c. Newtype a { parcelType :: b | c } => Lens' a b
+_parcelType = lens (unwrap >>> _.parcelType) (\oldRec newVal -> wrap ((unwrap oldRec) { parcelType = newVal }))
+
+_tag :: forall a b c. Newtype a { tag :: b | c } => Lens' a b
+_tag = lens (unwrap >>> _.tag) (\oldRec newVal -> wrap ((unwrap oldRec) { tag = newVal }))
+
+_driverArrivalTime :: forall a b c. Newtype a { driverArrivalTime :: b | c } => Lens' a b
+_driverArrivalTime = lens (unwrap >>> _.driverArrivalTime) (\oldRec newVal -> wrap ((unwrap oldRec) { driverArrivalTime = newVal }))
+
+_destinationReachedAt :: forall a b c. Newtype a { destinationReachedAt :: b | c } => Lens' a b
+_destinationReachedAt = lens (unwrap >>> _.destinationReachedAt) (\oldRec newVal -> wrap ((unwrap oldRec) { destinationReachedAt = newVal }))

@@ -54,7 +54,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
+import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), (>>=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
@@ -128,7 +128,7 @@ rideActionModalConfig state =
       detailText : stop
     }) <$> state.data.activeRide.lastStopAddress,
     estimatedRideFare = state.data.activeRide.estimatedFare,
-    notifiedCustomer = state.data.activeRide.notifiedCustomer,
+    notifiedCustomer = state.data.activeRide.notifiedCustomer || state.data.activeRide.notifiedReachedDestination,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
     vehicleType = state.data.vehicleType,
@@ -137,8 +137,10 @@ rideActionModalConfig state =
     requestedVehicleVariant = rideData.requestedVehicleVariant,
     accessibilityTag = rideData.disabilityTag,
     appConfig = state.data.config,
-    waitTimeStatus = state.props.waitTimeStatus,
-    waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
+    waitTimeStatus =  state.props.waitTimeStatus,
+    showWaitingTime = state.props.waitTimeStatus == ST.PostTriggered || state.props.waitTimeStatus == ST.DestinationWaitingTimeTriggered,
+    waitTimeSeconds = if state.props.waitTimeStatus == ST.DestinationWaitingTimeTriggered then (fromMaybe 0 state.data.activeRide.destinationWaitingTime) else state.data.activeRide.waitTimeSeconds,
+    destinationWaitingTime = state.data.activeRide.destinationWaitingTime,
     rideScheduledTime = state.data.activeRide.tripScheduledAt,
     rideType = state.data.activeRide.tripType,
     rideStartRemainingTime = state.props.rideStartRemainingTime,
@@ -185,7 +187,14 @@ getDeliveryDetails state =
       premises : state.data.activeRide.extraToLocationInfo,
       exophoneNumber : Nothing,
       instructions : state.data.activeRide.receiverInstructions
-    } :: RideActionModal.PersonAndDeliveryInfo)
+    } :: RideActionModal.PersonAndDeliveryInfo),
+    parcelDetails : ({
+      parcelQuantity : state.data.activeRide.parcelQuantity,
+      parcelType : maybe {tag: "others",contents:Nothing} (\parcelType -> {
+        tag : parcelType.tag,
+        contents : parcelType.contents
+      }) state.data.activeRide.parcelType 
+    }:: RideActionModal.ParcelInfo)
   }
 
 ---------------------------------------- endRidePopUp -----------------------------------------
@@ -2711,7 +2720,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
-    isVisible = not (isAmbulance state.data.linkedVehicleCategory),
+    isVisible = not (isAmbulance state.data.linkedVehicleCategory || HU.isDeliveryTruckVariant state.data.linkedVehicleCategory),
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,

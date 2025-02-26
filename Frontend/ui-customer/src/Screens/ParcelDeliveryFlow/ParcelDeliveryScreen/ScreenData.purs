@@ -45,9 +45,13 @@ initData =
         }
       , config : getAppConfig appConfig
       , tipForDriver : Nothing
+      , parcelQuantity : Nothing
+      , parcelType : Nothing
+      , parcelOthersType : Nothing
       },
       props : {
         editDetails : dummyPersonDeliveryDetails,
+        dropdownStatus : ST.CLOSE,
         showRateCard : false,
         isEditModal : false,
         focusField : "",
@@ -68,13 +72,6 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
-
-dummyDeliveryDetailsInfo :: API.DeliveryDetails
-dummyDeliveryDetailsInfo = API.DeliveryDetails {
-  senderDetails : dummyPersonAndLocationInfo
-  , receiverDetails : dummyPersonAndLocationInfo
-  , initiatedAs : API.SomeoneElse
-}
 
 dummyPersonAndLocationInfo :: API.PersonLocationAndInstruction
 dummyPersonAndLocationInfo = API.PersonLocationAndInstruction {

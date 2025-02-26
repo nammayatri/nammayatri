@@ -2325,6 +2325,8 @@ currentRideFlow activeRideResp isActiveRide = do
                 state = allState.homeScreen
                 activeRide = (activeRideDetail state (RidesInfo ride))
                 stage = (if activeRide.status == NEW then (if (any (\c -> c == ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ChatWithCustomer else RideAccepted) else RideStarted)
+                parcelType = ride.parcelType 
+                parcelQuantity = ride.parcelQuantity 
             sourceMod <- translateString decodedSource 500
             destinationMod <- maybe (pure Nothing) (\decodedDestination' -> do 
               destMod <- translateString decodedDestination' 500
@@ -2354,7 +2356,7 @@ currentRideFlow activeRideResp isActiveRide = do
             void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
             let stateChange = if (ride.bookingType == Just ADVANCED) 
                                   then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false, retryRideList = false}})) 
-                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired), retryRideList  = false}}))
+                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod, parcelQuantity = parcelQuantity, parcelType = parcelType}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired), retryRideList  = false}}))
             modifyScreenState $ stateChange
             
     noActiveRidePatch allState onBoardingSubscriptionViewCount = do
@@ -2541,7 +2543,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"
-          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > chargesOb.freeSeconds then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
+          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.tripType == ST.Delivery || updatedState.data.activeRide.waitTimeSeconds > chargesOb.freeSeconds then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ setValueToLocalStore RIDE_START_TIME (getCurrentUTC "")
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           void $ lift $ lift $ toggleLoader false
@@ -2867,7 +2869,7 @@ homeScreenFlow = do
         })
         case driverArrived of
           Right _ -> do
-            setValueToLocalStore WAITING_TIME_STATUS $ if state.data.activeRide.tripType == ST.Delivery && state.data.activeRide.driverVehicle == "BIKE" then (show ST.NotTriggered) else (show ST.Triggered) 
+            setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered) 
             setValueToLocalStore WAITING_TIME_VAL (state.data.activeRide.id <> "<$>" <> getCurrentUTC "")
             void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
             liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
@@ -3133,7 +3135,7 @@ homeScreenFlow = do
         case driverArrived of
           Right _ -> do
             setValueToLocalStore WAITING_TIME_STATUS $ show ST.DestinationReachedTriggered
-            
+            setValueToLocalStore DESTINATION_WAITING_TIME_VAL (state.data.activeRide.id <> "<$>" <> getCurrentUTC "")
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedReachedDestination = true}}})
           Left _ -> pure unit
         homeScreenFlow

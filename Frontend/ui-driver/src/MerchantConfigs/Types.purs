@@ -363,7 +363,8 @@ type WaitingChargesConfig = {
   cab :: ChargesEntity,
   auto :: ChargesEntity,
   bike :: ChargesEntity,
-  ambulance :: ChargesEntity
+  ambulance :: ChargesEntity,
+  truck :: ChargesEntity
 }
 
 type HotspotConfig = {

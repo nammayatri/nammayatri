@@ -22,7 +22,7 @@ import Prelude (class Eq, class Show, ($))
 import Animation (scaleYAnimWithDelay)
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.RideActionModal.Controller (Action(..), Config, LearnMorePopUp(..))
+import Components.RideActionModal.Controller (Action(..), Config, LearnMorePopUp(..), ParcelInfo(..))
 import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
@@ -30,6 +30,7 @@ import Data.Int as Int
 import Data.Maybe as Maybe
 import Data.Ord (abs)
 import Data.Tuple
+import Control.Alt ((<|>))
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC, os)
@@ -768,7 +769,7 @@ waitTimeView push config =
      , gravity START
      , orientation VERTICAL
      , weight 1.0
-     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
+     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.showWaitingTime then VISIBLE else GONE
      ]
      [ linearLayout
          [
@@ -896,7 +897,7 @@ rentalRideInfoView push config =
     , rentalDurationView push config
   ] 
   <> if config.startRideActive then (
-  if (config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered) then 
+  if (config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.showWaitingTime) then 
   [  separator true , waitTimeView push config ] else [ 
      separator true , totalDistanceView push config ]
   ) else []
@@ -993,7 +994,17 @@ normalRideInfoView push config =
       , height WRAP_CONTENT
       , orientation VERTICAL
       ]
-      [ rideTierAndCapacity push config
+      [ 
+      linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      ][
+        rideTierAndCapacity push config,
+        case config.delivery of 
+          Just delivery -> parcelInfoView delivery.parcelDetails
+          Nothing -> linearLayout[][]
+      ]
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -1362,7 +1373,7 @@ stopImageView  config push =
             SeparatorView.view (separatorConfig config)]
     ]
 isWaitingTimeStarted :: Config -> Boolean
-isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.showWaitingTime
 
 collectDeliveryCashView :: forall w. PrestoDOM (Effect Unit) w
 collectDeliveryCashView = 
@@ -1447,3 +1458,32 @@ instructionView config instruction showInstruction =
     getInstructionText instruction = let instructionHeader = if config.isSourceDetailsExpanded then getString PICKUP_INSTRUCTION <> ": " else getString DROP_INSTRUCTION <> ": " 
                       in maybe "" (\instruction' -> instructionHeader <> instruction') instruction
 
+
+parcelInfoView :: forall w. ParcelInfo -> PrestoDOM (Effect Unit) w
+parcelInfoView parcelInfo =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.grey700
+  , cornerRadius 8.0
+  , margin $ MarginLeft 12
+  , padding $ Padding 12 8 12 8
+  ]
+  [ parcelDetailsView parcelInfo
+  ]
+
+parcelDetailsView :: forall w. ParcelInfo -> PrestoDOM (Effect Unit) w
+parcelDetailsView config =
+  let
+    quantity = case config.parcelQuantity of
+      Nothing -> "loose - "
+      Just n -> "<b>" <> show n <> "x</b>"
+
+    itemType = config.parcelType.contents <|> Just config.parcelType.tag 
+  in
+    textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , color Color.black700
+    , textFromHtml $ quantity <> "&nbsp;&nbsp;" <> fromMaybe "" itemType
+    ] <> FontStyle.body1 TypoGraphy

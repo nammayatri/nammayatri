@@ -303,6 +303,31 @@ window.getMerchantConfig = function () {
             "name" : "Ambulance with Ventilator",
             "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
             "leftViewImage" : "ny_ic_ambulance_ventilator,"
+          },
+          "deliveryTruckMini" : {
+            "name" : "Delivery Truck",
+            "image" : "ny_ic_mini_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_mini_truck.png",
+            "leftViewImage" : "ny_ic_mini_truck_left_side.png,"
+          }, 
+          "deliveryTruckSmall" : {
+            "name" : "Delivery Truck",
+            "image" : "ny_ic_small_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_small_truck.png",
+            "leftViewImage" : "ny_ic_small_truck_left_side.png,"
+          }, 
+          "deliveryTruckMedium" : {
+            "name" : "Delivery Truck",
+            "image" : "ny_ic_medium_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_medium_truck.png",
+            "leftViewImage" : "ny_ic_medium_truck_left_side.png,"
+          }, 
+          "deliveryTruckLarge" : {
+            "name" : "Delivery Truck",
+            "image" : "ny_ic_large_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_large_truck.png",
+            "leftViewImage" : "ny_ic_large_truck_left_side.png,"
+          }, 
+          "deliveryTruckUltraLarge" : {
+            "name" : "Delivery Truck",
+            "image" : "ny_ic_ultra_large_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ultra_large_truck.png",
+            "leftViewImage" : "ny_ic_ultra_large_truck_left_side.png,"
           }
       }
       , "enableOnlyAuto" : true
