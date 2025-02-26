@@ -658,7 +658,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
                     String rideProductType = rideRequestBundle.getString("rideProductType");
                     String rideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
-                    String rideDistance = String.format("%d km", Math.floor(rideRequestBundle.getInt("rideDistance") / 1000));
+                    String rideDistance = String.format("%d km",rideRequestBundle.getInt("rideDistance") / 1000);
                     String rideStartTime = rideRequestBundle.getString("rideStartTime");
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
                     String notificationSource= rideRequestBundle.getString("notificationSource");
