@@ -1725,4 +1725,12 @@ getHi = Keymap {
 ,different_ambulance : "अलग एम्बुलेंस"
 , no_remaining_tickets : "कोई शेष टिकट नहीं"
 , ticket_not_booked_refund_initiated : "माफ़ कीजिए, टिकट बुक नहीं हुई। रिफंड प्रक्रिया शुरू कर दी गई है।"
+, parcel_details :  "पार्सल विवरण" 
+, parcel_type : "पार्सल प्रकार" 
+, parcel_quantity : "पार्सल मात्रा" 
+, unloading_time : "अनलोडिंग समय" 
+, loading_time : "लोडिंग समय" 
+, helps_smooth_delivery : "यह हमें सुचारू डिलीवरी प्रदान करने में मदद करता है" 
+, free_loading_unloading_time : (\ a b -> "नि:शुल्क संयुक्त लोडिंग/अनलोडिंग समय " <> a <> " मिनट प्रदान किया जाता है। कोई भी अतिरिक्त समय " <> b <> " की दर से शुल्क लिया जाएगा।" )
+, max_capacity_warning : "सामान अधिकतम क्षमता से अधिक नहीं होना चाहिए"
 }

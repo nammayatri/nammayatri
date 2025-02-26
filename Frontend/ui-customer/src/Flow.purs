@@ -1294,7 +1294,7 @@ homeScreenFlow = do
       (ServiceabilityRes destServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong) DESTINATION
       let
         destServiceable = destServiceabilityResp.serviceable
-      when (addToRecents)
+      when (addToRecents && state.data.fareProductType /= FPT.DELIVERY)
         $ do
             addLocationToRecents item bothLocationChangedState true destServiceabilityResp.serviceable
             fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -1424,7 +1424,7 @@ homeScreenFlow = do
                     }
                   }
             )
-      when (addToRecents)
+      when (addToRecents && state.data.fareProductType /= FPT.DELIVERY)
         $ do
             addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
             fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -1609,6 +1609,7 @@ homeScreenFlow = do
         void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
         findEstimates state
     SELECT_ESTIMATE_AND_QUOTES state -> do
+          let _ = spy "SELECT_ESTIMATE_AND_QUOTES" state
           let selectedEstimateOrQuote = state.data.selectedEstimatesObject
           setValueToLocalStore AUTO_SELECTING "false"
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
@@ -1619,9 +1620,18 @@ homeScreenFlow = do
             ChooseVehicle.ESTIMATES -> do
               let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
               if valid then do
-                void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) selectedEstimateOrQuote.id
+                void $ Remote.selectEstimateBT (
+                  Remote.makeEstimateSelectReq 
+                      (flowWithoutOffers WithoutOffers) 
+                      (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) 
+                      state.data.otherSelectedEstimates 
+                      (state.data.config.isAdvancedBookingEnabled) 
+                      state.data.deliveryDetailsInfo
+                    ) selectedEstimateOrQuote.id
                 void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
                 setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+                logStatus "finding_quotes" ("estimateId : " <> selectedEstimateOrQuote.id)
+                let _ = spy "finding_quotes ESTIMATES" ""
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
                                                                                           , estimateId = selectedEstimateOrQuote.id
                                                                                           , isPopUp = NoPopUp
@@ -1630,6 +1640,7 @@ homeScreenFlow = do
                 void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
                 findEstimates state
             ChooseVehicle.QUOTES _ -> do
+              let _ = spy "ChooseVehicle QUOTES" selectedEstimateOrQuote
               void $ pure $ enableMyLocation false
               updateLocalStage ConfirmingRide
               response  <- lift $ lift $ Remote.rideConfirm selectedEstimateOrQuote.id
@@ -7189,13 +7200,26 @@ parcelDeliveryFlow = do
       updateLocalStage SettingPrice
       homeScreenFlow
     ParcelDeliveryScreenController.GoToConfirmgDelivery state -> do
-      let deliveryDetailsInfo = API.DeliveryDetails { senderDetails : mkPersonLocation state.data.senderDetails, receiverDetails : mkPersonLocation state.data.receiverDetails, initiatedAs : state.data.initiatedAs }
+      let deliveryDetailsInfo = API.DeliveryDetails { parcelType : Just $ mkParcelType state.data.parcelType state.data.parcelOthersType, parcelQuantity : mkParcelQuantity state.data.parcelQuantity , senderDetails : mkPersonLocation state.data.senderDetails, receiverDetails : mkPersonLocation state.data.receiverDetails, initiatedAs : state.data.initiatedAs }
       updateLocalStage GoToConfirmgDelivery
       modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = GoToConfirmgDelivery, fromDeliveryScreen = true }, data { deliveryDetailsInfo = Just deliveryDetailsInfo } })
       void $ drawMapRoute' state
       homeScreenFlow
       where
+        mkParcelQuantity :: Maybe ST.DropdownItem -> Maybe Int
+        mkParcelQuantity (Just parcel) = if parcel.id == "loose" then Nothing else (INT.fromString parcel.id)
+        mkParcelQuantity Nothing = Nothing
+        
+        mkParcelType :: Maybe ST.DropdownItem -> Maybe String -> API.ParcelType
+        mkParcelType (Just parcel) parcelOthersType = API.ParcelType {
+          tag: parcel.id,
+          contents: if parcel.id == "Others" then parcelOthersType else Nothing
+        }
+        mkParcelType Nothing _ = API.ParcelType {
+          tag: "Others",
+          contents: Nothing
+        }
         mkPersonLocation :: ST.PersonDeliveryDetails -> API.PersonLocationAndInstruction
         mkPersonLocation details = API.PersonLocationAndInstruction { name : details.name, phoneNumber : details.phone, address : mkInstruction details}
         mkInstruction :: ST.PersonDeliveryDetails -> API.InstructionAndAddress

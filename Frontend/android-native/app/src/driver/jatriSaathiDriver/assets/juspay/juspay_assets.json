@@ -916,6 +916,16 @@
       "ny_ic_parcel_correct_image" : true,
       "ny_ic_parcel_wrong_image" : true,
       "ny_ic_asked_extra_fare" : true,
-      "ny_ic_account_blocked_for_n_days" : true
+      "ny_ic_account_blocked_for_n_days" : true,
+      "ny_ic_mini_truck": true,
+      "ny_ic_mini_truck_left_side": true,
+      "ny_ic_small_truck": true,
+      "ny_ic_small_truck_left_side": true,
+      "ny_ic_medium_truck": true,
+      "ny_ic_medium_truck_left_side": true,
+      "ny_ic_large_truck": true,
+      "ny_ic_large_truck_left_side": true,
+      "ny_ic_ultra_large_truck": true,
+      "ny_ic_ultra_large_truck_left_side": true
    }
 }

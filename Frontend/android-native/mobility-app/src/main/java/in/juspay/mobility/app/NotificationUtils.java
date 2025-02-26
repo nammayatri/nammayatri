@@ -233,6 +233,9 @@ public class NotificationUtils {
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.has("toLocation") && !entity_payload.isNull("toLocation") ? entity_payload.get("toLocation").toString() : "{}");
+                    JSONObject parcelType = new JSONObject(entity_payload.has("parcelType") && !entity_payload.isNull("parcelType") ? entity_payload.get("parcelType").toString() : "{}");
+                    String parcelTag = parcelType.has("tag") && !parcelType.isNull("tag") ? parcelType.getString("tag") : "";
+                    String parcelContents = parcelType.has("contents") && !parcelType.isNull("contents") ? parcelType.getString("contents") : "";
                     JSONObject driverDefaultStepFeeWithCurrency = new JSONObject(
                             entity_payload.has("driverDefaultStepFeeWithCurrencyV2") && !entity_payload.isNull("driverDefaultStepFeeWithCurrencyV2") ?
                             entity_payload.get("driverDefaultStepFeeWithCurrencyV2").toString() : (entity_payload.has("driverDefaultStepFeeWithCurrency") && !entity_payload.isNull("driverDefaultStepFeeWithCurrency") ? entity_payload.get("driverDefaultStepFeeWithCurrency").toString() : "{}"));
@@ -287,6 +290,8 @@ public class NotificationUtils {
                     sheetData.putInt("driverDefaultStepFee", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
                     sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
+                    sheetData.putString("parcelType", parcelTag + (parcelContents == "" ? "" :  " - " + parcelContents));
+                    sheetData.putInt("parcelQuantity", entity_payload.optInt("parcelQuantity",0));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);

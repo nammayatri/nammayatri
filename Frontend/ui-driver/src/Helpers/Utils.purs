@@ -900,6 +900,12 @@ getChargesOb tripType cityConfig driverVehicle =
       "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
       "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
       "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
+      "DELIVERY_TRUCK_MINI" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckMini
+      "DELIVERY_TRUCK_SMALL" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckSmall
+      "DELIVERY_TRUCK_MEDIUM" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckMedium
+      "DELIVERY_TRUCK_LARGE" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckLarge
+      "DELIVERY_TRUCK_ULTRA_LARGE" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckUltraLarge
+      _ | isDeliveryTruckVariant driverVehicle -> cityConfig.waitingChargesConfig.truck
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
@@ -911,6 +917,11 @@ getRentalChargesOb cityConfig driverVehicle =
     "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
     "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
     "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
+    "DELIVERY_TRUCK_MINI" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckMini
+    "DELIVERY_TRUCK_SMALL" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckSmall
+    "DELIVERY_TRUCK_MEDIUM" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckMedium
+    "DELIVERY_TRUCK_LARGE" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckLarge
+    "DELIVERY_TRUCK_ULTRA_LARGE" -> cityConfig.vehicleVariantWaitingChargeConfig.deliveryTruckUltraLarge
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 
@@ -1207,3 +1218,12 @@ getHvErrorMsg errorCode =
 
 isAmbulance :: String -> Boolean
 isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE",
+  "DELIVERY_LIGHT_GOODS_VEHICLE"]

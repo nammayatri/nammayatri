@@ -51,7 +51,7 @@ instance loggableAction :: Loggable Action where
 
 data Action 
   = NoAction
-  | EditAddress Boolean
+  | EditInfo Boolean
   | GoBack
   | GenericHeaderAC GenericHeaderController.Action
   | SearchButtonClick
