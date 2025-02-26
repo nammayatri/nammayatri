@@ -3849,12 +3849,16 @@ getInfoCardPeekHeight state =
       driverDetailsView = if isDriverInfoCardBanner && (state.data.fareProductType == FPT.RENTAL) then runFn1 getLayoutBounds $ getNewIDWithTag "DriverDetailsView"  else {height : 0, width : 0}
       driverDetailsViewPadding = if isDriverInfoCardBanner && (state.data.fareProductType == FPT.RENTAL) then 16 else 0
       fareEstimate = runFn1 getLayoutBounds $ getNewIDWithTag "PaymentMethodView"
+      city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      remoteConfig = RemoteConfig.getEnquiryBannerConfig city
+      alreadyShown = getValueFromCache (show ShowedEnquiryPopup) JB.getKeyInSharedPrefKeys == state.data.driverInfoCardState.rideId
+      enquiryBanner = if isJust remoteConfig.question && (not $ alreadyShown) then 110 else 0
       fareEstimateViewPadding = 12
       pixels = runFn1 getPixels FunctionCall
       density = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
       currentPeekHeight = if bottomSheetLayout.height == 0 || actionsView.height == 0
                           then 0
-                          else bottomSheetLayout.height + if state.data.config.driverInfoConfig.footerVisibility then brandingBanner.height else 0 - (if state.data.fareProductType == FPT.RENTAL then (fareEstimate.height + fareEstimateViewPadding + driverDetailsView.height + driverDetailsViewPadding) else 0) + actionsView.height
+                          else bottomSheetLayout.height + if state.data.config.driverInfoConfig.footerVisibility then brandingBanner.height else 0 - (if state.data.fareProductType == FPT.RENTAL then (fareEstimate.height + fareEstimateViewPadding + driverDetailsView.height + driverDetailsViewPadding) else 0) + actionsView.height - enquiryBanner
       requiredPeekHeight = if os /= "IOS" then ceil (((toNumber currentPeekHeight) /pixels) * density) else currentPeekHeight
     in requiredPeekHeight
 

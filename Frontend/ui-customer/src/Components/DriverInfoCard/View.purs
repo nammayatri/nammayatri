@@ -339,17 +339,10 @@ enquiryBanner push enquiryBannerMbConfig =
           ]
         ]
       , linearLayout[
-<<<<<<< HEAD
           width MATCH_PARENT
         , height WRAP_CONTENT
         , layoutGravity "right"
         , gravity RIGHT
-=======
-          width MATCH_PARENT
-        , height WRAP_CONTENT
-        , layoutGravity "right"
-        , gravity RIGHT
->>>>>>> 03e10211b4 (feat: ekd popup hotpush)
         ][
           imageView[
             width $ V 142
