@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 data TicketBookingT f = TicketBookingT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    blockExpirationTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     bookedSeats :: B.C f Kernel.Prelude.Int,
     cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
