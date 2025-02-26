@@ -81,14 +81,12 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
   vehicleFitnessCertImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFitnessCertificate)
   vehicleInsImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInsurance)
   profilePics <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.ProfilePhoto)
-
   vehicleFrontImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFront)
   vehicleBackImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBack)
   vehicleRightImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRight)
   vehicleLeftImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleLeft)
   vehicleFrontInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFrontInterior)
   vehicleBackInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBackInterior)
-
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs

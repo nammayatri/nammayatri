@@ -10,7 +10,6 @@ import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -29,22 +28,6 @@ findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
-
-findAllMerchant ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> m [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig])
-findAllMerchant limit offset isMandatory isImageValidationRequired isDefaultEnabledOnManualVerification doStrictVerifcation = do
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.isMandatory $ Se.Eq isMandatory,
-          Se.Is Beam.isImageValidationRequired $ (Se.Not . Se.Eq) isImageValidationRequired,
-          Se.Is Beam.isDefaultEnabledOnManualVerification $ (Se.Not . Se.Eq) isDefaultEnabledOnManualVerification,
-          Se.Is Beam.doStrictVerifcation $ (Se.Not . Se.Eq) doStrictVerifcation
-        ]
-    ]
-    (Se.Asc Beam.order)
-    limit
-    offset
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
