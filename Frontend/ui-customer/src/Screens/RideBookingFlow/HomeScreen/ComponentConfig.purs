@@ -30,7 +30,7 @@ import Screens.RideBookingFlow.HomeScreen.BannerConfig
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Common.Types.App (TicketType(..))
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
@@ -87,7 +87,7 @@ import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig, convertTo12HourFormat)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, isWeekend, getCityConfig, convertTo12HourFormat)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -103,7 +103,7 @@ import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig, dummyRideB
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..), NewContacts(..), SearchLocationModelType(..), Currency(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, ReferralStatus(..), VehicleViewType(..), NewContacts(..), SearchLocationModelType(..), Currency(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
@@ -972,7 +972,7 @@ rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
     bangaloreCode = HU.getCityCodeFromCity Bangalore
-    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    city = EHU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in RateCard.config 
         { isNightShift = state.data.rateCard.isNightShift
         , currentRateCardType = state.data.rateCard.currentRateCardType
@@ -2188,7 +2188,7 @@ generateReferralLink source medium term content campaign =
   let
     config = getAppConfig appConfig
 
-    cityConfig = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    cityConfig = EHU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
 
     path = "link/rider/SJ8D"
 

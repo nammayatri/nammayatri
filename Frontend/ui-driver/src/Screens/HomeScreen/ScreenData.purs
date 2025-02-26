@@ -304,6 +304,8 @@ initData =
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
+      , showEndRideWithStopPopup : false
+      , triggerGMapsIntent : false
       }
   }
 
@@ -421,6 +423,7 @@ dummyRideData = {
       , senderPersonDetails : Nothing
       , receiverPersonDetails : Nothing
       , notifiedReachedDestination : false
+      , stops : []
       }
 
 initialParkingData :: ParkingData

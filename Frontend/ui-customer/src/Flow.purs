@@ -20,7 +20,7 @@ import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Services.API as API
 import Common.Resources.Constants (zoomLevel)
-import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..),TicketType(..), Confidence(..), TripCategory(..), TripCategoryTag(..))
+import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..),TicketType(..), Confidence(..), TripCategory(..), TripCategoryTag(..), City(..))
 import Common.Types.App as CTA
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
@@ -57,7 +57,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap, markPerformance, splitString)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Utils (compareDate, loaderText, toggleLoader, showToast, saveObject, reboot, showSplash,getAndRemoveLatestNotificationType, fetchLanguage, handleUpdatedTerms, getReferralCode, (?))
+import Engineering.Helpers.Utils (compareDate, loaderText, toggleLoader, showToast, saveObject, reboot, showSplash,getAndRemoveLatestNotificationType, fetchLanguage, handleUpdatedTerms, getReferralCode, (?), getCityFromString)
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
@@ -65,7 +65,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, removeAllPolygons, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser, defaultMarkerImageConfig, destroySignedCall)
 import JBridge as JB
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, normalRoute, breakPrefixAndId, editPickupCircleConfig)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, normalRoute, breakPrefixAndId, editPickupCircleConfig)
 import Language.Strings (getString)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon, transformGeoJsonFeature, getSpecialTag, getZoneType, transformHotSpotInfo, mapSpecialZoneGates)
 import Language.Types (STR(..)) as STR
@@ -104,7 +104,7 @@ import Screens.HomeScreen.Transformer (getLocationList, dummyRideAPIEntity, enco
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (RiderRideCompletedScreenState(..), TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..), TicketBookingStage(..), MetroStations(..), SearchResultType(..), RentalScreenStage(..))
+import Screens.Types (RiderRideCompletedScreenState(..), TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..), TicketBookingStage(..), MetroStations(..), SearchResultType(..), RentalScreenStage(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
 import Screens.NammaSafetyFlow.Controller as NammaSafetyFlowScreenOutput
 import Screens.DataExplainWithFetch.ScreenData as DataExplainWithFetchSD
@@ -675,7 +675,7 @@ hybridFlow flow = do
                   { data
                     { pickUpLoc
                       { address = getString STR.CURRENT_LOCATION
-                      , city = ST.Bangalore
+                      , city = CTA.Bangalore
                       , lat = Just currentLocation.lat
                       , lon = Just currentLocation.lng
                       , placeId = Nothing

@@ -419,3 +419,9 @@ getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?dr
 
 specialLocationListCategory :: String -> String
 specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category
+
+arrivedStop :: String -> String -> String
+arrivedStop rideId stopId = (getBaseUrl "") <> "/driver/ride/"<> rideId <>"/arrived/" <> stopId <> "/stop"
+
+departedStop :: String -> String -> String
+departedStop rideId stopId = (getBaseUrl "") <> "/driver/ride/"<> rideId <>"/departed/" <> stopId <> "/stop"

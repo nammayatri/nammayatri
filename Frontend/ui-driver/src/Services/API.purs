@@ -703,7 +703,8 @@ newtype RidesInfo = RidesInfo
       roundTrip :: Boolean,
       returnTime :: Maybe String,
       senderDetails :: Maybe PersonDetails,
-      receiverDetails :: Maybe PersonDetails
+      receiverDetails :: Maybe PersonDetails,
+      stops :: Maybe (Array Stop)
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType
@@ -801,7 +802,8 @@ newtype LocationInfo = LocationInfo
         areaCode :: Maybe String,
         lon :: Number,
         instructions :: Maybe String,
-        extras :: Maybe String
+        extras :: Maybe String,
+        id :: Maybe String
       }
 
 data BookingTypes = CURRENT | ADVANCED
@@ -840,6 +842,7 @@ instance standardEncodeLocationInfo :: StandardEncode LocationInfo where standar
 instance showLocationInfo :: Show LocationInfo where show = genericShow
 instance decodeLocationInfo :: Decode LocationInfo where decode = defaultDecode
 instance encodeLocationInfo :: Encode LocationInfo where encode = defaultEncode
+instance eqLocationInfo :: Eq LocationInfo where eq = genericEq
 
 derive instance genericRidesInfo :: Generic RidesInfo _
 derive instance newtypeRidesInfo :: Newtype RidesInfo _
@@ -1124,6 +1127,7 @@ instance standardEncodeLatLong :: StandardEncode LatLong where standardEncode (L
 instance showLatLong :: Show LatLong where show = genericShow
 instance decodeLatLong :: Decode LatLong where decode = defaultDecode
 instance encodeLatLong:: Encode LatLong where encode = defaultEncode
+instance eqLatLong :: Eq LatLong where eq = genericEq
 
 ------------------------------------------------------------OnBoarding Flow---------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -5203,7 +5207,7 @@ instance decodeLocation:: Decode Location where decode = defaultDecode
 instance encodeLocation :: Encode Location where encode = defaultEncode
 instance eqLocation :: Eq Location where eq = genericEq
 
-newtype LocationAddress  = LocationAddress {
+newtype LocationAddress = LocationAddress {
   area :: Maybe String,
   areaCode :: Maybe String,
   building :: Maybe String,
@@ -5507,3 +5511,49 @@ instance standardEncodeSpecialLocationListRes :: StandardEncode SpecialLocationL
 instance showSpecialLocationListRes :: Show SpecialLocationListRes where show = genericShow
 instance decodeSpecialLocationListRes :: Decode SpecialLocationListRes where decode = defaultDecode
 instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where encode = defaultEncode
+
+newtype Stop = Stop {
+  location :: LocationInfo,
+  stopInfo :: Maybe StopInformation 
+}
+
+newtype StopInformation = StopInformation
+  { id :: String,
+    rideId :: String,
+    stopEndLatLng :: Maybe LatLong,
+    stopLocId :: String,
+    stopOrder :: Int,
+    stopStartLatLng :: LatLong,
+    waitingTimeEnd :: Maybe String,
+    waitingTimeStart :: String,
+    merchantId :: Maybe String,
+    merchantOperatingCityId :: Maybe String
+  }
+
+derive instance genericStop :: Generic Stop _
+derive instance newtypeStop :: Newtype Stop _
+instance standardEncodeStop :: StandardEncode Stop where standardEncode (Stop req) = standardEncode req
+instance showStop :: Show Stop where show = genericShow
+instance decodeStop :: Decode Stop where decode = defaultDecode
+instance encodeStop :: Encode Stop where encode = defaultEncode
+instance eqStop :: Eq Stop where eq = genericEq
+
+derive instance genericStopInformation :: Generic StopInformation _
+derive instance newtypeStopInformation :: Newtype StopInformation _
+instance standardEncodeStopInformation :: StandardEncode StopInformation where standardEncode (StopInformation req) = standardEncode req
+instance showStopInformation :: Show StopInformation where show = genericShow
+instance decodeStopInformation :: Decode StopInformation where decode = defaultDecode
+instance encodeStopInformation :: Encode StopInformation where encode = defaultEncode
+instance eqStopInformation :: Eq StopInformation where eq = genericEq
+
+data UpdateStopStatusReq = UpdateStopStatusReq String String Boolean LatLong
+
+instance makeUpdateStopStatusReq :: RestEndpoint UpdateStopStatusReq where
+    makeRequest reqBody@(UpdateStopStatusReq rideId stopId hasArrived (LatLong rqBody)) headers = defaultMakeRequestWithoutLogs POST ((if hasArrived then EP.arrivedStop else EP.departedStop) rideId stopId) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericUpdateStopStatusReq :: Generic UpdateStopStatusReq _
+instance standardEncodeUpdateStopStatusReq :: StandardEncode UpdateStopStatusReq where standardEncode (UpdateStopStatusReq rideId stopId hasArrived req) = standardEncode req
+instance showUpdateStopStatusReq :: Show UpdateStopStatusReq where show = genericShow
+instance decodeUpdateStopStatusReq :: Decode UpdateStopStatusReq where decode = defaultDecode
+instance encodeUpdateStopStatusReq :: Encode UpdateStopStatusReq where encode = defaultEncode

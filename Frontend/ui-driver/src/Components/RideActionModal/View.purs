@@ -18,11 +18,11 @@ module Components.RideActionModal.View where
 import Common.Types.App
 import ConfigProvider
 import Locale.Utils
-import Prelude (class Eq, class Show, ($))
+import Prelude (class Eq, class Show, ($), map)
 import Animation (scaleYAnimWithDelay)
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.RideActionModal.Controller (Action(..), Config, LearnMorePopUp(..))
+import Components.RideActionModal.Controller (Action(..), Config, LearnMorePopUp(..), stopActionButtonConfig)
 import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
@@ -45,7 +45,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
-import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>), (>>=))
+import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>), (>>=), (<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY,textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
@@ -67,9 +67,13 @@ import Data.Maybe
 import Data.Int
 import Services.API as SA
 import Components.RateCard.Controller 
+import Services.API as API
+import Resource.Constants as Cns 
+import Components.PrimaryButton as PB
+import Data.Newtype (unwrap)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = do
+view push config = 
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -313,17 +317,10 @@ rideActionView layoutMargin push config =
             [ width MATCH_PARENT
             , height $ V 1
             , background Color.lightGrey
-            , margin $ MarginTop 24
             ][]
-        , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , padding $ Padding 16 16 16 24
-            ][ if config.startRideActive
-                then startRide push config 
-                else if(config.rideType == ST.Rental && Maybe.isJust config.stopAddress) then arrivedStopView push config else endRide push config ]
+        , rideActionButtonView push config 
         ])
-    , Tuple "rideActionView_Child_2" $ cancelRide push config
+    , Tuple "rideActionView_Child_2" $ cancelOrEndRide push config
   ]]
 
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -388,8 +385,9 @@ rideActionDataView push config =
               rideInfoView push config
             , if config.rideType == ST.Rental then 
                 rentalRideDescView config push
-              else (if config.startRideActive then 
-                sourceAndDestinationView push config else destinationView config push)
+              else if config.startRideActive || (HU.checkIfStopsLeft config.stops) then 
+                sourceAndDestinationView push config
+              else destinationView config push
             ]
           ]
       ]
@@ -599,16 +597,27 @@ stopTextView config push =
         ][stopAddressTextView config push]
   ]
 
-sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+sourceAndDestinationView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 sourceAndDestinationView push config =
-  relativeLayout
-    [ height WRAP_CONTENT
+  scrollView
+    [ height $ V 120
     , width MATCH_PARENT
-    , margin $ MarginVertical 24 24
-    , afterRender push $ const NoAction
-    ][  sourceDestinationImageView config
-      , sourceDestinationTextView push config
-      ]
+    , margin $ MarginVertical 24 0
+    ]
+    [ linearLayout
+        [ height $ V 120
+        , width MATCH_PARENT
+        ]
+        [ relativeLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , afterRender push $ const NoAction
+            ]
+            [ sourceDestinationImageView config
+            , sourceDestinationTextView push config
+            ]
+        ]
+    ]
 
 startRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 startRide push config =
@@ -657,25 +666,27 @@ endRide push config =
     , afterRender push $ const NoAction
     ] <> FontStyle.subHeading1 TypoGraphy ]
 
-cancelRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cancelRide push config =
+cancelOrEndRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+cancelOrEndRide push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
   , background Color.white900
-  , visibility if config.startRideActive then VISIBLE else GONE
+  , visibility $ boolToVisibility $ config.startRideActive || HU.checkIfStopsLeft config.stops
   , padding $ PaddingBottom 16
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , padding $ Padding 16 8 16 8
-      , text (getString CANCEL_RIDE)
+      , text (getString if showEndRide then END_RIDE else CANCEL_RIDE)
       , color Color.red
-      , onClick push (const CancelRide)
+      , onClick push (const if showEndRide then ShowEndRideWithStops else CancelRide)
       ] <> FontStyle.body1 TypoGraphy
       )
   ]
+  where
+    showEndRide = config.currentStage == RideStarted && HU.checkIfStopsLeft config.stops
 
 customerNameView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 customerNameView push config =
@@ -1057,16 +1068,31 @@ sourceDestinationImageView  config =
         , width $ V 14
         , margin $ MarginTop 4
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
+        , visibility $ boolToVisibility config.startRideActive
         ]]<>
-        (if not $ config.rideType == ST.Rental && config.startRideActive then ([
-        SeparatorView.view (separatorConfig config)
+        (if config.rideType /= ST.Rental then (
+          (DA.mapWithIndex (\index item -> stopAndSeparatorView true ((index /= 0 && not config.startRideActive) || config.startRideActive)) config.stops)
+        <> [stopAndSeparatorView false true]
+        <> if config.rideType == ST.Rental then [SeparatorView.view (separatorConfig config)] else []) else []))
+  where
+    stopAndSeparatorView isStop showSeparator = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      ]
+      [ if showSeparator then SeparatorView.view (separatorConfig config) else noView
       , imageView
         [ height $ V 14
         , width $ V 14
-        , imageWithFallback $ fetchImage FF_ASSET if config.rideType == ST.Rental then (if Maybe.isNothing config.stopAddress then "ny_ic_last_drop_indicator" else "ny_ic_drop_indicator") else "ny_ic_destination"
+        , imageWithFallback $ fetchImage FF_ASSET $ stopImage isStop
         , margin $ if config.rideType == ST.Rental then MarginTop 4 else MarginTop 0
         ]
-      ]<> if config.rideType == ST.Rental then [SeparatorView.view (separatorConfig config)] else []) else []))
+      ]    
+    stopImage isStop = if config.rideType == ST.Rental 
+                  then (if Maybe.isNothing config.stopAddress then "ny_ic_last_drop_indicator" else "ny_ic_drop_indicator") 
+                else if isStop then "ny_ic_stop_grey"
+                else "ny_ic_destination"
 
 
 sourceDestinationTextView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -1088,7 +1114,7 @@ sourceDestinationTextView push config =
         , ellipsize true
         , singleLine true
         , afterRender push $ const NoAction
-        , visibility $ boolToVisibility $ not config.isDelivery
+        , visibility $ boolToVisibility $ config.startRideActive && not config.isDelivery 
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -1099,9 +1125,15 @@ sourceDestinationTextView push config =
         , margin $ if config.isDelivery then (MarginBottom 8) else (MarginBottom 25)
         , ellipsize true
         , singleLine true
-        , visibility $ boolToVisibility $ not config.isDelivery || config.isSourceDetailsExpanded
+        , visibility $ boolToVisibility $ config.startRideActive &&  (not config.isDelivery || config.isSourceDetailsExpanded) 
         , afterRender push $ const NoAction
         ] <> FontStyle.body1 TypoGraphy
+      , linearLayout 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        (DA.mapWithIndex (\index item -> stopView item index $ DA.length config.stops) config.stops)
       , instructionView config (config.delivery >>= (\delivery -> delivery.sender.instructions)) config.isSourceDetailsExpanded
       , destAddressTextView config push
       ] 
@@ -1434,3 +1466,62 @@ instructionView config instruction showInstruction =
     getInstructionText instruction = let instructionHeader = if config.isSourceDetailsExpanded then getString PICKUP_INSTRUCTION <> ": " else getString DROP_INSTRUCTION <> ": " 
                       in maybe "" (\instruction' -> instructionHeader <> instruction') instruction
 
+stopView :: forall w. API.Stop -> Int -> Int -> PrestoDOM (Effect Unit) w
+stopView stopData index totalStops = do
+  let Tuple sourceArea description = HU.getStopName stopData
+      stopCount = index + 1
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation VERTICAL
+    ]
+    [ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ]
+      [ textView
+        $ [ text sourceArea
+          , color Color.black800
+          , ellipsize true
+          , singleLine true
+          , weight 1.0
+          ]
+        <> FontStyle.subHeading1 TypoGraphy
+      , textView
+          $ [ text $ getString $ STOP (show stopCount)
+            , color Color.black700
+            , margin $ MarginLeft 8
+            , cornerRadius 13.0
+            , padding $ Padding 8 2 8 2
+            , background Color.grey900
+            ] <> FontStyle.tags TypoGraphy
+      ]
+    , textView
+        $ [ text description
+          , color Color.black650
+          , margin $ MarginBottom 25
+          , ellipsize true
+          , singleLine true
+          ]
+        <> FontStyle.body1 TypoGraphy
+    ]
+
+rideActionButtonView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideActionButtonView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 16 16 16 24
+  ][ 
+    if config.startRideActive
+      then startRide push config 
+    else if(config.rideType == ST.Rental && Maybe.isJust config.stopAddress) 
+      then arrivedStopView push config 
+    else if HU.checkIfStopsLeft config.stops
+      then stopActionView push config
+    else endRide push config 
+  ]
+
+stopActionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+stopActionView push config = 
+  PB.view (push <<< StopActionButton) (stopActionButtonConfig config)

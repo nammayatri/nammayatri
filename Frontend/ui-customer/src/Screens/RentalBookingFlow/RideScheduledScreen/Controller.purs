@@ -28,7 +28,7 @@ import Prelude
 import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd)
 import Screens (getScreen, ScreenName(..))
 import Helpers.Utils (performHapticFeedback)
-import Screens.Types (RideScheduledScreenState, City(..),NotificationBody)
+import Screens.Types (RideScheduledScreenState, NotificationBody)
 import Resources.Constants (cancelReasons, dummyCancelReason)
 import JBridge (hideKeyboardOnNavigation)
 import Services.API
@@ -44,6 +44,7 @@ import Debug (spy)
 import RemoteConfig as RemoteConfig
 import Locale.Utils (getLanguageLocale, languageKey)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
+import Common.Types.App as CTA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -112,8 +113,8 @@ eval (GetBooking apiResp) state =
       fareProductType = getFareProductType (bookingDetails.fareProductType)
   in continue state 
     { data
-      { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
-      , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) $ if fareProductType == FPT.INTER_CITY then contents.toLocation else contents.stopLocation
+      { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = CTA.AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
+      , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = CTA.AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) $ if fareProductType == FPT.INTER_CITY then contents.toLocation else contents.stopLocation
       , startTime = fromMaybe "" resp.rideScheduledTime
       , finalPrice = show resp.estimatedTotalFare
       , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600

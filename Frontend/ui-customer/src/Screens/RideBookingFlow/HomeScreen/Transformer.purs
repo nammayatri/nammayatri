@@ -26,7 +26,7 @@ import Locale.Utils
 import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _fareProductType, _stopLocation, _amount, _nightShiftCharge, _types, _senderDetails, _receiverDetails, _requestorPartyRoles)
-import Common.Types.App (LazyCheck(..), Paths, FareList, TicketType(..))
+import Common.Types.App (LazyCheck(..), Paths, FareList, TicketType(..), City(..))
 import Common.Types.App as CT
 import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProductType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -49,9 +49,10 @@ import Data.String (Pattern(..), drop, indexOf, length, split, trim, null, toLow
 import Data.Tuple as DT
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices,fetchImage, FetchImageFrom(..), getCityFromString, intersection ,isAmbulance)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices,fetchImage, FetchImageFrom(..), intersection)
 import JBridge (fromMetersToKm, getLatLonFromAddress)
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
@@ -67,14 +68,14 @@ import PrestoDOM (Visibility(..))
 import RemoteConfig as RC
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getFaresList, getKmMeter, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..), PersonDeliveryDetails(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), HotSpotData, VehicleViewType(..), PersonDeliveryDetails(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
 import Services.Backend as Remote
 import Services.API as API
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (setValueToLocalStore, getValueToLocalStore, getValueToLocalNativeStore, KeyStore(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection,getVehicleCapacity,fetchVehicleVariant)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), intersection,getVehicleCapacity,fetchVehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths, FareList)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -84,8 +85,8 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySett
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails, dummyIndividualCard)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, Stage(..))
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), HotSpotData, Stage(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), HotSpotData, VehicleViewType(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
 import Services.API (QuoteAPIDetails(..), IntercityQuoteAPIDetails(..))
@@ -100,6 +101,7 @@ import Components.MessagingView.Controller as CMC
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
 import SuggestionUtils
+import Engineering.Helpers.Utils (getCityFromString)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -790,7 +792,7 @@ getTripDetailsState (RideBookingRes ride) state = do
             autoWaitingCharges
         else if rideDetails.vehicleVariant == "BIKE" || rideDetails.vehicleVariant == "DELIVERY_BIKE" then
             bikeWaitingCharges
-        else if isAmbulance rideDetails.vehicleVariant then
+        else if EHU.isAmbulance rideDetails.vehicleVariant then
             ambulanceWaitingCharges
         else 
             cabsWaitingCharges

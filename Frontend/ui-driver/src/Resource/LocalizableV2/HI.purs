@@ -1789,4 +1789,7 @@ getHi =
     , drivers_are_permitted_to_cancel_ambulance_bookings :"ड्राइवरों को केवल उनके चिकित्सा कारणों या वाहन के खराब होने की स्थिति में ही रद्द करने की अनुमति है"
     , payment_under_maintenance : "भुगतान रखरखाव में है"
     , payments_temporarily_unavailable : "भुगतान अस्थायी रूप से अनुपलब्ध है और जल्द ही वापस आ जाएगा। कृपया बाद में पुनः प्रयास करें।"
+    , resume_ride : "यात्रा फिर से शुरू करें"
+    , end_ride_with_stops : "आपके पास और स्टॉप हैं। फिर भी यात्रा समाप्त करें?"
+    , stop: (\n -> "स्टॉप " <> n)
     }

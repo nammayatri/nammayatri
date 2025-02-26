@@ -522,7 +522,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     tripEndTime : ride.tripEndTime,
     acRide : ride.isVehicleAirConditioned,
     vehicleServiceTier : ride.vehicleServiceTier,
-    parkingCharge : fromMaybe 0.0 ride.parkingCharge
+    parkingCharge : fromMaybe 0.0 ride.parkingCharge, 
+    stops : fromMaybe [] ride.stops
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -771,5 +772,6 @@ dummyRideHistoryItem = RidesInfo {
       parkingCharge : Nothing,
       senderDetails : Nothing,
       receiverDetails : Nothing,
-      coinsEarned : Nothing 
+      coinsEarned : Nothing,
+      stops : Nothing
 }

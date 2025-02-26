@@ -18,8 +18,7 @@ module Components.SettingSideBar.View where
 import Common.Types.App
 
 import Animation (translateInXSidebarAnim, translateOutXSidebarAnim)
-import Common.Types.App (LazyCheck(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.SettingSideBar.Controller (Action(..), SettingSideBarState, Status(..), Tag(..), Item)
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
@@ -29,7 +28,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..),getCityFromString)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -41,15 +40,15 @@ import Screens.Types (Stage(..))
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
-import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
 import Data.Maybe (fromMaybe)
-import Screens.Types (Stage(..),City(..))
+import Screens.Types (Stage(..))
 import Data.String as DS
 import Mobility.Prelude
 import Debug
+import Engineering.Helpers.Utils (getCityFromString)
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =

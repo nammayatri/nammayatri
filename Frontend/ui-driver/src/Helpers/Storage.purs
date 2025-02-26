@@ -168,6 +168,8 @@ data KeyStore = USER_NAME
                 | DRIVER_RIDE_STATUS
                 | PACKAGE_NAME
                 | DRIVER_LOCATION_TS
+                | POINTS_FACTOR
+                | ACCURACY_THRESHOLD
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

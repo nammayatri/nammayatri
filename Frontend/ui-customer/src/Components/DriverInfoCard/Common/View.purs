@@ -4,7 +4,7 @@ import Prelude
 import Components.DriverInfoCard.Common.Types
 import Common.Types.App
 import Animation (fadeIn, fadeInWithDelay, scaleYAnimWithDelay)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..),PersonDeliveryDetails(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),PersonDeliveryDetails(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -49,6 +49,7 @@ import Components.ServiceTierCard.View as ServiceTierCard
 import Screens.Types as ST
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils as HU
+import Engineering.Helpers.Utils as EHU
 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. (Action -> Effect Unit) -> DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
@@ -287,8 +288,8 @@ getVehicleImage variant vehicleDetail city = do
           mkAutoImage city = 
             case city of 
               Hyderabad -> "ic_auto_rickshaw_black_yellow"
-              _ | HU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
-              _ | HU.isKeralaCity city -> "ny_ic_black_auto"
+              _ | EHU.isTamilNaduCity city -> "ic_auto_rickshaw_black_yellow"
+              _ | EHU.isKeralaCity city -> "ny_ic_black_auto"
               _ -> "ic_auto_rickshaw"
           mkTaxiImage :: Merchant -> String
           mkTaxiImage merchant =

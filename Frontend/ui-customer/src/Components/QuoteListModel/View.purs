@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage,fetchVehicleVariant,isAmbulance)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, quoteModalVariantImage,fetchVehicleVariant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
@@ -35,14 +35,14 @@ import Language.Types (STR(..))
 import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard, (*), negate, (-))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, fillViewport, alpha, horizontalScrollView, scrollBarX, disableKeyboardAvoidance)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..), QuoteListItemState(..), City(..),VehicleVariant(..), TipViewStage(..), FareProductType(..))
+import Screens.Types (Stage(..), QuoteListItemState(..),VehicleVariant(..), TipViewStage(..), FareProductType(..))
 import Storage 
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Data.String (null) as DS
 import Locale.Utils
 import Mobility.Prelude
-import Engineering.Helpers.Utils(splitIntoEqualParts)
+import Engineering.Helpers.Utils(splitIntoEqualParts, getCityFromString, isAmbulance)
 import Debug
 import Components.ProviderModel as PM
 import Components.ChooseVehicle.Controller as CVC

@@ -5,7 +5,7 @@ import Prelude
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import Common.Types.App as CTP
-import Screens.Types (City, SearchResultType, FareProductType, PersonDeliveryDetails)
+import Screens.Types (SearchResultType, FareProductType, PersonDeliveryDetails)
 
 type DriverDetailsType
   = { fareProductType :: FareProductType
@@ -13,7 +13,7 @@ type DriverDetailsType
     , driverName :: String
     , vehicleDetails :: String
     , vehicleVariant :: String
-    , merchantCity :: City
+    , merchantCity :: CTP.City
     , registrationNumber :: String
     , config :: AppConfig
     , rideStarted :: Boolean

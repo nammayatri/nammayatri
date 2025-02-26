@@ -449,7 +449,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | DRIVER_AVAILABILITY_STATUS HomeScreenState DriverStatus
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
-                          | UPDATE_ROUTE HomeScreenState
+                          | UPDATE_ROUTE HomeScreenState Boolean
                           | FCM_NOTIFICATION String HomeScreenState NotificationBody
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
@@ -489,6 +489,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
                           | UPDATE_METRO_WARRIOR HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
+                          | UPDATE_STOPS_STATUS HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

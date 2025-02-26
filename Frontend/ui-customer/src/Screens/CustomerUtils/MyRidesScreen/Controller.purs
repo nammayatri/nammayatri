@@ -33,9 +33,9 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC,getCurrentUTC)
 import Engineering.Helpers.Commons (strToBool, os)
 import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.Utils (getFixedTwoDecimals, showToast)
+import Engineering.Helpers.Utils (getFixedTwoDecimals, showToast, getCityFromString, isAmbulance)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink, getCityConfig)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getVehicleVariantImage, getAssetLink, getCityConfig)
 import JBridge (firebaseLogEvent)
 import JBridge (differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
@@ -51,7 +51,7 @@ import Resources.LocalizableV2.Strings (getEN)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..), City(..), VehicleViewType(..),NotificationBody)
+import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..), VehicleViewType(..),NotificationBody)
 import Screens.Types (FareProductType(..)) as FPT
 import Data.Array as DA
 import Helpers.Utils as HU
@@ -272,7 +272,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     specialTags = getSpecialTag ride.specialLocationTag
     cityStr = getValueToLocalStore CUSTOMER_LOCATION
     city = getCityFromString cityStr
-    nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
+    nightChargeFrom = if city == CTP.Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
     startTime = fromMaybe "" ride.rideStartTime
     endTime = fromMaybe "" ride.rideEndTime
@@ -291,7 +291,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
           autoWaitingCharges
       else if any (_ == rideDetails.vehicleVariant) ["BIKE", "DELVIERY_BIKE"] then 
           bikeWaitingCharges
-      else if HU.isAmbulance rideDetails.vehicleVariant  then
+      else if isAmbulance rideDetails.vehicleVariant  then
           ambulanceWaitingCharges
       else 
          cabsWaitingCharges

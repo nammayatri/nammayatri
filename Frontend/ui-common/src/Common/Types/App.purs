@@ -764,3 +764,52 @@ newtype UploadFileConfig = UploadFileConfig {
   imageAspectHeight :: Int,
   imageAspectWidth :: Int
 }
+
+data City
+  = Bangalore
+  | Kolkata
+  | Paris
+  | Kochi
+  | Delhi
+  | Hyderabad
+  | Mumbai
+  | Chennai
+  | Coimbatore
+  | Pondicherry
+  | Goa
+  | Pune
+  | Mysore
+  | Tumakuru
+  | Siliguri
+  | AnyCity
+  | Gurugram
+  | Noida
+  | Thrissur
+  | Trivandrum
+  | Kozhikode
+  | Vellore
+  | Hosur
+  | Madurai
+  | Thanjavur
+  | Tirunelveli
+  | Salem
+  | Trichy
+  | Davanagere
+  | Shivamogga
+  | Hubli
+  | Mangalore
+  | Gulbarga
+  | Udupi
+  | Odisha
+  | Bhubaneswar
+  | Cuttack
+  | Nalgonda
+  | Puri
+  | Pudukkottai
+  | Bidar
+
+derive instance genericCity :: Generic City _
+instance showCity :: Show City where show = genericShow
+instance eqCity :: Eq City where eq = genericEq
+instance encodeCity :: Encode City where encode = defaultEnumEncode
+instance decodeCity :: Decode City where decode = defaultEnumDecode

@@ -23,7 +23,7 @@ import CarouselHolder as CarouselHolder
 import Common.Styles.Colors as CommonColor
 import Animation (fadeIn, fadeInWithDelay, scaleYAnimWithDelay, shimmerAnimation, translateInXAnim)
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.BannerCarousel as BannerCarousel
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
@@ -61,7 +61,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.LocalizableV2.Strings (getEN)
-import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..), NavigationMode(..))
 import Storage (KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color

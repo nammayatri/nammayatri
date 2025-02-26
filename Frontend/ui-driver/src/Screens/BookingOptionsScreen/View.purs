@@ -8,7 +8,7 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions ,isAmbulance)
+import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
@@ -48,7 +48,7 @@ screen initialState =
   , view
   , name: "BookingDetailsScreen"
   , globalEvents: 
-        [( \push -> if not $ initialState.data.config.rateCardScreen.showRateCard then pure $ pure unit else if HU.isAmbulance initialState.data.vehicleType then pure $ pure unit else do
+        [( \push -> if not $ initialState.data.config.rateCardScreen.showRateCard then pure $ pure unit else if EHU.isAmbulance initialState.data.vehicleType then pure $ pure unit else do
             _ <-
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
@@ -112,7 +112,7 @@ view push state =
 acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 acCheckForDriversView push state =
   let
-    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned && not (isAmbulance state.data.vehicleType)
+    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned && not (EHU.isAmbulance state.data.vehicleType)
 
     (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
 
