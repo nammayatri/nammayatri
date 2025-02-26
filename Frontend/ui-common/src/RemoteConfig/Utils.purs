@@ -240,6 +240,11 @@ tipConfigData city variant = do
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         "HERITAGE_CAB" -> config.heritageCab
+        "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+        "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+        "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+        "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+        "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -259,6 +264,11 @@ defaultTipsConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , heritageCab: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
 
@@ -279,6 +289,11 @@ defaultSubscriptionsConfigVariantLevel =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , heritageCab: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
 
@@ -376,6 +391,11 @@ subscriptionsConfigVariantLevel city variant = do
         "AMBULANCE_TAXI" -> config.ambulanceTaxi
         "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
         "HERITAGE_CAB" -> config.heritageCab
+        "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+        "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+        "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+        "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+        "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig
@@ -487,6 +507,11 @@ getConfigForVariant variant config =
     "AMBULANCE_TAXI" -> config.ambulanceTaxi
     "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
     "HERITAGE_CAB" -> config.heritageCab
+    "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+    "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+    "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+    "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+    "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
     _ -> config.default
       
 getInvoiceConfig :: String -> String -> InvoiceConfig
@@ -516,8 +541,14 @@ defaultInvoiceVariantConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , heritageCab: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
+
 
 -- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)
 pollingConfig :: String -> Types.PollingConfig
@@ -541,3 +572,12 @@ pollingConfig functionName =
       pollingIntervalDelayMultiplier : 0,
       pollingRetryCount : 0
     }
+
+
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE"]

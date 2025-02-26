@@ -325,6 +325,11 @@ defaultMetroWarriorConfig =
   , ambulanceAcOxy : Nothing
   , ambulanceVentilator : Nothing
   , heritageCab: Nothing
+  , deliveryTruckMini: Nothing
+  , deliveryTruckSmall: Nothing
+  , deliveryTruckMedium: Nothing
+  , deliveryTruckLarge: Nothing
+  , deliveryTruckUltraLarge: Nothing
   , default: Nothing
   }
 

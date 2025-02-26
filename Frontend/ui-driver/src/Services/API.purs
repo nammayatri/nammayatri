@@ -702,7 +702,14 @@ newtype RidesInfo = RidesInfo
       roundTrip :: Boolean,
       returnTime :: Maybe String,
       senderDetails :: Maybe PersonDetails,
-      receiverDetails :: Maybe PersonDetails
+      receiverDetails :: Maybe PersonDetails,
+      parcelType :: Maybe ParcelType,
+      parcelQuantity :: Maybe Int
+}
+
+type ParcelType = {
+  tag :: String,
+  contents :: Maybe String
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType
@@ -4419,6 +4426,11 @@ data ServiceTierType
   | AMBULANCE_AC_OXY_TIER
   | AMBULANCE_VENTILATOR_TIER
   | HERITAGE_CAB_TIER
+  | DELIVERY_TRUCK_MINI
+  | DELIVERY_TRUCK_SMALL
+  | DELIVERY_TRUCK_MEDIUM
+  | DELIVERY_TRUCK_LARGE
+  | DELIVERY_TRUCK_ULTRA_LARGE
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4493,6 +4505,11 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "AMBULANCE_AC_OXY" -> except $ Right AMBULANCE_AC_OXY_TIER
                   "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR_TIER
                   "HERITAGE_CAB"  -> except $ Right HERITAGE_CAB_TIER
+                  "DELIVERY_TRUCK_MINI" -> except $ Right DELIVERY_TRUCK_MINI
+                  "DELIVERY_TRUCK_SMALL" -> except $ Right DELIVERY_TRUCK_SMALL
+                  "DELIVERY_TRUCK_MEDIUM" -> except $ Right DELIVERY_TRUCK_MEDIUM
+                  "DELIVERY_TRUCK_LARGE" -> except $ Right DELIVERY_TRUCK_LARGE
+                  "DELIVERY_TRUCK_ULTRA_LARGE" -> except $ Right DELIVERY_TRUCK_ULTRA_LARGE
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4518,6 +4535,11 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode AMBULANCE_AC_OXY_TIER = standardEncode "AMBULANCE_AC_OXY"
     standardEncode AMBULANCE_VENTILATOR_TIER = standardEncode "AMBULANCE_VENTILATOR"
     standardEncode HERITAGE_CAB_TIER = standardEncode "HERITAGE_CAB"
+    standardEncode DELIVERY_TRUCK_MINI = standardEncode "DELIVERY_TRUCK_MINI"
+    standardEncode DELIVERY_TRUCK_SMALL = standardEncode "DELIVERY_TRUCK_SMALL"
+    standardEncode DELIVERY_TRUCK_MEDIUM = standardEncode "DELIVERY_TRUCK_MEDIUM"
+    standardEncode DELIVERY_TRUCK_LARGE = standardEncode "DELIVERY_TRUCK_LARGE"
+    standardEncode DELIVERY_TRUCK_ULTRA_LARGE = standardEncode "DELIVERY_TRUCK_ULTRA_LARGE"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow

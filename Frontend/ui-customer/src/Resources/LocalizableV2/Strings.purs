@@ -1818,5 +1818,6 @@ getProxy str =
     NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
     AMBULANCE_ -> \a -> a @~ ambulance_
+    FREE_LOADING_UNLOADING_TIME arg1 arg2 -> \a -> (a @~ free_loading_unloading_time) arg1 arg2
 
 

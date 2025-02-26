@@ -54,4 +54,5 @@
     <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
     <string name="zxing_msg_default_status" tools:override="true">""</string>
     <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
+    <string name="delivery">ഡెൗണ്‍‌റുകൾ</string>
 </resources>

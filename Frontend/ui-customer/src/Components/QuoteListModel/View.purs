@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage,fetchVehicleVariant,isAmbulance)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage,fetchVehicleVariant,isAmbulance, isDeliveryTruckVariant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
@@ -562,7 +562,22 @@ quotesView state push =
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 findingRidesView state push =
+<<<<<<< HEAD
   let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else if any (_ == getValueToLocalStore SELECTED_VARIANT) ["BIKE", "DELIVERY_BIKE"] then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_bike.json" else if isAmbulance (getValueToLocalStore SELECTED_VARIANT) then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_ambulance.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
+=======
+  let selectedVariant = getValueToLocalStore SELECTED_VARIANT
+      assetsBaseUrl = getAssetsBaseUrl FunctionCall
+      lottieRawJson =
+        if state.appConfig.autoVariantEnabled && any (_ == selectedVariant) ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] 
+          then assetsBaseUrl <> getAutoLottie state.city
+        else if any (_ == selectedVariant) ["BIKE", "DELIVERY_BIKE"] 
+          then assetsBaseUrl <> "lottie/finding_rides_loader_bike.json"
+        else if isAmbulance selectedVariant 
+          then assetsBaseUrl <> "lottie/finding_rides_loader_ambulance.json"
+        else if isDeliveryTruckVariant selectedVariant
+          then "lottie/finding_delivery_partner_parcel_lottie.json"
+        else assetsBaseUrl <> "lottie/finding_rides_loader_without_text_cab.json"
+>>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
   in
     linearLayout
     [ height MATCH_PARENT

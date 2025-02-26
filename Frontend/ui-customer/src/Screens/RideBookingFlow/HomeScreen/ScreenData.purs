@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..) , TripTypeData,NotificationBody)
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..), TicketServiceType)
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..), TicketServiceType, ParcelType(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -208,6 +208,8 @@ initData = let
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
+    , driverArrivalTimeUTC : Nothing
+    , destinationReachedAtUTC : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -573,8 +575,12 @@ dummyDriverInfo =
   , rideScheduledAtUTC : Nothing
   , senderDetails : Nothing
   , receiverDetails : Nothing
+  , parcelType : Nothing
+  , parcelQuantity : Nothing
   , estimatedTimeToReachDestination : Nothing
   , isAirConditioned : Nothing
+  , destinationWaitingTime : Nothing
+  , rideStartTime : ""
   }
 
 dummySettingBar :: SettingSideBarState
@@ -696,7 +702,9 @@ dummyRideBookingDetails = RideBookingDetails {
   stopLocation : Nothing,
   senderDetails : Nothing,
   receiverDetails : Nothing,
-  requestorPartyRoles : Nothing
+  requestorPartyRoles : Nothing,
+  parcelType : Nothing,
+  parcelQuantity : Nothing
 }
 
 
