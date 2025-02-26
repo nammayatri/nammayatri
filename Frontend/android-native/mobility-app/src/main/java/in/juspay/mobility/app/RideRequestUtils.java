@@ -603,6 +603,14 @@ public class RideRequestUtils {
         return df.format(val);
     }
 
+    public static void updateTripCategory(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context){
+        String tripCategory = model.getRideProductType() != null ? model.getRideProductType() : "";
+        if (tripCategory.equals(NotificationUtils.DELIVERY)) {
+            holder.tripCategory.setVisibility(View.VISIBLE);
+            holder.vcTierAndACView.setRadius(dpToPx(8, context));
+        }
+    }
+
     public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         
         String tripCategory = model.getRideProductType() != null ? model.getRideProductType() : "";
@@ -623,8 +631,6 @@ public class RideRequestUtils {
             holder.nonAcView.setVisibility(View.GONE);
         }
         
-        if(tripCategory.equals(NotificationUtils.DELIVERY)) holder.vcTierAndACView.setRadius(dpToPx(8,context));
-
         holder.vcTierAndACView.setVisibility((showTier || showAC || showNonAC) ? View.VISIBLE : View.GONE);
         holder.vcTierAndACView.setCardBackgroundColor(getVcTierAndACBg(tripCategory, showNonAC, context));
         holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? getSTMapping (model.getVehicleServiceTier(), context) : "");
@@ -633,6 +639,16 @@ public class RideRequestUtils {
         holder.acNonAcView.setVisibility( showAC || showNonAC ? View.VISIBLE : View.GONE);
     }
 
+    @SuppressLint("SetTextI18n")
+    public static void updateDeliveryInfo(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context){
+        String tripCategory = model.getRideProductType() != null ? model.getRideProductType() : "";
+        if (tripCategory.equals(NotificationUtils.DELIVERY)) {
+            holder.parcelDetailView.setVisibility(View.VISIBLE);
+            holder.parcelType.setText(model.getParcelType());
+            if(model.getParcelQuantity() == 0) holder.parcelQuantity.setText("Loose"); else holder.parcelQuantity.setText(String.valueOf(model.getParcelQuantity()));
+        }
+    }
+    
     @SuppressLint("SetTextI18n")
     public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();

@@ -1727,4 +1727,12 @@ getEn = Keymap {
 ,uncomfortable_ambulance : "Uncomfortable Ambulance"
 ,clean_ambulance : "Clean Ambulance"
 ,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
+, parcel_details :  "Parcel Details"
+, parcel_type : "Parcel Type"
+, parcel_quantity : "Parcel Quantity"
+, unloading_time : "Unloading Time"
+, loading_time : "Loading Time"
+, helps_smooth_delivery : "Helps us provide a smooth delivery"
+, free_loading_unloading_time : (\a b ->"Free combined loading/unloading time of " <> a <> " min is provided. Any extra time will be charged at a rate of " <> b )
+, max_capacity_warning : "Items should not exceed max capacity"
 }

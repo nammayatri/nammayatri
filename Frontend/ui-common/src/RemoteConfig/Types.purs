@@ -101,7 +101,12 @@ type VariantLevelRemoteConfig a =
       ambulanceVentilator :: a,
       default :: a,
       deliveryBike :: a,
-      heritageCab :: a
+      deliveryTruckMini :: a
+    , deliveryTruckSmall :: a
+    , deliveryTruckMedium :: a
+    , deliveryTruckLarge :: a
+    , deliveryTruckUltraLarge :: a
+    , heritageCab :: a
     }
 
 
@@ -202,6 +207,11 @@ type TipsConfig
       ambulanceAcOxy ::  Maybe (Array Int),
       ambulanceVentilator :: Maybe (Array Int),
       heritageCab :: Maybe (Array Int)
+    , deliveryTruckMini :: Maybe (Array Int)
+    , deliveryTruckSmall :: Maybe (Array Int)
+    , deliveryTruckMedium :: Maybe (Array Int)
+    , deliveryTruckLarge :: Maybe (Array Int)
+    , deliveryTruckUltraLarge :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 

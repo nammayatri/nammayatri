@@ -714,6 +714,7 @@ getVehicleVariantImage :: String -> VehicleViewType -> String
 getVehicleVariantImage variant viewType =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
       city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+      _ = spy "DEBUG: variantConfig" variantConfig
   in
     if viewType == LEFT_VIEW
       then do
@@ -748,7 +749,15 @@ getVehicleVariantImage variant viewType =
           "AMBULANCE_VENTILATOR" -> variantConfig.ambulanceVentilator.leftViewImage
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_left_side"
           "DELIVERY_BIKE" -> variantConfig.deliveryBike.leftViewImage
+<<<<<<< HEAD
           "HERITAGE_CAB"  -> variantConfig.heritageCab.leftViewImage
+=======
+          "DELIVERY_TRUCK_MINI" -> variantConfig.deliveryTruckMini.leftViewImage
+          "DELIVERY_TRUCK_SMALL" -> variantConfig.deliveryTruckSmall.leftViewImage
+          "DELIVERY_TRUCK_MEDIUM" -> variantConfig.deliveryTruckMedium.leftViewImage
+          "DELIVERY_TRUCK_LARGE" -> variantConfig.deliveryTruckLarge.leftViewImage
+          "DELIVERY_TRUCK_ULTRA_LARGE" -> variantConfig.deliveryTruckUltraLarge.leftViewImage
+>>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -782,7 +791,15 @@ getVehicleVariantImage variant viewType =
           "AMBULANCE_AC" -> variantConfig.ambulanceAc.image
           "AMBULANCE_AC_OXY" -> variantConfig.ambulanceAcOxy.image
           "AMBULANCE_VENTILATOR" -> variantConfig.ambulanceVentilator.image
+<<<<<<< HEAD
           "HERITAGE_CAB"  -> variantConfig.heritageCab.image
+=======
+          "DELIVERY_TRUCK_MINI" -> variantConfig.deliveryTruckMini.image
+          "DELIVERY_TRUCK_SMALL" -> variantConfig.deliveryTruckSmall.image
+          "DELIVERY_TRUCK_MEDIUM" -> variantConfig.deliveryTruckMedium.image
+          "DELIVERY_TRUCK_LARGE" -> variantConfig.deliveryTruckLarge.image
+          "DELIVERY_TRUCK_ULTRA_LARGE" -> variantConfig.deliveryTruckUltraLarge.image
+>>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
 
 getVariantRideType :: String -> String
@@ -796,6 +813,7 @@ getVariantRideType variant =
                     "SEDAN" -> "Sedan"
                     "HATCHBACK" -> "AC Mini"
                     _ | isAmbulance variant -> "Ambulance"
+                    _ | isDeliveryTruckVariant variant -> "Truck"
                     _      -> "AC Cab"
     _          -> getString AC_CAB
 
@@ -874,6 +892,8 @@ quoteModalVariantImage variant =
         _ -> "ny_ic_no_quotes_auto"
       else if isAmbulance variant 
           then "ny_ic_no_quotes_ambulance"
+      else if isDeliveryTruckVariant variant 
+          then ""
       else "ny_ic_no_quotes_color"
 
 getCancellationImage :: String -> Int -> String
@@ -888,6 +908,7 @@ getCancellationImage vehicleVariant distance =
     "AMBULANCE_AC" -> "ny_ic_driver_near_ambulance"
     "AMBULANCE_AC_OXY" -> "ny_ic_driver_near_ambulance"
     "AMBULANCE_VENTILATOR" -> "ny_ic_driver_near_ambulance"
+    _ | isDeliveryTruckVariant vehicleVariant -> ""
     _ -> "ny_ic_driver_started"
   else case vehicleVariant of
     "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
@@ -898,6 +919,7 @@ getCancellationImage vehicleVariant distance =
     "AMBULANCE_AC" -> "ny_ic_driver_started_ambulance"
     "AMBULANCE_AC_OXY" -> "ny_ic_driver_started_ambulance"
     "AMBULANCE_VENTILATOR" -> "ny_ic_driver_started_ambulance"
+    _ | isDeliveryTruckVariant vehicleVariant -> ""
     _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
 getAutoRickshawNearImage  =
@@ -1279,6 +1301,11 @@ fetchVehicleVariant variant =
     "AMBULANCE_AC" -> Just ST.AMBULANCE_AC
     "AMBULANCE_AC_OXY" -> Just ST.AMBULANCE_AC_OXY
     "AMBULANCE_VENTILATOR" -> Just ST.AMBULANCE_VENTILATOR
+    "DELIVERY_TRUCK_MINI" -> Just ST.DELIVERY_TRUCK_MINI
+    "DELIVERY_TRUCK_SMALL" -> Just ST.DELIVERY_TRUCK_SMALL
+    "DELIVERY_TRUCK_MEDIUM" -> Just ST.DELIVERY_TRUCK_MEDIUM
+    "DELIVERY_TRUCK_LARGE" -> Just ST.DELIVERY_TRUCK_LARGE
+    "DELIVERY_TRUCK_ULTRA_LARGE" -> Just ST.DELIVERY_TRUCK_ULTRA_LARGE
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
@@ -1302,7 +1329,11 @@ getCitySpecificMarker city variant currentStage =
             "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
             "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
             _ | isAmbulance variant -> "ny_ic_ambulance_nav_on_map"
+<<<<<<< HEAD
             "HERITAGE_CAB"  -> if isHeritageCabImagePresent then "ny_ic_heritage_cab_nav_on_map" else "ny_ic_vehicle_nav_on_map"
+=======
+            _ | isDeliveryTruckVariant variant -> "ny_ic_delivery_truck_nav_on_map"
+>>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
             _               -> "ny_ic_vehicle_nav_on_map"
     in variantImage
 
@@ -1618,6 +1649,13 @@ isTamilNaduCity city = elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, T
 isKeralaCity :: City -> Boolean 
 isKeralaCity city = elem city [Kochi, Kozhikode, Thrissur, Trivandrum]
 
-
 isAmbulance :: String -> Boolean
 isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+isDeliveryTruckVariant :: String -> Boolean
+isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
+  "DELIVERY_TRUCK_MINI",
+  "DELIVERY_TRUCK_SMALL",
+  "DELIVERY_TRUCK_MEDIUM",
+  "DELIVERY_TRUCK_LARGE",
+  "DELIVERY_TRUCK_ULTRA_LARGE"]

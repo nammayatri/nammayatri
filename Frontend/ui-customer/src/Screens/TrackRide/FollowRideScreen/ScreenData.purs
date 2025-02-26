@@ -231,6 +231,10 @@ mockDriverInfo =
   , rideScheduledAtUTC : Nothing
   , senderDetails : Nothing
   , receiverDetails : Nothing
+  , parcelType : Nothing
+  , parcelQuantity : Nothing
   , estimatedTimeToReachDestination : Nothing
   , isAirConditioned : Nothing
+  , destinationWaitingTime : Nothing
+  , rideStartTime : ""
   }

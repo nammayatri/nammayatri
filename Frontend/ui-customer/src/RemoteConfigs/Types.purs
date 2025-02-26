@@ -27,8 +27,13 @@ type TipsConfigRC = {
   ambulanceTaxiOxy :: Array Int,
   ambulanceAc :: Array Int,
   ambulanceAcOxy :: Array Int,
-  ambulanceVentilator :: Array Int,
-  bookAny :: Array Int
+  ambulanceVentilator :: Array Int
+, deliveryTruckMini:: Array Int
+, deliveryTruckSmall:: Array Int
+, deliveryTruckMedium:: Array Int
+, deliveryTruckLarge:: Array Int
+, deliveryTruckUltraLarge:: Array Int
+, bookAny :: Array Int
 }
 
 type SafetyVideoConfig

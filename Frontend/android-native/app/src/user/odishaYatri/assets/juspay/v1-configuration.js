@@ -297,6 +297,31 @@ window.getMerchantConfig = function () {
           "name" : "Heritage Cab",
           "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_side.png",
           "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_left_side.png"
+        },
+        "deliveryTruckMini" : {
+          "name" : "Delivery Truck",
+          "image" : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
+          "leftViewImage" : "ny_ic_delivery_truck.png,"
+        }, 
+        "deliveryTruckSmall" : {
+          "name" : "Delivery Truck",
+          "image" : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
+          "leftViewImage" : "ny_ic_delivery_truck.png,"
+        }, 
+        "deliveryTruckMedium" : {
+          "name" : "Delivery Truck",
+          "image" : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
+          "leftViewImage" : "ny_ic_delivery_truck.png,"
+        }, 
+        "deliveryTruckLarge" : {
+          "name" : "Delivery Truck",
+          "image" : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
+          "leftViewImage" : "ny_ic_delivery_truck.png,"
+        }, 
+        "deliveryTruckUltraLarge" : {
+          "name" : "Delivery Truck",
+          "image" : "ny_ic_delivery_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_delivery_truck.png",
+          "leftViewImage" : "ny_ic_delivery_truck.png,"
         }
       }
       , "enableOnlyAuto" : true

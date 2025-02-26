@@ -100,7 +100,8 @@ type WaitingChargesConfig = {
   cab :: ChargesEntity,
   auto :: ChargesEntity,
   bike :: ChargesEntity,
-  ambulance :: ChargesEntity
+  ambulance :: ChargesEntity,
+  truck :: ChargesEntity
 }
 
 type ChargesEntity = {
@@ -139,4 +140,12 @@ type GeoJsonProperties = {
 type GeoJsonGeometry = {
     type :: String
   , coordinates :: Array (Array (Array (Array Number)))
+}
+
+type VehicleVariantWaitingCharge = {
+    deliveryTruckMini :: ChargesEntity
+  , deliveryTruckSmall :: ChargesEntity
+  , deliveryTruckMedium :: ChargesEntity
+  , deliveryTruckLarge :: ChargesEntity
+  , deliveryTruckUltraLarge :: ChargesEntity
 }

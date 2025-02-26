@@ -435,7 +435,11 @@ dummyRideData = {
       , receiverInstructions : Nothing
       , senderPersonDetails : Nothing
       , receiverPersonDetails : Nothing
+      , parcelType : Nothing
+      , parcelQuantity : Nothing
       , notifiedReachedDestination : false
+      , destinationWaitingTime : Nothing
+      , destinationWaitTimerId : ""
       }
 
 initialParkingData :: ParkingData
