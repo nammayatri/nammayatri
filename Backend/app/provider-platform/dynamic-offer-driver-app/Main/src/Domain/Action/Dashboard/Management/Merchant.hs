@@ -1007,6 +1007,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     defaultStepFee :: Text,
     extraKmRateStartDistance :: Text,
     perExtraKmRate :: Text,
+    baseFareDepreciation :: Text,
     peakTimings :: Text,
     peakDays :: Text,
     cancellationFarePolicyDescription :: Text,
@@ -1091,6 +1092,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "default_step_fee"
       <*> r .: "extra_km_rate_start_distance"
       <*> r .: "per_extra_km_rate"
+      <*> r .: "base_fare_depreciation"
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
       <*> r .: "cancellation_fare_policy_description"
@@ -1459,7 +1461,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       }
             startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
-            let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
+            let baseFareDepreciation :: HighPrecMoney = fromMaybe (HighPrecMoney 0.0) (readMaybeCSVField idx row.baseFareDepreciation "Base fare depreciation")
+            let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate, baseFareDepreciation}]
             -- TODO: Add support for per min rate sections in csv file
             let perMinRateSections = Nothing
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = mbNightCharges, ..}

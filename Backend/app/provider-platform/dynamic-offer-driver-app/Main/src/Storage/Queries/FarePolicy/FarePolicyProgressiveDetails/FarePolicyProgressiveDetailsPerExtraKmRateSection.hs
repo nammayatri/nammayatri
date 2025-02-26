@@ -55,6 +55,7 @@ instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection 
           DFP.FPProgressiveDetailsPerExtraKmRateSection
             { startDistance = startDistance,
               perExtraKmRate = perExtraKmRate,
+              baseFareDepreciation = fromMaybe (HighPrecMoney 0.0) baseFareDepreciation,
               distanceUnit = fromMaybe Meter distanceUnit
             }
         )
@@ -66,5 +67,6 @@ instance ToTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection Be
         farePolicyId = farePolicyId,
         startDistance = startDistance,
         perExtraKmRate = perExtraKmRate,
+        baseFareDepreciation = Just baseFareDepreciation,
         distanceUnit = Just distanceUnit
       }
