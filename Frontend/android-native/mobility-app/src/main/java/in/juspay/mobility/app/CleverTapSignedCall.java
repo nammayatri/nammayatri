@@ -432,6 +432,10 @@ public class CleverTapSignedCall {
     }
 
     private void sendJavaScriptCallback(String callback, String callId, String status, String rideId, int errorCode, boolean isDriver, String networkType, String networkQuality, String merchantId) {
+        if (callback == null || callId == null || status == null || rideId == null || networkType == null || networkQuality == null || merchantId == null) {
+            Log.d("signedcall", "JavaScript callback not sent due to null values.");
+            return;
+        }
         String javascript = String.format(Locale.ENGLISH,
                 "window.callUICallback('%s','%s', '%s', '%s', %d, %d, '%s', '%s', '%s');",
                 callback, callId, status, rideId, errorCode, isDriver ? 1 : 0, networkType, networkQuality, merchantId);
