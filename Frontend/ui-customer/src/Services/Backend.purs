@@ -1103,7 +1103,13 @@ bookTicketsBT payload placeId = do
     withAPIResultBT (EP.ticketPlaceBook placeId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketBookingRequest placeId payload))
     where
     errorHandler errorPayload = do
-            BackT $ pure GoBack
+        let errResp = errorPayload.response
+            codeMessage = decodeError errResp.errorMessage "errorCode"
+            userMessage = decodeError errResp.errorMessage "errorMessage"
+        case errorPayload.code, codeMessage, userMessage of
+            400, "INVALID_REQUEST", errMsg -> void $ lift $ lift $ EHU.showToast errMsg
+            _, _, errMsg -> void $ lift $ lift $ EHU.showToast errMsg
+        BackT $ pure GoBack
 
 mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
 mkBookingTicketReq ticketBookingScreenData = 
