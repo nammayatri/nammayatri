@@ -1,5 +1,4 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -17,8 +16,10 @@ import qualified Tools.Beam.UtilsTH
 
 data IntegratedBPPConfig = IntegratedBPPConfig
   { domain :: Kernel.Prelude.Text,
+    id :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -26,8 +27,13 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   }
   deriving (Generic, FromJSON, ToJSON)
 
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
   | CUMTA Domain.Types.Extra.IntegratedBPPConfig.CUMTAConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
+  | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   deriving (Generic, FromJSON, ToJSON, Eq)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)
