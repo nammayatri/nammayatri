@@ -1133,15 +1133,18 @@ calculateTotalRequestedUnits req = Map.toList $ Map.fromListWith (+) [(c.categor
 setupBlockMechanismNx :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
 setupBlockMechanismNx serviceCategoryId visitDate = do
   mbBookedCount :: Maybe Int <- Redis.get (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate)
-  when (isNothing mbBookedCount) $ do
+  mbAllowedMaxCapacity :: Maybe Int <- Redis.get (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate)
+  when (isNothing mbBookedCount || isNothing mbAllowedMaxCapacity) $ do
     serviceCategory <- QSC.findById serviceCategoryId >>= fromMaybeM (InternalError $ "Setup failed: Service Category id " <> serviceCategoryId.getId <> " not found")
     whenJust serviceCategory.availableSeats $ \maxSeats -> do
+      mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCategoryId visitDate
+      let alreadyBookedCount = maybe 0 (.booked) mbSeatM
       keyExpiryTime <- expirationTimeInSeconds visitDate
       let keysAndValues =
             [ (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate, maxSeats),
               (mkTicketServiceCategoryConflictResolverKey serviceCategoryId visitDate, 0),
               (mkTicketServiceCategoryActiveBlockRequestKey serviceCategoryId visitDate, 0),
-              (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate, 0)
+              (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate, alreadyBookedCount)
             ]
       when (keyExpiryTime > 0) $ forM_ keysAndValues $ \(key, value) -> void $ Redis.setNxExpire key keyExpiryTime value
   where
