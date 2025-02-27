@@ -37,6 +37,7 @@ module Tools.Payment
     groupSumVendorSplits,
     roundVendorFee,
     getIsSplitEnabled,
+    roundToTwoDecimalPlaces,
   )
 where
 

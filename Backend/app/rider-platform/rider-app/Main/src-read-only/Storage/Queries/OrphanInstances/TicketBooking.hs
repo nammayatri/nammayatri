@@ -21,6 +21,7 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
       Just
         Domain.Types.TicketBooking.TicketBooking
           { amount = Kernel.Types.Common.mkPrice currency amount,
+            blockExpirationTime = blockExpirationTime,
             bookedSeats = bookedSeats,
             cancelledSeats = cancelledSeats,
             createdAt = createdAt,
@@ -41,6 +42,7 @@ instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking wh
     Beam.TicketBookingT
       { Beam.amount = (.amount) amount,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
+        Beam.blockExpirationTime = blockExpirationTime,
         Beam.bookedSeats = bookedSeats,
         Beam.cancelledSeats = cancelledSeats,
         Beam.createdAt = createdAt,

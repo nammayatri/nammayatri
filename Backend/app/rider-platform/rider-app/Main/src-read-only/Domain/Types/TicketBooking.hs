@@ -20,6 +20,7 @@ import qualified Tools.Payment
 
 data TicketBooking = TicketBooking
   { amount :: Kernel.Types.Common.Price,
+    blockExpirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     bookedSeats :: Kernel.Prelude.Int,
     cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,

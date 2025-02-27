@@ -1,11 +1,15 @@
 module Domain.Action.UI.TicketService where
 
 import API.Types.UI.TicketService
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
+import Data.List (partition)
 import qualified Data.Map as Map
 import Data.Ord as DO
 import qualified Data.Text as Data.Text
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
@@ -35,6 +39,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as Kernel.Types.APISuccess
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Kernel.Types.Id
+import Kernel.Types.Time
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -207,6 +212,15 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
 
+  -- Redis blocking starts here --
+  -- setup if not done
+  let requestedUnitsCount = calculateTotalRequestedUnits req
+  forM_ (fst <$> requestedUnitsCount) (\svcCategoryId -> setupBlockMechanismNx svcCategoryId req.visitDate)
+
+  -- try blocking seats for all and release if failed
+  res <- blockSeats personId_ req.visitDate requestedUnitsCount
+  mbBlockExpiryTime <- case res of BlockFailed msg -> throwError (InvalidRequest msg); BlockSuccess expTime -> return expTime
+
   ticketBookingId <- generateGUID
   ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate) req.services
 
@@ -216,7 +230,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   let bookedSeats = sum $ ticketBookingServices <&> (.bookedSeats)
       vendorSplits = accumulateVendorSplits (ticketBookingServices <&> (.vendorSplitDetails))
 
-  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats vendorSplits
+  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats vendorSplits mbBlockExpiryTime
 
   QTBS.createMany ticketBookingServices
   QTB.create ticketBooking
@@ -254,7 +268,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       throwError $ InternalError "Failed to create order"
   where
     accumulateVendorSplits mbSplits = mbSplits & catMaybes & concat & Payment.groupSumVendorSplits & \l -> bool (pure l) (Nothing) (null l)
-    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats vendorSplits = do
+    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats vendorSplits mbBlockExpiryTime = do
       shortId <- generateShortId
       now <- getCurrentTime
       return $
@@ -272,7 +286,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             updatedAt = now,
             bookedSeats,
             cancelledSeats = Nothing,
-            vendorSplitDetails = vendorSplits
+            vendorSplitDetails = vendorSplits,
+            blockExpirationTime = mbBlockExpiryTime
           }
 
     createTicketBookingService merchantOperatingCityId ticketBookingId visitDate ticketServicesReq = do
@@ -664,7 +679,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
-  if ticketBooking'.status == DTTB.Cancelled || ticketBooking'.status == DTTB.Booked
+  let totalRefundAmount = Payment.roundToTwoDecimalPlaces ticketBooking'.amount.amount
+  if ticketBooking'.status == DTTB.Cancelled || ticketBooking'.status == DTTB.Booked || ticketBooking'.status == DTTB.RefundInitiated
     then do
       return ticketBooking'.status
     else do
@@ -672,14 +688,32 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
       case paymentStatus of
         DPayment.PaymentStatus {..} -> do
           when (status == Payment.CHARGED) $ do
-            QTB.updateStatusByShortId DTTB.Booked _shortId
-            QTBS.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
-            mapM_
-              ( \tbsc ->
-                  whenJust tbsc.serviceCategoryId $ \serviceId ->
-                    updateBookedAndBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
-              )
-              ticketBookingServiceCategories
+            -- checking here if blockExpiryTime is passed
+            currentTimeWithBuffer <- (10000 +) <$> getCurrentTimestamp
+            let windowTimePassed = maybe False (\expTime -> currentTimeWithBuffer > expTime) ticketBooking'.blockExpirationTime
+            if windowTimePassed
+              then do
+                intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId
+                QTB.updateStatusByShortId DTTB.RefundInitiated _shortId
+                QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
+              else do
+                res <- case ticketBooking'.blockExpirationTime of
+                  Just _ -> tryLockBooking personId ticketBookingServiceCategories
+                  Nothing -> return (LockBookingSuccess Nothing)
+                case res of
+                  LockBookingSuccess _ -> do
+                    QTB.updateStatusByShortId DTTB.Booked _shortId
+                    QTBS.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
+                    mapM_
+                      ( \tbsc ->
+                          whenJust tbsc.serviceCategoryId $ \serviceId ->
+                            updateBookedAndBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
+                      )
+                      ticketBookingServiceCategories
+                  LockBookingFailed -> do
+                    intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId
+                    QTB.updateStatusByShortId DTTB.RefundInitiated _shortId
+                    QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
           when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
             QTB.updateStatusByShortId DTTB.Failed _shortId
             QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
@@ -698,7 +732,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
     updateBookedAndBlockedSeats serviceCatId tbsc visitDate = do
       seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
       QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
-      QTSM.updateBookedSeats (seatManagement.booked + tbsc.bookedSeats) serviceCatId visitDate
+      QTSM.safeUpdateBookedSeats (seatManagement.booked + tbsc.bookedSeats) serviceCatId visitDate
 
     updateBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
     updateBlockedSeats serviceCatId tbsc visitDate = do
@@ -1011,3 +1045,174 @@ mkMerchantTicketBookingCancellationKey businessHourId date serviceCategoryId =
 mkUserTicketBookingCancellationKey :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Text
 mkUserTicketBookingCancellationKey businessHourId date serviceCategoryId =
   "User:ticket:booking:cancel:-" <> businessHourId.getId <> "-" <> show date <> "-" <> serviceCategoryId.getId
+
+data BlockResult = BlockSuccess (Maybe Double) | BlockFailed Text deriving (Generic, Eq, Show, Read)
+
+data LockBookingResult = LockBookingSuccess (Maybe RevertInfo) | LockBookingFailed deriving (Generic, Eq, Show, Read)
+
+data RevertInfo = RevertInfo {revertKey :: Text, decrementBy :: Int} deriving (Generic, Eq, Show, Read)
+
+mkTicketServiceCategoryBlockedSeatKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryBlockedSeatKey categoryId visitDate = "TicketServiceCategory:blockedSet:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceCategoryBookedCountKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryBookedCountKey categoryId visitDate = "TicketServiceCategory:bookedCount:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceCategoryActiveBlockRequestKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate = "TicketServiceCategory:activeBlockQuantityRequest:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceCategoryConflictResolverKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceCategoryConflictResolverKey categoryId visitDate = "TicketServiceCategory:activeBlockConflictResolver:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkTicketServiceAllowedMaxCapacityKey :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Text
+mkTicketServiceAllowedMaxCapacityKey categoryId visitDate = "TicketServiceCategory:allowedMaxCapacity:id-" <> categoryId.getId <> "-date-" <> show visitDate
+
+mkBlockMember :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Int -> Text
+mkBlockMember personId numOfUnits = "{" <> personId.getId <> "}:" <> show numOfUnits
+
+releaseBlock :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)] -> Environment.Flow ()
+releaseBlock personId visitDate = mapM_ (\(categoryId, categoryUnit) -> Redis.zRem (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) ([mkBlockMember personId categoryUnit]))
+
+tryBlockSeat :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int) -> Environment.Flow BlockResult
+tryBlockSeat personId visitDate (categoryId, numberOfUnits) = withActiveRequestCounter tryBlockServiceCategory
+  where
+    blockSeat :: Environment.Flow BlockResult
+    blockSeat = do
+      now <- getCurrentTimestamp
+      Redis.zAdd (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) [(now, mkBlockMember personId numberOfUnits)]
+      return $ BlockSuccess (Just $ now + 300000)
+    tryBlockServiceCategory :: Int -> Environment.Flow BlockResult
+    tryBlockServiceCategory requestCount = do
+      now <- getCurrentTimestamp
+      mbAllowedMaxCapacity :: Maybe Int <- Redis.get (mkTicketServiceAllowedMaxCapacityKey categoryId visitDate)
+      case mbAllowedMaxCapacity of
+        Just allowedMaxCapacity -> do
+          bookedCount :: Int <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate) >>= fromMaybeM (InternalError $ "Booked Count not found for categoryId " <> show categoryId <> "on date " <> show visitDate)
+          if (bookedCount + numberOfUnits > allowedMaxCapacity)
+            then return (BlockFailed $ (if (allowedMaxCapacity - bookedCount) > 0 then "Only " <> show (allowedMaxCapacity - bookedCount) else "No") <> " tickets left")
+            else do
+              blockedCountInWindow <- getBlockCountInWindow now
+              bookedCount' :: Int <- Redis.get (mkTicketServiceCategoryBookedCountKey categoryId visitDate) >>= fromMaybeM (InternalError $ "Booked Count not found for categoryId " <> show categoryId <> "on date " <> show visitDate)
+              if (bookedCount' + blockedCountInWindow + requestCount) > allowedMaxCapacity
+                then withConflictResolverCounter $ \resolverCounter -> do
+                  blockedCountInWindow' <- getBlockCountInWindow now
+                  if resolverCounter > (allowedMaxCapacity - bookedCount - blockedCountInWindow')
+                    then return $ BlockFailed "All Tickets Blocked for now, try again after some time"
+                    else blockSeat
+                else blockSeat
+        Nothing -> pure $ BlockSuccess Nothing
+    getBlockCountInWindow :: Double -> Environment.Flow Int
+    getBlockCountInWindow now = do
+      blockedSet <- Redis.zRangeByScore (mkTicketServiceCategoryBlockedSeatKey categoryId visitDate) (now - 300000) now
+      return $ accumulateCount blockedSet
+      where
+        accumulateCount arr = sum $ map extractCount arr
+        extractCount :: BS.ByteString -> Int
+        extractCount bs = case BS8.split ':' bs of
+          [_personId, countBS] -> case BS8.readInt countBS of
+            Just (count, _) -> count
+            Nothing -> 0
+          _ -> 0
+    withActiveRequestCounter :: (Int -> Environment.Flow a) -> Environment.Flow a
+    withActiveRequestCounter action = do
+      requestCount <- Redis.incrby (mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate) (fromIntegral numberOfUnits)
+      res <- action (fromIntegral requestCount)
+      _ <- Redis.decrby (mkTicketServiceCategoryActiveBlockRequestKey categoryId visitDate) (fromIntegral numberOfUnits)
+      return res
+
+    withConflictResolverCounter :: (Int -> Environment.Flow a) -> Environment.Flow a
+    withConflictResolverCounter action = do
+      conflictResolverCount <- Redis.incrby (mkTicketServiceCategoryConflictResolverKey categoryId visitDate) (fromIntegral numberOfUnits)
+      res <- action (fromIntegral conflictResolverCount)
+      _ <- Redis.decrby (mkTicketServiceCategoryConflictResolverKey categoryId visitDate) (fromIntegral numberOfUnits)
+      return res
+
+calculateTotalRequestedUnits :: TicketBookingReq -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)]
+calculateTotalRequestedUnits req = Map.toList $ Map.fromListWith (+) [(c.categoryId, sum (map (.numberOfUnits) c.peopleCategories)) | s <- req.services, c <- s.categories]
+
+setupBlockMechanismNx :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
+setupBlockMechanismNx serviceCategoryId visitDate = do
+  mbBookedCount :: Maybe Int <- Redis.get (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate)
+  when (isNothing mbBookedCount) $ do
+    serviceCategory <- QSC.findById serviceCategoryId >>= fromMaybeM (InternalError $ "Setup failed: Service Category id " <> serviceCategoryId.getId <> " not found")
+    whenJust serviceCategory.availableSeats $ \maxSeats -> do
+      keyExpiryTime <- expirationTimeInSeconds visitDate
+      let keysAndValues =
+            [ (mkTicketServiceAllowedMaxCapacityKey serviceCategoryId visitDate, maxSeats),
+              (mkTicketServiceCategoryConflictResolverKey serviceCategoryId visitDate, 0),
+              (mkTicketServiceCategoryActiveBlockRequestKey serviceCategoryId visitDate, 0),
+              (mkTicketServiceCategoryBookedCountKey serviceCategoryId visitDate, 0)
+            ]
+      when (keyExpiryTime > 0) $ forM_ keysAndValues $ \(key, value) -> void $ Redis.setNxExpire key keyExpiryTime value
+  where
+    endOfDayTime :: Day -> UTCTime
+    endOfDayTime day = UTCTime day (secondsToDiffTime (24 * 60 * 60 - 1))
+
+    expirationTimeInSeconds :: Day -> Environment.Flow Int
+    expirationTimeInSeconds day = do
+      currentTime <- getCurrentTime
+      let endTime = endOfDayTime day
+      return . round $ utcTimeToPOSIXSeconds endTime - utcTimeToPOSIXSeconds currentTime
+
+blockSeats :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)] -> Environment.Flow BlockResult
+blockSeats personId visitDate requestedUnits = do
+  res <- mapM (tryBlockSeat personId visitDate) requestedUnits
+  let (failedBlocks, successfulBlocks) = partition (isBlockFailed . snd) (zip requestedUnits res)
+  if null failedBlocks
+    then do
+      let blockExpiration = (fmap minimum . nonEmpty . catMaybes) [expiration | (_, BlockSuccess expiration) <- successfulBlocks]
+      return $ BlockSuccess blockExpiration
+    else do
+      releaseBlock personId visitDate (map fst successfulBlocks)
+      return $ BlockFailed (getErrorMessage $ snd <$> failedBlocks)
+  where
+    getErrorMessage failedBlocks = Data.Text.intercalate "\n" [msg | BlockFailed msg <- failedBlocks]
+
+bookAndReleaseBlock :: Kernel.Types.Id.Id Domain.Types.Person.Person -> DTB.TicketBookingServiceCategory -> Environment.Flow LockBookingResult
+bookAndReleaseBlock personId tbsc = withLogTag "Redis" $ do
+  case (Kernel.Types.Id.Id <$> tbsc.serviceCategoryId, tbsc.visitDate) of
+    (Just scId, Just date) -> do
+      mbAllowedMaxCapacity :: Maybe Integer <- Redis.get (mkTicketServiceAllowedMaxCapacityKey scId date)
+      case mbAllowedMaxCapacity of
+        Just allowedMaxCapacity -> do
+          res <- Redis.incrby (mkTicketServiceCategoryBookedCountKey scId date) (fromIntegral tbsc.bookedSeats)
+          releaseBlock personId date [(scId, tbsc.bookedSeats)]
+          if res > allowedMaxCapacity
+            then do
+              void $ Redis.decrby (mkTicketServiceCategoryBookedCountKey scId date) (fromIntegral tbsc.bookedSeats)
+              return LockBookingFailed
+            else do
+              fork "Ticket Booking Garbage collection" $ garbageCollect scId date
+              return $ LockBookingSuccess (Just $ RevertInfo (mkTicketServiceCategoryBookedCountKey scId date) tbsc.bookedSeats)
+        Nothing -> return $ LockBookingSuccess Nothing
+    _ -> return LockBookingFailed
+
+tryLockBooking :: Kernel.Types.Id.Id Domain.Types.Person.Person -> [DTB.TicketBookingServiceCategory] -> Environment.Flow LockBookingResult
+tryLockBooking personId tscs = do
+  bookingResults <- mapM (bookAndReleaseBlock personId) tscs
+  if any (== LockBookingFailed) bookingResults
+    then do
+      revertBookings (extractRevertInfo bookingResults)
+      return LockBookingFailed
+    else return (LockBookingSuccess Nothing)
+
+isBlockFailed :: BlockResult -> Bool
+isBlockFailed (BlockFailed _) = True
+isBlockFailed _ = False
+
+revertBookings :: [RevertInfo] -> Environment.Flow ()
+revertBookings = mapM_ (\rInfo -> void $ Redis.decrby rInfo.revertKey (fromIntegral rInfo.decrementBy))
+
+extractRevertInfo :: [LockBookingResult] -> [RevertInfo]
+extractRevertInfo =
+  catMaybes
+    . map
+      ( \case
+          LockBookingFailed -> Nothing
+          LockBookingSuccess rinfo -> rinfo
+      )
+
+garbageCollect :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
+garbageCollect scId date = do
+  now <- getCurrentTimestamp
+  void $ Redis.zRemRangeByScore (mkTicketServiceCategoryBlockedSeatKey scId date) 0 (now - 600000)
