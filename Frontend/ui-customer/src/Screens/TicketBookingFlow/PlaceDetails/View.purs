@@ -59,6 +59,8 @@ import Mobility.Prelude (groupAdjacent, sortAccToDayName, boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Tuple (Tuple(..), fst, snd)
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -862,7 +864,7 @@ individualServiceBHView push state service =
            $ [] <> (if DA.length service.serviceCategories > 1 
                    then maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory
                    else maybe [] (\selServiceCat -> if shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId
-                                                   then map (incrementDecrementView push state service.id selServiceCat.categoryId) selServiceCat.peopleCategories
+                                                   then map (incrementDecrementView push state service.id selServiceCat.categoryId selServiceCat) selServiceCat.peopleCategories
                                                    else []
                                   ) mbSelectedCategory)
                    <> maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory
@@ -879,7 +881,7 @@ multipleServiceCategory push state serviceId selectedBHId categories selectedCat
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ] ( if (shouldDisplayIncDscView selectedCategory.validOpDay selectedBHId) then (map (incrementDecrementView push state serviceId selectedCategory.categoryId) selectedCategory.peopleCategories)
+      ] ( if (shouldDisplayIncDscView selectedCategory.validOpDay selectedBHId) then (map (incrementDecrementView push state serviceId selectedCategory.categoryId selectedCategory) selectedCategory.peopleCategories)
           else [] )
     , textView $
       [ text "Select your ticket category"
@@ -986,8 +988,8 @@ selectDestinationViewPill push state serviceId category =
       [weight 1.0][]
   ]
 
-incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState-> String -> String -> ST.PeopleCategoriesData -> PrestoDOM (Effect Unit) w
-incrementDecrementView push state  serviceId serviceCatId pcCategory  =
+incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState-> String -> String -> ST.ServiceCategory -> ST.PeopleCategoriesData -> PrestoDOM (Effect Unit) w
+incrementDecrementView push state  serviceId serviceCatId serviceCategory pcCategory =
   let ticketLimit = getTicketIncrementLimit state
   in
   PrestoAnim.animationSet [
@@ -1011,7 +1013,7 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
       , cornerRadius 8.0
       , background Color.white900
       , gravity CENTER_VERTICAL
-      , stroke $ "1," <> Color.grey900
+      , stroke $ if serviceCategory.noRemainingTicketAvailable then "1," <> Color.red900 else  "1," <> Color.grey900
       ][  textView $
           [ background Color.grey700
           , text "-"
@@ -1020,7 +1022,7 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
           , width $ V 72
           , height $ V 36
           , padding $ Padding 28 1 28 7
-          , onClick push $ const (DecrementTicket serviceId serviceCatId pcCategory ticketLimit)
+          , onClick push $ const (DecrementTicket serviceId serviceCatId pcCategory ticketLimit serviceCategory)
           , height WRAP_CONTENT
           ] <> FontStyle.body10 TypoGraphy
         , textView $
@@ -1039,7 +1041,8 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
           , cornerRadius 4.0
           , width $ V 72
           , height $ V 36
-          , onClick push $ const (IncrementTicket serviceId serviceCatId pcCategory ticketLimit)
+          , alpha if serviceCategory.noRemainingTicketAvailable then 0.5 else 1.0
+          , onClick push $ const (IncrementTicket serviceId serviceCatId pcCategory ticketLimit serviceCategory)
           , gravity CENTER
           ] <> FontStyle.body10 TypoGraphy
       ]
@@ -1047,6 +1050,12 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
       [ text $ "Upto " <> show ticketLimit <> " tickets can only be booked at a time"
       , visibility $ if pcCategory.ticketLimitCrossed then VISIBLE else GONE
       , color Color.red 
+      , margin $ MarginTop 8
+      ] <> FontStyle.tags TypoGraphy
+    , textView $
+      [ text $ getStringV2 no_remaining_tickets
+      , visibility $ if serviceCategory.noRemainingTicketAvailable then VISIBLE else GONE
+      , color Color.red900
       , margin $ MarginTop 8
       ] <> FontStyle.tags TypoGraphy
   ]

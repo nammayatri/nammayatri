@@ -1737,6 +1737,7 @@ newtype Keymap = Keymap {
 , clean_ambulance :: String
 , ambulance_booking_disclaimer :: String
 , different_ambulance :: String
+, no_remaining_tickets :: String
 }
 
 
@@ -6919,3 +6920,8 @@ ambulance_booking_disclaimer = a
 different_ambulance :: Proxy "different_ambulance"
 different_ambulance = a
 
+different_ambulance :: Proxy "different_ambulance"
+different_ambulance = a
+
+no_remaining_tickets :: Proxy "no_remaining_tickets"
+no_remaining_tickets = a
