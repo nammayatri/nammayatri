@@ -821,7 +821,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
       let defaultFrom = UTCTime (utctDay now) 0
           from = fromMaybe defaultFrom mbFrom
           to = fromMaybe now mbTo
-      forM (zip driverListWithInfo fdaList) $ \((driver, driverInfo'), fda) -> do
+      forM driverListWithInfo $ \(driver, driverInfo') -> do
         driverRCAssociation <- QRCAssociation.findAllByDriverId driver.id
         let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
         (vehicleNo, vehicleType) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
@@ -854,7 +854,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
               return $ isJust currentTripTransaction
             else pure False
         let isRcAssociated = isJust vehicleNo
-        let isDriverActive = fda.isActive
+        let isDriverActive = maybe False (.isActive) $ find (\fda -> fda.driverId == driver.id) fdaList
         let driverId = Just $ driver.id.getId
         let ls =
               Common.DriveVehicleAssociationListItem
