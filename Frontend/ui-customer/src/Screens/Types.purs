@@ -2044,7 +2044,8 @@ type ServiceCategory =
     peopleCategories :: Array PeopleCategoriesData,
     operationalDays :: Array OperationalDaysData,
     operationalDate :: Maybe OperationalDate,
-    validOpDay :: Maybe OperationalDaysData
+    validOpDay :: Maybe OperationalDaysData,
+    noRemainingTicketAvailable :: Boolean
   }
 
 type OperationalDate = {

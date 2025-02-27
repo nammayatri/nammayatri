@@ -152,7 +152,8 @@ transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state 
               peopleCategories : generatePeopleCategories (bhData.category ^. _peopleCategories),
               operationalDays : operationalDaysData,
               operationalDate : bhData.operationalDate,
-              validOpDay : find (\opDay -> selOpDay `elem` opDay.operationalDays) operationalDaysData
+              validOpDay : find (\opDay -> selOpDay `elem` opDay.operationalDays) operationalDaysData,
+              noRemainingTicketAvailable : false
           }]
 
     generateOperationalDaysData :: Array FlattenedBusinessHourData -> Array OperationalDaysData
