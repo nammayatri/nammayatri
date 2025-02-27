@@ -281,6 +281,11 @@ getVehicleImage variant vehicleDetail city = do
               "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_concept"
               "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
               "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+              "DELIVERY_TRUCK_MINI" -> "ny_ic_mini_truck_left_side"
+              "DELIVERY_TRUCK_SMALL" -> "ny_ic_small_truck_left_side"
+              "DELIVERY_TRUCK_MEDIUM" -> "ny_ic_medium_truck_left_side"
+              "DELIVERY_TRUCK_LARGE" -> "ny_ic_large_truck_left_side"
+              "DELIVERY_TRUCK_ULTRA_LARGE" -> "ny_ic_ultra_large_truck_left_side"
               _ | isDeliveryTruckVariant variant -> "ny_ic_truck_delivery_concept"
               _           -> "ny_ic_sedan_concept"              
         where 
