@@ -21,6 +21,8 @@ data IssueConfig = IssueConfig
     onKaptMarkIssueResMsgs :: [Id IssueMessage],
     merchantId :: Id Common.Merchant,
     messageTransformationConfig :: Maybe MessageTransformationConfig,
+    reopenCount :: Int,
+    onIssueCloseMsgs :: [Id IssueMessage],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

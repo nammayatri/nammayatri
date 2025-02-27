@@ -31,6 +31,7 @@ data IssueReport = IssueReport
     ticketId :: Maybe Text,
     chats :: [Chat],
     merchantId :: Maybe (Id Merchant),
-    becknIssueId :: Maybe Text
+    becknIssueId :: Maybe Text,
+    reopenedCount :: Int
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)
