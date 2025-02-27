@@ -535,7 +535,6 @@ public class MainActivity extends AppCompatActivity {
         if (!MobilityServiceHolder.getInstance(context).isInitialized()) {
             MobilityServiceHolder.getInstance(context).initiate(context);
         }
-        MobilityServiceHolder.getInstance(context).setCallbackAdapter(callbackAdapter);
 
         if(isPerfEnabledCustomer){
             String appName = getApplicationContext().getResources().getString(R.string.app_type);
@@ -551,6 +550,8 @@ public class MainActivity extends AppCompatActivity {
         preInitFutureTaskResult = preInitFlow();
 
         handleSplashScreen();
+
+        MobilityServiceHolder.getInstance(context).setCallbackAdapter(callbackAdapter);
 
         WebView.setWebContentsDebuggingEnabled(true);
 
