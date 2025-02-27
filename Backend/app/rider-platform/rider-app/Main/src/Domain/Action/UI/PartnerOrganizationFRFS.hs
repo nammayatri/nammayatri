@@ -46,6 +46,7 @@ import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
@@ -74,6 +75,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
@@ -101,7 +103,8 @@ data GetFareReq = GetFareReq
     mobileNumber :: Text,
     identifierType :: SP.IdentifierType,
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
-    cityId :: Id DMOC.MerchantOperatingCity
+    cityId :: Id DMOC.MerchantOperatingCity,
+    vehicleType :: Maybe Spec.VehicleCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -110,7 +113,8 @@ data GetFareReqV2 = GetFareReqV2
     toStationCode :: Text,
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
     routeCode :: Maybe Text,
-    cityId :: Id DMOC.MerchantOperatingCity
+    cityId :: Id DMOC.MerchantOperatingCity,
+    vehicleType :: Maybe Spec.VehicleCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -403,7 +407,7 @@ shareTicketInfo ticketBookingId = do
           B.runInReplica $
             CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
               >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
-        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
+        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking DIBC.PARTNERORG
 
 getFareV2 :: PartnerOrganization -> Station -> Station -> Maybe (Id PartnerOrgTransaction) -> Maybe Text -> Flow GetFareRespV2
 getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = do
@@ -414,15 +418,16 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
   bapConfig <-
     CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)
       >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")
+  merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType) DIBC.PARTNERORG >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "Platform Type:" +|| DIBC.PARTNERORG ||+ "")
   route <-
     maybe
       (pure Nothing)
       ( \routeCode' -> do
-          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          route' <- B.runInReplica $ QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
           return $ Just route'
       )
       routeCode
-  merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
   let frfsRouteDetails =
         [ FRFSRouteDetails
             { routeCode = routeCode,
@@ -433,7 +438,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
   searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
-    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails
+    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails integratedBPPConfig
   quotes <- mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchReq.id
   whenJust quotes $ \quotes' -> QQuote.createMany quotes'
   case quotes of
@@ -641,7 +646,8 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
                 mobileNumber = req.mobileNumber,
                 identifierType = req.identifierType,
                 partnerOrgTransactionId = Nothing,
-                cityId = fromStation.merchantOperatingCityId
+                cityId = fromStation.merchantOperatingCityId,
+                vehicleType = Just fromStation.vehicleType
               }
       let mbRegCoordinates = mkLatLong fromStation.lat fromStation.lon
       (personId, token) <- upsertPersonAndGetToken partnerOrg.orgId regPOCfg fromStation.merchantOperatingCityId fromStation.merchantId mbRegCoordinates getFareReq
