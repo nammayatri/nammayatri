@@ -44,8 +44,8 @@ data Action = AfterRender
             | GenericHeaderAC GenericHeader.Action 
             | PrimaryButtonAC PrimaryButton.Action
             | ToggleTicketOption String 
-            | IncrementTicket String String PeopleCategoriesData Int
-            | DecrementTicket String String PeopleCategoriesData Int
+            | IncrementTicket String String PeopleCategoriesData Int ServiceCategory
+            | DecrementTicket String String PeopleCategoriesData Int ServiceCategory
             | DatePicker String String Int Int Int
             | ToggleTermsAndConditions
             | NoAction
@@ -69,13 +69,16 @@ eval (ToggleTicketOption serviceId) state = do
       updatedAmount = calculateTotalAmount updatedServicesInfo
   continue state { data { servicesInfo = updatedServicesInfo , totalAmount = updatedAmount } }
 
-eval (IncrementTicket serviceId serviceCatId peopleCat limit) state = do
+eval (IncrementTicket serviceId serviceCatId peopleCat limit serviceCategory) state = do
+  let totalSeatsBooked = foldl (\acc peopleCategory -> peopleCategory.currentValue + acc) 0 serviceCategory.peopleCategories
+
   if peopleCat.currentValue == limit then continue state { data {servicesInfo = markLimitCrossed serviceId serviceCatId peopleCat true state.data.servicesInfo}}
+  else if maybe false (\availableSeats -> totalSeatsBooked >= availableSeats - serviceCategory.bookedSeats) serviceCategory.availableSeats then continue state { data { servicesInfo = showNoRemainingTicketsAvailable serviceId serviceCatId peopleCat true state.data.servicesInfo}}
   else do
     let {finalAmount, updateServicesInfo} = updateAndCalculateTotalServiceAmount serviceId serviceCatId peopleCat (Just true) state state.data.servicesInfo
     continue state { data { totalAmount = finalAmount, servicesInfo = updateServicesInfo } }
 
-eval (DecrementTicket serviceId serviceCatId peopleCat limit) state = do
+eval (DecrementTicket serviceId serviceCatId peopleCat limit serviceCategory) state = do
   let {finalAmount, updateServicesInfo} = updateAndCalculateTotalServiceAmount serviceId serviceCatId peopleCat (Just false) state state.data.servicesInfo
       limitUpdatedServicesInfo = markLimitCrossed serviceId serviceCatId peopleCat false updateServicesInfo
   continue state { data { totalAmount = finalAmount, servicesInfo = limitUpdatedServicesInfo } }
@@ -227,8 +230,15 @@ markLimitCrossed serviceId serviceCatId selPeopleCat value services = do
   map updateService services
   where
     updateService service = if serviceId == service.id then service {serviceCategories = map updateServiceCategories service.serviceCategories} else service
-    updateServiceCategories serviceCat = if serviceCat.categoryId == serviceCatId then serviceCat { peopleCategories = map updatePeopleCat serviceCat.peopleCategories} else serviceCat
+    updateServiceCategories serviceCat = if serviceCat.categoryId == serviceCatId then serviceCat { peopleCategories = map updatePeopleCat serviceCat.peopleCategories, noRemainingTicketAvailable = value} else serviceCat
     updatePeopleCat peopleCategory = if selPeopleCat.peopleCategoryId == peopleCategory.peopleCategoryId then peopleCategory{ticketLimitCrossed = value} else peopleCategory
+
+showNoRemainingTicketsAvailable :: String -> String -> PeopleCategoriesData -> Boolean -> Array TicketServiceData -> Array TicketServiceData
+showNoRemainingTicketsAvailable serviceId serviceCatId selPeopleCat value services = do
+  map updateAvailableRemainingTicket services
+  where
+    updateAvailableRemainingTicket service = if serviceId == service.id then service {serviceCategories = map updateServiceCategories service.serviceCategories} else service
+    updateServiceCategories serviceCat = if serviceCat.categoryId == serviceCatId then serviceCat { noRemainingTicketAvailable = value} else serviceCat
 
 sum :: Array Int -> Int
 sum = foldl (\acc x -> acc + x) 0

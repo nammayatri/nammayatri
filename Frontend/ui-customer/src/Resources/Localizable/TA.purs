@@ -1365,3 +1365,4 @@ getTA stringKey =
     BOOKING -> "பதிவு"
     CLEAN_BIKE -> "சுத்தமான பைக்"
     UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"
+    NO_REMAINING_TICKETS ->  "மீதமுள்ள டிக்கெட்கள் இல்லை"

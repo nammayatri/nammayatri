@@ -1350,3 +1350,4 @@ getML stringKey =
         BOOKING -> "ബുക്കിംഗ്"
         CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
         UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"
+        NO_REMAINING_TICKETS -> "ഇനിയൊരു ടിക്കറ്റ് ശേഷിക്കുന്നില്ല"

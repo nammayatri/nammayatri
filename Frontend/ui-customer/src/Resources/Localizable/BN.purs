@@ -1347,3 +1347,4 @@ getBN stringKey =
         BOOKING -> "বুকিং"
         CLEAN_BIKE -> "পরিষ্কার বাইক"
         UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"
+        NO_REMAINING_TICKETS -> "কোনো অবশিষ্ট টিকিট নেই"

@@ -1349,3 +1349,4 @@ getKN stringKey =
         BOOKING -> "ಬುಕ್"
         CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
         UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"
+        NO_REMAINING_TICKETS -> "ಯಾವುದೇ ಉಳಿದ ಟಿಕೆಟ್‌ಗಳಿಲ್ಲ"

@@ -1349,3 +1349,4 @@ getEN stringKey =
         BOOKING -> "Booking"
         CLEAN_BIKE -> "Clean Bike"
         UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"
+        NO_REMAINING_TICKETS -> "No remaining tickets"

@@ -1346,3 +1346,4 @@ getHI stringKey =
         BOOKING -> "बुकिंग"
         CLEAN_BIKE -> "साफ बाइक"
         UNCOMFORTABLE_BIKE -> "असहज बाइक"
+        NO_REMAINING_TICKETS -> "कोई शेष टिकट नहीं"

@@ -1350,3 +1350,4 @@ getFR stringKey =
         BOOKING -> "Réservation"
         CLEAN_BIKE -> "Vélo propre"
         UNCOMFORTABLE_BIKE -> "Vélo inconfortable"
+        NO_REMAINING_TICKETS -> ""
