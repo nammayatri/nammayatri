@@ -465,7 +465,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           then do
             let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
                 orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal
-            paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id shortId.getShortId) orderStatusCall
+            paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall
             mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
           else pure refunds
 
