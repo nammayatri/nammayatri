@@ -47,3 +47,6 @@ clearCache domain =
 
 createMany :: (BeamFlow.BeamFlow m r) => [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement] -> m ()
 createMany = Queries.createMany
+
+create :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement -> m ()
+create = Queries.create
