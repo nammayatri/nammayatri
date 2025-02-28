@@ -56,7 +56,7 @@ module Lib.Yudhishthira.Types
     ConfigDetailsResp (..),
     ConfigVersionMap (..),
     Config (..),
-    Action (..),
+    ConfigTypeChoice (..),
     ActionChangeRequest (..),
     ConcludeReq (..),
     AbortReq (..),
@@ -220,6 +220,9 @@ instance Enumerable LogicDomain where
       ++ map DRIVER_CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
 
+instance Enumerable ConfigType where
+  allValues = [minBound .. maxBound]
+
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
   [show POOLING]
@@ -323,12 +326,6 @@ data ExperimentStatus
 $(mkBeamInstancesForEnumAndList ''ExperimentStatus)
 $(mkHttpInstancesForEnum ''ExperimentStatus)
 
-data Action
-  = CONCLUDE
-  | ABORT
-  | REVERT
-  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
-
 data ActionChangeRequest
   = Conclude ConcludeReq
   | Abort AbortReq
@@ -339,22 +336,19 @@ instance HideSecrets ActionChangeRequest where
   hideSecrets = identity
 
 data ConcludeReq = ConcludeReq
-  { action :: Action,
-    version :: Int,
+  { version :: Int,
     domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data AbortReq = AbortReq
-  { action :: Action,
-    version :: Int,
+  { version :: Int,
     domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data RevertReq = RevertReq
-  { action :: Action,
-    domain :: LogicDomain
+  { domain :: LogicDomain
   }
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
@@ -367,9 +361,12 @@ data ConfigDetailsResp = ConfigDetailsResp
   { modifiedBy :: Maybe (Id Person),
     percentageRollout :: Int,
     version :: Int,
-    configPatch :: [Value]
+    configPatch :: [Value],
+    isBasePatch :: Bool
   }
   deriving (Show, Read, Generic, ToSchema, ToJSON, FromJSON)
+
+data ConfigTypeChoice = DriverCfg | RiderCfg deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
@@ -472,8 +469,7 @@ data LogicRolloutObject = LogicRolloutObject
   { domain :: LogicDomain,
     timeBounds :: Text,
     rollout :: [RolloutVersion],
-    modifiedBy :: Maybe (Id Person),
-    experimentStatus :: Maybe ExperimentStatus
+    modifiedBy :: Maybe (Id Person)
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

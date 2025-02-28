@@ -473,6 +473,7 @@ library
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.ConfigPilot
       Tools.Constants
       Tools.Error
       Tools.Event

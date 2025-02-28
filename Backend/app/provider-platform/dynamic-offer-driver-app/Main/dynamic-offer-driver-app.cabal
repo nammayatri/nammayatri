@@ -625,6 +625,7 @@ library
       Tools.Beam.UtilsTH
       Tools.Call
       Tools.ChatCompletion
+      Tools.ConfigPilot
       Tools.Constants
       Tools.DriverBackgroundVerification
       Tools.Error

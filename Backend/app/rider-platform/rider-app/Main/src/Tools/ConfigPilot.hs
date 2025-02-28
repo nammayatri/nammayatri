@@ -1,0 +1,137 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
+module Tools.ConfigPilot where
+
+import qualified Data.Aeson as A
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import EulerHS.Prelude hiding (id)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+-- import qualified Storage.CachedQueries.UiRiderConfig as UIRC
+
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types as LYTU
+import Storage.Beam.SchedulerJob ()
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.FRFSConfig as SCFRFS
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMPC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.MerchantConfig as SCMC
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRN
+import qualified Storage.Queries.FRFSConfig as SQFRFS
+import qualified Storage.Queries.MerchantConfig as SQMC
+import qualified Storage.Queries.MerchantPushNotification as SQMPN
+import qualified Storage.Queries.PayoutConfig as SQPC
+import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRN
+import qualified Storage.Queries.RiderConfig as SQR
+
+returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.ConfigType -> Id MerchantOperatingCity -> m LYTU.TableDataResp
+returnConfigs cfgType merchantOpCityId = do
+  case cfgType of
+    LYTU.RiderConfig -> do
+      riderCfg <- QRC.findByMerchantOperatingCityId merchantOpCityId (Just [])
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList riderCfg)}
+    LYTU.PayoutConfig -> do
+      payoutCfg <- SCMPC.findAllByMerchantOpCityId merchantOpCityId (Just [])
+      return LYTU.TableDataResp {configs = map A.toJSON payoutCfg}
+    LYTU.RideRelatedNotificationConfig -> do
+      rideRelatedNotificationCfg <- SCRRN.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
+      return LYTU.TableDataResp {configs = map A.toJSON rideRelatedNotificationCfg}
+    LYTU.MerchantConfig -> do
+      merchantCfg <- SCMC.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
+      return LYTU.TableDataResp {configs = map A.toJSON merchantCfg}
+    LYTU.MerchantPushNotification -> do
+      merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId merchantOpCityId (Just [])
+      return LYTU.TableDataResp {configs = map A.toJSON merchantPushNotification}
+    LYTU.FRFSConfig -> do
+      frfsConfig <- SCFRFS.findByMerchantOperatingCityId merchantOpCityId (Just [])
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
+    _ -> throwError $ InvalidRequest "Unsupported config type."
+
+handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYTU.MerchantOperatingCity -> LYTU.ConcludeReq -> [A.Value] -> m ()
+handleConfigDBUpdate merchantOpCityId concludeReq baseLogics = do
+  case concludeReq.domain of
+    LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
+      handleConfigUpdate (normalizeMaybeFetch SQR.findByMerchantOperatingCityId) QRC.clearCache SQR.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
+      handleConfigUpdate SQPC.findAllByMerchantOpCityId (const $ pure ()) SQPC.updateByPrimaryKey (cast merchantOpCityId) -- TODO add clearCache
+    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
+      handleConfigUpdate SQRRN.findAllByMerchantOperatingCityId (const $ pure ()) SQRRN.updateByPrimaryKey (cast merchantOpCityId) -- TODO add clearCache
+    LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
+      handleConfigUpdateWithExtraDimensions SQMC.findAllByMerchantOperatingCityId SCMC.clearCache SQMC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
+      handleConfigUpdate SQMPN.findAllByMerchantOpCityId (const $ pure ()) SQMPN.updateByPrimaryKey (cast merchantOpCityId) -- TODO add clearCache
+    LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
+      handleConfigUpdate (normalizeMaybeFetch SQFRFS.findByMerchantOperatingCityId) SCFRFS.clearCache SQFRFS.updateByPrimaryKey (cast merchantOpCityId)
+    _ -> throwError $ InvalidRequest $ "Logic Domain not supported" <> show concludeReq.domain
+  where
+    convertToConfigWrapper :: [a] -> [LYTU.Config a]
+    convertToConfigWrapper configs =
+      zipWith
+        (\id cfg -> cfg {LYTU.identifier = id})
+        [0 ..]
+        (map (\cfg -> LYTU.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) configs)
+
+    applyPatchToConfig :: forall b m. (FromJSON b, MonadFlow m, ToJSON b) => [LYTU.Config b] -> m [LYTU.Config b]
+    applyPatchToConfig configWrapper = do
+      patchedConfigs <- mapM (LYTU.runLogics baseLogics) configWrapper
+      mapM
+        ( \resp ->
+            case (A.fromJSON (resp.result) :: A.Result (LYTU.Config b)) of
+              A.Success cfg -> pure cfg
+              A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+        )
+        patchedConfigs
+
+    getConfigsToUpdate :: (MonadFlow m, Eq a, Show a, FromJSON a, ToJSON a) => [LYTU.Config a] -> [LYTU.Config a] -> m [a]
+    getConfigsToUpdate configWrapper cfgs = do
+      let sortedCfgs = sortOn LYTU.identifier cfgs
+      pure $
+        catMaybes $
+          zipWith
+            ( \cfg1 cfg2 ->
+                if cfg1.identifier == cfg2.identifier && cfg1.config /= cfg2.config
+                  then Just cfg2.config
+                  else Nothing
+            )
+            configWrapper
+            sortedCfgs
+
+    handleConfigUpdate ::
+      (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) =>
+      (Id MerchantOperatingCity -> m [a]) -> -- Fetch function
+      (Id MerchantOperatingCity -> m ()) -> -- Optional cache clearing function
+      (a -> m ()) -> -- Update function
+      Id MerchantOperatingCity ->
+      m ()
+    handleConfigUpdate fetchFunc clearCacheFunc updateFunc merchantOpCityId' = do
+      configs <- fetchFunc merchantOpCityId'
+      let configWrapper = convertToConfigWrapper configs
+      patchedConfigs <- applyPatchToConfig configWrapper
+      configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
+      mapM_ updateFunc configsToUpdate
+      clearCacheFunc merchantOpCityId'
+
+    handleConfigUpdateWithExtraDimensions ::
+      (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) =>
+      (Id MerchantOperatingCity -> Bool -> m [a]) -> -- Fetch function
+      (Id MerchantOperatingCity -> m ()) -> -- Optional cache clearing function
+      (a -> m ()) -> -- Update function
+      Id MerchantOperatingCity ->
+      m ()
+    handleConfigUpdateWithExtraDimensions fetchFunc clearCacheFunc updateFunc merchantOpCityId' = do
+      configs <- fetchFunc merchantOpCityId' True
+      let configWrapper = convertToConfigWrapper configs
+      patchedConfigs <- applyPatchToConfig configWrapper
+      configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
+      mapM_ updateFunc configsToUpdate
+      clearCacheFunc merchantOpCityId'
+
+    normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
+    normalizeMaybeFetch fetchFunc merchantOpCityId' = do
+      result <- fetchFunc merchantOpCityId'
+      pure $ maybeToList result
