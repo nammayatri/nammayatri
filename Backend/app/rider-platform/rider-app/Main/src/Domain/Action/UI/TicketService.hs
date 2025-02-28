@@ -405,8 +405,11 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             createdAt = now,
             updatedAt = now,
             peopleCategoryId = Just tPCatId,
-            vendorSplitDetails = tServicePCat.vendorSplitDetails
+            vendorSplitDetails = (map (multiplyVendorSplits numberOfUnits)) <$> tServicePCat.vendorSplitDetails
           }
+
+    multiplyVendorSplits :: Int -> Payment.VendorSplitDetails -> Payment.VendorSplitDetails
+    multiplyVendorSplits count vendorSplitDetail = vendorSplitDetail {Payment.splitAmount = Payment.roundToTwoDecimalPlaces (vendorSplitDetail.splitAmount * (Payment.roundToTwoDecimalPlaces $ fromIntegral count))}
 
     calculateAmountAndSeats :: (MonadThrow m, Log m) => [DTB.TicketBookingPeopleCategory] -> m (Price, Int)
     calculateAmountAndSeats categories = do
