@@ -274,7 +274,15 @@ type CityConfig = {
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
   showScheduledRides :: Boolean,
-  enableNammaMeter :: Maybe (Object Boolean)
+  enableNammaMeter :: Maybe (Object Boolean),
+  chatFooterBanner :: Maybe ChatFootBannerConfig
+}
+
+
+type ChatFootBannerConfig = {
+  defaultText :: String,
+  translations :: Object String,
+  enable :: Boolean
 }
 
 type InAppKeyboardModalConfig = {
