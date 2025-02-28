@@ -41,7 +41,9 @@ data TransitObject = TransitObject
 
 data TicketLeg = TicketLeg
   { originName :: Name,
-    destinationName :: Name
+    destinationName :: Name,
+    originStationGmmLocationId :: Text,
+    destinationStationGmmLocationId :: Text
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 

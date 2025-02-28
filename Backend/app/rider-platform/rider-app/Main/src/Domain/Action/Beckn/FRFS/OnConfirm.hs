@@ -33,6 +33,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
+import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude ((+||), (||+))
@@ -50,6 +51,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
+import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Station as CQStation
 import qualified Storage.Queries.BecknConfig as QBC
@@ -121,7 +123,7 @@ onConfirm merchant booking' dOrder = do
         let mId = booking'.merchantId
         let mocId' = booking'.merchantOperatingCityId
         serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-        transitObjects' <- createTransitObjects booking tickets person serviceAccount className
+        transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className
         url <- mkGoogleWalletLink serviceAccount transitObjects'
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
@@ -241,8 +243,8 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.isTicketFree = Just isTicketFree
       }
 
-mkTransitObjects :: Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Flow TC.TransitObject
-mkTransitObjects booking ticket person serviceAccount className = do
+mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Flow TC.TransitObject
+mkTransitObjects pOrgId booking ticket person serviceAccount className = do
   toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
   fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
   let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
@@ -264,6 +266,10 @@ mkTransitObjects booking ticket person serviceAccount className = do
   let nowText = GWSA.utcTimeToText now
   let validTillText = GWSA.utcTimeToText ticket.validTill
   let timeInterval = TC.TimeInterval {TC.start = TC.DateTime {TC.date = nowText}, TC.end = TC.DateTime {TC.date = validTillText}}
+  mbFromStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId fromStation.id pOrgId
+  let fromStationGMMLocationId = maybe (fromStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbFromStationPartnerOrg
+  mbToStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId toStation.id pOrgId
+  let toStationGMMLocationId = maybe (toStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbToStationPartnerOrg
   return
     TC.TransitObject
       { TC.id = serviceAccount.saIssuerId <> "." <> ticket.id.getId,
@@ -275,7 +281,9 @@ mkTransitObjects booking ticket person serviceAccount className = do
         TC.ticketLeg =
           TC.TicketLeg
             { TC.originName = fromStationName,
-              TC.destinationName = toStationName
+              TC.destinationName = toStationName,
+              TC.originStationGmmLocationId = fromStationGMMLocationId,
+              TC.destinationStationGmmLocationId = toStationGMMLocationId
             },
         TC.barcode = barcode',
         TC.textModulesData = textModules,
@@ -292,12 +300,12 @@ createTickets booking dTickets discountedTickets = go dTickets discountedTickets
       let newFreeTickets = if isTicketFree then freeTicketsLeft - 1 else freeTicketsLeft
       go ds newFreeTickets (ticket : acc)
 
-createTransitObjects :: Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
-createTransitObjects booking tickets person serviceAccount className = go tickets []
+createTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
+createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets []
   where
     go [] acc = return (Prelude.reverse acc)
     go (x : xs) acc = do
-      transitObject <- mkTransitObjects booking x person serviceAccount className
+      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className
       go xs (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
