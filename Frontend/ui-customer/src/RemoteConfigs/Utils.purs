@@ -518,6 +518,12 @@ defaultSwitchCityConfigs = {
         name: "Bidar",
         value: "Bidar",
         title: ""
+    },
+    {
+        name: "Srinagar",
+        value: "Srinagar",
+        title: ""
     }
+    
   ]
 }

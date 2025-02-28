@@ -1220,6 +1220,7 @@ data City
   | Puri
   | Pudukkottai
   | Bidar
+  | Srinagar
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow

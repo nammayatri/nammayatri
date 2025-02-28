@@ -69,6 +69,7 @@ type RemoteConfig a
     , nalgonda :: Maybe a
     , bidar :: Maybe a
     , puri :: Maybe a
+    , srinagar :: Maybe a
     , pudukkottai :: Maybe a
     , config :: Maybe Config
     }
