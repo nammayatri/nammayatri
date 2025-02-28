@@ -586,6 +586,20 @@ config =
                 enableCabBanner = false
               }
           },
+          defaultCityConfig 
+          {   cityName = "Srinagar"
+            , cityCode = "std:0194"
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = true
+            , enableScheduling = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
 
            defaultCityConfig 
           {   cityName = "Thanjavur"

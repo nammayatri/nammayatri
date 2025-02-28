@@ -810,6 +810,7 @@ data City
   | Asansol
   | Durgapur
   | Petrapole
+  | Srinagar
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
