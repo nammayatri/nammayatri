@@ -93,6 +93,7 @@ import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
+import Foreign.Object (lookup, empty)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -802,6 +803,12 @@ chatViewConfig state = let
               then getSuggestionsfromKey chatSuggestion "driverInitialAP"
             else getSuggestionsfromKey chatSuggestion "driverInitialBP"
     else state.data.chatSuggestionsList
+  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  chatFooterBanner = fromMaybe {
+    defaultText : "",
+    translations: empty,
+    enable : false
+  } cityConfig.chatFooterBanner
   config = ChatView.config
   chatViewConfig' = config {
     userConfig {
@@ -824,6 +831,10 @@ chatViewConfig state = let
     , enableSuggestions = state.data.config.feature.enableSuggestions
     , showNavigate = if state.data.activeRide.tripType == ST.Rental then isJust state.data.activeRide.nextStopLat && isJust state.data.activeRide.nextStopLon else true
     , useSuggestionsView = true
+    , footerBanner { 
+        enable = chatFooterBanner.enable,
+        text = fromMaybe chatFooterBanner.defaultText $ lookup (DS.toLower $ getLanguageLocale languageKey) chatFooterBanner.translations
+    }
   }
   in chatViewConfig'
 

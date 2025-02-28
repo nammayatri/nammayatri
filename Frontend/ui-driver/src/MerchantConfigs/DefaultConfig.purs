@@ -149,6 +149,7 @@ config =
   , cityConfig : [
             {
               cityName : "Bangalore",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_bengalore_map",
               cityCode : "std:080",
@@ -231,6 +232,7 @@ config =
             },
             {
               cityName : "Hyderabad",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_hyderabad_map",
               cityCode : "std:040",
@@ -308,6 +310,7 @@ config =
             },
             {
               cityName : "Mysore",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_mysuru_map",
               cityCode : "std:0821",
@@ -380,6 +383,7 @@ config =
             },
             {
               cityName : "Delhi",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_delhi_map",
               cityCode : "std:011",
@@ -452,6 +456,20 @@ config =
             },
             {
               cityName : "Chennai",
+              chatFooterBanner: Just ({
+                enable: true,
+                defaultText : "Do not demand extra from customer",
+                translations : fromHomogeneous ({
+                  "en_us": "Do not demand extra from customer",
+                  "bn_in": "গ্রাহকের কাছ থেকে অতিরিক্ত দাবি করবেন না",
+                  "hi_in": "ग्राहक से अतिरिक्त मांग न करें",
+                  "kn_in": "ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಬೇಡಿಕೆ ಇರಬೇಡ",
+                  "ml_in": "ഉപഭോക്താവിൽ നിന്ന് അധികം ആവശ്യപ്പെടരുത്",
+                  "ta_in": "வாடிக்கையாளரிடமிருந்து கூடுதல் கட்டணம் கோர வேண்டாம்",
+                  "te_in": "గ్రాహకుని నుండి అదనంగా కోరవద్దు",
+                  "od_in": "ଗ୍ରାହକଙ୍କ ପାଖରୁ ଅତିରିକ୍ତ ଦାବି କରିବେ ନାହିଁ"
+                })
+              }),
               enableNammaMeter : Just (fromHomogeneous ({
                 "AUTO_RICKSHAW" : true
               })),
@@ -526,6 +544,7 @@ config =
             },
             {
               cityName : "Coimbatore",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_coimbatore_map",
               cityCode : "std:0422",
@@ -598,6 +617,7 @@ config =
             },
             {
               cityName : "Puducherry",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_puducherry_map",
               cityCode : "std:0413",
@@ -670,6 +690,7 @@ config =
             },
             {
               cityName : "Gurugram",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_gurugram_map",
               cityCode : "std:0124",
@@ -742,6 +763,7 @@ config =
             },
             {             
               cityName : "Noida",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_noida_map",
               cityCode : "std:01189",
@@ -814,6 +836,7 @@ config =
             },
             {
               cityName : "TamilNaduCities",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_tamilnadu_map",
               cityCode :  "std:0422",
@@ -886,6 +909,7 @@ config =
             },
             {
               cityName : "Kolkata",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "",
               cityCode : "std:033",
@@ -971,6 +995,7 @@ config =
             }, 
             {
               cityName : "Kochi",
+              chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
               mapImage : "ny_ic_kochi_map",
               cityCode : "std:0484",
@@ -1048,6 +1073,7 @@ config =
             --, For future use
             -- {
             --   cityName : "Madurai",
+            --   chatFooterBanner: Nothing,
             -- enableNammaMeter : Nothing,
             --   mapImage : "ny_ic_madurai_map",
             --   cityCode : "std:0452",
@@ -1219,6 +1245,7 @@ defaultCityConfig =
 allCitiesDefaultCityConfig :: CityConfig
 allCitiesDefaultCityConfig = {
   cityName : "",
+  chatFooterBanner: Nothing,
   enableNammaMeter : Nothing,
   mapImage : "",
   cityCode : "",

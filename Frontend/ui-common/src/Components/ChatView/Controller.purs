@@ -58,7 +58,13 @@ type Config =
   , chatMargin :: Margin 
   , showNavigate :: Boolean
   , useSuggestionsView :: Boolean
+  , footerBanner :: FooterBannerConfig
   }
+
+type FooterBannerConfig = {
+  text :: String,
+  enable :: Boolean
+}
 
 type UserConfig =
   { userName :: String
@@ -111,6 +117,10 @@ config =
     , chatMargin : Margin 0 0 0 0
     , showNavigate : true
     , useSuggestionsView : false
+    , footerBanner : {
+        text : "",
+        enable : true
+    }
   }
 
 makeChatComponent' :: String -> Maybe String -> Maybe String -> String -> String -> String -> Int -> ChatComponentConfig 
