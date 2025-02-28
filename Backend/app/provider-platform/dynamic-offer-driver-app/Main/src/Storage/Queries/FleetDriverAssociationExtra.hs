@@ -79,8 +79,9 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                       fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
                         B.&&?. fleetDriverAssociation.isActive B.==?. B.val_ True
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbName
+                        B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbName
+                               )
                   )
                   do
                     fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)

@@ -367,6 +367,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: DriverMode
+        - name: Text
       response:
         type: DrivertoVehicleAssociationRes
       migrate:
@@ -387,6 +388,7 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: DriverMode
+              - name: Text
             response:
               type: DrivertoVehicleAssociationRes
 
