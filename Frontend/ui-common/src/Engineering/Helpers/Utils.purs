@@ -595,4 +595,5 @@ getCityFromString cityString =
     "Asansol" -> Asansol
     "Durgapur" -> Durgapur
     "Petrapole" -> Petrapole
+    "Srinagar" -> Srinagar
     _ -> AnyCity
