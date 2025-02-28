@@ -88,3 +88,14 @@ getLocationSuggestionsToExclude city = do
     let config = fetchRemoteConfigString "location_suggestions_to_exclude"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
+defaultCancellationBannerThresholdConfig :: CancellationThreshold 
+defaultCancellationBannerThresholdConfig = {
+    showBanner : false,
+    percentage : 100.0
+}
+
+getCancellationBannerThresholdConfig :: String -> CancellationThreshold
+getCancellationBannerThresholdConfig city =
+    let config = fetchRemoteConfigString "customer_cancellation_banner_threshold"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultCancellationBannerThresholdConfig
+    in getCityBasedConfig value $ DS.toLower city 

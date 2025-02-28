@@ -184,6 +184,7 @@ initData = let
     , parking : initialParkingData
     , toll : initialTollData
     , clickedLocationTagBar : Nothing
+    , cancellationRate : Nothing
     },
     props: {
       rideRequestFlow : false

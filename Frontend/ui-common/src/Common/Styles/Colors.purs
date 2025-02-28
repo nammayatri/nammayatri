@@ -400,3 +400,6 @@ indianRed8 = "#14E55454"
 
 lightBlue80 :: Color
 lightBlue80 = "#CC80B2FF"
+
+brownishYellow :: Color
+brownishYellow = "#FFCC6E"

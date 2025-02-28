@@ -1273,6 +1273,8 @@ getTE stringKey =
     VIEW_FARES -> "ఛార్జీలను వీక్షించండి"
     EXCESS_TIME_DESCRIPTION charges -> "అదనపు సమయం " <> charges <> " ఛార్జ్ చేయబడుతుంది"
     ESTIMATED_CHARGES -> "అంచనా వేసిన ఛార్జీలు"
+    YOUR_CANCELLATION_RATE_IS_HIGH -> "మీ రద్దు రేటు ఎక్కువగా ఉంది!"
+    AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " ని ఉపయోగించడం కొనసాగించడానికి తదుపరి రద్దులను నివారించండి."
     NIGHT_TIME_FEES -> "రాత్రి సమయ ధరలు"
     PARKING_AND_OTHER_CHARGES -> "పార్కింగ్ మరియు ఇతర ధరలు"
     ADDITIONAL_CHARGES -> "అదనపు ధరలు"

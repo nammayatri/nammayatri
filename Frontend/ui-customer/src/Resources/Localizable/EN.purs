@@ -1260,6 +1260,8 @@ getEN stringKey =
         VIEW_FARES -> "View Fares"
         EXCESS_TIME_DESCRIPTION charges -> "Excess time will be charged at " <> charges
         ESTIMATED_CHARGES -> "Estimated Charges"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "Your cancellation rate is high!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> "Avoid further cancellations to keep using " <> appName
         NIGHT_TIME_FEES -> "Night Time Fees"
         PARKING_AND_OTHER_CHARGES -> "Parking and other charges"
         ADDITIONAL_CHARGES  -> "Additional Charges"

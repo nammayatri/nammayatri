@@ -24,7 +24,6 @@ import Data.Tuple
 import Engineering.Helpers.BackTrack
 import Locale.Utils
 import Mobility.Prelude
-import Mobility.Prelude
 import PrestoDOM.Core
 import PrestoDOM.List
 import Screens.RideBookingFlow.HomeScreen.Config
@@ -35,7 +34,6 @@ import Timers
 import Types.App
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, emptyScreenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
-import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
 import CarouselHolder as CarouselHolder
@@ -80,7 +78,6 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop)
 import Data.Array as Arr
 import Data.Either (Either(..))
-import Data.Function.Uncurried (runFn1)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
@@ -100,13 +97,11 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2,runEffectFn3, runEffectFn9)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
-import Engineering.Helpers.Events as Events
+import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC, compareUTCDate)
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -183,7 +178,6 @@ import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
 import Engineering.Helpers.Events as Events
-import Types.App
 import Mobility.Prelude
 import Screens.Types as ST
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
@@ -198,6 +192,7 @@ import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.Controllers.Types
 import Helpers.Utils as HU
+import RemoteConfig.Utils as RemoteConfig
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -3935,7 +3930,7 @@ mapView' push state idTag =
             , height $ V 40
             , width $ V 40
             ]
-
+            , highCancellationBanner push state
         ]
     ]
 
@@ -3992,6 +3987,66 @@ getMapDimensions state =
                   else MATCH_PARENT 
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
   in {height : mapHeight, width : mapWidth}
+
+highCancellationBanner :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+highCancellationBanner push state =
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in
+  linearLayout 
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.brownishYellow
+  , margin $ Margin 16 8 16 2
+  , cornerRadius 12.0
+  , visibility $ boolToVisibility $ showCancellationHighBanner state.data.cancellationRate
+  ]
+  [ linearLayout 
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ Margin 14 8 8 8
+    , id $ EHC.getNewIDWithTag "cancellationBannerText"
+    ]
+    [ textView $
+      [ text $ getString YOUR_CANCELLATION_RATE_IS_HIGH
+      , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
+      , height WRAP_CONTENT
+      ] <> FontStyle.subHeading3 TypoGraphy
+    , textView $
+      [ text $ getString $ AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName
+      , color Color.black900
+      , width $ V (((EHC.screenWidth unit) * 2)/ 3)
+      , singleLine false
+      , height WRAP_CONTENT
+      , margin $ MarginVertical 4 4
+      ] <> FontStyle.body1 TypoGraphy
+    ]
+    , linearLayout[weight 1.0][]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , orientation VERTICAL
+      , height $ V (if contentLayout.height == 0 then 80 else contentLayoutHeight)
+      ]
+      [ linearLayout[weight 1.0][]
+      , imageView
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancellation_high"
+        , accessibility DISABLE
+        , margin $ MarginRight 12
+        , height $  V 80
+        , width $ V 80
+        ]
+      ]
+    ]
+    where 
+      showCancellationHighBanner :: Maybe Number -> Boolean
+      showCancellationHighBanner cancellationRate =
+        let rate = fromMaybe 0.0 cancellationRate
+            cancellationThresholdConfig = RemoteConfig.getCancellationBannerThresholdConfig $  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+        in cancellationThresholdConfig.showBanner && rate >= cancellationThresholdConfig.percentage
+      contentLayoutHeight = HU.getDefaultPixelSize(contentLayout.height + 20)
+      contentLayout = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "cancellationBannerText"
+        
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state = 

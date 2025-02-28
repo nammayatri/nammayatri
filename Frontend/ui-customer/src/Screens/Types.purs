@@ -675,6 +675,7 @@ type HomeScreenStateData =
 , parking :: ParkingData
 , toll :: TollData
 , clickedLocationTagBar :: Maybe String
+, cancellationRate :: Maybe Number
 }
 
 type TollData = {

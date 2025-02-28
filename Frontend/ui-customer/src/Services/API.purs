@@ -1351,6 +1351,7 @@ newtype GetProfileRes = GetProfileRes
   , customerReferralCode :: Maybe String
   , deviceId :: Maybe String
   , androidId :: Maybe String
+  , cancellationRate :: Maybe Number
   }
 
 

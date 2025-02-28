@@ -1258,6 +1258,8 @@ getHI stringKey =
         VIEW_FARES -> "किराया देखें"
         EXCESS_TIME_DESCRIPTION charges -> "अतिरिक्त समय के लिए " <> charges <> "लिया जाएगा"
         ESTIMATED_CHARGES -> "अनुमानित शुल्क"
+        YOUR_CANCELLATION_RATE_IS_HIGH -> "आपकी रद्दीकरण दर ऊंची है!"
+        AVOID_FURTHER_CANCELLATIONS_TO_KEEP_USING_APP appName -> appName <> " का उपयोग जारी रखने के लिए आगे रद्दीकरण से बचें"
         NIGHT_TIME_FEES -> "रात के समय का शुल्क"
         PARKING_AND_OTHER_CHARGES -> "पार्किंग और अन्य शुल्क"
         ADDITIONAL_CHARGES -> "अतिरिक्त शुल्क"

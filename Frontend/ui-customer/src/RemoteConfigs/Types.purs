@@ -59,3 +59,35 @@ newtype FamousDestination = FamousDestination {
 
 derive instance genericFamousDestination :: Generic FamousDestination _
 instance decodeFamousDestination :: Decode FamousDestination where decode = defaultDecode
+
+-- type Service = {
+--   type :: ServiceType,
+--   name :: STR,
+--   image :: String,
+--   backgroundColor :: String,
+--   preferredEstimateOrder :: Array String,
+--   hasSecondaryPill :: Boolean,
+--   secondaryPillColor :: String
+-- }
+
+type SafetyConfig = {
+  bannerAction :: String,
+  bannerUrl :: String,
+  bannerPosition :: Int,
+  showOnRide :: String
+}
+
+type MetroConfig = {
+  tnc :: String,
+  logoImage :: String,
+  mapImage :: String,
+  bannerImage :: String,
+  bannerBackgroundColor :: String,
+  bannerTextColor :: String,
+  showCancelButton :: Boolean
+}
+
+type CancellationThreshold = {
+  showBanner :: Boolean,
+  percentage :: Number
+}
