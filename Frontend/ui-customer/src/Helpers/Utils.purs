@@ -852,6 +852,7 @@ cityCodeMap =
   , Tuple (Just "std:06752") Puri
   , Tuple (Just "std:04322") Pudukkottai
   , Tuple (Just "std:8482") Bidar
+  , Tuple (Just "std:0194") Srinagar
   , Tuple Nothing AnyCity
   ]
 
@@ -952,6 +953,7 @@ getCityFromString cityString =
     "Puri" -> Puri
     "Pudukkottai" -> Pudukkottai
     "Bidar" -> Bidar
+    "Srinagar" -> Srinagar
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -1363,6 +1365,7 @@ getLanguageBasedCityName cityName =
     Puri -> "Puri"
     Pudukkottai -> "Pudukkottai"
     Bidar -> "Bidar"
+    Srinagar -> "Srinagar"
     AnyCity -> ""
 
 breakPrefixAndId :: String -> Maybe (Tuple String (Maybe String))
