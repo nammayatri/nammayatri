@@ -1906,13 +1906,15 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       subType = BecknSub.BPP
       domain = Context.MOBILITY
       lookupReq = SimpleLookupRequest {unique_key_id = uniqueKeyId, subscriber_id = subscriberId, merchant_id = baseMerchant.id.getId, subscriber_type = subType, ..}
+      newUniqueId = maybe uniqueKeyId (.uniqueKeyId) mbNewMerchant
+      newSubscriberId = maybe subscriberId (.subscriberId.getShortId) mbNewMerchant
   mbAddCityReq <-
     Registry.registryLookup nyRegistryUrl lookupReq >>= \case
       Nothing -> do
         logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
         return Nothing
       Just sub | req.city `elem` sub.city -> return Nothing
-      Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) uniqueKeyId subscriberId subType domain
+      Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) newUniqueId newSubscriberId subType domain
 
   finally
     ( do
@@ -2001,7 +2003,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     buildMerchant merchantId merchantData currentTime DM.Merchant {city = _city, ..} =
       DM.Merchant
         { id = merchantId,
-          subscriberId = ShortId merchantData.shortId,
+          subscriberId = ShortId merchantData.subscriberId,
           shortId = ShortId merchantData.shortId,
           name = merchantData.name,
           city = req.city,
