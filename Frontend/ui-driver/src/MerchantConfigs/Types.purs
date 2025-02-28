@@ -271,7 +271,15 @@ type CityConfig = {
   enableGullak :: Boolean,
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
-  showScheduledRides :: Boolean
+  showScheduledRides :: Boolean,
+  chatFooterBanner :: Maybe ChatFootBannerConfig
+}
+
+
+type ChatFootBannerConfig = {
+  defaultText :: String,
+  translations :: Object String,
+  enable :: Boolean
 }
 
 type InAppKeyboardModalConfig = {

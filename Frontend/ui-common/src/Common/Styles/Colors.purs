@@ -207,6 +207,9 @@ pink = "#FEF1E5"
 blue650 :: Color
 blue650 = "#E3EAFF"
 
+yellow400 :: Color
+yellow400 = "#FFF0C9"
+
 yellow500 :: Color
 yellow500 = "#F5C061"
 

@@ -901,6 +901,20 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Chennai",
+        "chatFooterBanner": {
+          "enable": true,
+          "defaultText" : "Do not demand extra from customer",
+          "translations" : {
+            "en_us": "Do not demand extra from customer",
+            "bn_in": "গ্রাহকের কাছ থেকে অতিরিক্ত দাবি করবেন না",
+            "hi_in": "ग्राहक से अतिरिक्त मांग न करें",
+            "kn_in": "ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಬೇಡಿಕೆ ಇರಬೇಡ",
+            "ml_in": "ഉപഭോക്താവിൽ നിന്ന് അധികം ആവശ്യപ്പെടരുത്",
+            "ta_in": "வாடிக்கையாளரிடமிருந்து கூடுதல்\nகட்டணம் கோர வேண்டாம்",
+            "te_in": "గ్రాహకుని నుండి అదనంగా కోరవద్దు",
+            "od_in": "ଗ୍ରାହକଙ୍କ ପାଖରୁ ଅତିରିକ୍ତ ଦାବି କରିବେ ନାହିଁ"
+          }
+        },
         "mapImage" : "ny_ic_chennai_map",
         "cityCode" : "std:044",
         "showSubscriptions" : false,

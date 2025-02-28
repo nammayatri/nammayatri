@@ -235,12 +235,27 @@ chatFooterView config push =
   , margin $ MarginBottom $ if os == "IOS" then 16 else 0
   , adjustViewWithKeyboard "true"
   ][ suggestionsView config push
-   , linearLayout
-     [ width (V (screenWidth unit))
-     , height $ V 1
-     , background Color.grey900
-     , margin $ MarginTop 16
-     ][]
+    , if config.footerBanner.enable then 
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.yellow400
+        , gravity CENTER
+        , padding $ PaddingVertical 8 8
+        , margin $ MarginTop 16
+        , orientation VERTICAL
+        ][ textView $
+            [ text config.footerBanner.text
+            , color Color.black900
+            ] <> FontStyle.body25 LanguageStyle
+        ]
+      else  
+        linearLayout
+          [ width (V (screenWidth unit))
+          , height $ V 1
+          , background Color.grey900
+          , margin $ MarginTop 16
+          ][]
     , linearLayout
       [ height $ V 48
       , width MATCH_PARENT
