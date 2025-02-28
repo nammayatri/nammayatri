@@ -39,15 +39,168 @@
                     android:gravity="center"
                     android:layout_marginHorizontal="20dp">
 
-
-                    <ImageView
+                    <!-- Bus Details Layout - Initially Gone -->
+                    <LinearLayout
+                        android:id="@+id/bus_details_layout"
                         android:layout_width="match_parent"
-                        android:layout_height="270dp"
-                        android:layout_marginTop="10dp"
-                        android:id="@+id/image"
-                        android:layout_marginHorizontal="3dp"
-                        android:scaleType="fitCenter" />
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
+                        <ImageView
+                            android:id="@+id/close_button"
+                            android:layout_width="24dp"
+                            android:contentDescription="@string/close"
+                            android:layout_height="24dp"
+                            android:layout_gravity="end"
+                            android:src="@drawable/ic_dismiss_overlay"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/bus_number"
+                            android:layout_marginTop="16dp"
+                            android:textColor="#454545"
+                            android:fontFamily="@font/plus_jakartasans_regular"
+                            android:textSize="16sp"/>
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="#F9FAFB">
+
+                            <TextView
+                                android:id="@+id/bus_number"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#F9FAFB"
+                                android:padding="16dp"
+                                android:textColor="#454545"
+                                android:fontFamily="@font/plus_jakarta_sans_bold"
+                                android:textSize="16sp"/>
+
+                        </androidx.cardview.widget.CardView>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/bus_type"
+                            android:textColor="#454545"
+                            android:layout_marginTop="16dp"
+                            android:fontFamily="@font/plus_jakartasans_regular"
+                            android:textSize="16sp"/>
+
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="#F9FAFB">
+
+                            <TextView
+                                android:id="@+id/bus_type"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#F9FAFB"
+                                android:padding="16dp"
+                                android:textColor="#454545"
+                                android:fontFamily="@font/plus_jakarta_sans_bold"
+                                android:textSize="16sp"/>
+
+                        </androidx.cardview.widget.CardView>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/route_number"
+                            android:textColor="#454545"
+                            android:layout_marginTop="16dp"
+                            android:fontFamily="@font/plus_jakartasans_regular"
+                            android:textSize="16sp"/>
+
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="#F9FAFB">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#F9FAFB"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/route_number"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                                    android:padding="16dp"
+                                    android:textColor="#454545"
+                                    android:textSize="16sp" />
+
+                                <androidx.cardview.widget.CardView
+                                    android:id="@+id/ellipse_355"
+                                    android:layout_width="6dp"
+                                    android:layout_gravity="center"
+                                    android:layout_height="6dp"
+                                    app:cardBackgroundColor="#A7A7A7"
+                                    app:cardCornerRadius="3dp"
+                                    app:cardElevation="0dp" />
+
+
+                                <TextView
+                                    android:id="@+id/route_source_destination"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                                    android:padding="16dp"
+                                    android:textColor="#6D7280"
+                                    android:textSize="16sp" />
+                            </LinearLayout>
+
+                        </androidx.cardview.widget.CardView>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/start_bus_ride_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/start_ride"
+                            android:layout_marginTop="24dp"
+                            android:paddingVertical="12dp"
+                            android:textAllCaps="false"
+                            android:textColor="#FFFFFF"
+                            android:backgroundTint="#22C55E"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            app:cornerRadius="16dp"/>
+                    </LinearLayout>
+
+                    <!-- Original Overlay Content -->
+                    <LinearLayout
+                        android:id="@+id/original_overlay_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="visible">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="270dp"
+                            android:layout_marginTop="10dp"
+                            android:id="@+id/image"
+                            android:layout_marginHorizontal="3dp"
+                            android:scaleType="fitCenter" />
+
+                        
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -350,10 +503,11 @@
 
                     </LinearLayout>
 
+
+                    </LinearLayout>
+
                 </LinearLayout>
-
             </ScrollView>
-
         </androidx.cardview.widget.CardView>
 
         <ImageView
@@ -363,6 +517,4 @@
             android:src="@drawable/ic_logo_name" />
 
     </RelativeLayout>
-
-
 </LinearLayout>

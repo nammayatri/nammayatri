@@ -161,3 +161,14 @@ type RideEndAudioConfig = {
 , rideEndAudioUrl :: Maybe String
 }
 
+type WMBEducationConfig = {
+  videoUrl :: String,
+  title :: String,
+  isWMBEducationEnabled :: Boolean,
+  descriptionList :: Array WMBEducationDescription
+}
+
+type WMBEducationDescription = {
+  description :: String,
+  imageUrl :: String
+}

@@ -57,6 +57,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.common.services.TLSSocketFactory;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
+import in.juspay.mobility.common.services.MobilityCallAPI;
 
 public  class MyFirebaseMessagingService {
 
@@ -318,13 +320,34 @@ public  class MyFirebaseMessagingService {
                         } else
                             NotificationUtils.showRR(context, entity_payload, payload, NotificationUtils.RequestSource.FCM);
                         break;
-
+                    case NotificationTypes.WMB_TRIP_ASSIGNED:
+                        String jsonData = remoteMessage.getData().get("entity_data");
+                        String currentAppState = "";
+                        SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                        if (jsonData != null) {
+                            try {
+                                JSONObject notificationPayload = new JSONObject(jsonData);
+                                String notificationType_ = remoteMessage.getData().get("notification_type"); 
+                                if(notificationType_ != null) notificationPayload.put("notification_type", notificationType_);
+                                
+                                Boolean isFirstBatchTrip = notificationPayload.optBoolean("isFirstBatchTrip", false);
+                                    
+                                if (sharedPrefs != null) currentAppState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+                                Boolean showBusTripOverlay = (currentAppState.equals("onPause") || currentAppState.equals("onDestroy") || currentAppState.isEmpty() || isFirstBatchTrip);
+                                if (showBusTripOverlay){
+                                    busTripAssignedOverlay(context,notificationPayload);
+                                }
+                            }
+                            catch (JSONException e) {
+                                Log.e("MyFirebaseMessagingService", "Invalid JSON in bus trip assignment: " + e.getMessage());
+                            }
+                        }
+                        break;
                     case NotificationTypes.CLEARED_FARE:
                         sharedPref.edit().putString(context.getString(R.string.CLEAR_FARE), String.valueOf(payload.get(context.getString(R.string.entity_ids)))).apply();
                         NotificationUtils.showAllocationNotification(context, payload, entity_payload, NotificationUtils.RequestSource.FCM);
                         NotificationUtils.startWidgetService(context, "CLEAR_FARE", payload, entity_payload, NotificationUtils.RequestSource.FCM);
                         break;
-
                     case NotificationTypes.CANCELLED_PRODUCT:
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             NotificationUtils.showNotification(context, title, body, payload, imageUrl);
@@ -628,6 +651,33 @@ public  class MyFirebaseMessagingService {
         }
     }
 
+    public static void busTripAssignedOverlay(Context context, JSONObject dataModel)
+    {
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String baseUrl = sharedPref.getString("BASE_URL", "null");
+            MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
+            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
+            String routeCode = dataModel.optString("routeCode","null");
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(baseUrl + "/wmb/route/" + routeCode + "/details", baseHeaders,null, "GET", false);
+            if (apiResponse.getStatusCode() == 200){
+                JSONObject routeDetails = new JSONObject(apiResponse.getResponseBody());
+                dataModel.put("longName", routeDetails.optString("longName","").replace(" TO "," -> "));
+            }
+            double lat = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LAT","0.0"));
+            double lon = Double.parseDouble(sharedPref.getString("LAST_KNOWN_LON","0.0"));
+            JSONArray arr = new JSONArray();
+            arr.put("START_BUS_RIDE");
+            dataModel.put("actions",arr);
+            dataModel.put("lat", lat);
+            dataModel.put("lon", lon);
+            showOverlayMessage(context,dataModel);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("MyFirebaseMessagingService", "Error in busTripAssignedOverlay " + e);
+        }
+    }
+
     public static void startFCMBundleUpdateService(Context context, RemoteMessage remoteMessage, String merchantType) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -879,5 +929,6 @@ public  class MyFirebaseMessagingService {
         public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
         public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
         public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
+        public static final String WMB_TRIP_ASSIGNED = "WMB_TRIP_ASSIGNED";
     }
 }

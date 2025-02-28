@@ -76,6 +76,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.media.MediaPlayer;
 
 import androidx.annotation.Nullable;
 
@@ -115,8 +116,11 @@ public class OverlayMessagingService extends Service {
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private String toastMessage;
     private String supportPhoneNumber;
+    public static MediaPlayer mediaPlayer;
 
     private double editLat, editlon;
+
+    private Context context;
 
     @Nullable
     @Override
@@ -172,44 +176,68 @@ public class OverlayMessagingService extends Service {
             TextView buttonCancel = messageView.findViewById(R.id.button_cancel);
             ImageView cancelButtonImage = messageView.findViewById(R.id.cancel_button_image);
             TextView buttonCancelRight = messageView.findViewById(R.id.button_cancel_right);
-            title.setText(data.has("title") ? data.getString("title") : "");
-            buttonOk.setText(data.has("okButtonText") ? data.getString("okButtonText") : "Cancel");
-            buttonCancel.setText(data.has("cancelButtonText") ? data.getString("cancelButtonText") : "Ok");
-            description.setText(data.has("description") ? data.getString("description") : "");
-            link = data.has("link") ? data.getString("link") : null;
-            endPoint = data.has("endPoint") ? data.getString("endPoint") : null;
-            method = data.has("method") ? data.getString("method") : null;
-            reqBody = data.has("reqBody") ?  data.getString("reqBody") : null;
-            actions = data.has("actions") ? data.getJSONArray("actions") : (new JSONArray());
-            actions2 = data.has("actions2") ? data.getJSONArray("actions2") : (new JSONArray());
-            secondaryActions = data.has("secondaryActions") ? data.getJSONArray("secondaryActions") : (new JSONArray());
-            secondaryActions2 = data.has("secondaryActions2") ? data.getJSONArray("secondaryActions2") : (new JSONArray());
-            toastMessage = data.optString("toastMessage", null);
-            supportPhoneNumber = data.optString("contactSupportNumber", null);
-            editLat = data.has("editlat") ? data.getDouble("editlat") : 0.0;
-            editlon = data.has("editlon") ? data.getDouble("editlon") : 0.0;
-            Glide.with(this).load(data.getString("imageUrl")).into(imageView);
-            boolean titleVisibility = data.has("titleVisibility") && data.getBoolean("titleVisibility");
+            LinearLayout busDetailsLayout = messageView.findViewById(R.id.bus_details_layout);
+            LinearLayout originalOverlayContent = messageView.findViewById(R.id.original_overlay_content);
+            TextView busNumber = messageView.findViewById(R.id.bus_number);
+            TextView busType = messageView.findViewById(R.id.bus_type);
+            TextView routeNumber = messageView.findViewById(R.id.route_number);
+            TextView routeSourceDestination = messageView.findViewById(R.id.route_source_destination);
             boolean updateLocDetailsComponentVisibility = data.has("updateLocDetails");
-            if (updateLocDetailsComponentVisibility) {
-                SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                SharedPreferences.Editor editor = sharedPref.edit();
-                currency = sharedPref.getString("CURRENCY", "₹");
-                lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-                editor.putString("CALL_REFRESH", "true").apply(); 
-            }
-            boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
-            boolean buttonOkVisibility = data.has("buttonOkVisibility") && data.getBoolean("buttonOkVisibility");
-            boolean buttonCancelVisibility = data.has("buttonCancelVisibility") && data.getBoolean("buttonCancelVisibility");
-            boolean buttonLayoutVisibility = data.has("buttonLayoutVisibility") && data.getBoolean("buttonLayoutVisibility");
-            boolean imageVisibility = data.has("imageVisibility") && data.getBoolean("imageVisibility");
-            title.setVisibility(titleVisibility ? View.VISIBLE : View.GONE);
-            updateLocDetailsComponent.setVisibility(updateLocDetailsComponentVisibility ? View.VISIBLE : View.GONE);
-            description.setVisibility(descriptionVisibility ? View.VISIBLE : View.GONE);
-            buttonLayout.setVisibility(buttonLayoutVisibility ? View.VISIBLE : View.GONE);
-            buttonOk.setVisibility(buttonOkVisibility ? View.VISIBLE : View.GONE);
-            buttonCancel.setVisibility(buttonCancelVisibility ? View.VISIBLE : View.GONE);
-            imageView.setVisibility(imageVisibility ? View.VISIBLE : View.GONE);
+                title.setText(data.has("title") ? data.getString("title") : "");
+                buttonOk.setText(data.has("okButtonText") ? data.getString("okButtonText") : "Cancel");
+                buttonCancel.setText(data.has("cancelButtonText") ? data.getString("cancelButtonText") : "Ok");
+                description.setText(data.has("description") ? data.getString("description") : "");
+                link = data.has("link") ? data.getString("link") : null;
+                endPoint = data.has("endPoint") ? data.getString("endPoint") : null;
+                method = data.has("method") ? data.getString("method") : null;
+                reqBody = data.has("reqBody") ?  data.getString("reqBody") : null;
+                actions = data.has("actions") ? data.getJSONArray("actions") : (new JSONArray());
+                actions2 = data.has("actions2") ? data.getJSONArray("actions2") : (new JSONArray());
+                secondaryActions = data.has("secondaryActions") ? data.getJSONArray("secondaryActions") : (new JSONArray());
+                secondaryActions2 = data.has("secondaryActions2") ? data.getJSONArray("secondaryActions2") : (new JSONArray());
+                toastMessage = data.optString("toastMessage", null);
+                supportPhoneNumber = data.optString("contactSupportNumber", null);
+                editLat = data.has("editlat") ? data.getDouble("editlat") : 0.0;
+                editlon = data.has("editlon") ? data.getDouble("editlon") : 0.0;
+                if(data.has("imageUrl")){
+                    Glide.with(this).load(data.getString("imageUrl")).into(imageView);
+                }
+                boolean titleVisibility = data.has("titleVisibility") && data.getBoolean("titleVisibility");
+                
+                if (updateLocDetailsComponentVisibility) {
+                    SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPref.edit();
+                    currency = sharedPref.getString("CURRENCY", "₹");
+                    lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
+                    editor.putString("CALL_REFRESH", "true").apply(); 
+                }
+                if(data.has("notification_type") && data.getString("notification_type").equals("WMB_TRIP_ASSIGNED"))
+                {
+
+                    mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.bus_allocation_request);
+                    mediaPlayer.start();
+                    busDetailsLayout.setVisibility(View.VISIBLE);
+                    originalOverlayContent.setVisibility(View.GONE);
+                    busNumber.setText(data.has("vehicleNumber") ? data.getString("vehicleNumber") : "");
+                    busType.setText(data.has("vehicleServiceTierType") ? (data.getString("vehicleServiceTierType").equals("BUS_NON_AC") ? "Non-Ac" : "Ac") : "");
+                    routeNumber.setText(data.has("routeShortname") ? data.getString("routeShortname") : "");
+                    String sourceDestination = (data.has("longName") ? data.getString("longName") : "");
+                    routeSourceDestination.setText(sourceDestination);
+                } 
+                else {
+                boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
+                boolean buttonOkVisibility = data.has("buttonOkVisibility") && data.getBoolean("buttonOkVisibility");
+                boolean buttonCancelVisibility = data.has("buttonCancelVisibility") && data.getBoolean("buttonCancelVisibility");
+                boolean buttonLayoutVisibility = data.has("buttonLayoutVisibility") && data.getBoolean("buttonLayoutVisibility");
+                boolean imageVisibility = data.has("imageVisibility") && data.getBoolean("imageVisibility");
+                title.setVisibility(titleVisibility ? View.VISIBLE : View.GONE);
+                updateLocDetailsComponent.setVisibility(updateLocDetailsComponentVisibility ? View.VISIBLE : View.GONE);
+                description.setVisibility(descriptionVisibility ? View.VISIBLE : View.GONE);
+                buttonLayout.setVisibility(buttonLayoutVisibility ? View.VISIBLE : View.GONE);
+                buttonOk.setVisibility(buttonOkVisibility ? View.VISIBLE : View.GONE);
+                buttonCancel.setVisibility(buttonCancelVisibility ? View.VISIBLE : View.GONE);
+                imageView.setVisibility(imageVisibility ? View.VISIBLE : View.GONE);
+                }
             try {
                 setDataToMediaView(data);
             } catch (Exception e){
@@ -480,6 +508,37 @@ public class OverlayMessagingService extends Service {
             }
             stopSelf();
         });
+
+
+        ImageView closeButton = messageView.findViewById(R.id.close_button);
+        if (closeButton != null)
+        {
+            if (mediaPlayer != null)
+                mediaPlayer.stop();
+            closeButton.setOnClickListener(view -> {stopSelf();});
+        }
+
+        MaterialButton startBusRide = messageView.findViewById(R.id.start_bus_ride_button);
+        if (startBusRide != null){
+            startBusRide.setOnClickListener(view -> {
+            try {
+                if (actions.length() != 0) {
+                    for (int i = 0; i < actions.length(); i++) {
+                        String action = String.valueOf(actions.get(i));
+                        performAction(action, intentMessage);
+                    }
+                }
+                if(countDownTimer != null){
+                countDownTimer.cancel();
+            }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if (mediaPlayer != null)
+                mediaPlayer.stop();
+            stopSelf();
+        });
+    }
     }
 
     public void openNavigation(double lat, double lon) {
@@ -564,6 +623,47 @@ public class OverlayMessagingService extends Service {
                         openNavigation(latitude, longitude);
                 } catch (Exception e) {
                     System.out.println(e.toString());
+                }
+                break;
+            case "START_BUS_RIDE":
+                try {
+                    new Thread(() -> {
+                        try {
+                            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                            String baseUrl = sharedPref.getString("BASE_URL", "null");
+                            MobilityCallAPI mobilityApiHandler = MobilityCallAPI.getInstance(context);
+                            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
+
+                            JSONObject data = new JSONObject(intentMessage);
+                            double latitude = data.optDouble("lat", 0.0);
+                            double longitude = data.optDouble("lon", 0.0);
+                            String tripTransactionId = data.optString("tripTransactionId");
+                            if (!tripTransactionId.isEmpty()) {
+                                String startRideEndpoint = baseUrl + "/wmb/trip/" + tripTransactionId + "/start";
+                                JSONObject startRidePayload = new JSONObject();
+                                JSONObject location = new JSONObject();
+                                
+                                location.put("lat",latitude);
+                                location.put("lon",longitude);
+                                startRidePayload.put("location",location);
+                                MobilityAPIResponse startRideResponse = mobilityApiHandler.callAPI(startRideEndpoint, baseHeaders, startRidePayload.toString(), "POST");
+                                if (startRideResponse.getStatusCode() == 200) {
+                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                        RideRequestUtils.openApplication(OverlayMessagingService.this);
+                                        Toast.makeText(OverlayMessagingService.this, getString(R.string.bus_ride_started_successfully), Toast.LENGTH_SHORT).show();
+                                    });
+                                } else {
+                                    throw new Exception("Failed to start bus ride: " + startRideResponse.getResponseBody());
+                                }
+                            } else {
+                                throw new Exception("tripTransactionId is empty in tripLink response");
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error in START_BUS_RIDE: " + e.getMessage());
+                        }
+                    }).start();
+                } catch (Exception e) {
+                    System.out.println("Error in START_BUS_RIDE: " + e.getMessage());
                 }
                 break;
         }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="ride_rejected"> റൈഡ് നിരസിച്ചു</string>
     <string name="request">അഭ്യർത്ഥിക്കുക</string>
     <string name="decline">നിരസിക്കുക</string>
@@ -52,4 +52,6 @@
     <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
     <string name="tip_included"> നുറുങ്ങ് ഉൾപ്പെടുത്തിയിട്ടുണ്ട്!</string>
     <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
+    <string name="zxing_msg_default_status" tools:override="true">""</string>
+    <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
 </resources>
