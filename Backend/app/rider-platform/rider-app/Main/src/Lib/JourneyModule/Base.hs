@@ -136,10 +136,21 @@ getAllLegsStatus ::
 getAllLegsStatus journey = do
   allLegsRawData <- getJourneyLegs journey.id
   riderLastPoints <- getLastThreePoints journey.id
-  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
-  when (all (\st -> st.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState && journey.status /= DJourney.CANCELLED) $ do
-    updateJourneyStatus journey DJourney.FEEDBACK_PENDING
-  return allLegsState
+  let lockKey = multimodalLegSearchIdAccessLockKey journey.id.getId
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+    (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
+    when
+      ( all
+          ( \st -> case st of
+              JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
+              JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
+          )
+          allLegsState
+          && journey.status /= DJourney.CANCELLED
+      )
+      $ do
+        updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+    return allLegsState
   where
     processLeg ::
       JL.GetStateFlow m r c =>
@@ -158,7 +169,12 @@ getAllLegsStatus journey = do
               DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted}
               DTrip.Subway -> JL.getState $ SubwayLegRequestGetState $ SubwayLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted}
               DTrip.Bus -> JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted}
-          return (legState.status == JL.Completed, legsState <> [legState])
+          return
+            ( case legState of
+                JL.Single legData -> legData.status == JL.Completed
+                JL.Transit legDataList -> all (\legData -> legData.status == JL.Completed) legDataList,
+              legsState <> [legState]
+            )
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
 
 startJourney ::

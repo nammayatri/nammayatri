@@ -12,12 +12,14 @@ import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
+import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data JourneyRouteDetails = JourneyRouteDetails
   { frequency :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     fromStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station),
     id :: Kernel.Types.Id.Id Domain.Types.JourneyRouteDetails.JourneyRouteDetails,
+    journeyStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     platformNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

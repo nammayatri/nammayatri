@@ -9,12 +9,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Time
+import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data JourneyRouteDetailsT f = JourneyRouteDetailsT
   { frequency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
     fromStationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    journeyStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     lineColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lineColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     platformNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

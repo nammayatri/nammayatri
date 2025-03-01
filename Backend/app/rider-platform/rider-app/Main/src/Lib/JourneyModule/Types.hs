@@ -167,7 +167,9 @@ newtype SearchResponse = SearchResponse
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyLegState = JourneyLegState
+data JourneyLegState = Transit [JourneyLegStateData] | Single JourneyLegStateData
+
+data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus,
     statusChanged :: Bool,
     userPosition :: Maybe LatLong,
@@ -175,6 +177,7 @@ data JourneyLegState = JourneyLegState
     nextStop :: Maybe DRouteStopMappping.RouteStopMapping,
     nextStopTravelTime :: Maybe Seconds,
     nextStopTravelDistance :: Maybe Meters,
+    subLegOrder :: Int,
     legOrder :: Int,
     mode :: DTrip.MultimodalTravelMode
   }
@@ -264,6 +267,7 @@ data MetroLegRouteInfo = MetroLegRouteInfo
     platformNumber :: Maybe Text,
     lineColor :: Maybe Text,
     lineColorCode :: Maybe Text,
+    journeyStatus :: Maybe JourneyLegStatus,
     frequency :: Maybe Seconds
   }
   deriving stock (Show, Generic)
@@ -286,6 +290,7 @@ data SubwayLegRouteInfo = SubwayLegRouteInfo
     lineColor :: Maybe Text,
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
+    journeyStatus :: Maybe JourneyLegStatus,
     frequency :: Maybe Seconds
   }
   deriving stock (Show, Generic)
@@ -633,6 +638,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 destinationStop = stationToStationAPI toStation,
                 routeCode = route.code,
                 subOrder = journeyRouteDetail.subLegOrder,
+                journeyStatus = journeyRouteDetail.journeyStatus,
                 platformNumber = journeyRouteDetail.platformNumber,
                 lineColor = journeyRouteDetail.lineColor,
                 lineColorCode = journeyRouteDetail.lineColorCode,
@@ -660,6 +666,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 routeCode = route.code,
                 subOrder = journeyRouteDetail.subLegOrder,
                 platformNumber = journeyRouteDetail.platformNumber,
+                journeyStatus = journeyRouteDetail.journeyStatus,
                 lineColor = journeyRouteDetail.lineColor,
                 lineColorCode = journeyRouteDetail.lineColorCode,
                 trainNumber = Nothing,
@@ -735,7 +742,6 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                 }
         Spec.BUS -> do
           journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
-
           fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
           toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
           routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
@@ -786,6 +792,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                 subOrder = journeyRouteDetail.subLegOrder,
                 platformNumber = journeyRouteDetail.platformNumber,
                 lineColor = journeyRouteDetail.lineColor,
+                journeyStatus = journeyRouteDetail.journeyStatus,
                 lineColorCode = journeyRouteDetail.lineColorCode,
                 frequency = journeyRouteDetail.frequency
               }
@@ -812,6 +819,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                 subOrder = journeyRouteDetail.subLegOrder,
                 platformNumber = journeyRouteDetail.platformNumber,
                 lineColor = journeyRouteDetail.lineColor,
+                journeyStatus = journeyRouteDetail.journeyStatus,
                 lineColorCode = journeyRouteDetail.lineColorCode,
                 trainNumber = Nothing,
                 frequency = journeyRouteDetail.frequency

@@ -28,6 +28,7 @@ create frfsSearchReq = do
             { id = newId,
               lineColor = journeyRouteDetail.lineColor,
               lineColorCode = journeyRouteDetail.lineColorCode,
+              journeyStatus = journeyRouteDetail.journeyStatus,
               frequency = journeyRouteDetail.frequency,
               routeLongName = journeyRouteDetail.routeLongName,
               searchId = frfsSearchReq.id,
