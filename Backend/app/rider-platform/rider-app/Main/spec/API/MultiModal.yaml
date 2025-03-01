@@ -37,6 +37,7 @@ types:
 
   LegStatus:
     legOrder: Int
+    subLegOrder: Int
     status: JourneyLegStatus
     vehiclePosition: Maybe LatLong
     userPosition: Maybe LatLong

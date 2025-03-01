@@ -421,6 +421,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
 
   searchReqId <- generateGUID
   now <- getCurrentTime
+  let updatedJourneyRouteDetails = map (\JLT.MultiModalJourneyRouteDetails {..} -> JLT.MultiModalJourneyRouteDetails {journeyStatus = Just JLT.InPlan, ..}) mbJourneyRouteDetails
   let searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
@@ -437,7 +438,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             partnerOrgId = mbPOrgId,
             journeyLegInfo = journeySearchData,
             journeyLegStatus = Just JLT.InPlan,
-            journeyRouteDetails = mbJourneyRouteDetails,
+            journeyRouteDetails = updatedJourneyRouteDetails,
             isOnSearchReceived = Nothing,
             ..
           }

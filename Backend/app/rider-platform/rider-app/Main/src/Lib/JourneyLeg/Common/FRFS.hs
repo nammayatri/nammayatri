@@ -6,7 +6,7 @@ import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Applicative
-import Data.List (sortBy)
+import Data.List (sortBy, sortOn)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import Domain.Types.Booking.API as DBA
@@ -21,7 +21,7 @@ import qualified Domain.Types.Person as DPerson
 import Domain.Types.Station
 import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
-import Domain.Utils (safeHead)
+import Domain.Utils (safeHead, safeLast)
 import EulerHS.Prelude (comparing, (+||), (||+))
 import ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Maps.Types
@@ -50,6 +50,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyRouteDetails as QJRD
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -60,55 +61,128 @@ getState mode searchId riderLastPoints isLastCompleted = do
   let userPosition = (.latLong) <$> listToMaybe riderLastPoints
   case mbBooking of
     Just booking -> do
-      (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationId
-      when statusChanged $ QTBooking.updateJourneyLegStatus (Just newStatus) booking.id
-      journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-      vehicleTrackingAndPosition <- do
-        let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
-        getVehiclePosition booking.riderId booking.merchantId booking.merchantOperatingCityId newStatus userPosition booking.vehicleType mbRouteStations
-      let vehiclePosition = snd <$> vehicleTrackingAndPosition
-          nextStopDetails = fst <$> vehicleTrackingAndPosition
-      return $
-        JT.JourneyLegState
-          { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
-            userPosition,
-            vehiclePosition = vehiclePosition,
-            nextStop = nextStopDetails <&> (.nextStop),
-            nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
-            nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
-            legOrder = journeyLegOrder,
-            statusChanged,
-            mode
-          }
+      case mode of
+        DTrip.Bus -> do
+          (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationId
+          when statusChanged $ QTBooking.updateJourneyLegStatus (Just newStatus) booking.id
+          journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+          vehicleTrackingAndPosition <- do
+            let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+            getVehiclePosition booking.riderId booking.merchantId booking.merchantOperatingCityId newStatus userPosition booking.vehicleType mbRouteStations
+          let vehiclePosition = snd <$> vehicleTrackingAndPosition
+              nextStopDetails = fst <$> vehicleTrackingAndPosition
+          return $
+            JT.Single $
+              JT.JourneyLegStateData
+                { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
+                  userPosition,
+                  vehiclePosition = vehiclePosition,
+                  nextStop = nextStopDetails <&> (.nextStop),
+                  nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
+                  nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
+                  legOrder = journeyLegOrder,
+                  subLegOrder = 1,
+                  statusChanged,
+                  mode
+                }
+        _ -> do
+          let sortedSubRoutes = sortOn (.subLegOrder) booking.journeyRouteDetails
+          processedStatuses <-
+            mapM
+              ( \subRoute -> do
+                  toStationId <- subRoute.toStationId & fromMaybeM (InternalError "Missing toStationId")
+                  processOldStatus subRoute.journeyStatus toStationId
+              )
+              sortedSubRoutes
+          let newStatuses = zipWith (\subRoute (changed, newStatus) -> (subRoute, changed, newStatus)) sortedSubRoutes processedStatuses
+          forM_ newStatuses $ \(subRoute, statusChanged, newStatus) -> do
+            when statusChanged $ do
+              QJRD.updateJourneyStatus (Just newStatus) booking.searchId subRoute.subLegOrder
+          lastSubRoute <- safeLast newStatuses & fromMaybeM (InternalError "New Status Not Found")
+          let (_, lastStatusChanged, lastNewStatus) = lastSubRoute
+          when lastStatusChanged $ do
+            QTBooking.updateJourneyLegStatus (Just lastNewStatus) booking.id
+          journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+          let journeyLegStates =
+                [ JT.JourneyLegStateData
+                    { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
+                      userPosition,
+                      vehiclePosition = Nothing,
+                      nextStop = Nothing,
+                      nextStopTravelTime = Nothing,
+                      nextStopTravelDistance = Nothing,
+                      legOrder = journeyLegOrder,
+                      subLegOrder = fromMaybe 1 subRoute.subLegOrder,
+                      statusChanged = changed,
+                      mode
+                    }
+                  | (subRoute, changed, newStatus) <- newStatuses
+                ]
+          return $ JT.Transit journeyLegStates
     Nothing -> do
-      searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-      (statusChanged, newStatus) <- processOldStatus searchReq.journeyLegStatus searchReq.toStationId
-      when statusChanged $ QFRFSSearch.updateJourneyLegStatus (Just newStatus) searchReq.id
-      journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
-      vehicleTrackingAndPosition <- do
-        case journeyLegInfo.pricingId of
-          Just quoteId -> do
-            mbQuote <- QFRFSQuote.findById (Id quoteId)
-            case mbQuote of
-              Just quote -> do
-                let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-                getVehiclePosition quote.riderId quote.merchantId searchReq.merchantOperatingCityId newStatus userPosition searchReq.vehicleType mbRouteStations
+      case mode of
+        DTrip.Bus -> do
+          searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
+          (statusChanged, newStatus) <- processOldStatus searchReq.journeyLegStatus searchReq.toStationId
+          when statusChanged $ QFRFSSearch.updateJourneyLegStatus (Just newStatus) searchReq.id
+          journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
+          vehicleTrackingAndPosition <- do
+            case journeyLegInfo.pricingId of
+              Just quoteId -> do
+                mbQuote <- QFRFSQuote.findById (Id quoteId)
+                case mbQuote of
+                  Just quote -> do
+                    let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+                    getVehiclePosition quote.riderId quote.merchantId quote.merchantOperatingCityId newStatus userPosition quote.vehicleType mbRouteStations
+                  Nothing -> pure Nothing
               Nothing -> pure Nothing
-          Nothing -> pure Nothing
-      let vehiclePosition = snd <$> vehicleTrackingAndPosition
-          nextStopDetails = fst <$> vehicleTrackingAndPosition
-      return $
-        JT.JourneyLegState
-          { status = newStatus,
-            userPosition,
-            vehiclePosition = vehiclePosition,
-            nextStop = nextStopDetails <&> (.nextStop),
-            nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
-            nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
-            legOrder = journeyLegInfo.journeyLegOrder,
-            statusChanged,
-            mode
-          }
+          let vehiclePosition = snd <$> vehicleTrackingAndPosition
+              nextStopDetails = fst <$> vehicleTrackingAndPosition
+          return $
+            JT.Single $
+              JT.JourneyLegStateData
+                { status = newStatus,
+                  userPosition,
+                  vehiclePosition = vehiclePosition,
+                  nextStop = nextStopDetails <&> (.nextStop),
+                  nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
+                  nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
+                  legOrder = journeyLegInfo.journeyLegOrder,
+                  subLegOrder = 1,
+                  statusChanged,
+                  mode
+                }
+        _ -> do
+          searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
+          let sortedSubRoutes = sortOn (.subLegOrder) searchReq.journeyRouteDetails
+          processedStatuses <-
+            mapM
+              ( \subRoute -> do
+                  toStationId <- subRoute.toStationId & fromMaybeM (InternalError "Missing toStationId")
+                  processOldStatus subRoute.journeyStatus toStationId
+              )
+              sortedSubRoutes
+          let newStatuses = zipWith (\subRoute (changed, newStatus) -> (subRoute, changed, newStatus)) sortedSubRoutes processedStatuses
+          lastSubRoute <- safeLast newStatuses & fromMaybeM (InternalError "New Status Not Found")
+          let (_, lastStatusChanged, lastNewStatus) = lastSubRoute
+          when lastStatusChanged $ QFRFSSearch.updateJourneyLegStatus (Just lastNewStatus) searchReq.id
+          journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InternalError "JourneySearchData not found")
+          let journeyLegStates =
+                [ JT.JourneyLegStateData
+                    { status = newStatus,
+                      userPosition,
+                      vehiclePosition = Nothing,
+                      nextStop = Nothing,
+                      nextStopTravelTime = Nothing,
+                      nextStopTravelDistance = Nothing,
+                      legOrder = journeyLegInfo.journeyLegOrder,
+                      subLegOrder = fromMaybe 1 subRoute.subLegOrder,
+                      statusChanged = changed,
+                      mode
+                    }
+                  | (subRoute, changed, newStatus) <- newStatuses
+                ]
+          return $ JT.Transit journeyLegStates
   where
     getVehiclePosition :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DPerson.Person -> Id DMerchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> JPT.JourneyLegStatus -> Maybe LatLong -> Spec.VehicleCategory -> Maybe [API.FRFSRouteStationsAPI] -> m (Maybe (VehicleTracking, LatLong))
     getVehiclePosition riderId merchantId merchantOperatingCityId journeyStatus riderPosition vehicleType = \case
@@ -280,6 +354,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
                 lineColor = EMTypes.shortName rd,
                 frequency = EMTypes.frequency rd,
                 subLegOrder = Just (EMTypes.subLegOrder rd),
+                journeyStatus = Nothing,
                 routeLongName = EMTypes.longName rd,
                 fromStationId = fmap (.id) fromStation,
                 toStationId = fmap (.id) toStation,

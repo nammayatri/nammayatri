@@ -9,9 +9,11 @@ import qualified Domain.Types.JourneyRouteDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.JourneyLeg.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyRouteDetails as Beam
 
@@ -24,6 +26,19 @@ createMany = traverse_ create
 findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.JourneyRouteDetails.JourneyRouteDetails])
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
+updateJourneyStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ())
+updateJourneyStatus journeyStatus searchId subLegOrder = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.journeyStatus journeyStatus, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId),
+          Se.Is Beam.subLegOrder $ Se.Eq subLegOrder
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.JourneyRouteDetails.JourneyRouteDetails -> m (Maybe Domain.Types.JourneyRouteDetails.JourneyRouteDetails))
@@ -35,6 +50,7 @@ updateByPrimaryKey (Domain.Types.JourneyRouteDetails.JourneyRouteDetails {..}) =
   updateWithKV
     [ Se.Set Beam.frequency frequency,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId <$> fromStationId),
+      Se.Set Beam.journeyStatus journeyStatus,
       Se.Set Beam.lineColor lineColor,
       Se.Set Beam.lineColorCode lineColorCode,
       Se.Set Beam.platformNumber platformNumber,
@@ -58,6 +74,7 @@ instance FromTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jo
           { frequency = frequency,
             fromStationId = Kernel.Types.Id.Id <$> fromStationId,
             id = Kernel.Types.Id.Id id,
+            journeyStatus = journeyStatus,
             lineColor = lineColor,
             lineColorCode = lineColorCode,
             platformNumber = platformNumber,
@@ -78,6 +95,7 @@ instance ToTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jour
       { Beam.frequency = frequency,
         Beam.fromStationId = Kernel.Types.Id.getId <$> fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.journeyStatus = journeyStatus,
         Beam.lineColor = lineColor,
         Beam.lineColorCode = lineColorCode,
         Beam.platformNumber = platformNumber,

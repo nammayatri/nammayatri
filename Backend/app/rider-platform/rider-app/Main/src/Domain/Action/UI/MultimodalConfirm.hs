@@ -323,20 +323,26 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
           then do
             return (Just FRFSTicketService.SUCCESS)
           else return Nothing
-  return $ ApiTypes.JourneyStatusResp {legs = map transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus}
+  return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus}
   where
-    transformLeg :: JMTypes.JourneyLegState -> ApiTypes.LegStatus
+    transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
     transformLeg legState =
-      ApiTypes.LegStatus
-        { legOrder = legState.legOrder,
-          status = legState.status,
-          userPosition = legState.userPosition,
-          vehiclePosition = legState.vehiclePosition,
-          mode = legState.mode,
-          nextStop = legState.nextStop,
-          nextStopTravelTime = legState.nextStopTravelTime,
-          nextStopTravelDistance = legState.nextStopTravelDistance
-        }
+      case legState of
+        JMTypes.Single legData -> [convert legData]
+        JMTypes.Transit legDataList -> map convert legDataList
+      where
+        convert legData =
+          ApiTypes.LegStatus
+            { legOrder = legData.legOrder,
+              subLegOrder = legData.subLegOrder,
+              status = legData.status,
+              userPosition = legData.userPosition,
+              vehiclePosition = legData.vehiclePosition,
+              mode = legData.mode,
+              nextStop = legData.nextStop,
+              nextStopTravelTime = legData.nextStopTravelTime,
+              nextStopTravelDistance = legData.nextStopTravelDistance
+            }
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedbackForm = do

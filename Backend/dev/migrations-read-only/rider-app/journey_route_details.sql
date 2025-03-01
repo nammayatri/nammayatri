@@ -25,3 +25,8 @@ ALTER TABLE atlas_app.journey_route_details ADD COLUMN sub_leg_order integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_route_details ADD COLUMN route_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_route_details ADD COLUMN journey_status text ;
