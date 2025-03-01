@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
@@ -328,4 +329,4 @@ shareTicketInfo ticketBookingId = do
           B.runInReplica $
             CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
               >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
-        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
+        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking DIBC.PARTNERORG

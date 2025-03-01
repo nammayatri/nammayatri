@@ -594,6 +594,25 @@ instance IsHTTPError BecknConfigError where
 
 instance IsAPIError BecknConfigError
 
+newtype IntegratedBPPConfigError
+  = IntegratedBPPConfigNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
+
+instance IsBaseError IntegratedBPPConfigError where
+  toMessage = \case
+    IntegratedBPPConfigNotFound msg -> Just $ "IntegratedBPPConfig Config not found:-" <> msg
+
+instance IsHTTPError IntegratedBPPConfigError where
+  toErrorCode = \case
+    IntegratedBPPConfigNotFound _ -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+
+  toHttpCode = \case
+    IntegratedBPPConfigNotFound _ -> E500
+
+instance IsAPIError IntegratedBPPConfigError
+
 data PaymentError
   = PaymentMethodRequired
   | CustomerPaymentIdNotFound Text
