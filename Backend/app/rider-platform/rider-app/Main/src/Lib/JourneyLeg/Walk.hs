@@ -80,17 +80,19 @@ instance JT.JourneyLeg WalkLegRequest m where
       let walkLegStatus = JT.castWalkLegStatusFromLegStatus newStatus
       QWalkLeg.updateStatus walkLegStatus req.walkLegId
     return $
-      JT.JourneyLegState
-        { status = newStatus,
-          userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-          vehiclePosition = Nothing,
-          nextStop = Nothing,
-          nextStopTravelDistance = Nothing,
-          nextStopTravelTime = Nothing,
-          legOrder = journeyLegInfo.journeyLegOrder,
-          statusChanged,
-          mode = DTrip.Walk
-        }
+      JT.Single $
+        JT.JourneyLegStateData
+          { status = newStatus,
+            userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+            vehiclePosition = Nothing,
+            nextStop = Nothing,
+            nextStopTravelDistance = Nothing,
+            nextStopTravelTime = Nothing,
+            legOrder = journeyLegInfo.journeyLegOrder,
+            subLegOrder = 1,
+            statusChanged,
+            mode = DTrip.Walk
+          }
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (WalkLegRequestGetInfo req) = do

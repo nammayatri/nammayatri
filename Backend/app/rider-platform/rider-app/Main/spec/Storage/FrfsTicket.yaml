@@ -80,7 +80,7 @@ FRFSSearch:
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList|E
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetailsT journeyRouteDetailsList|E
 
   excludedDefaultQueries:
     - create
@@ -123,11 +123,17 @@ JourneyRouteDetails:
     fromStationId: Maybe (Id Station)
     toStationId: Maybe (Id Station)
     routeId: Maybe (Id Route)
+    journeyStatus: Maybe JourneyLegStatus
 
   queries:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+    updateJourneyStatus:
+      kvFunction: updateOneWithKV
+      params: [journeyStatus]
+      where:
+        and: [searchId, subLegOrder]
 
   constraints:
     id: PrimaryKey

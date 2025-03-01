@@ -51,7 +51,7 @@ getTransformedRouteDetails routeDetails = do
                       longitude = fromMaybe (error "Missing start location latitude") (RD.endLocationLon rd)
                     }
               },
-          subLegOrder = fromMaybe 0 (RD.subLegOrder rd),
+          subLegOrder = fromMaybe 1 (RD.subLegOrder rd),
           fromArrivalTime = RD.fromArrivalTime rd,
           fromDepartureTime = RD.fromDepartureTime rd,
           toArrivalTime = RD.toArrivalTime rd,
@@ -82,6 +82,26 @@ getTransformedJourneyRouteDetails routeDetails = do
         { platformNumber = JRD.platformNumber rd,
           lineColorCode = JRD.lineColorCode rd,
           lineColor = JRD.lineColor rd,
+          journeyStatus = JRD.journeyStatus rd,
+          subLegOrder = JRD.subLegOrder rd,
+          frequency = JRD.frequency rd,
+          routeLongName = JRD.routeLongName rd,
+          fromStationId = JRD.fromStationId rd,
+          toStationId = JRD.toStationId rd,
+          routeId = JRD.routeId rd
+        }
+
+getTransformedJourneyRouteDetailsT :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
+getTransformedJourneyRouteDetailsT routeDetails = do
+  map transformJourneyRouteDetails routeDetails
+  where
+    transformJourneyRouteDetails :: JRD.JourneyRouteDetails -> MultiModalJourneyRouteDetails
+    transformJourneyRouteDetails rd =
+      MultiModalJourneyRouteDetails
+        { platformNumber = JRD.platformNumber rd,
+          lineColorCode = JRD.lineColorCode rd,
+          lineColor = JRD.lineColor rd,
+          journeyStatus = JRD.journeyStatus rd,
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,
           routeLongName = JRD.routeLongName rd,

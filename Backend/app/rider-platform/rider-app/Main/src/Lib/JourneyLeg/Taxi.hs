@@ -192,34 +192,38 @@ instance JT.JourneyLeg TaxiLegRequest m where
         (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
         return $
-          JT.JourneyLegState
-            { status = journeyLegStatus,
-              userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-              vehiclePosition,
-              nextStop = Nothing,
-              nextStopTravelDistance = Nothing,
-              nextStopTravelTime = Nothing,
-              legOrder = journeyLegOrder,
-              statusChanged = False,
-              mode = DTrip.Taxi
-            }
+          JT.Single $
+            JT.JourneyLegStateData
+              { status = journeyLegStatus,
+                userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+                vehiclePosition,
+                nextStop = Nothing,
+                nextStopTravelDistance = Nothing,
+                nextStopTravelTime = Nothing,
+                legOrder = journeyLegOrder,
+                subLegOrder = 1,
+                statusChanged = False,
+                mode = DTrip.Taxi
+              }
       Nothing -> do
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
         let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
         return $
-          JT.JourneyLegState
-            { status = journeyLegStatus,
-              userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-              vehiclePosition = Nothing,
-              nextStop = Nothing,
-              nextStopTravelDistance = Nothing,
-              nextStopTravelTime = Nothing,
-              legOrder = journeyLegInfo.journeyLegOrder,
-              statusChanged = False,
-              mode = DTrip.Taxi
-            }
+          JT.Single $
+            JT.JourneyLegStateData
+              { status = journeyLegStatus,
+                userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+                vehiclePosition = Nothing,
+                nextStop = Nothing,
+                nextStopTravelDistance = Nothing,
+                nextStopTravelTime = Nothing,
+                legOrder = journeyLegInfo.journeyLegOrder,
+                subLegOrder = 1,
+                statusChanged = False,
+                mode = DTrip.Taxi
+              }
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do
