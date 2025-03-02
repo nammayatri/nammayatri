@@ -694,29 +694,27 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
             -- checking here if blockExpiryTime is passed
             currentTimeWithBuffer <- (10000 +) <$> getCurrentTimestamp
             let windowTimePassed = maybe False (\expTime -> currentTimeWithBuffer > expTime) ticketBooking'.blockExpirationTime
-            if windowTimePassed
-              then do
+            res <-
+              if windowTimePassed
+                then tryInstantBooking personId ticketBookingServiceCategories
+                else do
+                  case ticketBooking'.blockExpirationTime of
+                    Just _ -> tryLockBooking personId ticketBookingServiceCategories
+                    Nothing -> return (LockBookingSuccess Nothing)
+            case res of
+              LockBookingSuccess _ -> do
+                QTB.updateStatusByShortId DTTB.Booked _shortId
+                QTBS.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
+                mapM_
+                  ( \tbsc ->
+                      whenJust tbsc.serviceCategoryId $ \serviceId ->
+                        updateBookedAndBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
+                  )
+                  ticketBookingServiceCategories
+              LockBookingFailed -> do
                 intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId
                 QTB.updateStatusByShortId DTTB.RefundInitiated _shortId
                 QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
-              else do
-                res <- case ticketBooking'.blockExpirationTime of
-                  Just _ -> tryLockBooking personId ticketBookingServiceCategories
-                  Nothing -> return (LockBookingSuccess Nothing)
-                case res of
-                  LockBookingSuccess _ -> do
-                    QTB.updateStatusByShortId DTTB.Booked _shortId
-                    QTBS.updateAllStatusByBookingId DTB.Confirmed ticketBooking'.id
-                    mapM_
-                      ( \tbsc ->
-                          whenJust tbsc.serviceCategoryId $ \serviceId ->
-                            updateBookedAndBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
-                      )
-                      ticketBookingServiceCategories
-                  LockBookingFailed -> do
-                    intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId
-                    QTB.updateStatusByShortId DTTB.RefundInitiated _shortId
-                    QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
           when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
             QTB.updateStatusByShortId DTTB.Failed _shortId
             QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
@@ -1222,3 +1220,18 @@ garbageCollect :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategor
 garbageCollect scId date = do
   now <- getCurrentTimestamp
   void $ Redis.zRemRangeByScore (mkTicketServiceCategoryBlockedSeatKey scId date) 0 (now - 600000)
+
+tryInstantBooking :: Kernel.Types.Id.Id Domain.Types.Person.Person -> [DTB.TicketBookingServiceCategory] -> Environment.Flow LockBookingResult
+tryInstantBooking personId tscs = do
+  case Kernel.Prelude.headMay tscs >>= (.visitDate) of
+    Nothing -> return LockBookingFailed
+    Just date -> do
+      let requestedCount = map (\tsc -> tsc.serviceCategoryId >>= (\scId -> pure (Kernel.Types.Id.Id scId, tsc.bookedSeats))) tscs
+      if any isNothing requestedCount
+        then do
+          return LockBookingFailed
+        else do
+          blockRes <- blockSeats personId date (catMaybes requestedCount)
+          case blockRes of
+            BlockFailed _ -> return LockBookingFailed
+            BlockSuccess _ -> tryLockBooking personId tscs
