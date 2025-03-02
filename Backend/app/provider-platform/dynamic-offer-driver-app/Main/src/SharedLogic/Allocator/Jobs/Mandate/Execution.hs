@@ -122,26 +122,30 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
       let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
       vendorFees' <- if splitEnabled then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
       let vendorFees = map roundVendorFee vendorFees'
-
-      splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) else pure Nothing
-      let executionRequest =
-            PaymentInterface.MandateExecutionReq
-              { orderId = invoice.invoiceShortId,
-                amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
-                customerId = driverFee.driverId.getId,
-                notificationId = notification.shortId,
-                mandateId = mandateId.getId,
-                executionDate,
-                splitSettlementDetails = splitSettlementDetails
-              }
-      return $
-        Just
-          ExecutionData
-            { executionRequest,
-              invoice,
-              driverFee,
-              driverPlan
-            }
+      splitSettlementDetails' <- try @_ @SomeException $ if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) else pure Nothing
+      case splitSettlementDetails' of
+        Left err -> do
+          logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
+          return Nothing
+        Right splitSettlementDetails -> do
+          let executionRequest =
+                PaymentInterface.MandateExecutionReq
+                  { orderId = invoice.invoiceShortId,
+                    amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
+                    customerId = driverFee.driverId.getId,
+                    notificationId = notification.shortId,
+                    mandateId = mandateId.getId,
+                    executionDate,
+                    splitSettlementDetails = splitSettlementDetails
+                  }
+          return $
+            Just
+              ExecutionData
+                { executionRequest,
+                  invoice,
+                  driverFee,
+                  driverPlan
+                }
     Nothing -> return Nothing
 
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
