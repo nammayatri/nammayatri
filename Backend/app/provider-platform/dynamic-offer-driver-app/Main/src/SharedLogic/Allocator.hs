@@ -57,6 +57,7 @@ data AllocatorJobType
   | SendManualPaymentLink
   | RetryDocumentVerification
   | ScheduledRideNotificationsToDriver
+  | ScheduleTagActionNotification
   | DriverReferralPayout
   | ScheduledRideAssignedOnUpdate
   | CheckExotelCallStatusAndNotifyBAP
@@ -94,6 +95,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
   restoreAnyJobInfo SRetryDocumentVerification jobData = AnyJobInfo <$> restoreJobInfo SRetryDocumentVerification jobData
   restoreAnyJobInfo SScheduledRideNotificationsToDriver jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToDriver jobData
+  restoreAnyJobInfo SScheduleTagActionNotification jobData = AnyJobInfo <$> restoreJobInfo SScheduleTagActionNotification jobData
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
@@ -342,6 +344,19 @@ data ScheduledRideNotificationsToDriverJobData = ScheduledRideNotificationsToDri
 instance JobInfoProcessor 'ScheduledRideNotificationsToDriver
 
 type instance JobContent 'ScheduledRideNotificationsToDriver = ScheduledRideNotificationsToDriverJobData
+
+data ScheduleTagActionNotificationJobData = ScheduleTagActionNotificationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    notificationType :: DRN.NotificationType,
+    notificationKey :: Text,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduleTagActionNotification
+
+type instance JobContent 'ScheduleTagActionNotification = ScheduleTagActionNotificationJobData
 
 data DriverReferralPayoutJobData = DriverReferralPayoutJobData
   { merchantId :: Id DM.Merchant,
