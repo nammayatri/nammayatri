@@ -1,0 +1,68 @@
+name: Nix CI for x86_64 Image
+
+on:
+  push:
+    branches:
+      - "**"  # Run on any branch push
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Keep the manual trigger option
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  x86-build-and-push:
+    runs-on: ubuntu-latest  # Using GitHub-hosted runner instead of self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+      
+      - name: Install crane tool for Docker push
+        run: |
+          # Install crane directly using Go
+          nix-shell -p go --run "go install github.com/google/go-containerregistry/cmd/crane@latest"
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+      
+      - name: Install om tool
+        run: |
+          nix --accept-flake-config profile install github:juspay/omnix
+          # Ensure om is in PATH
+          echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
+
+      - name: Build all flake outputs
+        run: |
+          # If your 'om' tool is from within your repo:
+          om ci run --systems "x86_64-linux" --no-link -- -v
+          # Or manual fallback if 'om' isn't available:
+          # nix build .#packages.x86_64-linux --no-link -L
+
+      - name: Build And Push Docker image
+        env:
+          DOCKER_REGISTRY: ghcr.io
+        run: |
+          nix build .#packages.x86_64-linux.dockerImage
+    
+          BASE_IMAGE="$(nix eval --raw .#packages.x86_64-linux.dockerImage.imageName):$(nix eval --raw .#packages.x86_64-linux.dockerImage.imageTag)"
+          echo "Built image: ${BASE_IMAGE}"
+
+          # Extract and push the image
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-amd64"
+          
+          # Also push as the main image if needed
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          
+          crane auth logout ${DOCKER_REGISTRY}
