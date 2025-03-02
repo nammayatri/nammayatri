@@ -27,6 +27,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Data.List as List
+import qualified Data.Text as T
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FarePolicy as FarePolicyD
@@ -144,7 +145,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let safetyAlertTags = UtilsOU.mkSafetyAlertTags reason
+    let safetyAlertTags = UtilsOU.mkSafetyAlertTags (readMaybe (T.unpack reason))
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False Nothing (Just $ show Event.SAFETY_ALERT) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order

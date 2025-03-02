@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as List
+import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
@@ -314,7 +315,7 @@ mkNewMessageTags message =
             tagValue = Just message
           }
 
-mkSafetyAlertTags :: Text -> Maybe [Spec.TagGroup]
+mkSafetyAlertTags :: Maybe Enums.SafetyReasonCode -> Maybe [Spec.TagGroup]
 mkSafetyAlertTags reason =
   Just
     [ Spec.TagGroup
@@ -338,12 +339,12 @@ mkSafetyAlertTags reason =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DEVIATION,
+                  { descriptorCode = Just $ show Tags.SAFETY_REASON_CODE,
                     descriptorName = Just "Safety Alert Trigger",
                     descriptorShortDesc = Nothing
                   },
             tagDisplay = Just False,
-            tagValue = Just reason
+            tagValue = Just (T.pack $ maybe "" show reason)
           }
 
 mkUpdatedDistanceTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
