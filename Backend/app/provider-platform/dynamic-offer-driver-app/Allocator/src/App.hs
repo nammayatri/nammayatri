@@ -53,7 +53,7 @@ import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
-import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver)
+import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
@@ -110,6 +110,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . retryDocumentVerificationJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendDriverReferralPayoutJobData)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendTagActionNotification)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBAP)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFleetAlert)

@@ -217,6 +217,7 @@ let AllocatorJobType =
       | RetryDocumentVerification
       | SendManualPaymentLink
       | ScheduledRideNotificationsToDriver
+      | ScheduleTagActionNotification
       | DriverReferralPayout
       | ScheduledRideAssignedOnUpdate
       | Daily
@@ -257,6 +258,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledRideNotificationsToDriver
         , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.ScheduleTagActionNotification
+        , mapValue = False
         }
       , { mapKey = AllocatorJobType.ScheduledRideAssignedOnUpdate
         , mapValue = True
