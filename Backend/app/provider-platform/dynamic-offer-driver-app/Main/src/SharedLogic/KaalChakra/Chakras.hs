@@ -47,7 +47,7 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
         mbDriver <- QPerson.findById $ cast @LYT.User @DPerson.Person userId
         pure $ mbDriver <&> (\driver -> fromMaybe [] driver.driverTag),
       updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @LYT.User @DPerson.Person userId),
-      action = Actions.kaalChakraAction . cast @LYT.User @DPerson.Person,
+      action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,
       createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId
     }

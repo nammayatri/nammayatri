@@ -44,7 +44,7 @@ data Handle m action = Handle
     updateUserTags :: Id Yudhishthira.User -> [Yudhishthira.TagNameValueExpiry] -> m (),
     createFetchUserDataJob :: Yudhishthira.Chakra -> Yudhishthira.KaalChakraJobData -> UTCTime -> m (),
     createUpdateUserTagDataJob :: Yudhishthira.Chakra -> Yudhishthira.UpdateKaalBasedTagsData -> UTCTime -> m (),
-    action :: Id Yudhishthira.User -> action -> m ()
+    action :: Id Yudhishthira.User -> Maybe action -> Text -> m ()
   }
 
 type ChakraEvent m r action =
@@ -62,7 +62,7 @@ skipUpdateUserTagsHandler =
       updateUserTags = \userId updatedTags -> logInfo $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags,
       createFetchUserDataJob = \chakra updateTagData _scheduledTime -> logInfo $ "Skip generateUserData job for: " <> show updateTagData <> "; chakra: " <> show chakra,
       createUpdateUserTagDataJob = \chakra kaalChakraData _scheduledTime -> logInfo $ "Skip updateTag job for: " <> show kaalChakraData <> "; chakra: " <> show chakra,
-      action = \userId action -> logInfo $ "Skip action: " <> show action <> "; userId: " <> show userId
+      action = \userId action _ -> logInfo $ "Skip action: " <> show action <> "; userId: " <> show userId
     }
 
 kaalChakraEvent ::
@@ -363,9 +363,10 @@ runTagAction h userId actionData = do
               Just action -> do
                 logInfo $ "Run extra tag action: tagName: " <> show tagName <> "; action: " <> show action <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew
                 handle (errHandler action) $
-                  h.action userId action
+                  h.action userId (Just action) actionTxt
               Nothing -> do
                 logError $ "Could not parse action: tagName: " <> show tagName <> "; action: " <> actionTxt <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew <> "; skipping."
+                h.action userId Nothing actionTxt
             Right A.Null ->
               logInfo $ "Empty extra tag action determined: tagName:" <> show tagName <> "; tagValueOld: " <> show mbTagValueOld <> "; tagValueNew: " <> show tagValueNew
             Right val -> do

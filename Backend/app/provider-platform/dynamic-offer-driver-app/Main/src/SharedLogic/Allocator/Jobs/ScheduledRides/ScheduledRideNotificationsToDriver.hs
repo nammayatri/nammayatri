@@ -22,10 +22,12 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Common as DInfo
+import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Overlay as DOverlay
+import Domain.Types.Person
 import Domain.Types.RideRelatedNotificationConfig
 import Domain.Types.TransporterConfig
-import qualified Kernel.Beam.Functions as B
 import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..), SchedulerFlow)
@@ -51,14 +53,17 @@ import Tools.Notifications
 import qualified Tools.SMS as Sms
 import Utils.Common.Cac.KeyNameConstants
 
-sendScheduledRideNotificationsToDriver ::
+type ScheduleNotificationFlow m r =
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     SchedulerFlow r
-  ) =>
+  )
+
+sendScheduledRideNotificationsToDriver ::
+  ScheduleNotificationFlow m r =>
   Job 'ScheduledRideNotificationsToDriver ->
   m ExecutionResult
 sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
@@ -74,57 +79,14 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   let isNotificationRequired = not onlyIfOffline || (driverInfo.mode /= Just DInfo.ONLINE)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-
   when (isNotificationRequired && booking.status /= DB.CANCELLED) do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
-    driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-    mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-    countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-    let phoneNumber = countryCode <> mobileNumber
-    case notificationType of
-      CALL -> do
-        callStatusId <- generateGUID
-        let callReq =
-              InitiateCallReq
-                { fromPhoneNum = phoneNumber,
-                  toPhoneNum = Nothing,
-                  attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = bookingId.getId},
-                  appletId = maybeAppId
-                }
-        exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
-        logTagInfo ("BookingId: " <> bookingId.getId) "IVR Call initiated to driver."
-        callStatus <- buildCallStatus callStatusId exotelResponse booking
-        void $ QCallStatus.create callStatus
-      PN -> do
-        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing driver.language Nothing >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
-        let entityData = generateReq merchantPN.title merchantPN.body booking merchant
-        notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken entityData merchantPN.fcmNotificationType
-      OVERLAY -> do
-        overlayKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid overlay key for Notification")
-        merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
-        let (title, description) = formatMessageTransformer (fromMaybe "" merchantOverlay.title) (fromMaybe "" merchantOverlay.description) booking merchant.shortId
-        let overlay :: DOverlay.Overlay = overlay {DOverlay.title = Just title, DOverlay.description = Just description}
-        sendOverlay merchantOpCityId driver $ mkOverlayReq overlay
-      SMS -> do
-        smsCfg <- asks (.smsCfg)
-        messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
-        merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
-        let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
-            (_, messageBody) = formatMessageTransformer "" merchantMessage.message booking merchant.shortId
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender) >>= Sms.checkSmsResult
-      _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
+    sendCommuncationToDriver $ SendCommuncationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
   return Complete
   where
-    generateReq notifTitle notifBody booking merchant = do
-      let (title, message) = formatMessageTransformer notifTitle notifBody booking merchant.shortId
-      NotifReq
-        { title = title,
-          message = message,
-          entityId = booking.id.getId
-        }
-
-    formatMessageTransformer title body booking merchantShortId = do
+    formatMessageTransformer :: DB.Booking -> ShortId Merchant -> (Text, Text) -> (Text, Text)
+    formatMessageTransformer booking merchantShortId (title, body) = do
       let isRentalOrIntercity = case booking.tripCategory of
             DTC.Rental _ -> "Rental"
             DTC.InterCity _ _ -> "InterCity"
@@ -139,19 +101,94 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
           formattedBody = T.replace "{#pickupAddress#}" fullAddress $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#driverPartnerName#}" driverPartnerName body
       (formattedTitle, formattedBody)
 
-    buildCallStatus callStatusId exotelResponse booking = do
+sendTagActionNotification ::
+  ScheduleNotificationFlow m r =>
+  Job 'ScheduleTagActionNotification ->
+  m ExecutionResult
+sendTagActionNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+  let jobData = jobInfo.jobData
+      merchantOpCityId = jobData.merchantOperatingCityId
+      driverId = jobData.driverId
+      notificationType = jobData.notificationType
+      notificationKey = jobData.notificationKey
+      merchantId = jobData.merchantId
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  sendCommuncationToDriver $ SendCommuncationToDriverReq {maybeAppId = Nothing, entityId = Nothing, messageTransformer = identity, ..}
+  return Complete
+
+data SendCommuncationToDriverReq = SendCommuncationToDriverReq
+  { notificationType :: NotificationType,
+    notificationKey :: Text,
+    maybeAppId :: Maybe Text,
+    entityId :: Maybe Text,
+    messageTransformer :: (Text, Text) -> (Text, Text),
+    merchant :: Merchant,
+    merchantOpCityId :: Id MerchantOperatingCity,
+    driverId :: Id Person
+  }
+
+sendCommuncationToDriver ::
+  ScheduleNotificationFlow m r =>
+  SendCommuncationToDriverReq ->
+  m ()
+sendCommuncationToDriver SendCommuncationToDriverReq {..} = do
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let phoneNumber = countryCode <> mobileNumber
+  case notificationType of
+    CALL -> do
+      callStatusId <- generateGUID
+      let callReq =
+            InitiateCallReq
+              { fromPhoneNum = phoneNumber,
+                toPhoneNum = Nothing,
+                attachments = Attachments $ CallAttachments {callStatusId, entityId = fromMaybe driverId.getId entityId},
+                appletId = maybeAppId
+              }
+      exotelResponse <- initiateCall merchant.id merchantOpCityId callReq
+      callStatus <- buildCallStatus callStatusId exotelResponse
+      void $ QCallStatus.create callStatus
+    PN -> do
+      merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing driver.language Nothing >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
+      let entityData = generateReq merchantPN.title merchantPN.body
+      notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken entityData merchantPN.fcmNotificationType
+    OVERLAY -> do
+      overlayKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid overlay key for Notification")
+      merchantOverlay <- CMO.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId overlayKey ENGLISH Nothing Nothing >>= fromMaybeM (OverlayKeyNotFound notificationKey)
+      let (title, description) = messageTransformer ((fromMaybe "" merchantOverlay.title), (fromMaybe "" merchantOverlay.description))
+      let overlay :: DOverlay.Overlay = overlay {DOverlay.title = Just title, DOverlay.description = Just description}
+      sendOverlay merchantOpCityId driver $ mkOverlayReq overlay
+    SMS -> do
+      smsCfg <- asks (.smsCfg)
+      messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
+      merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+      let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
+          (_, messageBody) = messageTransformer ("", merchantMessage.message)
+      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender) >>= Sms.checkSmsResult
+    _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
+  where
+    generateReq notifTitle notifBody = do
+      let (title, message) = messageTransformer (notifTitle, notifBody)
+      NotifReq
+        { title = title,
+          message = message,
+          entityId = fromMaybe driverId.getId entityId
+        }
+
+    buildCallStatus callStatusId exotelResponse = do
       now <- getCurrentTime
       return $
         SCS.CallStatus
           { id = callStatusId,
             callId = exotelResponse.callId,
-            entityId = Just booking.id.getId,
+            entityId,
             dtmfNumberUsed = Nothing,
             status = exotelResponse.callStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,
-            merchantId = Just booking.providerId.getId,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            merchantId = Just merchant.id.getId,
+            merchantOperatingCityId = Just merchantOpCityId,
             callService = Just Exotel,
             callAttempt = Just SCS.Resolved,
             callError = Nothing,
