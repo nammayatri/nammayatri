@@ -46,6 +46,7 @@ import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MeterRideQuote as DMeterRideQuote
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
@@ -480,9 +481,13 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         ..
       }
 
-buildMeterRideQuoteDetails :: MonadFlow m => MeterRideQuoteDetails -> m DQuote.MeterRideQuoteDetails
+buildMeterRideQuoteDetails :: MonadFlow m => MeterRideQuoteDetails -> m DMeterRideQuote.MeterRideQuote
 buildMeterRideQuoteDetails MeterRideQuoteDetails {..} = do
-  pure DQuote.MeterRideQuoteDetails {..}
+  id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
+  pure DMeterRideQuote.MeterRideQuote {..}
 
 mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =

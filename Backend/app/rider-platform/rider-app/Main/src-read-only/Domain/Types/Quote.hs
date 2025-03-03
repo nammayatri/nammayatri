@@ -11,6 +11,7 @@ import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MeterRideQuote
 import qualified Domain.Types.QuoteBreakup
 import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest
@@ -99,7 +100,7 @@ data QuoteDetails
   | DriverOfferDetails Domain.Types.DriverOffer.DriverOffer
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   | DeliveryDetails Domain.Types.DriverOffer.DriverOffer
-  | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
+  | MeterRideDetails Domain.Types.MeterRideQuote.MeterRideQuote
   deriving (Generic, Show)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)

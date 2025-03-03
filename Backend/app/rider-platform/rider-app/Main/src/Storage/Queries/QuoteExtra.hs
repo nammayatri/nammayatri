@@ -14,6 +14,7 @@ import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
+import Storage.Queries.MeterRideQuote as QueryMR
 import Storage.Queries.OrphanInstances.Quote ()
 import qualified Storage.Queries.QuoteBreakup as QQB
 import Storage.Queries.RentalDetails as QueryRD
@@ -27,7 +28,7 @@ createQuote = createWithKV
 createDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
-  MeterRideDetails _ -> pure ()
+  MeterRideDetails meterRideDetails -> QueryMR.create meterRideDetails
   DQ.DeliveryDetails driverOffer -> QueryDO.create driverOffer
   AmbulanceDetails driverOffer -> QueryDO.create driverOffer
   RentalDetails rentalDetails -> QueryRD.create rentalDetails

@@ -32,6 +32,7 @@ data QuoteT f = QuoteT
     distanceToNearestDriverValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     driverOfferId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
+    meterRideQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rentalDetailsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

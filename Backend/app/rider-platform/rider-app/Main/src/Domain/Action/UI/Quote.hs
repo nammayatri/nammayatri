@@ -49,6 +49,7 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.MeterRideQuote as DMeterRideQuote
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
 import Domain.Types.QuoteBreakup
@@ -163,7 +164,7 @@ instance ToSchema QuoteAPIDetails where
 
 mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails tollCharges = \case
-  DQuote.MeterRideDetails MeterRideQuoteDetails {..} -> DQuote.MeterRideAPIDetails MeterRideQuoteAPIDetails {..}
+  DQuote.MeterRideDetails DMeterRideQuote.MeterRideQuote {..} -> DQuote.MeterRideAPIDetails MeterRideQuoteAPIDetails {..}
   DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
   DQuote.OneWayDetails OneWayQuoteDetails {..} ->
     DQuote.OneWayAPIDetails

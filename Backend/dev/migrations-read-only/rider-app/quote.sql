@@ -84,3 +84,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN trip_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN vehicle_icon_url character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN meter_ride_quote_id character(36) ;

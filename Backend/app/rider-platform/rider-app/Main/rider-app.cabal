@@ -454,6 +454,7 @@ library
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.MeterRideQuote
       Storage.Queries.Transformers.MultiModal
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
@@ -637,6 +638,7 @@ library
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
+      Domain.Types.MeterRideQuote
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
@@ -752,6 +754,7 @@ library
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
+      Storage.Beam.MeterRideQuote
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
@@ -868,6 +871,7 @@ library
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
+      Storage.Queries.MeterRideQuote
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
