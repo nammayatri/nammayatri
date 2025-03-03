@@ -92,11 +92,11 @@ mkFRFSConfigAPI :: Config.FRFSConfig -> APITypes.FRFSConfigAPIRes
 mkFRFSConfigAPI Config.FRFSConfig {..} = do
   APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
 
-mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
-mkPOrgStationAPI mbPOrgId merchantOperatingCityId vehicleType stationAPI = do
+mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> DIBC.PlatformType -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
+mkPOrgStationAPI mbPOrgId merchantOperatingCityId vehicleType platformType stationAPI = do
   integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
   station <- B.runInReplica $ CQS.findByStationCodeAndIntegratedBPPConfigId stationAPI.code integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")
   mkPOrgStationAPIRes station mbPOrgId
 
@@ -350,11 +350,11 @@ data VehicleInfo = VehicleInfo
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> Text -> m [VehicleTracking]
-trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
+trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> m [VehicleTracking]
+trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platformType = do
   integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
   vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
   let vehicleInfoWithLatLong :: [(Text, VehicleInfo, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) vehicleTrackingInfo
   routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id

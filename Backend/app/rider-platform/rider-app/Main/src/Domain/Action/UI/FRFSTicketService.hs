@@ -73,6 +73,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -158,14 +159,16 @@ getFrfsRoute ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Text ->
+  Maybe DIBC.PlatformType ->
   Context.City ->
   BecknV2.FRFS.Enums.VehicleCategory ->
   Environment.Flow API.Types.UI.FRFSTicketService.FRFSRouteAPI
-getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
+getFrfsRoute (_personId, _mId) routeCode _platformType _mbCity _vehicleType = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _mbCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _mbCity)
+  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
   route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
   routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
   currentTime <- getCurrentTime
@@ -439,6 +442,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             journeyLegInfo = journeySearchData,
             journeyLegStatus = Just JLT.InPlan,
             journeyRouteDetails = updatedJourneyRouteDetails,
+            integratedBppConfigId = Just integratedBPPConfig.id,
             isOnSearchReceived = Nothing,
             ..
           }
@@ -476,6 +480,10 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 
 postFrfsQuoteV2Confirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
+  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req DIBC.APPLICATION
+
+postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> DIBC.PlatformType -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req platformType = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
   -- handle (errHandler dConfirmRes.booking) $
@@ -493,7 +501,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
     let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
     void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
-    CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' DIBC.APPLICATION
+    CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' platformType
   return $ makeBookingStatusAPI dConfirmRes discounts routeStations stations merchantOperatingCity.city
   where
     -- errHandler booking exc
@@ -570,6 +578,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                 journeyRouteDetails = journeyRouteDetails',
                 startTime = Just now, -- TODO
                 isFareChanged = Just isFareChanged,
+                integratedBppConfigId = mbSearch >>= (.integratedBppConfigId),
                 googleWalletJWTUrl = Nothing,
                 isDeleted = Just False,
                 isSkipped = Just False,
@@ -603,6 +612,10 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
 postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []})
 
+postFrfsQuoteConfirmPlatformType :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> DIBC.PlatformType -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirmPlatformType (mbPersonId, merchantId_) quoteId platformType =
+  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []}) platformType
+
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
@@ -632,6 +645,13 @@ frfsBookingStatus (personId, merchantId_) booking' = do
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
+  platformType' <- case (booking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
   case booking.status of
     DFRFSTicketBooking.NEW -> buildFRFSTicketBookingStatusAPIRes booking Nothing
@@ -663,7 +683,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
         else do
           buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
-      void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking DIBC.APPLICATION
+      void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking platformType'
       buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -728,7 +748,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
                   let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                   mRiderNumber <- mapM decrypt person.mobileNumber
                   void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
-                  void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking DIBC.APPLICATION
+                  void $ CallExternalBPP.confirm (processOnConfirm platformType') merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking platformType'
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
                   paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id booking
@@ -763,8 +783,8 @@ frfsBookingStatus (personId, merchantId_) booking' = do
             transactionId = Nothing
           }
 
-    processOnConfirm onConfirmReq = do
-      (merchant', booking'') <- DACFOC.validateRequest onConfirmReq
+    processOnConfirm platformType' onConfirmReq = do
+      (merchant', booking'') <- DACFOC.validateRequest onConfirmReq platformType'
       DACFOC.onConfirm merchant' booking'' onConfirmReq
 
     paymentFailed =
@@ -841,7 +861,14 @@ getFrfsBookingList (mbPersonId, merchantId) mbLimit mbOffset mbVehicleCategory =
 
 buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking payment = do
-  stations <- mapM (Utils.mkPOrgStationAPI booking.partnerOrgId booking.merchantOperatingCityId booking.vehicleType) =<< (decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db"))
+  platformType' <- case (booking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
+  stations <- mapM (Utils.mkPOrgStationAPI booking.partnerOrgId booking.merchantOperatingCityId booking.vehicleType platformType') =<< (decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db"))
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< booking.discountsJson
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking

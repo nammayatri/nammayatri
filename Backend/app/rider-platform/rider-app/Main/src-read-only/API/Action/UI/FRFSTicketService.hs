@@ -15,6 +15,7 @@ import qualified Domain.Action.UI.FRFSTicketService as Domain.Action.UI.FRFSTick
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -68,6 +69,9 @@ type API =
       :> Capture
            "routeCode"
            Data.Text.Text
+      :> QueryParam
+           "platformType"
+           Domain.Types.IntegratedBPPConfig.PlatformType
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
@@ -290,11 +294,12 @@ getFrfsRoute ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Data.Text.Text ->
+    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSRouteAPI
   )
-getFrfsRoute a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getFrfsRoute a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postFrfsSearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

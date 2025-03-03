@@ -24,6 +24,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
+  PlatformType: Domain.Types.IntegratedBPPConfig
 
 module: FRFSTicketService
 types:
@@ -227,6 +228,8 @@ apis:
       mandatoryQuery:
         city: City
         vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
       params:
         routeCode: Text
       response:

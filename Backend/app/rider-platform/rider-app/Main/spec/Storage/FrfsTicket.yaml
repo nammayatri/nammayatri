@@ -53,6 +53,7 @@ FRFSSearch:
     journeyLegStatus: Maybe JourneyLegStatus
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
+    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
 
   beamFields:
     journeyLegInfo:
@@ -318,6 +319,7 @@ FRFSTicketBooking:
     isFareChanged: Maybe Bool
     isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
+    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
 
   default:
     customerCancelled: "false"

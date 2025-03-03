@@ -43,6 +43,7 @@ import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
+import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -175,10 +176,12 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
   let merchantOperatingCityId = search.merchantOperatingCityId
-  let platformType = if isNothing search.partnerOrgId then DIBC.APPLICATION else DIBC.PARTNERORG
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+  integratedBPPConfig <- case (search.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+    Nothing -> do
+      QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
+        >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   startStation <- QStation.findByStationCode dStartStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   endStation <- QStation.findByStationCode dEndStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let stationsJSON = stations & map castStationToAPI & encodeToText
