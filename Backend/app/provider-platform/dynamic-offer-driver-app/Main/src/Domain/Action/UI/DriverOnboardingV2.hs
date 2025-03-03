@@ -43,7 +43,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -103,38 +103,29 @@ getOnboardingConfigs ::
 getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let personLangauge = fromMaybe ENGLISH person.language
+  let personLanguage = fromMaybe ENGLISH person.language
   cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE
   ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE
   truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK
   busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS
-  cabConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
-  autoConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
-  bikeConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
-  ambulanceConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
-  truckConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments truckConfigsRaw)
-  busConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments busConfigsRaw)
+  cabConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments cabConfigsRaw mbOnlyVehicle)
+  autoConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments autoConfigsRaw mbOnlyVehicle)
+  bikeConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments bikeConfigsRaw mbOnlyVehicle)
+  ambulanceConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments ambulanceConfigsRaw mbOnlyVehicle)
+  truckConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments truckConfigsRaw mbOnlyVehicle)
+  busConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments busConfigsRaw mbOnlyVehicle)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
-      { cabs = toMaybe cabConfigs,
-        autos = toMaybe autoConfigs,
-        bikes = toMaybe bikeConfigs,
-        ambulances = toMaybe ambulanceConfigs,
-        trucks = toMaybe truckConfigs,
-        bus = toMaybe busConfigs
+      { cabs = SDO.toMaybe cabConfigs,
+        autos = SDO.toMaybe autoConfigs,
+        bikes = SDO.toMaybe bikeConfigs,
+        ambulances = SDO.toMaybe ambulanceConfigs,
+        trucks = SDO.toMaybe truckConfigs,
+        bus = SDO.toMaybe busConfigs
       }
   where
-    toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
-    toMaybe [] = Kernel.Prelude.Nothing
-    toMaybe xs = Kernel.Prelude.Just xs
-
-    filterVehicleDocuments :: [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]
-    filterVehicleDocuments docs =
-      if mbOnlyVehicle == Just True
-        then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
-        else docs
     filterInCompatibleFlows :: [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity] -> [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
     filterInCompatibleFlows = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
 
@@ -264,7 +255,7 @@ postDriverUpdateAirCondition ::
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
-  checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers Nothing
+  SDO.checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers Nothing
   now <- getCurrentTime
   QDI.updateLastACStatusCheckedAt (Just now) personId
   return Success
@@ -283,12 +274,12 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  let personLangauge = fromMaybe ENGLISH person.language
+  let personLanguage = fromMaybe ENGLISH person.language
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
-  let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
+  let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
   let tierOptions =
@@ -309,10 +300,10 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
       then do
         restrictionMessageItem <-
           if not isACAllowedForDriver
-            then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLangauge
+            then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLanguage
             else
               if isACWorkingForVehicle
-                then MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLangauge
+                then MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLanguage
                 else return Nothing
         return $
           Just $
@@ -367,7 +358,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
 
-  whenJust airConditioned $ \ac -> checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers Nothing
+  whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers Nothing
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 

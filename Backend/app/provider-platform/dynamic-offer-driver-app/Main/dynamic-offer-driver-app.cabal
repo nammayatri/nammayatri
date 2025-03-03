@@ -141,6 +141,7 @@ library
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
+      Domain.Action.Dashboard.Fleet.Onboarding
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Booking
@@ -652,6 +653,7 @@ library
       API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Fleet.Onboarding
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.Management

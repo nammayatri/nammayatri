@@ -48,6 +48,7 @@ module Domain.Action.Dashboard.Management.Merchant
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
 import qualified Data.ByteString as BS
@@ -728,8 +729,16 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
         updatedAt = now,
         createdAt = now,
+        documentCategory = castDocumentCategory <$> documentCategory,
         ..
       }
+  where
+    castDocumentCategory :: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory -> DVC.DocumentCategory
+    castDocumentCategory = \case
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Driver -> DVC.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle -> DVC.Vehicle
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
 
 ---------------------------------------------------------------------
 postMerchantServiceConfigMapsUpdate ::

@@ -16,6 +16,7 @@
 module Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
   ( findAllByMerchantOpCityId,
     findByMerchantOpCityIdAndDocumentType,
+    findAllByMerchantOpCityIdAndRole,
     clearCache,
     create,
   )
@@ -24,6 +25,7 @@ where
 import Domain.Types.DocumentVerificationConfig
 import Domain.Types.FleetOwnerDocumentVerificationConfig as FODTO
 import Domain.Types.MerchantOperatingCity
+import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -41,6 +43,9 @@ findAllByMerchantOpCityId id =
 
 findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m (Maybe FODTO.FleetOwnerDocumentVerificationConfig)
 findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
+
+findAllByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> m [FODTO.FleetOwnerDocumentVerificationConfig]
+findAllByMerchantOpCityIdAndRole merchantOpCityId role = filter (\config -> config.role == role) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheFleetOwnerDocumentVerificationConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [FODTO.FleetOwnerDocumentVerificationConfig] -> m ()
 cacheFleetOwnerDocumentVerificationConfigs merchantOpCityId configs = do
