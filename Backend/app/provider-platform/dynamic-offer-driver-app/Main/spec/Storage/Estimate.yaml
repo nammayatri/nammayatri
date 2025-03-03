@@ -2,6 +2,7 @@ imports:
   FareParameters: Domain.Types.FareParameters
   FarePolicy: Domain.Types.FarePolicy
   TripCategory: Domain.Types.Common
+  Seconds: Kernel.Types.Common
   ServiceTierType: Domain.Types.Common
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
@@ -26,6 +27,8 @@ Estimate:
       dpVersion : Maybe Text
       currency: Currency
       estimatedDistance: Maybe Meters
+      estimatedDuration : Maybe Seconds
+      fromLocGeohash: Maybe Text
       supplyDemandRatioFromLoc : Maybe Double
       supplyDemandRatioToLoc : Maybe Double
       mbActualQARFromLocGeohash : Maybe Double

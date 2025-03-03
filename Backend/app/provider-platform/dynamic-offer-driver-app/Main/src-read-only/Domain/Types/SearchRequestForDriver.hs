@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchTry
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -78,9 +79,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     status :: Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
+    tripEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    tripEstimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     upgradeCabRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
