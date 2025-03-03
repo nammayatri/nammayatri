@@ -142,3 +142,30 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN last_rid
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_type text ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_quantity integer ;
+
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN trip_estimated_duration integer ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN trip_estimated_distance integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_tag_score json ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_category text ;

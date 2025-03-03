@@ -43,6 +43,7 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
             tripCategory = getTripCategory tripCategory,
             updatedAt = updatedAt,
             validTill = validTill,
+            vehicleCategory = vehicleCategory,
             vehicleServiceTier = vehicleVariant,
             vehicleServiceTierName = fromMaybe (Kernel.Prelude.show vehicleVariant) vehicleServiceTierName
           }
@@ -73,6 +74,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
+        Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleVariant = vehicleServiceTier,
         Beam.vehicleServiceTierName = Kernel.Prelude.Just vehicleServiceTierName
       }
