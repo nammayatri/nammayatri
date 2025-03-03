@@ -50,6 +50,8 @@ library
       API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver
       API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+      API.Types.ProviderPlatform.Fleet.Onboarding
       API.Types.ProviderPlatform.Management
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.CoinsConfig

@@ -1,5 +1,6 @@
 imports:
   Person: Domain.Types.Person
+  Role: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
@@ -359,9 +360,11 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
+    DocumentCategory:
+      enum: "Driver,Vehicle,Permission,Training"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
@@ -385,6 +388,7 @@ DocumentVerificationConfig:
     doStrictVerifcation: Bool
     order: Int
     filterForOldApks: Maybe Bool
+    documentCategory: Maybe DocumentCategory
   default:
     order: "0"
     doStrictVerifcation: "true"
@@ -567,7 +571,6 @@ FleetRCAssociation:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-
 DriverSSN:
   tableName: driver_ssn
   fields:
@@ -680,11 +683,15 @@ FleetOwnerDocumentVerificationConfig:
     maxRetryCount: Int
     doStrictVerifcation: Bool
     order: Int
+    role: Role
+    documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
   default:
     order: "0"
+    role: "'FLEET_OWNER'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     documentType: PrimaryKey
+    role: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
   queries:
@@ -694,7 +701,10 @@ FleetOwnerDocumentVerificationConfig:
       orderBy:
         field: order
         order: asc
-
+    findAllByMerchantOpCityIdAndRole:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, role]
 
 AadhaarCard:
   tableName: aadhaar_card

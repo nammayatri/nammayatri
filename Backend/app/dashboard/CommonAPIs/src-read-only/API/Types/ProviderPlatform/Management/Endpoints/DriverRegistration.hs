@@ -66,6 +66,16 @@ data DocumentType
   | VehicleFitnessCertificateImage
   | VehicleInspectionImage
   | ProfilePhotoImage
+  | VehicleNOC
+  | Permissions
+  | SubscriptionPlan
+  | AadhaarCard
+  | ProfileDetails
+  | SocialSecurityNumber
+  | GSTCertificate
+  | BackgroundVerification
+  | UploadProfileImage
+  | BusinessLicense
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

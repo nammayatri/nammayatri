@@ -28,6 +28,7 @@ imports:
   Vector: Data.Vector
   ConfigFailoverReq: Dashboard.Common.Merchant
   ConfigNames: Dashboard.Common.Merchant
+  DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 
 module: Merchant
 
@@ -712,6 +713,7 @@ types:
     - stepFeeWithCurrency: Maybe PriceAPIEntity
     - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
     - filterForOldApks: Maybe Bool
+    - documentCategory: Maybe DocumentCategory
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money
