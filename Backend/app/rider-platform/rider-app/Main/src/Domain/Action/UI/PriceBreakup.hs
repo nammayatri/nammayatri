@@ -37,3 +37,12 @@ transformQuoteBreakup quoteBreakup =
     { title = CHQ.title quoteBreakup,
       priceWithCurrency = PriceAPIEntity (HighPrecMoney $ toRational (CHQ.priceValue quoteBreakup)) (CHQ.priceCurrency quoteBreakup)
     }
+
+getMeterRidePrice ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Environment.FlowHandler API.Types.UI.PriceBreakup.MeterRidePriceRes
+  )
+

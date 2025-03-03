@@ -1,10 +1,20 @@
 imports:
   Ride: Domain.Types.Ride
   RateCardItem: API.Types.UI.DriverOnboardingV2
+  HighPrecMoney: Kernel.Types.Common
 
 module: PriceBreakup
-types: {}
+types:
+  MeterRidePriceRes:
+    fare: HighPrecMoney
+    breakup: "[RateCardItem]"
 apis:
+  - GET:
+      endpoint: /meterRide/price
+      mandatoryQuery:
+        rideId: Id Ride
+      response: 
+        type: MeterRidePriceRes
   - GET:
       endpoint: /priceBreakup
       mandatoryQuery:
