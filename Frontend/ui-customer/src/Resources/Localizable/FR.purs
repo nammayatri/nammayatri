@@ -1351,3 +1351,4 @@ getFR stringKey =
         CLEAN_BIKE -> "Vélo propre"
         UNCOMFORTABLE_BIKE -> "Vélo inconfortable"
         NO_REMAINING_TICKETS -> ""
+        TICKET_NOT_BOOKED_REFUND_INITIATED -> ""

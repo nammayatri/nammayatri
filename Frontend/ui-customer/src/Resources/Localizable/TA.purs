@@ -1366,3 +1366,4 @@ getTA stringKey =
     CLEAN_BIKE -> "சுத்தமான பைக்"
     UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"
     NO_REMAINING_TICKETS ->  "மீதமுள்ள டிக்கெட்கள் இல்லை"
+    TICKET_NOT_BOOKED_REFUND_INITIATED -> "மன்னிக்கவும், டிக்கெட் பதிவு செய்யப்படவில்லை. பணத்தை மீட்டளிக்க தொடங்கியுள்ளோம்." 

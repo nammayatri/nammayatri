@@ -1051,7 +1051,7 @@ incrementDecrementView push state  serviceId serviceCatId serviceCategory pcCate
       , margin $ MarginTop 8
       ] <> FontStyle.tags TypoGraphy
     , textView $
-      [ text $ getStringV2 no_remaining_tickets
+      [ text $ getString NO_REMAINING_TICKETS
       , visibility $ if serviceCategory.noRemainingTicketAvailable then VISIBLE else GONE
       , color Color.red900
       , margin $ MarginTop 8
@@ -1082,6 +1082,7 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
   Cancelled -> "ny_ic_cancelled"
+  RefundInitiated -> "ny_ic_payment_failed"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of 
@@ -1089,6 +1090,7 @@ getTicketStatusBackgroundColor status = case status of
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
   Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  RefundInitiated -> { bgColor : Color.red900, statusText : "Refund Initiated" }
 
 getTicketBackgroundColor :: String -> String
 getTicketBackgroundColor ticketServiceName = case ticketServiceName of

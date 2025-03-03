@@ -1826,7 +1826,8 @@ type TicketBookingItem =
 type TicketBookings = 
   { pendingBooking :: Array TicketBookingItem,
     booked :: Array TicketBookingItem,
-    cancelled :: Array TicketBookingItem
+    cancelled :: Array TicketBookingItem,
+    refundInitiated :: Array TicketBookingItem
   }
 
 type TicketBookingScreenProps = {
@@ -1863,8 +1864,14 @@ type IndividualBookingItem =
     amount :: Number,
     visitDate :: String,
     status :: BookingStatus,
-    services :: Array TicketBookingServiceDetails
+    services :: Array TicketBookingServiceDetails,
+    refundDetails :: Maybe (Array RefundInfo)
   }
+
+type RefundInfo = {
+    status :: String,
+    refundAmount :: Number
+}
 
 type TicketBookingServiceDetails =
   { amount :: Number,

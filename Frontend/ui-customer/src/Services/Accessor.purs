@@ -328,3 +328,6 @@ _deviceId = lens (unwrap >>> _.deviceId) (\oldRec newVal -> wrap ((unwrap oldRec
 
 _androidId :: forall a b c. Newtype a { androidId :: b | c } => Lens' a b
 _androidId = lens (unwrap >>> _.androidId) (\oldRec newVal -> wrap ((unwrap oldRec) { androidId = newVal }))
+
+_refundDetails :: forall a b c. Newtype a { refundDetails :: b | c } => Lens' a b
+_refundDetails = lens (unwrap >>> _.refundDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { refundDetails = newVal }))
