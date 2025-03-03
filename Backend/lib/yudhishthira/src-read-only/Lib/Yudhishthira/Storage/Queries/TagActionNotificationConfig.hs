@@ -25,12 +25,12 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m ([Lib.Yudhishthira.Types.TagActionNotificationConfig.TagActionNotificationConfig]))
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m [Lib.Yudhishthira.Types.TagActionNotificationConfig.TagActionNotificationConfig])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOperatingCityIdAndNotificationKey ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Kernel.Prelude.Text -> m ([Lib.Yudhishthira.Types.TagActionNotificationConfig.TagActionNotificationConfig]))
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Kernel.Prelude.Text -> m [Lib.Yudhishthira.Types.TagActionNotificationConfig.TagActionNotificationConfig])
 findAllByMerchantOperatingCityIdAndNotificationKey merchantOperatingCityId notificationKey = do
   findAllWithKV
     [ Se.And
@@ -52,7 +52,7 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.TagActionNotificationConfig.TagAction
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.notificationKey notificationKey,
       Se.Set Beam.notificationType notificationType,
-      Se.Set Beam.notifiyAt notifiyAt,
+      Se.Set Beam.notifyAt notifyAt,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -68,7 +68,7 @@ instance FromTType' Beam.TagActionNotificationConfig Lib.Yudhishthira.Types.TagA
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             notificationKey = notificationKey,
             notificationType = notificationType,
-            notifiyAt = notifiyAt,
+            notifyAt = notifyAt,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -81,7 +81,7 @@ instance ToTType' Beam.TagActionNotificationConfig Lib.Yudhishthira.Types.TagAct
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.notificationKey = notificationKey,
         Beam.notificationType = notificationType,
-        Beam.notifiyAt = notifiyAt,
+        Beam.notifyAt = notifyAt,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -37,6 +37,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 data RiderJobType
   = CheckPNAndSendSMS
   | ScheduledRideNotificationsToRider
+  | ScheduleTagActionNotification
   | SafetyIVR
   | CallPoliceApi
   | CheckExotelCallStatusAndNotifyBPP
@@ -66,6 +67,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo :: Sing (e :: RiderJobType) -> Text -> Maybe (AnyJobInfo RiderJobType)
   restoreAnyJobInfo SCheckPNAndSendSMS jobData = AnyJobInfo <$> restoreJobInfo SCheckPNAndSendSMS jobData
   restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData
+  restoreAnyJobInfo SScheduleTagActionNotification jobData = AnyJobInfo <$> restoreJobInfo SScheduleTagActionNotification jobData
   restoreAnyJobInfo SSafetyIVR jobData = AnyJobInfo <$> restoreJobInfo SSafetyIVR jobData
   restoreAnyJobInfo SCallPoliceApi jobData = AnyJobInfo <$> restoreJobInfo SCallPoliceApi jobData
   restoreAnyJobInfo SSafetyCSAlert jobData = AnyJobInfo <$> restoreJobInfo SSafetyCSAlert jobData
@@ -148,6 +150,19 @@ data ScheduledRideNotificationsToRiderJobData = ScheduledRideNotificationsToRide
 instance JobInfoProcessor 'ScheduledRideNotificationsToRider
 
 type instance JobContent 'ScheduledRideNotificationsToRider = ScheduledRideNotificationsToRiderJobData
+
+data ScheduleTagActionNotificationJobData = ScheduleTagActionNotificationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    notificationType :: DRN.NotificationType,
+    notificationKey :: Text,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduleTagActionNotification
+
+type instance JobContent 'ScheduleTagActionNotification = ScheduleTagActionNotificationJobData
 
 data CheckExotelCallStatusAndNotifyBPPJobData = CheckExotelCallStatusAndNotifyBPPJobData
   { rideId :: Id DR.Ride,

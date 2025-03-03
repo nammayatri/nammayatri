@@ -15,7 +15,7 @@ data TagActionNotificationConfig = TagActionNotificationConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity,
     notificationKey :: Kernel.Prelude.Text,
     notificationType :: Lib.Yudhishthira.Types.TagActionNotificationConfig.NotificationType,
-    notifiyAt :: Kernel.Prelude.TimeOfDay,
+    notifyAt :: Kernel.Prelude.TimeOfDay,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -23,4 +23,4 @@ data TagActionNotificationConfig = TagActionNotificationConfig
 
 data NotificationType = SMS | PN | WHATSAPP | OVERLAY | CALL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationType)

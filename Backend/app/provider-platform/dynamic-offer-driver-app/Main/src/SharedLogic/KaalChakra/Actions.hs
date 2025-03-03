@@ -14,6 +14,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DRN
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
+import Storage.Beam.Yudhishthira ()
 
 data Action
   = SAFE_TO_UNSAFE_COHORT
@@ -54,7 +55,7 @@ scheduleTagActionNotificationJob ::
   m ()
 scheduleTagActionNotificationJob driverId DRN.TagActionNotificationConfig {..} = do
   now <- getCurrentTime
-  let dfCalculationJobTs = max 2 (diffUTCTime (nextOccurrenceUTC notifiyAt now) now) -- Buffer of 2 seconds in case of <=0 timeDiff
+  let dfCalculationJobTs = max 2 (diffUTCTime (nextOccurrenceUTC notifyAt now) now) -- Buffer of 2 seconds in case of <=0 timeDiff
   createJobIn @_ @'ScheduleTagActionNotification (Just (cast merchantId)) (Just (cast merchantOperatingCityId)) dfCalculationJobTs $
     ScheduleTagActionNotificationJobData
       { merchantId = cast merchantId,

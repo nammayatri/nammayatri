@@ -9,7 +9,7 @@ TagActionNotificationConfig:
       enum: "SMS,PN,WHATSAPP,OVERLAY,CALL"
   fields:
     id: Id TagActionNotificationConfig
-    notifiyAt: TimeOfDay
+    notifyAt: TimeOfDay
     notificationType: NotificationType
     notificationKey: Text
     merchantId: Id Merchant

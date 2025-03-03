@@ -64,6 +64,7 @@ schedulerHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkPNAndSendSMS)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToRider)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendTagActionNotification)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSafetyIVR)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendCallPoliceApi)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBPP)

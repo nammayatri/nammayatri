@@ -82,7 +82,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
   when (isNotificationRequired && booking.status /= DB.CANCELLED) do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
-    sendCommuncationToDriver $ SendCommuncationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
+    sendCommunicationToDriver $ SendCommunicationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
   return Complete
   where
     formatMessageTransformer :: DB.Booking -> ShortId Merchant -> (Text, Text) -> (Text, Text)
@@ -113,10 +113,10 @@ sendTagActionNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
       notificationKey = jobData.notificationKey
       merchantId = jobData.merchantId
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  sendCommuncationToDriver $ SendCommuncationToDriverReq {maybeAppId = Nothing, entityId = Nothing, messageTransformer = identity, ..}
+  sendCommunicationToDriver $ SendCommunicationToDriverReq {maybeAppId = Nothing, entityId = Nothing, messageTransformer = identity, ..}
   return Complete
 
-data SendCommuncationToDriverReq = SendCommuncationToDriverReq
+data SendCommunicationToDriverReq = SendCommunicationToDriverReq
   { notificationType :: NotificationType,
     notificationKey :: Text,
     maybeAppId :: Maybe Text,
@@ -127,11 +127,11 @@ data SendCommuncationToDriverReq = SendCommuncationToDriverReq
     driverId :: Id Person
   }
 
-sendCommuncationToDriver ::
+sendCommunicationToDriver ::
   ScheduleNotificationFlow m r =>
-  SendCommuncationToDriverReq ->
+  SendCommunicationToDriverReq ->
   m ()
-sendCommuncationToDriver SendCommuncationToDriverReq {..} = do
+sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
