@@ -58,3 +58,12 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostPayoutPayoutDriversSetBlockState","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_DRIVERS_SET_BLOCK_STATE' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'PAYOUT_MANAGEMENT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostPayoutPayoutUpdateVPA","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_UPDATE_VPA' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'PAYOUT_MANAGEMENT' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostPayoutPayoutRefundRegistrationAmount","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_REFUND_REGISTRATION_AMOUNT' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'PAYOUT_MANAGEMENT' ) ON CONFLICT DO NOTHING;

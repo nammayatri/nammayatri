@@ -977,10 +977,8 @@ verifyVPAService ::
   ( EncFlow m r,
     BeamFlow m r
   ) =>
-  Id Merchant ->
-  Id Person ->
   Payment.VerifyVPAReq ->
   (Payment.VerifyVPAReq -> m Payment.VerifyVPAResp) ->
   m Payment.VerifyVPAResp
-verifyVPAService _merchantId _personId verifyVPAReq verifyVPACall = do
+verifyVPAService verifyVPAReq verifyVPACall = do
   verifyVPACall verifyVPAReq -- api call

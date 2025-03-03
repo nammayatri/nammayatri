@@ -9,6 +9,8 @@ module Domain.Action.ProviderPlatform.Management.Payout
     postPayoutPayoutPendingPayout,
     postPayoutPayoutDeleteVPA,
     postPayoutPayoutDriversSetBlockState,
+    postPayoutPayoutUpdateVPA,
+    postPayoutPayoutRefundRegistrationAmount,
   )
 where
 
@@ -91,3 +93,17 @@ postPayoutPayoutDriversSetBlockState merchantShortId opCity apiTokenInfo req = d
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutDriversSetBlockState) req
+
+postPayoutPayoutUpdateVPA :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.UpdateVpaReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPayoutPayoutUpdateVPA merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ do
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutUpdateVPA) req
+
+postPayoutPayoutRefundRegistrationAmount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.RefundRegAmountReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPayoutPayoutRefundRegistrationAmount merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ do
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutRefundRegistrationAmount) req
