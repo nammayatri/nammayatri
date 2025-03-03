@@ -435,7 +435,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
               endStationCode = toStation.code
             }
         ]
-  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
+  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route integratedBPPConfig
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
     CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails integratedBPPConfig
@@ -456,7 +456,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             quotes = Nothing
           }
   where
-    mkSearchReq frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route = do
+    mkSearchReq frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route integratedBPPConfig = do
       now <- getCurrentTime
       uid <- generateGUID
       return
@@ -477,6 +477,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             journeyLegInfo = Nothing,
             isOnSearchReceived = Nothing,
             journeyLegStatus = Nothing,
+            integratedBppConfigId = Just integratedBPPConfig.id,
             journeyRouteDetails = [],
             ..
           }
@@ -657,7 +658,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
           (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirm (Just personId, fromStation.merchantId) quote.id
+      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id DIBC.PARTNERORG
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

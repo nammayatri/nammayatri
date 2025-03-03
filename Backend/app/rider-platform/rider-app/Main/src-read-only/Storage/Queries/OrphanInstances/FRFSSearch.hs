@@ -24,10 +24,11 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Domain.Types.FRFSSearch.FRFSSearch
           { fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
+            integratedBppConfigId = Kernel.Types.Id.Id <$> integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
             journeyLegInfo = mkJourneyLegInfo agency convenienceCost isDeleted journeyId journeyLegOrder pricingId skipBooking,
             journeyLegStatus = journeyLegStatus,
-            journeyRouteDetails = Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList,
+            journeyRouteDetails = Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetailsT journeyRouteDetailsList,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
@@ -46,6 +47,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     Beam.FRFSSearchT
       { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId <$> integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
         Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,

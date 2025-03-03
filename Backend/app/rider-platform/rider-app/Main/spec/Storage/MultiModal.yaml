@@ -337,6 +337,7 @@ JourneyLeg:
   constraints:
     id: PrimaryKey
     journeyId: "!SecondaryKey"
+    legId: "!SecondaryKey"
 
   extraOperations:
     - EXTRA_QUERY_FILE

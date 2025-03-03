@@ -189,7 +189,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
       Just routesStations ->
         case listToMaybe routesStations of
           Just routeStations -> do
-            vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code
+            vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL
             if isUpcomingJourneyLeg journeyStatus
               then do
                 let vehicleTrackingWithLatLong :: [(VehicleTracking, Double, Double)] = mapMaybe (\vehicleTrack -> (vehicleTrack,,) <$> vehicleTrack.vehicleInfo.latitude <*> vehicleTrack.vehicleInfo.longitude) vehicleTracking
@@ -377,7 +377,7 @@ confirm personId merchantId searchId mbQuoteId skipBooking bookingAllowed = do
   mbBooking <- QTBooking.findBySearchId searchId -- if booking already there no need to confirm again
   when (not skipBooking && bookingAllowed && isNothing mbBooking) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
-    void $ FRFSTicketService.postFrfsQuoteConfirm (Just personId, merchantId) quoteId
+    void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId DIBC.MULTIMODAL
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
 cancel searchId cancellationType isSkipped = do

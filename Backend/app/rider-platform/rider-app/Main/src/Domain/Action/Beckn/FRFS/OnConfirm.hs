@@ -63,6 +63,7 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
@@ -72,14 +73,13 @@ import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
 import Web.JWT hiding (claims)
 
-validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
-validateRequest DOrder {..} = do
+validateRequest :: DOrder -> DIBC.PlatformType -> Flow (Merchant, Booking.FRFSTicketBooking)
+validateRequest DOrder {..} platformType = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
-
   if booking.validTill < now
     then do
       -- Booking is expired
@@ -88,7 +88,7 @@ validateRequest DOrder {..} = do
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
-      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking DIBC.APPLICATION
+      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking platformType
       throwM $ InvalidRequest "Booking expired, initated cancel request"
     else return (merchant, booking)
 
@@ -98,7 +98,14 @@ onConfirmFailure bapConfig ticketBooking = do
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
   void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING ticketBooking.id
-  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking DIBC.APPLICATION
+  platformType' <- case (ticketBooking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
+  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType'
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
