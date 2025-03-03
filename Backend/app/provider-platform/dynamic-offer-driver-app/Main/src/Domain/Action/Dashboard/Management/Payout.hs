@@ -7,6 +7,8 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutPendingPayout,
     postPayoutPayoutDeleteVPA,
     postPayoutPayoutDriversSetBlockState,
+    postPayoutPayoutUpdateVPA,
+    postPayoutPayoutRefundRegistrationAmount,
   )
 where
 
@@ -17,18 +19,23 @@ import Data.Time (minutesToTimeZone, utcToLocalTime, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Types.DailyStats as DDS
+import qualified Domain.Types.DriverFee as DF
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DR
 import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
-import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, whenJust)
+import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, sum, whenJust)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt, getDbHash)
+import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as TPayout
 import qualified Kernel.External.Payout.Types as PT
@@ -50,6 +57,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
@@ -58,6 +66,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Notifications
+import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
 import Utils.Common.Cac.KeyNameConstants
 
@@ -289,6 +298,57 @@ postPayoutPayoutDriversSetBlockState _merchantShortId _opCity req = do
   void $ QDI.updateIsBlockedForReferralPayout driverIds req.blockState
   pure Success
 
+postPayoutPayoutUpdateVPA :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateVpaReq -> Environment.Flow APISuccess
+postPayoutPayoutUpdateVPA _merchantShortId _opCity req = do
+  person <- QPerson.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+  let verifyVPAReq =
+        KT.VerifyVPAReq
+          { orderId = Nothing,
+            customerId = Just person.id.getId,
+            vpa = req.vpa
+          }
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId (DEMSC.PaymentService Payment.Juspay)
+  resp <- try @_ @SomeException $ Payout.verifyVPAService verifyVPAReq verifyVpaCall
+  case resp of
+    Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
+    Right response -> do
+      if response.status == "VALID"
+        then do
+          QDI.updatePayoutVpaAndStatus (Just req.vpa) (Just $ castVpaStatus req.vpaStatus) person.id
+        else do
+          throwError $ InvalidRequest $ "Invalid VPA Updation: " <> show response
+  pure Success
+
+postPayoutPayoutRefundRegistrationAmount :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.RefundRegAmountReq -> Environment.Flow APISuccess
+postPayoutPayoutRefundRegistrationAmount merchantShortId opCity req = do
+  driverInfo <- QDI.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+  if driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded && isJust driverInfo.payoutVpa
+    then do
+      mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] (cast req.driverId) DPlan.YATRI_SUBSCRIPTION
+      case mbDriverFee of
+        Just driverFee -> do
+          now <- getCurrentTime
+          let registrationFee = driverFee.platformFee
+              registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
+          when (registrationAmount > 0.0) $ do
+            QDF.updateStatus DF.REFUND_PENDING driverFee.id now
+            QDI.updatePayoutRegAmountRefunded (Just registrationAmount) (cast req.driverId)
+            merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+            merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+            let vehicleCategory = DV.AUTO_CATEGORY
+            payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
+            uid <- generateGUID
+            createOrderReq <- createReq payoutConfig (fromMaybe "" driverInfo.payoutVpa) uid req.driverId registrationAmount
+            let serviceName = DEMSC.PayoutService PT.Juspay
+                entityName = DLP.BACKLOG
+                createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
+            logDebug $ "calling payoutOrder with driverId: " <> req.driverId.getId <> " | registration amount: " <> show registrationAmount <> " | orderId: " <> show uid
+            void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Just $ Kernel.Types.Id.cast merchantOpCity.id) (cast req.driverId) (Just [driverFee.id.getId]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
+        _ -> logDebug $ "No registration fee found for driverId: " <> req.driverId.getId
+    else do
+      throwError $ InvalidRequest $ "Driver not eligible for refund | driver id: " <> show req.driverId
+  pure Success
+
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()
 callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
   when (isJust payoutOrder.retriedOrderId) $ throwError $ InvalidRequest "Payout Order Already Retried"
@@ -378,3 +438,9 @@ castEntityName entity =
     DTP.RETRY_VIA_DASHBOARD -> Just DLP.RETRY_VIA_DASHBOARD
     DTP.DRIVER_FEE -> Just DLP.DRIVER_FEE
     DTP.INVALID -> Nothing
+
+castVpaStatus :: DTP.PayoutVpaStatus -> DI.PayoutVpaStatus
+castVpaStatus vpaStatus = case vpaStatus of
+  DTP.VIA_WEBHOOK -> DI.VIA_WEBHOOK
+  DTP.VERIFIED_BY_USER -> DI.VERIFIED_BY_USER
+  _ -> DI.MANUALLY_ADDED

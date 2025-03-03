@@ -66,10 +66,8 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
             customerId = Just personId.getId,
             vpa = vpa
           }
-      commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant person.merchantId
-      commonPersonId = cast @Person.Person @DPayment.Person personId
       verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal
-  resp <- try @_ @SomeException $ DP.verifyVPAService commonMerchantId commonPersonId verifyVPAReq verifyVpaCall
+  resp <- try @_ @SomeException $ DP.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
     Right response -> do

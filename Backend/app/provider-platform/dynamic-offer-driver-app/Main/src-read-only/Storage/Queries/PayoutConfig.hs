@@ -66,6 +66,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.payoutRegistrationCgst payoutRegistrationCgst,
       Se.Set Beam.payoutRegistrationFee payoutRegistrationFee,
       Se.Set Beam.payoutRegistrationSgst payoutRegistrationSgst,
+      Se.Set Beam.referralProgramStartDate referralProgramStartDate,
       Se.Set Beam.referralRewardAmountPerRide referralRewardAmountPerRide,
       Se.Set Beam.remark remark,
       Se.Set Beam.thresholdPayoutAmountPerPerson thresholdPayoutAmountPerPerson,

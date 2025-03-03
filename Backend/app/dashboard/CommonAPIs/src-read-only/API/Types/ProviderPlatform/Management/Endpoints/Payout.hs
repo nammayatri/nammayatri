@@ -78,6 +78,13 @@ data PayoutReferralHistoryRes = PayoutReferralHistoryRes {history :: [ReferralHi
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PayoutVpaStatus
+  = VIA_WEBHOOK
+  | MANUALLY_ADDED
+  | VERIFIED_BY_USER
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PendingPayoutReq = PendingPayoutReq {personId :: Kernel.Types.Id.Id Dashboard.Common.Driver}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -98,6 +105,13 @@ data ReferralHistoryItem = ReferralHistoryItem
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RefundRegAmountReq = RefundRegAmountReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RefundRegAmountReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data RetryPayoutsReq = RetryPayoutsReq {limit :: Kernel.Prelude.Int, offset :: Kernel.Prelude.Int, status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus, entityNames :: [EntityName]}
   deriving stock (Generic)
@@ -125,7 +139,14 @@ data UpdateFraudStatusReq = UpdateFraudStatusReq
 instance Kernel.Types.HideSecrets.HideSecrets UpdateFraudStatusReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout :<|> PostPayoutPayoutDeleteVPA :<|> PostPayoutPayoutDriversSetBlockState))
+data UpdateVpaReq = UpdateVpaReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, vpa :: Kernel.Prelude.Text, vpaStatus :: PayoutVpaStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdateVpaReq where
+  hideSecrets = Kernel.Prelude.identity
+
+type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout :<|> PostPayoutPayoutDeleteVPA :<|> PostPayoutPayoutDriversSetBlockState :<|> PostPayoutPayoutUpdateVPA :<|> PostPayoutPayoutRefundRegistrationAmount))
 
 type GetPayoutPayoutReferralHistory =
   ( "payout" :> "referral" :> "history" :> QueryParam "areActivatedRidesOnly" Kernel.Prelude.Bool
@@ -185,6 +206,10 @@ type PostPayoutPayoutDeleteVPA = ("payout" :> "deleteVPA" :> ReqBody '[JSON] Del
 
 type PostPayoutPayoutDriversSetBlockState = ("payout" :> "drivers" :> "setBlockState" :> ReqBody '[JSON] SetDriversBlockStateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostPayoutPayoutUpdateVPA = ("payout" :> "updateVPA" :> ReqBody '[JSON] UpdateVpaReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostPayoutPayoutRefundRegistrationAmount = ("payout" :> "refundRegistrationAmount" :> ReqBody '[JSON] RefundRegAmountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data PayoutAPIs = PayoutAPIs
   { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
     getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutHistoryRes,
@@ -193,13 +218,15 @@ data PayoutAPIs = PayoutAPIs
     postPayoutPayoutRetryAllWithStatus :: RetryPayoutsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutPendingPayout :: PendingPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutDeleteVPA :: DeleteVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutDriversSetBlockState :: SetDriversBlockStateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPayoutPayoutDriversSetBlockState :: SetDriversBlockStateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutUpdateVPA :: UpdateVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutRefundRegistrationAmount :: RefundRegAmountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
-    getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout :<|> postPayoutPayoutDeleteVPA :<|> postPayoutPayoutDriversSetBlockState = payoutClient
+    getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout :<|> postPayoutPayoutDeleteVPA :<|> postPayoutPayoutDriversSetBlockState :<|> postPayoutPayoutUpdateVPA :<|> postPayoutPayoutRefundRegistrationAmount = payoutClient
 
 data PayoutUserActionType
   = GET_PAYOUT_PAYOUT_REFERRAL_HISTORY
@@ -210,6 +237,8 @@ data PayoutUserActionType
   | POST_PAYOUT_PAYOUT_PENDING_PAYOUT
   | POST_PAYOUT_PAYOUT_DELETE_VPA
   | POST_PAYOUT_PAYOUT_DRIVERS_SET_BLOCK_STATE
+  | POST_PAYOUT_PAYOUT_UPDATE_VPA
+  | POST_PAYOUT_PAYOUT_REFUND_REGISTRATION_AMOUNT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
