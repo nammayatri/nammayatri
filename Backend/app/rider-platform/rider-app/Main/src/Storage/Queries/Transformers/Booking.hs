@@ -33,6 +33,7 @@ getDistance = \case
   DRB.OneWaySpecialZoneDetails details -> Just details.distance
   DRB.InterCityDetails details -> Just details.distance
   DRB.AmbulanceDetails details -> Just details.distance
+  DRB.MeterRideDetails _ -> Nothing
 
 -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
 getFareProductType :: Domain.Types.Booking.BookingDetails -> FareProductType
@@ -42,6 +43,7 @@ getFareProductType = \case
   DRB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
   DRB.InterCityDetails _ -> INTER_CITY
   DRB.AmbulanceDetails _ -> AMBULANCE
+  DRB.MeterRideDetails _ -> ONE_WAY
   _ -> DRIVER_OFFER
 
 getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -53,6 +55,7 @@ getOtpCode = \case
   DRB.InterCityDetails details -> details.otpCode
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails details -> details.otpCode
+  DRB.MeterRideDetails _ -> Nothing
 
 getParcelQuantity :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Int
 getParcelQuantity = \case
@@ -73,6 +76,7 @@ getIsUpgradedToCab = \case
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails _ -> Nothing
+  DRB.MeterRideDetails _ -> Nothing
 
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
@@ -83,6 +87,7 @@ getStopLocationId = \case
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails _ -> Nothing
+  DRB.MeterRideDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getToLocationId bookingDetails = do
@@ -98,6 +103,7 @@ getToLocation = \case
   DRB.InterCityDetails details -> Just details.toLocation
   DRB.AmbulanceDetails details -> Just details.toLocation
   DRB.DeliveryDetails details -> Just details.toLocation
+  DRB.MeterRideDetails details -> details.toLocation
 
 getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
 getDeliveryBookingInfo = \case

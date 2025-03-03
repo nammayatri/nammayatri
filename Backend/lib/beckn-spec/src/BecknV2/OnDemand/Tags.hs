@@ -64,6 +64,7 @@ data BecknTagGroup
   | ROUTE_INFO
   | -- Custom tag groups
     REALLOCATION_INFO
+  | SEARCH_REQUEST_INFO
   | FARE_PARAMETERS_IN_RATECARD_INFO
   | DRIVER_IDENTIFIER
   | CUSTOMER_INFO
@@ -369,6 +370,8 @@ data BecknTag
   | ROUND_TRIP
   | -- Reallocation tags
     IS_REALLOCATION_ENABLED
+  | -- Meter ride tags
+    IS_METER_RIDE_SEARCH
   | -- FareParametersInRatwCard tag
     FARE_PARAMETERS_IN_RATECARD
   | -- Driver identifier tags
@@ -480,6 +483,7 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> (Just "Static Terms", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
+    IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
     FARE_PARAMETERS_IN_RATECARD -> (Just "Fare Parametes in RateCard information", Nothing)
     SENDER_NUMBER -> (Just "Delivery Sender Number", Nothing)
     SENDER_NAME -> (Just "Delivery Sender Name", Nothing)
@@ -517,6 +521,7 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> SETTLEMENT_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    IS_METER_RIDE_SEARCH -> SEARCH_REQUEST_INFO
     FARE_PARAMETERS_IN_RATECARD -> FARE_PARAMETERS_IN_RATECARD_INFO
     CUSTOMER_LANGUAGE -> CUSTOMER_INFO
     DASHBOARD_USER -> CUSTOMER_INFO

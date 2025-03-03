@@ -188,10 +188,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
         )
   let merchantOperatingCityId = merchantOperatingCity.id
+  let isMeterRide = getIsMeterRideSearch req
+
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID
-  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg req
+  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
@@ -226,6 +228,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       journeySearchData
       driverIdentifier'
       configVersionMap
+      isMeterRide
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -247,10 +250,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard,
+        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
         ..
       }
   where
+    getIsMeterRideSearch rqst = case rqst of
+      OneWaySearch reqData -> reqData.isMeterRideSearch
+      _ -> Just False
+
     mkDriverIdentifier :: Text -> Maybe DRL.DriverIdentifier
     mkDriverIdentifier refCode = DRL.mkDriverIdentifier (Just DRL.REFERRAL_CODE) (Just refCode)
 
@@ -268,7 +275,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard = do
+    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       Just $
@@ -279,6 +286,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.ROUND_TRIP, Just $ show roundTrip),
                 (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
                 (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
+                (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
                 (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
                 (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
                 (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText)
@@ -318,14 +326,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       Bool ->
       Context.City ->
       RiderConfig ->
+      Maybe Bool ->
       SearchReq ->
       m RouteDetails
-    getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg = \case
-      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg
-      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq.sessionToken ambulanceReq.isSourceManuallyMoved ambulanceReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg
-      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg
+    getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide = \case
+      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq.sessionToken ambulanceReq.isSourceManuallyMoved ambulanceReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
-      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg
+      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
 
     extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
     extractSearchDetails now = \case
@@ -333,7 +342,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         SearchDetails
           { riderPreferredOption = SearchRequest.OneWay,
             roundTrip = False,
-            stops = fromMaybe [] stops <> [destination],
+            stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
             hasStops = reqDetails.stops >>= \s -> Just $ length s > 0,
@@ -362,7 +371,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         SearchDetails
           { riderPreferredOption = SearchRequest.Ambulance,
             roundTrip = False,
-            stops = [destination],
+            stops = maybe [] pure destination,
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
             hasStops = Nothing,
@@ -373,7 +382,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         SearchDetails
           { riderPreferredOption = SearchRequest.Delivery,
             roundTrip = False,
-            stops = [destination],
+            stops = maybe [] pure destination,
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
             hasStops = Nothing,
@@ -395,11 +404,22 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       LatLong ->
       Bool ->
       RiderConfig ->
+      Maybe Bool ->
       m RouteDetails
-    processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig = do
+    processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide = do
       autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now
-      destinationLatLong <- lastMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
-      let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else sourceLatLong : stopsLatLong
+      destinationLatLong <- case lastMaybe stopsLatLong of
+        Just latLong -> return (Just latLong)
+        Nothing -> do
+          case isMeterRide of
+            Just True -> return Nothing
+            _ -> throwError (InvalidRequest "Destination is required for Non-Meter Ride  OneWay Search ")
+      latLongs <-
+        if roundTrip
+          then case destinationLatLong of
+            Just latLong -> return [sourceLatLong, latLong, sourceLatLong]
+            Nothing -> throwError (InvalidRequest "Destination is required for Round Trips ")
+          else return $ sourceLatLong : stopsLatLong
       calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
 
     processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m RouteDetails
@@ -459,8 +479,9 @@ buildSearchRequest ::
   Maybe JPT.JourneySearchData ->
   Maybe DRL.DriverIdentifier ->
   [LYT.ConfigVersionMap] ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -509,6 +530,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         driverIdentifier = mbDriverReferredInfo,
         hasMultimodalSearch = Just False,
         configInExperimentVersions = configVersionMap,
+        isMeterRideSearch = isMeterRide,
         ..
       }
   where

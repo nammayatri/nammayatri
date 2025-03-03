@@ -151,3 +151,4 @@ onInit req = do
       DRB.InterCityDetails details -> Just details.toLocation
       DRB.AmbulanceDetails details -> Just details.toLocation
       DRB.DeliveryDetails details -> Just details.toLocation
+      DRB.MeterRideDetails details -> details.toLocation

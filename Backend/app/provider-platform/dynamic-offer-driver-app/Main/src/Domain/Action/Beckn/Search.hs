@@ -127,6 +127,7 @@ data DSearchReq = DSearchReq
     customerLanguage :: Maybe Maps.Language,
     customerNammaTags :: Maybe [LYT.TagNameValue],
     isReallocationEnabled :: Maybe Bool,
+    isMeterRideSearch :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     disabilityTag :: Maybe Text,
     dropLocation :: Maybe LatLong,
@@ -215,7 +216,6 @@ handler ValidatedDSearchReq {..} sReq = do
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   stops <- mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
-
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed) <-
     case sReq.dropLocation of
       Just dropLoc -> do
@@ -246,7 +246,7 @@ handler ValidatedDSearchReq {..} sReq = do
             join ((\(_, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
           )
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
-  let localTimeZoneSeconds = 19800 -- fix this ------once live in another country
+  let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohash toLocGeohash mbDistance mbDuration mbVersion) `mapM` possibleTripOption.tripCategories)
@@ -771,25 +771,32 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           then (dsReq.pickupTime, True)
           else (now, False)
       tripCategories =
-        case dsReq.dropLocation of
-          Just _ -> do
-            if isInterCity
-              then do
-                if isCrossCity
+        if (checkIfMeterRideSearch dsReq.isMeterRideSearch)
+          then [OneWay MeterRide]
+          else do
+            case dsReq.dropLocation of
+              Just _ -> do
+                if isInterCity
                   then do
-                    [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                      <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                    if isCrossCity
+                      then do
+                        [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                          <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                      else do
+                        [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                          <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
                   else do
-                    [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                      <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-              else do
-                [OneWay OneWayOnDemandStaticOffer, Rental OnDemandStaticOffer]
-                  <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer])
-          Nothing ->
-            [Rental OnDemandStaticOffer]
-              <> [Rental RideOtp | not isScheduled]
+                    [OneWay OneWayOnDemandStaticOffer, Rental OnDemandStaticOffer]
+                      <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer])
+              Nothing ->
+                [Rental OnDemandStaticOffer]
+                  <> [Rental RideOtp | not isScheduled]
 
   TripOption {..}
+  where
+    checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
+      Just isMeterRide -> isMeterRide
+      Nothing -> False
 
 getDriverIdFromIdentifier :: DRL.DriverIdentifier -> Flow (Id DP.Person)
 getDriverIdFromIdentifier driverInfo =
