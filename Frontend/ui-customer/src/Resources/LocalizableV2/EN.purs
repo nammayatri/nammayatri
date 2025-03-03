@@ -1738,4 +1738,5 @@ getEn = Keymap {
 ,clean_ambulance : "Clean Ambulance"
 ,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
 , no_remaining_tickets : "No remaining tickets"
+, ticket_not_booked_refund_initiated : "Sorry, the ticket was not booked. A refund has been initiated."
 }

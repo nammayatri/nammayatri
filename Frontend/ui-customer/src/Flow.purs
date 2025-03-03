@@ -245,6 +245,8 @@ import Screens.AadhaarVerificationScreen.ScreenData as AadhaarVerificationScreen
 import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData as BusTrackingScreenData
 import Helpers.FrfsUtils (getFirstRoute, getAllFirstRoutes, getSortedStops)
 import DecodeUtil (decodeForeignAny,parseJSON)
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1415,9 +1417,10 @@ homeScreenFlow = do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       (GetAllBookingsRes cancelledRes) <- Remote.getAllBookingsBT Cancelled
+      (GetAllBookingsRes refundInitiated) <- Remote.getAllBookingsBT RefundInitiated
       void $ pure $ spy "bookedRes" bookedRes
       void $ pure $ spy "pendingRes" pendingRes
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = true, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) } })
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = true, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) (buildBookingDetails refundInitiated)} })
       modifyScreenState $ TicketingScreenStateType (\ticketingScreen -> ticketingScreen { props { hideMyTickets = true } })
       ticketListFlow
     GO_TO_MY_PROFILE updateProfile -> do
@@ -4466,11 +4469,12 @@ updateFlowStatus eventType = do
             $ do
                 currentFlowStatus false
 
-getTicketBookings :: Array TicketBookingItem -> Array TicketBookingItem -> Array TicketBookingItem -> TicketBookings
-getTicketBookings bookedRes pendingRes cancelledRes =
+getTicketBookings :: Array TicketBookingItem -> Array TicketBookingItem -> Array TicketBookingItem -> Array TicketBookingItem -> TicketBookings
+getTicketBookings bookedRes pendingRes cancelledRes refundInitiated =
   { pendingBooking: pendingRes
   , booked: bookedRes
   , cancelled: cancelledRes
+  , refundInitiated: refundInitiated
   }
 
 cancelEstimate :: String -> FlowBT String Unit
@@ -4751,7 +4755,8 @@ placeListFlow = do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       (GetAllBookingsRes cancelledRes) <- Remote.getAllBookingsBT Cancelled
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) } })
+      (GetAllBookingsRes refundInitiated) <- Remote.getAllBookingsBT RefundInitiated
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) (buildBookingDetails refundInitiated)} })
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> ticketListFlow)
     PlaceListC.BookTickets updatedState selectedPlace -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
@@ -4834,7 +4839,8 @@ ticketStatusFlow = do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       (GetAllBookingsRes cancelledRes) <- Remote.getAllBookingsBT Cancelled
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes)} })
+      (GetAllBookingsRes refundInitiated) <- Remote.getAllBookingsBT RefundInitiated
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) (buildBookingDetails refundInitiated)} })
       ticketListFlow
     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
@@ -5160,8 +5166,11 @@ updatePaymentStatusData ticketStatus shortOrderID = case ticketStatus of
     fillBookingDetails infoRes shortOrderID ticketStatus
   "Failed" -> do
     modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus = PP.Failed } })
+  "RefundInitiated" -> do
+    void $ void $ lift $ lift $ showToast $ getStringV2 ticket_not_booked_refund_initiated
+    modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus =  PP.Failed } })
   _ -> do
-    void $ void $ lift $ lift $ showToast $  getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+    void $ void $ lift $ lift $ showToast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
     modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ticketBookingScreen.props.previousStage } }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
     pure unit
 

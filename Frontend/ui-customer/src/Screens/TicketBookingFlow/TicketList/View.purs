@@ -95,7 +95,7 @@ paymentStatusPooling shortOrderId count delayDuration state push action =
     _ <- pure $ spy "ticketStatus" ticketStatus
     case ticketStatus of
       Right (API.GetTicketStatusResp resp) -> do
-        if (DA.any (_ == resp) ["Booked", "Failed"]) then do
+        if (DA.any (_ == resp) ["Booked", "Failed", "RefundInitiated"]) then do
             _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp
         else do
@@ -267,6 +267,7 @@ ticketsListView state push =
   ][ if DA.null state.props.ticketBookingList.booked then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Tickets"
   ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
   ,  if DA.null state.props.ticketBookingList.cancelled then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.cancelled "Cancelled Tickets"
+  ,  if DA.null state.props.ticketBookingList.refundInitiated then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.refundInitiated "Tickets Not Booked"
   , emptyTicketsView state push
   ]
 
@@ -411,6 +412,7 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
   Cancelled -> "ny_ic_cancelled"
+  RefundInitiated -> "ny_ic_white_tick"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of 
@@ -418,6 +420,7 @@ getTicketStatusBackgroundColor status = case status of
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
   Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  RefundInitiated ->  { bgColor : Color.red900, statusText : "Refund Initiated" }
 
 getShareButtonIcon :: String -> String
 getShareButtonIcon ticketServiceName = case ticketServiceName of
