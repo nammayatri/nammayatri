@@ -151,6 +151,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_t
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN parcel_quantity integer ;
 
 
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN trip_estimated_duration integer ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN trip_estimated_distance integer ;
 
 
 ------- SQL updates -------
@@ -185,3 +187,4 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN condit
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_safety_plus boolean ;
 
 
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_category text ;

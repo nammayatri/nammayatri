@@ -59,6 +59,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.vehicleVariant vehicleServiceTier,
       Se.Set Beam.vehicleServiceTierName (Kernel.Prelude.Just vehicleServiceTierName)
     ]
