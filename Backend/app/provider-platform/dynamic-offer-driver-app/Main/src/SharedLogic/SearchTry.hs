@@ -233,6 +233,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         vehicleServiceTier = serviceTier,
         vehicleServiceTierName = vehicleServiceTierItem.name,
         requestId = searchReq.id,
+        vehicleCategory = vehicleServiceTierItem.vehicleCategory,
         estimateIds = estimateOrQuoteIds,
         estimateId = estOrQuoteId,
         merchantId = Just merchantId,
