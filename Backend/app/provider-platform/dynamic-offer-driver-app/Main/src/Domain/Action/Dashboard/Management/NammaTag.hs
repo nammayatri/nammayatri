@@ -34,6 +34,7 @@ where
 
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Domain.Types.DriverPoolConfig as DTD
@@ -110,14 +111,18 @@ postNammaTagTagCreate _merchantShortId _opCity req = do
         LYT.ApplicationTag LYT.NammaTagApplication {..} -> do
           case tagRule of
             C.RuleEngine rule -> do
-              let defVal = C.getLogicInputDef tagStage
-              case defVal of
-                Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
-                Just defaultVal -> do
-                  result <- YudhishthiraFlow.verifyDynamicLogic tagPossibleValues [rule] defaultVal
-                  pure $ LYT.CreateNammaTagResponse {result = LYT.ApplicationTagRes (LYT.CreateNammaApplicationTagResponse result defaultVal)}
+              unless (length tagStages == length (NE.nub tagStages)) $
+                throwError (InvalidRequest "Tag stages should be unique")
+              createTagResponses <- forM tagStages \event -> do
+                let defVal = C.getLogicInputDef event
+                case defVal of
+                  Nothing -> throwError $ InvalidRequest "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
+                  Just defaultVal -> do
+                    result <- YudhishthiraFlow.verifyDynamicLogic tagPossibleValues [rule] defaultVal
+                    pure $ LYT.ApplicationTagRes (LYT.CreateNammaApplicationTagResponse result defaultVal)
+              pure $ LYT.CreateNammaTagResponse {results = createTagResponses}
             _ -> throwError $ InvalidRequest "LLMContext not supported yet"
-        _ -> pure $ LYT.CreateNammaTagResponse {result = LYT.Success}
+        _ -> pure $ LYT.CreateNammaTagResponse {results = NE.singleton LYT.Success}
 
 postNammaTagTagUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UpdateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpdate req
@@ -136,7 +141,7 @@ postNammaTagTagVerify _merchantShortId _opCity LYT.VerifyNammaTagRequest {..} = 
           validateInputType tagStage value
           result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
           pure $ LYT.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
-        Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
+        Nothing -> throwError $ InvalidRequest "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
     _ -> do
       throwError $ InvalidRequest $ "Available only for Application events currenlty"
   where
