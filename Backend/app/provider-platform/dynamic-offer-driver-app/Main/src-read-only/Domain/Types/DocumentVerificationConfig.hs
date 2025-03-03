@@ -69,6 +69,12 @@ data DocumentType
   | VehicleBackInterior
   | VehicleNOC
   | BusinessLicense
+  | VehicleFront
+  | VehicleBack
+  | VehicleRight
+  | VehicleLeft
+  | VehicleFrontInterior
+  | VehicleBackInterior
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
