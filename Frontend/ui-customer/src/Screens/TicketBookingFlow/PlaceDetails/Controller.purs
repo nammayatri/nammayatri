@@ -1,7 +1,7 @@
 module Screens.TicketBookingFlow.PlaceDetails.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, discard, pure, map, unit, min, max, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show, (&&), (>), (/=), (||), (<=), (>=), (<))
+import Prelude (class Show, discard, pure, map, unit, min, max, bind, join, (>>=), (<$>), ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show, (&&), (>), (/=), (||), (<=), (>=), (<))
 import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
@@ -19,7 +19,7 @@ import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, g
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
 import Resources.Constants
-import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..))
+import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..), TicketServiceResp(..), BusinessHoursResp(..), OperationalDateResp(..))
 import Data.Int (ceil)
 import Common.Types.App as Common
 import Screens.TicketBookingFlow.PlaceDetails.ScreenData as TicketBookingScreenData
@@ -117,10 +117,16 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd 
 eval (UpdatePlacesData placeData mbServiceData) state = do
   case mbServiceData of 
     Just (TicketServicesResponse serviceData) -> do
+      let operationStartDate = join ((\(TicketServiceResp ticketServiceResp) -> ticketServiceResp.businessHours !! 0 ) <$> (serviceData !! 0)) >>= 
+              \(BusinessHoursResp businessHours) -> case businessHours.operationalDate of
+                  Just (OperationalDateResp oplDate) -> 
+                    if state.data.dateOfVisit < oplDate.startDate then Just oplDate.startDate else Nothing
+                  Nothing -> Nothing
       let selectedOpDay = convertUTCtoISC (state.data.dateOfVisit) "dddFull"
           servicesInfo2 = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
-          
-      continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
+      case operationStartDate of
+          Just opStartDate -> updateAndExit state { data { dateOfVisit = opStartDate}} $ GoToTicketBook state { data { dateOfVisit = opStartDate}} "" 
+          _ -> continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
     Nothing -> do
       let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
       continue newState

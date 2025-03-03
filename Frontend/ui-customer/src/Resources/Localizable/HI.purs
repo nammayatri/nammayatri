@@ -1347,3 +1347,4 @@ getHI stringKey =
         CLEAN_BIKE -> "साफ बाइक"
         UNCOMFORTABLE_BIKE -> "असहज बाइक"
         NO_REMAINING_TICKETS -> "कोई शेष टिकट नहीं"
+        TICKET_NOT_BOOKED_REFUND_INITIATED -> "माफ़ कीजिए, टिकट बुक नहीं हुई। रिफंड प्रक्रिया शुरू कर दी गई है।"

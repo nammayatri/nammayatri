@@ -53,7 +53,8 @@ initData =
           amount : 66.0,
           visitDate : "2023-11-30",
           status : Pending,
-          services : []
+          services : [],
+          refundDetails : Nothing
       },
       activeListItem : dummyServiceDetails,
       activeIndex : 0,
@@ -67,7 +68,8 @@ initData =
 dummyData :: TicketBookings
 dummyData = { booked : [{shortId : "kjdfk;a", ticketPlaceName : "Zoological Garden, AliPore", amount : 500.0, visitDate : "10-10-2023", status : Booked, ticketPlaceId : "", personId : "" }],
               pendingBooking : [{shortId : "kjdfadfk;a", ticketPlaceName : "Zoological Garden, AliPore", amount : 500.0, visitDate : "10-10-2023", status : Pending, ticketPlaceId : "", personId : ""}],
-              cancelled : []
+              cancelled : [],
+              refundInitiated : []
             }
 
 
