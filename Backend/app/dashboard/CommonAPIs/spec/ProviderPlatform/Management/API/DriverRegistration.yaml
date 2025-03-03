@@ -169,6 +169,12 @@ types:
     - vehiclePermit: [Text]
     - vehiclePUC: [Text]
     # TODO(Rupak): add vehiclePermit and vehiclePUC
+    - vehicleFront: [Text]
+    - vehicleBack: [Text]
+    - vehicleRight: [Text]
+    - vehicleLeft: [Text]
+    - vehicleFrontInterior: [Text]
+    - vehicleBackInterior: [Text]
   GetDocumentResponse:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
