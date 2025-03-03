@@ -19,6 +19,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetGetAllDriver,
     postDriverFleetUnlink,
     postDriverFleetRemoveVehicle,
+    getFleetOwnerId,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
     getDriverFleetVehicleEarning,

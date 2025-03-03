@@ -1,0 +1,58 @@
+imports:
+  DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+
+module: Onboarding
+
+apis:
+  - GET:
+      endpoint: /document/configs
+      auth: ApiAuthV2
+      query:
+        onlyVehicle: Bool
+        makeSelfieAadhaarPanMandatory: Bool
+        role: Role
+      response:
+        type: DocumentVerificationConfigList
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_ONBOARDING
+      helperApi:
+        - GET:
+            endpoint: /document/configs/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              onlyVehicle: Bool
+              makeSelfieAadhaarPanMandatory: Bool
+              role: Role
+            response:
+              type: DocumentVerificationConfigList
+
+types:
+  Role:
+    enum: "NORMAL_FLEET, BUSINESS_FLEET"
+    derive: "HttpInstance"
+  DocumentVerificationConfigList:
+    fleet: Maybe [DocumentVerificationConfigAPIEntity]
+    autos: Maybe [DocumentVerificationConfigAPIEntity]
+    cabs: Maybe [DocumentVerificationConfigAPIEntity]
+    bikes: Maybe [DocumentVerificationConfigAPIEntity]
+    ambulances: Maybe [DocumentVerificationConfigAPIEntity]
+    trucks: Maybe [DocumentVerificationConfigAPIEntity]
+    bus: Maybe [DocumentVerificationConfigAPIEntity]
+  DocumentVerificationConfigAPIEntity:
+    documentType: DocumentType
+    title: Text
+    description: Maybe Text
+    isMandatory: Bool
+    isDisabled: Bool
+    disableWarning: Maybe Text
+    isHidden: Bool
+    dependencyDocumentType: '[DocumentType]'
+    checkExtraction: Bool
+    checkExpiry: Bool
+    rcNumberPrefixList: '[Text]'
+    filterForOldApks: Maybe Bool
+    documentCategory: Maybe DocumentCategory
+  DocumentCategory:
+      enum: "Driver,Vehicle,Permission,Training"

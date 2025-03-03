@@ -178,6 +178,16 @@ mapDocumentType Common.VehicleFitnessCertificateImage = Domain.VehicleFitnessCer
 mapDocumentType Common.VehicleInspectionImage = Domain.VehicleInspectionForm
 mapDocumentType Common.ProfilePhotoImage = Domain.ProfilePhoto
 mapDocumentType Common.PanCard = Domain.PanCard
+mapDocumentType Common.Permissions = Domain.Permissions
+mapDocumentType Common.SubscriptionPlan = Domain.SubscriptionPlan
+mapDocumentType Common.ProfileDetails = Domain.ProfileDetails
+mapDocumentType Common.AadhaarCard = Domain.AadhaarCard
+mapDocumentType Common.SocialSecurityNumber = Domain.SocialSecurityNumber
+mapDocumentType Common.GSTCertificate = Domain.GSTCertificate
+mapDocumentType Common.BackgroundVerification = Domain.BackgroundVerification
+mapDocumentType Common.UploadProfileImage = Domain.UploadProfile
+mapDocumentType Common.VehicleNOC = Domain.VehicleNOC
+mapDocumentType Common.BusinessLicense = Domain.BusinessLicense
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
