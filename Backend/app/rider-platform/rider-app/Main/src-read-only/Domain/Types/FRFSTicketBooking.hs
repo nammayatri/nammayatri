@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -40,6 +41,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     googleWalletJWTUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+    integratedBppConfigId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig),
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

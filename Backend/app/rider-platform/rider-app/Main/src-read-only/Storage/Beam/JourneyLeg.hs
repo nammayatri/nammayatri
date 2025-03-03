@@ -54,6 +54,6 @@ instance B.Table JourneyLegT where
 
 type JourneyLeg = JourneyLegT Identity
 
-$(enableKVPG ''JourneyLegT ['id] [['journeyId]])
+$(enableKVPG ''JourneyLegT ['id] [['journeyId], ['legId]])
 
 $(mkTableInstances ''JourneyLegT "journey_leg")

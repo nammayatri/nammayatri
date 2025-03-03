@@ -191,3 +191,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_skipped boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_fare_changed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN integrated_bpp_config_id character varying(36) ;
