@@ -40,6 +40,7 @@ library
       Domain.Action.ProviderPlatform.AppManagement.Overlay
       Domain.Action.ProviderPlatform.AppManagement.Subscription
       Domain.Action.ProviderPlatform.Fleet.Driver
+      Domain.Action.ProviderPlatform.Fleet.Onboarding
       Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Booking
       Domain.Action.ProviderPlatform.Management.CoinsConfig
@@ -74,6 +75,7 @@ library
       API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.Fleet.Onboarding
       API.Action.ProviderPlatform.IssueManagement
       API.Action.ProviderPlatform.IssueManagement.Issue
       API.Action.ProviderPlatform.Management
