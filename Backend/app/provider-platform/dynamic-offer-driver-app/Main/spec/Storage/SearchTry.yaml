@@ -5,6 +5,7 @@ imports:
   ServiceTierType: Domain.Types.Common
   TripCategory: Domain.Types.Common
   Money: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
 
 SearchTry:
   tableName: search_try
@@ -30,6 +31,7 @@ SearchTry:
     validTill : UTCTime
     vehicleServiceTier : ServiceTierType|NoRelation
     vehicleServiceTierName : Text
+    vehicleCategory: Maybe VehicleCategory
     baseFare : HighPrecMoney
     customerExtraFee : Maybe HighPrecMoney
     currency: Currency

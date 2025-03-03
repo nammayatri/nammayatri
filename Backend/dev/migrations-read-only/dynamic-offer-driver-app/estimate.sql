@@ -92,3 +92,9 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN merchant_operating_city_i
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash double precision ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN from_loc_geohash text ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN estimated_duration integer ;
