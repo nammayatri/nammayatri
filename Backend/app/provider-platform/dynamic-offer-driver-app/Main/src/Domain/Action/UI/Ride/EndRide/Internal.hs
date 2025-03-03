@@ -237,10 +237,13 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
             mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
             (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
             QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
-            when (isValidRideForPayout && isConsideredForPayout riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig
+            when (isValidRideForPayout && isConsideredForPayout payoutConfig riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig
         Nothing -> pure ()
   where
-    isConsideredForPayout riderDetails = maybe False (\referredAt -> referredAt >= getDefaultTime) riderDetails.referredAt
+    isConsideredForPayout payoutConfig riderDetails = do
+      let programStartDate = fromMaybe getDefaultTime payoutConfig.referralProgramStartDate
+      maybe False (\referredAt -> referredAt >= programStartDate) riderDetails.referredAt
+
     updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId payoutConfig = do
       driverInfo <- QDI.findById (cast referredDriverId) >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       when (isNothing driverInfo.payoutVpa) do

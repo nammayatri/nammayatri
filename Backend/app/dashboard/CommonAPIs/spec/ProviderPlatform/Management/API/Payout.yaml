@@ -110,6 +110,30 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
+  - POST: # update vpa's
+      endpoint: payout/updateVPA
+      auth: ApiAuthV2
+      request:
+        type: UpdateVpaReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+
+  - POST: # payout for D2R registration amount
+      endpoint: payout/refundRegistrationAmount
+      auth: ApiAuthV2
+      request:
+        type: RefundRegAmountReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+
 types:
 
   PayoutReferralHistoryRes:
@@ -169,4 +193,14 @@ types:
   SetDriversBlockStateReq:
    - driverIds: [Id Driver]
    - blockState: Bool
+   - derive: "'HideSecrets"
+  PayoutVpaStatus:
+    - enum: "VIA_WEBHOOK,MANUALLY_ADDED,VERIFIED_BY_USER"
+  UpdateVpaReq:
+   - driverId: Id Driver
+   - vpa: Text
+   - vpaStatus: PayoutVpaStatus
+   - derive: "'HideSecrets"
+  RefundRegAmountReq:
+   - driverId: Id Driver
    - derive: "'HideSecrets"
