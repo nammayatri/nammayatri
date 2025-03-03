@@ -9,6 +9,7 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as SQNT
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as SQNTT
 import Lib.Yudhishthira.Tools.Utils (mkTagNameValue)
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
@@ -26,7 +27,16 @@ yudhishthiraDecide ::
 yudhishthiraDecide req = do
   nammaTags <-
     case req.source of
-      Application event -> SQNT.findAllByApplicationEvent event
+      Application event -> do
+        nammaTagsTrigger <- SQNTT.findAllByEvent event
+        let tagNames = nammaTagsTrigger <&> (.tagName)
+        when (null tagNames) $
+          logWarning $ "No triggers found for event: " <> show event
+        nammaTags <- SQNT.findAllByPrimaryKeys tagNames
+        let missedTags = filter (`notElem` (nammaTags <&> (.name))) tagNames
+        unless (null missedTags) $
+          logError $ "Some tags missing for event: " <> show event <> "; tags: " <> show missedTags
+        pure nammaTags
       KaalChakra chakra -> SQNT.findAllByChakra chakra
   logDebug $ "NammaTags for source <> " <> show req.source <> ": " <> show nammaTags
   logDebug $ "SourceData: " <> show req.sourceData

@@ -58,6 +58,7 @@ library
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Beam.ChakraQueries
       Lib.Yudhishthira.Storage.Beam.NammaTag
+      Lib.Yudhishthira.Storage.Beam.NammaTagTrigger
       Lib.Yudhishthira.Storage.Beam.TagActionNotificationConfig
       Lib.Yudhishthira.Storage.Beam.TimeBoundConfig
       Lib.Yudhishthira.Storage.Beam.UserData
@@ -65,6 +66,7 @@ library
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
       Lib.Yudhishthira.Storage.Queries.NammaTag
+      Lib.Yudhishthira.Storage.Queries.NammaTagTrigger
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
@@ -77,6 +79,7 @@ library
       Lib.Yudhishthira.Types.AppDynamicLogicRollout
       Lib.Yudhishthira.Types.ChakraQueries
       Lib.Yudhishthira.Types.NammaTag
+      Lib.Yudhishthira.Types.NammaTagTrigger
       Lib.Yudhishthira.Types.TagActionNotificationConfig
       Lib.Yudhishthira.Types.TimeBoundConfig
       Lib.Yudhishthira.Types.UserData
