@@ -1348,3 +1348,4 @@ getBN stringKey =
         CLEAN_BIKE -> "পরিষ্কার বাইক"
         UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"
         NO_REMAINING_TICKETS -> "কোনো অবশিষ্ট টিকিট নেই"
+        TICKET_NOT_BOOKED_REFUND_INITIATED -> "দুঃখিত, টিকিট বুক হয়নি। ফেরতের প্রক্রিয়া শুরু হয়েছে।"

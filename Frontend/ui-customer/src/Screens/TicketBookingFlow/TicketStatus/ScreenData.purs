@@ -53,7 +53,8 @@ initData =
           amount : 66.0,
           visitDate : "2023-11-30",
           status : Pending,
-          services : []
+          services : [],
+          refundDetails : Nothing
       },
       activeListItem : dummyServiceDetails,
       activeIndex : 0,
@@ -67,7 +68,8 @@ initData =
 dummyData :: TicketBookings
 dummyData = { booked : [],
               pendingBooking : [],
-              cancelled : []
+              cancelled : [],
+              refundInitiated : []
             }
 
 

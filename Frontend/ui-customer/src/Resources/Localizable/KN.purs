@@ -1350,3 +1350,4 @@ getKN stringKey =
         CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
         UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"
         NO_REMAINING_TICKETS -> "ಯಾವುದೇ ಉಳಿದ ಟಿಕೆಟ್‌ಗಳಿಲ್ಲ"
+        TICKET_NOT_BOOKED_REFUND_INITIATED -> "ಕ್ಷಮಿಸಿ, ಟಿಕೆಟ್ ಬುಕ್ ಆಗಿಲ್ಲ. ಮರುಪಾವತಿ ಪ್ರಕ್ರಿಯೆ ಪ್ರಾರಂಭಿಸಲಾಗಿದೆ."

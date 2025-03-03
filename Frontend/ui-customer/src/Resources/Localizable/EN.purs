@@ -1350,3 +1350,4 @@ getEN stringKey =
         CLEAN_BIKE -> "Clean Bike"
         UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"
         NO_REMAINING_TICKETS -> "No remaining tickets"
+        TICKET_NOT_BOOKED_REFUND_INITIATED -> "Sorry, the ticket was not booked. A refund has been initiated."

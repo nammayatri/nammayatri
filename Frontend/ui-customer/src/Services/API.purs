@@ -2102,7 +2102,7 @@ instance encodeSPersonStatsRes :: Encode PersonStatsRes where encode = defaultEn
 
 -- =========================================== Zoo Booking API's ================================================================
 
-data BookingStatus = Pending | Failed | Booked | Cancelled
+data BookingStatus = Pending | Failed | Booked | Cancelled | RefundInitiated
 
 derive instance genericBookingStatus :: Generic BookingStatus _
 instance standardEncodeBookingStatus :: StandardEncode BookingStatus where standardEncode _ = standardEncode {}
@@ -2150,6 +2150,28 @@ instance standardEncodeTicketBookingAPIEntity :: StandardEncode TicketBookingAPI
 instance showTicketBookingAPIEntity:: Show TicketBookingAPIEntity where show = genericShow
 instance decodeTicketBookingAPIEntity :: Decode TicketBookingAPIEntity where decode = defaultDecode
 instance encodeTicketBookingAPIEntity :: Encode TicketBookingAPIEntity where encode = defaultEncode
+
+newtype RefundDetails = RefundDetails
+  { id :: String
+  , shortId :: String
+  , createdAt :: String
+  , updatedAt :: String
+  , status :: String
+  , refundAmount :: Number
+  , merchantId :: String
+  , orderId :: String
+  , errorCode :: Maybe String
+  , errorMessage :: Maybe String
+  , idAssignedByServiceProvider :: Maybe String
+  , initiatedBy :: Maybe String
+  }
+
+derive instance genericRefundDetails :: Generic RefundDetails _
+derive instance newtypeRefundDetails :: Newtype RefundDetails _
+instance standardEncodeRefundDetails :: StandardEncode RefundDetails where standardEncode _ = standardEncode {}
+instance decodeRefundDetails :: Decode RefundDetails where decode = defaultDecode
+instance encodeRefundDetails :: Encode RefundDetails where encode = defaultEncode
+instance showRefundDetails :: Show RefundDetails where show = genericShow
 
 newtype TicketBookingServiceDetails = TicketBookingServiceDetails
   { amount :: Number,
@@ -2205,7 +2227,8 @@ newtype TicketBookingDetails = TicketBookingDetails
     amount :: Number,
     visitDate :: String,
     status :: String,
-    services :: Array TicketBookingServiceDetails
+    services :: Array TicketBookingServiceDetails,
+    refundDetails :: Maybe (Array RefundDetails)
   }
 
 instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq  where

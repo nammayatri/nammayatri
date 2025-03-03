@@ -1363,3 +1363,4 @@ getTE stringKey =
     CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
     UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"
     NO_REMAINING_TICKETS -> "మిగిలిన టిక్కెట్లు లేవు" 
+    TICKET_NOT_BOOKED_REFUND_INITIATED -> "క్షమించండి, టికెట్ బుక్ చేయబడలేదు. రిఫండ్ ప్రారంభించబడింది." 
