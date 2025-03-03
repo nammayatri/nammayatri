@@ -47,7 +47,7 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
         mbRider <- QPerson.findById $ cast @LYT.User @DPerson.Person userId
         pure $ mbRider <&> (\rider -> fromMaybe [] rider.customerNammaTags),
       updateUserTags = \userId customerTags -> QPerson.updateCustomerTags (Just customerTags) (cast @LYT.User @DPerson.Person userId),
-      action = Actions.kaalChakraAction . cast @LYT.User @DPerson.Person,
+      action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,
       createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId
     }

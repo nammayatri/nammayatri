@@ -187,6 +187,7 @@ let RiderJobType =
       < CheckPNAndSendSMS
       | ScheduledRidePopupToRider
       | ScheduledRideNotificationsToRider
+      | ScheduleTagActionNotification
       | SafetyIVR
       | CallPoliceApi
       | SafetyCSAlert
@@ -211,6 +212,9 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True
+        }
+      , { mapKey = RiderJobType.ScheduleTagActionNotification
+        , mapValue = False
         }
       , { mapKey = RiderJobType.SafetyIVR, mapValue = False }
       , { mapKey = RiderJobType.ExecutePaymentIntent, mapValue = True }
