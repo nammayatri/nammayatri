@@ -20,6 +20,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
@@ -35,6 +36,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     response :: C f (Maybe DI.SearchRequestForDriverResponse),
     vehicleServiceTier :: C f DServiceTierType.ServiceTierType,
     requestId :: C f (Id DSR.SearchRequest),
+    searchTryId :: C f (Id DST.SearchTry),
     createdAt :: C f CH.DateTime --,
   }
   deriving (Generic)
@@ -52,6 +54,7 @@ searchRequestForDriverTTable =
       response = "response",
       vehicleServiceTier = "vehicle_service_tier",
       requestId = "search_request_id",
+      searchTryId = "search_try_id",
       createdAt = "created_at"
     }
 
@@ -69,7 +72,7 @@ calulateSupplyDemandByGeohashAndServiceTier from to = do
     CH.select_
       ( \srfd -> do
           let supplyCount = CH.count_ (CH.distinct srfd.driverId)
-          let demandCount = CH.count_ (CH.distinct srfd.requestId)
+          let demandCount = CH.count_ (CH.distinct srfd.searchTryId)
           CH.groupBy (srfd.fromLocGeohash, srfd.vehicleServiceTier) $ \(fromLocGeohash, vehicleServiceTier) -> do
             (fromLocGeohash, supplyCount, demandCount, vehicleServiceTier)
       )
@@ -91,7 +94,7 @@ calulateAcceptanceCountByGeohashAndServiceTier from to = do
   CH.findAll $
     CH.select_
       ( \srfd -> do
-          let acceptanceCount = CH.count_ (CH.distinct srfd.requestId)
+          let acceptanceCount = CH.count_ (CH.distinct srfd.searchTryId)
           CH.groupBy (srfd.fromLocGeohash, srfd.vehicleServiceTier) $ \(fromLocGeohash, vehicleServiceTier) -> do
             (fromLocGeohash, acceptanceCount, vehicleServiceTier)
       )
@@ -113,7 +116,7 @@ calulateDemandByCityAndServiceTier from to = do
   CH.findAll $
     CH.select_
       ( \srfd -> do
-          let demandCount = CH.count_ (CH.distinct srfd.requestId)
+          let demandCount = CH.count_ (CH.distinct srfd.searchTryId)
           CH.groupBy (srfd.merchantOperatingCityId, srfd.vehicleServiceTier) $ \(merchantOperatingCityId, vehicleServiceTier) -> do
             (merchantOperatingCityId, demandCount, vehicleServiceTier)
       )
@@ -133,7 +136,7 @@ calulateAcceptanceCountByCityAndServiceTier from to = do
   CH.findAll $
     CH.select_
       ( \srfd -> do
-          let acceptanceCount = CH.count_ (CH.distinct srfd.requestId)
+          let acceptanceCount = CH.count_ (CH.distinct srfd.searchTryId)
           CH.groupBy (srfd.merchantOperatingCityId, srfd.vehicleServiceTier) $ \(merchantOperatingCityId, vehicleServiceTier) -> do
             (merchantOperatingCityId, acceptanceCount, vehicleServiceTier)
       )
