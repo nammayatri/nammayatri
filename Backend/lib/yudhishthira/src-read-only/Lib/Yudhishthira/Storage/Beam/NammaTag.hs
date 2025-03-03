@@ -18,7 +18,6 @@ data NammaTagT f = NammaTagT
     category :: B.C f Kernel.Prelude.Text,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chakra :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra),
-    event :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent),
     tagType :: B.C f Lib.Yudhishthira.Types.NammaTag.TagType,
     name :: B.C f Kernel.Prelude.Text,
     rangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

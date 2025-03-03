@@ -6,6 +6,7 @@ import Data.Aeson
 import qualified Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.List.NonEmpty as DLNE
+import qualified Data.List.NonEmpty as NE
 import Data.Scientific (toRealFloat)
 import qualified Data.Text as T
 import JsonLogic
@@ -28,6 +29,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQ
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as SQCQ
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNT
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as QNTT
 import Lib.Yudhishthira.Tools.Error
 import Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
@@ -36,14 +38,20 @@ import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
+import qualified Lib.Yudhishthira.Types.NammaTagTrigger as DNTT
 import Lib.Yudhishthira.Types.TimeBoundConfig
 import qualified System.Environment as Se
 
-postTagCreate :: BeamFlow m r => Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
+postTagCreate :: forall m r. BeamFlow m r => Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
 postTagCreate tagRequest = do
-  nammaTag <- buildNammaTag
+  now <- getCurrentTime
+  let nammaTag = mkNammaTag now
+  mbNammaTagTriggers <- buildNammaTagTriggers now
   checkForDuplicacy nammaTag.name
+
   QNT.create nammaTag
+  QNTT.deleteAllByTagName nammaTag.name -- Just in case if old data persists
+  whenJust mbNammaTagTriggers (QNTT.createMany . NE.toList)
   pure Kernel.Types.APISuccess.Success
   where
     checkForDuplicacy name = do
@@ -51,85 +59,109 @@ postTagCreate tagRequest = do
         Just _ -> throwError (TagAlreadyExists name)
         Nothing -> pure ()
 
-    buildNammaTag = do
-      now <- getCurrentTime
+    mkNammaTag now = do
+      let createdAt = now
+          updatedAt = now
       case tagRequest of
         Lib.Yudhishthira.Types.ApplicationTag Lib.Yudhishthira.Types.NammaTagApplication {..} ->
-          return $
-            DNT.NammaTag
-              { category = tagCategory,
-                info = DNT.Application (DNT.ApplicationTagInfo tagStage),
-                name = tagName,
-                possibleValues = tagPossibleValues,
-                rule = tagRule,
-                description = description,
-                actionEngine = Nothing,
-                validity = tagValidity,
-                createdAt = now,
-                updatedAt = now
-              }
+          DNT.NammaTag
+            { category = tagCategory,
+              info = DNT.Application,
+              name = tagName,
+              possibleValues = tagPossibleValues,
+              rule = tagRule,
+              description = description,
+              actionEngine = Nothing,
+              validity = tagValidity,
+              ..
+            }
         Lib.Yudhishthira.Types.KaalChakraTag Lib.Yudhishthira.Types.NammaTagChakra {..} ->
-          return $
-            DNT.NammaTag
-              { category = tagCategory,
-                info = DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra),
-                name = tagName,
-                possibleValues = tagPossibleValues,
-                rule = tagRule,
-                description = description,
-                actionEngine,
-                validity = tagValidity,
-                createdAt = now,
-                updatedAt = now
-              }
+          DNT.NammaTag
+            { category = tagCategory,
+              info = DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra),
+              name = tagName,
+              possibleValues = tagPossibleValues,
+              rule = tagRule,
+              description = description,
+              actionEngine,
+              validity = tagValidity,
+              ..
+            }
         Lib.Yudhishthira.Types.ManualTag Lib.Yudhishthira.Types.NammaTagManual {..} ->
-          return $
-            DNT.NammaTag
-              { category = tagCategory,
-                info = DNT.Manual,
-                name = tagName,
-                possibleValues = tagPossibleValues,
-                rule = Lib.Yudhishthira.Types.LLM "empty-context",
-                description = description,
-                actionEngine = Nothing,
-                validity = tagValidity,
-                createdAt = now,
-                updatedAt = now
-              }
+          DNT.NammaTag
+            { category = tagCategory,
+              info = DNT.Manual,
+              name = tagName,
+              possibleValues = tagPossibleValues,
+              rule = Lib.Yudhishthira.Types.LLM "empty-context",
+              description = description,
+              actionEngine = Nothing,
+              validity = tagValidity,
+              ..
+            }
 
-postTagUpdate :: BeamFlow m r => Lib.Yudhishthira.Types.UpdateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
+    buildNammaTagTriggers :: UTCTime -> m (Maybe (NE.NonEmpty DNTT.NammaTagTrigger))
+    buildNammaTagTriggers now = case tagRequest of
+      Lib.Yudhishthira.Types.ApplicationTag Lib.Yudhishthira.Types.NammaTagApplication {..} -> do
+        let createdAt = now
+            updatedAt = now
+        unless (length tagStages == length (NE.nub tagStages)) $
+          throwError (InvalidRequest "Tag stages should be unique")
+        pure . Just $ tagStages <&> \event -> DNTT.NammaTagTrigger {event, tagName, ..}
+      _ -> pure Nothing
+
+postTagUpdate :: forall m r. BeamFlow m r => Lib.Yudhishthira.Types.UpdateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
 postTagUpdate tagRequest = do
   tag <- QNT.findByPrimaryKey tagRequest.tagName >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
-  updatedTag <- buildUpdateNammaTagEntity tag
+  now <- getCurrentTime
+
+  let updatedTag = mkUpdateNammaTagEntity tag now
+  mbNammaTagTriggers <- buildNammaTagTriggers tag now
+
   QNT.updateByPrimaryKey updatedTag
+  whenJust mbNammaTagTriggers \nammaTagTriggers -> do
+    QNTT.deleteAllByTagName tagRequest.tagName
+    QNTT.createMany (NE.toList nammaTagTriggers)
   return Kernel.Types.APISuccess.Success
   where
-    buildUpdateNammaTagEntity tag = do
-      now <- getCurrentTime
+    mkUpdateNammaTagEntity tag now = do
       let validity = case tagRequest.resetTagValidity of
             Just True -> Nothing
             _ -> tagRequest.tagValidity <|> tag.validity
-      return $
-        DNT.NammaTag
-          { category = fromMaybe tag.category tagRequest.tagCategory,
-            info = buildTagInfo tag,
-            name = tag.name,
-            possibleValues = fromMaybe tag.possibleValues tagRequest.tagPossibleValues,
-            rule = fromMaybe tag.rule tagRequest.tagRule,
-            description = tagRequest.description <|> tag.description,
-            actionEngine = tagRequest.actionEngine <|> tag.actionEngine,
-            validity,
-            createdAt = tag.createdAt,
-            updatedAt = now
-          }
-    buildTagInfo tag = do
+      DNT.NammaTag
+        { category = fromMaybe tag.category tagRequest.tagCategory,
+          info = mkTagInfo tag,
+          name = tag.name,
+          possibleValues = fromMaybe tag.possibleValues tagRequest.tagPossibleValues,
+          rule = fromMaybe tag.rule tagRequest.tagRule,
+          description = tagRequest.description <|> tag.description,
+          actionEngine = tagRequest.actionEngine <|> tag.actionEngine,
+          validity,
+          createdAt = tag.createdAt,
+          updatedAt = now
+        }
+    mkTagInfo tag = case tag.info of
+      DNT.Application -> DNT.Application
+      DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra) -> DNT.KaalChakra (DNT.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra))
+      DNT.Manual -> DNT.Manual
+
+    buildNammaTagTriggers :: DNT.NammaTag -> UTCTime -> m (Maybe (NE.NonEmpty DNTT.NammaTagTrigger))
+    buildNammaTagTriggers tag now = do
       case tag.info of
-        DNT.Application (DNT.ApplicationTagInfo tagStage) -> DNT.Application (DNT.ApplicationTagInfo (fromMaybe tagStage tagRequest.tagStage))
-        DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra) -> DNT.KaalChakra (DNT.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra))
-        DNT.Manual -> DNT.Manual
+        DNT.Application -> do
+          let createdAt = now
+              updatedAt = now
+          whenJust tagRequest.tagStages $ \events -> do
+            unless (length events == length (NE.nub events)) $
+              throwError (InvalidRequest "Tag stages should be unique")
+          pure $ tagRequest.tagStages <&> fmap \event -> DNTT.NammaTagTrigger {event, tagName = tagRequest.tagName, ..}
+        _ -> do
+          whenJust tagRequest.tagStages $ \_ -> throwError (InvalidRequest "tagStage relevant only for application tags")
+          pure Nothing
 
 deleteTag :: BeamFlow m r => T.Text -> m Kernel.Types.APISuccess.APISuccess
 deleteTag tagName = do
+  QNTT.deleteAllByTagName tagName
   QNT.deleteByPrimaryKey tagName
   return Kernel.Types.APISuccess.Success
 
@@ -268,7 +300,8 @@ data VerifyTagData = VerifyTagData
 verifyEventLogic :: (BeamFlow m r, ToJSON a) => Lib.Yudhishthira.Types.ApplicationEvent -> [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
 verifyEventLogic event logics data_ = do
   result <- runLogics logics data_
-  nammaTags <- QNT.findAllByApplicationEvent event
+  nammaTagsTrigger <- QNTT.findAllByEvent event
+  nammaTags <- QNT.findAllByPrimaryKeys (nammaTagsTrigger <&> (.tagName))
   let allTags =
         foldl'
           ( \(VerifyTagData tagsAcc isAnyText rangeAcc) x ->
