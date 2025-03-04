@@ -5,6 +5,7 @@ imports:
   UTCTime: Kernel.Prelude
   Double: Kernel.Prelude
   VehicleCategory: BecknV2.FRFS.Enums
+  UpcomingStop: SharedLogic.FRFSUtils
 
 module: TrackRoute
 
@@ -29,6 +30,8 @@ types:
     nextStopTravelDistance: Meters
     vehicleId: Text
     vehicleInfo: VehicleInfoForRoute
+    upcomingStops: "[UpcomingStop]"
+    delay: Maybe Seconds
 
 apis:
   - GET:

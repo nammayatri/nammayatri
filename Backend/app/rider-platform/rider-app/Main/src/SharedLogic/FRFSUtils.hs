@@ -325,7 +325,7 @@ data VehicleTracking = VehicleTracking
     vehicleInfo :: VehicleInfo,
     delay :: Maybe Seconds
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpcomingStop = UpcomingStop
@@ -379,42 +379,37 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
         pure (minDistanceFromVehicle, nextStop)
     let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
         nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
-        nextStopTravelTime = (\speed -> Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed
         upcomingStopsList = dropWhile (/= nextStop) sortedStops
         upcomingStopPairs = pairWithNext upcomingStopsList
 
         (segmentDistancesForUpcoming, segmentDurationsForUpcoming :: [Maybe Seconds]) = unzip $ map (\pair -> fromMaybe (HighPrecMeters 0, Nothing) (Map.lookup pair segmentDistancesMap)) upcomingStopPairs
+        mbNextStopTravelTime = listToMaybe segmentDurationsForUpcoming
+        nextStopTravelTime = fromMaybe (computeFromSpeed nextStopTravelDistance <$> vehicleInfo.speed) mbNextStopTravelTime
 
         cumulativeDistances = scanl (+) nextStopTravelDistance segmentDistancesForUpcoming
 
-        upcomingStopsEntries =
+    now <- getCurrentTime
+    let (actualTime, delay) = calculateTimes now nextStopTravelDistance nextStopTravelTime vehicleInfo.startTime
+    let upcomingStopsEntries =
           zipWith3
             ( \stop cumulativeDist duration -> do
                 UpcomingStop
                   { stop = stop,
                     estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
-                    actualTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed else duration,
+                    actualTravelTime = Nothing,
                     distance = highPrecMetersToMeters cumulativeDist
                   }
             )
             upcomingStopsList
             cumulativeDistances
             segmentDurationsForUpcoming
-    currentTime <- liftIO getCurrentTime
-    let delay
-          | nextStopTravelDistance <= 100 =
-            case (nextStopTravelTime, vehicleInfo.startTime) of
-              (Just (Seconds estimatedSeconds), Just startTime) ->
-                let actualDiff = diffUTCTime currentTime startTime
-                    actualSeconds = fromIntegral (nominalDiffTimeToSeconds actualDiff)
-                 in Just $ Seconds (actualSeconds - estimatedSeconds)
-              _ -> Nothing
-          | otherwise = Nothing
-
+        updatedUpcomingStopsEntries = case upcomingStopsEntries of
+          [] -> []
+          (next : rest) -> next {actualTravelTime = actualTime} : rest
     let vehicleTracking =
           VehicleTracking
             { nextStopTravelDistance = highPrecMetersToMeters nextStopTravelDistance,
-              upcomingStops = upcomingStopsEntries,
+              upcomingStops = updatedUpcomingStopsEntries,
               ..
             }
     updatedVehicleTracking <- updateVehicleTrackingFromCache vehicleId vehicleTracking
@@ -424,6 +419,7 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
       mbCachedVehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
       updatedTracking <- case mbCachedVehicleTracking of
         Just cachedVehicleTracking -> do
+          logDebug $ "Vehicle tracking cache hit for vehicleId " <> show vehicleId <> " routeCode " <> show routeCode <> " cachedVehicleTracking " <> show cachedVehicleTracking
           let cachedStopMap =
                 Map.fromList
                   [ (RouteStopMapping.stopCode (stop cachedStop), estimatedTravelTime cachedStop)
@@ -444,7 +440,7 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
       pure updatedTracking
 
     getStopPairsWithWaypoints stopPairs = do
-      Redis.get (stopPairRoutePointsKey routeCode)
+      Redis.safeGet (stopPairRoutePointsKey routeCode)
         >>= \case
           Just stopPairsWithWaypointAndDuration -> pure stopPairsWithWaypointAndDuration
           Nothing -> do
@@ -515,6 +511,16 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
 
     stopPairRoutePointsKey :: Text -> Text
     stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
+
+    calculateTimes :: UTCTime -> HighPrecMeters -> Maybe Seconds -> Maybe UTCTime -> (Maybe Seconds, Maybe Seconds)
+    calculateTimes now nextStopTravelDistance nextStopTravelTime startTime
+      | nextStopTravelDistance > 100 = (Nothing, Nothing)
+      | otherwise =
+        let actualTime = fmap (nominalDiffTimeToSeconds . (`diffUTCTime` now)) startTime
+            delay = liftM2 (\t (Seconds est) -> Seconds (t - est)) (getSeconds <$> actualTime) (nextStopTravelTime)
+         in (actualTime, delay)
+
+    computeFromSpeed nextStopTravelDistance speed = Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)
 
 mkVehicleTrackingKey :: Text -> Text -> Text
 mkVehicleTrackingKey vehicleId routeCode = "FRFS:VehicleTracking:" <> vehicleId <> ":" <> routeCode
