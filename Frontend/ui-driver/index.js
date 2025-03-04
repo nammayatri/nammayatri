@@ -16,6 +16,7 @@ window.timeStamps["assetDownloaderToIndexBundle"]["end"] = date;
 window.version = window.version || {};
 window.version["app"] = __VERSION__;
 let previousDateObject = new Date();
+var innerPayload;
 const refreshThreshold = 300;
 console.warn("Hello World");
 const JBridge = window.JBridge;
