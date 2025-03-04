@@ -324,7 +324,9 @@ data CreateRCInput = CreateRCInput
     fuelType :: Maybe Text,
     color :: Maybe Text,
     dateOfRegistration :: Maybe UTCTime,
-    vehicleModelYear :: Maybe Int
+    vehicleModelYear :: Maybe Int,
+    grossVehicleWeight :: Maybe Float,
+    unladdenWeight :: Maybe Float
   }
 
 buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> m (Maybe VehicleRegistrationCertificate)
@@ -351,6 +353,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
+        Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
   VehicleRegistrationCertificate
     { id,
