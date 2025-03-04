@@ -718,6 +718,7 @@ library
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
+      API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
