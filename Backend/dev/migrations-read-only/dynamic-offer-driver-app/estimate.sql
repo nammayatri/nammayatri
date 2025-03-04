@@ -98,3 +98,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city double
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN from_loc_geohash text ;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN estimated_duration integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN congestion_multiplier double precision ;
