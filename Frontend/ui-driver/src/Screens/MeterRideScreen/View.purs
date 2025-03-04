@@ -4,6 +4,8 @@ import Animation as Anim
 import Common.Types.App
 import Data.String (length)
 import Data.String.Unsafe (charAt)
+import Effect.Uncurried (runEffectFn1)
+import Data.Int (toNumber, round)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -31,13 +33,23 @@ import Engineering.Helpers.Commons as EHC
 import Components.TripStageTopBar as TripStageTopBar
 import Screens.HomeScreen.ScreenData (dummyRideData)
 import Data.Maybe
+import Timers (waitingCountdownTimerV2, clearTimerWithIdEffect)
 
 screen :: MeterRideScreenState -> Screen Action MeterRideScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "MeterRideScreen"
-  , globalEvents : []
+  , globalEvents : [
+    (
+      \push -> do
+        if initialState.props.isMeterRideStarted then do
+          void $ waitingCountdownTimerV2 initialState.data.timeSec "1" "MeterRideStartedTimer" push MeterRideStartedTimerCB
+          pure $ runEffectFn1 clearTimerWithIdEffect "MeterRideStartedTimer"
+        else 
+          pure $ pure $ unit
+    )
+  ]
   , eval : (\action state -> do
       let _ = spy "MeterRideScree state -----" state
       let _ = spy "MeterRideScree action -----" action
@@ -122,7 +134,7 @@ view push state =
             , gravity CENTER
             ]
             , textView $ 
-            [ text $ "₹" <> show (state.props.sliderVal * state.props.ratePerKM)
+            [ text $ "₹" <> show (round (toNumber state.props.sliderVal * state.props.ratePerKM))
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , color Color.black800
@@ -547,7 +559,7 @@ distAndTimeView push state =
   [
     width MATCH_PARENT,
     height $ WRAP_CONTENT,
-    margin $ Margin 20 30 20 0
+    margin $ Margin 20 36 20 0
   ]
   [
     linearLayout
@@ -614,12 +626,12 @@ distAndTimeView push state =
           height $ V 19,
           width $ V 19,
           imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_ny_clock_unfilled",
-          margin $ Margin 0 4
-           10 0
+          margin $ Margin 0 4 10 0
         ]
         , textView $ 
         [ text "TIME"
         , height WRAP_CONTENT
+        , margin $ Margin 0 0 5 0
         , letterSpacing $ PX 2.0
         , color Color.black500
         ] <> FontStyle.h2 TypoGraphy
@@ -631,8 +643,7 @@ distAndTimeView push state =
       ]
       [
         textView $ 
-        [ text $ getTime state.data.timeMin 
-        state.data.timeSec
+        [ text $ getTime state.data.timeSec
         , height WRAP_CONTENT
         , color Color.black900
         ] <> FontStyle.body34 TypoGraphy
@@ -641,13 +652,16 @@ distAndTimeView push state =
   ]
 
   where
-    getTime :: Int -> Int -> String
-    getTime min sec = 
+    getTime :: Int -> String
+    getTime sec = 
       let
-        sstr = if (div min 10) == 0 then "0" <> (show min) else show min
-        mstr = if (div sec 10) == 0 then "0" <> (show sec) else show sec 
-      in 
-        mstr <> ":" <> sstr
+        sstr = if (div (mod sec 60) 10) == 0 then "0" <> (show (mod sec 60)) else show (mod sec 60)
+        mstr = if (div (mod (div sec 60) 60) 10) == 0 then "0" <> (show (mod (div sec 60) 60)) else show (mod (div sec 60) 60) 
+        hrs = div sec 3600
+      in
+        if hrs == 0 then mstr <> ":" <> sstr
+        else (show hrs) <> ":" <> mstr <> ":" <> sstr
+        
         
 
 enterDestinationView :: forall w . (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w

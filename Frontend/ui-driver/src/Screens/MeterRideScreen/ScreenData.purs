@@ -6,7 +6,6 @@ initData :: MeterRideScreenState
 initData = {
     data : {
         distance : 0.0,
-        timeMin : 0,
         timeSec : 0,
         destinationAddress : "",
         destinationLat : 0.0,
@@ -21,7 +20,7 @@ initData = {
         sliderDefVal : 10,
         incrementUnit : 1,
         sliderVal : 10,
-        ratePerKM : 28,
+        ratePerKM : 28.0,
         isMeterRideStarted : false
     }
 }
