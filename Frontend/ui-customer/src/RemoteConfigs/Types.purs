@@ -115,7 +115,8 @@ type BusFlowConfig = {
   showBusTracking :: Boolean,
   showPostBookingTracking :: Boolean,
   liveRoutes :: Int,
-  ticketValidity :: String
+  ticketValidity :: String,
+  showPreBookingTracking :: Boolean
 }
 
 type CancellationThreshold = {
