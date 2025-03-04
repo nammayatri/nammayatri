@@ -8,6 +8,7 @@ imports:
   Money: Kernel.Types.Common
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Centesimal: Kernel.Types.Common
 
 Estimate:
     tableName: estimate
@@ -35,6 +36,7 @@ Estimate:
       mbActualQARCity : Maybe Double
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
+      congestionMultiplier : Maybe Centesimal
       distanceUnit: DistanceUnit
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
