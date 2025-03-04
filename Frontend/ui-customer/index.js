@@ -47,7 +47,7 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
         return result;
         }
         catch(e){
-          console.error("Error in index.js" + e);
+          console.error("Error in index.js " + e + " fnName " + fnName);
           return;
         }
       };
@@ -87,6 +87,7 @@ const homeScreenRT = 300;
 const JBridge = window.JBridge;
 const JOS = window.JOS;
 const Android = window.Android;
+var innerPayload;
 
 const eventObject = {
   type : ""
@@ -144,12 +145,20 @@ function setManualEvents(eventName, callbackFunction) {
 
 window.setManualEvents = setManualEvents;
 
-window.__FN_INDEX = 0;
-window.__PROXY_FN = top.__PROXY_FN || {};
+window.__FN_INDEX = window.__FN_INDEX || 0;
+window.__PROXY_FN = window.__PROXY_FN || {};
 
-const purescript = require("./output/Main");
+
+let purescript = null;
+
+function getPureScript () {
+  if (purescript == null) {
+    purescript = require("./output/Main");
+  }
+  return purescript;
+}
 // if (window.__OS == "WEB") {
-//   purescript.main();
+//   getPureScript().main();
 // }
 
 function callInitiateResult () {
@@ -231,6 +240,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
       }
     } catch (err) {}
     callInitiateResult();
+    getPureScript();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
@@ -262,37 +272,59 @@ window.onMerchantEvent = function (_event, globalPayload) {
     } else {
       console.log("client Payload: ", clientPaylod);
       if(clientPaylod.notification_type == "TRIGGER_FCM"){
-        purescript.main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
+        getPureScript().main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
       }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
-        purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
+        getPureScript().mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
       }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL_NOTIFY" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL_NOTIFY"){
-        purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL_NOTIFY", ""))();
+        getPureScript().mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL_NOTIFY", ""))();
       }else if(clientPaylod.notification_type == "CHAT_MESSAGE" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE")){
-        purescript.main(makeEvent("CHAT_MESSAGE", ""))(!clientPaylod.onNewIntent)();
+        getPureScript().main(makeEvent("CHAT_MESSAGE", ""))(!clientPaylod.onNewIntent)();
       }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
-        purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
+        getPureScript().onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
       }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
-        purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
+        getPureScript().onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
       }else if(clientPaylod.notification_type == "SAFETY_ALERT_DEVIATION" || (clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SAFETY_ALERT_DEVIATION")){
-        purescript.main(makeEvent("SAFETY_ALERT_DEVIATION", ""))(!clientPaylod.onNewIntent)();
+        getPureScript().main(makeEvent("SAFETY_ALERT_DEVIATION", ""))(!clientPaylod.onNewIntent)();
       }else if (!clientPaylod.notification_type || !clientPaylod.onNewIntent) {
-        purescript.main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
+        getPureScript().main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
       }
     }
   }
 }
 
 window.callUICallback = function () {
-  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
+  const getCurrTime = () => (new Date()).getTime()
+  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null,
+    arguments));
   const fName = args[0]
   const functionArgs = args.slice(1)
+  let currTime;
+  let timeDiff;
+  if (fName) {
+    if (window.__THROTTELED_ACTIONS && window.__THROTTELED_ACTIONS.indexOf(fName) == -1) {
+      window.__PROXY_FN[fName].apply(null, functionArgs);
+    } else if (window.__LAST_FN_CALLED && (fName == window.__LAST_FN_CALLED.fName)) {
+      currTime = getCurrTime();
+      timeDiff = currTime - window.__LAST_FN_CALLED.timeStamp;
 
-  try {
-    window.__PROXY_FN[fName].call(null, ...functionArgs);
-  } catch (err) {
-    console.error(err)
+      if (timeDiff >= 100) {
+        window.__PROXY_FN[fName].apply(null, functionArgs);
+        window.__LAST_FN_CALLED.timeStamp = currTime;
+      } else {
+        console.warn("function throtteled", fName);
+        console.warn("time diff", timeDiff);
+      }
+    } else {
+      window.__PROXY_FN[fName].apply(null, functionArgs);
+      window.__LAST_FN_CALLED = {
+        timeStamp: (new Date()).getTime(),
+        fName: fName
+      }
+    }
+  } else {
+    console.error("got empty callback", fName, functionArgs)
   }
-}
+};
 
 window.onResumeListeners = [];
 window.internetListeners = {};
@@ -358,7 +390,7 @@ function refreshFlow(){
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
     window.chatMessages = undefined;
-    purescript.onConnectivityEvent("REFRESH")();
+    getPureScript().onConnectivityEvent("REFRESH")();
   }
 }
 
@@ -368,7 +400,7 @@ window["onEvent'"] = function (_event, args) {
     if (JBridge.onBackPressedPP && JBridge.onBackPressedPP()) {
       console.log("Backpress Consumed by PP")
     } else {
-      purescript.onEvent(_event)();
+      getPureScript().onEvent(_event)();
     }
   } else if (_event == "onPause") {
     previousDateObject = new Date();
@@ -377,19 +409,19 @@ window["onEvent'"] = function (_event, args) {
     window.onResume();
     refreshFlow();
   } else if (_event == "onLocationChanged" && !(window.receiverFlag)) {
-    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+    getPureScript().onConnectivityEvent("LOCATION_DISABLED")();
   } else if (_event == "onInternetChanged") {
     if(window.noInternetAction) window.noInternetAction();
-    else purescript.onConnectivityEvent("INTERNET_ACTION")();
+    else getPureScript().onConnectivityEvent("INTERNET_ACTION")();
   }else if(_event == "onBundleUpdated"){
-    purescript.onBundleUpdatedEvent(JSON.parse(args))();
+    getPureScript().onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
   } else if (_event == "onLocationFetch") {
     console.log("Location Fetch Event", args);
     window["current_location"] = JSON.parse(args);
   } else {
-    purescript.onEvent(_event)();
+    getPureScript().onEvent(_event)();
   }
 };
 
