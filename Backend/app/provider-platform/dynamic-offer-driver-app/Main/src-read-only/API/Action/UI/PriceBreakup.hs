@@ -8,6 +8,7 @@ module API.Action.UI.PriceBreakup
 where
 
 import qualified API.Types.UI.DriverOnboardingV2
+import qualified API.Types.UI.PriceBreakup
 import qualified Control.Lens
 import qualified Domain.Action.UI.PriceBreakup as Domain.Action.UI.PriceBreakup
 import qualified Domain.Types.Merchant
@@ -23,10 +24,31 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "priceBreakup" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> Get '[JSON] [API.Types.UI.DriverOnboardingV2.RateCardItem])
+type API =
+  ( TokenAuth :> "meterRide" :> "price" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> Get
+           ('[JSON])
+           API.Types.UI.PriceBreakup.MeterRidePriceRes
+      :<|> TokenAuth
+      :> "priceBreakup"
+      :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> Get
+           ('[JSON])
+           [API.Types.UI.DriverOnboardingV2.RateCardItem]
+  )
 
 handler :: Environment.FlowServer API
-handler = getPriceBreakup
+handler = getMeterRidePrice :<|> getPriceBreakup
+
+getMeterRidePrice ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Environment.FlowHandler API.Types.UI.PriceBreakup.MeterRidePriceRes
+  )
+getMeterRidePrice a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PriceBreakup.getMeterRidePrice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPriceBreakup ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

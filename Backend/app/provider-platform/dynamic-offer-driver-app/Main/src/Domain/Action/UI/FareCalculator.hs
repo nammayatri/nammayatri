@@ -41,7 +41,7 @@ getCalculateFare ::
   )
 getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropLatLong pickupLatlong = do
   (_, mbDistance, mbDuration, mbRoute, _) <- calculateDistanceAndRoutes merchantId merchanOperatingCityId distanceWeightage [pickupLatlong, dropLatLong] -----------------if you want congestionCharges to be considered then pass geohash imstead of nothing
-  calculateFareUtil merchantId merchanOperatingCityId dropLatLong pickupLatlong mbDistance mbDuration mbRoute
+  calculateFareUtil merchantId merchanOperatingCityId (Just dropLatLong) pickupLatlong mbDistance mbDuration mbRoute (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
 
 data CalculateFareReq = CalculateFareReq
   { dropLatLong :: Kernel.External.Maps.Types.LatLong,
@@ -57,23 +57,24 @@ calculateFare merchantId merchantCity apiKey CalculateFareReq {..} = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-  calculateFareUtil merchantId merchantOperatingCity.id dropLatLong pickupLatLong mbDistance mbDuration Nothing
+  calculateFareUtil merchantId merchantOperatingCity.id (Just dropLatLong) pickupLatLong mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
 
 calculateFareUtil ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  Kernel.External.Maps.Types.LatLong ->
+  Maybe Kernel.External.Maps.Types.LatLong ->
   Kernel.External.Maps.Types.LatLong ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Utils.RouteInfo ->
+  DTC.TripCategory ->
   Environment.Flow API.Types.UI.FareCalculator.FareResponse
-calculateFareUtil merchantId merchanOperatingCityId dropLatLong pickupLatlong mbDistance mbDuration mbRoute = do
+calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory = do
   now <- getCurrentTime
   transporterConfig <- CCT.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   let mbFromLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (pickupLatlong.lat, pickupLatlong.lon)
-  let mbToLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)
-  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong (Just dropLatLong) Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
+  let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
+  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
   let mbTollCharges = (\(tollCharges, _, _, _) -> tollCharges) <$> mbTollChargesAndNames
   let mbTollNames = (\(_, tollNames, _, _) -> tollNames) <$> mbTollChargesAndNames
