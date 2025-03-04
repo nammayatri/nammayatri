@@ -231,3 +231,7 @@ getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   RentalDetails _ -> Rental
   InterCityDetails _ -> InterCity
   AmbulanceDetails _ -> Ambulance
+
+congestionChargeMultiplierToCentesimal :: CongestionChargeMultiplier -> Centesimal
+congestionChargeMultiplierToCentesimal (BaseFareAndExtraDistanceFare charge) = charge
+congestionChargeMultiplierToCentesimal (ExtraDistanceFare charge) = charge
