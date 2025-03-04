@@ -76,6 +76,12 @@ data DocumentType
   | BackgroundVerification
   | UploadProfileImage
   | BusinessLicense
+  | VehicleFront
+  | VehicleBack
+  | VehicleRight
+  | VehicleLeft
+  | VehicleFrontInterior
+  | VehicleBackInterior
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

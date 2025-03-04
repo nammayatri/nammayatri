@@ -188,6 +188,12 @@ mapDocumentType Common.BackgroundVerification = Domain.BackgroundVerification
 mapDocumentType Common.UploadProfileImage = Domain.UploadProfile
 mapDocumentType Common.VehicleNOC = Domain.VehicleNOC
 mapDocumentType Common.BusinessLicense = Domain.BusinessLicense
+mapDocumentType Common.VehicleFront = Domain.VehicleFront
+mapDocumentType Common.VehicleBack = Domain.VehicleBack
+mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
+mapDocumentType Common.VehicleRight = Domain.VehicleRight
+mapDocumentType Common.VehicleFrontInterior = Domain.VehicleFrontInterior
+mapDocumentType Common.VehicleBackInterior = Domain.VehicleBackInterior
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
