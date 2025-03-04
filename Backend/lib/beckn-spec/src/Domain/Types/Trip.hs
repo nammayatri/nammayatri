@@ -200,7 +200,7 @@ data TripOption = TripOption
     tripCategories :: [TripCategory]
   }
 
-data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDynamicOffer
+data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDynamicOffer | MeterRide
   deriving stock (Eq, Show, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable OneWayMode

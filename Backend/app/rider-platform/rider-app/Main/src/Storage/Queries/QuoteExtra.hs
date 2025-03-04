@@ -27,6 +27,7 @@ createQuote = createWithKV
 createDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
+  MeterRideDetails _ -> pure ()
   DQ.DeliveryDetails driverOffer -> QueryDO.create driverOffer
   AmbulanceDetails driverOffer -> QueryDO.create driverOffer
   RentalDetails rentalDetails -> QueryRD.create rentalDetails
