@@ -23,3 +23,6 @@ meterRideScreen = do
     GoBack state -> do 
       modifyScreenState $ MeterRideScreenStateType (\_ -> state)
       App.BackT $ pure App.GoBack
+    GoToEnterDestination state -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ ENTER_DESTINATION state)

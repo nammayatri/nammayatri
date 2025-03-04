@@ -4732,9 +4732,9 @@ meterScreenFlow :: FlowBT String Unit
 meterScreenFlow = do
   action <- UI.meterScreen
   case action of
-    GO_TO_HOME_SCREEN_FROM_METER state -> do
+    GO_BACK_TO_METER_RIDE state -> do
           modifyScreenState $ MeterScreenStateType $ \meterScreen -> MeterScreenData.initData
-          homeScreenFlow
+          meterRideScreenFlow
     SEARCH_LOCATION input updatedState -> do
       LatLon lat lon _ <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       resp <- lift $ lift $ Remote.autoComplete input lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey))
@@ -4753,12 +4753,14 @@ meterScreenFlow = do
             Just (API.PlaceName placeName) -> do
               let (API.LatLong latLong) = placeName.location
               void $ liftFlowBT $ JB.animateCamera latLong.lat latLong.lon 17.0 "ZOOM"
-              modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon}, data {destinationAddress = encodeAddress placeName.formattedAddress placeName.addressComponents (Just placeId) latLong.lat latLong.lon, isSearchLocation = ST.LocateOnMap}}
+              modifyScreenState $ MeterScreenStateType $ \meterScreen -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon, isSearchLocation = ST.LocateOnMap}, data {destinationAddress = encodeAddress placeName.formattedAddress placeName.addressComponents (Just placeId) latLong.lat latLong.lon}}
             Nothing -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
         Left _ -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
       meterScreenFlow
-    GO_TO_METER_MAP_FROM_METER state -> meterScreenFlow
-    RELOAD_STATE saveToCurrLocs -> meterScreenFlow
+    GO_TO_METER_RIDE state -> do
+      modifyScreenState $ MeterScreenStateType $ \meterScreen -> state { props {isSearchLocation = ST.NoView } }
+      modifyScreenState $ MeterRideScreenStateType $ \meterRideScreen -> meterRideScreen { data { destinationLat = state.props.destinationLat, destinationLng = state.props.destinationLng, destinationAddress = state.data.destination}}
+      meterRideScreenFlow
     UPDATE_LOCATION_NAME state lat lon -> do
       resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
@@ -4777,4 +4779,6 @@ meterRideScreenFlow :: FlowBT String Unit
 meterRideScreenFlow = do
   action <- UI.meterRideScreen
   case action of
+    MRSO.ENTER_DESTINATION state -> meterScreenFlow
     MRSO.GO_BACK -> homeScreenFlow
+    MRSO.GO_TO_DRIVER_PROFILE state -> driverProfileFlow

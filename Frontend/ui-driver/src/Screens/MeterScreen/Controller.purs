@@ -2,7 +2,7 @@ module Screens.MeterScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge as JB
-import Prelude (class Show, bind, discard, not, pure, unit, void, ($), (&&), (/=), (==), (>))
+import Prelude
 import PrestoDOM (Eval, continue, continueWithCmd, exit, update, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types as ST
@@ -21,6 +21,8 @@ import Common.Resources.Constants (zoomLevel)
 import Resource.Constants (encodeAddress)
 import Components.PopUpModal as PopUpModal
 import Screens.MeterScreen.ScreenData (initData)
+import Timers
+import PrestoDOM.Core (getPushFn)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -39,41 +41,41 @@ data Action
   | EditTextFocusChanged
   | ShowMap String String String
   | LocateOnMapClicked
-  | SetCurrentLocation
   | LocateOnMapCallBack String String String
-  | VoiceToText (Maybe String)
+  | VoiceToText (Maybe String) Boolean
   | ShowVoiceToTextPopup
   | VoiceToTextPopup PopUpModal.Action
+  | CountDown Int String String
 
 data ScreenOutput
-  = GoToHomeScreen ST.MeterScreenState
+  = GoBack ST.MeterScreenState
   | SearchPlace String ST.MeterScreenState 
   | GetPlaceName ST.MeterScreenState String
-  | GoToMeterMapScreen ST.MeterScreenState
-  | UpdatedState ST.MeterScreenState Boolean
   | UpdatedLocationName ST.MeterScreenState Number Number
+  | GoToMeterRideScreen ST.MeterScreenState
 
 eval :: Action -> ST.MeterScreenState -> Eval Action ScreenOutput ST.MeterScreenState
 
 eval BackPressed state = do
   void $ pure $ JB.hideKeyboardOnNavigation true
   _ <- pure $ JB.updateInputString ""
-  if state.data.isSearchLocation == ST.LocateOnMap then continue state { data { isSearchLocation = ST.NoView } }
-  else exit $ GoToHomeScreen state{ data{searchString = Mb.Nothing}}
+  if state.props.isSearchLocation == ST.LocateOnMap then continue state { props { isSearchLocation = ST.NoView } }
+  else exit $ GoBack state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
-  continue state
+  exit $ GoToMeterRideScreen state
 
 eval (DestinationChanged input) state = do
-  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  let isMapSearchLocation = any (_ == state.props.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  let locationList = if (STR.length input < 3) then [] else state.data.locationList
   if (input /= state.data.destination && not isMapSearchLocation) then do
-    continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false}} }
+    continueWithCmd state { props { searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false } }, data { locationList = locationList} }
       [ do
           _ <- pure $ JB.updateInputString input
           pure NoAction
       ]
   else
-    continue state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}}
+    continue state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}, data {locationList = locationList}}
 
 eval (LocationListItemActionController (LocationListItem.OnClick item)) state = do
   let updatedState = state {data{destination = item.title}}
@@ -88,7 +90,7 @@ eval (ShowMap _ _ _) state = do
 
 eval LocateOnMapClicked state = do
     void $ pure $ JB.hideKeyboardOnNavigation true
-    continueWithCmd state {data { isSearchLocation = ST.LocateOnMap}} [do
+    continueWithCmd state {props { isSearchLocation = ST.LocateOnMap}} [do
       if state.props.destinationLat /= 0.0 && state.props.destinationLng /= 0.0 then do 
         JB.animateCamera state.props.destinationLat state.props.destinationLng 17.0 "ZOOM" 
       else pure unit
@@ -101,24 +103,21 @@ eval DestinationClear state = do
   if (state.props.isSearchLocation /= ST.LocateOnMap) then do
     _ <- pure $ JB.requestKeyboardShow (getNewIDWithTag "DestinationEditTextMeterSreen")
     _ <- pure $ JB.updateInputString ""
+    _ <- pure $ setText (getNewIDWithTag  "DestinationEditTextMeterSreen") ""
     pure unit
   else
     pure unit
-  continue state { data { destination = "", destinationAddress = dummyAddress, locationList = []}, props {  isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false }} }
+  continue state { data { destination = "", destinationAddress = dummyAddress, locationList = []}, props {  searchLocationModelProps{crossBtnDestVisibility = false }} }
 
 
 eval (DebounceCallBack searchString isSource) state = do
-  let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  let isMapSearchLocation = any (_ == state.props.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
   if (STR.length searchString > 2) && not isMapSearchLocation && isSource == false then
     validateSearchInput state searchString
   else continue state
 
 eval EditTextFocusChanged state = do
   continue state{ props {searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}}
-
-eval SetCurrentLocation state = do
-  _ <- pure $ JB.currentPosition ""
-  continue state{ props{ searchLocationModelProps{isAutoComplete = false}}}
 
 eval (LocateOnMapCallBack key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
@@ -127,20 +126,47 @@ eval (LocateOnMapCallBack key lat lon) state = do
     "LatLon" -> exit $ UpdatedLocationName state latitude longitude
     _ ->  continue state
 
-eval (VoiceToText text) state = do 
+eval (VoiceToText text isSuccess) state = do 
   let updatedText = case text of
         Just t -> t
         Nothing -> "Voice Search Failed.\n Please try again" 
-  pure $ setText (getNewIDWithTag "DestinationEditTextMeterSreen") (fromMaybe state.data.destination text)
-  continue state { data { voiceToText = updatedText } }
+  -- if isSuccess then pure $ setText (getNewIDWithTag "DestinationEditTextMeterSreen") (fromMaybe state.data.destination text)
+  -- else pure unit
+  -- pure $ setText (getNewIDWithTag "DestinationEditTextMeterSreen") (fromMaybe state.data.destination text)
+  let voiceToTextSearchString = if isSuccess then updatedText else ""
+  let updatedState = state { data { voiceToText = updatedText }, props {voiceToTextSuccess = isSuccess, voiceToTextSearchString = voiceToTextSearchString} }
+  if isSuccess then do 
+    continueWithCmd updatedState [do
+      push <- getPushFn Nothing "MeterScreen"
+      pure $ clearTimerWithId "confirmVoiceToText"
+      void $ startTimer 5 "confirmVoiceToText" "1" push CountDown
+      pure NoAction
+    ]
+  else continue updatedState
 
 eval ShowVoiceToTextPopup state = do
   continue state { props { showVoiceToText = true } }
 
-eval (VoiceToTextPopup PopUpModal.DismissPopup) state = continueWithCmd state { props { showVoiceToText = false }, data { voiceToText =  initData.data.voiceToText} } [ do
+eval (VoiceToTextPopup PopUpModal.DismissPopup) state = continueWithCmd state { props { showVoiceToText = false, voiceToTextSuccess = false, confirmButtonText = initData.props.confirmButtonText }, data { voiceToText =  initData.data.voiceToText} } [ do
       void $ runEffectFn1 JB.stopVoiceRecognition ""
+      void $ pure $ clearTimerWithId "confirmVoiceToText"
       pure NoAction
   ]
+
+eval (VoiceToTextPopup PopUpModal.OnButton1Click) state = do 
+  void $ pure $ clearTimerWithId "confirmVoiceToText"
+  pure $ setText (getNewIDWithTag "DestinationEditTextMeterSreen") state.props.voiceToTextSearchString
+  continue state { props { showVoiceToText = false, voiceToTextSuccess = false, confirmButtonText = initData.props.confirmButtonText }, data { voiceToText =  initData.data.voiceToText} } 
+
+
+eval (CountDown seconds status timerId) state = do
+  let updatedState = case status of
+        "EXPIRED" -> state { props { confirmButtonText = initData.props.confirmButtonText, showVoiceToText = false }, data { voiceToText =  initData.data.voiceToText} }
+        _ -> state { props { confirmButtonText = "Confirming in "  <> (show seconds) <> "s" } }
+  case status of 
+    "EXPIRED" -> pure $ setText (getNewIDWithTag "DestinationEditTextMeterSreen") state.props.voiceToTextSearchString
+    _ -> pure unit
+  continue updatedState
 
 eval _ state = update state
 

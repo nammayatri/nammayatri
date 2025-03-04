@@ -26,12 +26,14 @@ import Common.Styles.Colors as Color
 import Components.TipsView as TipsView
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
+import Data.String as DS
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Timers
-import Animation (fadeIn) as Anim
+import Animation (fadeIn, translateOutXBackwardAnimY) as Anim
+import Animation.Config (AnimConfig, animConfig)
 import Common.Styles.Colors as Color
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
@@ -423,7 +425,7 @@ view push state =
         , case state.layout of
             Just layout -> layout { visibility : VISIBLE }
             Nothing -> textView [ visibility GONE]
-        , linearLayout
+        , frameLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , gravity CENTER
@@ -487,7 +489,7 @@ view push state =
                             [ width WRAP_CONTENT
                             , height WRAP_CONTENT
                             , accessibility ENABLE
-                            , text  (if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text)
+                            , text  (if state.option1.enableTimer && state.option1.timerValue > 0 && not state.voiceToTextConfig.enabled then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text)
                             , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                             , color $ state.option1.color
                             , gravity CENTER
@@ -538,6 +540,23 @@ view push state =
                         ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
                     ]
                 ]
+               , if state.option1.enableTimer then
+                 PrestoAnim.animationSet [ 
+                   Anim.translateOutXBackwardAnimY animConfig
+                     { duration = 4000
+                     , toX = 0 
+                     , fromX = (screenWidth unit)
+                     , ifAnim = true
+                     }
+                 ] $ 
+                    linearLayout [ 
+                      height $ state.option1.height
+                    , width MATCH_PARENT
+                    , alpha 0.5
+                    , background Color.white900
+                    , visibility $ boolToVisibility state.option1.enableTimer
+                    ][]
+                else noView
             ]
         , linearLayout [
             height state.optionWithHtml.height

@@ -3362,32 +3362,24 @@ type MeterScreenState = {
 }
 
 type MeterScreenData = {
-  listItem :: Maybe ListItem,
   searchString :: Maybe String,
-  appConfig :: AppConfig,
-  isSearchLocation :: SearchLocationModelType,
-  suffixButtonVisibility :: Visibility,
-  isEditDestination :: Boolean,
-  isDestViewEditable :: Boolean,
   destination :: String,
-  locationList :: Array LocationListItemState,
   destinationAddress :: Address,
+  locationList :: Array LocationListItemState,
   voiceToText :: String
 }
 
 type MeterScreenProps = {
-  locateOnMap :: Boolean,
-  rideSearchProps :: RideSearchProps,
-  isRideServiceable :: Boolean,
   searchLocationModelProps :: SearchLocationModelProps,
   isSearchLocation :: SearchLocationModelType,
   destinationLat :: Number,
   destinationLng :: Number,
   destinationPlaceId :: Maybe String,
-  isDestServiceable :: Boolean,
-  searchType :: Maybe String,
   currentLocation :: JB.Location,
-  showVoiceToText :: Boolean
+  showVoiceToText :: Boolean,
+  voiceToTextSuccess :: Boolean,
+  confirmButtonText :: String,
+  voiceToTextSearchString :: String
 } 
 
 data SearchLocationModelType = SearchLocationType | LocateOnMap | NoView | RouteMap | SelectTripType
@@ -3429,7 +3421,6 @@ type LocationListItemState = {
 
 type SearchLocationModelProps = {
     isAutoComplete :: Boolean
-  , showLoader :: Boolean
   , crossBtnDestVisibility :: Boolean
 }
 
@@ -3445,16 +3436,6 @@ type Address =
   , ward :: Maybe String
   , placeId :: Maybe String
   }
-
-type RideSearchProps = {
-  destManuallyMoved :: Boolean 
-}
-
-type MeterData = {
-  primaryStation :: Maybe API.SpecialLocationWarrior,
-  secondaryStationsData :: Array String,
-  isSpecialLocWarrior :: Boolean
-}
 
 data CustomerLocationSelectType = SEARCH | MAP | FAVOURITE | REPEAT_RIDE | RETRY_SEARCH | SUGGESTION
 derive instance genericCustomerLocationSelectType :: Generic CustomerLocationSelectType _
@@ -3487,7 +3468,10 @@ type MeterRideScreenState = {
 type MeterRideScreenData = {
   distance :: Number,
   timeMin :: Int,
-  timeSec :: Int
+  timeSec :: Int,
+  destinationAddress :: String,
+  destinationLat :: Number,
+  destinationLng :: Number
 }
 
 type MeterRideScreenProps = {

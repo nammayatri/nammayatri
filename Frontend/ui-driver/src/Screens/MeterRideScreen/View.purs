@@ -49,6 +49,7 @@ view push state =
   relativeLayout[
     width MATCH_PARENT
   , height MATCH_PARENT
+  , background Color.white900
   ] $ [
     Anim.screenAnimationFadeInOut $ linearLayout
     [
@@ -651,29 +652,95 @@ distAndTimeView push state =
 
 enterDestinationView :: forall w . (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 enterDestinationView push state =
-  linearLayout
-  [
-    width MATCH_PARENT,
-    height WRAP_CONTENT,
-    background Color.blue600,
-    gravity CENTER,
-    padding $ Padding 15 15 15 15,
-    margin $ Margin 0 0 0 20,
-    cornerRadius 15.0
-  ]
-  [
-    imageView
-    [
-      height $ V 20,
-      width $ V 20,
-      color Color.blue800,
-      margin $ Margin 0 2 10 0,
-      imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_location_blue"
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.blue600
+  ,  gravity CENTER
+  ,  padding $ Padding 15 15 15 15
+  ,  margin $ Margin 0 0 0 20
+  ,  cornerRadius 15.0
+  ][
+    imageView [
+      height $ V 20
+    , width $ V 20
+    , color Color.blue800
+    , margin $ Margin 0 2 10 0
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_location_blue"
+    , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
     ]
-    ,textView $ 
-    [ text "Enter Destination"
+  , linearLayout [
+      height WRAP_CONTENT
+    , visibility $ boolToVisibility (state.data.destinationLat /= 0.0)
+    , orientation VERTICAL
+    , width MATCH_PARENT
+    ][
+      linearLayout [
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding $ Padding 5 5 5 5
+      ][
+        textView $ [
+          text "Destination"
+        , color "#A7A7A7"
+        , onClick (\action -> do
+            _ <- push action
+            pure unit
+            )(const $ EnterDestination)
+        ] <> FontStyle.body5 TypoGraphy
+      ]
+    , textView $ [
+        text state.data.destinationAddress
+      , maxLines 2
+      , ellipsize true
+      , padding $ Padding 5 5 5 5
+      , color Color.black800
+      , onClick (\action -> do
+          _ <- push action
+          pure unit
+        )(const $ EnterDestination)
+      ] <> FontStyle.body5 TypoGraphy
+    , linearLayout [
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding $ Padding 10 10 10 10
+      , gravity RIGHT
+      ][
+        linearLayout [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ Padding 10 10 10 10
+        , gravity CENTER
+        , cornerRadius 22.0
+        , background Color.blue900
+        , rippleColor Color.rippleShade
+        , onClick (\action -> do
+            _ <- push action
+            pure unit
+          )(const $ OnNavigate)
+        ][
+          imageView [
+            height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_google_map_tracking"
+          ]
+        , textView $ [
+            text "Maps"
+          , height WRAP_CONTENT
+          , color Color.white900
+          ] <> FontStyle.body23 TypoGraphy
+        ]
+      ]
+    ]
+  , textView $ [
+      text "Enter Destination"
     , height WRAP_CONTENT
     , color Color.blue800
+    , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
+    , onClick (\action -> do
+        _ <- push action
+        pure unit
+      )(const $ EnterDestination)
     ] <> FontStyle.h3 TypoGraphy
   ]
 

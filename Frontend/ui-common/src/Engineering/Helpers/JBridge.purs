@@ -317,7 +317,7 @@ foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> E
 foreign import pickContact :: EffectFn1 String Boolean
 foreign import getResourceIdentifier :: String -> String -> Int
 foreign import executeJS :: Fn2 (Array String) String String
-foreign import voiceToTextImpl :: forall action. EffectFn4 (action -> Effect Unit) (Maybe String -> action) (String -> Maybe String) (Maybe String) String
+foreign import voiceToTextImpl :: forall action. EffectFn4 (action -> Effect Unit) (Maybe String -> Boolean -> action) (String -> Maybe String) (Maybe String) String
 foreign import stopVoiceRecognition :: EffectFn1 String Unit
 foreign import startVoiceRecognition :: EffectFn1 String Unit
 foreign import setupVoiceRecognitionView :: String -> Effect Unit
@@ -1112,5 +1112,5 @@ foreign import triggerReloadApp :: String ->Effect Unit
 
 foreign import rsEncryption :: String -> String
 
-voiceToText :: forall action. (action -> Effect Unit) -> (Maybe String -> action) -> (String -> Maybe String) -> (Maybe String) -> Effect String
+voiceToText :: forall action. (action -> Effect Unit) -> (Maybe String -> Boolean -> action) -> (String -> Maybe String) -> (Maybe String) -> Effect String
 voiceToText = runEffectFn4 voiceToTextImpl

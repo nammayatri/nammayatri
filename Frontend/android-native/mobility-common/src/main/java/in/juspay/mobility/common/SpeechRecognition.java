@@ -207,7 +207,7 @@ public class SpeechRecognition {
                 if (matches != null && !matches.isEmpty()) {
                     String match = matches.get(0);
                     Log.i(LOG_TAG, "partialResults" + matches.toString());
-                    String js = String.format(Locale.ENGLISH, "window.callUICallback('%s', '%s', '%s');", callback, "SUCCESS", match);
+                    String js = String.format(Locale.ENGLISH, "window.callUICallback('%s', '%s', '%s');", callback, "PARTIAL", match);
                     bridgeComponents.getJsCallback().addJsToWebView(js);
                 }
             }
@@ -220,7 +220,11 @@ public class SpeechRecognition {
     }
 
     public void startListening(Intent intent) {
-        if(this.isListening) return;
+        if(this.isListening) {
+            speechRecognizer.stopListening();
+            speechRecognizer.cancel();
+            this.isListening = false;
+        };
         this.isListening = true;
         this.speechRecognizer.startListening(intent);
     }

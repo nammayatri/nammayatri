@@ -469,15 +469,6 @@ getAssetLink lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
 
-getAssetLinkCustomer :: LazyCheck -> String
-getAssetLinkCustomer lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/user/images/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/user/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/user/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/images/"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/images/"
-
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
@@ -502,16 +493,6 @@ fetchImage fetchImageFrom imageName =
   else 
     case fetchImageFrom of
       FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
-      FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
-      COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
-      GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
-
-fetchImageCustomer :: FetchImageFrom -> String -> String
-fetchImageCustomer fetchImageFrom imageName =   
-  if imageName  == "" then ","
-  else 
-    case fetchImageFrom of
-      FF_ASSET -> imageName <> "," <> (getAssetLinkCustomer FunctionCall) <> imageName <> ".png"
       FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
       COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
       GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"

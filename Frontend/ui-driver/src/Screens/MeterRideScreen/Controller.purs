@@ -2,6 +2,7 @@ module Screens.MeterRideScreen.Controller where
 
 import Screens.Types (MeterRideScreenState)
 import Data.Maybe
+import JBridge (openNavigation)
 import Prelude
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable, Eval)
@@ -24,8 +25,11 @@ data Action = NoAction
             | ChangeSlider Boolean
             | SliderCallback Int
             | TripStageTopBarAC TripStageTopBar.Action
+            | EnterDestination
+            | OnNavigate
             
-data ScreenOutput = GoBack MeterRideScreenState
+data ScreenOutput = GoBack MeterRideScreenState 
+                  | GoToEnterDestination MeterRideScreenState
 
 eval :: Action -> MeterRideScreenState -> Eval Action ScreenOutput MeterRideScreenState
 
@@ -63,4 +67,12 @@ eval (SliderCallback val) state = continue state {props {sliderVal = val}}
 eval (ChangeSlider action) state = do
   let finalVal = if action then min state.props.sliderMaxValue (state.props.sliderVal + state.props.incrementUnit) else max state.props.sliderMinValue (state.props.sliderVal - state.props.incrementUnit)
   continue state{props{sliderVal = finalVal}}
+
+eval EnterDestination state = do
+  exit $ GoToEnterDestination state
+
+eval OnNavigate state = do
+  void $ pure $ openNavigation state.data.destinationLat state.data.destinationLng "TWOWHEELER"
+  continue state
+
 eval _ state = continue state

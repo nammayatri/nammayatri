@@ -3098,18 +3098,21 @@ export const executeJS = (params, codeString) => {
 
 export const voiceToTextImpl = function (cb, action, just, nothing) {
   const callbackFallback = function () {
-    cb(action(nothing));
+    cb(action(nothing)(false))();
   };
   if (window.JBridge.voiceToText){
     try {
       const callback = callbackMapper.map(function (res, text) {
         if(res == "SUCCESS"){
-          cb(action(just(text)))();
+          cb(action(just(text))(true))();
         }
         else if (res == "INIT") {
-          cb(action(just("")))();
+          cb(action(just(""))(false))();
+        }
+        else if (res == "PARTIAL") {
+          cb(action(just(text))(false))();
         }else {
-          cb(action(nothing))();
+          cb(action(nothing)(false))();
         }
       });
       return JBridge.voiceToText(callback);

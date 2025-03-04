@@ -15,37 +15,26 @@ import JBridge (Location)
 initData :: MeterScreenState
 initData =
   { data: {
-    listItem : Mb.Nothing,
     searchString : Mb.Nothing,
-    isSearchLocation: NoView,
-    appConfig: getAppConfig appConfig,
-    suffixButtonVisibility: GONE,
-    isEditDestination : false,
-    isDestViewEditable: true,
     destination: "",
     destinationAddress: dummyAddress,
     locationList: [],
     voiceToText: "Please speak to get suggestions"
   }
   , props: {
-      locateOnMap: false,
       destinationLat : 0.0,
       destinationLng : 0.0,
       currentLocation : dummyLocation,
       destinationPlaceId : Nothing,
-      searchType : Nothing,
-      isDestServiceable : true,
       isSearchLocation: NoView,
-      isRideServiceable: true,
       showVoiceToText : false,
-      rideSearchProps : {
-          destManuallyMoved : false
-      },
       searchLocationModelProps: {
         isAutoComplete : false,
-        showLoader : false,
         crossBtnDestVisibility : false
-      }
+      },
+      voiceToTextSuccess : false,
+      confirmButtonText : "Confirm",
+      voiceToTextSearchString : ""
   }
 }
 
