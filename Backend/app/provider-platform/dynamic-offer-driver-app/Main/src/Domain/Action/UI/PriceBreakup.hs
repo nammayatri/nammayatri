@@ -1,7 +1,10 @@
-module Domain.Action.UI.PriceBreakup (getPriceBreakup) where
+module Domain.Action.UI.PriceBreakup (getPriceBreakup, getMeterRidePrice) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
+import qualified API.Types.UI.PriceBreakup
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
+import qualified Domain.Action.UI.FareCalculator as FC
+import Domain.Types
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -10,6 +13,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude as Prelude
 import Kernel.Beam.Functions as B
+import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -46,3 +50,22 @@ getPriceBreakup (_, _, _) rideId = do
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
+
+getMeterRidePrice ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes
+  )
+getMeterRidePrice (_, merchantId, merchantOpCityId) rideId = do
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters ride.traveledDistance) Nothing Nothing (OneWay MeterRide)
+  let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
+  maybe
+    (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
+    ( \meterRideEstiamte -> do
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare}
+    )
+    mbMeterRideEstimate
