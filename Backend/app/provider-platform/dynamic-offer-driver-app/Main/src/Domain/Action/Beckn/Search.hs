@@ -697,6 +697,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         isScheduled = isScheduled,
         tollNames = if isTollApplicable then tollNames else Nothing,
         dpVersion = fullFarePolicy.dpVersion,
+        congestionMultiplier = DFP.congestionChargeMultiplierToCentesimal <$> fullFarePolicy.congestionChargeMultiplier,
         createdAt = now,
         updatedAt = now,
         eligibleForUpgrade = False,
