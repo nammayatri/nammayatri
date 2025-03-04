@@ -31,7 +31,7 @@ import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, sum, whenJust)
+import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
@@ -349,19 +349,22 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
   journey <- JM.getJourney journeyId
   riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
-  let mkJourneyfeedbackForm =
-        JFB.JourneyFeedback
-          { additionalFeedBack = journeyFeedbackForm.additionalFeedBack,
-            journeyId = journeyId,
-            rating = journeyFeedbackForm.rating,
-            riderId = riderId,
-            merchantId = Just mbMerchantId,
-            merchantOperatingCityId = journey.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now
-          }
-
-      mkJourneyLegsFeedback feedbackEntry =
+  ratingForLegs <- SQJLFB.findAllByJourneyId journeyId
+  whenJust journeyFeedbackForm.rating $ \rating -> do
+    let mkJourneyfeedbackForm =
+          JFB.JourneyFeedback
+            { additionalFeedBack = journeyFeedbackForm.additionalFeedBack,
+              journeyId = journeyId,
+              rating = Just rating,
+              riderId = riderId,
+              merchantId = Just mbMerchantId,
+              merchantOperatingCityId = journey.merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+    SQJFB.create mkJourneyfeedbackForm
+    JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
+  let mkJourneyLegsFeedback feedbackEntry =
         JLFB.JourneyLegsFeedbacks
           { isExperienceGood = feedbackEntry.isExperienceGood,
             journeyId = journeyId,
@@ -372,11 +375,13 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
             createdAt = now,
             updatedAt = now
           }
-
-  SQJFB.create mkJourneyfeedbackForm
-  SQJLFB.createMany $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
-  JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
+  mapM_ (findAndUpdate ratingForLegs) $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
   pure Kernel.Types.APISuccess.Success
+  where
+    findAndUpdate :: [JLFB.JourneyLegsFeedbacks] -> JLFB.JourneyLegsFeedbacks -> Environment.Flow ()
+    findAndUpdate [] legRating = SQJLFB.create legRating
+    findAndUpdate (ratingForLegs : nextRatingForLegs) legRating =
+      if ratingForLegs.legOrder == legRating.legOrder then SQJLFB.updateByPrimaryKey legRating else findAndUpdate nextRatingForLegs legRating
 
 getMultimodalFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow (Kernel.Prelude.Maybe ApiTypes.JourneyFeedBackForm)
 getMultimodalFeedback (mbPersonId, _) journeyId = do
