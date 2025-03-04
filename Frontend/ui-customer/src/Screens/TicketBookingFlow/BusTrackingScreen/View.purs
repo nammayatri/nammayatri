@@ -79,6 +79,7 @@ import LocalStorage.Cache
 import Data.Tuple as DT
 import Data.Map as DM
 import Screens.TicketBookingFlow.BusTrackingScreen.Transformer
+import RemoteConfig.Utils as RCU
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState =
@@ -96,8 +97,9 @@ screen initialState =
                   else
                     liftFlowBT $ push $ UpdateStops (API.GetMetroStationResponse initialState.data.stopsList)
                   let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" initialState.data.busRouteCode
-                  lift $ lift $ busLocationTracking 3000.0 0 initialState.data.busRouteCode push
-                  pure unit
+                  if (showPreBookingTracking "BUS") 
+                    then lift $ lift $ busLocationTracking 3000.0 0 initialState.data.busRouteCode push
+                    else pure unit
             pure $ pure unit
         )
       ]
@@ -224,6 +226,7 @@ verticalLineView push idTag showOnlyBullet vehicles =
     linearLayout 
       [height MATCH_PARENT
       , width MATCH_PARENT
+      , visibility $ boolToVisibility $ showPreBookingTracking "BUS"
       ]
       [ imageView
         [ width MATCH_PARENT
@@ -541,7 +544,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
         , visibility $ boolToVisibility $ index /= 0
         ]
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
-        , if stopType == SOURCE_STOP && index /=0 
+        , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS")
             then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaTime
             else 
               MP.noView
@@ -614,7 +617,7 @@ busLocationTracking duration id routeCode push = do
                   (API.RouteStopMapping nextStop) = item.nextStop
                   lat = Mb.fromMaybe 0.0 m.latitude
                   lon = Mb.fromMaybe 0.0 m.longitude
-                  markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker" }
+                  markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
                   (API.LatLong nextStopPosition) = nextStop.stopPoint
                 void $ EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
                 pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon, nextStopTravelTime : item.nextStopTravelTime, nextStopSequence : nextStop.sequenceNum}
@@ -713,3 +716,9 @@ passengerBoardConfirmationPopup state push =
       , color Color.yellow800
       ] <> FontStyle.body1 CTA.TypoGraphy
     ]
+
+
+showPreBookingTracking :: String -> Boolean
+showPreBookingTracking _ = 
+      let busConfig = RCU.getBusFlowConfigs (getValueToLocalStore CUSTOMER_LOCATION)
+      in busConfig.showPreBookingTracking
