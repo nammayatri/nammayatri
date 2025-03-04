@@ -77,6 +77,9 @@ a_24 = fromMaybe 24 $ fromNumber $ 24.0 * multiplier
 a_26 :: FontSize
 a_26 = fromMaybe 26 $ fromNumber $ 26.0 * multiplier
 
+a_27 :: FontSize
+a_27 = fromMaybe 27 $ fromNumber $ 27.0 * multiplier
+
 a_28 :: FontSize
 a_28 = fromMaybe 28 $ fromNumber $ 28.0 * multiplier
 
@@ -86,6 +89,9 @@ a_30 = fromMaybe 30 $ fromNumber $ 30.0 * multiplier
 a_32 :: FontSize
 a_32 = fromMaybe 32 $ fromNumber $ 32.0 * multiplier
 
+a_38 :: FontSize
+a_38 = fromMaybe 38 $ fromNumber $ 32.0 * multiplier
+
 a_40 :: FontSize 
 a_40 = fromMaybe 40 $ fromNumber $ 40.0 * multiplier 
 
@@ -94,6 +100,10 @@ a_44 = fromMaybe 44 $ fromNumber $ 44.0 * multiplier
 
 a_48 :: FontSize
 a_48 = fromMaybe 48 $ fromNumber $ 48.0 * multiplier
+
+a_52 :: FontSize
+a_52 = fromMaybe 52 $ fromNumber $ 52.0 * multiplier
+
 
 primaryButtonSize :: FontSize
 primaryButtonSize = fromMaybe 20 $ fromNumber $ 20.0 * multiplier
@@ -109,3 +119,6 @@ stepNumberSize = fromMaybe 52 $ fromNumber $ 52.0 * multiplier
 
 a_72 :: FontSize
 a_72 = fromMaybe 72 $ fromNumber $ 72.0 * multiplier 
+
+a_80 :: FontSize
+a_80 = fromMaybe 80 $ fromNumber $ 80.0 * multiplier

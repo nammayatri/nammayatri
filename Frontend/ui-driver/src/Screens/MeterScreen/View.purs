@@ -162,6 +162,7 @@ mapView state push isMapSearchLocation =
     , mapMarker state push isMapSearchLocation
     , bottomMapView state push
     , mapBackPressView state push
+    --this is a test
   ]
 
 

@@ -3489,3 +3489,27 @@ instance eqLocItemType :: Eq LocItemType where eq = genericEq
 instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
+
+type MeterRideScreenState = {
+  data :: MeterRideScreenData,
+  props :: MeterRideScreenProps
+}
+
+type MeterRideScreenData = {
+  distance :: Number,
+  timeMin :: Int,
+  timeSec :: Int
+}
+
+type MeterRideScreenProps = {
+  meterFare :: Int,
+  showRateCard :: Boolean,
+  startButtonCountDown :: Int,
+  sliderMaxValue :: Int,
+  sliderMinValue :: Int,
+  sliderDefVal :: Int,
+  incrementUnit :: Int,
+  sliderVal :: Int,
+  ratePerKM :: Int,
+  isMeterRideStarted :: Boolean
+}
