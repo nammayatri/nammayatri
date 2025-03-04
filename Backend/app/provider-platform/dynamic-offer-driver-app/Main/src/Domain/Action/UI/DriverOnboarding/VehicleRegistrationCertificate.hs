@@ -337,9 +337,11 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
 
 onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
+  let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
+      mbUnladdenWeight = rcVerificationResponse.unladdenWeight
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
-  let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear
+  let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
   mVehicleRC <- do
     case mbVehicleVariant of
       Just vehicleVariant ->
@@ -368,8 +370,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
     else initiateRCCreation mVehicleRC now mbFleetOwnerId
   where
-    createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> CreateRCInput
-    createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear =
+    createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
+    createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
       CreateRCInput
         { registrationNumber = rcVerificationResponse.registrationNumber,
           fitnessUpto = convertTextToUTC rcVerificationResponse.fitnessUpto,
@@ -392,7 +394,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           fuelType = rcVerificationResponse.fuelType,
           dateOfRegistration,
           vehicleModelYear,
-          color = rcVerificationResponse.color
+          color = rcVerificationResponse.color,
+          grossVehicleWeight = mbGrossVehicleWeight,
+          unladdenWeight = mbUnladdenWeight
         }
 
     readFromJson (String val) = Just val
@@ -403,6 +407,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     createVehicleRC merchantId merchantOperatingCityId input vehicleVariant certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
+      let updatedVehicleVariant = case input.vehicleCategory of
+            Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
+            _ -> vehicleVariant
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
@@ -412,7 +419,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             permitExpiry = input.permitValidityUpto,
             pucExpiry = input.pucValidityUpto,
             vehicleClass = input.vehicleClass,
-            vehicleVariant = Just vehicleVariant,
+            vehicleVariant = Just updatedVehicleVariant,
             vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
             vehicleCapacity = input.seatingCapacity,
             vehicleModel = input.manufacturerModel,

@@ -617,7 +617,9 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} =
       mYManufacturing = mYManufacturing,
       color = Just colour,
       dateOfRegistration = req.dateOfRegistration,
-      vehicleModelYear = req.vehicleModelYear
+      vehicleModelYear = req.vehicleModelYear,
+      grossVehicleWeight = Nothing,
+      unladdenWeight = Nothing
     }
 
 ---------------------------------------------------------------------
