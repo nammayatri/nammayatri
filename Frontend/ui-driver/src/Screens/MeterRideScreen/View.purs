@@ -49,6 +49,7 @@ view push state =
   relativeLayout[
     width MATCH_PARENT
   , height MATCH_PARENT
+  , background Color.white900
   ] $ [
     Anim.screenAnimationFadeInOut $ linearLayout
     [
@@ -669,12 +670,47 @@ enterDestinationView push state =
       color Color.blue800,
       margin $ Margin 0 2 10 0,
       imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_location_blue"
+      , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
     ]
-    ,textView $ 
-    [ text "Enter Destination"
-    , height WRAP_CONTENT
-    , color Color.blue800
-    ] <> FontStyle.h3 TypoGraphy
+    , linearLayout 
+      [ height WRAP_CONTENT
+      , visibility $ boolToVisibility (state.data.destinationLat /= 0.0)
+      , orientation VERTICAL
+      ][linearLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ Padding 5 5 5 5
+        ][textView $
+          [ text "Destination"
+          , color "#A7A7A7"
+          , onClick (\action -> do
+                _ <- push action
+                pure unit
+            )(const $ EnterDestination)
+          ] <> FontStyle.body5 TypoGraphy
+        ]
+        , textView $ [ 
+            text state.data.destinationAddress
+          , maxLines 2
+          , ellipsize true
+          , padding $ Padding 5 5 5 5
+          , color Color.black800
+          , onClick (\action -> do
+              _ <- push action
+              pure unit
+            )(const $ EnterDestination)
+          ] <> FontStyle.body5 TypoGraphy
+      ]
+      , textView $ 
+      [ text "Enter Destination"
+      , height WRAP_CONTENT
+      , color Color.blue800
+      , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
+      , onClick (\action -> do
+            _ <- push action
+            pure unit
+        )(const $ EnterDestination)
+      ] <> FontStyle.h3 TypoGraphy
   ]
 
 stopMeterView :: forall w . (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w

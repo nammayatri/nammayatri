@@ -7,7 +7,10 @@ initData = {
     data : {
         distance : 0.0,
         timeMin : 0,
-        timeSec : 0
+        timeSec : 0,
+        destinationAddress : "",
+        destinationLat : 0.0,
+        destinationLng : 0.0
     }
     , props : {
         meterFare : 0,

@@ -24,8 +24,10 @@ data Action = NoAction
             | ChangeSlider Boolean
             | SliderCallback Int
             | TripStageTopBarAC TripStageTopBar.Action
+            | EnterDestination
             
-data ScreenOutput = GoBack MeterRideScreenState
+data ScreenOutput = GoBack MeterRideScreenState 
+                  | GoToEnterDestination MeterRideScreenState
 
 eval :: Action -> MeterRideScreenState -> Eval Action ScreenOutput MeterRideScreenState
 
@@ -63,4 +65,8 @@ eval (SliderCallback val) state = continue state {props {sliderVal = val}}
 eval (ChangeSlider action) state = do
   let finalVal = if action then min state.props.sliderMaxValue (state.props.sliderVal + state.props.incrementUnit) else max state.props.sliderMinValue (state.props.sliderVal - state.props.incrementUnit)
   continue state{props{sliderVal = finalVal}}
+
+eval EnterDestination state = do
+  exit $ GoToEnterDestination state
+
 eval _ state = continue state

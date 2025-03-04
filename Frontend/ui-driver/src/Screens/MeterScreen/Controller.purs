@@ -2,7 +2,7 @@ module Screens.MeterScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge as JB
-import Prelude (class Show, bind, discard, not, pure, unit, void, ($), (&&), (/=), (==), (>))
+import Prelude
 import PrestoDOM (Eval, continue, continueWithCmd, exit, update, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types as ST
@@ -39,19 +39,17 @@ data Action
   | EditTextFocusChanged
   | ShowMap String String String
   | LocateOnMapClicked
-  | SetCurrentLocation
   | LocateOnMapCallBack String String String
   | VoiceToText (Maybe String)
   | ShowVoiceToTextPopup
   | VoiceToTextPopup PopUpModal.Action
 
 data ScreenOutput
-  = GoToHomeScreen ST.MeterScreenState
+  = GoBack ST.MeterScreenState
   | SearchPlace String ST.MeterScreenState 
   | GetPlaceName ST.MeterScreenState String
-  | GoToMeterMapScreen ST.MeterScreenState
-  | UpdatedState ST.MeterScreenState Boolean
   | UpdatedLocationName ST.MeterScreenState Number Number
+  | GoToMeterRideScreen ST.MeterScreenState
 
 eval :: Action -> ST.MeterScreenState -> Eval Action ScreenOutput ST.MeterScreenState
 
@@ -59,21 +57,22 @@ eval BackPressed state = do
   void $ pure $ JB.hideKeyboardOnNavigation true
   _ <- pure $ JB.updateInputString ""
   if state.data.isSearchLocation == ST.LocateOnMap then continue state { data { isSearchLocation = ST.NoView } }
-  else exit $ GoToHomeScreen state{ data{searchString = Mb.Nothing}}
+  else exit $ GoBack state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
-  continue state
+  exit $ GoToMeterRideScreen state
 
 eval (DestinationChanged input) state = do
   let isMapSearchLocation = any (_ == state.data.isSearchLocation) [ST.LocateOnMap, ST.RouteMap]
+  let locationList = if (STR.length input < 3) then [] else state.data.locationList
   if (input /= state.data.destination && not isMapSearchLocation) then do
-    continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false}} }
+    continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false } }, data { locationList = locationList} }
       [ do
           _ <- pure $ JB.updateInputString input
           pure NoAction
       ]
   else
-    continue state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}}
+    continue state{props {searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = false}}, data {locationList = locationList}}
 
 eval (LocationListItemActionController (LocationListItem.OnClick item)) state = do
   let updatedState = state {data{destination = item.title}}
@@ -115,10 +114,6 @@ eval (DebounceCallBack searchString isSource) state = do
 
 eval EditTextFocusChanged state = do
   continue state{ props {searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}}
-
-eval SetCurrentLocation state = do
-  _ <- pure $ JB.currentPosition ""
-  continue state{ props{ searchLocationModelProps{isAutoComplete = false}}}
 
 eval (LocateOnMapCallBack key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)

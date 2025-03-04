@@ -3498,7 +3498,10 @@ type MeterRideScreenState = {
 type MeterRideScreenData = {
   distance :: Number,
   timeMin :: Int,
-  timeSec :: Int
+  timeSec :: Int,
+  destinationAddress :: String,
+  destinationLat :: Number,
+  destinationLng :: Number
 }
 
 type MeterRideScreenProps = {

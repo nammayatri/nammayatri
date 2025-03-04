@@ -302,6 +302,7 @@ topView state push =
         , accessibility ENABLE
         , imageWithFallback $ if state.data.isSearchLocation == ST.RouteMap then "ny_ic_close_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_close_white.png" else  "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
         , margin $ Margin 4 4 4 4
+        , cornerRadius 20.0
         ]
       , textView  $
         [ text ""
@@ -337,6 +338,7 @@ mapBackPressView state push =
         , gravity TOP_VERTICAL
         , padding (Padding 4 4 4 4)
         , background Color.white900
+        , rippleColor Color.rippleShade
         , cornerRadius 20.0
         ][imageView
           [ height $ V 23
@@ -409,6 +411,7 @@ destinationEditTextView state push =
               , gravity CENTER
               , margin $ MarginTop 2
               , visibility if state.props.searchLocationModelProps.crossBtnDestVisibility then VISIBLE else GONE
+              , rippleColor Color.rippleShade
               , onClick (\action -> do
                           _ <- pure $ EHC.setText (getNewIDWithTag  "DestinationEditTextMeterSreen") "" 
                           _ <- push action

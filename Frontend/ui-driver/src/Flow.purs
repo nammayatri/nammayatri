@@ -4827,9 +4827,9 @@ meterScreenFlow :: FlowBT String Unit
 meterScreenFlow = do
   action <- UI.meterScreen
   case action of
-    GO_TO_HOME_SCREEN_FROM_METER state -> do
+    GO_BACK_TO_METER_RIDE state -> do
           modifyScreenState $ MeterScreenStateType $ \meterScreen -> MeterScreenData.initData
-          homeScreenFlow
+          meterRideScreenFlow
     SEARCH_LOCATION input updatedState -> do
       LatLon lat lon _ <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       resp <- lift $ lift $ Remote.autoComplete input lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey))
@@ -4852,8 +4852,10 @@ meterScreenFlow = do
             Nothing -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
         Left _ -> modifyScreenState $ MeterScreenStateType $ \meterScreen -> state
       meterScreenFlow
-    GO_TO_METER_MAP_FROM_METER state -> meterScreenFlow
-    RELOAD_STATE saveToCurrLocs -> meterScreenFlow
+    GO_TO_METER_RIDE state -> do
+      modifyScreenState $ MeterScreenStateType $ \meterScreen -> state { data {isSearchLocation = ST.NoView } }
+      modifyScreenState $ MeterRideScreenStateType $ \meterRideScreen -> meterRideScreen { data { destinationLat = state.props.destinationLat, destinationLng = state.props.destinationLng, destinationAddress = state.data.destination}}
+      meterRideScreenFlow
     UPDATE_LOCATION_NAME state lat lon -> do
       resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq lat lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
@@ -4872,4 +4874,5 @@ meterRideScreenFlow :: FlowBT String Unit
 meterRideScreenFlow = do
   action <- UI.meterRideScreen
   case action of
+    MRSO.ENTER_DESTINATION state -> meterScreenFlow
     MRSO.GO_BACK -> homeScreenFlow
