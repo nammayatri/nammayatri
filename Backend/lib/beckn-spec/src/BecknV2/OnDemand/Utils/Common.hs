@@ -150,6 +150,7 @@ tripCategoryToFulfillmentType = \case
   Rental _ -> show Enums.RENTAL
   InterCity _ _ -> show Enums.INTER_CITY
   Ambulance _ -> show Enums.AMBULANCE_FLOW
+  OneWay MeterRide -> show Enums.METER_RIDE
   _ -> show Enums.DELIVERY
 
 -- TODO :: To be removed after released ---- ENDS HERE
@@ -168,4 +169,5 @@ fulfillmentTypeToTripCategory fulfillmentType =
         Just Enums.RENTAL -> Rental OnDemandStaticOffer
         Just Enums.INTER_CITY -> InterCity OneWayOnDemandStaticOffer Nothing
         Just Enums.AMBULANCE_FLOW -> Ambulance OneWayOnDemandDynamicOffer
+        Just Enums.METER_RIDE -> OneWay MeterRide
         _ -> OneWay OneWayOnDemandDynamicOffer

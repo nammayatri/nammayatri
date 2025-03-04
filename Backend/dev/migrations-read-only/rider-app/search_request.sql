@@ -163,3 +163,4 @@ ALTER TABLE atlas_app.search_request ADD COLUMN config_in_experiment_versions js
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN is_meter_ride_search boolean ;

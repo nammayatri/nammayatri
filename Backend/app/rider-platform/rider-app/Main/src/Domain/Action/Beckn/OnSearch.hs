@@ -23,6 +23,7 @@ module Domain.Action.Beckn.OnSearch
     OneWayQuoteDetails (..),
     OneWaySpecialZoneQuoteDetails (..),
     InterCityQuoteDetails (..),
+    MeterRideQuoteDetails (..),
     RentalQuoteDetails (..),
     QuoteBreakupInfo (..),
     EstimateBreakupInfo (..),
@@ -34,6 +35,7 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import qualified API.UI.Confirm as DConfirm
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -56,7 +58,6 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
-import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -200,6 +201,11 @@ data QuoteDetails
   | InterCityDetails InterCityQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
+  | MeterRideDetails MeterRideQuoteDetails
+
+data MeterRideQuoteDetails = MeterRideQuoteDetails
+  { quoteId :: Text
+  }
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
@@ -236,9 +242,8 @@ data RentalQuoteDetails = RentalQuoteDetails
     nightShiftInfo :: Maybe NightShiftInfo
   }
 
-validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
-validateRequest DOnSearchReq {..} = do
-  searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+validateRequest :: DOnSearchReq -> DSearchReq.SearchRequest -> Flow ValidatedOnSearchReq
+validateRequest DOnSearchReq {..} searchRequest = do
   merchant <- QMerch.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   return $ ValidatedOnSearchReq {..}
 
@@ -279,6 +284,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
         when shouldAutoSelect $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
+      when (searchRequest.isMeterRideSearch == Just True) $ do
+        quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
+        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing
   where
     autoSelectEstimate personId estimateId = do
       let selectReq =
@@ -443,6 +451,8 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
     InterCityDetails details -> do
       DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit searchRequest.roundTrip details
+    MeterRideDetails details -> do
+      DQuote.MeterRideDetails <$> buildMeterRideQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
@@ -471,6 +481,10 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         tripCategory = Just tripCategory,
         ..
       }
+
+buildMeterRideQuoteDetails :: MonadFlow m => MeterRideQuoteDetails -> m DQuote.MeterRideQuoteDetails
+buildMeterRideQuoteDetails MeterRideQuoteDetails {..} = do
+  pure DQuote.MeterRideQuoteDetails {..}
 
 mkOneWayQuoteDetails :: DistanceUnit -> OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails distanceUnit OneWayQuoteDetails {..} =

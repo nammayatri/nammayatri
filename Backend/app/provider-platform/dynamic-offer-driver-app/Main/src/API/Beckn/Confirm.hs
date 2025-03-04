@@ -14,6 +14,7 @@
 
 module API.Beckn.Confirm (API, handler) where
 
+import qualified API.UI.Ride as RAPI
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -21,8 +22,10 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -84,12 +87,24 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
               fork "on_confirm with rideInfo" $ do
                 handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
                   void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context
+                  when (isMeterRide dConfirmRes.booking.tripCategory) $ do
+                    let startRideReq =
+                          RAPI.StartRideReq
+                            { rideOtp = "", -- doesn't matter for meter ride, not sure why this is not made Maybe, but not changing now as its not in scope of this PR. will do seperately later.
+                              point = LatLong {lat = dConfirmRes.fromLocation.lat, lon = dConfirmRes.fromLocation.lon},
+                              odometer = Nothing
+                            }
+                    void $ RAPI.startRide' (rideInfo'.driver.id, transporter.id, dConfirmRes.booking.merchantOperatingCityId) rideInfo'.ride.id startRideReq
             Nothing -> do
               fork "on_confirm on-us" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
                   callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country
     pure Ack
   where
+    isMeterRide = \case
+      DTC.OneWay DTC.MeterRide -> True
+      _ -> False
+
     errHandler dConfirmRes transporter mbDriver exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking dConfirmRes.booking mbDriver transporter
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking dConfirmRes.booking mbDriver transporter

@@ -42,6 +42,7 @@ fareProductConstructorModifier = \case
   "DriverOfferAPIDetails" -> "DRIVER_OFFER"
   "AmbulanceAPIDetails" -> "AMBULANCE"
   "DeliveryAPIDetails" -> "DELIVERY" -- for now change accordingly
+  "MeterRideAPIDetails" -> "METER_RIDE"
   x -> x
 
 -- Convert camelCase to SCREAMING_SNAKE_CASE

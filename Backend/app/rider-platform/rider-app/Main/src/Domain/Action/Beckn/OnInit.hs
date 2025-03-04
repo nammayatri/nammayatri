@@ -133,7 +133,7 @@ onInit req = do
             nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
             enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,
             paymentId = req.paymentId,
-            enableOtpLessRide = fromMaybe False safetySettings.enableOtpLessRide,
+            enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
             tripCategory = booking.tripCategory,
             ..
           }
@@ -143,6 +143,10 @@ onInit req = do
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 
+    isBookingMeterRide = \case
+      DRB.MeterRideDetails _ -> True
+      _ -> False
+
     getToLocationFromBookingDetails = \case
       DRB.RentalDetails _ -> Nothing
       DRB.OneWayDetails details -> Just details.toLocation
@@ -151,3 +155,4 @@ onInit req = do
       DRB.InterCityDetails details -> Just details.toLocation
       DRB.AmbulanceDetails details -> Just details.toLocation
       DRB.DeliveryDetails details -> Just details.toLocation
+      DRB.MeterRideDetails details -> details.toLocation

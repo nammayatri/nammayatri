@@ -163,6 +163,7 @@ instance ToSchema QuoteAPIDetails where
 
 mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails tollCharges = \case
+  DQuote.MeterRideDetails MeterRideQuoteDetails {..} -> DQuote.MeterRideAPIDetails MeterRideQuoteAPIDetails {..}
   DQuote.RentalDetails details -> DQuote.RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
   DQuote.OneWayDetails OneWayQuoteDetails {..} ->
     DQuote.OneWayAPIDetails
@@ -248,6 +249,7 @@ data OfferRes
   | OnRentalCab QuoteAPIEntity
   | Metro MetroOffer
   | PublicTransport PublicTransportQuote
+  | OnMeterRide QuoteAPIEntity
   deriving (Show, Generic)
 
 instance ToJSON OfferRes where
@@ -341,7 +343,9 @@ getOffers searchRequest = do
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      let quotes = OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+      let quotes = case searchRequest.isMeterRideSearch of
+            Just True -> OnMeterRide <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            _ -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -349,6 +353,7 @@ getOffers searchRequest = do
       sortBy sortFunc quoteList
     getMbDistanceToNearestDriver quote =
       case quote.quoteDetails of
+        SQuote.MeterRideDetails _ -> Nothing
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.AmbulanceDetails details -> details.distanceToPickup
         SQuote.DeliveryDetails details -> details.distanceToPickup
@@ -361,6 +366,7 @@ getOffers searchRequest = do
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
     creationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
+    creationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
 getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> Bool -> m [UEstimate.EstimateAPIEntity]
 getEstimates searchRequestId isReferredRide = do

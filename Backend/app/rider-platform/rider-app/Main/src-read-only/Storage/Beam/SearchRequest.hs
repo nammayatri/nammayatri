@@ -55,6 +55,7 @@ data SearchRequestT f = SearchRequestT
     initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAdvanceBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isMeterRideSearch :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -86,6 +87,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG ''SearchRequestT ['id] [['riderId]])
+$(enableKVPG (''SearchRequestT) [('id)] [[('riderId)]])
 
-$(mkTableInstances ''SearchRequestT "search_request")
+$(mkTableInstances (''SearchRequestT) "search_request")
