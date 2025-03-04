@@ -260,6 +260,11 @@ library
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI
+      ExternalBPP.ExternalAPI.Bus.CRUT.Auth
+      ExternalBPP.ExternalAPI.Bus.CRUT.CreateBooking
+      ExternalBPP.ExternalAPI.Bus.CRUT.FetchFare
+      ExternalBPP.ExternalAPI.Bus.CRUT.RouteDetails
+      ExternalBPP.ExternalAPI.Bus.CRUT.RouteSearch
       ExternalBPP.ExternalAPI.Bus.EBIX.Auth
       ExternalBPP.ExternalAPI.Bus.EBIX.Order
       ExternalBPP.ExternalAPI.Bus.EBIX.Payment
