@@ -74,7 +74,7 @@ data DConfirmReq = DConfirmReq
     enableOtpLessRide :: Bool
   }
 
-data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote
+data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
 
 data DConfirmResp = DConfirmResp
   { booking :: DRB.Booking,
@@ -114,6 +114,7 @@ handler merchant req validatedQuote = do
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails
     StaticQuote quote -> handleStaticOfferFlow isNewRider quote booking riderDetails
     RideOtpQuote quote -> handleRideOtpFlow isNewRider quote booking riderDetails
+    MeterRideQuote driver quote -> handleMeterRideFlow isNewRider driver quote booking riderDetails
   where
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
@@ -129,6 +130,13 @@ handler merchant req validatedQuote = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp Nothing uBooking riderDetails
+
+    handleMeterRideFlow isNewRider driver _ booking riderDetails = do
+      updateBookingDetails isNewRider booking riderDetails
+      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide)
+      uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     generateUniqueOTPCode merchantOperatingCityId cnt = do
       when (cnt == 100) $ throwError (InternalError "Please try again in some time") -- Avoiding infinite loop (Todo: fix with something like LRU later)
@@ -262,6 +270,8 @@ validateRequest subscriber transporterId req now = do
     Delivery OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
+    OneWay MeterRide -> getMeterRideQuoteDetails booking transporter
+    _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
@@ -278,6 +288,13 @@ validateRequest subscriber transporterId req now = do
     getStaticQuoteDetails booking transporter = do
       quote <- getQuote booking transporter
       return (transporter, StaticQuote quote)
+
+    getMeterRideQuoteDetails booking transporter = do
+      quote <- getQuote booking transporter
+      searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+      driverIdForSearch <- searchReq.driverIdForSearch & fromMaybeM (InvalidRequest $ "Driver Id for search not found for meter ride searchId: " <> quote.searchRequestId.getId)
+      driver <- QPerson.findById driverIdForSearch >>= fromMaybeM (PersonNotFound driverIdForSearch.getId)
+      return (transporter, MeterRideQuote driver quote)
 
     getQuote booking transporter = do
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

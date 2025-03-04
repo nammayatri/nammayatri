@@ -23,6 +23,7 @@ module API.UI.Ride
     handler,
     otpRideCreateAndStart,
     cancelRide,
+    startRide',
   )
 where
 
@@ -179,7 +180,10 @@ handler =
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
-startRide (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} = withFlowHandlerAPI $ do
+startRide (requestorId, merchantId, merchantOpCityId) rideId = withFlowHandlerAPI . startRide' (requestorId, merchantId, merchantOpCityId) rideId
+
+startRide' :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> Flow APISuccess
+startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} = do
   requestor <- findPerson requestorId
   let driverReq = RideStart.DriverStartRideReq {requestor, ..}
   shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId merchantOpCityId

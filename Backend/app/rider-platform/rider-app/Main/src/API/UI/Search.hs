@@ -177,10 +177,11 @@ multiModalSearch ::
   Int ->
   Flow ()
 multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs = do
+  dest <- extractDest searchReq.destination
   let transitRoutesReq =
         GetTransitRoutesReq
           { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.origin.gps.lat, longitude = searchReq.origin.gps.lon}}},
-            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.destination.gps.lat, longitude = searchReq.destination.gps.lon}}},
+            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = dest.gps.lat, longitude = dest.gps.lon}}},
             arrivalTime = Nothing,
             departureTime = searchReq.startTime,
             mode = Nothing,
@@ -209,6 +210,9 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
             }
     QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
     JM.init initReq
+  where
+    extractDest Nothing = throwError $ InvalidRequest "Destination Does Not Exist"
+    extractDest (Just d) = return d
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

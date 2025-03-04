@@ -197,7 +197,7 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
       blackListedGeohashes = fromMaybe [] transporterConfig.dpBlackListedGeohash
   now <- getCurrentTime
   let _bookingStartTime = fromMaybe now mbBookingStartTime
-  let localTimeZoneSeconds = 19800 -- fix this
+  let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   congestionChargeMultiplierFromModel <-
     case fareProduct.tripCategory of
       DTC.OneWay _ -> do
