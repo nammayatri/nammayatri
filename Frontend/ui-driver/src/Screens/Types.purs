@@ -3467,22 +3467,30 @@ type MeterRideScreenState = {
 
 type MeterRideScreenData = {
   distance :: Number,
-  timeMin :: Int,
   timeSec :: Int,
   destinationAddress :: String,
   destinationLat :: Number,
-  destinationLng :: Number
+  destinationLng :: Number,
+  ridesInfo :: Maybe RidesInfo,
+  rateCard :: Maybe Common.RateCard
 }
 
 type MeterRideScreenProps = {
   meterFare :: Int,
   showRateCard :: Boolean,
   startButtonCountDown :: Int,
-  sliderMaxValue :: Int,
-  sliderMinValue :: Int,
-  sliderDefVal :: Int,
-  incrementUnit :: Int,
-  sliderVal :: Int,
-  ratePerKM :: Int,
-  isMeterRideStarted :: Boolean
+  rateCardConfig :: {
+    sliderMaxValue :: Int,
+    sliderMinValue :: Int,
+    sliderDefVal :: Int,
+    incrementUnit :: Int,
+    sliderVal :: Int,
+    ratePerKM :: Number,
+    sliderFare :: Int
+  },
+  isMeterRideStarted :: Boolean,
+  isMeterClockRunning :: Boolean,
+  confirmMeterRideStop :: Boolean
 }
+
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY

@@ -26,3 +26,15 @@ meterRideScreen = do
     GoToEnterDestination state -> do
       modifyScreenState $ MeterRideScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> (pure $ ENTER_DESTINATION state)
+    GoToDriverProfile state -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_DRIVER_PROFILE state)
+    StartMeterRide state -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ START_METER_RIDE state)
+    EndMeterRide state -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ END_METER_RIDE state)
+    UpdatePrice updatedState val -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_RATE_CARD_API updatedState val)

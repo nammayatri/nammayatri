@@ -1130,6 +1130,7 @@ config =
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }
+  , customerTokenForMeterRide : "c1e973c9-87d3-4921-bddf-f936f52293fa"
 }
 
 registrationConfig :: RegistrationConfig

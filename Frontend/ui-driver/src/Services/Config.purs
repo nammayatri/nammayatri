@@ -83,6 +83,9 @@ getBaseUrl dummy = do
       let Config config = getConfig
       in (config.baseUrl)
 
+getCustomerBaseUrl :: String -> String
+getCustomerBaseUrl dummy = "https://api.sandbox.moving.tech/dev/app/v2"
+
 getSpecialZoneBaseUrl :: String -> String
 getSpecialZoneBaseUrl dummy = ""
 

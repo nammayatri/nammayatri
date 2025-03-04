@@ -509,4 +509,3 @@ data ScreenType =
   | BusTrackingScreenStateType (ST.BusTrackingScreenState -> ST.BusTrackingScreenState)
   | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
   | SelectBusRouteScreenType (SelectBusRouteScreenData.SelectBusRouteScreenState -> SelectBusRouteScreenData.SelectBusRouteScreenState)
-  | MeterRideScreenStateType (MeterRideScreenStateState -> MeterRideScreenStateState)

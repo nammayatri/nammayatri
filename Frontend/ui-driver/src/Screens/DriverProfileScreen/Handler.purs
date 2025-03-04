@@ -108,7 +108,8 @@ driverProfileScreen = do
                                                 , downgradeOptions = driverDetailsScreen.data.downgradeOptions
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
-      App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+      App.BackT $ pure App.GoBack
+      -- App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
     GoToCompletingProfile updatedState -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> pure (DRIVER_COMPLETING_PROFILE_SCREEN (getVehicleCategory updatedState))

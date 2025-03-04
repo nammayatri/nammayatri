@@ -897,7 +897,7 @@ meterBooking state push =
         ]
       , textView $
         [ weight 1.0
-        , text $ "Meter Rides"
+        , text $ "Namma Meter"
         , gravity CENTER
         , margin $ MarginLeft 10
         , color Color.blue800

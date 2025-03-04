@@ -1,9 +1,25 @@
-module Screens.MeterRideScreen.View where
+module Screens.MeterRideScreen.View
+  ( distAndTimeView
+  , driverProfile
+  , enterDestinationView
+  , fareView
+  , getActiveRide
+  , rideInitView
+  , rideStartedView
+  , screen
+  , sevenSegmentView
+  , sliderView
+  , stopMeterView
+  )
+  where
 
 import Animation as Anim
 import Common.Types.App
 import Data.String (length)
 import Data.String.Unsafe (charAt)
+import Effect.Uncurried (runEffectFn1)
+import Data.Int (toNumber, round)
+import Data.Either
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -11,33 +27,71 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Mobility.Prelude (boolToVisibility)
 import Prelude
+import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM 
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Events (onBackPressed, onClick)
-import PrestoDOM.Properties (textSize, fontStyle, letterSpacing, width, height, orientation, visibility, margin, padding, text, color, background, cornerRadius, imageWithFallback, weight, gravity, cornerRadii)
+import PrestoDOM.Properties (rippleColor, textSize, fontStyle, letterSpacing, width, height, orientation, visibility, margin, padding, text, color, background, cornerRadius, imageWithFallback, weight, gravity, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Orientation(..))
 import PrestoDOM.Types.Core (LetterSpacing(..))
 import Styles.Colors as Color
 import Screens.BookingOptionsScreen.ComponentConfig as BOP
 import Screens.MeterRideScreen.Controller (Action(..), ScreenOutput(..), eval)
 import Screens.Types
+import Services.Backend as Remote
+import Services.API
 import Debug
-import PrestoDOM.Elements.Keyed as Keyed 
+import Types.ModifyScreenState (modifyScreenState)
+import Types.App (defaultGlobalState, GlobalState(..))
+import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
+import Data.Array (head)
+import Types.App (ScreenType(..), FlowBT)
 import Language.Strings (getString)
+import Control.Monad.Except.Trans (runExceptT)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons as EHC
 import Components.TripStageTopBar as TripStageTopBar
 import Screens.HomeScreen.ScreenData (dummyRideData)
 import Data.Maybe
+import Effect.Aff (Milliseconds(..), launchAff)
+import Timers (waitingCountdownTimerV2, clearTimerWithIdEffect)
+import Control.Transformers.Back.Trans (runBackT)
+import Effect.Class (liftEffect)
+import Control.Monad.Trans.Class (lift)
+import Helpers.API as HelperAPI
 
 screen :: MeterRideScreenState -> Screen Action MeterRideScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "MeterRideScreen"
-  , globalEvents : []
+  , globalEvents : [
+    (
+      \push -> do
+        _ <-   if initialState.props.rateCardConfig.ratePerKM == 0.0 then 
+                void $ launchAff $ EHC.flowRunner defaultGlobalState
+                  $ do
+                      response <- HelperAPI.callApi $ GetDriverRateCardReq Nothing (Just initialState.props.rateCardConfig.sliderDefVal)
+                      case response of
+                        Left _ -> pure unit
+                        Right (GetDriverRateCardRes resp) -> 
+                          case (head resp) of
+                            Nothing -> pure unit
+                            Just res -> do
+                              EHC.liftFlow $ push $ UpdateRateCard res
+                              pure unit
+              else pure unit
+        if initialState.props.isMeterRideStarted && (not initialState.props.isMeterClockRunning) then do
+          void $ runEffectFn1 clearTimerWithIdEffect "MeterRideStartedTimer"
+          -- void $ waitingCountdownTimerV2 0 "1" "MeterRideStartedTimer" push MeterRideStartedTimerCB
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $  runExceptT $ runBackT $ getActiveRide 20 1000.0 push initialState
+          pure $ runEffectFn1 clearTimerWithIdEffect "MeterRideStartedTimer"
+        else 
+          pure $ pure $ unit
+    )
+  ]
   , eval : (\action state -> do
       let _ = spy "MeterRideScree state -----" state
       let _ = spy "MeterRideScree action -----" action
@@ -122,7 +176,7 @@ view push state =
             , gravity CENTER
             ]
             , textView $ 
-            [ text $ "₹" <> show (state.props.sliderVal * state.props.ratePerKM)
+            [ text $ "₹" <> show (state.props.rateCardConfig.sliderFare)
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , color Color.black800
@@ -130,7 +184,7 @@ view push state =
             , gravity CENTER
             ] <> FontStyle.priceFont TypoGraphy
             , textView $ 
-            [ text $ "₹" <> show state.props.ratePerKM <> "/km"
+            [ text $ "₹" <> show state.props.rateCardConfig.ratePerKM <> "/km"
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , color Color.black500
@@ -186,7 +240,7 @@ sliderView push state =
                   , margin $ Margin 0 5 15 5
                   ] <> if decButtonEnabled then [rippleColor Color.rippleShade] else []
             , textView
-                $ [ text $ show state.props.sliderVal <> " km"
+                $ [ text $ show state.props.rateCardConfig.sliderVal <> " km"
                   , color Color.black800
                   , gravity CENTER
                   , margin $ Margin 0 0 0 5
@@ -221,6 +275,7 @@ sliderView push state =
                     ( \sliderAction -> do
                         void $ pure $ JB.updateInputString "MeterRideInput"
                         void $ push sliderAction
+                        void $ JB.debounceFunction 800 push DebounceCallBack false
                         pure unit
                     )  
                     SliderCallback sliderConfig ) (const NoAction)
@@ -236,16 +291,16 @@ sliderView push state =
     
     where incButtonAlpha = if incButtonEnabled then 1.0 else 0.4
           decButtonAlpha = if decButtonEnabled then 1.0 else 0.4
-          incButtonEnabled = state.props.sliderVal < state.props.sliderMaxValue
-          decButtonEnabled = state.props.sliderVal > state.props.sliderMinValue
+          incButtonEnabled = state.props.rateCardConfig.sliderVal < state.props.rateCardConfig.sliderMaxValue
+          decButtonEnabled = state.props.rateCardConfig.sliderVal > state.props.rateCardConfig.sliderMinValue
           sliderConfig = 
             JB.sliderConfig { 
               id= EHC.getNewIDWithTag "RateSlider", 
               toolTipId = EHC.getNewIDWithTag "RateSliderTool",
-              sliderMinValue = state.props.sliderMinValue,
-              sliderMaxValue = state.props.sliderMaxValue,
-              sliderDefaultValue = state.props.sliderDefVal,
-              stepFunctionForCoinConversion = state.props.incrementUnit,
+              sliderMinValue = state.props.rateCardConfig.sliderMinValue,
+              sliderMaxValue = state.props.rateCardConfig.sliderMaxValue,
+              sliderDefaultValue = state.props.rateCardConfig.sliderDefVal,
+              stepFunctionForCoinConversion = state.props.rateCardConfig.incrementUnit,
               enableToolTip = false,
               getCallbackOnProgressChanged = true,
               thumbColor = Color.blue800,
@@ -397,8 +452,7 @@ rideInitView push state =
                 width $ V 108,
                 height $ V 108,
                 cornerRadii $ Corners 999.0 false true false false,
-                background Color.lightHulkGreen,
-
+                background if state.props.startButtonCountDown > 0 then Color.lightHulkGreen else Color.darkHulkGreen,
                 layoutGravity "left"
               ]
               [
@@ -488,7 +542,12 @@ rideInitView push state =
 
 rideStartedView :: forall w . (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 rideStartedView push state =
-  linearLayout
+  relativeLayout
+  [
+    width MATCH_PARENT,
+    height MATCH_PARENT
+  ] $ 
+  [Anim.screenAnimationFadeInOut $ linearLayout
   [
     width MATCH_PARENT,
     height MATCH_PARENT,
@@ -524,6 +583,72 @@ rideStartedView push state =
         ,stopMeterView push state
       ]
     ]
+  ]] <> 
+  [
+    Anim.screenAnimationFadeInOut $ linearLayout
+    [
+      width MATCH_PARENT,
+      height MATCH_PARENT,
+      background Color.blackLessTrans,
+      gravity BOTTOM,
+      padding $ Padding 24 24 24 24,
+      orientation VERTICAL,
+      onClick push $ const HideStopMeterRideConfirmCard,
+      visibility $ boolToVisibility state.props.confirmMeterRideStop
+    ]
+    [
+      linearLayout
+      [
+        width MATCH_PARENT,
+        height WRAP_CONTENT,
+        gravity CENTER,
+        padding $ Padding 16 16 16 16,
+        background Color.white900,
+        orientation VERTICAL,
+        cornerRadius 15.0,
+        clickable true
+      ]
+      [
+        textView $ 
+        [ text $ "Confirm Meter Stop"
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , color "#454545"
+        , gravity CENTER
+        , clickable true
+        ] <> FontStyle.h2 TypoGraphy
+        , linearLayout
+        [
+          cornerRadius 8.0,
+          background Color.gunMetalBlue,
+          width MATCH_PARENT,
+          height WRAP_CONTENT,
+          gravity CENTER,
+          margin $ Margin 0 24 0 0,
+          padding $ Padding 0 14 0 14,
+          rippleColor Color.rippleShade,
+          onClick push $ const EndRide
+        ]
+        [
+          textView $ 
+          [ text $ "Confirm"
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          , color Color.yellow900
+          , gravity CENTER
+          ] <> FontStyle.subHeading3 TypoGraphy
+        ]
+        , textView $ 
+        [ text $ "Cancel"
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ Margin 0 24 0 24
+        , color "#454545"
+        , gravity CENTER
+        , onClick push $ const HideStopMeterRideConfirmCard
+        ] <> FontStyle.subHeading3 TypoGraphy
+      ]
+    ]
   ]
 
   where
@@ -547,7 +672,7 @@ distAndTimeView push state =
   [
     width MATCH_PARENT,
     height $ WRAP_CONTENT,
-    margin $ Margin 20 30 20 0
+    margin $ Margin 20 36 20 0
   ]
   [
     linearLayout
@@ -614,12 +739,12 @@ distAndTimeView push state =
           height $ V 19,
           width $ V 19,
           imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_ny_clock_unfilled",
-          margin $ Margin 0 4
-           10 0
+          margin $ Margin 0 4 10 0
         ]
         , textView $ 
         [ text "TIME"
         , height WRAP_CONTENT
+        , margin $ Margin 0 0 5 0
         , letterSpacing $ PX 2.0
         , color Color.black500
         ] <> FontStyle.h2 TypoGraphy
@@ -631,8 +756,7 @@ distAndTimeView push state =
       ]
       [
         textView $ 
-        [ text $ getTime state.data.timeMin 
-        state.data.timeSec
+        [ text $ getTime state.data.timeSec
         , height WRAP_CONTENT
         , color Color.black900
         ] <> FontStyle.body34 TypoGraphy
@@ -641,13 +765,18 @@ distAndTimeView push state =
   ]
 
   where
-    getTime :: Int -> Int -> String
-    getTime min sec = 
-      let
-        sstr = if (div min 10) == 0 then "0" <> (show min) else show min
-        mstr = if (div sec 10) == 0 then "0" <> (show sec) else show sec 
-      in 
-        mstr <> ":" <> sstr
+    getTime :: Int -> String
+    getTime sec = 
+      if sec <= 0 then "--:--"
+      else
+        let
+          sstr = if (div (mod sec 60) 10) == 0 then "0" <> (show (mod sec 60)) else show (mod sec 60)
+          mstr = if (div (mod (div sec 60) 60) 10) == 0 then "0" <> (show (mod (div sec 60) 60)) else show (mod (div sec 60) 60) 
+          hrs = div sec 3600
+        in
+          if hrs == 0 then mstr <> ":" <> sstr
+          else (show hrs) <> ":" <> mstr <> ":" <> sstr
+        
         
 
 enterDestinationView :: forall w . (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
@@ -687,6 +816,7 @@ enterDestinationView push state =
             _ <- push action
             pure unit
             )(const $ EnterDestination)
+        , clickable (state.data.destinationLat == 0.0)
         ] <> FontStyle.body5 TypoGraphy
       ]
     , textView $ [
@@ -695,6 +825,7 @@ enterDestinationView push state =
       , ellipsize true
       , padding $ Padding 5 5 5 5
       , color Color.black800
+      , clickable (state.data.destinationLat == 0.0)
       , onClick (\action -> do
           _ <- push action
           pure unit
@@ -705,6 +836,7 @@ enterDestinationView push state =
       , width MATCH_PARENT
       , padding $ Padding 10 10 10 10
       , gravity RIGHT
+      , clickable true
       ][
         linearLayout [
           height WRAP_CONTENT
@@ -737,6 +869,7 @@ enterDestinationView push state =
     , height WRAP_CONTENT
     , color Color.blue800
     , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
+    , clickable (state.data.destinationLat == 0.0)
     , onClick (\action -> do
         _ <- push action
         pure unit
@@ -754,7 +887,9 @@ stopMeterView push state =
     margin $ Margin 0 0 0 26,
     cornerRadius 15.0,
     padding $ Padding 15 15 15 15,
-    gravity CENTER
+    gravity CENTER,
+    onClick push $ const ConfirmStopMeter,
+    rippleColor Color.rippleShade
   ]
   [
     linearLayout
@@ -793,7 +928,8 @@ fareView push state =
       width MATCH_PARENT,
       height WRAP_CONTENT,
       gravity CENTER,
-      padding $ Padding 0 35 0 12
+      padding $ Padding 0 35 0 12,
+      onClick push $ const $ if state.props.startButtonCountDown > 3 then ShowRateCard else NoAction
     ]
     [
       textView $ 
@@ -805,10 +941,9 @@ fareView push state =
       ] <> FontStyle.body30 TypoGraphy
       , imageView
       [
-        height $ V 16,
-        width $ V 16,
-        imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue_inverse",
-        onClick push $ const $ if state.props.startButtonCountDown > 3 then ShowRateCard else NoAction
+        height $ V 20,
+        width $ V 20,
+        imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue_inverse"
       ]
     ]
     ,linearLayout
@@ -893,6 +1028,7 @@ driverProfile push state =
     , height WRAP_CONTENT
     , gravity CENTER
     , padding $ Padding 16 20 12 16
+    , onClick push $ const GoToProfile
     ][ imageView
           [ width $ V 42
           , height $ V 42
@@ -900,3 +1036,18 @@ driverProfile push state =
           ]
     ]
   
+
+getActiveRide :: Int -> Number -> (Action -> Effect Unit) -> MeterRideScreenState -> FlowBT String Unit
+getActiveRide count duration push state = do
+    (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+    case (head rideHistoryResponse.list) of
+      Nothing -> do
+        if count > 0 then do
+          void $ lift $ lift $ delay $ Milliseconds duration
+          getActiveRide (count-1) duration push state
+        else pure unit
+      Just resp -> do
+        let _ = spy "FOUND_ACTIVE_RIDE$$$$$$$$$$$$$$$$$$$$$$$$$$$" resp
+        void $ lift $ lift $  doAff $  liftEffect $ push $ UpdateRidesInfo resp
+        pure unit
+       
