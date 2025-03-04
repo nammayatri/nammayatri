@@ -58,12 +58,6 @@ data DocumentType
   | UploadProfile
   | GSTCertificate
   | BackgroundVerification
-  | VehicleFront
-  | VehicleBack
-  | VehicleRight
-  | VehicleLeft
-  | VehicleFrontInterior
-  | VehicleBackInterior
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
