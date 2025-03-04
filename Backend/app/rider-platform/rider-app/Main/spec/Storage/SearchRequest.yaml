@@ -70,6 +70,7 @@ SearchRequest:
     backendAppVersion: Maybe Text
     totalRidesCount: Maybe Int
     isAdvanceBookingEnabled: Maybe Bool
+    isMeterRideSearch: Maybe Bool
     isDashboardRequest: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
     placeNameSource:  Maybe Text

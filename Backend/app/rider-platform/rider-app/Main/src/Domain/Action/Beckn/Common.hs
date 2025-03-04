@@ -275,6 +275,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         DRB.InterCityDetails details -> (Just details.toLocation, [])
         DRB.AmbulanceDetails details -> (Just details.toLocation, [])
         DRB.DeliveryDetails details -> (Just details.toLocation, [])
+        DRB.MeterRideDetails details -> (details.toLocation, [])
       allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       onlinePayment = maybe False (.onlinePayment) mbMerchant

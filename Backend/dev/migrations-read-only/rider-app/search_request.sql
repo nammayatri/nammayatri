@@ -165,3 +165,4 @@ ALTER TABLE atlas_app.search_request ADD COLUMN has_multimodal_search boolean  d
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN is_meter_ride_search boolean ;

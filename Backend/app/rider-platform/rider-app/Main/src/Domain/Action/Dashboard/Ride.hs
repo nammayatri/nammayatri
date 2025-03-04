@@ -443,6 +443,7 @@ mkFareProductType bookingDetails = case bookingDetails of
   DTB.InterCityDetails _ -> INTER_CITY
   DTB.AmbulanceDetails _ -> AMBULANCE
   DTB.DeliveryDetails _ -> DRIVER_OFFER --Fix: Check later if this is correct
+  DTB.MeterRideDetails _ -> ONE_WAY
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1

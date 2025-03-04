@@ -49,6 +49,7 @@ data FulfillmentType
   | RENTAL
   | INTER_CITY
   | AMBULANCE_FLOW
+  | METER_RIDE
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
 
 data StopType

@@ -160,6 +160,7 @@ data BookingAPIDetails
   | InterCityAPIDetails InterCityBookingAPIDetails
   | AmbulanceAPIDetails AmbulanceBookingAPIDetails
   | DeliveryAPIDetails DeliveryBookingAPIDetails
+  | MeterRideAPIDetails MeterRideBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -183,6 +184,12 @@ data OneWayBookingAPIDetails = OneWayBookingAPIDetails
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance,
     isUpgradedToCab :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data MeterRideBookingAPIDetails = MeterRideBookingAPIDetails
+  { toLocation :: Maybe LocationAPIEntity,
+    distanceCovered :: Maybe Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -320,6 +327,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
   InterCityDetails details -> return $ InterCityAPIDetails . mkInterCityAPIDetails $ details
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
   DeliveryDetails details -> DeliveryAPIDetails <$> mkDeliveryAPIDetails details
+  MeterRideDetails details -> return $ MeterRideAPIDetails . mkMeterRideAPIDetails $ details
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails
@@ -356,6 +364,12 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance
         }
+    mkMeterRideAPIDetails MeterRideBookingDetails {..} =
+      MeterRideBookingAPIDetails
+        { toLocation = SLoc.makeLocationAPIEntity <$> toLocation,
+          ..
+        }
+
     -- check later if sender info required --
     mkDeliveryAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DeliveryBookingDetails -> m DeliveryBookingAPIDetails
     mkDeliveryAPIDetails (DeliveryBookingDetails {..}) = do

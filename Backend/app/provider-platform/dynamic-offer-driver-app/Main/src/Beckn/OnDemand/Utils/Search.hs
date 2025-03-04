@@ -136,6 +136,12 @@ buildCustomerNammaTags req = do
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_NAMMA_TAGS tagGroups
   readMaybe . T.unpack =<< tagValue
 
+getIsMeterRideSearch :: Spec.SearchReqMessage -> Maybe Bool
+getIsMeterRideSearch req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  let tagValue = Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.IS_METER_RIDE_SEARCH tagGroups
+  readMaybe . T.unpack =<< tagValue
+
 checkIfDashboardSearch :: Spec.SearchReqMessage -> Maybe Bool
 checkIfDashboardSearch req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)

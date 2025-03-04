@@ -152,6 +152,7 @@ tfQuotesInfo provider fulfillments validTill item = do
           InterCity _ _ -> do
             interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing intercity quote details")
             pure $ Domain.Action.Beckn.OnSearch.InterCityDetails interCityQuoteInfo
+          OneWay MeterRide -> pure $ Domain.Action.Beckn.OnSearch.MeterRideDetails (Domain.Action.Beckn.OnSearch.MeterRideQuoteDetails {quoteId = quoteOrEstId_})
           ft -> throwError (InternalError $ "tfQuotesInfo not implemented for fulfillmentType: " <> show ft)
       pure $
         Right $

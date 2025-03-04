@@ -20,6 +20,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
+import Domain.Types
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -61,10 +62,21 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
         fork "on confirm received pushing ondc logs" do
           booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
           void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
-        fork "onConfirm request processing" $
-          Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
-            DOnConfirm.onConfirm validatedReq
+        runInForkWithCheck
+          "onConfirm request processing"
+          ( pure $ case validatedReq of
+              DOnConfirm.ValidatedRideAssigned rideAssignedReq -> rideAssignedReq.booking.tripCategory /= Just (OneWay MeterRide)
+              _ -> True
+          )
+          (Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $ DOnConfirm.onConfirm validatedReq)
     pure Ack
+  where
+    runInForkWithCheck message checkShouldFork action = do
+      shouldFork <- checkShouldFork
+      if shouldFork
+        then do
+          fork message action
+        else action
 
 onConfirmLockKey :: Text -> Text
 onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id
