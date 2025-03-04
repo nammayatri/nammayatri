@@ -770,7 +770,7 @@ public class LocationUpdateService extends Service {
             locationData.put("ts", locTime);
             locationData.put("acc", accuracy);
             locationData.put("source", locationSource);
-            locationData.put("v", locSpeed + "");
+            locationData.put("v", locSpeed);
             if (!locationData.has("pt")) return;
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
