@@ -175,8 +175,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
   let merchantOperatingCityId = search.merchantOperatingCityId
+  let platformType = if isNothing search.partnerOrgId then DIBC.APPLICATION else DIBC.PARTNERORG
   integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   startStation <- QStation.findByStationCode dStartStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   endStation <- QStation.findByStationCode dEndStation.stationCode integratedBPPConfig.id >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
