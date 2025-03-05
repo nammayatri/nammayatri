@@ -1,0 +1,22 @@
+imports:
+  Ride: Domain.Types.Ride
+  Location: Domain.Types.Location
+  LatLong: Kernel.External.Maps.Types
+  APISuccess: Kernel.Types.APISuccess
+  LocationAddress: Domain.Types.Location
+
+module: MeterRide
+types:
+  MeterRideAddDestinationReq:
+    gps: LatLong
+    location: LocationAddress
+apis:
+  - POST:
+      endpoint: /meterRide/{rideId}/addDestination
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      request:
+        type: MeterRideAddDestinationReq
+      response:
+        type: APISuccess

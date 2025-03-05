@@ -2,11 +2,13 @@ imports:
   Ride: Domain.Types.Ride
   RateCardItem: API.Types.UI.DriverOnboardingV2
   HighPrecMoney: Kernel.Types.Common
+  HighPrecMeters: Kernel.Types.Common
 
 module: PriceBreakup
 types:
   MeterRidePriceRes:
     fare: HighPrecMoney
+    distance: HighPrecMeters
 apis:
   - GET:
       endpoint: /meterRide/price
