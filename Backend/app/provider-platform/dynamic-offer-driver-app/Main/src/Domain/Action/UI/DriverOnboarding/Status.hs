@@ -95,6 +95,7 @@ data StatusRes = StatusRes
     driverDocuments :: [DocumentStatusItem],
     vehicleDocuments :: [VehicleDocumentItem],
     enabled :: Bool,
+    manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [DLDetails],
     vehicleRegistrationCertificateDetails :: Maybe [RCDetails]
   }
@@ -275,13 +276,13 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
     let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
     when (null mandatoryVehicleDocumentVerificationConfigs) $ do
       allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
-      when allDriverDocsVerified $ do
+      when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True) $ do
         enableDriver merchantOpCityId personId mDL
         whenJust onboardingVehicleCategory $ \category -> do
           DIIQuery.updateOnboardingVehicleCategory (Just category) personId
 
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
-  vehicleDocuments <- getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL
+  vehicleDocuments <- getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL transporterConfig.requiresOnboardingInspection
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -307,17 +308,18 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
         driverDocuments,
         vehicleDocuments,
         enabled = driverInfo.enabled,
+        manualVerificationRequired = transporterConfig.requiresOnboardingInspection,
         driverLicenseDetails = dlDetails,
         vehicleRegistrationCertificateDetails = rcDetails
       }
   where
-    getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL = do
+    getVehicleDocuments driverDocuments vehicleDocumentsUnverified mDL requiresOnboardingInspection = do
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
         allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
         when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
         mbVehicle <- Vehicle.findById personId -- check everytime
-        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
+        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && requiresOnboardingInspection /= Just True) $
           void $ try @_ @SomeException (activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 

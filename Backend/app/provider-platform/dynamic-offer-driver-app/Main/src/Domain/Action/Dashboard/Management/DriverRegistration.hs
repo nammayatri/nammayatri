@@ -190,10 +190,10 @@ mapDocumentType Common.VehicleNOC = Domain.VehicleNOC
 mapDocumentType Common.BusinessLicense = Domain.BusinessLicense
 mapDocumentType Common.VehicleFront = Domain.VehicleFront
 mapDocumentType Common.VehicleBack = Domain.VehicleBack
-mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
-mapDocumentType Common.VehicleRight = Domain.VehicleRight
 mapDocumentType Common.VehicleFrontInterior = Domain.VehicleFrontInterior
 mapDocumentType Common.VehicleBackInterior = Domain.VehicleBackInterior
+mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
+mapDocumentType Common.VehicleRight = Domain.VehicleRight
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
