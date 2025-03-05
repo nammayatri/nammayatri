@@ -1672,3 +1672,21 @@ instance IsHTTPError WMBErrors where
     AlreadyOnActiveTrip -> E400
 
 instance IsAPIError WMBErrors
+
+data FleetError
+  = UserAlreadyExists Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FleetError
+
+instance IsBaseError FleetError where
+  toMessage = \case
+    UserAlreadyExists userId -> Just $ "User with ID \"" <> userId <> "\" already exists."
+
+instance IsHTTPError FleetError where
+  toErrorCode = \case
+    UserAlreadyExists _ -> "USER_ALREADY_EXISTS"
+  toHttpCode = \case
+    UserAlreadyExists _ -> E400
+
+instance IsAPIError FleetError

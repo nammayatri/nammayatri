@@ -9,19 +9,21 @@ import qualified Domain.Types.FleetOwnerInformation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
-  { blocked :: B.C f Kernel.Prelude.Bool,
-    enabled :: B.C f Kernel.Prelude.Bool,
-    fleetOwnerPersonId :: B.C f Kernel.Prelude.Text,
-    fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,
-    gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    verified :: B.C f Kernel.Prelude.Bool,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { blocked :: (B.C f Kernel.Prelude.Bool),
+    enabled :: (B.C f Kernel.Prelude.Bool),
+    fleetOwnerPersonId :: (B.C f Kernel.Prelude.Text),
+    fleetType :: (B.C f Domain.Types.FleetOwnerInformation.FleetType),
+    gstImageId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    gstNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    referredByOperatorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    verified :: (B.C f Kernel.Prelude.Bool),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +33,6 @@ instance B.Table FleetOwnerInformationT where
 
 type FleetOwnerInformation = FleetOwnerInformationT Identity
 
-$(enableKVPG ''FleetOwnerInformationT ['fleetOwnerPersonId] [])
+$(enableKVPG (''FleetOwnerInformationT) [('fleetOwnerPersonId)] [])
 
-$(mkTableInstances ''FleetOwnerInformationT "fleet_owner_information")
+$(mkTableInstances (''FleetOwnerInformationT) "fleet_owner_information")
