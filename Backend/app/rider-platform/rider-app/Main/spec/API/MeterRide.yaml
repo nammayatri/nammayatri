@@ -1,0 +1,22 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  APISuccess: Kernel.Types.APISuccess
+  LocationAddress: Domain.Types.LocationAddress
+
+module: MeterRide
+types:
+  MeterRideAddDestinationReq:
+    gps: LatLong
+    location: LocationAddress
+apis:
+  - POST:
+      endpoint: /{bppRideId}/addDestination
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bppRideId: Text
+      request:
+        type: MeterRideAddDestinationReq
+      response:
+        type: APISuccess

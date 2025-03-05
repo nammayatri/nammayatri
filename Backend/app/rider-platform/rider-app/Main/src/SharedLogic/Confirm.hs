@@ -136,7 +136,7 @@ confirm DConfirmReq {..} = do
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
-    Just booking -> DQuote.processActiveBooking booking OnConfirm
+    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -194,6 +194,10 @@ confirm DConfirmReq {..} = do
   where
     prependZero :: Text -> Text
     prependZero str = "0" <> str
+
+    isMeterRide = \case
+      DQuote.MeterRideDetails _ -> True
+      _ -> False
 
     getBppQuoteId now = \case
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
