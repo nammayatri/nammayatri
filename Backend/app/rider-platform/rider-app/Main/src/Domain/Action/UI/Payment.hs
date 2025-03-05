@@ -78,6 +78,7 @@ createOrder (personId, merchantId) rideId = do
   unless (person.id == riderId) $ throwError NotAnExecutor
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.Normal
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -96,7 +97,7 @@ createOrder (personId, merchantId) rideId = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount []
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

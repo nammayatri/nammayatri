@@ -12,6 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
+import qualified Tools.Payment
 
 data TicketBookingPeopleCategory = TicketBookingPeopleCategory
   { amountToRefund :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -22,6 +23,7 @@ data TicketBookingPeopleCategory = TicketBookingPeopleCategory
     peopleCategoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory),
     pricePerUnit :: Kernel.Types.Common.Price,
     ticketBookingServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
+    vendorSplitDetails :: Kernel.Prelude.Maybe [Tools.Payment.VendorSplitDetails],
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

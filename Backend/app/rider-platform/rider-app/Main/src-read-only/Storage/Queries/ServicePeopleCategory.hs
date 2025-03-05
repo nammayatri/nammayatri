@@ -4,6 +4,7 @@
 
 module Storage.Queries.ServicePeopleCategory (module Storage.Queries.ServicePeopleCategory, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -44,6 +45,7 @@ updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
       Se.Set Beam.pricingType (Kernel.Prelude.Just pricingType),
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
+      Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

@@ -22,6 +22,8 @@ imports:
   TimeBound : Kernel.Types.TimeBound
   BookingStatus: Domain.Types.Extra.TicketBooking
   Day: Data.Time
+  VendorSplitDetails: Tools.Payment
+  SplitType: Tools.Payment
 
 TicketPlace:
   tableName: ticket_place
@@ -222,14 +224,17 @@ ServicePeopleCategory:
     cancellationCharges: "Maybe [CancellationCharge]"
     timeBounds: TimeBound|NoRelation
     pricingType: PricingType
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
 
   beamType:
     cancellationCharges: Maybe Value
+    vendorSplitDetails: Maybe Value
     timeBounds: Maybe TimeBound
     pricingType: Maybe PricingType
 
   sqlType:
     cancellationCharges: json
+    vendorSplitDetails: json
 
   beamFields:
     pricePerUnit:
@@ -241,6 +246,8 @@ ServicePeopleCategory:
     cancellationCharges: getCancellationChargesFromTable
     timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
     pricingType: (Kernel.Prelude.fromMaybe Domain.Types.ServicePeopleCategory.AllDays)|I
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
     pricePerUnit: (.amount)|I
@@ -248,6 +255,7 @@ ServicePeopleCategory:
     cancellationCharges: convertCancellationChargesToTable
     timeBounds: Kernel.Prelude.Just|I
     pricingType: Kernel.Prelude.Just|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
 
   default:
     timeBounds: "'Unbounded'"
@@ -298,6 +306,15 @@ SeatManagement:
       params: [booked]
       where:
         and: [ticketServiceCategoryId, date]
+    safeUpdateBookedSeats:
+      kvFunction: updateWithKV
+      params: [booked]
+      where:
+        and:
+         - ticketServiceCategoryId
+         - date
+         - lt:
+            - booked
     updateBlockedSeats:
       kvFunction: updateWithKV
       params: [blocked]
@@ -327,7 +344,11 @@ TicketBooking:
     updatedAt: UTCTime
     bookedSeats: Int
     cancelledSeats: Maybe Int
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    blockExpirationTime: Maybe Double
 
+  beamType:
+    vendorSplitDetails: Maybe Value
   beamFields:
     amount:
       currency: Maybe Currency
@@ -335,10 +356,16 @@ TicketBooking:
 
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency amount|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
     amount: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+
+  sqlType:
+    vendorSplitDetails: json
 
   constraints:
     id: PrimaryKey
@@ -396,7 +423,10 @@ TicketBookingService:
     updatedAt: UTCTime
     bookedSeats: Int
     cancelledSeats: Maybe Int
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
 
+  beamType:
+    vendorSplitDetails: Maybe Value
   beamFields:
     amount:
       currency: Maybe Currency
@@ -404,10 +434,16 @@ TicketBookingService:
 
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency amount|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
     amount: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+
+  sqlType:
+    vendorSplitDetails: json
 
   types:
     ServiceStatus:
@@ -458,6 +494,10 @@ TicketBookingServiceCategory:
     serviceCategoryId: Maybe Text
     visitDate: Maybe Day
     btype: Maybe BusinessHourType
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
+
+  beamType:
+    vendorSplitDetails: Maybe Value
 
   beamFields:
     amount:
@@ -466,10 +506,16 @@ TicketBookingServiceCategory:
 
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency amount|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
     amount: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+
+  sqlType:
+    vendorSplitDetails: json
 
   types:
     CancelledBy:
@@ -509,7 +555,10 @@ TicketBookingPeopleCategory:
     numberOfUnits: Int
     numberOfUnitsCancelled: Maybe Int
     amountToRefund: Maybe HighPrecMoney
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
 
+  beamType:
+    vendorSplitDetails: Maybe Value
   beamFields:
     pricePerUnit:
       currency: Maybe Currency
@@ -517,11 +566,16 @@ TicketBookingPeopleCategory:
 
   fromTType:
     pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
 
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
 
+  sqlType:
+    vendorSplitDetails: json
   queries:
     findById:
       kvFunction: findOneWithKV

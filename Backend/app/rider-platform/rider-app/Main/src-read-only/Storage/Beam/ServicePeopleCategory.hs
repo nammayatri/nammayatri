@@ -23,6 +23,7 @@ data ServicePeopleCategoryT f = ServicePeopleCategoryT
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
     pricingType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServicePeopleCategory.PricingType),
     timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
+    vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
