@@ -63,7 +63,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
     Just booking -> do
       case mode of
         DTrip.Bus -> do
-          (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationId
+          (statusChanged, newStatus) <- processOldStatus booking.journeyLegStatus booking.toStationId isLastCompleted
           when statusChanged $ QTBooking.updateJourneyLegStatus (Just newStatus) booking.id
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
           vehicleTrackingAndPosition <- do
@@ -86,19 +86,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   mode
                 }
         _ -> do
-          let sortedSubRoutes = sortOn (.subLegOrder) booking.journeyRouteDetails
-          processedStatuses <-
-            mapM
-              ( \subRoute -> do
-                  toStationId <- subRoute.toStationId & fromMaybeM (InternalError "Missing toStationId")
-                  processOldStatus subRoute.journeyStatus toStationId
-              )
-              sortedSubRoutes
-          let newStatuses = zipWith (\subRoute (changed, newStatus) -> (subRoute, changed, newStatus)) sortedSubRoutes processedStatuses
-          forM_ newStatuses $ \(subRoute, statusChanged, newStatus) -> do
-            when statusChanged $ do
-              QJRD.updateJourneyStatus (Just newStatus) booking.searchId subRoute.subLegOrder
-          lastSubRoute <- safeLast newStatuses & fromMaybeM (InternalError "New Status Not Found")
+          routeStatuses <- getStatusForMetroAndSubway booking.journeyRouteDetails booking.searchId isLastCompleted
+          lastSubRoute <- safeLast routeStatuses & fromMaybeM (InternalError "New Status Not Found")
           let (_, lastStatusChanged, lastNewStatus) = lastSubRoute
           when lastStatusChanged $ do
             QTBooking.updateJourneyLegStatus (Just lastNewStatus) booking.id
@@ -116,14 +105,14 @@ getState mode searchId riderLastPoints isLastCompleted = do
                       statusChanged = changed,
                       mode
                     }
-                  | (subRoute, changed, newStatus) <- newStatuses
+                  | (subRoute, changed, newStatus) <- routeStatuses
                 ]
           return $ JT.Transit journeyLegStates
     Nothing -> do
       case mode of
         DTrip.Bus -> do
           searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          (statusChanged, newStatus) <- processOldStatus searchReq.journeyLegStatus searchReq.toStationId
+          (statusChanged, newStatus) <- processOldStatus searchReq.journeyLegStatus searchReq.toStationId isLastCompleted
           when statusChanged $ QFRFSSearch.updateJourneyLegStatus (Just newStatus) searchReq.id
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           vehicleTrackingAndPosition <- do
@@ -154,16 +143,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                 }
         _ -> do
           searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-          let sortedSubRoutes = sortOn (.subLegOrder) searchReq.journeyRouteDetails
-          processedStatuses <-
-            mapM
-              ( \subRoute -> do
-                  toStationId <- subRoute.toStationId & fromMaybeM (InternalError "Missing toStationId")
-                  processOldStatus subRoute.journeyStatus toStationId
-              )
-              sortedSubRoutes
-          let newStatuses = zipWith (\subRoute (changed, newStatus) -> (subRoute, changed, newStatus)) sortedSubRoutes processedStatuses
-          lastSubRoute <- safeLast newStatuses & fromMaybeM (InternalError "New Status Not Found")
+          routeStatuses <- getStatusForMetroAndSubway searchReq.journeyRouteDetails searchReq.id isLastCompleted
+          lastSubRoute <- safeLast routeStatuses & fromMaybeM (InternalError "New Status Not Found")
           let (_, lastStatusChanged, lastNewStatus) = lastSubRoute
           when lastStatusChanged $ QFRFSSearch.updateJourneyLegStatus (Just lastNewStatus) searchReq.id
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InternalError "JourneySearchData not found")
@@ -180,7 +161,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                       statusChanged = changed,
                       mode
                     }
-                  | (subRoute, changed, newStatus) <- newStatuses
+                  | (subRoute, changed, newStatus) <- routeStatuses
                 ]
           return $ JT.Transit journeyLegStates
   where
@@ -220,12 +201,34 @@ getState mode searchId riderLastPoints isLastCompleted = do
     isUpcomingJourneyLeg :: JPT.JourneyLegStatus -> Bool
     isUpcomingJourneyLeg legStatus = legStatus `elem` [JPT.InPlan]
 
-    processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JPT.JourneyLegStatus -> Id Station -> m (Bool, JPT.JourneyLegStatus)
-    processOldStatus mbOldStatus toStationId = do
+    processOldStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JPT.JourneyLegStatus -> Id Station -> Bool -> m (Bool, JPT.JourneyLegStatus)
+    processOldStatus mbOldStatus toStationId isLastCompleted' = do
       mbToStation <- QStation.findById toStationId
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
-      let oldStatus = fromMaybe (if isLastCompleted then JPT.Ongoing else JPT.InPlan) mbOldStatus
-      return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted) mbToLatLong
+      let oldStatus = fromMaybe (if isLastCompleted' then JPT.Ongoing else JPT.InPlan) mbOldStatus
+      return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted') mbToLatLong
+
+    getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [JPT.MultiModalJourneyRouteDetails] -> Id Domain.Types.FRFSSearch.FRFSSearch -> Bool -> m [(JPT.MultiModalJourneyRouteDetails, Bool, JPT.JourneyLegStatus)]
+    getStatusForMetroAndSubway journeyRouteDetails searchId' isLastCompleted' = do
+      let sortedSubRoutes = sortOn (.subLegOrder) journeyRouteDetails
+      (_, (_, processedStatuses)) <-
+        foldM
+          ( \(isFirst, (prevStatus, acc)) subRoute -> do
+              toStationId <- subRoute.toStationId & fromMaybeM (InternalError "Missing toStationId")
+              let newIsLastCompleted = if isFirst then prevStatus else False
+              newStatus <- processOldStatus subRoute.journeyStatus toStationId newIsLastCompleted
+              if snd newStatus == JPT.Completed
+                then pure (True, (newIsLastCompleted, newStatus : acc))
+                else pure (False, (newIsLastCompleted, newStatus : acc))
+          )
+          (True, (isLastCompleted', []))
+          sortedSubRoutes
+      let processedStatuses' = reverse processedStatuses
+      let newStatuses = zipWith (\subRoute (changed, newStatus) -> (subRoute, changed, newStatus)) sortedSubRoutes processedStatuses'
+      forM_ newStatuses $ \(subRoute, statusChanged, newStatus) -> do
+        when statusChanged $ do
+          QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
+      pure newStatuses
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> m (Maybe JT.GetFareResponse)
 getFare merchant merchantOperatingCity vehicleCategory routeDetails = do
