@@ -233,7 +233,9 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           color = Just vehicleColour,
           fuelType = Nothing,
           bodyType = Nothing,
-          status = Nothing
+          status = Nothing,
+          grossVehicleWeight = Nothing,
+          unladdenWeight = Nothing
         }
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
