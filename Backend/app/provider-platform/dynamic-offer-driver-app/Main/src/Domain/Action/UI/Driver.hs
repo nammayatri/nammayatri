@@ -103,6 +103,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import Data.Time (defaultTimeLocale, parseTimeM)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
@@ -927,6 +928,18 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
       mbDriverOverchargingTag = Yudhishthira.accessTagKey (LYT.TagName "DriverChargingBehaviour") driverTags
       mbTotalRidesConsideredForFareIssues = Yudhishthira.accessTagKey (LYT.TagName "TotalRidesConsideredForFareIssues") driverTags
       mbRidesWithFareIssues = Yudhishthira.accessTagKey (LYT.TagName "RidesWithFareIssue") driverTags
+      mbOverchargingBlockedTill = Yudhishthira.accessTagKey (LYT.TagName "OverchargingBlockedTill") driverTags
+  let (overchargingBlocked, blockedTill) =
+        case (mbDriverOverchargingTag, mbOverchargingBlockedTill) of
+          (Just driverOverchargingTag, Just overchargingBlockedTillV) | transporterConfig.enableOverchargingBlocker -> do
+            let bt :: DA.Result Integer = DA.fromJSON overchargingBlockedTillV
+            case bt of
+              DA.Success bt' -> do
+                let bt'' = epochToUTCTime (bt' - fromIntegral transporterConfig.timeDiffFromUtc)
+                let highOC = highOverchargingTag driverOverchargingTag
+                (highOC, bool Nothing (Just bt'') highOC)
+              _ -> (False, Nothing)
+          _ -> (False, Nothing)
   return $
     DriverEntityRes
       { id = person.id,
@@ -940,8 +953,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         active = driverInfo.active,
         onRide = onRideFlag,
         enabled = driverInfo.enabled,
-        blocked = driverInfo.blocked,
-        blockExpiryTime = driverInfo.blockExpiryTime,
+        blocked = driverInfo.blocked || overchargingBlocked,
+        blockExpiryTime = driverInfo.blockExpiryTime <|> blockedTill,
         blockedReasonFlag = driverInfo.blockReasonFlag,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
@@ -984,6 +997,10 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
         ..
       }
+  where
+    highOverchargingTag overchargingTag = overchargingTag `elem` ["SuperOverCharging", "HighOverCharging", "MediumOverCharginge"]
+
+    epochToUTCTime epoch = posixSecondsToUTCTime (fromInteger epoch)
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
