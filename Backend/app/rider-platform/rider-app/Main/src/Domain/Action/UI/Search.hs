@@ -190,6 +190,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let merchantOperatingCityId = merchantOperatingCity.id
   let isMeterRide = getIsMeterRideSearch req
 
+  when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
+    throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID

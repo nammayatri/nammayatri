@@ -66,6 +66,6 @@ getMeterRidePrice (_, merchantId, merchantOpCityId) rideId = do
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstiamte -> do
-        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare}
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = ride.traveledDistance}
     )
     mbMeterRideEstimate
