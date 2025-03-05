@@ -154,6 +154,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags),
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
+      Se.Set Beam.dateOfBirth dateOfBirth,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
       Se.Set Beam.description description,
       Se.Set Beam.deviceId deviceId,
@@ -188,6 +189,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.payoutVpa payoutVpa,
+      Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByCustomer referredByCustomer,
@@ -203,6 +205,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.totalRidesCount totalRidesCount,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.useFakeOtp useFakeOtp,
+      Se.Set Beam.verificationChannel verificationChannel,
       Se.Set Beam.whatsappNotificationEnrollStatus whatsappNotificationEnrollStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
