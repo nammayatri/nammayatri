@@ -8,6 +8,6 @@ import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
-data MeterRidePriceRes = MeterRidePriceRes {fare :: Kernel.Types.Common.HighPrecMoney}
+data MeterRidePriceRes = MeterRidePriceRes {distance :: Kernel.Types.Common.HighPrecMeters, fare :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

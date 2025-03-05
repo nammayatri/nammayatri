@@ -25,6 +25,7 @@ import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
@@ -110,6 +111,7 @@ type API =
            :<|> SocialLogin.API
            :<|> VehicleDetails.API
            :<|> PriceBreakup.API
+           :<|> MeterRide.API
            :<|> Tokenization.API
            :<|> FareCalculator.API
            :<|> ReferralPayout.API
@@ -159,6 +161,7 @@ handler =
     :<|> SocialLogin.handler
     :<|> VehicleDetails.handler
     :<|> PriceBreakup.handler
+    :<|> MeterRide.handler
     :<|> Tokenization.handler
     :<|> FareCalculator.handler
     :<|> ReferralPayout.handler
