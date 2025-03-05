@@ -232,6 +232,7 @@ library
       Domain.Action.UI.TicketService
       Domain.Action.UI.TrackRoute
       Domain.Action.UI.TriggerFCM
+      Domain.Action.UI.Voip
       Domain.Action.UI.Whatsapp
       Domain.Types.Booking.API
       Domain.Types.CacType
@@ -467,6 +468,7 @@ library
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.UiRiderConfigExtra
+      Storage.Queries.VoipCallStatusExtra
       Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
@@ -534,6 +536,7 @@ library
       API.Action.UI.TicketService
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
+      API.Action.UI.Voip
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.Tickets
@@ -688,6 +691,7 @@ library
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
+      Domain.Types.VoipCallStatus
       Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -802,6 +806,7 @@ library
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
+      Storage.Beam.VoipCallStatus
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
@@ -917,6 +922,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.UiRiderConfig
+      Storage.Queries.OrphanInstances.VoipCallStatus
       Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
@@ -967,6 +973,7 @@ library
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
+      Storage.Queries.VoipCallStatus
       Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:

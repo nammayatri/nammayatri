@@ -1,0 +1,39 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  CallService: Kernel.External.Call.Types
+  Ride: Domain.Types.Ride
+  VoipStatus: Utils.Common.Voip.Types.VoipStorageType
+
+VoipCallStatus:
+  tableName: voip_call_status
+
+  fields:
+    id : Id VoipCallStatus
+    callId : Maybe Text
+    callStatus : VoipStatus
+    rideId: Id Ride
+    errorCode: Maybe Int
+    networkType: Text
+    networkQuality: Text
+    merchantId : Id Merchant
+    merchantCity: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    rideId: "!SecondaryKey"
+
+  queries:
+    updateByCallId:
+      where: callId
+      kvFunction: updateOneWithKV
+      params: [callStatus, errorCode, networkType, networkQuality, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId]

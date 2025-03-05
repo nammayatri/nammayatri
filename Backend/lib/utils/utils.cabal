@@ -32,6 +32,8 @@ library
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
+      Utils.Common.Voip.Types.VoipApiType
+      Utils.Common.Voip.Types.VoipStorageType
   other-modules:
       Paths_utils
   hs-source-dirs:
