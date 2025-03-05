@@ -377,8 +377,12 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
                 waypoints
         let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
         pure (minDistanceFromVehicle, nextStop)
-    let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
-        nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
+    let ((closestDistanceToVehicle, subsequentWaypoints), nextStop) = minimumBy (comparing (fst . fst)) minDistancesWithWaypoints
+        distanceToClosestWaypoint = metersToHighPrecMeters closestDistanceToVehicle
+        distanceFromClosestToStop = foldr (\(curr, next) acc -> acc + distanceBetweenInMeters curr next) (HighPrecMeters 0) (pairWithNext subsequentWaypoints)
+        nextStopTravelDistance = distanceToClosestWaypoint + distanceFromClosestToStop
+        -- let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
+        -- nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
         upcomingStopsList = dropWhile (/= nextStop) sortedStops
         upcomingStopPairs = pairWithNext upcomingStopsList
 
@@ -516,7 +520,7 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
 
     calculateTimes :: UTCTime -> Meters -> Maybe Seconds -> Maybe UTCTime -> (Maybe Seconds, Maybe Seconds)
     calculateTimes now nextStopTravelDistance nextStopTravelTime startTime
-      | nextStopTravelDistance > 100 = (Nothing, Nothing)
+      | nextStopTravelDistance.getMeters > 100 = (Nothing, Nothing)
       | otherwise =
         let actualTime = fmap (nominalDiffTimeToSeconds . (`diffUTCTime` now)) startTime
             delay = liftM2 (\t (Seconds est) -> Seconds (t - est)) (getSeconds <$> actualTime) nextStopTravelTime
