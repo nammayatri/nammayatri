@@ -28,7 +28,7 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
   case st of
-    DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen}) 
+    DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen})
     SplashScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { splashScreen = a state.splashScreen})
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
     DriverProfileScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverProfileScreen = a state.driverProfileScreen})
@@ -85,6 +85,7 @@ modifyScreenState st =
     ScheduleRideAcceptedScreenStateType a  -> modifyState (\(GlobalState state) -> GlobalState $ state {scheduledRideAcceptedScreen = a state.scheduledRideAcceptedScreen})
     UploadParcelImageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {uploadParcelImageScreen = a state.uploadParcelImageScreen})
     MetroWarriorsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroWarriorsScreen = a state.metroWarriorsScreen})
+    ExtraChargeInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {extraChargeInfoScreen = a state.extraChargeInfoScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
