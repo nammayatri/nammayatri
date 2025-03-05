@@ -389,7 +389,9 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
         cumulativeDistances = scanl (+) nextStopTravelDistance segmentDistancesForUpcoming
 
     now <- getCurrentTime
-    let (actualTime, delay) = calculateTimes now nextStopTravelDistance nextStopTravelTime vehicleInfo.startTime
+    logDebug $ "Next stop: " <> show nextStop <> ", nextStopTravelDistance: " <> show (highPrecMetersToMeters nextStopTravelDistance) <> ", vehicleId: " <> show vehicleId
+    let (actualTime, delay) = calculateTimes now (highPrecMetersToMeters nextStopTravelDistance) nextStopTravelTime vehicleInfo.startTime
+    logDebug $ "Actual travel time: " <> show actualTime <> ", delay: " <> show delay <> ", vehicleId: " <> show vehicleId
     let upcomingStopsEntries =
           zipWith3
             ( \stop cumulativeDist duration -> do
@@ -512,12 +514,12 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode = do
     stopPairRoutePointsKey :: Text -> Text
     stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
 
-    calculateTimes :: UTCTime -> HighPrecMeters -> Maybe Seconds -> Maybe UTCTime -> (Maybe Seconds, Maybe Seconds)
+    calculateTimes :: UTCTime -> Meters -> Maybe Seconds -> Maybe UTCTime -> (Maybe Seconds, Maybe Seconds)
     calculateTimes now nextStopTravelDistance nextStopTravelTime startTime
       | nextStopTravelDistance > 100 = (Nothing, Nothing)
       | otherwise =
         let actualTime = fmap (nominalDiffTimeToSeconds . (`diffUTCTime` now)) startTime
-            delay = liftM2 (\t (Seconds est) -> Seconds (t - est)) (getSeconds <$> actualTime) (nextStopTravelTime)
+            delay = liftM2 (\t (Seconds est) -> Seconds (t - est)) (getSeconds <$> actualTime) nextStopTravelTime
          in (actualTime, delay)
 
     computeFromSpeed nextStopTravelDistance speed = Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)
