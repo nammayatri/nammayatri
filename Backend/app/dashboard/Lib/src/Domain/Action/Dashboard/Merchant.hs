@@ -185,18 +185,55 @@ listMerchants _ mbLimit mbOffset mbShortId = do
       pure $ DMerchant.mkMerchantAPIEntity decryptedMerchant emailList
   pure ListMerchantResp {list = list, summary = Summary {totalCount = 10000, count = length list}}
 
+-- createUserForMerchant ::
+--   (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]) =>
+--   TokenInfo ->
+--   DPerson.CreatePersonReq ->
+--   m DPerson.CreatePersonRes
+-- createUserForMerchant tokenInfo req = do
+--   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+--   merchantAssociatedAccount <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
+--   merchantUserAccountLimit <- asks (.merchantUserAccountNumber)
+--   when (length merchantAssociatedAccount >= merchantUserAccountLimit) $ throwError (MerchantAccountLimitExceeded (merchant.shortId.getShortId))
+--   personEntity <- DPerson.createPerson tokenInfo req
+--   _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = tokenInfo.city, merchantId = merchant.shortId}
+--   pure personEntity
+
 createUserForMerchant ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]
+  ) =>
   TokenInfo ->
   DPerson.CreatePersonReq ->
   m DPerson.CreatePersonRes
 createUserForMerchant tokenInfo req = do
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+
+  role <- QRole.findById req.roleId >>= fromMaybeM (RoleDoesNotExist req.roleId.getId)
+
+  let isFleetOwner = role.dashboardAccessType == FLEET_OWNER
+  when (isFleetOwner && fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) $ do
+    QMerchant.updateEnableStatus merchant.shortId False
+    throwError (InvalidRequest "Fleet owner registration requires admin approval for this merchant")
+
   merchantAssociatedAccount <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
   merchantUserAccountLimit <- asks (.merchantUserAccountNumber)
-  when (length merchantAssociatedAccount >= merchantUserAccountLimit) $ throwError (MerchantAccountLimitExceeded (merchant.shortId.getShortId))
+  when (length merchantAssociatedAccount >= merchantUserAccountLimit) $
+    throwError (MerchantAccountLimitExceeded (merchant.shortId.getShortId))
+
   personEntity <- DPerson.createPerson tokenInfo req
-  _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = tokenInfo.city, merchantId = merchant.shortId}
+
+  _ <-
+    DPerson.assignMerchantCityAccess
+      tokenInfo
+      personEntity.person.id
+      DPerson.MerchantCityAccessReq
+        { operatingCity = tokenInfo.city,
+          merchantId = merchant.shortId
+        }
+
   pure personEntity
 
 buildPersonCreateReq :: (BeamFlow m r, EncFlow m r) => CreateMerchantWithAdminReq -> DRole.Role -> m SP.Person
