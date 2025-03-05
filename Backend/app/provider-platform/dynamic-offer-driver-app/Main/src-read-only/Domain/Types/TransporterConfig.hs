@@ -180,6 +180,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
+    requiresOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
     schedulePayoutForDay :: Kernel.Prelude.Maybe Kernel.Prelude.Integer,
