@@ -27,6 +27,8 @@ module Environment
 where
 
 import AWS.S3
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -34,7 +36,7 @@ import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as DM
-import EulerHS.Prelude (newEmptyTMVarIO)
+import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -45,6 +47,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Distance, DistanceUnit (Meter), HighPrecMeters, Seconds, convertHighPrecMetersToDistance)
@@ -70,7 +73,9 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
+import qualified Storage.Queries.BecknConfig as QBC
 import System.Environment as SE
+import Tools.Error
 import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types hiding (ONDC)
@@ -354,7 +359,9 @@ instance Registry Flow where
       performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
       performRegistryLookup priorityList sub merchant tryNumber = do
         fetchUrlFromList priorityList >>= \registryUrl -> do
-          Registry.registryLookup registryUrl sub
+          bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) BecknSpec.METRO >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchant.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| BecknSpec.METRO ||+ "")
+          let selfSubId = if sub.domain == Domain.PUBLIC_TRANSPORT then bapConfig.subscriberId else merchant.bapId
+          Registry.registryLookup registryUrl sub selfSubId
             `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
       reorderList :: [a] -> [a]
       reorderList [] = []

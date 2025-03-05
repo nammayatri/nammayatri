@@ -89,7 +89,7 @@ fareProductConstructorModifier = \case
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: SearchReqLocation,
-    destination :: SearchReqLocation,
+    destination :: Maybe SearchReqLocation,
     stops :: Maybe [SearchReqLocation],
     isSourceManuallyMoved :: Maybe Bool,
     isDestinationManuallyMoved :: Maybe Bool,
@@ -100,7 +100,8 @@ data OneWaySearchReq = OneWaySearchReq
     quotesUnifiedFlow :: Maybe Bool,
     sessionToken :: Maybe Text,
     placeNameSource :: Maybe Text,
-    driverIdentifier :: Maybe DRL.DriverIdentifier
+    driverIdentifier :: Maybe DRL.DriverIdentifier,
+    isMeterRideSearch :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

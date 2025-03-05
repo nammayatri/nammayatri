@@ -33,6 +33,7 @@ getDistance = \case
   DRB.OneWaySpecialZoneDetails details -> Just details.distance
   DRB.InterCityDetails details -> Just details.distance
   DRB.AmbulanceDetails details -> Just details.distance
+  DRB.MeterRideDetails _ -> Nothing
 
 -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
 getFareProductType :: Domain.Types.Booking.BookingDetails -> FareProductType
@@ -42,6 +43,7 @@ getFareProductType = \case
   DRB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
   DRB.InterCityDetails _ -> INTER_CITY
   DRB.AmbulanceDetails _ -> AMBULANCE
+  DRB.MeterRideDetails _ -> ONE_WAY
   _ -> DRIVER_OFFER
 
 getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -53,6 +55,7 @@ getOtpCode = \case
   DRB.InterCityDetails details -> details.otpCode
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails details -> details.otpCode
+  DRB.MeterRideDetails _ -> Nothing
 
 getParcelQuantity :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Int
 getParcelQuantity = \case
@@ -73,6 +76,7 @@ getIsUpgradedToCab = \case
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails _ -> Nothing
+  DRB.MeterRideDetails _ -> Nothing
 
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
@@ -83,6 +87,7 @@ getStopLocationId = \case
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails _ -> Nothing
+  DRB.MeterRideDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getToLocationId bookingDetails = do
@@ -98,6 +103,7 @@ getToLocation = \case
   DRB.InterCityDetails details -> Just details.toLocation
   DRB.AmbulanceDetails details -> Just details.toLocation
   DRB.DeliveryDetails details -> Just details.toLocation
+  DRB.MeterRideDetails details -> details.toLocation
 
 getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
 getDeliveryBookingInfo = \case
@@ -191,6 +197,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         Just tripCategory ->
           case tripCategory of
             OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
+            OneWay MeterRide -> DRB.MeterRideDetails <$> buildOneWayMeterRideDetails toLocId
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
@@ -217,8 +224,13 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
           { distance = distance',
             ..
           }
+
+    buildOneWayMeterRideDetails mbToLocId = do
+      mbToLocation <- maybe (pure Nothing) (QL.findById . Id) mbToLocId
+      pure $ DRB.MeterRideBookingDetails {distanceCovered = Nothing, toLocation = mbToLocation}
+
     buildInterCityDetails mbToLocid stops = do
-      toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
+      toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way intercity bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
       pure
@@ -228,7 +240,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             ..
           }
     buildOneWaySpecialZoneDetails mbToLocid stops = do
-      toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
+      toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way special zone bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
       pure

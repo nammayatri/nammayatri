@@ -28,7 +28,7 @@ updateInitiatedBy :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prel
 updateInitiatedBy initiatedBy id = do updateOneWithKV [Se.Set Beam.initiatedBy initiatedBy] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRiderPreferredOption :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequest.RiderPreferredOption -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption (Just riderPreferredOption)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption ((Just riderPreferredOption))] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTotalRidesCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

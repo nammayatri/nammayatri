@@ -542,7 +542,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       domain = Context.MOBILITY
       lookupReq = SimpleLookupRequest {unique_key_id = uniqueKeyId, subscriber_id = subscriberId, merchant_id = baseMerchant.id.getId, subscriber_type = subType, ..}
   mbAddCityReq <-
-    Registry.registryLookup nyRegistryUrl lookupReq >>= \case
+    Registry.registryLookup nyRegistryUrl lookupReq subscriberId >>= \case
       Nothing -> do
         logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
         return Nothing

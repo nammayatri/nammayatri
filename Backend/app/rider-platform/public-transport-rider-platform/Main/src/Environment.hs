@@ -153,7 +153,8 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup sReq = do
     registryUrl <- asks (.registryUrl)
-    Registry.withSubscriberCache (Registry.registryLookup registryUrl) sReq
+    selfId <- asks (.selfId)
+    Registry.withSubscriberCache (\req -> Registry.registryLookup registryUrl req selfId) sReq
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

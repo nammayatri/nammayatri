@@ -86,6 +86,7 @@ INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id
 
 -- ONLY FOR LOCAL
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area , trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('494abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'InterCity_OneWayOnDemandStaticOffer', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area , trip_category, time_bounds, enabled, merchant_operating_city_id) VALUES ('094abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'OneWay_MeterRide', 'Unbounded', true, (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --

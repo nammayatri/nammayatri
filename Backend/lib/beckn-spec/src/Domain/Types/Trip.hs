@@ -200,7 +200,7 @@ data TripOption = TripOption
     tripCategories :: [TripCategory]
   }
 
-data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDynamicOffer
+data OneWayMode = OneWayRideOtp | OneWayOnDemandStaticOffer | OneWayOnDemandDynamicOffer | MeterRide
   deriving stock (Eq, Show, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable OneWayMode
@@ -380,6 +380,7 @@ shouldRectifyDistantPointsSnapToRoadFailure :: TripCategory -> Bool
 shouldRectifyDistantPointsSnapToRoadFailure tripCategory = case tripCategory of
   Rental _ -> True
   InterCity _ _ -> True
+  OneWay MeterRide -> True
   _ -> False
 
 isRentalTrip :: TripCategory -> Bool

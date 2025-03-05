@@ -25,6 +25,7 @@ data PayoutConfigT f = PayoutConfigT
     payoutRegistrationCgst :: B.C f Kernel.Types.Common.HighPrecMoney,
     payoutRegistrationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     payoutRegistrationSgst :: B.C f Kernel.Types.Common.HighPrecMoney,
+    referralProgramStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referralRewardAmountPerRide :: B.C f Kernel.Types.Common.HighPrecMoney,
     remark :: B.C f Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: B.C f Kernel.Types.Common.HighPrecMoney,

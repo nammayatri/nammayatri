@@ -232,3 +232,22 @@ ALTER TABLE atlas_app.booking ADD COLUMN parcel_quantity integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN journey_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -103,4 +103,5 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup sReq = do
     registryUrl <- asks (.registryUrl)
-    Registry.registryLookup registryUrl sReq
+    selfId <- asks (.selfId)
+    Registry.registryLookup registryUrl sReq selfId

@@ -25,6 +25,7 @@ data PayoutConfig = PayoutConfig
     payoutRegistrationCgst :: Kernel.Types.Common.HighPrecMoney,
     payoutRegistrationFee :: Kernel.Types.Common.HighPrecMoney,
     payoutRegistrationSgst :: Kernel.Types.Common.HighPrecMoney,
+    referralProgramStartDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     remark :: Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: Kernel.Types.Common.HighPrecMoney,

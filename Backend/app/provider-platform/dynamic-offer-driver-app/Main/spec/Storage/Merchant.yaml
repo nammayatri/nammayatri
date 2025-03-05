@@ -1536,6 +1536,7 @@ PayoutConfig:
     orderType: Text
     expand: Maybe Expand
     maxPayoutReferralForADay: Maybe Int
+    referralProgramStartDate: Maybe UTCTime
   beamType:
     timeDiff: Seconds
   toTType:
