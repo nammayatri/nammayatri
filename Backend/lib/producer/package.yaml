@@ -97,7 +97,7 @@ ghc-options:
   - -Werror
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
+  # - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
   - -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false}
