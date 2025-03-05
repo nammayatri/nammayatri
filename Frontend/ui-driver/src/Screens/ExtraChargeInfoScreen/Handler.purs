@@ -16,6 +16,7 @@ import PrestoDOM.Core (terminateUI)
 import Effect.Class (liftEffect)
 import Screens.ExtraChargeInfoScreen.View as ExtraChargeInfoScreen
 import Debug
+import JBridge
 
 
 extraChargeInfoScreen :: FlowBT String Unit
@@ -23,4 +24,6 @@ extraChargeInfoScreen = do
     (GlobalState state) <- getState
     void $ lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "ExtraChargeInfoScreen" Nothing
     act <- lift $ lift $ showScreenWithNameSpace $ ExtraChargeInfoScreen.screen state.extraChargeInfoScreen
+    let _ = releaseYoutubeView unit
     void $ lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "ExtraChargeInfoScreen"
+
