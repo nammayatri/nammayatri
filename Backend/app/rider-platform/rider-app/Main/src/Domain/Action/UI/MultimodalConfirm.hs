@@ -83,7 +83,7 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
   forM_ confirmElements $ \element ->
-    when (element.skipBooking) $
+    when element.skipBooking $
       JM.skipLeg journeyId element.journeyLegOrder
   void $ JM.startJourney forcedBookLegOrder journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
@@ -114,7 +114,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
-  -- handle if onit doesn't come for all bookings once ui designs are there
+  -- handle if on_init doesn't come for all bookings once ui designs are there
   if allLegsOnInitDone
     then do
       frfsBookingStatusArr <- FRFSTicketService.frfsBookingStatus (personId, merchantId) `mapM` allJourneyFrfsBookings
@@ -203,22 +203,18 @@ postMultimodalSwitch (_, _) journeyId req = do
   canSwitch <- JM.canBeSwitched legData req.newMode
   isCancellable <- JM.checkIfCancellable legData
   let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
+  unless isCancellable $ do throwError (JourneyLegCannotBeCancelled journeyLeg.id.getId)
+  unless canSwitch $ do throwError (JourneyLegCannotBeSwitched journeyLeg.id.getId)
   Redis.whenWithLockRedis lockKey 5 $ do
-    if isCancellable
+    isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
+    if not isExtendLeg
       then do
-        if canSwitch
-          then do
-            isExtendLeg <- JM.isExtendable remainingLegs legData req.newMode
-            if not isExtendLeg
-              then do
-                JM.cancelLeg legData (SCR.CancellationReasonCode "") False
-                newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
-                addAllLegs journeyId [newJourneyLeg]
-                when (legData.status /= JL.InPlan) $
-                  fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
-              else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
-          else throwError $ JourneyLegCannotBeSwitched journeyLeg.id.getId
-      else throwError $ JourneyLegCannotBeCancelled journeyLeg.id.getId
+        JM.cancelLeg legData (SCR.CancellationReasonCode "") False
+        newJourneyLeg <- JM.createJourneyLegFromCancelledLeg journeyLeg req.newMode req.startLocation
+        addAllLegs journeyId [newJourneyLeg]
+        when (legData.status /= JL.InPlan) $
+          fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
+      else throwError $ InvalidRequest "Call the Extend Leg" -- TODO : Call the Extend Leg API
   pure Kernel.Types.APISuccess.Success
 
 postMultimodalRiderLocation ::

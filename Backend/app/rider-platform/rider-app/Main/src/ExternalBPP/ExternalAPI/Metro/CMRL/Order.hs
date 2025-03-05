@@ -94,10 +94,8 @@ generateQRAPI = Proxy
 generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> GenerateQRReq -> m [TicketInfo]
 generateQRTickets config qrReq = do
   let modifiedQrReq = qrReq {origin = getStationCode qrReq.origin, destination = getStationCode qrReq.destination}
-  accessToken <- getAuthToken config
-  qrResponse <-
-    callAPI config.networkHostUrl (ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq) "generateQRTickets" generateQRAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_GENERATE_QR_TICKET_API") config.networkHostUrl)
+      eulerClient = \accessToken -> ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq
+  qrResponse <- callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
   return qrResponse.result
   where
     getStationCode :: Text -> Text

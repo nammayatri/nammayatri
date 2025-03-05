@@ -272,6 +272,7 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.Auth
       ExternalBPP.ExternalAPI.Metro.CMRL.BusinessHour
       ExternalBPP.ExternalAPI.Metro.CMRL.DurationDetails
+      ExternalBPP.ExternalAPI.Metro.CMRL.Error
       ExternalBPP.ExternalAPI.Metro.CMRL.FareByOriginDest
       ExternalBPP.ExternalAPI.Metro.CMRL.FareMatrix
       ExternalBPP.ExternalAPI.Metro.CMRL.Order
