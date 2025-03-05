@@ -41,6 +41,7 @@ import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
+import Kernel.Utils.JSON
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -335,13 +336,20 @@ data BookingData = BookingData
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
+    _type :: DJ.QRType,
     txnId :: Text,
     createdAt :: UTCTime,
     cmrl :: [BookingData],
     mtc :: [BookingData]
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON UnifiedTicketQR where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON UnifiedTicketQR where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Provider = CMRL | MTC | DIRECT
   deriving (Eq, Show)
@@ -904,7 +912,8 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         endTime,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        qrType = Nothing
       }
 
 mkJourneyLeg :: MonadFlow m => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> Maybe GetFareResponse -> m DJL.JourneyLeg

@@ -5,7 +5,6 @@
 module Storage.Queries.JourneyLeg (module Storage.Queries.JourneyLeg, module ReExport) where
 
 import qualified Domain.Types.Common
-import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions

@@ -23,6 +23,7 @@ data Journey = Journey
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
+    qrType :: Kernel.Prelude.Maybe Domain.Types.Journey.QRType,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -37,6 +38,10 @@ data Journey = Journey
 
 data JourneyStatus = NEW | INITIATED | CONFIRMED | INPROGRESS | CANCELLED | FEEDBACK_PENDING | COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data QRType = INTEGRATED_QR | REGULAR_QR deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''QRType)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''JourneyStatus)

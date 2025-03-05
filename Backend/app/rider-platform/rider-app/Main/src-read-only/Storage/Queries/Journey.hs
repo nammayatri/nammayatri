@@ -31,6 +31,9 @@ updatePaymentStatus isPaymentSuccess id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isPaymentSuccess isPaymentSuccess, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateQRType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Journey.QRType -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
+updateQRType qrType id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.qrType qrType, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Journey.JourneyStatus -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status (Just status), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -48,6 +51,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.modes modes,
+      Se.Set Beam.qrType qrType,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
       Se.Set Beam.startTime startTime,
