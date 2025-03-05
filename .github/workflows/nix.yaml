@@ -5,6 +5,7 @@ on:
     branches: 
       - "main"
       - "prodHotPush-Common"
+      - "backend/fix/eta-in-wimb"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
