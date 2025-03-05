@@ -26,3 +26,8 @@ ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN event_cancelled
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN cancelled_seats integer ;
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN btype text ;
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN amount_to_refund double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN vendor_split_details json ;

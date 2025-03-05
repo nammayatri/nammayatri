@@ -4,6 +4,7 @@
 
 module Storage.Queries.TicketBookingPeopleCategory (module Storage.Queries.TicketBookingPeopleCategory, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TicketBookingPeopleCategory
 import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Beam.Functions
@@ -58,6 +59,7 @@ updateByPrimaryKey (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeople
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) pricePerUnit),
       Se.Set Beam.pricePerUnit ((.amount) pricePerUnit),
       Se.Set Beam.ticketBookingServiceCategoryId (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
+      Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

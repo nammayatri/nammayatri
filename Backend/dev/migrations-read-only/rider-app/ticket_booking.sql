@@ -34,3 +34,13 @@ ALTER TABLE atlas_app.ticket_booking ADD COLUMN currency text ;
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN cancelled_seats integer ;
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN booked_seats integer NOT NULL default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN vendor_split_details json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN block_expiration_time double precision ;
