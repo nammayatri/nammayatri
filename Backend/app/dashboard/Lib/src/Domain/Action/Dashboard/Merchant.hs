@@ -137,7 +137,8 @@ buildMerchant req = do
         website = Just req.website,
         authToken = Just encryptedAuthToken,
         enabled = Just True,
-        createdAt = now
+        createdAt = now,
+        requireAdminApprovalForFleetOnboarding = Just False
       }
 
 changeMerchantEnableState ::

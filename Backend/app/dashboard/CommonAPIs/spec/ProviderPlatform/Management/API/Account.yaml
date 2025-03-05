@@ -1,0 +1,21 @@
+
+
+
+
+# module: Account
+
+# apis:
+#   - GET: # FetchUnverifiedMerchantsAPI
+#       endpoint: /fetchUnverifiedAccounts
+#       auth: ApiAuthV2
+#       query:
+#         - fromDate: UTCTime
+#         - toDate: UTCTime
+#         - mobileNumber: Text
+#         - status: Bool
+#       response:
+#         type: UnverifiedMerchantsRes
+#       migrate:
+#         endpoint: MerchantAPI FetchUnverifiedMerchantsEndpoint
+#         endpointV2:
+#         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT FETCH_UNVERIFIED_MERCHANTS
