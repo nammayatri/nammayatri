@@ -4909,7 +4909,7 @@ updatePaymentStatusData ticketStatus shortOrderID = case ticketStatus of
   "Failed" -> do
     modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus = PP.Failed } })
   "RefundInitiated" -> do
-    void $ void $ lift $ lift $ showToast $ getStringV2 ticket_not_booked_refund_initiated
+    void $ pure $ toast $ getStringV2 ticket_not_booked_refund_initiated
     modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus =  PP.Failed } })
   _ -> do
     void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER

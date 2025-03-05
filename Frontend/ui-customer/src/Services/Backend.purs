@@ -1107,8 +1107,8 @@ bookTicketsBT payload placeId = do
             codeMessage = decodeError errResp.errorMessage "errorCode"
             userMessage = decodeError errResp.errorMessage "errorMessage"
         case errorPayload.code, codeMessage, userMessage of
-            400, "INVALID_REQUEST", errMsg -> void $ lift $ lift $ EHU.showToast errMsg
-            _, _, errMsg -> void $ lift $ lift $ EHU.showToast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            400, "INVALID_REQUEST", errMsg -> void $ pure $ toast errMsg
+            _, _, errMsg -> void $ pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { totalAmount = 0, servicesInfo = []}})
         BackT $ pure GoBack
 
