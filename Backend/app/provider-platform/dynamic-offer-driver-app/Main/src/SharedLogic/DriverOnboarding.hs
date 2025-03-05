@@ -622,7 +622,35 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.BusinessLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessLicense
   Domain.Types.DocumentVerificationConfig.VehicleFront -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFront
   Domain.Types.DocumentVerificationConfig.VehicleBack -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBack
-  Domain.Types.DocumentVerificationConfig.VehicleLeft -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft
   Domain.Types.DocumentVerificationConfig.VehicleRight -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRight
+  Domain.Types.DocumentVerificationConfig.VehicleLeft -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft
   Domain.Types.DocumentVerificationConfig.VehicleFrontInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior
   Domain.Types.DocumentVerificationConfig.VehicleBackInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior
+
+castDocumentTypeToDomain :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType -> Domain.Types.DocumentVerificationConfig.DocumentType
+castDocumentTypeToDomain = \case
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverLicense -> Domain.Types.DocumentVerificationConfig.DriverLicense
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRegistrationCertificate -> Domain.Types.DocumentVerificationConfig.VehicleRegistrationCertificate
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Permissions -> Domain.Types.DocumentVerificationConfig.Permissions
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SubscriptionPlan -> Domain.Types.DocumentVerificationConfig.SubscriptionPlan
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfilePhotoImage -> Domain.Types.DocumentVerificationConfig.ProfilePhoto
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.AadhaarCard -> Domain.Types.DocumentVerificationConfig.AadhaarCard
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanCard -> Domain.Types.DocumentVerificationConfig.PanCard
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePermitImage -> Domain.Types.DocumentVerificationConfig.VehiclePermit
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFitnessCertificateImage -> Domain.Types.DocumentVerificationConfig.VehicleFitnessCertificate
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInsuranceImage -> Domain.Types.DocumentVerificationConfig.VehicleInsurance
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePUCImage -> Domain.Types.DocumentVerificationConfig.VehiclePUC
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfileDetails -> Domain.Types.DocumentVerificationConfig.ProfileDetails
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SocialSecurityNumber -> Domain.Types.DocumentVerificationConfig.SocialSecurityNumber
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage -> Domain.Types.DocumentVerificationConfig.VehicleInspectionForm
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.GSTCertificate -> Domain.Types.DocumentVerificationConfig.GSTCertificate
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BackgroundVerification -> Domain.Types.DocumentVerificationConfig.BackgroundVerification
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UploadProfileImage -> Domain.Types.DocumentVerificationConfig.UploadProfile
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleNOC -> Domain.Types.DocumentVerificationConfig.VehicleNOC
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessLicense -> Domain.Types.DocumentVerificationConfig.BusinessLicense
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFront -> Domain.Types.DocumentVerificationConfig.VehicleFront
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBack -> Domain.Types.DocumentVerificationConfig.VehicleBack
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRight -> Domain.Types.DocumentVerificationConfig.VehicleRight
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft -> Domain.Types.DocumentVerificationConfig.VehicleLeft
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior -> Domain.Types.DocumentVerificationConfig.VehicleFrontInterior
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior -> Domain.Types.DocumentVerificationConfig.VehicleBackInterior
