@@ -327,11 +327,11 @@ instance Registry Flow where
     where
       performLookup sub = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId sub.subscriber_id sub.unique_key_id
+        merchant <- CM.findById (Id sub.merchant_id) >>= fromMaybeM (MerchantDoesNotExist sub.merchant_id)
         case mbRegistryMapFallback of
           Just registryMapFallback -> do
-            Registry.registryLookup registryMapFallback.registryUrl sub
+            Registry.registryLookup registryMapFallback.registryUrl sub merchant.subscriberId.getShortId
           Nothing -> do
-            merchant <- CM.findById (Id sub.merchant_id) >>= fromMaybeM (MerchantDoesNotExist sub.merchant_id)
             performRegistryLookup merchant.gatewayAndRegistryPriorityList sub merchant 1
       fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
       fetchUrlFromList priorityList = do
@@ -350,7 +350,7 @@ instance Registry Flow where
       performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
       performRegistryLookup priorityList sub merchant tryNumber = do
         fetchUrlFromList priorityList >>= \registryUrl -> do
-          Registry.registryLookup registryUrl sub
+          Registry.registryLookup registryUrl sub merchant.subscriberId.getShortId
             `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
       reorderList :: [a] -> [a]
       reorderList [] = []
