@@ -113,6 +113,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
+    enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
@@ -286,7 +287,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read)
 
-type TransporterConfig = TransporterConfigD 'Safe
+type TransporterConfig = TransporterConfigD ('Safe)
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 
