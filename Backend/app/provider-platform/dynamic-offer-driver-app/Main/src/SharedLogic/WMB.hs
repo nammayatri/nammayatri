@@ -20,6 +20,7 @@ import qualified Domain.Types.VehicleVariant as DVehVariant
 import Domain.Utils
 import Environment
 import qualified EulerHS.Prelude as EHS
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
@@ -212,14 +213,15 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                       void $ LF.rideDetails (cast tripTransaction.id) DRide.CANCELLED tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing Nothing
                       QTT.updateOnEnd CANCELLED (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
                       TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId CANCELLED "Ride Cancelled" "Your ride has been Cancelled" EmptyDynamicParam
-                      findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
-                        Just advancedTripTransaction -> do
-                          route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
-                          (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
-                          assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point True
-                        Nothing -> do
-                          QDI.updateOnRide False tripTransaction.driverId
-                          unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
+                      runInMasterDbAndRedis $
+                        findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
+                          Just advancedTripTransaction -> do
+                            route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
+                            (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
+                            assignTripTransaction advancedTripTransaction route False currentLocation destinationStopInfo.point True
+                          Nothing -> do
+                            QDI.updateOnRide False tripTransaction.driverId
+                            unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
                     IN_PROGRESS -> endTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource
                     _ -> pure ()
                 else do

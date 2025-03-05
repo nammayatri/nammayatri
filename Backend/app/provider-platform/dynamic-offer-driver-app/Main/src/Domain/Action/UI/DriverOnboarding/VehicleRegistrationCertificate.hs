@@ -52,6 +52,7 @@ import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
@@ -417,7 +418,7 @@ compareRegistrationDates actualDate providedDate =
     && ((convertUTCTimetoDate <$> providedDate) /= (convertUTCTimetoDate <$> convertTextToUTC actualDate))
 
 linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RCStatusReq -> Flow APISuccess
-linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = do
+linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = runInMasterDbAndRedis $ do
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError (RCActivationFailedPaymentDue driverId.getId)
