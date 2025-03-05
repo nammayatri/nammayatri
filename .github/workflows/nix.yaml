@@ -68,7 +68,7 @@ jobs:
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
-            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
           fi
   build:
     needs: [check-conditions]
