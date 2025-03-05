@@ -378,12 +378,17 @@ getUnifiedQR legs now = do
   let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
   let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL || provider == providerToText JL.DIRECT]
   let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC || provider == providerToText JL.DIRECT]
+  let qrType =
+        if not (null cmrlBookings) && not (null mtcBookings)
+          then JL.INTEGRATED_QR
+          else JL.REGULAR_QR
   if null cmrlBookings && null mtcBookings
     then Nothing
     else
       Just $
         JL.UnifiedTicketQR
           { version = "1.0",
+            type' = qrType,
             txnId = "nammayatri-test-N62dNNcFc8-1",
             createdAt = now,
             cmrl = cmrlBookings,

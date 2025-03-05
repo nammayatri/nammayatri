@@ -327,6 +327,7 @@ data BookingData = BookingData
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
+    type' :: QRType,
     txnId :: Text,
     createdAt :: UTCTime,
     cmrl :: [BookingData],
@@ -337,6 +338,10 @@ data UnifiedTicketQR = UnifiedTicketQR
 
 data Provider = CMRL | MTC | DIRECT
   deriving (Eq, Show)
+
+data QRType = INTEGRATED_QR | REGULAR_QR
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data IsCancellableResponse = IsCancellableResponse
   { canCancel :: Bool
