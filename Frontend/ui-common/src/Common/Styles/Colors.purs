@@ -104,10 +104,10 @@ textSecondary = "#5B5E69"
 warningRed :: Color
 warningRed  = "#f04c31"
 
-green900 :: Color 
+green900 :: Color
 green900 = "#53BB6F"
 
-greenAlpha :: Color 
+greenAlpha :: Color
 greenAlpha = "#1A53BB6F"
 
 yellow100 :: Color
@@ -119,7 +119,7 @@ greenOpacity10 = "#1A53BB6F"
 green300 :: Color
 green300 = "#DDFFEB"
 
-green100 :: Color 
+green100 :: Color
 green100 = "#1A53BB6F"
 
 dustyRed :: Color
@@ -128,7 +128,7 @@ dustyRed = "#BF4A4E"
 selectiveYellow :: Color
 selectiveYellow = "#FCB700"
 
-pearl :: Color 
+pearl :: Color
 pearl = "#FFECED"
 
 floralWhite :: Color
@@ -143,16 +143,16 @@ orange200 = "#FFE7C2"
 pickledBlue :: Color
 pickledBlue = "#29334A"
 
-linen :: Color 
-linen = "#FEF1E5" 
+linen :: Color
+linen = "#FEF1E5"
 
-pigmentGreen :: Color 
-pigmentGreen = "#40AA5C" 
+pigmentGreen :: Color
+pigmentGreen = "#40AA5C"
 
-almond :: Color 
+almond :: Color
 almond = "#F0DCCA"
 
-frenchSkyBlue :: Color 
+frenchSkyBlue :: Color
 frenchSkyBlue = "#80B2FF"
 
 frenchSkyBlue800 :: Color
@@ -177,7 +177,7 @@ transparentHigh :: Color
 transparentHigh = "#99FFFFFF"
 
 black800 :: Color
-black800 = 
+black800 =
   let config = getAppConfig appConfig
   in config.colors.black800
 
@@ -195,13 +195,13 @@ red :: Color
 red = let config = getAppConfig appConfig
   in config.colors.red
 
-blueMagenta :: Color 
+blueMagenta :: Color
 blueMagenta = "#9747FF"
 
 darkCharcoal :: Color
 darkCharcoal = "#333333"
 
-pink :: Color 
+pink :: Color
 pink = "#FEF1E5"
 
 blue650 :: Color
@@ -237,7 +237,7 @@ redOpacity16 = "#29E55454"
 redOpacity10 :: Color
 redOpacity10 = "#1AE55454"
 
-fadedPurple :: Color 
+fadedPurple :: Color
 fadedPurple = "#339747FF"
 
 red900 :: Color
@@ -255,7 +255,7 @@ black200 = "#1A2C2F3A"
 black80 :: Color
 black80 = "#142C2F3A"
 
-purple100 :: Color 
+purple100 :: Color
 purple100 = "#1A9747FF"
 
 blue100 :: Color
@@ -326,7 +326,7 @@ red200 = "#FFE0E0"
 darkRed :: Color
 darkRed = "#DC1C4A"
 
-tealishGreen :: Color 
+tealishGreen :: Color
 tealishGreen = "#E5F5E9"
 
 darkGradientBlue :: Color
@@ -337,7 +337,7 @@ lightBlueTeal = "#B2E4EF"
 black7000 :: Color
 black7000 = "#B32C2F3A"
 
-white13 :: Color 
+white13 :: Color
 white13 = "#21000000"
 
 black150 :: Color
@@ -349,14 +349,14 @@ policeBlue = "#2A5465"
 azureWhite :: Color
 azureWhite = "#D6EBF5"
 
-mountainFig :: Color 
+mountainFig :: Color
 mountainFig = "#373B49"
 
 
 blueGreen :: Color
 blueGreen = "#42B8BA"
 
-blueGreenBg :: Color 
+blueGreenBg :: Color
 blueGreenBg = "#E8F5F6"
 
 azureine :: Color
@@ -392,19 +392,19 @@ metroBlue = "#2250BF"
 pumpkin30 :: Color
 pumpkin30 = "#4DFF8533"
 
-pumpkin10 :: Color 
+pumpkin10 :: Color
 pumpkin10 = "#1AFF8533"
 
 seaShell :: Color
 seaShell = "#FFF8F4"
 
-darkOrange :: Color 
+darkOrange :: Color
 darkOrange = "#F88600"
 
-dodgerBlue30 :: Color 
+dodgerBlue30 :: Color
 dodgerBlue30 = "#4D2194FF"
 
-dodgerBlue8 :: Color 
+dodgerBlue8 :: Color
 dodgerBlue8 = "#142194FF"
 
 indianRed8 :: Color
@@ -416,8 +416,11 @@ lightBlue80 = "#CC80B2FF"
 surfaceRed :: Color
 surfaceRed = "#FDEAEA"
 
-limeGreen :: Color 
+limeGreen :: Color
 limeGreen = "#3AA215"
 
 brownishYellow :: Color
 brownishYellow = "#FFCC6E"
+
+argent :: Color
+argent = "#888888"

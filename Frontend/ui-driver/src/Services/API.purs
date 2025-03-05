@@ -222,8 +222,8 @@ instance showDriverActiveInactiveResp :: Show DriverActiveInactiveResp where sho
 instance decodeDriverActiveInactiveResp :: Decode DriverActiveInactiveResp where decode = defaultDecode
 instance encodeDriverActiveInactiveResp :: Encode DriverActiveInactiveResp where encode = defaultEncode
 
-newtype ErrorResponseDriverActivity = ErrorResponseDriverActivity { 
-    blockExpiryTime :: String, 
+newtype ErrorResponseDriverActivity = ErrorResponseDriverActivity {
+    blockExpiryTime :: String,
     blockReason :: String
 }
 
@@ -263,7 +263,7 @@ newtype Point = Point
     ,   ts :: String
     }
 
-newtype Odometer = Odometer 
+newtype Odometer = Odometer
   {
     value :: Number,
     fileId :: Maybe String
@@ -454,7 +454,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , paymentPending        :: Boolean
     , subscribed            :: Boolean
     , mediaUrl              :: Maybe String
-    , autoPayStatus         :: Maybe String  
+    , autoPayStatus         :: Maybe String
     , aadhaarCardPhoto      :: Maybe String
     , freeTrialDaysLeft     :: Maybe Int
     , payerVpa              :: Maybe String
@@ -469,7 +469,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canSwitchToIntraCity  :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
-    , payoutVpa             :: Maybe String 
+    , payoutVpa             :: Maybe String
     , payoutVpaStatus       :: Maybe PayoutVpaStatus
     , isPayoutEnabled       :: Maybe Boolean
     , payoutRewardAmount    :: Maybe Int
@@ -490,8 +490,26 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
     , subscriptionDown :: Maybe Boolean
+    , overchargingTag :: Maybe OverchargingTag
+    , ridesWithFareIssues :: Maybe Int
+    , totalRidesConsideredForFareIssues :: Maybe Int
     }
 
+data OverchargingTag =
+    SuperOverCharging -- Blocked
+  | HighOverCharging -- Blocked
+  | MediumOverCharging -- Suspended
+  | ModerateOverCharging -- High
+  | LowOverCharging -- Low
+  | VeryLowOverCharging -- Low
+  | NoOverCharging -- Zero
+
+derive instance genericOverChargingTag :: Generic OverchargingTag _
+instance showOverchargingTag :: Show OverchargingTag where show = genericShow
+instance decodeOverchargingTag :: Decode OverchargingTag where decode = defaultEnumDecode
+instance encodeOverchargingTag :: Encode OverchargingTag where encode = defaultEnumEncode
+instance eqOverchargingTag :: Eq OverchargingTag where eq = genericEq
+instance standardEncodeOverchargingTag :: StandardEncode OverchargingTag where standardEncode _ = standardEncode {}
 
 newtype DriverGoHomeInfo = DriverGoHomeInfo {
   cnt :: Int,
@@ -698,7 +716,7 @@ newtype RidesInfo = RidesInfo
       bookingType :: Maybe BookingTypes,
       bapName :: Maybe String,
       isValueAddNP :: Boolean,
-      parkingCharge :: Maybe Number, 
+      parkingCharge :: Maybe Number,
       coinsEarned :: Maybe (Array CoinsEarned),
       roundTrip :: Boolean,
       returnTime :: Maybe String,
@@ -759,7 +777,7 @@ instance showStopLocationAddress :: Show StopLocationAddress where show = generi
 instance decodeStopLocationAddress :: Decode StopLocationAddress where decode = defaultDecode
 instance encodeStopLocationAddress :: Encode StopLocationAddress where encode = defaultEncode
 
-newtype StopLocation = StopLocation 
+newtype StopLocation = StopLocation
   { address :: StopLocationAddress,
     createdAt :: String,
     id :: String,
@@ -776,7 +794,7 @@ instance decodeStopLocation :: Decode StopLocation where decode = defaultDecode
 instance encodeStopLocation :: Encode StopLocation where encode = defaultEncode
 
 newtype TripCategory = TripCategory
-    { 
+    {
       contents :: Maybe String,
       tag :: String
     }
@@ -784,7 +802,7 @@ newtype TripCategory = TripCategory
 derive instance genericTripCategory :: Generic TripCategory _
 derive instance newtypeTripCategory :: Newtype TripCategory _
 instance standardEncodeTripCategory :: StandardEncode TripCategory where standardEncode (TripCategory req) = standardEncode req
-instance showTripCategory :: Show TripCategory where show = genericShow     
+instance showTripCategory :: Show TripCategory where show = genericShow
 instance decodeTripCategory :: Decode TripCategory where decode = defaultDecode
 instance encodeTripCategory :: Encode TripCategory where encode = defaultEncode
 
@@ -965,9 +983,9 @@ data UpdateDriverInfoRequest = UpdateDriverInfoRequest UpdateDriverInfoReq
 
 newtype UpdateDriverInfoReq
   = UpdateDriverInfoReq UpdateDriverInfoReqEntity
-  
 
-type UpdateDriverInfoReqEntity = 
+
+type UpdateDriverInfoReqEntity =
   { middleName :: Maybe String
   , firstName :: Maybe String
   , lastName :: Maybe String
@@ -2221,7 +2239,7 @@ instance encodeGetPlaceNameResp :: Encode GetPlaceNameResp where encode = defaul
 
 derive instance genericPlaceName :: Generic PlaceName _
 derive instance newtypePlaceName :: Newtype PlaceName _
-instance standardEncodePlaceName :: StandardEncode PlaceName where standardEncode (PlaceName body) = standardEncode body  
+instance standardEncodePlaceName :: StandardEncode PlaceName where standardEncode (PlaceName body) = standardEncode body
 instance showPlaceName :: Show PlaceName where show = genericShow
 instance decodePlaceName :: Decode PlaceName where decode = defaultDecode
 instance encodePlaceName :: Encode PlaceName where encode = defaultEncode
@@ -2477,7 +2495,7 @@ instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
 derive instance genericCreateOrderRes :: Generic CreateOrderRes _
 derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
 instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
-instance showCreateOrderRes :: Show CreateOrderRes where 
+instance showCreateOrderRes :: Show CreateOrderRes where
   show (CreateOrderRes { id, order_id, payment_links, sdk_payload }) =
     show {id, order_id, payment_links, sdk_payload}
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
@@ -2557,9 +2575,9 @@ instance encodeGetPaymentHistoryResp :: Encode GetPaymentHistoryResp where encod
 
 derive instance genericDriverFeeStatus :: Generic DriverFeeStatus _
 instance showDriverFeeStatus :: Show DriverFeeStatus where show = genericShow
-instance decodeDriverFeeStatus :: Decode DriverFeeStatus 
-  where 
-    decode status = 
+instance decodeDriverFeeStatus :: Decode DriverFeeStatus
+  where
+    decode status =
       case (runExcept $ decode status) of
         Either.Right val -> case val of
                       "INACTIVE" -> defaultEnumDecode $ encode "INACTIVE_DRIVERFEE"
@@ -2704,7 +2722,7 @@ newtype PlanEntity = PlanEntity {
 }
 
 
-newtype CoinEntity = CoinEntity { 
+newtype CoinEntity = CoinEntity {
   coinDiscountUpto :: Number
   }
 
@@ -2749,7 +2767,7 @@ derive instance newtypePromotionPopupConfig :: Newtype PromotionPopupConfig _
 instance standardEncodePromotionPopupConfig :: StandardEncode PromotionPopupConfig where standardEncode (PromotionPopupConfig res) = standardEncode res
 instance showPromotionPopupConfig :: Show PromotionPopupConfig where show = genericShow
 instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode = defaultDecode
-instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode 
+instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq where
  makeRequest reqBody@(UiPlansReq vehicleVariant) headers = defaultMakeRequestWithoutLogs GET (EP.getUiPlans vehicleVariant) headers reqBody Nothing
@@ -2774,7 +2792,7 @@ derive instance newtypeUiPlansResp :: Newtype UiPlansResp _
 instance standardEncodeUiPlansResp :: StandardEncode UiPlansResp where standardEncode (UiPlansResp res) = standardEncode res
 instance showUiPlansResp :: Show UiPlansResp where show = genericShow
 instance decodeUiPlansResp :: Decode UiPlansResp where decode = defaultDecode
-instance encodeUiPlansResp :: Encode UiPlansResp where encode = defaultEncode 
+instance encodeUiPlansResp :: Encode UiPlansResp where encode = defaultEncode
 
 derive instance genericPlanEntity :: Generic PlanEntity _
 derive instance newtypePlanEntity :: Newtype PlanEntity _
@@ -2788,14 +2806,14 @@ derive instance newtypeOfferEntity :: Newtype OfferEntity _
 instance standardEncodeOfferEntity :: StandardEncode OfferEntity where standardEncode (OfferEntity res) = standardEncode res
 instance showOfferEntity :: Show OfferEntity where show = genericShow
 instance decodeOfferEntity :: Decode OfferEntity where decode = defaultDecode
-instance encodeOfferEntity :: Encode OfferEntity where encode = defaultEncode 
+instance encodeOfferEntity :: Encode OfferEntity where encode = defaultEncode
 
 derive instance genericCoinEntity :: Generic CoinEntity _
 derive instance newtypeCoinEntity :: Newtype CoinEntity _
 instance standardEncodeCoinEntity :: StandardEncode CoinEntity where standardEncode (CoinEntity res) = standardEncode res
 instance showCoinEntity :: Show CoinEntity where show = genericShow
 instance decodeCoinEntity :: Decode CoinEntity where decode = defaultDecode
-instance encodeCoinEntity :: Encode CoinEntity where encode = defaultEncode 
+instance encodeCoinEntity :: Encode CoinEntity where encode = defaultEncode
 
 
 -------------------------------------------------- SubscribePlan ------------------------------
@@ -2962,7 +2980,7 @@ derive instance newtypeGetCurrentPlanResp :: Newtype GetCurrentPlanResp _
 instance standardEncodeGetCurrentPlanResp :: StandardEncode GetCurrentPlanResp where standardEncode (GetCurrentPlanResp res) = standardEncode res
 instance showGetCurrentPlanResp :: Show GetCurrentPlanResp where show = genericShow
 instance decodeGetCurrentPlanResp :: Decode GetCurrentPlanResp where decode = defaultDecode
-instance encodeGetCurrentPlanResp :: Encode GetCurrentPlanResp where encode = defaultEncode 
+instance encodeGetCurrentPlanResp :: Encode GetCurrentPlanResp where encode = defaultEncode
 
 derive instance genericMandateData :: Generic MandateData _
 derive instance newtypeMandateData:: Newtype MandateData _
@@ -3009,7 +3027,7 @@ instance showKioskLocationResp :: Show KioskLocationResp where show = genericSho
 instance decodeKioskLocationResp :: Decode KioskLocationResp where decode = defaultDecode
 instance encodeKioskLocationResp :: Encode KioskLocationResp where encode = defaultEncode
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
--- Post Driver Feedback 
+-- Post Driver Feedback
 
 
 newtype PostRideFeedbackReq = PostRideFeedbackReq {
@@ -3066,13 +3084,13 @@ data FeeType = AUTOPAY_REGISTRATION | MANUAL_PAYMENT | AUTOPAY_PAYMENT
 
 derive instance genericFeeType :: Generic FeeType _
 instance showFeeType :: Show FeeType where show = genericShow
-instance decodeFeeType :: Decode FeeType where 
+instance decodeFeeType :: Decode FeeType where
   decode body = case unsafeFromForeign body of
-                  "MANDATE_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION 
-                  "RECURRING_INVOICE"           -> except $ Right MANUAL_PAYMENT 
-                  "RECURRING_EXECUTION_INVOICE" -> except $ Right AUTOPAY_PAYMENT 
+                  "MANDATE_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION
+                  "RECURRING_INVOICE"           -> except $ Right MANUAL_PAYMENT
+                  "RECURRING_EXECUTION_INVOICE" -> except $ Right AUTOPAY_PAYMENT
                   _                             -> fail $ ForeignError "Unknown response"
-instance encodeFeeType :: Encode FeeType where 
+instance encodeFeeType :: Encode FeeType where
   encode _ = encode {}
 instance eqFeeType :: Eq FeeType where eq = genericEq
 instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ = standardEncode {}
@@ -3081,12 +3099,12 @@ data LastPaymentType = AUTOPAY_REGISTRATION_TYPE | CLEAR_DUE
 
 derive instance genericLastPaymentType :: Generic LastPaymentType _
 instance showLastPaymentType :: Show LastPaymentType where show = genericShow
-instance decodeLastPaymentType :: Decode LastPaymentType where 
+instance decodeLastPaymentType :: Decode LastPaymentType where
   decode body = case unsafeFromForeign body of
-                  "AUTOPAY_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION_TYPE 
-                  "CLEAR_DUE"           -> except $ Right CLEAR_DUE 
+                  "AUTOPAY_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION_TYPE
+                  "CLEAR_DUE"           -> except $ Right CLEAR_DUE
                   _                             -> fail $ ForeignError "Unknown response"
-instance encodeLastPaymentType :: Encode LastPaymentType where 
+instance encodeLastPaymentType :: Encode LastPaymentType where
   encode _ = encode {}
 instance eqLastPaymentType :: Eq LastPaymentType where eq = genericEq
 instance standardEncodeLastPaymentType :: StandardEncode LastPaymentType where standardEncode _ = standardEncode {}
@@ -3104,7 +3122,7 @@ newtype AutoPayInvoiceHistory = AutoPayInvoiceHistory {
   invoiceId :: String,
   amount :: Number,
   executionAt :: String,
-  autoPayStage :: Maybe AutopayPaymentStage, 
+  autoPayStage :: Maybe AutopayPaymentStage,
   rideTakenOn :: String,
   isCoinCleared :: Boolean,
   coinDiscountAmount :: Maybe Number
@@ -3218,13 +3236,13 @@ derive instance genericAutopayPaymentStage :: Generic AutopayPaymentStage _
 instance showAutopayPaymentStage :: Show AutopayPaymentStage where show = genericShow
 instance decodeAutopayPaymentStage :: Decode AutopayPaymentStage
   where decode body = case unsafeFromForeign body of
-                  "NOTIFICATION_SCHEDULED"        -> except $ Right NOTIFICATION_SCHEDULED 
-                  "NOTIFICATION_ATTEMPTING"           -> except $ Right NOTIFICATION_ATTEMPTING 
-                  "EXECUTION_SCHEDULED" -> except $ Right EXECUTION_SCHEDULED 
-                  "EXECUTION_ATTEMPTING" -> except $ Right EXECUTION_ATTEMPTING 
-                  "EXECUTION_SUCCESS" -> except $ Right EXECUTION_SUCCESS 
-                  "EXECUTION_FAILED" -> except $ Right EXECUTION_FAILED 
-                  "NOTIFICATION_FAILED" -> except $ Right NOTIFICATION_FAILED 
+                  "NOTIFICATION_SCHEDULED"        -> except $ Right NOTIFICATION_SCHEDULED
+                  "NOTIFICATION_ATTEMPTING"           -> except $ Right NOTIFICATION_ATTEMPTING
+                  "EXECUTION_SCHEDULED" -> except $ Right EXECUTION_SCHEDULED
+                  "EXECUTION_ATTEMPTING" -> except $ Right EXECUTION_ATTEMPTING
+                  "EXECUTION_SUCCESS" -> except $ Right EXECUTION_SUCCESS
+                  "EXECUTION_FAILED" -> except $ Right EXECUTION_FAILED
+                  "NOTIFICATION_FAILED" -> except $ Right NOTIFICATION_FAILED
                   _   ->  except $ Right NOTIFICATION_SCHEDULED
 instance encodeAutopayPaymentStage :: Encode AutopayPaymentStage where encode = defaultEnumEncode
 instance eqAutopayPaymentStage :: Eq AutopayPaymentStage where eq = genericEq
@@ -3320,7 +3338,7 @@ instance encodeAddHomeLocationReq :: Encode AddHomeLocationReq where encode = de
 
 
 data GetHomeLocationReq = GetHomeLocationReq
-newtype GetHomeLocationsRes = GetHomeLocationsRes { 
+newtype GetHomeLocationsRes = GetHomeLocationsRes {
   locations :: Array DriverHomeLocationAPIEntity
 }
 
@@ -3453,7 +3471,7 @@ instance decodeGetCityRes :: Decode GetCityRes where decode = defaultDecode
 instance encodeGetCityRes :: Encode GetCityRes where encode = defaultEncode
 
 ---------------------------------------------- DriverCoins ---------------------------------------------------
-  
+
 data CoinTransactionReq = CoinTransactionReq String
 
 newtype CoinTransactionRes = CoinTransactionRes
@@ -3531,8 +3549,8 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where 
-  decode body = 
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where
+  decode body =
     case (typeOf body == "object") of
       true -> defaultDecode body
       false -> defaultDecode $ unsafeToForeign {tag : body}
@@ -3723,11 +3741,11 @@ instance encodeSDKEventsReq :: Encode SDKEventsReq where encode = defaultEncode
 
 data UploadOdometerImageReq = UploadOdometerImageReq String OdometerImage
 
-data OdometerImage = OdometerImage String 
-  
+data OdometerImage = OdometerImage String
+
 
 data UploadOdometerImageResp =  UploadOdometerImageResp {
-   fileId :: String 
+   fileId :: String
   }
 
 
@@ -3743,21 +3761,21 @@ instance encodeOdometerImage :: Encode OdometerImage where encode = defaultEncod
 
 
 derive instance genericUploadOdometerImageReq :: Generic UploadOdometerImageReq _
-instance standardEncodeUploadOdometerImageReq :: StandardEncode UploadOdometerImageReq where standardEncode (UploadOdometerImageReq rideId req) = standardEncode req           
+instance standardEncodeUploadOdometerImageReq :: StandardEncode UploadOdometerImageReq where standardEncode (UploadOdometerImageReq rideId req) = standardEncode req
 instance showUploadOdometerImageReq :: Show UploadOdometerImageReq where show = genericShow
-instance decodeUploadOdometerImageReq :: Decode UploadOdometerImageReq where decode = defaultDecode   
+instance decodeUploadOdometerImageReq :: Decode UploadOdometerImageReq where decode = defaultDecode
 instance encodeUploadOdometerImageReq :: Encode UploadOdometerImageReq where encode = defaultEncode
 
 
 
-derive instance genericUploadOdometerImageResp :: Generic UploadOdometerImageResp _     
-instance standardUploadOdometerImageResp :: StandardEncode UploadOdometerImageResp where standardEncode (UploadOdometerImageResp body) = standardEncode body      
-instance showUploadOdometerImageResp :: Show UploadOdometerImageResp where show = genericShow           
+derive instance genericUploadOdometerImageResp :: Generic UploadOdometerImageResp _
+instance standardUploadOdometerImageResp :: StandardEncode UploadOdometerImageResp where standardEncode (UploadOdometerImageResp body) = standardEncode body
+instance showUploadOdometerImageResp :: Show UploadOdometerImageResp where show = genericShow
 instance decodeUploadOdometerImageResp :: Decode UploadOdometerImageResp where decode = defaultDecode
-instance encodeUploadOdometerImageResp :: Encode UploadOdometerImageResp where encode = defaultEncode     
+instance encodeUploadOdometerImageResp :: Encode UploadOdometerImageResp where encode = defaultEncode
 
 ------------------------------------------ Get all lms modules ------------------------------------------------------------------------
- 
+
 data GetAllModuleReq = GetAllModuleReq String
 
 newtype LmsGetModuleRes = LmsGetModuleRes
@@ -3834,8 +3852,8 @@ derive instance genericModuleCompletionCriteria :: Generic ModuleCompletionCrite
 instance showModuleCompletionCriteria :: Show ModuleCompletionCriteria where show = genericShow
 instance decodeModuleCompletionCriteria :: Decode ModuleCompletionCriteria where decode = defaultDecode
 instance encodeModuleCompletionCriteria :: Encode ModuleCompletionCriteria where encode = defaultEncode
-instance standardEncodeModuleCompletionCriteria :: StandardEncode ModuleCompletionCriteria 
-  where 
+instance standardEncodeModuleCompletionCriteria :: StandardEncode ModuleCompletionCriteria
+  where
     standardEncode (ONLY_VIDEOS) = standardEncode {}
     standardEncode (VIDEOS_AND_QUIZ _) = standardEncode {}
 
@@ -3843,8 +3861,8 @@ derive instance genericLmsReward :: Generic LmsReward _
 instance showLmsReward :: Show LmsReward where show = genericShow
 instance decodeLmsReward :: Decode LmsReward where decode = defaultDecode
 instance encodeLmsReward :: Encode LmsReward where encode = defaultEncode
-instance standardEncodeLmsReward :: StandardEncode LmsReward 
-  where 
+instance standardEncodeLmsReward :: StandardEncode LmsReward
+  where
     standardEncode (COIN _) = standardEncode {}
     standardEncode (BADGE _) = standardEncode {}
 
@@ -4014,8 +4032,8 @@ derive instance genericQuizQuestion :: Generic QuizQuestion _
 instance showQuizQuestion :: Show QuizQuestion where show = genericShow
 instance decodeQuizQuestion :: Decode QuizQuestion where decode = defaultDecode
 instance encodeQuizQuestion :: Encode QuizQuestion where encode = defaultEncode
-instance standardEncodeQuizQuestion :: StandardEncode QuizQuestion 
-  where 
+instance standardEncodeQuizQuestion :: StandardEncode QuizQuestion
+  where
     standardEncode (TextQuestion _) = standardEncode {}
     standardEncode (ImageQuestion _ _ _ _) = standardEncode {}
 
@@ -4023,8 +4041,8 @@ derive instance genericQuizOptions :: Generic QuizOptions _
 instance showQuizOptions :: Show QuizOptions where show = genericShow
 instance decodeQuizOptions :: Decode QuizOptions where decode = defaultDecode
 instance encodeQuizOptions :: Encode QuizOptions where encode = defaultEncode
-instance standardEncodeQuizOptions :: StandardEncode QuizOptions 
-  where 
+instance standardEncodeQuizOptions :: StandardEncode QuizOptions
+  where
     standardEncode (SingleSelect _) = standardEncode {}
     standardEncode (MultiSelect _) = standardEncode {}
 
@@ -4047,8 +4065,8 @@ instance showSingleOption :: Show SingleOption where show = genericShow
 instance decodeSingleOption :: Decode SingleOption where decode = defaultDecode
 instance encodeSingleOption :: Encode SingleOption where encode = defaultEncode
 instance eqSingleOption :: Eq SingleOption where eq = genericEq
-instance standardEncodeSingleOption :: StandardEncode SingleOption 
-  where 
+instance standardEncodeSingleOption :: StandardEncode SingleOption
+  where
     standardEncode (TextOption _) = standardEncode {}
     standardEncode (SingleLineImage _ _ _) = standardEncode {}
     standardEncode (TwoColumnImage _ _ _) = standardEncode {}
@@ -4151,8 +4169,8 @@ instance showSelectedOption :: Show SelectedOption where show = genericShow
 instance decodeSelectedOption :: Decode SelectedOption where decode = defaultDecode
 instance encodeSelectedOption :: Encode SelectedOption where encode = defaultEncode
 instance eqSelectedOption :: Eq SelectedOption where eq = genericEq
-instance standardEncodeSelectedOption :: StandardEncode SelectedOption 
-  where 
+instance standardEncodeSelectedOption :: StandardEncode SelectedOption
+  where
     standardEncode (SingleSelectedOption _) = standardEncode {}
     standardEncode (MultiSelectedOption _) = standardEncode {}
 
@@ -4168,8 +4186,8 @@ instance showSelectedOptionValidation :: Show SelectedOptionValidation where sho
 instance decodeSelectedOptionValidation :: Decode SelectedOptionValidation where decode = defaultDecode
 instance encodeSelectedOptionValidation :: Encode SelectedOptionValidation where encode = defaultEncode
 instance eqSelectedOptionValidation :: Eq SelectedOptionValidation where eq = genericEq
-instance standardEncodeSelectedOptionValidation :: StandardEncode SelectedOptionValidation 
-  where 
+instance standardEncodeSelectedOptionValidation :: StandardEncode SelectedOptionValidation
+  where
     standardEncode (SingleSelectedOptionValidation _) = standardEncode {}
     standardEncode (MultiSelectedOptionValidation _) = standardEncode {}
 
@@ -4312,7 +4330,7 @@ newtype SpecialLocationFull = SpecialLocationFull
   , merchantOperatingCityId :: Maybe String
   , gatesInfo :: Array GateInfoFull
   , gates :: Array GatesInfo
-  , geoJson :: Maybe String    
+  , geoJson :: Maybe String
   }
 
 newtype GatesInfo = GatesInfo {
@@ -4594,7 +4612,7 @@ instance encodeDriverVehicleServiceTier  :: Encode DriverVehicleServiceTier wher
 instance makeDriverVehicleServiceTierReq :: RestEndpoint DriverVehicleServiceTierReq where
   makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.driverVehicleServiceTier "") headers reqBody Nothing
   encodeRequest req = standardEncode req
-  
+
 data RideStatusPastDaysReq = RideStatusPastDaysReq
 
 newtype RideStatusPastDaysRes = RideStatusPastDaysRes {
@@ -4789,7 +4807,7 @@ instance encodeVerifyVpaRes :: Encode VerifyVpaRes where encode = defaultEncode
 
 data PayoutRegisterReq = PayoutRegisterReq String
 
-newtype PayoutRegisterRes = PayoutRegisterRes 
+newtype PayoutRegisterRes = PayoutRegisterRes
     {
       orderResp :: CreateOrderRes,
       orderId :: String
@@ -4864,8 +4882,8 @@ newtype PanCardReq = PanCardReq
     imageId1 :: Maybe String,
     imageId2 :: Maybe String,
     panNumber :: String,
-    validationStatus :: ValidationStatus, 
-    verifiedBy :: VerifiedBy, 
+    validationStatus :: ValidationStatus,
+    verifiedBy :: VerifiedBy,
     transactionId :: Maybe String,
     nameOnGovtDB :: Maybe String
   }
@@ -4951,7 +4969,7 @@ instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defau
 instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
 
 -----------------------------------------------------------Fetching Driver Profile--------------------------------------------------
-data DriverProfileDataReq = DriverProfileDataReq Boolean 
+data DriverProfileDataReq = DriverProfileDataReq Boolean
 
 newtype DriverProfileDataRes = DriverProfileDataRes
   {
@@ -5010,7 +5028,7 @@ instance encodeDriverReachedReq :: Encode DriverReachedReq where encode = defaul
 
 ------------------------------------------------------ Driver Reached Destination --------------------------------------------------------
 
-data CoinInfoReq = CoinInfoReq 
+data CoinInfoReq = CoinInfoReq
 
 newtype CoinInfoRes = CoinInfoRes (Array CoinInfo)
 
@@ -5043,7 +5061,7 @@ instance encodeCoinInfoRes :: Encode CoinInfoRes where encode = defaultEncode
 
 derive instance genericCoinInfo :: Generic CoinInfo _
 instance showCoinInfo :: Show CoinInfo where show = genericShow
-instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{} 
+instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{}
 instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
 instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
 
@@ -5051,14 +5069,14 @@ instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
 
 data DemandHotspotsReq = DemandHotspotsReq String
 
-newtype DemandHotspotsResp = DemandHotspotsResp 
+newtype DemandHotspotsResp = DemandHotspotsResp
   { createdAt :: String,
     expiryAt :: String,
     hotspotsDetails :: Array HotspotsDetails
   }
 
 newtype HotspotsDetails = HotspotsDetails {
-  frequency :: Int, 
+  frequency :: Int,
   location :: LatLong
 }
 
@@ -5110,7 +5128,7 @@ instance decodeScheduledBookingListResponse:: Decode ScheduledBookingListRespons
 instance encodeScheduledBookingListResponse  :: Encode ScheduledBookingListResponse where encode = defaultEncode
 instance eqScheduledBookingListResponse :: Eq ScheduledBookingListResponse where eq = genericEq
 
-newtype ScheduleBooking = ScheduleBooking  
+newtype ScheduleBooking = ScheduleBooking
    {
     bookingDetails :: BookingAPIEntity,
     fareDetails ::  Array RateCardItem
@@ -5200,14 +5218,14 @@ data Area = Default | Drop String | Pickup String
 derive instance genericArea :: Generic Area _
 instance standardEncodeArea :: StandardEncode Area where standardEncode _ = standardEncode {}
 instance showArea :: Show Area where show = genericShow
-instance decodeArea :: Decode Area 
+instance decodeArea :: Decode Area
   where decode body =
           case (runExcept $ (readProp "tag" body) >>= decode) of
               Right tag -> case tag of
-                                "Pickup" -> case runExcept $ (readProp "contents" body) >>= decode of 
+                                "Pickup" -> case runExcept $ (readProp "contents" body) >>= decode of
                                               Right content -> except $ Right $ Pickup content
                                               Left _  -> except $ Right $ Default
-                                "Drop" -> case runExcept $ (readProp "contents" body) >>= decode of 
+                                "Drop" -> case runExcept $ (readProp "contents" body) >>= decode of
                                               Right content ->except $ Right $ Drop content
                                               Left _  -> except $ Right $ Default
                                 _ -> except $ Right $ Default
@@ -5215,7 +5233,7 @@ instance decodeArea :: Decode Area
 instance encodeArea  :: Encode Area where encode = defaultEncode
 instance eqArea :: Eq Area where eq = genericEq
 
-data Currency  = INR | USD | EUR 
+data Currency  = INR | USD | EUR
 
 derive instance genericCurrency :: Generic Currency  _
 instance showCurrency :: Show Currency where show = genericShow
@@ -5292,27 +5310,27 @@ instance decodeRateCardItem :: Decode RateCardItem where decode = defaultDecode
 instance encodeRateCardItem:: Encode RateCardItem where encode = defaultEncode
 instance eqRateCardItem:: Eq RateCardItem where eq = genericEq
 
-data TitleTag = SERVICE_CHARGE 
-              | GOVERNMENT_CHARGE 
-              | NIGHT_SHIFT_START_TIME_IN_SECONDS 
-              | NIGHT_SHIFT_END_TIME_IN_SECONDS 
-              | MIN_FARE 
-              | PER_HOUR_CHARGE 
-              | PER_MINUTE_CHARGE 
-              | UNPLANNED_PER_KM_CHARGE 
-              | PER_HOUR_DISTANCE_KM 
-              | PLANNED_PER_KM_CHARGE 
-              | DEAD_KILOMETER_FARE 
-              | WAITING_CHARGE_PER_MIN 
-              | FREE_WAITING_TIME_IN_MINUTES 
-              | NIGHT_SHIFT_CHARGE 
+data TitleTag = SERVICE_CHARGE
+              | GOVERNMENT_CHARGE
+              | NIGHT_SHIFT_START_TIME_IN_SECONDS
+              | NIGHT_SHIFT_END_TIME_IN_SECONDS
+              | MIN_FARE
+              | PER_HOUR_CHARGE
+              | PER_MINUTE_CHARGE
+              | UNPLANNED_PER_KM_CHARGE
+              | PER_HOUR_DISTANCE_KM
+              | PLANNED_PER_KM_CHARGE
+              | DEAD_KILOMETER_FARE
+              | WAITING_CHARGE_PER_MIN
+              | FREE_WAITING_TIME_IN_MINUTES
+              | NIGHT_SHIFT_CHARGE
               | CONSTANT_NIGHT_SHIFT_CHARGE
               | WAITING_CHARGE_RATE_PER_MIN
 
 derive instance genericTitleTag :: Generic TitleTag   _
 instance showTitleTag :: Show TitleTag  where show = genericShow
-instance decodeTitleTag :: Decode TitleTag  
-   where decode body = case unsafeFromForeign body of 
+instance decodeTitleTag :: Decode TitleTag
+   where decode body = case unsafeFromForeign body of
                     "SERVICE_CHARGE"                     ->  except $ Right SERVICE_CHARGE
                     "GOVERNMENT_CHARGE"                  ->  except $ Right GOVERNMENT_CHARGE
                     "NIGHT_SHIFT_START_TIME_IN_SECONDS"  ->  except $ Right NIGHT_SHIFT_START_TIME_IN_SECONDS
@@ -5336,7 +5354,7 @@ instance eqTitleTag :: Eq TitleTag  where eq = genericEq
 instance standardTitleTag :: StandardEncode TitleTag   where standardEncode _ = standardEncode {}
 
 
-data ScheduleBookingAcceptReq = ScheduleBookingAcceptReq String 
+data ScheduleBookingAcceptReq = ScheduleBookingAcceptReq String
 
 newtype ScheduleBookingAcceptRes = ScheduleBookingAcceptRes ApiSuccessResult
 
@@ -5389,7 +5407,7 @@ instance showHVSdkCallLogResp :: Show HVSdkCallLogResp where show = genericShow
 instance decodeHVSdkCallLogResp:: Decode HVSdkCallLogResp where decode = defaultDecode
 instance encodeHVSdkCallLogResp  :: Encode HVSdkCallLogResp where encode = defaultEncode
 
--------------- METRO WARRIOR 
+-------------- METRO WARRIOR
 
 newtype UpdateSpecialLocWarriorInfoReq = UpdateSpecialLocWarriorInfoReq {
   isSpecialLocWarrior :: Boolean,

@@ -436,7 +436,7 @@ export const preFetch = function () {
   return getDownloadObject(assets, bundles, configPackage.app_list, configPackage.dependencies);
 }
 
-// TODO NEED TO REFACTOR 
+// TODO NEED TO REFACTOR
 export const renewFile = function (filePath, fileLocation, cb) {
   JBridge.renewFile(fileLocation, filePath, callbackMapper.map(function (result) {
     cb(result)();
@@ -474,7 +474,7 @@ export const isMoreThanXMs = function(timestamp, millis) {
     const now = Date.now();
     const timestampTime = timestampDate.getTime();
     const timeDifference = now - timestampTime;
-    
+
     return timeDifference > millis;
   } catch (error) {
     console.log(error);
@@ -482,7 +482,7 @@ export const isMoreThanXMs = function(timestamp, millis) {
   }
 }
 
-export const isToday = function (dateString) { 
+export const isToday = function (dateString) {
   try {
     const today = new Date()
     const date = new Date(dateString);
@@ -620,5 +620,18 @@ export const renderSlider = function (cb) {
 
 // This can be used in future for activityResultListeners
 // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
-//   cb(reqCode)(bundle)(); 
+//   cb(reqCode)(bundle)();
 // };
+export function percentageToAngle(numerator, denominator, segmentAngle, segments) {
+    if (denominator === 0) {
+        return 0;
+    }
+    let percentage = (numerator / denominator) * 100;
+    for (let segment of segments) {
+        if (percentage >= segment.min && percentage <= segment.max) {
+            let mappedDegree = ((percentage - segment.min) * segmentAngle) / (segment.max - segment.min);
+            return Math.round(mappedDegree * 100) / 100; // Round to 2 decimal places
+        }
+    }
+    return segmentAngle;
+}

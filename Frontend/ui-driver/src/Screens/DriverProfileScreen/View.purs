@@ -87,6 +87,8 @@ import Data.Array (filter)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Types.App (GlobalState(..), FlowBT)
 import Services.API (DriverProfileDataRes(..))
+import Components.ExtraChargeCard as ExtraChargeCard
+import Services.API as API
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -95,7 +97,7 @@ screen initialState =
   , name: "DriverProfileScreen"
   , globalEvents:
       [ ( \push -> do
-            if initialState.props.openSettings then
+            if initialState.props.skipGlobalEvents then
               pure unit
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
@@ -429,8 +431,6 @@ manageVehicleItem state vehicle push =
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 profileView push state =
-  let driverBlockedHeaderVisibility = state.data.driverBlocked && (not $ DS.null state.data.blockedExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
-  in
   PrestoAnim.animationSet [ Anim.fadeIn (not state.props.openSettings) ]
     $ linearLayout
         [ height MATCH_PARENT
@@ -440,28 +440,7 @@ profileView push state =
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
         [ headerView state push
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , background Color.red900
-            , padding $ Padding 16 16 16 16
-            , gravity LEFT
-            , visibility $ boolToVisibility driverBlockedHeaderVisibility
-            ]
-            [ textView $ 
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , color Color.white900
-                , text $ getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
-                , weight 1.0
-                ] <> FontStyle.subHeading3 TypoGraphy
-            , imageView 
-                [ height $ V 24
-                , width $ V 24
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
-                , onClick push $ const ShowDrvierBlockedPopup
-                ]
-            ]
+        , driverBlockedHeader state push
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -495,7 +474,7 @@ profileView push state =
                       , width MATCH_PARENT
                       ][
                         tabImageView state push
-                      , completedProfile state push 
+                      , completedProfile state push
                       ]
                     , infoView state push
                     , verifiedVehiclesView state push
@@ -509,6 +488,44 @@ profileView push state =
             ]
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
+
+
+driverBlockedHeader :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverBlockedHeader state push =
+  case state.data.driverInfoResponse of
+    Just (GetDriverInfoResp res) ->
+      let
+        isSuspended = res.overchargingTag == Just API.MediumOverCharging
+        timeFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A"
+        dayFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY"
+        blockedTitle = getString $ if isSuspended then SUSPENDED_TILL timeFormat dayFormat else BLOCKED_TILL timeFormat dayFormat
+        driverBlockedHeaderVisibility = state.data.driverBlocked
+          && (not $ DS.null state.data.blockedExpiryTime)
+          && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
+      in
+        linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , background Color.red900
+          , padding $ Padding 16 16 16 16
+          , gravity LEFT
+          , visibility $ boolToVisibility driverBlockedHeaderVisibility
+          ]
+          [ textView $
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color Color.white900
+              , text blockedTitle
+              , weight 1.0
+              ] <> FontStyle.subHeading3 TypoGraphy
+          , imageView
+              [ height $ V 24
+              , width $ V 24
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
+              , onClick push $ const ShowDrvierBlockedPopup
+              ]
+          ]
+    Nothing -> linearLayout [width $ V 0 , height $ V 0][]
 
 completedProfile :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 completedProfile state push =
@@ -568,7 +585,7 @@ completedProfile state push =
 
 getVerifiedVehicleCount :: Array ST.DriverVehicleDetails -> Int
 getVerifiedVehicleCount vehicles = length $ filter (\item -> item.isVerified == true) vehicles
-  
+
 verifiedVehiclesView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 verifiedVehiclesView state push =
   linearLayout
@@ -778,7 +795,7 @@ tabImageView state push =
               linearLayout[
                 height $ V 98,
                 width $ V 100,
-                orientation VERTICAL, 
+                orientation VERTICAL,
                 visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS && per < 100
             ][
                 linearLayout[
@@ -875,16 +892,44 @@ driverDetailsView push state =
       , margin $ MarginHorizontal 16 16
       ] $ if state.data.cancellationRate > configs.warning1 then cancellationRateOnTop configs else cancellationRateOnBottom configs
   where
-    cancellationRateOnTop configs = 
-      [ cancellationRateView state push configs
+    cancellationRateOnTop configs =
+      [ extraChargePenaltyView push state
+      , cancellationRateView state push configs
       , driverAnalyticsView state push
       , badgeLayoutView state
       ]
     cancellationRateOnBottom configs =
-      [ driverAnalyticsView state push
+      [ extraChargePenaltyView push state
+      , driverAnalyticsView state push
       , badgeLayoutView state
       , cancellationRateView state push configs
       ]
+
+extraChargePenaltyView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+extraChargePenaltyView push state =
+  case state.data.driverInfoResponse of
+    Just (GetDriverInfoResp resp) ->
+       case resp.overchargingTag of
+        Just overchargingTag ->
+          linearLayout[
+            width MATCH_PARENT,
+            height WRAP_CONTENT,
+            orientation VERTICAL,
+            margin $ MarginTop 8
+          ][
+            textView $ [
+              text "Extra-Charge Penalty",
+              width MATCH_PARENT,
+              height WRAP_CONTENT,
+              color Color.black
+            , margin $ MarginBottom 12
+            ] <> (FontStyle.subHeading2 TypoGraphy)
+          , ExtraChargeCard.view (push <<< ExtraChargeCardAC) $ ExtraChargeCard.extraChargesConfig overchargingTag resp.ridesWithFareIssues resp.totalRidesConsideredForFareIssues VISIBLE
+          ]
+        Nothing -> linearLayout [width $ V 0, height $ V 0][]
+    Nothing -> linearLayout [width $ V 0, height $ V 0][]
+
+
 
 ------------------------------------------- MISSED OPPORTUNITY VIEW -----------------------------------------
 missedOpportunityView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -927,7 +972,6 @@ driverAnalyticsView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ Margin 0 40 0 0
       ]
       [ textView
           [ width WRAP_CONTENT
@@ -993,7 +1037,7 @@ driverAnalyticsView state push =
                   , margin $ MarginHorizontal 5 5
                   , gravity CENTER_VERTICAL
                   ]
-                  [ imageView 
+                  [ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_heart"
                     , width $ V 15
                     , height $ V 15
@@ -1061,14 +1105,14 @@ cancellationRateView state push configs =
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , margin if cancellationRate > configs.warning2 then MarginBottom 16 else MarginBottom 0
-        ] 
-        [ 
+        ]
+        [
           relativeLayout
           [ height $ V 103
           , width $ V $ ((screenWidth unit)/ 2) - 32
           , gravity CENTER
-          ][ 
-            imageView 
+          ][
+            imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_gauge_image"
             , width $ V $ ((screenWidth unit)/ 2) - 32
             , height $ V 100
@@ -1092,7 +1136,7 @@ cancellationRateView state push configs =
           , weight 1.0
           , orientation VERTICAL
           , gravity CENTER
-          ] [ 
+          ] [
               textView $
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -1130,7 +1174,7 @@ cancellationRateView state push configs =
           , padding $ PaddingVertical 8 8
           , gravity CENTER
           , visibility $ boolToVisibility $ cancellationRate > configs.warning2
-          ] 
+          ]
           [ textView $
             [ text (getString HIGH_CANCELLATION_RATE)
             , textSize FontSize.a_14
@@ -1791,7 +1835,7 @@ vehicleListItem state push vehicle =
             ]
         ]
     ]
-  
+
 
 getRcDetails :: ST.DriverProfileScreenState -> Array { key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean, keyInfo :: Boolean, isRightInfo :: Boolean }
 getRcDetails state = do
@@ -2593,8 +2637,8 @@ getVehicleImage :: ST.VehicleCategory -> ST.DriverProfileScreenState -> String
 getVehicleImage category state =
   let vehicleVariant = (getValueToLocalStore VEHICLE_VARIANT)
       showSpecialVariantImage = vehicleVariant == "HERITAGE_CAB"
-  in 
-    if showSpecialVariantImage 
+  in
+    if showSpecialVariantImage
       then HU.getVehicleVariantImage vehicleVariant
       else mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
   where

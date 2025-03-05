@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types 
+module Screens.Types
   ( module Screens.Types
   , module ReExport
   ) where
@@ -38,7 +38,7 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Control.Alt ((<|>))
-import Foreign (ForeignError(..), fail) 
+import Foreign (ForeignError(..), fail)
 import Halogen.VDom.DOM.Prop (PropValue)
 import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, Language(..))
 import Prelude (class Eq, class Show, ($), (<$>))
@@ -273,7 +273,7 @@ type UploadDrivingLicenseStateProps = {
   , openHowToUploadManual :: Boolean
   , logoutPopupModal :: Boolean
   , validateProfilePicturePopUp :: Boolean
-  , imageCaptureLayoutView :: Boolean 
+  , imageCaptureLayoutView :: Boolean
   , fileCameraPopupModal :: Boolean
   , fileCameraOption :: Boolean
   , validating :: Boolean
@@ -369,16 +369,16 @@ data AnimType = HIDE | SHOW | ANIMATING
 derive instance genericAnimType :: Generic AnimType _
 instance eqAnimType :: Eq AnimType where eq = genericEq
 
-data RegisterationStep = 
-    DRIVING_LICENSE_OPTION 
-  | VEHICLE_DETAILS_OPTION 
-  | GRANT_PERMISSION 
+data RegisterationStep =
+    DRIVING_LICENSE_OPTION
+  | VEHICLE_DETAILS_OPTION
+  | GRANT_PERMISSION
   | SUBSCRIPTION_PLAN
   | PROFILE_PHOTO
   | AADHAAR_CARD
-  | PAN_CARD 
-  | VEHICLE_PERMIT 
-  | FITNESS_CERTIFICATE 
+  | PAN_CARD
+  | VEHICLE_PERMIT
+  | FITNESS_CERTIFICATE
   | VEHICLE_INSURANCE
   | VEHICLE_PUC
   | NO_OPTION
@@ -598,7 +598,8 @@ type DriverProfileScreenProps = {
   canSwitchToRental :: Maybe Boolean,
   canSwitchToIntraCity :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean,
-  showDriverBlockedPopup :: Boolean
+  showDriverBlockedPopup :: Boolean,
+  skipGlobalEvents :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1063,7 +1064,7 @@ type HomeScreenData =  {
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
   paymentState :: PaymentState,
-  profileImg :: Maybe String, 
+  profileImg :: Maybe String,
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
@@ -1091,8 +1092,8 @@ type HomeScreenData =  {
 , coinsEarned :: Array API.CoinsEarned
 , plansState :: PlansState
 , scheduledRideListResponse ::  Int
-, upcomingRide :: Maybe ActiveRide 
-, homeScreenBannerTimerID :: String 
+, upcomingRide :: Maybe ActiveRide
+, homeScreenBannerTimerID :: String
 , homeScreenBannerTimer :: Int
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
@@ -1102,6 +1103,9 @@ type HomeScreenData =  {
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
+, overchargingTag :: Maybe API.OverchargingTag
+, driverBlocked :: Boolean
+, blockedExpiryTime :: String
 }
 
 type FavouritePopUp = {
@@ -1178,7 +1182,7 @@ type EndRideData = {
     rideId :: String,
     zeroCommision :: Int,
     tip :: Maybe Int,
-    finalAmount :: Int, 
+    finalAmount :: Int,
     riderName :: String,
     rating :: Int,
     feedback :: String,
@@ -1376,7 +1380,7 @@ type HomeScreenProps =  {
   showOffer :: Boolean,
   autoPayBanner :: SubscriptionBannerType,
   subscriptionPopupType :: SubscriptionPopupType,
-  rcActive :: Boolean, 
+  rcActive :: Boolean,
   rcDeactivePopup :: Boolean,
   showAccessbilityPopup :: Boolean,
   rentalInfoPopUp :: Boolean,
@@ -1426,7 +1430,8 @@ type HomeScreenProps =  {
   showParcelIntroductionPopup :: Boolean,
   showMetroWarriorWarningPopup :: Boolean,
   setBusOnline :: Boolean,
-  bus_input_data :: String
+  bus_input_data :: String,
+  showBlockerPopup :: Boolean
  }
 
 type RideRequestPill = {
@@ -1664,7 +1669,7 @@ type ReportIssueChatScreenData = {
              }
 }
 type Image = {
-  image :: String, 
+  image :: String,
   imageName :: String
 }
 
@@ -2140,7 +2145,7 @@ type DriverCompleteProfileScreenProps = {
 }
 
 type DatePickersState = {
-    activeIndex :: Int 
+    activeIndex :: Int
   , dates :: Array CalendarDate
   , id :: String
 }
@@ -2417,7 +2422,7 @@ type DueItem = {
   isSplit :: Boolean,
   specialZoneRideCount :: Maybe Int,
   totalSpecialZoneCharges :: Maybe Number,
-  amountPaidByYatriCoins :: Maybe Number 
+  amountPaidByYatriCoins :: Maybe Number
 }
 
 type KioskLocation = {
@@ -2467,7 +2472,7 @@ instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
 instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
 instance encodeAutoPayStatus :: Encode AutoPayStatus where encode = defaultEnumEncode
 
-data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView 
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView
 
 derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
 instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
@@ -2672,10 +2677,10 @@ type SaveLocationObject = {
 }
 
 type Tag = {
-  background :: String, 
-  image :: String, 
-  visibility :: Boolean, 
-  text :: String, 
+  background :: String,
+  image :: String,
+  visibility :: Boolean,
+  text :: String,
   textColor :: String
 }
 
@@ -2781,7 +2786,7 @@ type DriverEarningsScreenProps = {
   offsetValue :: Int
 }
 
-type CalendarState = { 
+type CalendarState = {
   calendarPopup :: Boolean,
   endDate :: Maybe Common.CalendarModalDateObject,
   selectedTimeSpan :: Common.CalendarModalDateObject,
@@ -3039,7 +3044,7 @@ type DocumentCaptureScreenData = {
   docId :: String,
   linkedRc :: Maybe String,
   cityConfig :: CityConfig
-} 
+}
 
 type DocumentCaptureScreenProps = {
   validateDocModal :: Boolean,
@@ -3048,7 +3053,7 @@ type DocumentCaptureScreenProps = {
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
   contactSupportModal :: AnimType
-} 
+}
 
 
 type UpdateRouteSrcDestConfig = {
@@ -3060,16 +3065,16 @@ type UpdateRouteSrcDestConfig = {
   destination :: String
 }
 
-data CoinEarnedPopupType = 
-    RIDE_MORE_EARN_COIN 
-  | TWO_MORE_RIDES 
-  | ONE_MORE_RIDE 
-  | TWO_RIDE_COMPLETED 
-  | FIVE_RIDE_COMPLETED 
+data CoinEarnedPopupType =
+    RIDE_MORE_EARN_COIN
+  | TWO_MORE_RIDES
+  | ONE_MORE_RIDE
+  | TWO_RIDE_COMPLETED
+  | FIVE_RIDE_COMPLETED
   | EIGHT_RIDE_COMPLETED
-  | TEN_RIDE_COMPLETED 
-  | REFER_AND_EARN_COIN 
-  | CONVERT_COINS_TO_CASH 
+  | TEN_RIDE_COMPLETED
+  | REFER_AND_EARN_COIN
+  | CONVERT_COINS_TO_CASH
   | NO_COIN_POPUP
   | SIX_RIDE_COMPLETED
 
@@ -3200,7 +3205,7 @@ data LiveSelfie = LiveSelfie
     declineReason :: Maybe String,
     errorCode :: Maybe String
   }
-  
+
 derive instance genericLiveSelfie :: Generic LiveSelfie _
 instance decodeLiveSelfie :: Decode LiveSelfie where decode = defaultDecode
 instance encodeLiveSelfie  :: Encode LiveSelfie where encode = defaultEncode
@@ -3306,7 +3311,7 @@ type PointsWithWeight = {
 type NotificationBody = {
   title :: String,
   message :: String
-} 
+}
 
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 
@@ -3320,13 +3325,13 @@ type UploadParcelImageScreenData = {
   imagePath :: String,
   errorMessage :: Maybe String,
   imageId :: String
-} 
+}
 
 type UploadParcelImageScreenProps = {
   showConfirmAndUploadButton :: Boolean,
   isStartRideActive :: Boolean,
   uploading :: Boolean
-} 
+}
 
 type MetroWarriorsScreenState = {
   data :: MetroWarriorsScreenData,
