@@ -39,6 +39,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.JSON
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -327,14 +328,20 @@ data BookingData = BookingData
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
-    type' :: QRType,
+    _type :: QRType,
     txnId :: Text,
     createdAt :: UTCTime,
     cmrl :: [BookingData],
     mtc :: [BookingData]
   }
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON UnifiedTicketQR where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON UnifiedTicketQR where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Provider = CMRL | MTC | DIRECT
   deriving (Eq, Show)

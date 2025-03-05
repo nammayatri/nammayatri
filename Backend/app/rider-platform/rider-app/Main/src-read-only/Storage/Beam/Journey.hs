@@ -11,6 +11,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.JourneyModule.Types
 import Tools.Beam.UtilsTH
 
 data JourneyT f = JourneyT
@@ -22,6 +23,7 @@ data JourneyT f = JourneyT
     id :: B.C f Kernel.Prelude.Text,
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
+    qrType :: B.C f (Kernel.Prelude.Maybe Lib.JourneyModule.Types.QRType),
     riderId :: B.C f Kernel.Prelude.Text,
     searchRequestId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

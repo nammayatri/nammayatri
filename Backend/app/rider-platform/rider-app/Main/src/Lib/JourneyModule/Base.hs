@@ -373,8 +373,8 @@ getRemainingLegs journeyId = do
 cancellableStatus :: JL.LegInfo -> Bool
 cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)
 
-getUnifiedQR :: [JL.LegInfo] -> UTCTime -> Maybe JL.UnifiedTicketQR
-getUnifiedQR legs now = do
+getUnifiedQR :: [JL.LegInfo] -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> UTCTime -> Maybe JL.UnifiedTicketQR
+getUnifiedQR legs journeyId now = do
   let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
   let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL || provider == providerToText JL.DIRECT]
   let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC || provider == providerToText JL.DIRECT]
@@ -382,13 +382,14 @@ getUnifiedQR legs now = do
         if not (null cmrlBookings) && not (null mtcBookings)
           then JL.INTEGRATED_QR
           else JL.REGULAR_QR
+  QJourney.updateQRType qrType journeyId
   if null cmrlBookings && null mtcBookings
     then Nothing
     else
       Just $
         JL.UnifiedTicketQR
           { version = "1.0",
-            type' = qrType,
+            _type = qrType,
             txnId = "nammayatri-test-N62dNNcFc8-1",
             createdAt = now,
             cmrl = cmrlBookings,

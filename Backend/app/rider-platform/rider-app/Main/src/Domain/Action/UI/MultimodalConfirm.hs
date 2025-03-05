@@ -174,7 +174,7 @@ generateJourneyInfoResponse :: Domain.Types.Journey.Journey -> [JMTypes.LegInfo]
 generateJourneyInfoResponse journey legs now = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR legs now
+  let unifiedQR = getUnifiedQR legs journey.id now
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   ApiTypes.JourneyInfoResp
     { estimatedDuration = journey.estimatedDuration,

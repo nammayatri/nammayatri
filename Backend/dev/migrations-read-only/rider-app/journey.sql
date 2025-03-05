@@ -54,8 +54,8 @@ ALTER TABLE atlas_app.journey ADD COLUMN is_payment_success boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.journey ADD COLUMN qr_type text ;
 
 
-
-
+------- SQL updates -------
 

@@ -13,6 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified Lib.JourneyModule.Types
 import qualified Tools.Beam.UtilsTH
 
 data Journey = Journey
@@ -23,6 +24,7 @@ data Journey = Journey
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
+    qrType :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.QRType,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
