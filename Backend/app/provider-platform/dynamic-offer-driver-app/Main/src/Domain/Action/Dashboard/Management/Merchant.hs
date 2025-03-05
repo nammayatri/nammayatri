@@ -1909,7 +1909,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       newUniqueId = maybe uniqueKeyId (.uniqueKeyId) mbNewMerchant
       newSubscriberId = maybe subscriberId (.subscriberId.getShortId) mbNewMerchant
   mbAddCityReq <-
-    Registry.registryLookup nyRegistryUrl lookupReq >>= \case
+    Registry.registryLookup nyRegistryUrl lookupReq subscriberId >>= \case
       Nothing -> do
         logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
         return Nothing
