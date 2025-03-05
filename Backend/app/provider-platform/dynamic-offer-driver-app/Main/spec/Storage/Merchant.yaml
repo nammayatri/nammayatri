@@ -997,6 +997,7 @@ TransporterConfig:
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
+    enableOverchargingBlocker: Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1045,6 +1046,7 @@ TransporterConfig:
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
     minThresholdForPassThroughDestination: Maybe Meters
+    enableOverchargingBlocker: Maybe Bool
 
   beamFields:
     fcmConfig:
@@ -1098,6 +1100,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    enableOverchargingBlocker: Just enableOverchargingBlocker|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
@@ -1159,6 +1162,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    enableOverchargingBlocker: fromMaybe False enableOverchargingBlocker|E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
@@ -1222,6 +1226,7 @@ TransporterConfig:
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
+    enableOverchargingBlocker: Maybe Bool
 
   default:
     mediaFileUrlPattern: |-
@@ -1354,6 +1359,8 @@ TransporterConfig:
     recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
 
     minThreshildForPassThroughDestination: "1000"
+    enableOverchargingBlocker: "false"
+
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
