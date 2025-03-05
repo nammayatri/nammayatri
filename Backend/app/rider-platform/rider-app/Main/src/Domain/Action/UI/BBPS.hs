@@ -102,6 +102,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             DBBPS.createdAt = now,
             DBBPS.updatedAt = now
           }
+  isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,
@@ -120,7 +121,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount []
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId

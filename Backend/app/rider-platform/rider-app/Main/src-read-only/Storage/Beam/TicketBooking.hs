@@ -3,6 +3,7 @@
 
 module Storage.Beam.TicketBooking where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -16,6 +17,7 @@ import Tools.Beam.UtilsTH
 data TicketBookingT f = TicketBookingT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    blockExpirationTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     bookedSeats :: B.C f Kernel.Prelude.Int,
     cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -26,6 +28,7 @@ data TicketBookingT f = TicketBookingT
     status :: B.C f Domain.Types.Extra.TicketBooking.BookingStatus,
     ticketPlaceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     visitDate :: B.C f Data.Time.Day,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }

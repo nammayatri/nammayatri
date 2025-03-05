@@ -33,6 +33,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson as JSON
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -110,6 +111,7 @@ import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
 import Tools.Error
+import qualified Tools.Payment as Payment
 
 ---------------------------------------------------------------------
 postMerchantUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantUpdateReq -> Flow APISuccess
@@ -825,7 +827,8 @@ data TicketConfigCSVRow = TicketConfigCSVRow
     peakDays :: Text,
     cancellationType :: Text,
     cancellationTime :: Text,
-    cancellationFee :: Text
+    cancellationFee :: Text,
+    vendorSplitDetails :: Text
   }
   deriving (Show)
 
@@ -877,6 +880,7 @@ instance FromNamedRecord TicketConfigCSVRow where
       <*> r .: "cancellation_type"
       <*> r .: "cancellation_time"
       <*> r .: "cancellation_fee"
+      <*> r .: "vendor_split_details"
 
 postMerchantTicketConfigUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTicketConfigReq -> Flow Common.UpsertTicketConfigResp
 postMerchantTicketConfigUpsert merchantShortId opCity request = do
@@ -1132,7 +1136,8 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
       priceAmount :: HighPrecMoney <- readCSVField idx row.priceAmount "Price Amount"
       pricingType :: PricingType <- readCSVField idx row.pricingType "Pricing Type"
       priceCurrency :: Currency <- readCSVField idx row.priceCurrency "Price Currency"
-      let pricePerUnit = Price (round priceAmount) priceAmount priceCurrency
+      let vendorSplitDetails = (map Payment.roundVendorFee) <$> (cleanField row.vendorSplitDetails >>= JSON.decodeStrict . encodeUtf8)
+          pricePerUnit = Price (round priceAmount) priceAmount priceCurrency
           mbPeakTimings = cleanField row.peakTimings
           svcPeopleCategoryId = peopleCategoryName <> separator <> svcCategoryId
           mbCancellationType = cleanField row.cancellationType

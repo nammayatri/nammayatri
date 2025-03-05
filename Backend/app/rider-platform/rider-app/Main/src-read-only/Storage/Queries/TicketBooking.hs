@@ -4,6 +4,7 @@
 
 module Storage.Queries.TicketBooking (module Storage.Queries.TicketBooking, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.Extra.TicketBooking
 import qualified Domain.Types.MerchantOperatingCity
@@ -81,6 +82,7 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
   updateWithKV
     [ Se.Set Beam.amount ((.amount) amount),
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
+      Se.Set Beam.blockExpirationTime blockExpirationTime,
       Se.Set Beam.bookedSeats bookedSeats,
       Se.Set Beam.cancelledSeats cancelledSeats,
       Se.Set Beam.createdAt createdAt,
@@ -90,6 +92,7 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.ticketPlaceId (Kernel.Types.Id.getId ticketPlaceId),
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.visitDate visitDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]

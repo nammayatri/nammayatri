@@ -22,6 +22,9 @@ Refunds:
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  constraints:
+    orderId: SecondaryKey
+
   sqlType:
     id: character varying(36)
     refund_amount: double precision
