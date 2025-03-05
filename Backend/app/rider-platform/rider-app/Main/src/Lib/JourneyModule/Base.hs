@@ -986,8 +986,6 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
             bookingUpdateRequestId = Nothing
           }
   where
-    -- else throwError (InvalidRequest "Legs are not cancellable")
-
     getEndLocation location =
       LatLong
         { lat = location.lat,
@@ -1051,33 +1049,3 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
         }
 
     getAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}
-
--- deleteLeg :: JourneyLeg leg m => leg -> m ()
--- deleteLeg leg = do
---   let cancelReq = mkCancelReq leg
---   JL.cancel cancelReq
-
--- updateLeg :: JourneyLeg leg m => leg -> leg -> m ()
--- updateLeg
---   let updateReq = mkUpdateReq leg
---   JL.update leg
-
--- skipJourney :: Journey -> [leg] -> m ()
--- skipJourney journey
--- getRemainingLegs
--- map update [leg]
--- @@ call cancel for current leg
-
--- endJourney :: Journey -> m ()
--- endJourney
--- if last leg then update leg
--- loop through and delete/update legs and journey as required
--- call leg level cancel
-
--- replaceLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m () -- leg2 can be an array
--- replaceLeg journey oldLegs newLeg =
---   forM_ (deleteLeg journey) oldLegs >> addLeg journey newLeg
-
--- extendLeg :: JourneyLeg leg1 leg2 m => Journey -> [leg1] -> leg2 -> m ()
--- extendLeg journey oldLegs newLeg =
---   forM_ (deleteLeg journey) oldLegs >> updateLeg journey newLeg

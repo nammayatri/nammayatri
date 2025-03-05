@@ -13,7 +13,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
-import Tools.Error
 
 data FareMatrixRes = FareMatrixRes
   { sourceStationId :: T.Text,
@@ -44,8 +43,6 @@ fareMatrixAPI = Proxy
 
 getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m [FareMatrixRes]
 getFareMatrix config = do
-  accessToken <- getAuthToken config
-  fareMatrixRes <-
-    callAPI config.networkHostUrl (ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken)) "getFareMatrix" fareMatrixAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_FARE_MATRIX_API") config.networkHostUrl)
+  let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken)
+  fareMatrixRes <- callCMRLAPI config eulerClient "getFareMatrix" fareMatrixAPI
   return fareMatrixRes.result

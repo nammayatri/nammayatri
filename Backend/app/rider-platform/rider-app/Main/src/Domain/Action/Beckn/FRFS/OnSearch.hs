@@ -142,7 +142,7 @@ onSearch ::
   m ()
 onSearch onSearchReq validatedReq = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
-  quotes <- traverse (mkQuotes onSearchReq validatedReq) (onSearchReq.quotes)
+  quotes <- traverse (mkQuotes onSearchReq validatedReq) onSearchReq.quotes
   traverse_ cacheQuote quotes
   if null quotesCreatedByCache
     then QQuote.createMany quotes

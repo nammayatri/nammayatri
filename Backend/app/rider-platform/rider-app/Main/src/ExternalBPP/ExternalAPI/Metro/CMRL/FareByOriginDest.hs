@@ -15,7 +15,6 @@ import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant hiding (route)
 import qualified SharedLogic.FRFSUtils as FRFSUtils
-import Tools.Error
 
 data FareByOriginDestReq = FareByOriginDestReq
   { route :: T.Text,
@@ -50,10 +49,8 @@ fareByOriginDestAPI = Proxy
 
 getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
 getFareByOriginDest config fareReq = do
-  accessToken <- getAuthToken config
-  fareByODRes <-
-    callAPI config.networkHostUrl (ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType) "getFareByOriginDest" fareByOriginDestAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_FARE_BY_ORIGIN_DEST_API") config.networkHostUrl)
+  let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType
+  fareByODRes <- callCMRLAPI config eulerClient "getFareByOriginDest" fareByOriginDestAPI
   logDebug $ "CMRL Get Fares API Response : " <> show fareByODRes
   case fareByODRes.result >>= (.result) of
     Just amount ->

@@ -13,7 +13,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
-import Tools.Error
 
 data PassengerViewStatusReq = PassengerViewStatusReq
   { mobileNumber :: T.Text
@@ -57,8 +56,6 @@ passengerViewStatusAPI = Proxy
 
 getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> PassengerViewStatusReq -> m [TicketDetails]
 getPassengerViewStatus config req = do
-  accessToken <- getAuthToken config
-  response <-
-    callAPI config.networkHostUrl (ET.client passengerViewStatusAPI (Just $ "Bearer " <> accessToken) req) "getPassengerViewStatus" passengerViewStatusAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_PASSENGER_VIEW_STATUS_API") config.networkHostUrl)
+  let eulerClient = \accessToken -> ET.client passengerViewStatusAPI (Just $ "Bearer " <> accessToken) req
+  response <- callCMRLAPI config eulerClient "getPassengerViewStatus" passengerViewStatusAPI
   return response.result

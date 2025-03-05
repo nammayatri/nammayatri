@@ -11,7 +11,6 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
-import Tools.Error
 
 data Station = Station
   { id :: Int,
@@ -42,8 +41,6 @@ stationListAPI = Proxy
 
 getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m [Station]
 getStationList config = do
-  accessToken <- getAuthToken config
-  response <-
-    callAPI config.networkHostUrl (ET.client stationListAPI (Just $ "Bearer " <> accessToken)) "getStationList" stationListAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_STATION_LIST_API") config.networkHostUrl)
+  let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken)
+  response <- callCMRLAPI config eulerClient "getStationList" stationListAPI
   return response.result
