@@ -35,6 +35,7 @@ import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, when
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -66,7 +67,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId
     now <- getCurrentTime
-    return $ generateJourneyInfoResponse journey legs now
+    generateJourneyInfoResponse journey legs now
   where
     lockKey = "infoLock-" <> journeyId.getId
 
@@ -101,7 +102,7 @@ getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   legs <- JM.getAllLegsInfo journeyId
   now <- getCurrentTime
   JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
-  return $ generateJourneyInfoResponse journey legs now
+  generateJourneyInfoResponse journey legs now
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -156,7 +157,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
-  return $ generateJourneyInfoResponse journey updatedLegs now
+  generateJourneyInfoResponse journey updatedLegs now
 
 getActiveJourneyIds ::
   ( CacheFlow m r,
@@ -170,23 +171,24 @@ getActiveJourneyIds riderId = do
   activeJourneys <- QJourney.findAllActiveByRiderId riderId
   return $ activeJourneys <&> (.id)
 
-generateJourneyInfoResponse :: Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> ApiTypes.JourneyInfoResp
+generateJourneyInfoResponse :: (JMTypes.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> m ApiTypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs now = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR legs now
+  unifiedQR <- getUnifiedQR legs journey.id now
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-  ApiTypes.JourneyInfoResp
-    { estimatedDuration = journey.estimatedDuration,
-      estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
-      estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
-      estimatedDistance = journey.estimatedDistance,
-      journeyStatus = journey.status,
-      legs,
-      unifiedQR,
-      startTime = journey.startTime,
-      endTime = journey.endTime
-    }
+  return $
+    ApiTypes.JourneyInfoResp
+      { estimatedDuration = journey.estimatedDuration,
+        estimatedMinFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMinFareAmount,
+        estimatedMaxFare = mkPriceAPIEntity $ mkPrice mbCurrency estimatedMaxFareAmount,
+        estimatedDistance = journey.estimatedDistance,
+        journeyStatus = journey.status,
+        legs,
+        unifiedQR,
+        startTime = journey.startTime,
+        endTime = journey.endTime
+      }
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
