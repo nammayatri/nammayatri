@@ -175,6 +175,7 @@ createPayments ::
 createPayments merchantOperatingCityId merchantId orderId orderShortId amount person paymentType = do
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
+  isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
@@ -193,7 +194,7 @@ createPayments merchantOperatingCityId merchantId orderId orderShortId amount pe
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Nothing
+            splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled amount []
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId

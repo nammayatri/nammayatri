@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.TicketBooking where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -20,6 +21,7 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
       Just
         Domain.Types.TicketBooking.TicketBooking
           { amount = Kernel.Types.Common.mkPrice currency amount,
+            blockExpirationTime = blockExpirationTime,
             bookedSeats = bookedSeats,
             cancelledSeats = cancelledSeats,
             createdAt = createdAt,
@@ -30,6 +32,7 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
             status = status,
             ticketPlaceId = Kernel.Types.Id.Id ticketPlaceId,
             updatedAt = updatedAt,
+            vendorSplitDetails = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails,
             visitDate = visitDate,
             merchantId = Kernel.Types.Id.Id <$> merchantId
           }
@@ -39,6 +42,7 @@ instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking wh
     Beam.TicketBookingT
       { Beam.amount = (.amount) amount,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
+        Beam.blockExpirationTime = blockExpirationTime,
         Beam.bookedSeats = bookedSeats,
         Beam.cancelledSeats = cancelledSeats,
         Beam.createdAt = createdAt,
@@ -49,6 +53,7 @@ instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking wh
         Beam.status = status,
         Beam.ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
         Beam.updatedAt = updatedAt,
+        Beam.vendorSplitDetails = Data.Aeson.toJSON <$> vendorSplitDetails,
         Beam.visitDate = visitDate,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }

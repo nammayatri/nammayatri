@@ -3,6 +3,7 @@
 
 module Storage.Beam.TicketBookingPeopleCategory where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -21,6 +22,7 @@ data TicketBookingPeopleCategoryT f = TicketBookingPeopleCategoryT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
     ticketBookingServiceCategoryId :: B.C f Kernel.Prelude.Text,
+    vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

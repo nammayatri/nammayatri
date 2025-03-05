@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN currency text ;
 ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN people_category_id character varying(36) ;
 ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN number_of_units_cancelled integer ;
 ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN amount_to_refund double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN vendor_split_details json ;

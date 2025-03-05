@@ -11,6 +11,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import qualified Tools.Beam.UtilsTH
+import qualified Tools.Payment
 
 data ServicePeopleCategory = ServicePeopleCategory
   { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
@@ -20,6 +21,7 @@ data ServicePeopleCategory = ServicePeopleCategory
     pricePerUnit :: Kernel.Types.Common.Price,
     pricingType :: Domain.Types.ServicePeopleCategory.PricingType,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
+    vendorSplitDetails :: Kernel.Prelude.Maybe [Tools.Payment.VendorSplitDetails],
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

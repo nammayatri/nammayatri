@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.TicketBookingService where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TicketBookingService
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -33,6 +34,7 @@ instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.
             ticketBookingId = Kernel.Types.Id.Id ticketBookingId,
             ticketServiceId = Kernel.Types.Id.Id ticketServiceId,
             updatedAt = updatedAt,
+            vendorSplitDetails = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails,
             verificationCount = verificationCount,
             visitDate = visitDate,
             merchantId = Kernel.Types.Id.Id <$> merchantId
@@ -56,6 +58,7 @@ instance ToTType' Beam.TicketBookingService Domain.Types.TicketBookingService.Ti
         Beam.ticketBookingId = Kernel.Types.Id.getId ticketBookingId,
         Beam.ticketServiceId = Kernel.Types.Id.getId ticketServiceId,
         Beam.updatedAt = updatedAt,
+        Beam.vendorSplitDetails = Data.Aeson.toJSON <$> vendorSplitDetails,
         Beam.verificationCount = verificationCount,
         Beam.visitDate = visitDate,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId

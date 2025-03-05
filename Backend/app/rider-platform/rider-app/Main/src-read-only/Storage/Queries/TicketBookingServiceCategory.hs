@@ -4,6 +4,7 @@
 
 module Storage.Queries.TicketBookingServiceCategory (module Storage.Queries.TicketBookingServiceCategory, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.TicketBookingService
@@ -80,6 +81,7 @@ updateByPrimaryKey (Domain.Types.TicketBookingServiceCategory.TicketBookingServi
       Se.Set Beam.name name,
       Se.Set Beam.serviceCategoryId serviceCategoryId,
       Se.Set Beam.ticketBookingServiceId (Kernel.Types.Id.getId ticketBookingServiceId),
+      Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.visitDate visitDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
