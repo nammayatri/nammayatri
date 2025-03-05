@@ -105,6 +105,9 @@ Person:
     customerNammaTags: "Maybe [TagNameValueExpiry]"
     payoutVpa: Maybe Text
     frequentLocGeohashes: "Maybe [Text]"
+    dateOfBirth: Maybe UTCTime
+    profilePicture: Maybe Text
+    verificationChannel: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
