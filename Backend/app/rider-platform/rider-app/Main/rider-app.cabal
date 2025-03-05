@@ -207,6 +207,7 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.MeterRide
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
@@ -528,6 +529,7 @@ library
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
+      API.Action.UI.MeterRide
       API.Action.UI.MultimodalConfirm
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -570,6 +572,7 @@ library
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
+      API.Types.UI.MeterRide
       API.Types.UI.MultimodalConfirm
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment

@@ -217,6 +217,7 @@ library
       Domain.Action.UI.Merchant
       Domain.Action.UI.MerchantServiceConfig
       Domain.Action.UI.Message
+      Domain.Action.UI.MeterRide
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
@@ -684,6 +685,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
+      API.Action.UI.MeterRide
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
@@ -719,6 +721,7 @@ library
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
+      API.Types.UI.MeterRide
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
