@@ -40,6 +40,7 @@ data PersonE e = Person
     customerNammaTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     customerPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     customerReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -73,6 +74,7 @@ data PersonE e = Person
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -89,6 +91,7 @@ data PersonE e = Person
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     useFakeOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verificationChannel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     whatsappNotificationEnrollStatus :: Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods
   }
   deriving (Generic)
@@ -121,6 +124,7 @@ instance EncryptedItem Person where
           customerNammaTags = customerNammaTags entity,
           customerPaymentId = customerPaymentId entity,
           customerReferralCode = customerReferralCode entity,
+          dateOfBirth = dateOfBirth entity,
           defaultPaymentMethodId = defaultPaymentMethodId entity,
           description = description entity,
           deviceId = deviceId entity,
@@ -154,6 +158,7 @@ instance EncryptedItem Person where
           notificationToken = notificationToken entity,
           passwordHash = passwordHash entity,
           payoutVpa = payoutVpa entity,
+          profilePicture = profilePicture entity,
           rating = rating entity,
           referralCode = referralCode entity,
           referredAt = referredAt entity,
@@ -170,6 +175,7 @@ instance EncryptedItem Person where
           totalRidesCount = totalRidesCount entity,
           updatedAt = updatedAt entity,
           useFakeOtp = useFakeOtp entity,
+          verificationChannel = verificationChannel entity,
           whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
         }
   decryptItem entity = do
@@ -194,6 +200,7 @@ instance EncryptedItem Person where
             customerNammaTags = customerNammaTags entity,
             customerPaymentId = customerPaymentId entity,
             customerReferralCode = customerReferralCode entity,
+            dateOfBirth = dateOfBirth entity,
             defaultPaymentMethodId = defaultPaymentMethodId entity,
             description = description entity,
             deviceId = deviceId entity,
@@ -227,6 +234,7 @@ instance EncryptedItem Person where
             notificationToken = notificationToken entity,
             passwordHash = passwordHash entity,
             payoutVpa = payoutVpa entity,
+            profilePicture = profilePicture entity,
             rating = rating entity,
             referralCode = referralCode entity,
             referredAt = referredAt entity,
@@ -243,6 +251,7 @@ instance EncryptedItem Person where
             totalRidesCount = totalRidesCount entity,
             updatedAt = updatedAt entity,
             useFakeOtp = useFakeOtp entity,
+            verificationChannel = verificationChannel entity,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
           },
         ""

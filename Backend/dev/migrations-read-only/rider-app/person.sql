@@ -141,3 +141,11 @@ ALTER TABLE atlas_app.person ADD COLUMN frequent_loc_geohashes text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN verification_channel text ;
+ALTER TABLE atlas_app.person ADD COLUMN profile_picture text ;
+ALTER TABLE atlas_app.person ADD COLUMN date_of_birth timestamp with time zone ;

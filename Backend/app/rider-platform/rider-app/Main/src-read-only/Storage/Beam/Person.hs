@@ -39,6 +39,7 @@ data PersonT f = PersonT
     customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     customerPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     customerReferralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dateOfBirth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     defaultPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -74,6 +75,7 @@ data PersonT f = PersonT
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -89,6 +91,7 @@ data PersonT f = PersonT
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     useFakeOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    verificationChannel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     whatsappNotificationEnrollStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods)
   }
   deriving (Generic, B.Beamable)

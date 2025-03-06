@@ -45,6 +45,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             customerNammaTags = customerNammaTags',
             customerPaymentId = customerPaymentId,
             customerReferralCode = customerReferralCode,
+            dateOfBirth = dateOfBirth,
             defaultPaymentMethodId = defaultPaymentMethodId,
             description = description,
             deviceId = deviceId,
@@ -78,6 +79,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             notificationToken = notificationToken,
             passwordHash = passwordHash,
             payoutVpa = payoutVpa,
+            profilePicture = profilePicture,
             rating = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings,
             referralCode = referralCode,
             referredAt = referredAt,
@@ -94,6 +96,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             totalRidesCount = totalRidesCount,
             updatedAt = updatedAt,
             useFakeOtp = useFakeOtp,
+            verificationChannel = verificationChannel,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
           }
 
@@ -120,6 +123,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.customerNammaTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags,
         Beam.customerPaymentId = customerPaymentId,
         Beam.customerReferralCode = customerReferralCode,
+        Beam.dateOfBirth = dateOfBirth,
         Beam.defaultPaymentMethodId = defaultPaymentMethodId,
         Beam.description = description,
         Beam.deviceId = deviceId,
@@ -155,6 +159,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.notificationToken = notificationToken,
         Beam.passwordHash = passwordHash,
         Beam.payoutVpa = payoutVpa,
+        Beam.profilePicture = profilePicture,
         Beam.referralCode = referralCode,
         Beam.referredAt = referredAt,
         Beam.referredByCustomer = referredByCustomer,
@@ -170,5 +175,6 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.totalRidesCount = totalRidesCount,
         Beam.updatedAt = updatedAt,
         Beam.useFakeOtp = useFakeOtp,
+        Beam.verificationChannel = verificationChannel,
         Beam.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
       }
