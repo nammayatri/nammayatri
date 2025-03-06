@@ -22,6 +22,7 @@ data JourneyT f = JourneyT
     id :: B.C f Kernel.Prelude.Text,
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
+    qrType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Journey.QRType),
     riderId :: B.C f Kernel.Prelude.Text,
     searchRequestId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

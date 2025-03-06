@@ -23,6 +23,9 @@ Journey:
     JourneyStatus:
       enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED"
       derive: "ToParamSchema"
+    QRType:
+      enum: "INTEGRATED_QR, REGULAR_QR"
+      derive: "ToParamSchema"
 
   fields:
     id: Id Journey
@@ -37,6 +40,7 @@ Journey:
     status: JourneyStatus
     totalLegs: Int
     isPaymentSuccess : Maybe Bool
+    qrType : Maybe QRType
 
   beamType:
     status: Maybe JourneyStatus
@@ -75,6 +79,11 @@ Journey:
         kvFunction: updateOneWithKV
         params: [isPaymentSuccess]
         where: id
+    updateQRType:
+        kvFunction: updateOneWithKV
+        params: [qrType]
+        where: id
+
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <JourneyStatus>
