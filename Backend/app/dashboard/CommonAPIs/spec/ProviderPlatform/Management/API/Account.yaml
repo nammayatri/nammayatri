@@ -17,10 +17,19 @@ apis:
         - status: FleetOwnerStatus
       response:
         type: [Person]
+  - POST:
+      endpoint: /verifyAccount
+      auth: ApiAuthV2
+      request:
+        type: VerifyAccountReq
+      response:
+        type: APISuccess
+
 
 types:
   FleetOwnerStatus:
-    type: enum
-    variants:
-      - PENDING
-      - REJECTED
+    - enum: Approved, Rejected
+  VerifyAccountReq:
+    - status: FleetOwnerStatus
+    - reason: Maybe Text
+    - fleetOwnerId: Id Person
