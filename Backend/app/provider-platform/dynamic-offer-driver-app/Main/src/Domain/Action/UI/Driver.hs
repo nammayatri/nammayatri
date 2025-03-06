@@ -929,17 +929,17 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
       mbTotalRidesConsideredForFareIssues = Yudhishthira.accessTagKey (LYT.TagName "TotalRidesConsideredForFareIssues") driverTags
       mbRidesWithFareIssues = Yudhishthira.accessTagKey (LYT.TagName "RidesWithFareIssue") driverTags
       mbOverchargingBlockedTill = Yudhishthira.accessTagKey (LYT.TagName "OverchargingBlockedTill") driverTags
-  let (overchargingBlocked, blockedTill) =
+  let (overchargingBlocked, blockedTill, driverOverchargingTag) =
         case (mbDriverOverchargingTag, mbOverchargingBlockedTill) of
-          (Just driverOverchargingTag, Just overchargingBlockedTillV) | transporterConfig.enableOverchargingBlocker -> do
+          (Just driverOverchargingTag', Just overchargingBlockedTillV) | transporterConfig.enableOverchargingBlocker -> do
             let bt :: DA.Result Integer = DA.fromJSON overchargingBlockedTillV
             case bt of
               DA.Success bt' -> do
                 let bt'' = epochToUTCTime (bt' - fromIntegral transporterConfig.timeDiffFromUtc)
-                let highOC = highOverchargingTag driverOverchargingTag
-                (highOC, bool Nothing (Just bt'') highOC)
-              _ -> (False, Nothing)
-          _ -> (False, Nothing)
+                let highOC = highOverchargingTag driverOverchargingTag'
+                (highOC, bool Nothing (Just bt'') highOC, Just driverOverchargingTag')
+              _ -> (False, Nothing, Nothing)
+          _ -> (False, Nothing, Nothing)
   return $
     DriverEntityRes
       { id = person.id,
@@ -988,7 +988,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
         safetyTag = mbDriverSafetyTag,
         safetyScore = mbDriverSafetyScore,
-        overchargingTag = mbDriverOverchargingTag,
+        overchargingTag = driverOverchargingTag,
         ridesWithFareIssues = mbRidesWithFareIssues,
         totalRidesConsideredForFareIssues = mbTotalRidesConsideredForFareIssues,
         softBlockStiers = driverInfo.softBlockStiers,

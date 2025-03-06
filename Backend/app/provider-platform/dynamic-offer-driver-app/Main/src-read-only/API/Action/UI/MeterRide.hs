@@ -17,7 +17,6 @@ import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -29,7 +28,7 @@ type API =
       :> ReqBody
            ('[JSON])
            API.Types.UI.MeterRide.MeterRideAddDestinationReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) API.Types.UI.MeterRide.MeterRideAddDestinationResp
   )
 
 handler :: Environment.FlowServer API
@@ -42,6 +41,6 @@ postMeterRideAddDestination ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     API.Types.UI.MeterRide.MeterRideAddDestinationReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Environment.FlowHandler API.Types.UI.MeterRide.MeterRideAddDestinationResp
   )
 postMeterRideAddDestination a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRide.postMeterRideAddDestination (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

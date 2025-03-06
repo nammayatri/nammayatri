@@ -203,6 +203,12 @@ Booking:
   default:
       bookingType: "'NormalBooking'"
 
+  queries:
+    updateEstimatedDistanceAndFare:
+      kvFunction: updateOneWithKV
+      params: [estimatedFare, estimatedDistance]
+      where: id
+
   constraints:
     id: PrimaryKey
     specialZoneOtpCode: "!SecondaryKey" # forcing to be a secondary key

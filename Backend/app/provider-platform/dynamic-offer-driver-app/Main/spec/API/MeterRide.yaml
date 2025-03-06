@@ -4,12 +4,18 @@ imports:
   LatLong: Kernel.External.Maps.Types
   APISuccess: Kernel.Types.APISuccess
   LocationAddress: Domain.Types.Location
+  HighPrecMoney: Kernel.Types.Common
+  Meters: Kernel.Types.Common
 
 module: MeterRide
 types:
   MeterRideAddDestinationReq:
-    gps: LatLong
-    location: LocationAddress
+    currentLatLong: LatLong
+    destinationLatLong: LatLong
+    destinationLocation: LocationAddress
+  MeterRideAddDestinationResp:
+    estimatedFare: HighPrecMoney
+    estimatedDistance: Meters
 apis:
   - POST:
       endpoint: /meterRide/{rideId}/addDestination
@@ -19,4 +25,4 @@ apis:
       request:
         type: MeterRideAddDestinationReq
       response:
-        type: APISuccess
+        type: MeterRideAddDestinationResp
