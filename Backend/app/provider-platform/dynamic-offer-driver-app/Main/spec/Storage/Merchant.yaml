@@ -1226,7 +1226,6 @@ TransporterConfig:
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
-    enableOverchargingBlocker: Maybe Bool
 
   default:
     mediaFileUrlPattern: |-
