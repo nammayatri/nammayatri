@@ -9,6 +9,6 @@ import qualified Kernel.External.Maps.Types
 import Servant
 import Tools.Auth
 
-data MeterRideAddDestinationReq = MeterRideAddDestinationReq {gps :: Kernel.External.Maps.Types.LatLong, location :: Domain.Types.LocationAddress.LocationAddress}
+data MeterRideAddDestinationReq = MeterRideAddDestinationReq {destinationLatLong :: Kernel.External.Maps.Types.LatLong, destinationLocation :: Domain.Types.LocationAddress.LocationAddress}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

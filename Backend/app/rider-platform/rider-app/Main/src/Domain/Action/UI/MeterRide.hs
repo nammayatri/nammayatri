@@ -42,7 +42,7 @@ postAddDestination bppRideId mbToken addDestinationReq = do
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (booking.tripCategory == Just (OneWay MeterRide)) $
     throwError $ InvalidRequest ("Invalid trip category " <> show booking.tripCategory)
-  dropLocation <- buildLocation ride.merchantId ride.merchantOperatingCityId addDestinationReq.gps addDestinationReq.location
+  dropLocation <- buildLocation ride.merchantId ride.merchantOperatingCityId addDestinationReq.destinationLatLong addDestinationReq.destinationLocation
   QL.create dropLocation
   pickupMapForBooking <- SLM.buildDropLocationMapping dropLocation.id ride.bookingId.getId DLM.BOOKING ride.merchantId ride.merchantOperatingCityId
   QLM.create pickupMapForBooking

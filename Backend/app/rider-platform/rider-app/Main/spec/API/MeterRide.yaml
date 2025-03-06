@@ -6,8 +6,8 @@ imports:
 module: MeterRide
 types:
   MeterRideAddDestinationReq:
-    gps: LatLong
-    location: LocationAddress
+    destinationLatLong: LatLong
+    destinationLocation: LocationAddress
 apis:
   - POST:
       endpoint: /{bppRideId}/addDestination
