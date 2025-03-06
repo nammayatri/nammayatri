@@ -19,6 +19,8 @@ module Domain.Action.UI.PartnerOrganizationFRFS
     shareTicketInfo,
     mkLatLong,
     upsertPersonAndQuoteConfirm,
+    partnerOrgAuthVerify,
+    partnerOrgAuth,
     GetFareReq (..),
     GetFareResp (..),
     GetConfigResp (..),
@@ -30,6 +32,9 @@ module Domain.Action.UI.PartnerOrganizationFRFS
     GetFareRespV2 (..),
     UpsertPersonAndQuoteConfirmResBody (..),
     QuoteConfirmStatus (..),
+    PartnerOrgAuthRes (..),
+    PartnerOrgAuthVerifyRes (..),
+    PartnerOrgAuthVerifyReq (..),
   )
 where
 
@@ -56,10 +61,10 @@ import qualified Domain.Types.RegistrationToken as SR
 import Domain.Types.Station
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, map, null, whenJust)
+import EulerHS.Prelude hiding (id, length, map, null, whenJust, whenM)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (sequenceA_)
 import Kernel.Sms.Config
@@ -68,11 +73,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common as Kernel
 import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.FRFSUtils as Utils
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
@@ -86,13 +93,13 @@ import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QFT
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFTBP
-import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Storage.Queries.Route as QRoute
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 data GetFareReq = GetFareReq
   { fromStationCode :: Text,
@@ -191,6 +198,28 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     googleWalletJWTUrl :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data PartnerOrgAuthVerifyReq = PartnerOrgAuthVerifyReq
+  { otp :: Text,
+    tokenId :: Id SR.RegistrationToken
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+validateAuthVerifyReq' :: Validate PartnerOrgAuthVerifyReq
+validateAuthVerifyReq' PartnerOrgAuthVerifyReq {..} =
+  sequenceA_
+    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit
+    ]
+
+newtype PartnerOrgAuthVerifyRes = PartnerOrgAuthVerifyRes
+  {token :: RegToken}
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PartnerOrgAuthRes = PartnerOrgAuthRes
+  { authId :: Id SR.RegistrationToken,
+    maskedMobileNumber :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 upsertPersonAndGetToken ::
   Id PartnerOrganization ->
@@ -519,7 +548,7 @@ upsertPersonAndQuoteConfirm partnerOrg req = do
     else do
       pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrg.orgId.getId $ show DPOC.REGISTRATION)
       regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
-      mbBooking <- QBooking.findByQuoteId req.quoteId
+      mbBooking <- QFTB.findByQuoteId req.quoteId
       case mbBooking of
         Just booking -> cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg
         Nothing -> createNewBookingAndTriggerInit partnerOrg req regPOCfg
@@ -668,3 +697,55 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
           }
   where
     lockKey = "FRFS:PartnerOrgId:" <> partnerOrg.orgId.getId <> ":UpsertPersonAndQuoteConfirm:SearchId:" <> req.searchId.getId
+
+partnerOrgAuth :: Id DFTB.FRFSTicketBooking -> Flow PartnerOrgAuthRes
+partnerOrgAuth ticketBookingId = do
+  ticketBooking <- B.runInReplica $ QFTB.findById ticketBookingId >>= fromMaybeM (FRFSTicketBookingNotFound ticketBookingId.getId)
+  case ticketBooking.partnerOrgId of
+    Nothing -> throwError $ FRFSBookingNotMadeThroughPartnerOrg ticketBookingId.getId
+    Just partnerOrgId -> do
+      let entityId = ticketBooking.riderId
+      person <- B.runInReplica $ Person.findById entityId >>= fromMaybeM (PersonNotFound ticketBooking.riderId.getId)
+      pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrgId.getId $ show DPOC.REGISTRATION)
+      regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
+      newOtp <- generateOTPCode
+      regToken <- getRegToken entityId partnerOrgId regPOCfg{fakeOtp = newOtp} ticketBooking.merchantId
+      RegistrationToken.updateOtpByIdForPartnerOrgId regToken.id partnerOrgId newOtp
+      let mRiderMobileCountryCode = person.mobileCountryCode
+      mobileNumber <- mapM decrypt person.mobileNumber
+      sendTicketCancelOTPSMS mobileNumber mRiderMobileCountryCode ticketBooking newOtp
+      maskedMobileNumber <- (maskMobileNumber <$> mobileNumber) & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      return $ PartnerOrgAuthRes regToken.id maskedMobileNumber
+      where
+        sendTicketCancelOTPSMS :: Maybe Text -> Maybe Text -> DFTB.FRFSTicketBooking -> Text -> Flow ()
+        sendTicketCancelOTPSMS mRiderNumber mRiderMobileCountryCode ticketBooking' otpCode' =
+          withLogTag ("SMS:PersonId:" <> ticketBooking'.riderId.getId) $ do
+            mobileNumber <- mRiderNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            let mocId = ticketBooking'.merchantOperatingCityId
+                countryCode = fromMaybe "+91" mRiderMobileCountryCode
+                phoneNumber = countryCode <> mobileNumber
+            buildSmsReq <-
+              MessageBuilder.buildFRFSTicketCancelOTPMessage mocId $
+                MessageBuilder.BuildFRFSTicketCancelOTPMessageReq
+                  { otp = otpCode'
+                  }
+
+            Sms.sendSMS ticketBooking'.merchantId mocId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
+        maskMobileNumber :: Text -> Text
+        maskMobileNumber text = if (T.length text) > 4 then T.take 2 text <> "XXXXXX" <> T.takeEnd 2 text else "XXXXXX"
+
+partnerOrgAuthVerify ::
+  PartnerOrgAuthVerifyReq ->
+  Flow PartnerOrgAuthVerifyRes
+partnerOrgAuthVerify req = do
+  runRequestValidation validateAuthVerifyReq' req
+  regToken@SR.RegistrationToken {..} <- DReg.getRegistrationTokenE req.tokenId
+  when verified $ throwError $ AuthBlocked "Already verified."
+  checkForExpiry authExpiry updatedAt
+  unless (regToken.authValueHash == req.otp && isJust regToken.createdViaPartnerOrgId) $ throwError InvalidAuthData
+  void $ RegistrationToken.setVerified True req.tokenId
+  return $ PartnerOrgAuthVerifyRes regToken.token
+  where
+    checkForExpiry authExpiry updatedAt =
+      whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
+        throwError TokenExpired
