@@ -376,23 +376,4 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN stop_fcm_supp
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN schedule_booking_list_eligibility_tags text[] ;
