@@ -239,6 +239,7 @@ Booking:
     configInExperimentVersions: "[ConfigVersionMap]"
     journeyId: Maybe (Id Journey)
     journeyLegStatus: Maybe JourneyLegStatus
+    preferSafetyPlus: Bool
 
   beamFields:
     estimatedDistance:
@@ -294,6 +295,7 @@ Booking:
     clientManufacturer: Maybe Text
     vehicleIconUrl: Maybe Text
     configInExperimentVersions: Maybe Value
+    preferSafetyPlus: Maybe Bool
 
   sqlType:
     id: character(36)
@@ -386,6 +388,7 @@ Booking:
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     parcelType: getParcelType
     parcelQuantity: getParcelQuantity
+    preferSafetyPlus : Kernel.Prelude.Just|I
 
   intermediateTransformers:
     toTType:
@@ -415,6 +418,7 @@ Booking:
     itemId: bppEstimateId|E
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    preferSafetyPlus : fromMaybe False preferSafetyPlus | E
 
   extraOperations:
     - EXTRA_QUERY_FILE

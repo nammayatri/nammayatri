@@ -20,6 +20,7 @@ import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
@@ -246,6 +247,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         currency = searchReq.currency,
         isAdvancedBookingEnabled = searchReq.isAdvanceBookingEnabled,
         serviceTierArray = estimateOrQuoteServTierNames,
+        preferSafetyPlus = searchReq.preferSafetyPlus,
         ..
       }
 
@@ -267,9 +269,10 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Text ->
+  [DAC.ConditionalCharges] ->
   Bool ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId eligibleForUpgrade = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name

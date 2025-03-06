@@ -103,6 +103,7 @@ Quote:
     updatedAt : UTCTime
     validTill : UTCTime
     vehicleIconUrl: Maybe BaseUrl
+    isSafetyPlus : Bool
   derives: "Generic, Show"
 
   beamFields:
@@ -147,6 +148,7 @@ Quote:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     vehicleIconUrl: Maybe Text
+    isSafetyPlus: Maybe Bool
 
 
   fromTType:
@@ -167,6 +169,7 @@ Quote:
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    isSafetyPlus : Kernel.Prelude.fromMaybe False isSafetyPlus | E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -197,6 +200,7 @@ Quote:
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     distanceUnit: Kernel.Prelude.Just|I
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    isSafetyPlus: Kernel.Prelude.Just|I
 
   sqlType:
     requestId: character varying(255)

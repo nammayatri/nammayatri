@@ -257,3 +257,14 @@ ALTER TABLE atlas_app.booking ADD COLUMN journey_id character varying(36) ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN journey_leg_status text ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN prefer_safety_plus boolean ;
+
+
+------- SQL updates -------
+

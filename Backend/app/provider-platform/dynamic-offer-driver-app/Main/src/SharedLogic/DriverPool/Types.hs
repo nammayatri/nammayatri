@@ -21,6 +21,7 @@ import Data.Default.Class
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Common as DI (DriverMode (..))
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
@@ -158,7 +159,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
-data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver
+data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver | SafetyPlusDriver
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
@@ -239,6 +240,7 @@ data TripQuoteDetail = TripQuoteDetail
     driverDefaultStepFee :: Maybe HighPrecMoney,
     driverPickUpCharge :: Maybe HighPrecMoney,
     driverParkingCharge :: Maybe HighPrecMoney,
+    conditionalCharges :: [DAC.ConditionalCharges],
     estimateOrQuoteId :: Text,
     eligibleForUpgrade :: Bool
   }

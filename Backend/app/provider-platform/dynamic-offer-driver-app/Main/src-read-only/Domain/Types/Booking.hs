@@ -52,6 +52,7 @@ data Booking = Booking
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isSafetyPlus :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -92,8 +93,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
-$(mkHttpInstancesForEnum (''BookingStatus))
+$(mkHttpInstancesForEnum ''BookingStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)

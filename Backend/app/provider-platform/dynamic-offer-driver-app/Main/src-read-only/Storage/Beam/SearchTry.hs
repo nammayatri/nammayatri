@@ -28,6 +28,7 @@ data SearchTryT f = SearchTryT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f Kernel.Prelude.Text,
+    preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requestId :: B.C f Kernel.Prelude.Text,
     searchRepeatCounter :: B.C f Kernel.Prelude.Int,
     searchRepeatType :: B.C f Domain.Types.SearchTry.SearchRepeatType,

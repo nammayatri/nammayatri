@@ -23,12 +23,15 @@ import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import qualified Domain.Types.ConditionalCharges as DAC
+import qualified Domain.Types.ConditionalCharges as DCC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.Plan as DPlan
 import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
@@ -57,6 +60,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
@@ -128,7 +132,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
     isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
     let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
-    let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge
+    let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
+    let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
     let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
@@ -175,9 +180,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               vehicleAge = vehicleAge,
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,
-              merchantOperatingCityId = Just searchReq.merchantOperatingCityId
+              merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
+              mbAdditonalChargeCategories = Nothing
             }
-      pure $ Fare.fareSum fareParams
+      pure $ Fare.fareSum fareParams $ Just []
 
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -205,13 +211,15 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
       driverStats <- runInReplica $ QDriverStats.findById dpRes.driverId
+      driverPlanSafetyPlus <- QDP.findByDriverIdWithServiceName dpwRes.driverPoolResult.driverId (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
+      let isEligibleForSafetyPlusCharge = maybe False (.enableServiceUsageCharge) driverPlanSafetyPlus
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
           farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
           getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
-        _ -> pure tripQuoteDetail.baseFare
+        _ -> pure $ tripQuoteDetail.baseFare
       deploymentVersion <- asks (.version)
       isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
       let searchRequestForDriver =
@@ -281,9 +289,15 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 parcelType = searchReq.parcelType,
                 parcelQuantity = searchReq.parcelQuantity,
                 driverTagScore = dpwRes.score,
+                conditionalCharges = additionalChargeConditional isEligibleForSafetyPlusCharge tripQuoteDetail.conditionalCharges,
+                isSafetyPlus = Just isEligibleForSafetyPlusCharge,
                 ..
               }
       pure searchRequestForDriver
+      where
+        additionalChargeConditional isEligibleForSafetyPlusCharge conditionalCharges = do
+          let safetyCharges = if isEligibleForSafetyPlusCharge then find (\ac -> ac == DAC.SAFETY_PLUS_CHARGES) $ map (.chargeCategory) conditionalCharges else Nothing
+          catMaybes $ [safetyCharges]
 
 buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
 buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do

@@ -154,6 +154,9 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           middleStopCount = 0,
           parcelQuantity = Nothing,
           parcelType = Nothing,
+          conditionalCharges = [],
+          isSafetyPlus = False,
+          safetyPlusCharges = Nothing,
           ..
         }
 

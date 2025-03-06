@@ -478,3 +478,12 @@ updateSafetyJourneyStatus rideId status = do
 
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+
+updateIsSafetyPlus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Bool -> m ()
+updateIsSafetyPlus rideId isSafetyPlus = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.isSafetyPlus $ Just isSafetyPlus,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]

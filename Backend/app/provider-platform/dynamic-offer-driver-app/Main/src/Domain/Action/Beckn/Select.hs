@@ -18,8 +18,9 @@ module Domain.Action.Beckn.Select
   )
 where
 
-import Data.Text as Text
+import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DeliveryDetails as DParcel
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
@@ -56,7 +57,8 @@ data DSelectReq = DSelectReq
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
     disabilityDisable :: Maybe Bool,
-    parcelDetails :: (Maybe Text, Maybe Int)
+    parcelDetails :: (Maybe Text, Maybe Int),
+    preferSafetyPlus :: Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -77,16 +79,18 @@ handler merchant sReq searchReq estimates = do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
       return Nothing
   QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
+  QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId False
+          driverAdditionalCharges = filterChargesByApplicability $ fromMaybe [] ((.conditionalCharges) <$> estimate.farePolicy)
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False
   let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @(DParcel.ParcelType) $ unpack rpt
   when (isJust parcelType) $ QSR.updateParcelDetails parcelType (snd sReq.parcelDetails) searchReq.id
-  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId}
+  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId, DSR.preferSafetyPlus = sReq.preferSafetyPlus}
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -102,6 +106,9 @@ handler merchant sReq searchReq estimates = do
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
   where
     mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then (Just DRD.MultipleDeviceIdExists) else Nothing) isMultipleOrNoDeviceIdExist
+    filterChargesByApplicability conditionalCharges = do
+      let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
+      catMaybes $ [safetyCharges]
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
 validateRequest merchantId sReq = do

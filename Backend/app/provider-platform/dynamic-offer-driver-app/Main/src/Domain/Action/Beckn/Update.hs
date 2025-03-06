@@ -272,7 +272,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,
-                    merchantOperatingCityId = Just booking.merchantOperatingCityId
+                    merchantOperatingCityId = Just booking.merchantOperatingCityId,
+                    mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
@@ -459,7 +460,7 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         merchantOperatingCityId = booking.merchantOperatingCityId,
         currentPointLat = (.lat) <$> currentPoint,
         currentPointLon = (.lon) <$> currentPoint,
-        estimatedFare = HighPrecMoney $ toRational $ fareSum fareParams,
+        estimatedFare = HighPrecMoney $ toRational $ fareSum fareParams Nothing,
         estimatedDistance = Just $ metersToHighPrecMeters estimatedDistance,
         oldEstimatedFare = booking.estimatedFare,
         maxEstimatedDistance = metersToHighPrecMeters <$> maxEstimatedDistance,

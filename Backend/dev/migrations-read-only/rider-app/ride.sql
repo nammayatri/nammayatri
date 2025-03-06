@@ -234,3 +234,10 @@ ALTER TABLE atlas_app.ride ADD COLUMN talked_with_driver boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN is_safety_plus boolean ;
+

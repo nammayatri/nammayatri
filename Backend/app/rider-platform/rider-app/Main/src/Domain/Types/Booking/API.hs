@@ -138,7 +138,8 @@ data BookingAPIEntity = BookingAPIEntity
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int,
     cancellationReason :: Maybe BookingCancellationReasonAPIEntity,
-    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange
+    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
+    isSafetyPlus :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -163,7 +164,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     driversPreviousRideDropLocLat :: Maybe Double,
     driversPreviousRideDropLocLon :: Maybe Double,
     stopInfo :: [DSI.StopInformation],
-    batchConfig :: Maybe SharedRedisKeys.BatchConfig
+    batchConfig :: Maybe SharedRedisKeys.BatchConfig,
+    isSafetyPlus :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -337,7 +339,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         favCount = activeRide >>= (.favCount),
         tripCategory = booking.tripCategory,
         estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
-        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl
+        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
+        isSafetyPlus = booking.preferSafetyPlus
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -496,8 +499,9 @@ buildBookingStatusAPIEntity booking = do
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
       destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
       talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
+      isSafetyPlus = booking.preferSafetyPlus
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

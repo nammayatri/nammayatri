@@ -104,3 +104,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN dynamic_pricing_log
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN config_in_experiment_versions json ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN parcel_type text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN parcel_quantity integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN prefer_safety_plus boolean ;

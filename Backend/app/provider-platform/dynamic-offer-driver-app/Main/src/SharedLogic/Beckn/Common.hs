@@ -52,7 +52,8 @@ data DRideAssignedReq = DRideAssignedReq
     driverAccountId :: Maybe Payment.AccountId,
     estimateId :: Maybe Text,
     isAlreadyFav :: Bool,
-    favCount :: Int
+    favCount :: Int,
+    isSafetyPlus :: Bool
   }
 
 data DRideStartedReq = DRideStartedReq

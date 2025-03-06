@@ -77,8 +77,9 @@ mkFulfillment ::
   Bool ->
   Bool ->
   Int ->
+  Bool ->
   m RideFulfillment.FulfillmentInfo
-mkFulfillment mbDriver mbDriverStats ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide isAlreadyFav favCount = do
+mkFulfillment mbDriver mbDriverStats ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide isAlreadyFav favCount isSafetyPlus = do
   let rideOtp = fromMaybe ride.otp ride.endOtp
   agent <-
     forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
@@ -93,7 +94,8 @@ mkFulfillment mbDriver mbDriverStats ride booking mbVehicle mbImage tags personT
                       Tags.Tag (Just False) (Just "is_driver_birthday") (Just "Is Driver BirthDay") (Just $ show isDriverBirthDay),
                       Tags.Tag (Just False) (Just "is_free_ride") (Just "Is Free Ride") (Just $ show isFreeRide),
                       Tags.Tag (Just False) (Just "is_already_fav") (Just "Is Already Fav") (Just $ show isAlreadyFav),
-                      Tags.Tag (Just False) (Just "fav_count") (Just "Favourite Count") (Just $ show favCount)
+                      Tags.Tag (Just False) (Just "fav_count") (Just "Favourite Count") (Just $ show favCount),
+                      Tags.Tag (Just False) (Just "is_safety_plus") (Just "Is Safety Plus") (Just $ show isSafetyPlus)
                     ]
                 }
             ]

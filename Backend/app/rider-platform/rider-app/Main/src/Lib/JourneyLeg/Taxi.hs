@@ -113,7 +113,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                       otherSelectedEstimates = Nothing,
                       isAdvancedBookingEnabled = Nothing,
                       deliveryDetails = Nothing,
-                      disabilityDisable = Nothing
+                      disabilityDisable = Nothing,
+                      preferSafetyPlus = Nothing
                     }
             void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
         Nothing -> CFFM.setConfirmOnceGetFare req.searchId

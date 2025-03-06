@@ -247,6 +247,7 @@ buildRideListItem QRide.RideItem {..} = do
         nextStopLocation = getStopFromBookingDetails bookingDetails,
         fareProductType = fareProductType,
         tripCategory = getTripCategory tripCategory fareProductType,
+        isSafetyPlus = ride.isSafetyPlus,
         ..
       }
 
@@ -418,7 +419,8 @@ rideInfo merchantId reqRideId = do
         computedPrice = ride.totalFare <&> (.amount),
         rideCreatedAt = ride.createdAt,
         roundTrip = booking.roundTrip,
-        mobileCountryCode = person.mobileCountryCode
+        mobileCountryCode = person.mobileCountryCode,
+        isSafetyPlus = ride.isSafetyPlus
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup

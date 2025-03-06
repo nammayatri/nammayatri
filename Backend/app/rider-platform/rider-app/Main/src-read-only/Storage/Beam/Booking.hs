@@ -77,6 +77,7 @@ data BookingT f = BookingT
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     paymentStatus :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     primaryExophone :: B.C f Kernel.Prelude.Text,
     providerId :: B.C f Kernel.Prelude.Text,
     providerUrl :: B.C f Kernel.Prelude.Text,

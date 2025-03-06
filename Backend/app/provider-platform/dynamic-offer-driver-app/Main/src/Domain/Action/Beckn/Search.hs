@@ -523,6 +523,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         configInExperimentVersions = configVersionMap,
         parcelType = Nothing,
         parcelQuantity = Nothing,
+        preferSafetyPlus = False,
         ..
       }
 
@@ -578,12 +579,13 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           currency = searchRequest.currency,
           noOfStops = length searchRequest.stops,
           distanceUnit = searchRequest.distanceUnit,
-          merchantOperatingCityId = Just merchantOpCityId
+          merchantOperatingCityId = Just merchantOpCityId,
+          mbAdditonalChargeCategories = Nothing
         }
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
-  let estimatedFare = fareSum fareParams
+  let estimatedFare = fareSum fareParams (Just [])
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -660,7 +662,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               noOfStops,
               currency,
               distanceUnit,
-              merchantOperatingCityId = Just merchantOperatingCityId
+              merchantOperatingCityId = Just merchantOperatingCityId,
+              mbAdditonalChargeCategories = Nothing
             }
     fareParamsMax <- calculateFareParameters params
     fareParamsMin <-
@@ -673,8 +676,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
-      minFare = fareSum minFareParams + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
-      maxFare = fareSum maxFareParams + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds
+      minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
+      maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DEst.Estimate

@@ -83,7 +83,8 @@ data RideAssignedInfo = RideAssignedInfo
     fareBreakups :: Maybe [DCommon.DFareBreakup],
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
-    driverAccountId :: Maybe Payment.AccountId
+    driverAccountId :: Maybe Payment.AccountId,
+    isSafetyPlus :: Bool
   }
 
 data ValidatedOnConfirmReq
@@ -166,4 +167,4 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
         email <- mapM decrypt person.email
         return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, ..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, isSafetyPlus = booking.preferSafetyPlus, ..}

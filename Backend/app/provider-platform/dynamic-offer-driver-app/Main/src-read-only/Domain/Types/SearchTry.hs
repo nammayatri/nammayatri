@@ -28,6 +28,7 @@ data SearchTry = SearchTry
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Text,
+    preferSafetyPlus :: Kernel.Prelude.Bool,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRepeatCounter :: Kernel.Prelude.Int,
     searchRepeatType :: Domain.Types.SearchTry.SearchRepeatType,

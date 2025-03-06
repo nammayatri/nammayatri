@@ -93,6 +93,7 @@ data BecknTagGroup
   | DRIVER_REACHED_DESTINATION_INFO
   | ESTIMATED_END_TIME_RANGE
   | RIDE_DETAILS_INFO
+  | SAFETY_PLUS_INFO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -456,6 +457,9 @@ data BecknTag
   | IS_VALID_RIDE
   | PARCEL_TYPE
   | PARCEL_QUANTITY
+  | PREFER_SAFETY_PLUS
+  | SAFETY_PLUS_CHARGES
+  | IS_SAFETY_PLUS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
