@@ -352,10 +352,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_thr
 
 
 
-------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_overcharging_blocker Maybe Bool  default false;
 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_overcharging_blocker boolean  default false;
