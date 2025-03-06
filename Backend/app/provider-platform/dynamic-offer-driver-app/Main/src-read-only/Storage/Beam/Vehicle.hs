@@ -37,6 +37,7 @@ data VehicleT f = VehicleT
     vehicleClass :: B.C f Kernel.Prelude.Text,
     vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

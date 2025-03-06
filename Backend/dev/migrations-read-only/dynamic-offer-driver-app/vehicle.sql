@@ -47,3 +47,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN m_y_manufacturing date;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN downgrade_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_tags text[] ;

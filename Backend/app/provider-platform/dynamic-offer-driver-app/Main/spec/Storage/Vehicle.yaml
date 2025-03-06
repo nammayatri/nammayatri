@@ -49,6 +49,7 @@ Vehicle:
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
     selectedServiceTiers: "[ServiceTierType]"
+    vehicleTags: Maybe [Text]
 
   fromTType:
     category: Domain.Types.VehicleVariant.getVehicleCategory category variant |E

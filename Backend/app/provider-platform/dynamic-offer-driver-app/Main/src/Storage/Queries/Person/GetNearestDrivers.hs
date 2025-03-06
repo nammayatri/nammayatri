@@ -162,6 +162,6 @@ getNearestDrivers NearestDriversReq {..} = do
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
-                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : fromMaybe [] person.driverTag,
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "NormalDriver#true" : (map (\tag -> LYT.TagNameValueExpiry tag) (fromMaybe [] vehicle.vehicleTags) ++ fromMaybe [] person.driverTag),
                 score = Nothing
               }

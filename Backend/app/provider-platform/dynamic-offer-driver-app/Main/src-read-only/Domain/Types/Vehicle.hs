@@ -38,6 +38,7 @@ data Vehicle = Vehicle
     vehicleClass :: Kernel.Prelude.Text,
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
