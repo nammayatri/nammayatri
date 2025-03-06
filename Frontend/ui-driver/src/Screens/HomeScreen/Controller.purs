@@ -70,7 +70,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys ,setKeyInSharedPref, isMicrophonePermissionEnabled, defaultMarkerConfig, renderBase64Image, checkAndAskMicrophonePermission, storeCallBackMicrophonePermission)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -325,6 +325,7 @@ instance showAction :: Show Action where
   show (RideEndWithStopsPopupAction _) = "RideEndWithStopsPopupAction"
   show (UpdateRouteInState _) = "UpdateRouteInState"
   show (DriverBlockedPopUp _) = "DriverBlockedPopUp"
+  show (MicPermissionCallBack _) = "MicPermissionCallBack"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -684,6 +685,7 @@ data Action = NoAction
             | UpdateRouteInState (Array Route)
             | GotoMeterRideScreen
             | DriverBlockedPopUp PopUpModal.Action
+            | MicPermissionCallBack Boolean
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1304,21 +1306,24 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
   if state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideStarted then
     continue state{props{showDeliveryCallPopup = true}}
   else do
-    let exoPhoneNo = if state.data.activeRide.tripType == ST.Delivery then maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails else state.data.activeRide.exoPhone
-    let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
+    let exophoneNumber = getExoPhoneNumber state
     let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-    if (voipConfig.driver.enableVoipCalling) then do
-      let customerCuid = state.data.activeRide.id
-      continueWithCmd state [ do
-        void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-          if (not (DS.null customerCuid)) then do
-            push <- liftFlow $ getPushFn Nothing "HomeScreen"
-            void $ liftFlow $ runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
-            pure unit
-          else pure unit
-        pure NoAction
-      ]
-
+    let isMicEnabled = JB.isMicrophonePermissionEnabled unit
+    let customerCuid = state.data.activeRide.id
+    if (voipConfig.driver.enableVoipCalling && not (DS.null customerCuid)) then do
+        if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
+          continueWithCmd state [ do
+            push <-  getPushFn Nothing "HomeScreen"
+            void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+            void $ pure $ JB.checkAndAskMicrophonePermission unit
+            pure NoAction
+          ]
+        else 
+          continueWithCmd state [ do
+            push <-  getPushFn Nothing "HomeScreen"
+            runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
+            pure NoAction
+          ]
     else do
       updateWithCmdAndExit state [ do
         void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
@@ -1420,17 +1425,35 @@ eval ScrollToBottom state = do
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = (length (trim value)) >= 1}}
 
+eval (MicPermissionCallBack isMicPermissionEnabled) state = do
+  if (isMicPermissionEnabled && getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true") then do
+    let _ =  runFn2 setKeyInSharedPref "MIC_PERMISSION_ASKED" "true"
+    continueWithCmd state [do
+      pure $ (ChatViewActionController (ChatView.Call))
+    ]
+  else do
+    let _ =  runFn2 setKeyInSharedPref "MIC_PERMISSION_ASKED" "true"
+    continue state
+
 eval (ChatViewActionController (ChatView.Call)) state = do
-  let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
+  let isMicEnabled = JB.isMicrophonePermissionEnabled unit
+  let customerCuid = state.data.activeRide.id
+  let exophoneNumber = getExoPhoneNumber state
   let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-  if (voipConfig.driver.enableVoipCalling) then do
-      let customerCuid = state.data.activeRide.id
-      continueWithCmd state [ do
-        when (not (DS.null customerCuid)) do
+  if (voipConfig.driver.enableVoipCalling && not (DS.null customerCuid)) then do
+      if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
+        continueWithCmd state [ do
+          push <-  getPushFn Nothing "HomeScreen"
+          void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+          void $ pure $ JB.checkAndAskMicrophonePermission unit
+          pure NoAction
+        ]
+      else 
+        continueWithCmd state [ do
           push <-  getPushFn Nothing "HomeScreen"
           runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
-        pure NoAction
-      ]
+          pure NoAction
+        ]
   else
     continueWithCmd state [ do
       _ <- pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
@@ -2136,6 +2159,15 @@ constructLatLong lat lon =
   , place : ""
   , driverInsideThreshold : false
   }
+
+getExoPhoneNumber :: ST.HomeScreenState -> String
+getExoPhoneNumber state =
+  let exoPhoneNo =
+        if state.data.activeRide.tripType == ST.Delivery
+          then maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails
+          else state.data.activeRide.exoPhone
+  in if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
+
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
 activeRideDetail state (RidesInfo ride) =
   let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)

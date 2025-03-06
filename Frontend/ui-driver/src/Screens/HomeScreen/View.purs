@@ -90,7 +90,7 @@ import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
-import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs, getExoPhoneNumber)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
@@ -264,7 +264,7 @@ screen initialState (GlobalState globalState) =
                                   else pure unit
                                 let voipConfig = getDriverVoipConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
                                 if (voipConfig.driver.enableVoipFeature) then do
-                                  void $ pure $ JB.initSignedCall initialState.data.activeRide.id true
+                                  void $ pure $ JB.initSignedCall initialState.data.activeRide.id true (getExoPhoneNumber initialState)
                                 else pure unit
                                 push GetMessages
             "RideStarted"    -> do

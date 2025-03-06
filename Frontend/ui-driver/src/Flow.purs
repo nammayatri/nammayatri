@@ -107,7 +107,7 @@ import Screens.DriverEarningsScreen.Transformer
 import Screens.Handlers (chooseCityScreen, homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
-import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion, getCoinPopupStatus)
+import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion, getCoinPopupStatus, getExoPhoneNumber)
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.DocumentCaptureScreen.ScreenData (initData) as DocumentCaptureData
@@ -2367,7 +2367,7 @@ currentRideFlow activeRideResp isActiveRide = do
                 lastStopMod <- translateString decodedLastStopAddress' 500
                 pure $ Just lastStopMod)  decodeLastStopAddress
               if (voipConfig.driver.enableVoipFeature) then do
-                void $ pure $ JB.initSignedCall activeRide.id true
+                void $ pure $ JB.initSignedCall activeRide.id true (getExoPhoneNumber state)
               else pure unit
               setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
 
