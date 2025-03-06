@@ -38,6 +38,7 @@ VehicleServiceTier:
     priority: Int
     stopFcmThreshold: Maybe Int
     stopFcmSuppressCount: Maybe Int
+    scheduleBookingListEligibilityTags: Maybe [Text]
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
