@@ -1257,6 +1257,11 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void setExoPhoneNumber(String phoneNum) {
+        cleverTapSignedCall.setExoPhoneNumber(phoneNum);
+    }
+
+    @JavascriptInterface
     public void setupCamera(String previewViewId, boolean isBackCamera) {
         cameraUtils = new CameraUtils();
         cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);

@@ -80,7 +80,7 @@ foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean
 foreign import checkAndAskNotificationPermission :: Boolean -> Effect Unit
-foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
+foreign import isMicrophonePermissionEnabled :: Unit -> Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
@@ -148,6 +148,7 @@ foreign import factoryResetApp :: String -> Unit
 foreign import listDownloadedTranslationModels :: forall action. (action -> Effect Unit) -> Int -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 foreign import askNotificationPermission :: Unit -> Effect Unit
+foreign import checkAndAskMicrophonePermission :: Unit -> Effect Unit
 -- foreign import onEvent        :: Foreign -> Effect Unit
 -- foreign import _onEventWithCB :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
 -- -- foreign import getSessionInfo :: { android_id_raw :: String, android_id :: String, os_version :: String, package_name :: String, android_api_level :: String }
@@ -205,6 +206,9 @@ foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -
 foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+
+foreign import storeCallBackMicrophonePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+
 foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import storeCallBackNotificationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
@@ -245,7 +249,7 @@ foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import voipDialer :: forall action. EffectFn6 String Boolean String Boolean (action -> Effect Unit) (String -> String -> String -> Int -> Int -> String -> String -> String -> action) Unit
-foreign import initSignedCall :: String -> Boolean -> Unit
+foreign import initSignedCall :: String -> Boolean -> String -> Unit
 foreign import isSignedCallInitialized :: Effect Boolean
 foreign import destroySignedCall :: Unit -> Effect Unit
 foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit

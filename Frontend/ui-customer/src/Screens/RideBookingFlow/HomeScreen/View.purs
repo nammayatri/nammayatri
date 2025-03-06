@@ -134,7 +134,7 @@ import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.LocalizableV2.Strings (getEN, getStringV2)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
+import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired, getExoPhoneNumber)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType, formatContacts)
@@ -476,7 +476,8 @@ initVoipIfEnabled :: HomeScreenState -> Effect Unit
 initVoipIfEnabled state = do
   let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
   if voipConfig.customer.enableVoipFeature 
-    then void $ pure $ JB.initSignedCall state.data.driverInfoCardState.bppRideId false
+    then do 
+      void $ pure $ JB.initSignedCall state.data.driverInfoCardState.bppRideId false (getExoPhoneNumber state)
     else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
