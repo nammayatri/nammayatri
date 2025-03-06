@@ -1,21 +1,26 @@
 imports:
-  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
 
 importPackageOverrides:
-  Domain.Types.Merchant: "lib-dashboard"
+  Domain.Types.Person: "lib-dashboard"
 
 module: Account
 
 apis:
-  - GET: # FetchUnverifiedMerchantsAPI
+  - GET:
       endpoint: /fetchUnverifiedAccounts
       auth: ApiAuthV2
       query:
         - fromDate: UTCTime
         - toDate: UTCTime
         - mobileNumber: Text
-        - status: Bool
+        - status: FleetOwnerStatus
       response:
-        type: [Merchant]
+        type: [Person]
 
-types: {}
+types:
+  FleetOwnerStatus:
+    type: enum
+    variants:
+      - PENDING
+      - REJECTED
