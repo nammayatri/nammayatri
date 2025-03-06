@@ -14,6 +14,7 @@ import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.Manifest.permission.RECORD_AUDIO;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
 import static android.graphics.Color.parseColor;
@@ -222,6 +223,8 @@ public class MobilityCommonBridge extends HyperBridge {
     public static final int BACKGROUND_LOCATION_REQ_CODE = 190;
     public static final int REQUEST_CALL = 8;
     protected static final int STORAGE_PERMISSION = 67;
+    public static final int REQUEST_MICROPHONE = 9;
+
     //Constants
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
@@ -852,6 +855,24 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public boolean isLocationPermissionEnabled() {
         return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
+    }
+    
+    @JavascriptInterface
+    public boolean isMicrophonePermissionEnabled() {
+        return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @JavascriptInterface
+    public void checkAndAskMicrophonePermission() {
+        if(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED){
+            try {
+                if (bridgeComponents.getActivity() != null) {
+                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
+                }
+            } catch (Exception e) {
+                Log.e("MICROPHONE", "Exception in request microphone permission", e);
+            }
+        }
     }
 
     @JavascriptInterface

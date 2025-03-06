@@ -83,7 +83,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, setKeyInSharedPref, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image, checkAndAskMicrophonePermission, storeCallBackMicrophonePermission)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds,formatMonth,calculateDateInfo)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -2111,6 +2111,16 @@ eval CloseLocationTracking state = continue state { props { isLocationTracking =
 
 eval CloseShowCallDialer state = continue state { props { showCallPopUp = false } }
 
+eval (MicPermissionCallBack isMicPermissionEnabled) state = do
+  if (isMicPermissionEnabled && getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true") then do
+    let _ =  runFn2 setKeyInSharedPref "MIC_PERMISSION_ASKED" "true"
+    continueWithCmd state [do
+      pure $ (ShowCallDialer ANONYMOUS_CALLER)
+    ]
+  else do
+    let _ =  runFn2 setKeyInSharedPref "MIC_PERMISSION_ASKED" "true"
+    continue state
+
 eval (ShowCallDialer item) state = do
   case item of
     ANONYMOUS_CALLER -> do
@@ -2118,19 +2128,23 @@ eval (ShowCallDialer item) state = do
               if not (STR.null state.data.driverInfoCardState.bppRideId)
               then state.data.driverInfoCardState.bppRideId 
               else ""
-        let phoneNum = 
-              if STR.null state.data.driverInfoCardState.merchantExoPhone
-              then fromMaybe "" state.data.driverInfoCardState.driverNumber
-              else if STR.take 1 state.data.driverInfoCardState.merchantExoPhone == "0" 
-                   then state.data.driverInfoCardState.merchantExoPhone 
-                   else "0" <> state.data.driverInfoCardState.merchantExoPhone
+        let phoneNum = getExoPhoneNumber state
         let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        if (not (STR.null driverCuid) && voipConfig.customer.enableVoipCalling)
-          then continueWithCmd state [ do
-            push <- getPushFn Nothing "HomeScreen"
-            void $ runEffectFn6 JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
-            pure CloseShowCallDialer
-          ]
+        let isMicEnabled = JB.isMicrophonePermissionEnabled unit
+        if (not (STR.null driverCuid) && voipConfig.customer.enableVoipCalling) then do
+          if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
+            continueWithCmd state [ do
+              push <-  getPushFn Nothing "HomeScreen"
+              void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+              void $ pure $ JB.checkAndAskMicrophonePermission unit
+              pure NoAction
+            ]
+          else 
+            continueWithCmd state [ do
+              push <- getPushFn Nothing "HomeScreen"
+              void $ runEffectFn6 JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
+              pure CloseShowCallDialer
+            ]
         else callDriver state "ANONYMOUS"
     DIRECT_CALLER -> callDriver state "DIRECT"
 
@@ -3782,6 +3796,16 @@ dummySelectedQuotes :: SelectedQuotes
 dummySelectedQuotes = SelectedQuotes {
   selectedQuotes : []
 }
+
+getExoPhoneNumber :: HomeScreenState -> String
+getExoPhoneNumber state =
+  let exoPhone = state.data.driverInfoCardState.merchantExoPhone
+      driverNum = state.data.driverInfoCardState.driverNumber
+  in if STR.null exoPhone
+       then fromMaybe "" driverNum
+       else if STR.take 1 exoPhone == "0"
+         then exoPhone
+         else "0" <> exoPhone
 
 getSearchExpiryTime :: Boolean -> Int
 getSearchExpiryTime isNormalRide =

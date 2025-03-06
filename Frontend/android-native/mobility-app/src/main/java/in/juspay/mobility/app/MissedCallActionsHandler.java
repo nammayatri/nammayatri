@@ -50,7 +50,6 @@ public class MissedCallActionsHandler implements MissedCallNotificationOpenedHan
         String callContext = isDriver ? "Customer" : "Driver";
         String remoteContext = isDriver ? "Driver" : "Customer";
         String callerCuid = result.callDetails.calleeCuid;
-
         JSONObject config = new JSONObject();
         try {
             config.put("isDriver", isDriver);
@@ -64,11 +63,12 @@ public class MissedCallActionsHandler implements MissedCallNotificationOpenedHan
         }
         switch (actionId) {
             case "callback":
-                System.out.println("signedcall missed");
+                Log.d("MissedCallHandler", "Voip Notification Callback Pressed," + " actionId: " + actionId);
                 cleverTapSignedCall.voipDialer(config.toString(), CleverTapSignedCall.phone, "push",null);
                 break;
             case "dismiss":
-                // Logic for dismissing the notification
+                Log.d("MissedCallHandler", "Voip Notification dismissal");
+                SignedCallAPI.getInstance().dismissMissedCallNotification(getApplicationContext());
                 break;
             default:
                 Log.d("MissedCallHandler", "Unknown action: " + actionId);
