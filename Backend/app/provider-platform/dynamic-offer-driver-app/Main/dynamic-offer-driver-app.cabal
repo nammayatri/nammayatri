@@ -762,6 +762,7 @@ library
       Domain.Types.DriverIntelligentPoolConfig
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
+      Domain.Types.DriverOperatorAssociation
       Domain.Types.DriverPanCard
       Domain.Types.DriverPlan
       Domain.Types.DriverPoolConfig
@@ -894,6 +895,7 @@ library
       Storage.Beam.DriverIntelligentPoolConfig
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
+      Storage.Beam.DriverOperatorAssociation
       Storage.Beam.DriverPanCard
       Storage.Beam.DriverPlan
       Storage.Beam.DriverPoolConfig
@@ -1029,6 +1031,7 @@ library
       Storage.Queries.DriverIntelligentPoolConfig
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
+      Storage.Queries.DriverOperatorAssociation
       Storage.Queries.DriverPanCard
       Storage.Queries.DriverPlan
       Storage.Queries.DriverPoolConfig

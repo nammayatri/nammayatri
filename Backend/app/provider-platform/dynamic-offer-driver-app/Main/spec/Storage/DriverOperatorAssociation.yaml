@@ -3,14 +3,14 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
 
-FleetOperatorAssociation:
-  tableName: fleet_operator_association
+DriverOperatorAssociation:
+  tableName: driver_operator_association
 
   fields:
-    id: Id FleetOperatorAssociation
+    id: Id DriverOperatorAssociation
     operatorId: Text
     isActive: Bool
-    fleetOwnerId: Text
+    driverId: Id Person
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
     createdAt: UTCTime
@@ -19,12 +19,12 @@ FleetOperatorAssociation:
   constraints:
     id: PrimaryKey
     operatorId: SecondaryKey
-    fleetOwnerId: SecondaryKey
+    driverId: SecondaryKey
 
   queries:
-    findAllOperatorByFleetOwnerId:
+    findAllOperatorByDriverId:
       kvFunction: findAllWithKV
-      where: fleetOwnerId
+      where: driverId
 
     deleteByOperatorId:
       kvFunction: deleteWithKV
@@ -33,7 +33,7 @@ FleetOperatorAssociation:
   sqlType:
     id: text
     operatorId: text
-    fleetOwnerId: text
+    driverId: text
 
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

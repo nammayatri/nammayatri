@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.FleetOperatorAssociation (module Storage.Queries.FleetOperatorAssociation, module ReExport) where
+module Storage.Queries.FleetOperatorAssociation where
 
 import qualified Domain.Types.FleetOperatorAssociation
 import Kernel.Beam.Functions
@@ -14,7 +14,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOperatorAssociation as Beam
-import Storage.Queries.FleetOperatorAssociationExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation -> m ())
 create = createWithKV
@@ -25,7 +24,7 @@ createMany = traverse_ create
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
 deleteByOperatorId operatorId = do deleteWithKV [Se.Is Beam.operatorId $ Se.Eq operatorId]
 
-findAllOperatorByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation]))
+findAllOperatorByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation])
 findAllOperatorByFleetOwnerId fleetOwnerId = do findAllWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
 
 findByPrimaryKey ::
@@ -46,3 +45,31 @@ updateByPrimaryKey (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociati
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
+  fromTType' (Beam.FleetOperatorAssociationT {..}) = do
+    pure $
+      Just
+        Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation
+          { associatedOn = associatedOn,
+            associatedTill = associatedTill,
+            createdAt = createdAt,
+            fleetOwnerId = fleetOwnerId,
+            id = Kernel.Types.Id.Id id,
+            isActive = isActive,
+            operatorId = operatorId,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
+  toTType' (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation {..}) = do
+    Beam.FleetOperatorAssociationT
+      { Beam.associatedOn = associatedOn,
+        Beam.associatedTill = associatedTill,
+        Beam.createdAt = createdAt,
+        Beam.fleetOwnerId = fleetOwnerId,
+        Beam.id = Kernel.Types.Id.getId id,
+        Beam.isActive = isActive,
+        Beam.operatorId = operatorId,
+        Beam.updatedAt = updatedAt
+      }
