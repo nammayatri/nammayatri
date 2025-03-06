@@ -33,6 +33,7 @@ data VehicleServiceTier = VehicleServiceTier
     name :: Kernel.Prelude.Text,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     priority :: Kernel.Prelude.Int,
+    scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

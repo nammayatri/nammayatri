@@ -2255,25 +2255,31 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
             Just _ -> pure $ ScheduledBookingRes []
             Nothing -> do
               now <- getCurrentTime
+              driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
               vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-              -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
               cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
-              let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-                  vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
-                  tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-                  currentDay = utctDay now
-                  limit = fromMaybe 10 mbLimit
-                  offset = fromMaybe 0 mbOffset
-                  safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
+              let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
+              let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
+              let mbScheduleBookingListEligibilityTags = (listToMaybe availableServiceTierItems) >>= (.scheduleBookingListEligibilityTags)
+              let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
+              if scheduleEnabled
+                then do
+                  let vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
+                      tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
+                      currentDay = utctDay now
+                      limit = fromMaybe 10 mbLimit
+                      offset = fromMaybe 0 mbOffset
+                      safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
 
-              scheduledBookings <-
-                if currentDay >= from
-                  then getTodayScheduledBookings now cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset safelimit
-                  else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset
+                  scheduledBookings <-
+                    if currentDay >= from
+                      then getTodayScheduledBookings now cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset safelimit
+                      else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset
 
-              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
-              let sortedBookings = sortBookingsByDistance (catMaybes bookings)
-              return $ ScheduledBookingRes sortedBookings
+                  bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
+                  let sortedBookings = sortBookingsByDistance (catMaybes bookings)
+                  return $ ScheduledBookingRes sortedBookings
+                else return $ ScheduledBookingRes []
         _ -> pure $ ScheduledBookingRes []
   where
     getCurrentDriverLocUsingLTS driverId = do
