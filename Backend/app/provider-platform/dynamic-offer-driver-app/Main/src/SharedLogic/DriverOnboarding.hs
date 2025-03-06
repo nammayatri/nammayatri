@@ -559,22 +559,12 @@ filterVehicleDocuments docs onlyVehicle =
     then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
     else docs
 
-filterInCompatibleFlows :: Maybe Bool -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity] -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity]
+filterInCompatibleFlows ::
+  HasField "filterForOldApks" documentVerificationConfigAPIEntity (Maybe Bool) =>
+  Maybe Bool ->
+  [documentVerificationConfigAPIEntity] ->
+  [documentVerificationConfigAPIEntity]
 filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
-
-mkDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
-mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
-  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
-  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
-  return $
-    API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
-      { title = maybe title (.message) mbTitle,
-        description = maybe description (Just . (.message)) mbDescription,
-        documentType = castDocumentType documentType,
-        dependencyDocumentType = map castDocumentType dependencyDocumentType,
-        documentCategory = castDocumentCategory <$> documentCategory,
-        ..
-      }
 
 mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
 mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
