@@ -148,6 +148,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
       distanceToPickup' = getDistanceToNearestDriverV2 itemTags
       isUpgradedToCab = getIsUpgradedToCab itemTags
       rating = getDriverRatingV2 agentTags
+      isSafetyPlus = fromMaybe False $ getIsSafetyPlusV2 agentTags
   let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
@@ -184,3 +185,9 @@ getDistanceToNearestDriverV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
+
+getIsSafetyPlusV2 :: Maybe [Spec.TagGroup] -> Maybe Bool
+getIsSafetyPlusV2 tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.IS_SAFETY_PLUS tagGroups
+  isSafetyPlus <- readMaybe $ T.unpack tagValue
+  Just $ isSafetyPlus

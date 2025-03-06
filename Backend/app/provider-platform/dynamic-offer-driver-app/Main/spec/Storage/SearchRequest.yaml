@@ -29,7 +29,7 @@ SearchRequest:
     id: Id SearchRequest
     transactionId: Text
     messageId: Maybe Text
-    hasStops : Maybe Bool
+    hasStops: Maybe Bool
     dynamicPricingLogicVersion: Maybe Int
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -78,7 +78,7 @@ SearchRequest:
     configInExperimentVersions: "[ConfigVersionMap]"
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int
-
+    preferSafetyPlus: Bool
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -92,6 +92,7 @@ SearchRequest:
     configInExperimentVersions: Maybe Value
     customerNammaTags: "Maybe [Text]"
     searchTags: "Maybe [Text]"
+    preferSafetyPlus: Maybe Bool
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -119,14 +120,15 @@ SearchRequest:
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    preferSafetyPlus: Kernel.Prelude.Just|I
 
   intermediateTransformers:
     fromTType:
-      - now: Kernel.Types.Common.getCurrentTime|EM
-      - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
-      - fromLocationMapping: Storage.Queries.LocationMapping.getLatestStartByEntityId id >>= fromMaybeM (Tools.Error.FromLocationMappingNotFound id)|EM
-      - mbToLocationMapping: Storage.Queries.LocationMapping.getLatestEndByEntityId id|EM
-      - startTime_: fromMaybe now startTime|E
+    - now: Kernel.Types.Common.getCurrentTime|EM
+    - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
+    - fromLocationMapping: Storage.Queries.LocationMapping.getLatestStartByEntityId id >>= fromMaybeM (Tools.Error.FromLocationMappingNotFound id)|EM
+    - mbToLocationMapping: Storage.Queries.LocationMapping.getLatestEndByEntityId id|EM
+    - startTime_: fromMaybe now startTime|E
   fromTType:
     merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
     bapUri: Kernel.Prelude.parseBaseUrl|IM
@@ -144,21 +146,21 @@ SearchRequest:
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
-
+    preferSafetyPlus: fromMaybe False preferSafetyPlus|E
 
   constraints:
     id: PrimaryKey
     transactionId: SecondaryKey
 
   excludedFields:
-    - merchantId
-    - updatedAt
+  - merchantId
+  - updatedAt
 
   excludedDefaultQueries:
-    - findByPrimaryKey
-    - updateByPrimaryKey
-    - create
-    - createMany
+  - findByPrimaryKey
+  - updateByPrimaryKey
+  - create
+  - createMany
 
   sqlType:
     providerId: character varying(255)
@@ -189,36 +191,40 @@ SearchRequest:
     findByTransactionIdAndMerchantId:
       kvFunction: findOneWithKV
       where:
-        and: [transactionId, providerId]
+        and: [ transactionId, providerId ]
     updateIsAdvancedBookingEnabled:
       kvFunction: updateWithKV
-      params: [isAdvanceBookingEnabled]
+      params: [ isAdvanceBookingEnabled ]
       where: id
     updateIsReallocationEnabled:
       kvFunction: updateWithKV
-      params: [isReallocationEnabled]
+      params: [ isReallocationEnabled ]
       where: id
     updateSearchTags:
       kvFunction: updateWithKV
-      params: [searchTags]
+      params: [ searchTags ]
       where: id
     updateTripCategory:
       kvFunction: updateWithKV
-      params: [tripCategory]
+      params: [ tripCategory ]
       where: id
     updatePoolingLogicVersion:
       kvFunction: updateWithKV
-      params: [poolingLogicVersion]
+      params: [ poolingLogicVersion ]
       where: id
 
     updatePoolingConfigVersion:
       kvFunction: updateWithKV
-      params: [poolingConfigVersion]
+      params: [ poolingConfigVersion ]
       where: id
     updateParcelDetails:
       kvFunction: updateWithKV
-      params: [parcelType, parcelQuantity]
+      params: [ parcelType, parcelQuantity ]
+      where: id
+    updateSafetyPlus:
+      kvFunction: updateWithKV
+      params: [ preferSafetyPlus ]
       where: id
 
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE

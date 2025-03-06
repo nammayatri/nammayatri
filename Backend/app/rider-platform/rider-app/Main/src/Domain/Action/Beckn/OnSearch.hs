@@ -300,7 +300,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 otherSelectedEstimates = Nothing,
                 isAdvancedBookingEnabled = Nothing,
                 deliveryDetails = Nothing,
-                disabilityDisable = Nothing
+                disabilityDisable = Nothing,
+                preferSafetyPlus = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
     {- Author: Hemant Mangla
@@ -480,6 +481,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
               },
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
+        isSafetyPlus = False,
         ..
       }
 

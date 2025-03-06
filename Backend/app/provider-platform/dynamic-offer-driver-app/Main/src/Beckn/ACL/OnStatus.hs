@@ -70,7 +70,7 @@ buildOnStatusMessage (DStatus.NewBookingBuildReq (DNewBookingBuildReq bookingId)
 buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
   let Common.BookingDetails {..} = bookingDetails
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -85,7 +85,7 @@ buildOnStatusMessage (DStatus.RideStartedReq Common.DRideStartedReq {..}) = do
   let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -101,7 +101,7 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   distanceTagGroup <- Common.buildDistanceTagGroup ride
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False False 0
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False False 0 booking.isSafetyPlus
   quote <- Common.buildRideCompletedQuote ride fareParams
   return $
     OnStatus.OnStatusMessage
@@ -120,7 +120,7 @@ buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {.
     let Common.BookingDetails {driver, driverStats, vehicle, ride} = bookingDetails'
     let image = Nothing
     let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-    Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
+    Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
   pure
     OnStatus.OnStatusMessage
       { order =
@@ -137,7 +137,7 @@ buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallo
   let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
   pure
     OnStatus.OnStatusMessage
       { order =

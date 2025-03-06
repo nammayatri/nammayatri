@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DeliveryPersonDetails as DTDPD
 import qualified Domain.Types.DriverQuote as DDQ
@@ -234,6 +235,7 @@ handler merchantId req validatedReq = do
             dynamicPricingLogicVersion = searchRequest.dynamicPricingLogicVersion,
             parcelType = searchRequest.parcelType,
             parcelQuantity = searchRequest.parcelQuantity,
+            isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

@@ -71,6 +71,7 @@ data Booking = Booking
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     paymentStatus :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferSafetyPlus :: Kernel.Prelude.Bool,
     primaryExophone :: Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,

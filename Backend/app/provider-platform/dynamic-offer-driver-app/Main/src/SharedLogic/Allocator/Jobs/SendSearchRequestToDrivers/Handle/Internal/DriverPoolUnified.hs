@@ -13,6 +13,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
@@ -35,6 +36,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.RiderDriverCorrelation as QFavDrivers
 import Tools.Maps as Maps
 
@@ -134,8 +136,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           blockListedAndAlreadyAttemptedDrivers = blockListedDrivers <> previousBatchesDrivers
           onlyNewAndFilteredDrivers = filter (\dp -> dp.driverPoolResult.driverId `notElem` blockListedAndAlreadyAttemptedDrivers) allDriversNotOnRide'
           onlyNonBlockedDrivers = filter (\dp -> dp.driverPoolResult.driverId `notElem` blockListedDrivers) allDriversNotOnRide'
+      safetyPlusDrivers <- assignSafetyPlusTag searchReq onlyNewAndFilteredDrivers
       favDrivers <- maybe (pure []) (`QFavDrivers.findFavDriversForRider` True) searchReq.riderId
-      let newFilteredDriversWithFavourites = assignTagsToDrivers (favDrivers <&> (.driverId)) FavouriteDriver True onlyNewAndFilteredDrivers
+      let newFilteredDriversWithFavourites = assignTagsToDrivers (favDrivers <&> (.driverId)) FavouriteDriver True safetyPlusDrivers
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
           -1 -> do
@@ -389,6 +392,40 @@ assignDriverGateTags searchReq pool = do
           onGateDrivers = addSpecialZoneInfo searchReq.driverDefaultExtraFee onGateDrivers''
       return $ onGateDrivers <> outSideDrivers
     Nothing -> return pool
+
+assignSafetyPlusTag ::
+  ( EncFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    LT.HasLocationService m r
+  ) =>
+  DSR.SearchRequest ->
+  [DriverPoolWithActualDistResult] ->
+  m [DriverPoolWithActualDistResult]
+assignSafetyPlusTag searchReq pool = do
+  if searchReq.preferSafetyPlus
+    then do
+      (safetyPlusDrivers, nonSafetyPlus) <- do
+        partitionM
+          ( \dd -> do
+              dplan <- QDriverPlan.findByDriverIdWithServiceName dd.driverPoolResult.driverId (DPlan.DASHCAM_RENTAL DPlan.CAUTIO)
+              case dplan of
+                Nothing -> return False
+                Just dp -> return dp.enableServiceUsageCharge
+          )
+          pool
+      let safetyPlusDrivers' =
+            map
+              ( \(dp :: DriverPoolWithActualDistResult) ->
+                  let dpResult = dp.driverPoolResult
+                      updatedTags = insertInObject dpResult.driverTags [SafetyPlusDriver]
+                      dprWithTags = (dpResult :: DriverPoolResult) {driverTags = updatedTags}
+                   in dp {driverPoolResult = dprWithTags}
+              )
+              safetyPlusDrivers
+      return $ safetyPlusDrivers' <> nonSafetyPlus
+    else return pool
 
 addSpecialZoneInfo :: Maybe HighPrecMoney -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
 addSpecialZoneInfo driverDefaultExtraFee = map (\driverWithDistance -> driverWithDistance {pickupZone = True, specialZoneExtraTip = driverDefaultExtraFee})

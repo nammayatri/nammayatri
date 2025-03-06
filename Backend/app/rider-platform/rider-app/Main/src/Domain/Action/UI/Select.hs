@@ -116,7 +116,8 @@ data DSelectReq = DSelectReq
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool,
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
-    disabilityDisable :: Maybe Bool
+    disabilityDisable :: Maybe Bool,
+    preferSafetyPlus :: Maybe Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -162,7 +163,8 @@ data DSelectRes = DSelectRes
     toUpdateDeviceIdInfo :: Bool,
     tripCategory :: Maybe TripCategory,
     disabilityDisable :: Maybe Bool,
-    selectResDetails :: Maybe DSelectResDetails
+    selectResDetails :: Maybe DSelectResDetails,
+    preferSafetyPlus :: Bool
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -302,6 +304,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
         tripCategory = estimate.tripCategory,
         selectResDetails = dselectResDetails,
+        preferSafetyPlus = fromMaybe False preferSafetyPlus,
         ..
       }
   where

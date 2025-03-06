@@ -21,6 +21,7 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.ConditionalCharges as DCC
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
@@ -130,7 +131,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
 
     performDynamicOfferReallocation driverQuote searchReq searchTry = do
       DP.addDriverToSearchCancelledList searchReq.id ride.driverId
-      tripQuoteDetails <- createTripQuoteDetails searchReq searchTry driverQuote.estimateId
+      let conditionalCharges = driverQuote.fareParams.conditionalCharges
+      tripQuoteDetails <- createTripQuoteDetails searchReq searchTry driverQuote.estimateId conditionalCharges
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -150,7 +152,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> ((.driverExtraFeeBounds) =<< (quote.farePolicy))) <&> uncurry DFP.findDriverExtraFeeBoundsByDistance
           driverPickUpCharge = USRD.extractDriverPickupCharges . (.farePolicyDetails) =<< (quote.farePolicy)
           driverParkingCharge = (.parkingCharge) =<< (quote.farePolicy)
-      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge newQuote.id.getId False
+      tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge newQuote.id.getId [] False
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       QQuote.create newQuote
       QRB.createBooking newBooking
@@ -179,11 +181,11 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             else cancelRideTransactionForNonReallocation Nothing (Just estimateId)
         Left _ -> cancelRideTransactionForNonReallocation Nothing (Just estimateId)
 
-    createTripQuoteDetails searchReq searchTry estimateId = do
+    createTripQuoteDetails searchReq searchTry estimateId conditionalCharges = do
       if length searchTry.estimateIds > 1
-        then traverse (createQuoteDetails searchReq searchTry) searchTry.estimateIds
+        then traverse (createQuoteDetails searchReq searchTry conditionalCharges) searchTry.estimateIds
         else do
-          quoteDetail <- createQuoteDetails searchReq searchTry estimateId.getId
+          quoteDetail <- createQuoteDetails searchReq searchTry conditionalCharges estimateId.getId
           return [quoteDetail]
 
     createNewBookingAndQuote quote transporterConfig now searchReq = do
@@ -205,14 +207,15 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       ) =>
       DSR.SearchRequest ->
       DST.SearchTry ->
+      [DCC.ConditionalCharges] ->
       Text ->
       m SDT.TripQuoteDetail
-    createQuoteDetails searchReq searchTry estimateId = do
+    createQuoteDetails searchReq searchTry conditionalCharges estimateId = do
       estimate <- QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId False
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee) (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId conditionalCharges False
     cancelRideTransactionForNonReallocation ::
       ( MonadFlow m,
         Redis.HedisFlow m r,

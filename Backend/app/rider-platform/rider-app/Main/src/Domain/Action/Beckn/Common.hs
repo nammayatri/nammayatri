@@ -133,7 +133,8 @@ data RideAssignedReq = RideAssignedReq
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
     fareBreakups :: Maybe [DFareBreakup],
-    driverTrackingUrl :: Maybe BaseUrl
+    driverTrackingUrl :: Maybe BaseUrl,
+    isSafetyPlus :: Bool
   }
 
 data OnlinePaymentParameters = OnlinePaymentParameters
@@ -155,7 +156,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl,
     isAlreadyFav :: Bool,
-    favCount :: Maybe Int
+    favCount :: Maybe Int,
+    isSafetyPlus :: Bool
   }
 
 data RideStartedReq = RideStartedReq
@@ -337,6 +339,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         wasRideSafe = Nothing,
         pickupRouteCallCount = Just 0,
         talkedWithDriver = Nothing,
+        isSafetyPlus = isSafetyPlus,
         ..
       }
 
@@ -372,6 +375,7 @@ rideAssignedReqHandler req = do
   case mbRide of
     Just ride -> do
       QERIDE.updateStatus ride.id rideStatus
+      QERIDE.updateIsSafetyPlus ride.id req.isSafetyPlus
       unless isInitiatedByCronJob $ do
         Notify.notifyOnRideAssigned booking ride
         when req.isDriverBirthDay $

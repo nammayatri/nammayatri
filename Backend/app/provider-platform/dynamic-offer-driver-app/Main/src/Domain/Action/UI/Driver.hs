@@ -122,6 +122,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.ConditionalCharges as DCC
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFee as DDF
@@ -1236,7 +1237,8 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -1350,7 +1352,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       now <- getCurrentTime
       deploymentVersion <- asks (.version)
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSum fareParams
+      let estimatedFare = fareSum fareParams $ Just sd.conditionalCharges
       pure
         DDrQuote.DriverQuote
           { id = guid,
@@ -1442,6 +1444,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,
               merchantOperatingCityId = Just merchantOpCityId,
+              mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'

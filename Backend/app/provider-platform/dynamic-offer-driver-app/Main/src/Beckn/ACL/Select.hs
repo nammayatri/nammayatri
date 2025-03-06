@@ -67,6 +67,7 @@ buildSelectReqV2 subscriber req = do
       bookAnyEstimates = getBookAnyEstimates item.itemTags
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
       parcelDetails = getParcelDetails item.itemTags
+      preferSafetyPlus = getPeferSafetyPlus item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
     _ -> pure Nothing
@@ -86,6 +87,7 @@ buildSelectReqV2 subscriber req = do
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
+        preferSafetyPlus = preferSafetyPlus,
         ..
       }
 
@@ -118,6 +120,14 @@ buildDisableDisabilityTag tagGroups = do
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =
   let tagValue = Utils.getTagV2 Tag.FORWARD_BATCHING_REQUEST_INFO Tag.IS_FORWARD_BATCH_ENABLED tagGroups
+   in case tagValue of
+        Just "True" -> True
+        Just "False" -> False
+        _ -> False
+
+getPeferSafetyPlus :: Maybe [Spec.TagGroup] -> Bool
+getPeferSafetyPlus tagGroups =
+  let tagValue = Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.PREFER_SAFETY_PLUS tagGroups
    in case tagValue of
         Just "True" -> True
         Just "False" -> False

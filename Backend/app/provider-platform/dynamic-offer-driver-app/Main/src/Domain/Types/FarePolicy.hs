@@ -22,6 +22,7 @@ import Data.Text as Text
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.CancellationFarePolicy as DTC
+import qualified Domain.Types.ConditionalCharges as DTAC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyInterCityDetails as Reexport
@@ -64,7 +65,8 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantId :: Maybe (Id Merchant),
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    conditionalCharges :: [DTAC.ConditionalCharges]
   }
   deriving (Generic, Show)
 
@@ -171,7 +173,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbActualQARFromLocGeohash :: Maybe Double,
-    mbActualQARCity :: Maybe Double
+    mbActualQARCity :: Maybe Double,
+    conditionalCharges :: [DTAC.ConditionalCharges]
   }
   deriving (Generic, Show)
 

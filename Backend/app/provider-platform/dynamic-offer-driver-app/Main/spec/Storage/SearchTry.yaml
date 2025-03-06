@@ -19,29 +19,30 @@ SearchTry:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   fields:
-    id : Id SearchTry
-    requestId : Id SearchRequest
-    estimateId : Text
-    estimateIds : "[Text]"
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Id MerchantOperatingCity
-    messageId : Text
-    startTime : UTCTime
-    validTill : UTCTime
-    vehicleServiceTier : ServiceTierType|NoRelation
-    vehicleServiceTierName : Text
-    baseFare : HighPrecMoney
-    customerExtraFee : Maybe HighPrecMoney
+    id: Id SearchTry
+    requestId: Id SearchRequest
+    estimateId: Text
+    estimateIds: "[Text]"
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Id MerchantOperatingCity
+    messageId: Text
+    startTime: UTCTime
+    validTill: UTCTime
+    vehicleServiceTier: ServiceTierType|NoRelation
+    vehicleServiceTierName: Text
+    baseFare: HighPrecMoney
+    customerExtraFee: Maybe HighPrecMoney
     currency: Currency
-    status : SearchTryStatus
-    searchRepeatCounter : Int
-    searchRepeatType : SearchRepeatType
-    tripCategory : TripCategory
-    isAdvancedBookingEnabled : Bool
-    isScheduled : Bool
-    serviceTierArray : "[Text]"
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    status: SearchTryStatus
+    searchRepeatCounter: Int
+    searchRepeatType: SearchRepeatType
+    tripCategory: TripCategory
+    isAdvancedBookingEnabled: Bool
+    isScheduled: Bool
+    preferSafetyPlus: Bool
+    serviceTierArray: "[Text]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   beamType:
     estimateIds: "Maybe [Text]"
@@ -51,8 +52,8 @@ SearchTry:
     vehicleServiceTierName: Maybe Text
     currency: Maybe Currency
     isAdvancedBookingEnabled: Maybe Bool
-    serviceTierArray : "Maybe [Text]"
-
+    serviceTierArray: "Maybe [Text]"
+    preferSafetyPlus: Maybe Bool
 
   beamFields:
     vehicleServiceTier:
@@ -67,9 +68,9 @@ SearchTry:
       customerExtraFeeAmount: Maybe HighPrecMoney
 
   domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchTryStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SearchTryStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchRepeatType>
+  - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchTryStatus>
+  - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SearchTryStatus>
+  - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchRepeatType>
 
   fromTType:
     estimateIds: fromMaybe [estimateId] estimateIds|E
@@ -82,7 +83,8 @@ SearchTry:
     customerExtraFee: Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     isAdvancedBookingEnabled: fromMaybe False isAdvancedBookingEnabled|E
-    serviceTierArray :  fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
+    serviceTierArray: fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
+    preferSafetyPlus: fromMaybe False preferSafetyPlus|E
 
   toTType:
     estimateIds: Kernel.Prelude.Just|I
@@ -97,7 +99,8 @@ SearchTry:
     customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
     customerExtraFeeAmount: customerExtraFee|E
     isAdvancedBookingEnabled: Kernel.Prelude.Just|I
-    serviceTierArray : Kernel.Prelude.Just|I
+    serviceTierArray: Kernel.Prelude.Just|I
+    preferSafetyPlus: Kernel.Prelude.Just|I
   constraints:
     id: PrimaryKey
     requestId: "!SecondaryKey" # forcing to be a secondary key
@@ -110,17 +113,16 @@ SearchTry:
 
     updateStatus:
       kvFunction: updateOneWithKV
-      params: [status]
+      params: [ status ]
       where: id
 
   sqlType:
     messageId: character (36)
     vehicleVariant: character varying (255)
-    estimateId : character (36)
+    estimateId: character (36)
     searchRepeatType: character varying (255)
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
 
   extraOperations:
-    - EXTRA_QUERY_FILE
-
+  - EXTRA_QUERY_FILE

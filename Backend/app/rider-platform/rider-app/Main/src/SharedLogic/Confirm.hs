@@ -346,6 +346,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isSkipped = skipBooking,
           journeyId,
           journeyLegStatus = Nothing,
+          preferSafetyPlus = quote.isSafetyPlus,
           ..
         },
       bookingParties

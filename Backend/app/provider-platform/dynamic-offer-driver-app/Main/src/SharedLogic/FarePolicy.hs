@@ -23,6 +23,7 @@ import Data.Time.Calendar.WeekDate
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Common
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
@@ -272,10 +273,11 @@ calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatin
             noOfStops = 0, ------fix it in future
             currency,
             distanceUnit,
-            merchantOperatingCityId = Just merchantOperatingCityId
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            mbAdditonalChargeCategories = Nothing
           }
   parameters <- SFC.calculateFareParameters params
-  return $ SFC.fareSum parameters
+  return $ SFC.fareSum parameters (Just [])
 
 mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
 mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
@@ -342,6 +344,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
       fixedCardChargeItem = mkBreakupItem fixedCardChargeCaption . (mkValue . highPrecMoneyToText) <$> (farePolicy.cardCharge >>= (.fixed))
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
+      conditionalCharges = processAdditionalCharges farePolicy.conditionalCharges
   catMaybes
     [ tollChargesItem,
       serviceChargeItem,
@@ -362,6 +365,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
     <> additionalDetailsBreakups
     <> driverExtraFeeBoundsMinFeeItems
     <> driverExtraFeeBoundsMaxFeeItems
+    <> conditionalCharges
   where
     mkInsuranceChargeCaption = \case
       Meter -> show Tags.INSURANCE_CHARGE_PER_METER
@@ -370,6 +374,12 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
       Yard -> show Tags.INSURANCE_CHARGE_PER_YARD
 
     toPercentage x = (x - 1) * 100
+
+    processAdditionalCharges conditionalCharges = do
+      List.map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToTag addCharges.chargeCategory) . mkValue $ show addCharges.charge) conditionalCharges
+
+    castAdditionalChargeCategoriesToTag = \case
+      DAC.SAFETY_PLUS_CHARGES -> Tags.SAFETY_PLUS_CHARGES
 
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det

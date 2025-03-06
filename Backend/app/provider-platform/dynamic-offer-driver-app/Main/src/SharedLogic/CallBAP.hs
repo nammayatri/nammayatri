@@ -73,6 +73,7 @@ import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DDriverStats
@@ -366,6 +367,7 @@ rideAssignedCommon booking ride driver veh = do
       Just _ -> pure True
       Nothing -> pure False
   let favCount = driverStats.favRiderCount
+  let isSafetyPlus = booking.isSafetyPlus
   driverAccountId <-
     if ride.onlinePayment && isValueAddNP
       then do
@@ -716,12 +718,17 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
 
     getTags :: Bool -> Tags.Taggings
     getTags isValueAddNP = do
+      let isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges
       def{Tags.itemTags =
             [ (Tags.DISTANCE_TO_NEAREST_DRIVER_METER, Just $ show driverQuote.distanceToPickup.getMeters),
               (Tags.ETA_TO_NEAREST_DRIVER_MIN, Just . show $ driverQuote.durationToPickup.getSeconds `div` 60),
               (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest)
             ]
-              <> if isJust driverQuote.specialLocationTag && isValueAddNP then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)] else []
+              <> if (isJust driverQuote.specialLocationTag && isValueAddNP)
+                then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)]
+                else
+                  []
+                    <> if (isSafetyPlus && isValueAddNP) then [(Tags.IS_SAFETY_PLUS, Just $ show isSafetyPlus)] else []
          }
 
 sendDriverArrivalUpdateToBAP ::

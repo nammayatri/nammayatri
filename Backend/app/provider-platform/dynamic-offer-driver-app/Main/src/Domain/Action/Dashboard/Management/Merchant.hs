@@ -51,6 +51,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -65,6 +66,7 @@ import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDri
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
@@ -1074,7 +1076,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     defaultWaitTimeAtDestination :: Text,
     enabled :: Text,
     disableRecompute :: Text,
-    stateEntryPermitCharges :: Text
+    stateEntryPermitCharges :: Text,
+    conditionalCharges :: Text
   }
   deriving (Show)
 
@@ -1160,6 +1163,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "enabled"
       <*> r .: "disable_recompute"
       <*> r .: "state_entry_permit_charges"
+      <*> r .: "additional_charges"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1381,6 +1385,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                   else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
       let perStopCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perStopCharge "Per Stop Charge"
+      let additionalChargesJson :: (Maybe DAT.Value) = readMaybeCSVField idx row.conditionalCharges "Additional Charges"
+      let conditionalCharges' = maybe (DAT.Success []) DAT.fromJSON additionalChargesJson
+      conditionalCharges <- do
+        case conditionalCharges' of
+          DAT.Success (resp :: [DAC.ConditionalCharges]) -> return resp
+          DAT.Error err -> throwError $ InvalidRequest ("Additional charges Parsing failed :: " <> show err)
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
       (freeWatingTime, waitingCharges, mbNightCharges) <- do
@@ -1559,7 +1569,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"

@@ -116,6 +116,7 @@ Ride:
     wasRideSafe: Maybe Bool
     pickupRouteCallCount: Maybe Int
     talkedWithDriver: Maybe Bool
+    isSafetyPlus : Bool
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -210,6 +211,7 @@ Ride:
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
     estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     tipAmount: fmap (Kernel.Types.Common.mkPrice currency) tipAmount|E
+    isSafetyPlus: Kernel.Prelude.fromMaybe False isSafetyPlus| E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -243,6 +245,7 @@ Ride:
     estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
     tipAmount: Kernel.Prelude.fmap (.amount)|I
+    isSafetyPlus:  Kernel.Prelude.Just isSafetyPlus|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -258,6 +261,7 @@ Ride:
     clientManufacturer: Maybe Text
     tipAmount: Maybe HighPrecMoney
     feedbackSkipped: Maybe Bool
+    isSafetyPlus: Maybe Bool
 
   constraints:
     id: PrimaryKey

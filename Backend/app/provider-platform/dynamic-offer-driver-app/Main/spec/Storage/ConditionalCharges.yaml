@@ -1,0 +1,39 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  ConditionalChargesCategories: Domain.Types.Extra.ConditionalCharges
+
+ConditionalCharges:
+  tableName: conditional_charges
+  derives : "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, Kernel.Utils.GenericPretty.PrettyShow"
+  fields:
+    chargeCategory: ConditionalChargesCategories
+    charge: HighPrecMoney
+    sgstPercentage: HighPrecMoney
+    cgstPercentage: HighPrecMoney
+    farePolicyId: Text
+
+
+  constraints:
+    farePolicyId: PrimaryKey
+    chargeCategory: PrimaryKey
+
+  beamType:
+    sgstPercentage: Maybe HighPrecMoney
+    cgstPercentage: Maybe HighPrecMoney
+
+  fromTType:
+    sgstPercentage: Kernel.Prelude.fromMaybe 0 sgstPercentage|E
+    cgstPercentage: Kernel.Prelude.fromMaybe 0 cgstPercentage|E
+  toTType:
+    cgstPercentage: Kernel.Prelude.Just|I
+    sgstPercentage: Kernel.Prelude.Just|I
+
+  queries:
+    findAllByFp:
+      kvFunction: findAllWithKV
+      where: farePolicyId
+
+  excludedFields: [ merchantId, merchantOperatingCityId ]
+  extraOperations:
+  - EXTRA_DOMAIN_TYPE_FILE
