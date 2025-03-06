@@ -801,13 +801,14 @@ notifySafetyAlert ::
   SRB.Booking ->
   T.Text ->
   m ()
-notifySafetyAlert booking _ = do
+notifySafetyAlert booking code = do
   logDebug "Sending safety alert notification"
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let entity = Notification.Entity Notification.Product person.id.getId ()
+      key = mkSafetyNotificationKey code
   dynamicNotifyPerson
     person
-    (createNotificationReq "SAFETY_ALERT_DEVIATION" identity)
+    (createNotificationReq key identity)
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -1113,3 +1114,10 @@ getAllOtherRelatedPartyPersons booking = do
       allParty <- catMaybes <$> mapM Person.findById allBookingPartyIds
       pure $ filter (isJust . (.deviceToken)) allParty
     _ -> pure []
+
+mkSafetyNotificationKey :: T.Text -> Text
+mkSafetyNotificationKey code =
+  case readMaybe (T.unpack code) of
+    Just BecknEnums.DEVIATION -> "SAFETY_ALERT_DEVIATION"
+    Just BecknEnums.RIDE_STOPPAGE -> "SAFETY_ALERT_RIDE_STOPPAGE"
+    Nothing -> code

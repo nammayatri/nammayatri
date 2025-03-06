@@ -25,6 +25,7 @@ where
 
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
+import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
@@ -110,9 +111,9 @@ driverStartRide ::
   DriverStartRideReq ->
   m APISuccess.APISuccess
 driverStartRide handle rideId req =
-  withLogTag ("requestorId-" <> req.requestor.id.getId)
-    . startRide handle rideId
-    $ DriverReq req
+  withLogTag ("requestorId-" <> req.requestor.id.getId) $ do
+    result <- startRide handle rideId (DriverReq req)
+    pure result
 
 dashboardStartRide ::
   (StartRideFlow m r, SchedulerFlow r) =>
@@ -188,6 +189,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
       else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
+  void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
