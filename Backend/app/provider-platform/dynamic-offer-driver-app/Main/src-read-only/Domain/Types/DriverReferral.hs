@@ -15,6 +15,7 @@ data DriverReferral = DriverReferral
   { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     linkedAt :: Kernel.Prelude.UTCTime,
     referralCode :: Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral,
+    role :: Domain.Types.Person.Role,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

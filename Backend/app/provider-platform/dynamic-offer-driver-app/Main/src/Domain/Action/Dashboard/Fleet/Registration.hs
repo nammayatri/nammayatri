@@ -19,6 +19,7 @@ import Data.OpenApi (ToSchema)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
+import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.FleetOperatorAssociation as FOA
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -96,7 +97,6 @@ newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
--- New function to handle referral code logic
 getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
 getOperatorIdFromReferralCode Nothing = return Nothing
 getOperatorIdFromReferralCode (Just refCode) = do
@@ -104,8 +104,6 @@ getOperatorIdFromReferralCode (Just refCode) = do
   result <- isValidReferralForFleet referralReq
   case result of
     SuccessCode val -> return $ Just val
-
--- _               -> return Nothing
 
 fleetOwnerRegister :: FleetOwnerRegisterReq -> Flow FleetOwnerRegisterRes
 fleetOwnerRegister req = do
@@ -122,7 +120,7 @@ fleetOwnerRegister req = do
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
       maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferredCodeForOperator
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
       fork "Uploading GST Image" $ do
@@ -132,8 +130,8 @@ fleetOwnerRegister req = do
           QFOI.updateGstImageId (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber mbReferredOperatorId = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber mbReferredOperatorId mbIsGenerateRefEntry = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
@@ -141,6 +139,8 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- FOA.makeFleetOperatorAssociation (person.id.getId) referredOperatorId Nothing
     QFOA.create fleetOperatorAssData
+  whenJust mbIsGenerateRefEntry $ \isGenerateRefEntry -> when isGenerateRefEntry $ do
+    void $ DR.generateReferralCode DP.FLEET_OWNER (person.id, merchantId, merchantOpCityId)
   pure person
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
@@ -165,7 +165,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber mbReferredByOpe
             verified = False,
             gstNumber = mbGstNumber,
             gstImageId = Nothing,
-            referredByOperatorId = mbReferredByOperatorId, -- New field
+            referredByOperatorId = mbReferredByOperatorId,
             createdAt = now,
             updatedAt = now
           }

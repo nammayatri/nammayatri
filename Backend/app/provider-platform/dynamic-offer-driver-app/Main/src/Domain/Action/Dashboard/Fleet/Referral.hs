@@ -5,15 +5,16 @@ module Domain.Action.Dashboard.Fleet.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Domain.Types.Person as DP
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, throwError)
 import Kernel.Utils.Validation (runRequestValidation, validateField)
-import qualified Storage.Queries.OperatorReferral as QOR
+import qualified Storage.Queries.DriverReferral as QDR
 import Tools.Error
 
 newtype FleetReferralReq = FleetReferralReq
@@ -55,17 +56,7 @@ isValidReferralForFleet ::
   Flow FleetReferralRes
 isValidReferralForFleet req = do
   runRequestValidation validateFleetReferralReq req
-  od <- B.runInReplica (QOR.findByReferralCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
-  return $ SuccessCode od.operatorId
-
--- addFleetReferral ::
---   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
---   FleetReferralReq ->
---   Flow FleetReferralRes
--- addFleetReferral (personId, _, _) req = do
---   runRequestValidation validateFleetReferralReq req
---   fr <- B.runInReplica (QOR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
---   fi <- B.runInReplica (FleetOwnerInformation.findByPrimaryKey personId) >>= fromMaybeM FleetOwnerInfoNotFound
---   case fi.referredByOperatorId of
---     Just _  -> return AlreadyReferred
---     Nothing -> return (Success fr.id)
+  od <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
+  if od.role == DP.OPERATOR
+    then return $ SuccessCode od.driverId.getId
+    else throwError $ InvalidReferralCode req.value

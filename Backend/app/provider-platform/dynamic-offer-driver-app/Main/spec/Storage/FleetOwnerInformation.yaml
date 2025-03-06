@@ -16,6 +16,8 @@ FleetOwnerInformation:
     fleetType: FleetType
     gstImageId : Maybe Text
     referredByOperatorId: Maybe Text
+  sqlType:
+    referredByOperatorId: character varying (36)
   excludedFields: [merchantOperatingCityId]
   types:
     FleetType:
@@ -38,6 +40,6 @@ FleetOwnerInformation:
       params: [gstNumber, enabled, updatedAt]
       where: fleetOwnerPersonId
     updateReferredByOperatorId:
-      kvFunction: updateWithKV
-      params: [referredByOperatorId, updatedAt]
+      kvFunction: updateOneWithKV
+      params: [referredByOperatorId]
       where: fleetOwnerPersonId

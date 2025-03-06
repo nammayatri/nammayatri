@@ -22,6 +22,8 @@ data MerchantT f = MerchantT
     enabled :: B.C f Kernel.Prelude.Bool,
     fromTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     gatewayAndRegistryPriorityList :: B.C f (Kernel.Prelude.Maybe [Domain.Types.GatewayAndRegistryService]),
+    generateReferredCodeForFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    generateReferredCodeForOperator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     geoHashPrecisionValue :: B.C f Kernel.Prelude.Int,
     destinationRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,
     originRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,

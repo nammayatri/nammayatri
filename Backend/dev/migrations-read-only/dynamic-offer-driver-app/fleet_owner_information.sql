@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN gst_image_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN referred_by_operator_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ALTER COLUMN referred_by_operator_id TYPE character varying (36);

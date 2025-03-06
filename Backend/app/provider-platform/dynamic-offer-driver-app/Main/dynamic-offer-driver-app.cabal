@@ -549,7 +549,6 @@ library
       Storage.Queries.FleetDriverAssociationExtra
       Storage.Queries.FleetOperatorAssociationExtra
       Storage.Queries.FleetRCAssociationExtra
-      Storage.Queries.FleetReferralExtra
       Storage.Queries.Geometry
       Storage.Queries.ImageExtra
       Storage.Queries.InterCityTravelCities
@@ -564,7 +563,6 @@ library
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
       Storage.Queries.NotificationExtra
-      Storage.Queries.OperatorReferralExtra
       Storage.Queries.PayoutConfigExtra
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
@@ -783,7 +781,6 @@ library
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
-      Domain.Types.FleetReferral
       Domain.Types.FleetRouteAssociation
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
@@ -818,7 +815,6 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.Notification
-      Domain.Types.OperatorReferral
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -917,7 +913,6 @@ library
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
-      Storage.Beam.FleetReferral
       Storage.Beam.FleetRouteAssociation
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
@@ -952,7 +947,6 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.Notification
-      Storage.Beam.OperatorReferral
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -1054,7 +1048,6 @@ library
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
-      Storage.Queries.FleetReferral
       Storage.Queries.FleetRouteAssociation
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
@@ -1089,7 +1082,6 @@ library
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
-      Storage.Queries.OperatorReferral
       Storage.Queries.OrphanInstances.AadhaarCard
       Storage.Queries.OrphanInstances.ApprovalRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
@@ -1121,7 +1113,6 @@ library
       Storage.Queries.OrphanInstances.FleetDriverAssociation
       Storage.Queries.OrphanInstances.FleetOperatorAssociation
       Storage.Queries.OrphanInstances.FleetRCAssociation
-      Storage.Queries.OrphanInstances.FleetReferral
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
@@ -1134,7 +1125,6 @@ library
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
       Storage.Queries.OrphanInstances.Notification
-      Storage.Queries.OrphanInstances.OperatorReferral
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan

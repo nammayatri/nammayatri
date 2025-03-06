@@ -477,7 +477,7 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   fork "generating the referral code for driver" $ do
-    void $ generateReferralCode (person.id, person.merchantId, Id merchantOperatingCityId)
+    void $ generateReferralCode person.role (person.id, person.merchantId, Id merchantOperatingCityId)
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken

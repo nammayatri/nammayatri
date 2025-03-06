@@ -28,4 +28,4 @@ data FleetOwnerInformation = FleetOwnerInformation
 
 data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FleetType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetType)
