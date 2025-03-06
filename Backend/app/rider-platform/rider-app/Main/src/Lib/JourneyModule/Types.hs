@@ -23,6 +23,7 @@ import qualified Domain.Types.RouteStopMapping as DRouteStopMappping
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
+import EulerHS.Prelude (safeHead)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
@@ -30,7 +31,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
-import Kernel.Storage.Esqueleto hiding (isNothing)
+import Kernel.Storage.Esqueleto hiding (isNothing, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -38,11 +39,13 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -216,6 +219,7 @@ data LegInfo = LegInfo
     estimatedDuration :: Maybe Seconds,
     estimatedMinFare :: Maybe PriceAPIEntity,
     estimatedMaxFare :: Maybe PriceAPIEntity,
+    estimatedTotalFare :: Maybe PriceAPIEntity,
     estimatedDistance :: Maybe Distance,
     legExtraInfo :: LegExtraInfo,
     merchantId :: Id DM.Merchant,
@@ -248,7 +252,9 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     bookingId :: Maybe (Id DBooking.Booking),
     rideId :: Maybe (Id DRide.Ride),
     vehicleIconUrl :: Maybe BaseUrl,
-    batchConfig :: Maybe SharedRedisKeys.BatchConfig
+    batchConfig :: Maybe SharedRedisKeys.BatchConfig,
+    tollDifference :: Maybe Kernel.Types.Common.Price,
+    differenceOfDistance :: Maybe HighPrecMeters
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -392,11 +398,35 @@ getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
       Just DEstimate.CANCELLED -> Cancelled
       _ -> Assigning
 
+getTollDifferenceFromBookingAndRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DBooking.Booking -> Maybe DRide.Ride -> m Kernel.Types.Common.Price
+getTollDifferenceFromBookingAndRide booking mRide = do
+  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
+  let extractAmount = fromMaybe Kernel.Types.Common.Price {amountInt = 0, amount = 0.0, currency = KTP.INR} . fmap (getField @"amount")
+      estimateAmount = extractAmount <$> safeHead $ filter (\item -> item.description == "TOLL_CHARGES") estimatedFareBreakups
+      finalAmount = extractAmount <$> safeHead $ filter (\item -> item.description == "TOLL_CHARGES") fareBreakups
+  fareDiff <- subtractPrice finalAmount estimateAmount
+  pure fareDiff
+
+getDistance :: DBooking.BookingDetails -> HighPrecMeters
+getDistance = \case
+  DBooking.OneWayDetails details -> distanceToHighPrecMeters $ details.distance
+  DBooking.DriverOfferDetails details -> distanceToHighPrecMeters $ details.distance
+  DBooking.OneWaySpecialZoneDetails details -> distanceToHighPrecMeters $ details.distance
+  DBooking.InterCityDetails details -> distanceToHighPrecMeters $ details.distance
+  DBooking.AmbulanceDetails details -> distanceToHighPrecMeters $ details.distance
+  DBooking.DeliveryDetails details -> distanceToHighPrecMeters $ details.distance
+  DBooking.MeterRideDetails _ -> 0
+  DBooking.RentalDetails _ -> 0
+
 mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m LegInfo
 mkLegInfoFromBookingAndRide booking mRide = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
   let skipBooking = fromMaybe False booking.isSkipped
+      estimatedDistance = getDistance booking.bookingDetails
+      chargeableRideDistance = distanceToHighPrecMeters <$> (mRide >>= (.chargeableDistance))
+      differenceOfDistance = estimatedDistance - fromMaybe 0 chargeableRideDistance
   (status, _) <- getTaxiLegStatusFromBooking booking mRide
+  tollDifference <- getTollDifferenceFromBookingAndRide booking mRide
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   return $
     LegInfo
@@ -410,6 +440,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
         estimatedDuration = booking.estimatedDuration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedFare,
         estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedFare,
+        estimatedTotalFare = Just $ mkPriceAPIEntity booking.estimatedTotalFare,
         estimatedDistance = booking.estimatedDistance,
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
@@ -427,10 +458,12 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 bookingId = Just $ booking.id,
                 rideId = mRide <&> (.id),
                 vehicleIconUrl = booking.vehicleIconUrl,
-                batchConfig
+                batchConfig,
+                tollDifference = Just tollDifference,
+                differenceOfDistance = Just differenceOfDistance
               },
         actualDistance = mRide >>= (.traveledDistance),
-        totalFare = mRide >>= (.fare)
+        totalFare = mRide >>= (.totalFare)
       }
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> m LegInfo
@@ -456,6 +489,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         estimatedDuration = estimatedRideDuration,
         estimatedMinFare = mkPriceAPIEntity <$> (mbFareRange <&> (.minFare)),
         estimatedMaxFare = mkPriceAPIEntity <$> (mbFareRange <&> (.maxFare)),
+        estimatedTotalFare = Nothing,
         estimatedDistance = distance,
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
@@ -473,6 +507,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 bookingId = Nothing,
                 rideId = Nothing,
                 vehicleIconUrl = Nothing,
+                tollDifference = Nothing,
+                differenceOfDistance = Nothing,
                 batchConfig
               },
         actualDistance = Nothing,
@@ -514,6 +550,7 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} = do
         estimatedDuration = estimatedDuration,
         estimatedMinFare = Nothing,
         estimatedMaxFare = Nothing,
+        estimatedTotalFare = Nothing,
         estimatedDistance = estimatedDistance,
         merchantId = merchantId,
         merchantOperatingCityId,
@@ -569,6 +606,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         estimatedDuration = duration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
         estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
+        estimatedTotalFare = Nothing,
         estimatedDistance = distance,
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
@@ -723,6 +761,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
         estimatedMinFare = mbEstimatedFare,
         estimatedMaxFare = mbEstimatedFare,
         estimatedDistance = distance,
+        estimatedTotalFare = Nothing,
         merchantId = merchantId,
         merchantOperatingCityId,
         personId = riderId,

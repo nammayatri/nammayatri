@@ -48,13 +48,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Booking (getfareBreakups)
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -467,22 +467,7 @@ buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
-  (fareBreakups, estimatedFareBreakups) <- do
-    case mbRide of
-      Just ride ->
-        case booking.status of
-          COMPLETED -> do
-            updatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
-            estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-            let fareBreakups = if null updatedFareBreakups then estimatedFareBreakups else updatedFareBreakups
-            return (fareBreakups, estimatedFareBreakups)
-          _ -> do
-            --------- Need to remove it after fixing the status api polling in frontend ---------
-            estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
-            return ([], estimatedFareBreakups)
-      Nothing -> do
-        estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
-        return ([], estimatedFareBreakups)
+  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mbRide
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
