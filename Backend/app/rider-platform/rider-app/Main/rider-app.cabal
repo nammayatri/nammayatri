@@ -299,6 +299,7 @@ library
       Lib.JourneyModule.Location
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
+      SharedLogic.Booking
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
