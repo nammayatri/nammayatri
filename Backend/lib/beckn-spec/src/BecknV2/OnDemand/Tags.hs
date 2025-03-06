@@ -415,7 +415,7 @@ data BecknTag
   | -- Auto assign enabled tags
     IS_AUTO_ASSIGN_ENABLED
   | -- Safety alert tags
-    DEVIATION
+    SAFETY_REASON_CODE
   | -- Ride odometer details tags
     START_ODOMETER_READING
   | -- Driver new message tags

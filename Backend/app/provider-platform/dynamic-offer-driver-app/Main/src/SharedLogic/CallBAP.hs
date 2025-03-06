@@ -995,11 +995,12 @@ sendSafetyAlertToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
-  T.Text ->
+  Enums.SafetyReasonCode ->
   DP.Person ->
   DVeh.Vehicle ->
   m ()
 sendSafetyAlertToBAP booking ride reason driver vehicle = do
+  logDebug $ "sendSafetyAlertToBAP: reason: " <> T.pack (show reason)
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1015,7 +1016,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
-        safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
+        safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {reason = T.pack (show reason), ..}
 
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
