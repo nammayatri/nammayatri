@@ -29,11 +29,7 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN expand text ;
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN max_payout_referral_for_a_day integer ;
 
 
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN referral_program_start_date timestamp with time zone  default ;
-
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.payout_config ALTER COLUMN referral_program_start_date DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN referral_program_start_date timestamp with time zone ;
