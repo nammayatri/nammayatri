@@ -78,7 +78,7 @@ SearchRequest:
     configInExperimentVersions: "[ConfigVersionMap]"
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int
-
+    peferSafetyPlus: Bool
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -92,6 +92,7 @@ SearchRequest:
     configInExperimentVersions: Maybe Value
     customerNammaTags: "Maybe [Text]"
     searchTags: "Maybe [Text]"
+    peferSafetyPlus: Maybe Bool
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -119,6 +120,7 @@ SearchRequest:
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    peferSafetyPlus: Kernel.Prelude.Just|I
 
   intermediateTransformers:
     fromTType:
@@ -144,7 +146,7 @@ SearchRequest:
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
-
+    peferSafetyPlus: fromMaybe False peferSafetyPlus|E
 
   constraints:
     id: PrimaryKey
@@ -218,6 +220,10 @@ SearchRequest:
     updateParcelDetails:
       kvFunction: updateWithKV
       params: [parcelType, parcelQuantity]
+      where: id
+    updateSafetyPlus :
+      kvFunction: updateWithKV
+      params: [peferSafetyPlus]
       where: id
 
   extraOperations:

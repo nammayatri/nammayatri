@@ -300,7 +300,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 otherSelectedEstimates = Nothing,
                 isAdvancedBookingEnabled = Nothing,
                 deliveryDetails = Nothing,
-                disabilityDisable = Nothing
+                disabilityDisable = Nothing,
+                peferSafetyPlus = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
     {- Author: Hemant Mangla

@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.SearchRequestForDriver where
 
+import qualified Data.Aeson
 import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.SearchRequestForDriver
@@ -42,6 +43,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientSdkVersion = clientSdkVersion',
+            conditionalCharges = Kernel.Prelude.fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< conditionalCharges,
             createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = getCustomerCancellationDues customerCancellationDues,
@@ -118,6 +120,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.clientOsType = clientDevice <&> (.deviceType),
         Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
+        Beam.conditionalCharges = Kernel.Prelude.Just $ Kernel.Prelude.toJSON conditionalCharges,
         Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.customerCancellationDues = Kernel.Prelude.Just customerCancellationDues,

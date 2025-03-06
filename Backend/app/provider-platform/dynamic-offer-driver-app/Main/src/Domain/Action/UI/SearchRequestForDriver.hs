@@ -19,6 +19,7 @@ import Data.Aeson.TH
 import Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
+import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DeliveryDetails as DParcel
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FarePolicy as DFP
@@ -103,7 +104,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     roundTrip :: Maybe Bool,
     middleStopCount :: Int,
     parcelType :: Maybe DParcel.ParcelType,
-    parcelQuantity :: Maybe Int
+    parcelQuantity :: Maybe Int,
+    conditionalCharges :: [DAC.ConditionalChargesCategories]
   }
   deriving (Generic, ToSchema, Show)
 
@@ -175,6 +177,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           parcelType = nearbyReq.parcelType,
           parcelQuantity = nearbyReq.parcelQuantity,
+          conditionalCharges = nearbyReq.conditionalCharges,
           ..
         }
   where
