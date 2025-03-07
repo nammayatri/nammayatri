@@ -5,6 +5,7 @@ on:
     branches: 
       - "main"
       - "prodHotPush-Common"
+      - "backend/fix/eta-in-wimb"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
@@ -67,7 +68,7 @@ jobs:
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
-            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
           fi
   build:
     needs: [check-conditions]
