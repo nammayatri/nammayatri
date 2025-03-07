@@ -2520,6 +2520,7 @@ derive instance genericTicketPlaceResponse :: Generic TicketPlaceResponse _
 derive instance newtypeTicketPlaceResponse :: Newtype TicketPlaceResponse _
 instance showTicketPlaceResponse :: Show TicketPlaceResponse where show = genericShow
 instance decodeTicketPlaceResponse :: Decode TicketPlaceResponse where decode = defaultDecode
+instance encodeTicketPlaceResponse :: Encode TicketPlaceResponse where encode = defaultEncode
 
 derive instance genericPlaceType :: Generic PlaceType _
 instance standardEncodePlaceType :: StandardEncode PlaceType where standardEncode _ = standardEncode {}

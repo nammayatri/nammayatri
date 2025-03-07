@@ -260,8 +260,24 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "fvrts" -> hideSplashAndCallFlow savedLocationFlow
         "help" -> hideSplashAndCallFlow $ flowRouter HelpAndSupportScreenFlow
         "prof" -> hideSplashAndCallFlow myProfileScreenFlow
-        "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
-        "tkts" -> hideSplashAndCallFlow placeListFlow
+        "lang" -> hideSplashAndCallFlow $ selectLanguageScreenFlow HomeScreenFlow
+        "tkts" -> do
+          case globalPayload ^. _payload ^. _deepLinkJSON of
+            Just (CTA.QueryParam queryParam) -> do
+              case queryParam.placeId of
+                Just queryPlaceId -> do
+                  ticketPlacesResp <- lift $ lift $ Remote.getTicketPlaces ""
+                  case ticketPlacesResp of
+                    Right (API.TicketPlaceResponse ticketPlaces) -> do
+                      let ticketPlace = DA.find (\(API.TicketPlaceResp ticketplace) -> ticketplace.id == queryPlaceId) ticketPlaces
+                      modifyScreenState $ TicketingScreenStateType (\ticketingScreen -> ticketingScreen{ data { placeInfoArray = ticketPlaces}})
+                      if isJust ticketPlace then do
+                        modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { navigateToHome = false, currentStage = DescriptionStage, previousStage = DescriptionStage }, data { totalAmount = 0, placeInfo = ticketPlace } })
+                        hideSplashAndCallFlow placeDetailsFlow
+                      else hideSplashAndCallFlow placeListFlow
+                    _ -> hideSplashAndCallFlow placeListFlow
+                Nothing -> hideSplashAndCallFlow placeListFlow
+            _ -> hideSplashAndCallFlow placeListFlow
         "safety" -> hideSplashAndCallFlow safetySettingsFlow
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { confirmTestDrill = true } })
