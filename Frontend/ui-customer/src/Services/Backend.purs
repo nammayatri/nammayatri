@@ -1014,6 +1014,13 @@ getTicketPlacesBT _ = do
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
+getTicketPlaces :: String -> Flow GlobalState (Either ErrorResponse TicketPlaceResponse)
+getTicketPlaces _ = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.ticketPlaces "") unwrapResponse $ callAPI headers TicketPlaceReq
+    where
+        unwrapResponse (x) = x
+
 bookTicketsBT :: TicketBookingReq -> String -> FlowBT String CreateOrderRes
 bookTicketsBT payload placeId = do
     headers <- getHeaders' "" false
