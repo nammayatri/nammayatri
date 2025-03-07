@@ -342,24 +342,17 @@ registerFleetOwner ::
   m APISuccess
 registerFleetOwner req mbPersonId = do
   runRequestValidation validateFleetOwner req
-  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $
-    throwError (InvalidRequest "Phone already registered")
-
+  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
+  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-
-  when (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) $
-    throwError (InvalidRequest "Fleet owner registration requires admin approval for this merchant")
-
-  fleetOwnerRole <-
-    QRole.findByDashboardAccessType (getFleetRole req.fleetType)
-      >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
-  fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   merchantServerAccessCheck merchant
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  QP.create fleetOwner
+  let mbBoolVerified = not <$> merchant.requireAdminApprovalForFleetOnboarding
+  QP.create fleetOwner {verified = mbBoolVerified}
   QAccess.create merchantAccess
   return Success
   where
