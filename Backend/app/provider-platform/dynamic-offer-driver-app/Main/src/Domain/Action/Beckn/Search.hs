@@ -705,6 +705,16 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         smartTipReason = fullFarePolicy.smartTipReason,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
+        mbActualQARCityPast = (.mbActualQARCityPast) =<< fullFarePolicy.congestionChargeData,
+        mbActualQARFromLocGeohashDistance = (.mbActualQARFromLocGeohashDistance) =<< fullFarePolicy.congestionChargeData,
+        mbActualQARFromLocGeohashDistancePast = (.mbActualQARFromLocGeohashDistancePast) =<< fullFarePolicy.congestionChargeData,
+        mbActualQARFromLocGeohashPast = (.mbActualQARFromLocGeohashPast) =<< fullFarePolicy.congestionChargeData,
+        mbCongestionCity = (.mbCongestionCity) =<< fullFarePolicy.congestionChargeData,
+        mbCongestionCityPast = (.mbCongestionCityPast) =<< fullFarePolicy.congestionChargeData,
+        mbCongestionFromLocGeohash = (.mbCongestionFromLocGeohash) =<< fullFarePolicy.congestionChargeData,
+        mbCongestionFromLocGeohashDistance = (.mbCongestionFromLocGeohashDistance) =<< fullFarePolicy.congestionChargeData,
+        mbCongestionFromLocGeohashDistancePast = (.mbCongestionFromLocGeohashDistancePast) =<< fullFarePolicy.congestionChargeData,
+        mbCongestionFromLocGeohashPast = (.mbCongestionFromLocGeohashPast) =<< fullFarePolicy.congestionChargeData,
         ..
       }
 
