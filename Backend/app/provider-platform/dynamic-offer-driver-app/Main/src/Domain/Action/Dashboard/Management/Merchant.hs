@@ -134,7 +134,7 @@ import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -379,6 +379,16 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
               let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
               createJobIn @_ @'SupplyDemand mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: SupplyDemandRequestJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.CongestionChargeCalculation -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe CongestionChargeCalculationRequestJobData
+          case jobData' of
+            Just jobData -> do
+              mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+              let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
+              createJobIn @_ @'CongestionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CongestionChargeCalculationRequestJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

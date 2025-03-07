@@ -202,22 +202,22 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
   congestionChargeMultiplierFromModel <-
     case fareProduct.tripCategory of
       DTC.OneWay _ -> do
-        maybe (return Nothing) (checkGeoHashAndCalculate localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes) mbFromLocGeohash
+        maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes) mbFromLocGeohash
       _ -> return Nothing -- For now, we are not supporting congestion charge through model for other trips
   farePolicy' <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
-  let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version, supplyDemandRatioFromLoc, supplyDemandRatioToLoc, smartTipSuggestion, smartTipReason, mbActualQARFromLocGeohash, mbActualQARCity) =
+  let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version, supplyDemandRatioFromLoc, supplyDemandRatioToLoc, smartTipSuggestion, smartTipReason, mbActualQARFromLocGeohash, mbActualQARCity, mbcongestionChargeData) =
         case congestionChargeMultiplierFromModel of
           Just details ->
             case (details.congestionChargePerMin, details.smartTipSuggestion, details.congestionChargeMultiplier) of
-              (Just congestionChargePerMinute, smartTip, Nothing) -> (Just congestionChargePerMinute, Nothing, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity) -----------Need to send Nothing here for congestionChargeMultiplier
-              (Nothing, smartTip, Just congestionChargeMultiplier) -> (Nothing, Just congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity) -----------Need to send Nothing here for congestionChargePerMinute
-              (Nothing, Just smartTip, Nothing) -> (Nothing, farePolicy'.congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Just smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity)
-              _ -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Nothing, Nothing, details.mbActualQARFromLocGeohash, details.mbActualQARCity)
-          Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+              (Just congestionChargePerMinute, smartTip, Nothing) -> (Just congestionChargePerMinute, Nothing, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData) -----------Need to send Nothing here for congestionChargeMultiplier
+              (Nothing, smartTip, Just congestionChargeMultiplier) -> (Nothing, Just congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData) -----------Need to send Nothing here for congestionChargePerMinute
+              (Nothing, Just smartTip, Nothing) -> (Nothing, farePolicy'.congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Just smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData)
+              _ -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Nothing, Nothing, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData)
+          Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
   let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity
   cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
-  let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails farePolicy fareProduct.disableRecompute
+  let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute
   case mbVehicleServiceTierItem of
     Just vehicleServiceTierItem -> do
       if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)
@@ -235,9 +235,9 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
         else return fullFarePolicy
     Nothing -> return fullFarePolicy
   where
-    checkGeoHashAndCalculate localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes fromLocGeohash =
+    checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes fromLocGeohash =
       if elem fromLocGeohash whiteListedGeohashes || notElem fromLocGeohash blackListedGeohashes
-        then getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier mbDistance mbDuration mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId
+        then getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier (maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem) mbDistance mbDuration mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId
         else return Nothing
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> FarePolicyD.FarePolicy
@@ -752,24 +752,39 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe Text ->
   Maybe Text ->
   ServiceTierType ->
+  Maybe DVC.VehicleCategory ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Int ->
   Id DMOC.MerchantOperatingCity ->
   m (Maybe CongestionChargeDetailsModel)
-getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) toLocGeohash serviceTier (Just (Meters distance)) (Just (Seconds duration)) (Just dynamicPricingLogicVersion) merchantOperatingCityId = do
+getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just dynamicPricingLogicVersion) merchantOperatingCityId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   let distanceInKm = int2Double distance / 1000.0
+  let distanceBin = getDistanceBin distance
   let estimatedDurationInH = int2Double duration / 3600.0
   let speedKmh = if estimatedDurationInH == 0.0 then 0.0 else distanceInKm / estimatedDurationInH
   toss <- getRandomInRange (1, 100 :: Int)
-  mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash fromLocGeohash serviceTier
-  mbActualQARFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohash fromLocGeohash serviceTier
-  mbActualQARCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCity merchantOperatingCityId.getId serviceTier
-  let actualQAR = mbActualQARFromLocGeohash <|> mbActualQARCity
-  mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash serviceTier) toLocGeohash
+  mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash fromLocGeohash vehicleCategory
+  mbActualQARFromLocGeohashDistance <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashAndDistanceBin fromLocGeohash distanceBin vehicleCategory
+  mbActualQARFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohash fromLocGeohash vehicleCategory
+  mbActualQARCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCity merchantOperatingCityId.getId vehicleCategory
+  mbActualQARFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin vehicleCategory
+  mbActualQARFromLocGeohashPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashPast fromLocGeohash vehicleCategory
+  mbActualQARCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCityPast merchantOperatingCityId.getId vehicleCategory
+  mbCongestionFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohash fromLocGeohash
+  mbCongestionFromLocGeohashDistance <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBin fromLocGeohash distanceBin
+  mbCongestionCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity merchantOperatingCityId.getId
+  mbCongestionFromLocGeohashPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashPast fromLocGeohash
+  mbCongestionFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin
+  mbCongestionCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast merchantOperatingCityId.getId
+  let actualQAR = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARCity
+  let actualQARPast = mbActualQARFromLocGeohashDistancePast <|> mbActualQARFromLocGeohashPast <|> mbActualQARCityPast
+  let congestionMultiplier = mbCongestionFromLocGeohashDistance <|> mbCongestionFromLocGeohash <|> mbCongestionCity
+  let congestionMultiplierPast = mbCongestionFromLocGeohashDistancePast <|> mbCongestionFromLocGeohashPast <|> mbCongestionCityPast
+  mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash vehicleCategory) toLocGeohash
   (allLogics, mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime (Just dynamicPricingLogicVersion) Nothing
-  let dynamicPricingData = DynamicPricingData {serviceTier, speedKmh, distanceInKm, supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc, supplyDemandRatioToLoc = fromMaybe 0.0 mbSupplyDemandRatioToLoc, toss, actualQAR = fromMaybe 0.0 actualQAR}
+  let dynamicPricingData = DynamicPricingData {serviceTier, speedKmh, distanceInKm, supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc, supplyDemandRatioToLoc = fromMaybe 0.0 mbSupplyDemandRatioToLoc, toss, actualQAR = actualQAR, actualQARPast = actualQARPast, congestionMultiplier = congestionMultiplier, congestionMultiplierPast = congestionMultiplierPast}
   if null allLogics
     then do
       logInfo $ "No DynamicPricingLogics found for merchantOperatingCityId : " <> show merchantOperatingCityId <> " and serviceTier : " <> show serviceTier <> " and localTime : " <> show localTime
@@ -795,6 +810,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
                           smartTipSuggestion = smartTip,
                           smartTipReason = result.smartTipReason,
                           congestionChargeMultiplier = Nothing,
+                          congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           ..
                         }
                 (Nothing, smartTip, Just congestionChargeMultiplier) -> do
@@ -807,6 +823,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
                           smartTipSuggestion = smartTip,
                           smartTipReason = result.smartTipReason,
                           congestionChargeMultiplier = Just congestionChargeMultiplier,
+                          congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           ..
                         }
                 (_, Just smartTipSuggestion, _) -> do
@@ -819,6 +836,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
                           smartTipSuggestion = Just smartTipSuggestion,
                           smartTipReason = result.smartTipReason,
                           congestionChargeMultiplier = Nothing,
+                          congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           ..
                         }
                 _ -> do
@@ -830,6 +848,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
                           smartTipSuggestion = Nothing,
                           smartTipReason = Nothing,
                           congestionChargeMultiplier = Nothing,
+                          congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           ..
                         }
             A.Error err -> do
@@ -842,9 +861,10 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
                       smartTipSuggestion = Nothing,
                       smartTipReason = Nothing,
                       congestionChargeMultiplier = Nothing,
+                      congestionChargeData = FarePolicyD.CongestionChargeData {..},
                       ..
                     }
-getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ = return Nothing
+getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ = return Nothing
 
 data CongestionChargeDetailsModel = CongestionChargeDetailsModel
   { dpVersion :: Maybe Text,
@@ -855,6 +875,43 @@ data CongestionChargeDetailsModel = CongestionChargeDetailsModel
     smartTipReason :: Maybe Text,
     mbActualQARFromLocGeohash :: Maybe Double,
     mbActualQARCity :: Maybe Double,
+    congestionChargeData :: FarePolicyD.CongestionChargeData,
     congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier
   }
   deriving (Generic, Show)
+
+getDistanceBin :: Int -> Text
+getDistanceBin distance =
+  if distance >= 0 && distance < 2000
+    then "0-2"
+    else
+      if distance >= 2000 && distance < 4000
+        then "2-4"
+        else
+          if distance >= 4000 && distance < 6000
+            then "4-6"
+            else
+              if distance >= 6000 && distance < 8000
+                then "6-8"
+                else
+                  if distance >= 8000 && distance < 10000
+                    then "8-10"
+                    else
+                      if distance >= 10000 && distance < 12000
+                        then "10-12"
+                        else
+                          if distance >= 12000 && distance < 14000
+                            then "12-14"
+                            else
+                              if distance >= 14000 && distance < 16000
+                                then "14-16"
+                                else
+                                  if distance >= 16000 && distance < 18000
+                                    then "16-18"
+                                    else
+                                      if distance >= 18000 && distance < 20000
+                                        then "18-20"
+                                        else
+                                          if distance >= 20000
+                                            then "more_than_20"
+                                            else "unknown"
