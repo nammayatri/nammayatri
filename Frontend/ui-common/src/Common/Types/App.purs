@@ -171,6 +171,7 @@ newtype QueryParam = QueryParam {
   option :: Maybe String,
   bookingId :: Maybe String,
   rideId :: Maybe String,
+  placeId :: Maybe String,
   messageId :: Maybe String
 }
 
