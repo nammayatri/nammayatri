@@ -84,7 +84,7 @@ window.getMerchantConfig = function () {
       "title" : "Share Yatri!"
       , "description" : "Hey there!\n\nCheck out Yatri, India's first open mobility cab hailing app built for commuters in Kochi.\n100% Open Source\n\nDownload Yatri now! \n" + (getAppLink(window.__OS)) + "\n\n#beOpen #chooseOpen"
     },
-    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP","META"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
     "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app",
