@@ -782,27 +782,35 @@ instance IsHTTPError DiscountError where
 
 instance IsAPIError DiscountError
 
-data CancelAndSwitchLegError
+data JourneyLegError
   = JourneyLegCannotBeSwitched Text
   | JourneyLegCannotBeCancelled Text
+  | JourneyLegCannotBeSkippedForMode Text
+  | JourneyLegCannotBeSkippedForStatus Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''CancelAndSwitchLegError
+instanceExceptionWithParent 'HTTPException ''JourneyLegError
 
-instance IsBaseError CancelAndSwitchLegError where
+instance IsBaseError JourneyLegError where
   toMessage = \case
     JourneyLegCannotBeSwitched journeyLegId -> Just ("JourneyLeg with id: " <> journeyLegId <> " can not be switched.")
     JourneyLegCannotBeCancelled journeyLegId -> Just ("Request data for journey leg number: " <> journeyLegId <> " can not be cancelled!")
+    JourneyLegCannotBeSkippedForMode journeyLegMode -> Just ("JourneyLeg csnnot be switched for mode: " <> journeyLegMode)
+    JourneyLegCannotBeSkippedForStatus journeyLegStatus -> Just ("JourneyLeg csnnot be switched for status: " <> journeyLegStatus)
 
-instance IsHTTPError CancelAndSwitchLegError where
+instance IsHTTPError JourneyLegError where
   toErrorCode = \case
     JourneyLegCannotBeSwitched _ -> "JOURNEY_LEG_CANNOT_SWITCH"
     JourneyLegCannotBeCancelled _ -> "JOURNEY_LEG_CANNOT_CANCELLED"
+    JourneyLegCannotBeSkippedForMode _ -> "JOURNEY_LEG_CANNOT_SKIP"
+    JourneyLegCannotBeSkippedForStatus _ -> "JOURNEY_LEG_CANNOT_SKIP"
   toHttpCode = \case
     JourneyLegCannotBeSwitched _ -> E400
     JourneyLegCannotBeCancelled _ -> E400
+    JourneyLegCannotBeSkippedForMode _ -> E400
+    JourneyLegCannotBeSkippedForStatus _ -> E400
 
-instance IsAPIError CancelAndSwitchLegError
+instance IsAPIError JourneyLegError
 
 data FRFSQuoteError
   = CachedFRFSQuoteAnomaly Text Text

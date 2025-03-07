@@ -918,6 +918,18 @@ cannotCancelStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled]
 cannotCancelWalkStatus :: [JourneyLegStatus]
 cannotCancelWalkStatus = [Skipped, Finishing, Completed, Cancelled]
 
-data ExtendLegStartPoint = StartLocation DLocation.LocationAPIEntity | StartLegOrder Int
+cannotSwitchStatus :: [JourneyLegStatus]
+cannotSwitchStatus = [Skipped, Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
+
+data ExtendLegStartPoint
+  = StartLocation StartLocationType
+  | StartLegOrder Int
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StartLocationType = StartLocationType
+  { location :: DLocation.LocationAPIEntity,
+    legOrder :: Int
+  }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
