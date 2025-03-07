@@ -48,6 +48,7 @@ data AllocatorJobType
   | UnblockSoftBlockedDriver
   | SoftBlockNotifyDriver
   | SupplyDemand
+  | CongestionCharge
   | SendPDNNotificationToDriver
   | MandateExecution
   | CalculateDriverFees
@@ -87,6 +88,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
   restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
   restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
+  restoreAnyJobInfo SCongestionCharge jobData = AnyJobInfo <$> restoreJobInfo SCongestionCharge jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
@@ -215,6 +217,17 @@ data SupplyDemandRequestJobData = SupplyDemandRequestJobData
 instance JobInfoProcessor 'SupplyDemand
 
 type instance JobContent 'SupplyDemand = SupplyDemandRequestJobData
+
+data CongestionChargeCalculationRequestJobData = CongestionChargeCalculationRequestJobData
+  { scheduleTimeIntervalInMin :: Int,
+    congestionChargeCalculationTTLInSec :: Int,
+    calculationDataIntervalInMin :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CongestionCharge
+
+type instance JobContent 'CongestionCharge = CongestionChargeCalculationRequestJobData
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
 
