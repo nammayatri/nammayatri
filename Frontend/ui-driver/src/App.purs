@@ -85,6 +85,7 @@ import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
 import Screens.MetroWarriorsScreen.ScreenData as MetroWarriorsScreenData
+import Screens.ExtraChargeInfoScreen.ScreenData as ExtraChargeInfoScreenState
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -148,6 +149,7 @@ newtype GlobalState = GlobalState {
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
   , uploadParcelImageScreen :: UploadParcelImageScreenState
   , metroWarriorsScreen :: MetroWarriorsScreenState
+  , extraChargeInfoScreen :: ExtraChargeInfoScreenState.ExtraChargeInfoScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -205,12 +207,13 @@ defaultGlobalState = GlobalState {
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
 , cancellationRateScreen : CancellationRateScreenData.initData
-, hotspotScreen : HotspotScreenData.initData 
+, hotspotScreen : HotspotScreenData.initData
 , rideRequestScreen : RideRequestScreenData.initData ""
 , rideSummaryScreen : RideSummaryScreenData.initData
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
 , uploadParcelImageScreen : UploadParcelImageScreenData.initData
 , metroWarriorsScreen : MetroWarriorsScreenData.initData
+, extraChargeInfoScreen : ExtraChargeInfoScreenState.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -284,6 +287,7 @@ data ScreenType =
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
   | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
   | MetroWarriorsScreenStateType (MetroWarriorsScreenState -> MetroWarriorsScreenState)
+  | ExtraChargeInfoScreenStateType (ExtraChargeInfoScreenState.ExtraChargeInfoScreenState ->ExtraChargeInfoScreenState.ExtraChargeInfoScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -291,7 +295,7 @@ data DOCUMENT_DETAILS_SCREEN_OUTPUT = GO_TO_HOME_FROM_DOCUMENT_DETAILS DocumentD
 
 data DRIVER_COMPLETE_PROFILE_SCREEN_OUTPUT = GO_TO_HOME_FROM_DRIVER_COMPLETE_PROFILE
 
-data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN 
+data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
                             | PROFILE_SCREEN
                             | GO_TO_REFERRAL_SCREEN
                             | REFRESH RideHistoryScreenState
@@ -352,12 +356,14 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_CALL_DRIVER DriverProfileScreenState
                                     | ADD_RC DriverProfileScreenState
                                     | UPDATE_LANGUAGES (Array String)
-                                    | SUBCRIPTION 
+                                    | SUBCRIPTION
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
                                     | VIEW_PENDING_VEHICLE String VehicleCategory
                                     | DRIVER_COMPLETING_PROFILE_SCREEN VehicleCategory
                                     | CANCELLATION_RATE_SCREEN CancellationRateScreenState
+                                    | GO_TO_EXTRA_CHARGE_INFO_SCREEN
+
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -399,10 +405,10 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | AADHAAR_PAN_SELFIE_UPLOAD RegistrationScreenState HyperVergeKycResult
                                 | GO_TO_APP_UPDATE_POPUP_SCREEN RegistrationScreenState
 
-data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
-                                          | VALIDATE_DATA_API UploadDrivingLicenseState 
-                                          | GOTO_VEHICLE_DETAILS_SCREEN 
-                                          | LOGOUT_ACCOUNT 
+data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState
+                                          | VALIDATE_DATA_API UploadDrivingLicenseState
+                                          | GOTO_VEHICLE_DETAILS_SCREEN
+                                          | LOGOUT_ACCOUNT
                                           | GOTO_ONBOARDING_FLOW
                                           | CHANGE_VEHICLE_FROM_DL_SCREEN
                                           | CHANGE_LANG_FROM_DL_SCREEN
@@ -411,13 +417,13 @@ data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState 
-                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState 
-                                        | REFER_API_CALL AddVehicleDetailsScreenState 
-                                        | APPLICATION_STATUS_SCREEN 
-                                        | LOGOUT_USER 
-                                        | ONBOARDING_FLOW 
-                                        | DRIVER_PROFILE_SCREEN 
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState
+                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState
+                                        | REFER_API_CALL AddVehicleDetailsScreenState
+                                        | APPLICATION_STATUS_SCREEN
+                                        | LOGOUT_USER
+                                        | ONBOARDING_FLOW
+                                        | DRIVER_PROFILE_SCREEN
                                         | RC_ACTIVATION AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
@@ -427,7 +433,7 @@ data RIDE_REQUEST_SCREEN_OUTPUT  = GOTO_HOME RideRequestScreenData.RideRequestSc
                                   | LOADER__OUTPUT RideRequestScreenData.RideRequestScreenState
                                   | NOTIFICATION_TYPE String RideRequestScreenData.RideRequestScreenState
                                   | GO_BACK_TO_RIDEREQUEST_SCREEN RideRequestScreenData.RideRequestScreenState
-                                  
+
 data SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT = GO_HOME_FROM_SCHEDULED_RIDE_ACCEPT_SCREEN
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN
@@ -462,7 +468,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_COMPLETE_PROFILE_SCREEN
-                          | GO_TO_RIDE_DETAILS_SCREEN 
+                          | GO_TO_RIDE_DETAILS_SCREEN
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES
                           | ENABLE_GOTO_API HomeScreenState String String
@@ -517,18 +523,18 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
-data BOOKING_OPTIONS_SCREEN_OUTPUT = 
-  SELECT_CAB BookingOptionsScreenState Boolean 
-  | ENABLE_RENTAL_INTERCITY_RIDE BookingOptionsScreenState 
-  | GO_TO_PROFILE 
-  | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference 
-  | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean 
-  | HOME_SCREEN_FROM_BOOKING_PREFS 
+data BOOKING_OPTIONS_SCREEN_OUTPUT =
+  SELECT_CAB BookingOptionsScreenState Boolean
+  | ENABLE_RENTAL_INTERCITY_RIDE BookingOptionsScreenState
+  | GO_TO_PROFILE
+  | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference
+  | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean
+  | HOME_SCREEN_FROM_BOOKING_PREFS
   | EXIT_TO_RATE_CARD_SCREEN BookingOptionsScreenState
 
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT
 
-data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationScreenState 
+data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationScreenState
   | VERIFY_AADHAAR_OTP AadhaarVerificationScreenState
   | RESEND_AADHAAR_OTP AadhaarVerificationScreenState
   | SEND_UNVERIFIED_AADHAAR_DATA AadhaarVerificationScreenState
@@ -538,16 +544,16 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
 data RIDE_SUMMARY_SCREEN_OUTPUT = GO_TO_RIDE_REQUEST RideSummaryScreenData.RideSummaryScreenState
                                     | ACCEPT_SCHEDULED_RIDE String
                                     | UPDATE_ROUTE_INTERCITY Number Number Number Number RideSummaryScreenData.RideSummaryScreenState
-                                    | UPDATE_ROUTE_RENTAL Number Number 
+                                    | UPDATE_ROUTE_RENTAL Number Number
                                     | UPDATE_ROUTE_REGULAR Number Number Number Number RideSummaryScreenData.RideSummaryScreenState
-                                    | CANCEL_SCHEDULED_RIDE {id :: String, info :: String , reason :: String} 
+                                    | CANCEL_SCHEDULED_RIDE {id :: String, info :: String , reason :: String}
                                     | BACK_HOME
                                     | ON_CALLING  RideSummaryScreenData.RideSummaryScreenState String
                                     | GO_TO_OPEN_GOOGLE_MAP  RideSummaryScreenData.RideSummaryScreenState
                                     | GO_TO_HOME_SCREEN_FROM_BANNER
                                     | FCM_NOTIFICATION_TYPE String RideSummaryScreenData.RideSummaryScreenState
                                     | GO_BACK_TO_RIDE_REQUEST
-                                     
+
 data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | NAV NAVIGATION_ACTIONS
                                   | MAKE_PAYMENT SubscriptionScreenState
@@ -582,18 +588,18 @@ data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
 
 data APP_UPDATE_POPUP = Later | UpdateNow
 
-data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN 
+data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                                   | AUTO_COMPLETE DriverSavedLocationScreenState String String String
                                   | GET_LOCATION_NAME DriverSavedLocationScreenState
                                   | SAVE_LOCATION DriverSavedLocationScreenState
                                   | GET_PLACE_NAME DriverSavedLocationScreenState String
                                   | DELETE_PLACE DriverSavedLocationScreenState String
-                                  | CHANGE_VIEW 
+                                  | CHANGE_VIEW
                                   | UPDATE_HOME_LOCATION DriverSavedLocationScreenState
-                      
+
 data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
-data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen 
+data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
                                   | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
                                   | DETECT_CITY Number Number ChooseCityScreenState
 
@@ -613,8 +619,8 @@ data LMS_QUIZ_SCREEN_OUTPUT = GO_TO_NEXT_QUESTION LmsQuizScreenState
                             | GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ LmsQuizScreenState
                             | GO_TO_BENEFITS_SCREEN_FROM_QUIZ LmsQuizScreenState
 
-data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState String 
-                                      | LOGOUT_FROM_DOC_CAPTURE 
+data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState String
+                                      | LOGOUT_FROM_DOC_CAPTURE
                                       | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
 
@@ -629,3 +635,8 @@ data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadP
 
 data METRO_WARRIOR_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_WARRIOR MetroWarriorsScreenState
                                   | UPDATE_WARRIOR_SETTINGS MetroWarriorsScreenState UpdateSpecialLocWarriorInfoReq
+
+
+
+
+data EXTRA_CHARGE_INFO_SCREEN = NO_EXTRA_CHARGE_OUTPUT
