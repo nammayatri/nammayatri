@@ -13,9 +13,9 @@ apis:
       endpoint: /document/configs
       auth: ApiAuthV2
       query:
-        onlyVehicle: Bool
-        makeSelfieAadhaarPanMandatory: Bool
-        role: Role
+        - makeSelfieAadhaarPanMandatory: Bool
+        - onlyVehicle: Bool
+        - role: Role
       response:
         type: DocumentVerificationConfigList
       migrate:
@@ -27,19 +27,19 @@ apis:
             params:
               fleetOwnerId: Text
             query:
-              onlyVehicle: Bool
-              makeSelfieAadhaarPanMandatory: Bool
-              role: Role
+              - makeSelfieAadhaarPanMandatory: Bool
+              - onlyVehicle: Bool
+              - role: Role
             response:
               type: DocumentVerificationConfigList
   - GET:
       endpoint: /register/status
       auth: ApiAuthV2
       query:
-        makeSelfieAadhaarPanMandatory: Bool
-        providePrefillDetails: Bool
-        onboardingVehicleCategory: VehicleCategory
-        driverId: Id Driver
+        - driverId: Id Driver
+        - makeSelfieAadhaarPanMandatory: Bool
+        - onboardingVehicleCategory: VehicleCategory
+        - providePrefillDetails: Bool
       response:
         type: StatusRes
       migrate:
@@ -51,10 +51,10 @@ apis:
             params:
               fleetOwnerId: Text
             query:
-              makeSelfieAadhaarPanMandatory: Bool
-              providePrefillDetails: Bool
-              onboardingVehicleCategory: VehicleCategory
-              driverId: Id Driver
+              - driverId: Id Driver
+              - makeSelfieAadhaarPanMandatory: Bool
+              - onboardingVehicleCategory: VehicleCategory
+              - providePrefillDetails: Bool
             response:
               type: StatusRes
 types:

@@ -39,8 +39,8 @@ ALTER TABLE atlas_app.merchant ALTER COLUMN updated_at DROP NOT NULL;
 
 INSERT INTO atlas_app.merchant (id, short_id) VALUES
     ('da4e23a5-3ce6-4c37-8b9b-41377c3c1a51', 'YATRI'),
-    ('da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'NAMMA_YATRI');
-
+    ('da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'NAMMA_YATRI'),
+    ('4b17bd06-ae7e-48e9-85bf-282fb310209c', 'NAMMA_YATRI2'); -- only for local testing
 
 
 --ALTER TABLE atlas_app.ride_booking ADD COLUMN merchant_id character(36) NOT NULL REFERENCES atlas_app.merchant (id) DEFAULT 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';
