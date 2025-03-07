@@ -171,7 +171,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbActualQARFromLocGeohash :: Maybe Double,
-    mbActualQARCity :: Maybe Double
+    mbActualQARCity :: Maybe Double,
+    congestionChargeData :: Maybe CongestionChargeData
   }
   deriving (Generic, Show)
 
@@ -188,6 +189,20 @@ data CongestionChargeDetails = CongestionChargeDetails
     mbActualQARCity :: Maybe Double
   }
   deriving (Generic, Show)
+
+data CongestionChargeData = CongestionChargeData
+  { mbActualQARFromLocGeohashDistancePast :: Maybe Double,
+    mbActualQARFromLocGeohashPast :: Maybe Double,
+    mbActualQARCityPast :: Maybe Double,
+    mbCongestionFromLocGeohashDistance :: Maybe Double,
+    mbCongestionFromLocGeohashDistancePast :: Maybe Double,
+    mbCongestionFromLocGeohash :: Maybe Double,
+    mbCongestionFromLocGeohashPast :: Maybe Double,
+    mbCongestionCity :: Maybe Double,
+    mbCongestionCityPast :: Maybe Double,
+    mbActualQARFromLocGeohashDistance :: Maybe Double
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 instance FromJSON (FullFarePolicyD 'DTC.Unsafe)
 
@@ -209,8 +224,8 @@ mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> Conge
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
-farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> Maybe Bool -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} disableRecompute =
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> Maybe CongestionChargeData -> FarePolicy -> Maybe Bool -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} congestionChargeData FarePolicy {..} disableRecompute =
   FullFarePolicy
     { merchantId = merchantId',
       ..

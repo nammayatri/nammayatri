@@ -293,6 +293,7 @@ data JobName
   | SendManualPaymentLinkTrigger
   | ReferralPayoutTrigger
   | SupplyDemandCalculation
+  | CongestionChargeCalculation
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
