@@ -34,7 +34,7 @@ token: {{adminToken}}
 ###
 # @name updateInitial
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token1}}
+token: {{token2}}
 mId: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
@@ -60,7 +60,7 @@ content-type: application/json
 
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
 content-type: application/json
-token: {{token1}}
+token: {{token2}}
 
 ###
 
@@ -146,13 +146,13 @@ token: {{app-token}}
 
 # @name nearbySearchRequest
 GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
-token: {{token1}}
+token: {{token2}}
 
 ###
 
 # @name offerQuote
 POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
@@ -206,7 +206,7 @@ token: {{app-token}}
 
 # @name driverList
 GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
-token: {{token1}}
+token: {{token2}}
 
 ###
 
@@ -215,7 +215,7 @@ token: {{token1}}
 
 # @name startRide
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
@@ -232,7 +232,7 @@ content-type: application/json
 
 # @name update1
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token1}}
+token: {{token2}}
 mId: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
@@ -278,7 +278,7 @@ content-type: application/json
 
 # @name update2
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token1}}
+token: {{token2}}
 mId: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
@@ -320,7 +320,7 @@ content-type: application/json
 
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
