@@ -208,19 +208,33 @@ deliveryPickupDetialsModalConfig state =
           items = appConfig'.parcelTypeConfig,
           placeholder = "Household Items",
           label = "Parcel Type",
-          selectedItem = state.data.parcelType,
+          selectedItem = if state.props.isEditModal then state.data.editParcelType else state.data.parcelType,
           isOpen = state.props.dropdownStatus == ST.DROP_DOWN_1,
           extraInput {
-            visibility = (case state.data.parcelType of
-              Just parcelType -> boolToVisibility $ parcelType.id == "Others"
-              Nothing -> GONE),
+            visibility = (
+              if state.props.isEditModal then 
+                case state.data.editParcelType of
+                  Just editParcelType -> boolToVisibility $ editParcelType.id == "Others"
+                  Nothing -> GONE
+              else
+                case state.data.parcelType of
+                Just parcelType -> boolToVisibility $ parcelType.id == "Others"
+                Nothing -> GONE
+              ),
             topLabel {
               text = "Parcel Type Details"
             },
             editText {
-              text = (case state.data.parcelOthersType of
-              Just text -> text
-              Nothing -> "")
+              text = (
+                if state.props.isEditModal then
+                  case state.data.editParcelOthersType of
+                    Just text -> text
+                    Nothing -> ""
+                else
+                  case state.data.parcelOthersType of
+                    Just text -> text
+                    Nothing -> ""
+              )
             }
           }
         }
@@ -228,7 +242,7 @@ deliveryPickupDetialsModalConfig state =
           items = appConfig'.parcelQuantityConfig,
           placeholder = "1",
           label = "Parcel Quantity",
-          selectedItem = state.data.parcelQuantity,
+          selectedItem = if state.props.isEditModal then state.data.editParcelQuantity else state.data.parcelQuantity,
           isOpen = state.props.dropdownStatus == ST.DROP_DOWN_2
         }
         , parcelDetailsVisibility = boolToVisibility $ state.data.currentStage == ST.PARCEL_DETAILS

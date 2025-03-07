@@ -309,7 +309,8 @@ type TripDetailsScreenData =
     tripId :: String,
     config :: AppConfig,
     vehicleVariant :: Maybe VehicleVariant,
-    categories :: Array CTA.CategoryListType
+    categories :: Array CTA.CategoryListType,
+    rideType :: FareProductType
     -- bookingId :: String
   }
 
@@ -502,7 +503,7 @@ type IndividualRideCardState =
   , isAirConditioned :: Maybe Boolean
   }
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE | EV_AUTO_RICKSHAW
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE | EV_AUTO_RICKSHAW | DELIVERY_TRUCK_MINI | DELIVERY_TRUCK_SMALL | DELIVERY_TRUCK_MEDIUM | DELIVERY_TRUCK_LARGE | DELIVERY_TRUCK_ULTRA_LARGE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -3247,6 +3248,9 @@ type ParcelDeliveryScreenData = {
   , parcelQuantity :: Maybe DropdownItem
   , parcelType :: Maybe DropdownItem
   , parcelOthersType :: Maybe String
+  , editParcelType :: Maybe DropdownItem
+  , editParcelOthersType :: Maybe String
+  , editParcelQuantity :: Maybe DropdownItem
 }
 
 type DropdownItem = 

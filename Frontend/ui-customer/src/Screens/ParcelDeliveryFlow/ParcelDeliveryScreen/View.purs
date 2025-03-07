@@ -383,7 +383,7 @@ editButtonView push state stage =
   , cornerRadius if EHC.os == "IOS" then 20.0 else 32.0
   , stroke $ "1," <> Color.grey900
   , padding $ Padding 16 8 16 8
-  , onClick push $ const $ EditAddress stage
+  , onClick push $ const $ EditInfo stage
   , rippleColor Color.rippleShade
   , layoutGravity "right"
   , gravity CENTER_VERTICAL
@@ -417,8 +417,8 @@ instructionData vehicleVariant serviceTierShortDesc waitingTimeInfo =
   let commonInstructions = [
           { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
         , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
-        , { title: getString $ FREE_LOADING_UNLOADING_TIME waitingTimeInfo.freeMinutes waitingTimeInfo.charge, image : ""}
-        , { title: getStringV2 max_capacity_warning <> "(" <> fromMaybe "--kg" serviceTierShortDesc <> ")", image : "" }
+        , { title: getString $ FREE_LOADING_UNLOADING_TIME waitingTimeInfo.freeMinutes waitingTimeInfo.charge, image : "ic_clock_filled"}
+        , { title: getStringV2 max_capacity_warning <> "(" <> fromMaybe "--kg" serviceTierShortDesc <> ")", image : "ic_fluent_box_filled" }
         ]
       instruction =
         case vehicleVariant of
@@ -695,7 +695,7 @@ deliveryInstructionView push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , margin $ Margin 16 16 16 100
+      , margin $ Margin 16 16 16 200
       ]
       [
         linearLayout
@@ -749,6 +749,7 @@ headerBannerView push state message =
   [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
   , background Color.yellow800
+  , visibility $ boolToVisibility $ state.data.currentStage /= ST.DELIVERY_INSTRUCTIONS
   ][ textView $
      [ width WRAP_CONTENT
      , height WRAP_CONTENT

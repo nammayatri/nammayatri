@@ -750,7 +750,7 @@ parcelQuantitySection parcelQuantity =
     , margin $ MarginBottom 4
     ] <> FontStyle.body3 TypoGraphy
   , textView $
-    [ text "3"
+    [ text $ maybe "Loose" show parcelQuantity
     , color Color.black900
     ] <> FontStyle.body1 TypoGraphy
   ]

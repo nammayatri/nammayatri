@@ -264,6 +264,7 @@ type CityConfig = {
   waitingCharges :: Number,
   waitingChargesConfig :: WaitingChargesConfig,
   rentalWaitingChargesConfig :: WaitingChargesConfig,
+  vehicleVariantWaitingChargeConfig :: VehicleVariantWaitingCharge,
   rateCardConfig :: RateCardConfig,
   gstPercentage :: String,
   assets :: Assets,

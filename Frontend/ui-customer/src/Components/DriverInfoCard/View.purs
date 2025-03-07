@@ -856,6 +856,10 @@ distanceView push state = let
       --  , maxLines 2
        ] <> FontStyle.body7 TypoGraphy
      , etaView push state
+     , linearLayout [
+            width MATCH_PARENT,
+            height (V 1)
+        ][]
      , loadingTimeView push state
      , textView $
         [ width WRAP_CONTENT
@@ -918,7 +922,7 @@ loadingTimeView push state =
   , gravity CENTER
   , padding $ Padding 8 2 8 2
   , margin $ Margin 0 4 0 4
-  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && (state.data.driverArrived || state.data.destinationReached)
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && ((state.data.driverArrived && state.props.currentStage == RideAccepted ) || (state.data.destinationReached && state.props.currentStage == RideStarted && isJust state.data.destinationWaitingTime))
   ]
   [ textView $
     [ width WRAP_CONTENT

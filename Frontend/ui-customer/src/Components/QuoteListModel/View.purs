@@ -572,7 +572,7 @@ findingRidesView state push =
         else if isAmbulance selectedVariant 
           then assetsBaseUrl <> "lottie/finding_rides_loader_ambulance.json"
         else if isDeliveryTruckVariant selectedVariant
-          then ""
+          then "lottie/finding_delivery_partner_parcel_lottie.json"
         else assetsBaseUrl <> "lottie/finding_rides_loader_without_text_cab.json"
   in
     linearLayout

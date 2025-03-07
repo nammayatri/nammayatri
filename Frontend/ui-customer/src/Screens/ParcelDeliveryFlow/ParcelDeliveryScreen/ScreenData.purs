@@ -48,6 +48,9 @@ initData =
       , parcelQuantity : Nothing
       , parcelType : Nothing
       , parcelOthersType : Nothing
+      , editParcelType : Nothing
+      , editParcelOthersType : Nothing 
+      , editParcelQuantity : Nothing
       },
       props : {
         editDetails : dummyPersonDeliveryDetails,

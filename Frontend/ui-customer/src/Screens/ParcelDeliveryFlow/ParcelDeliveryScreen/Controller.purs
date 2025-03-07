@@ -45,7 +45,7 @@ instance loggableAction :: Loggable Action where
 
 data Action 
   = NoAction
-  | EditAddress ST.ParcelDeliveryScreenStage
+  | EditInfo ST.ParcelDeliveryScreenStage
   | ExpandInstructions
   | GoBack
   | GenericHeaderAC GenericHeaderController.Action
@@ -112,11 +112,11 @@ eval (MapViewLoaded _ _ _) state =
     pure NoAction
   ] 
 
-eval (EditAddress stage) state =
+eval (EditInfo stage) state =
   case stage of
     ST.SENDER_DETAILS -> continue $ state {data {currentStage = ST.SENDER_DETAILS}, props { isEditModal = true}}
     ST.RECEIVER_DETAILS -> continue $ state {data {currentStage = ST.RECEIVER_DETAILS}, props { isEditModal = true}}
-    ST.PARCEL_DETAILS -> continue $ state {data {currentStage = ST.PARCEL_DETAILS}, props { isEditModal = true}}
+    ST.PARCEL_DETAILS -> continue $ state {data {currentStage = ST.PARCEL_DETAILS, editParcelType = state.data.parcelType, editParcelOthersType = state.data.parcelOthersType, editParcelQuantity = state.data.parcelQuantity}, props { isEditModal = true}}
     _ -> continue state
 
 
@@ -191,21 +191,21 @@ eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
         newState = state { data { currentStage = nextStage, receiverDetails = state.props.editDetails } }
     continue newState
   else do
-    let newState = state { data { currentStage = ST.FINAL_DETAILS, receiverDetails = state.props.editDetails } }
+    let newState = if state.props.isEditModal then state { data { currentStage = ST.FINAL_DETAILS, parcelQuantity = state.data.editParcelQuantity, parcelType = state.data.editParcelType ,parcelOthersType = state.data.editParcelOthersType } } else state { data { currentStage = ST.FINAL_DETAILS } }
     continue newState
 
 eval (DeliveryDetailAction (PopUpModalController.Dropdown1 dropdownAction)) state = do
   case dropdownAction of
     PopUpModalController.Toggle -> continue state { props { dropdownStatus = if state.props.dropdownStatus == ST.DROP_DOWN_1 then ST.CLOSE else ST.DROP_DOWN_1 }}
-    PopUpModalController.SelectItem dropdownItem -> continue state { props { dropdownStatus = ST.CLOSE }, data { parcelType = Just dropdownItem} }
-    PopUpModalController.ExtraInput (PrimaryEditTextController.TextChanged valId newVal) -> update state { data { parcelOthersType = Just newVal}}
+    PopUpModalController.SelectItem dropdownItem -> if state.props.isEditModal then continue state { props { dropdownStatus = ST.CLOSE }, data { editParcelType = Just dropdownItem} } else continue state { props { dropdownStatus = ST.CLOSE }, data { parcelType = Just dropdownItem} }
+    PopUpModalController.ExtraInput (PrimaryEditTextController.TextChanged valId newVal) -> if state.props.isEditModal then update state { data { editParcelOthersType = Just newVal}} else update state { data { parcelOthersType = Just newVal}}
     _ -> continue state
 
 eval (DeliveryDetailAction (PopUpModalController.Dropdown2 dropdownAction)) state = do
   case dropdownAction of
     PopUpModalController.Toggle -> continue state { props { dropdownStatus = if state.props.dropdownStatus == ST.DROP_DOWN_2 then ST.CLOSE else ST.DROP_DOWN_2 }}
-    PopUpModalController.SelectItem dropdownItem -> continue state { props { dropdownStatus = ST.CLOSE }, data { parcelQuantity = Just dropdownItem}}
-    PopUpModalController.ExtraInput (PrimaryEditTextController.TextChanged valId newVal) -> continue state
+    PopUpModalController.SelectItem dropdownItem -> if state.props.isEditModal then continue state { props { dropdownStatus = ST.CLOSE }, data { editParcelQuantity = Just dropdownItem}} else continue state { props { dropdownStatus = ST.CLOSE }, data { parcelQuantity = Just dropdownItem}}
+    PopUpModalController.ExtraInput (PrimaryEditTextController.TextChanged valId newVal) ->  continue state
     _ -> continue state
 
 eval (PickContactCallBack userName contactNo) state = do

@@ -855,7 +855,8 @@ getTripDetailsState (RideBookingRes ride) state = do
         rideStatus = rideStatus,
         rideCreatedAt = ride.createdAt
       },
-      vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
+      vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant,
+      rideType =  getFareProductType ((ride.bookingDetails) ^. _fareProductType)
     }
   }
 

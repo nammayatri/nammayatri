@@ -200,7 +200,7 @@ cancelAppConfig state =
         , cornerRadius = Corners 15.0 true true false false
         , coverImageConfig
           { imageUrl = fetchImage FF_ASSET $ HU.getCancellationImage state.data.driverInfoCardState.vehicleVariant state.data.driverInfoCardState.distance
-          , visibility = VISIBLE
+          , visibility = boolToVisibility $ HU.getCancellationImage state.data.driverInfoCardState.vehicleVariant state.data.driverInfoCardState.distance /= ""
           , margin = Margin 16 20 16 24
           , width = MATCH_PARENT
           , height = V 200

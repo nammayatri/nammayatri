@@ -1540,9 +1540,13 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DestinationWaitingTimeAction timerID timeInMinutes seconds) state = do
+  let validTimeInMinutes = 
+        if STR.contains (STR.Pattern "NaN") timeInMinutes
+        then "00:00" 
+        else timeInMinutes
   when ((getValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION) == "TRIGGER_DESTINATION_WAITING_ACTION") $ do
     void $ pure $ setValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION "DESTINATION_WAITING_ACTION_TRIGGERED"
-  continue state { data { driverInfoCardState { destinationWaitingTime = Just timeInMinutes}}, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
+  continue state { data { driverInfoCardState { destinationWaitingTime = Just validTimeInMinutes}}, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RideDurationTimer timerID timeInHHMM _)) state =
   continue state{props{rideDurationTimerId = timerID, rideDurationTimer = timeInHHMM}}

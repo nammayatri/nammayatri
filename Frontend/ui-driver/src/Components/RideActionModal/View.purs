@@ -127,7 +127,7 @@ messageButton push config =
       ]
   ]
   where 
-    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) && (not config.isDelivery || config.driverVehicle /= "BIKE")
+    visibility' = boolToVisibility $ (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental ) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) && (not config.isDelivery)
 
 getCurrentAndroidVersion :: Merchant -> Int
 getCurrentAndroidVersion merchant =
@@ -1466,6 +1466,7 @@ parcelInfoView parcelInfo =
   , height WRAP_CONTENT
   , background Color.grey700
   , cornerRadius 8.0
+  , singleLine true
   , margin $ MarginLeft 12
   , padding $ Padding 12 8 12 8
   ]
@@ -1485,5 +1486,7 @@ parcelDetailsView config =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , color Color.black700
+    , singleLine true
+    , ellipsize true
     , textFromHtml $ quantity <> "&nbsp;&nbsp;" <> fromMaybe "" itemType
     ] <> FontStyle.body1 TypoGraphy

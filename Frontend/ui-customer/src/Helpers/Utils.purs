@@ -898,6 +898,7 @@ getCancellationImage vehicleVariant distance =
     "AMBULANCE_AC" -> "ny_ic_driver_near_ambulance"
     "AMBULANCE_AC_OXY" -> "ny_ic_driver_near_ambulance"
     "AMBULANCE_VENTILATOR" -> "ny_ic_driver_near_ambulance"
+    _ | isDeliveryTruckVariant vehicleVariant -> ""
     _ -> "ny_ic_driver_started"
   else case vehicleVariant of
     "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
@@ -908,6 +909,7 @@ getCancellationImage vehicleVariant distance =
     "AMBULANCE_AC" -> "ny_ic_driver_started_ambulance"
     "AMBULANCE_AC_OXY" -> "ny_ic_driver_started_ambulance"
     "AMBULANCE_VENTILATOR" -> "ny_ic_driver_started_ambulance"
+    _ | isDeliveryTruckVariant vehicleVariant -> ""
     _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
 getAutoRickshawNearImage  =
@@ -1290,6 +1292,11 @@ fetchVehicleVariant variant =
     "AMBULANCE_AC" -> Just ST.AMBULANCE_AC
     "AMBULANCE_AC_OXY" -> Just ST.AMBULANCE_AC_OXY
     "AMBULANCE_VENTILATOR" -> Just ST.AMBULANCE_VENTILATOR
+    "DELIVERY_TRUCK_MINI" -> Just ST.DELIVERY_TRUCK_MINI
+    "DELIVERY_TRUCK_SMALL" -> Just ST.DELIVERY_TRUCK_SMALL
+    "DELIVERY_TRUCK_MEDIUM" -> Just ST.DELIVERY_TRUCK_MEDIUM
+    "DELIVERY_TRUCK_LARGE" -> Just ST.DELIVERY_TRUCK_LARGE
+    "DELIVERY_TRUCK_ULTRA_LARGE" -> Just ST.DELIVERY_TRUCK_ULTRA_LARGE
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
