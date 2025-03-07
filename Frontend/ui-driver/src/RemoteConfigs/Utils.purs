@@ -190,6 +190,13 @@ defaultParcelConfig = {
 getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "driver_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/driver/lottie/ny_bundle_splash_lottie_new.json", enable : true}
 
+
+defaultPerfConfig :: PerfConfig
+defaultPerfConfig = {
+  disableBannerAnimation : false,
+  mapRecenter : true
+}
+
 defaultCoinsConfig :: CoinsConfig
 defaultCoinsConfig = {
   minCoinSliderValue : 250,
@@ -246,6 +253,12 @@ getCoinsConfigData :: String -> CoinsConfig
 getCoinsConfigData city = do
     let config = fetchRemoteConfigString "coins_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
+    getCityBasedConfig value $ toLower city
+
+getPerfConfigData :: String -> PerfConfig
+getPerfConfigData city = do
+    let config = fetchRemoteConfigString "perf_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultPerfConfig
     getCityBasedConfig value $ toLower city
 
 getDriverVoipConfig :: String -> CT.VoipConfig

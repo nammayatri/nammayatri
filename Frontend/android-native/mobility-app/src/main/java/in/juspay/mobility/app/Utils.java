@@ -33,6 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class Utils {
@@ -59,6 +60,21 @@ public class Utils {
     public static int getPriority(String priority) {
         Integer value = PRIORITY_MAP.get(priority);
         return (value != null) ? value : DEFAULT_PRIORITY;
+    }
+
+    public static int getLocationPriority(String priority) {
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
+        try {
+            String priorityMap = remoteConfigs.getString("perf_config");
+            JSONObject config = new JSONObject(priorityMap);
+            int finalConfig = getPriority(config.optString(priority));
+            Log.i("RemoteConfig", "Location Update Priority: " + config + " " + finalConfig);
+            return finalConfig;
+
+        } catch (Exception e) {
+            Log.e("RemoteConfig", "Failed to parse JSON for location Update", e);
+            return getPriority("");
+        }
     }
 
     public static int getResIdentifier (Context context, String resName, String resType) {
