@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show,($))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), FRFSTicketBookingStatusAPIRes(..),FRFSStationAPI(..),TicketCategoriesResp(..), FrfsQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), FRFSConfigAPIRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..), RideBookingListRes, FRFSRouteAPI)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), FRFSTicketBookingStatusAPIRes(..),FRFSStationAPI(..),TicketCategoriesResp(..), FrfsQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), FRFSConfigAPIRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..), RideBookingListRes, FRFSRouteAPI, GetProfileRes)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -2924,6 +2924,7 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 type GlobalFlowCache = {
     savedLocations :: Maybe SavedLocationsListRes
   , savedScheduledRides :: Maybe RideBookingListRes
+  , profileResp :: Maybe GetProfileRes
 }
 
 type LocateOnMapProps = {
