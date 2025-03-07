@@ -51,12 +51,13 @@ validateFleetReferralReq FleetReferralReq {..} =
     [ validateField "value" value $ ExactLength 6
     ]
 
-isValidReferralForFleet ::
+isValidReferralForRole ::
   FleetReferralReq ->
+  DP.Role ->
   Flow FleetReferralRes
-isValidReferralForFleet req = do
+isValidReferralForRole req roleData = do
   runRequestValidation validateFleetReferralReq req
   od <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
-  if od.role == DP.OPERATOR
+  if od.role == roleData
     then return $ SuccessCode od.driverId.getId
     else throwError $ InvalidReferralCode req.value

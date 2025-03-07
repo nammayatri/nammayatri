@@ -101,7 +101,7 @@ getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
 getOperatorIdFromReferralCode Nothing = return Nothing
 getOperatorIdFromReferralCode (Just refCode) = do
   let referralReq = FleetReferralReq {value = refCode}
-  result <- isValidReferralForFleet referralReq
+  result <- isValidReferralForRole referralReq DP.OPERATOR
   case result of
     SuccessCode val -> return $ Just val
 
@@ -120,7 +120,7 @@ fleetOwnerRegister req = do
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
       maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferredCodeForOperator
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferredCodeForFleet
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
       fork "Uploading GST Image" $ do
@@ -220,7 +220,9 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       identifierType = Just DP.MOBILENUMBER,
       email = Nothing,
       registrationLat = Nothing,
-      registrationLon = Nothing
+      registrationLon = Nothing,
+      operatorReferralCode = Nothing,
+      fleetReferralCode = Nothing
     }
 
 fleetOwnerVerify ::

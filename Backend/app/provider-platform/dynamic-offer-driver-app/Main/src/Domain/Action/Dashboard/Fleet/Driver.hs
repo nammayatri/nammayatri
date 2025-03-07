@@ -1577,12 +1577,14 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
                 name = Just req_.driverName,
                 identifierType = Just DP.MOBILENUMBER,
                 registrationLat = Nothing,
-                registrationLon = Nothing
+                registrationLon = Nothing,
+                operatorReferralCode = Nothing,
+                fleetReferralCode = Nothing
               }
       mobileNumberHash <- getDbHash req_.driverPhoneNumber
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
-          >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
+          >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True Nothing Nothing) return
       WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do

@@ -31,7 +31,10 @@ module Domain.Action.UI.Registration
 where
 
 import Data.OpenApi hiding (email, info, name, url)
+import Domain.Action.Dashboard.Fleet.Referral
+import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import Domain.Action.UI.DriverReferral
+import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -42,6 +45,9 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.TransporterConfig as TC
 import qualified Email.AWS.Flow as Email
+-- import qualified Kernel.Types.Beckn.City as City
+
+import Environment (Flow)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -52,9 +58,7 @@ import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.APISuccess
-import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
 import Kernel.Types.Id
@@ -75,7 +79,9 @@ import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverLicense as QDL
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
@@ -93,7 +99,9 @@ data AuthReq = AuthReq
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    operatorReferralCode :: Maybe Text,
+    fleetReferralCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -143,12 +151,6 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
 
 auth ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r
-  ) =>
   Bool ->
   AuthReq ->
   Maybe Version ->
@@ -156,18 +158,12 @@ auth ::
   Maybe Version ->
   Maybe Text ->
   Maybe Text ->
-  m AuthRes
+  Flow AuthRes
 auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = do
   authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice
   return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId}
 
 authWithOtp ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r
-  ) =>
   Bool ->
   AuthReq ->
   Maybe Version ->
@@ -175,9 +171,10 @@ authWithOtp ::
   Maybe Version ->
   Maybe Text ->
   Maybe Text ->
-  m AuthWithOtpRes
+  Flow AuthWithOtpRes
 authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = do
-  let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+  let req = req'
+  -- let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
@@ -189,21 +186,24 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
 
+  maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
+  maybeFleetOwnerId <- getFleetOwnerIdFromReferralCode req.fleetReferralCode
+
   (person, otpChannel) <-
     case identifierType of
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
-        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for mobileNumber auth")
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId maybeFleetOwnerId) return
         return (person, SP.MOBILENUMBER)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchant (Just email) merchant.id
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId maybeFleetOwnerId) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
 
@@ -244,8 +244,8 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       authId = SR.id token
   return $ AuthWithOtpRes {attempts, authId, otpCode}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
-createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> Maybe Text -> Maybe Text -> m ()
+createDriverDetails personId merchantId merchantOpCityId transporterConfig mbOperatorId mbFleetOwnerId = do
   now <- getCurrentTime
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
@@ -266,8 +266,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             paymentPending = False,
             autoPayStatus = Nothing,
             referralCode = Nothing,
-            referredByFleetOwnerId = Nothing,
-            referredByOperatorId = Nothing,
+            referredByFleetOwnerId = mbFleetOwnerId,
+            referredByOperatorId = mbOperatorId,
             referredByDriverId = Nothing,
             totalReferred = Just 0,
             lastEnabledOn = Nothing,
@@ -451,12 +451,21 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> Maybe Text -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard mbOperatorId mbFleetOwnerId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
-  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
+  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig mbOperatorId mbFleetOwnerId
+
+  whenJust mbOperatorId $ \operatorId -> do
+    driverOperatorAssData <- DOA.makeDriverOperatorAssociation person.id operatorId Nothing
+    void $ QDOA.create driverOperatorAssData
+
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> do
+    fleetDriverAssData <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing
+    void $ QFDA.create fleetDriverAssData
+
   pure person
 
 verify ::
@@ -583,3 +592,19 @@ logout (personId, _, _) = do
   QR.deleteByPersonId personId.getId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
   pure Success
+
+getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
+getOperatorIdFromReferralCode Nothing = return Nothing
+getOperatorIdFromReferralCode (Just refCode) = do
+  let referralReq = FleetReferralReq {value = refCode}
+  result <- isValidReferralForRole referralReq SP.OPERATOR
+  case result of
+    SuccessCode val -> return $ Just val
+
+getFleetOwnerIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
+getFleetOwnerIdFromReferralCode Nothing = return Nothing
+getFleetOwnerIdFromReferralCode (Just refCode) = do
+  let referralReq = FleetReferralReq {value = refCode}
+  result <- isValidReferralForRole referralReq SP.FLEET_OWNER
+  case result of
+    SuccessCode val -> return $ Just val

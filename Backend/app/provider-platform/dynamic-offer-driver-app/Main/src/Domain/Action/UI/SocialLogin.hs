@@ -72,7 +72,7 @@ postSocialLogin req = do
             (,True) <$> do
               deploymentVersion <- asks (.version)
               let createPersonInput = buildCreatePersonInput moc.city req.name info.email
-              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False
+              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False Nothing Nothing
       QR.deleteByPersonId (getId person.id)
       token <- makeSession person.id.getId req.merchantId.getId moc.id.getId
       _ <- QR.create token
@@ -89,7 +89,9 @@ postSocialLogin req = do
           email = Just email,
           identifierType = Just SP.EMAIL,
           registrationLat = req.registrationLat,
-          registrationLon = req.registrationLon
+          registrationLon = req.registrationLon,
+          operatorReferralCode = Nothing,
+          fleetReferralCode = Nothing
         }
 
 makeSession ::

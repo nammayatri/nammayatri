@@ -204,6 +204,7 @@ library
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverOnboardingV2
+      Domain.Action.UI.DriverOperatorAssociation
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
@@ -547,7 +548,6 @@ library
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.FeedbackExtra
       Storage.Queries.FleetDriverAssociationExtra
-      Storage.Queries.FleetOperatorAssociationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
       Storage.Queries.ImageExtra
