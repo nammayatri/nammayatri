@@ -34,6 +34,7 @@ types:
     legs: [LegInfo]
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
+    merchantOperatingCityName : Maybe Text
 
   LegStatus:
     legOrder: Int
