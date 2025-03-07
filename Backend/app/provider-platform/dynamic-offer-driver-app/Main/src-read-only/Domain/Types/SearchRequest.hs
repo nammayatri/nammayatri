@@ -55,6 +55,7 @@ data SearchRequest = SearchRequest
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType,
+    peferSafetyPlus :: Kernel.Prelude.Bool,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

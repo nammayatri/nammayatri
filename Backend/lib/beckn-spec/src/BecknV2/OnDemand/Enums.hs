@@ -175,6 +175,7 @@ data QuoteBreakupTitle
   | INSURANCE_CHARGES
   | CARD_CHARGES_ON_FARE
   | CARD_CHARGES_FIXED
+  | SAFETY_PLUS_CHARGES
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

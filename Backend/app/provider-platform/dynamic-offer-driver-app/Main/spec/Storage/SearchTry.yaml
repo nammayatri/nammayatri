@@ -39,6 +39,7 @@ SearchTry:
     tripCategory : TripCategory
     isAdvancedBookingEnabled : Bool
     isScheduled : Bool
+    peferSafetyPlus : Bool
     serviceTierArray : "[Text]"
     createdAt : UTCTime
     updatedAt : UTCTime
@@ -52,6 +53,7 @@ SearchTry:
     currency: Maybe Currency
     isAdvancedBookingEnabled: Maybe Bool
     serviceTierArray : "Maybe [Text]"
+    peferSafetyPlus : Maybe Bool
 
 
   beamFields:
@@ -83,6 +85,7 @@ SearchTry:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     isAdvancedBookingEnabled: fromMaybe False isAdvancedBookingEnabled|E
     serviceTierArray :  fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
+    peferSafetyPlus: fromMaybe False peferSafetyPlus|E
 
   toTType:
     estimateIds: Kernel.Prelude.Just|I
@@ -98,6 +101,7 @@ SearchTry:
     customerExtraFeeAmount: customerExtraFee|E
     isAdvancedBookingEnabled: Kernel.Prelude.Just|I
     serviceTierArray : Kernel.Prelude.Just|I
+    peferSafetyPlus : Kernel.Prelude.Just|I
   constraints:
     id: PrimaryKey
     requestId: "!SecondaryKey" # forcing to be a secondary key

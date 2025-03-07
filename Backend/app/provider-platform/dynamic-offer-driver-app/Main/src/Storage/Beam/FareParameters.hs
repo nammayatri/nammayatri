@@ -55,6 +55,7 @@ data FareParametersT f = FareParametersT
     sgst :: B.C f (Maybe HighPrecMoney),
     cgst :: B.C f (Maybe HighPrecMoney),
     platformFeeChargesBy :: B.C f (Maybe FP.PlatformFeeMethods),
+    conditionalCharges :: B.C f (Maybe Value),
     currency :: B.C f (Maybe Currency),
     updatedAt :: B.C f (Maybe UTCTime),
     merchantId :: B.C f (Maybe Text),

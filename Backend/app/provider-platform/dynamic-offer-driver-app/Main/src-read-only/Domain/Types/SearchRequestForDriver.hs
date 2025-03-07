@@ -5,6 +5,7 @@ module Domain.Types.SearchRequestForDriver where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.ConditionalCharges
 import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.Merchant
@@ -33,6 +34,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    conditionalCharges :: [Domain.Types.ConditionalCharges.ConditionalChargesCategories],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Types.Common.HighPrecMoney,

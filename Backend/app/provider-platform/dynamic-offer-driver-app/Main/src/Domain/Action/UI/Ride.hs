@@ -344,10 +344,7 @@ mkDriverRideRes ::
   m DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo = do
   let fareParams = booking.fareParams
-      estimatedBaseFare =
-        fareSum $
-          fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
-                    }
+      estimatedBaseFare = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId

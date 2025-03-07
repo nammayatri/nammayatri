@@ -35,6 +35,7 @@ import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails as CQueries
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails as CQueriesFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as CQueriesFPSDS
 import qualified Storage.CachedQueries.FarePolicy as SCQF
+import qualified Storage.Queries.ConditionalCharges as QueriesAdditionalCharges
 import Storage.Queries.FarePolicy (FarePolicyHandler (..), fromTTypeFarePolicy)
 import Utils.Common.CacUtils as CCU
 
@@ -95,5 +96,6 @@ mkCacFarePolicyHandler (_farePolicy, context, tenant, id', toss) =
       findAllSlabDetailsSlabs = CQueriesFPSDS.getFarePolicySlabsDetailsSlabFromCAC context tenant id' toss,
       findRentalDetails = CQueriesFPRD.findFarePolicyRentalDetailsFromCAC context tenant id' toss,
       findInterCityDetails = CQueriesFPICD.findFarePolicyInterCityDetailsFromCAC context tenant id' toss,
-      findAllAmbulanceDetailsSlabs = CQueriesFPAD.getFarePolicyAmbulanceDetailsSlabFromCAC context tenant id' toss
+      findAllAmbulanceDetailsSlabs = CQueriesFPAD.getFarePolicyAmbulanceDetailsSlabFromCAC context tenant id' toss,
+      findAllAdditionalCharges = QueriesAdditionalCharges.findAllByFp id'.getId
     }

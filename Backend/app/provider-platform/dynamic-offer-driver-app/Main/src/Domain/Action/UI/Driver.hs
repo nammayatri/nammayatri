@@ -1336,7 +1336,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       now <- getCurrentTime
       deploymentVersion <- asks (.version)
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSum fareParams
+      let estimatedFare = fareSum fareParams $ Just sd.conditionalCharges
       pure
         DDrQuote.DriverQuote
           { id = guid,
@@ -1428,6 +1428,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,
               merchantOperatingCityId = Just merchantOpCityId,
+              mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
