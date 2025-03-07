@@ -1,0 +1,35 @@
+imports:
+  Person: Domain.Types.Person
+
+importPackageOverrides:
+  Domain.Types.Person: "lib-dashboard"
+
+module: Account
+
+apis:
+  - GET:
+      endpoint: /fetchUnverifiedAccounts
+      auth: ApiAuthV2
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - mobileNumber: Text
+        - status: FleetOwnerStatus
+      response:
+        type: [Person]
+  - POST:
+      endpoint: /verifyAccount
+      auth: ApiAuthV2
+      request:
+        type: VerifyAccountReq
+      response:
+        type: APISuccess
+
+
+types:
+  FleetOwnerStatus:
+    - enum: Approved, Rejected
+  VerifyAccountReq:
+    - status: FleetOwnerStatus
+    - reason: Maybe Text
+    - fleetOwnerId: Id Person
