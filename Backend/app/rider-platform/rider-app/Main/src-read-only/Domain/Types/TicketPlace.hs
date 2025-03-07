@@ -24,6 +24,7 @@ data TicketPlace = TicketPlace
     name :: Kernel.Prelude.Text,
     openTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     placeType :: Domain.Types.TicketPlace.PlaceType,
+    priority :: Kernel.Prelude.Int,
     shortDesc :: Kernel.Prelude.Text,
     status :: Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: [Kernel.Prelude.Text],
