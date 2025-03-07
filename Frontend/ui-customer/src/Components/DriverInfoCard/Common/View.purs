@@ -20,9 +20,10 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber,fetchVehicleVariant,getVehicleCapacity, getVariantRideType, getTitleConfig, getCityNameFromCode)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber,fetchVehicleVariant,getVehicleCapacity, getVariantRideType, getTitleConfig, getCityNameFromCode, isDeliveryTruckVariant)
 import Language.Strings (getString)
-import Resources.LocalizableV2.Strings (getEN)
+import Resources.LocalizableV2.Strings (getStringV2, getEN)
+import Resources.LocalizableV2.Types
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
@@ -280,7 +281,16 @@ getVehicleImage variant vehicleDetail city = do
               "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_concept"
               "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
               "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
+<<<<<<< HEAD
               "HERITAGE_CAB" -> "ny_ic_heritage_cab_concept"
+=======
+              "DELIVERY_TRUCK_MINI" -> "ny_ic_mini_truck_left_side"
+              "DELIVERY_TRUCK_SMALL" -> "ny_ic_small_truck_left_side"
+              "DELIVERY_TRUCK_MEDIUM" -> "ny_ic_medium_truck_left_side"
+              "DELIVERY_TRUCK_LARGE" -> "ny_ic_large_truck_left_side"
+              "DELIVERY_TRUCK_ULTRA_LARGE" -> "ny_ic_ultra_large_truck_left_side"
+              _ | isDeliveryTruckVariant variant -> "ny_ic_truck_delivery_concept"
+>>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
               _           -> "ny_ic_sedan_concept"              
         where 
           mkAutoImage :: City -> String
@@ -431,7 +441,8 @@ sourceDestinationView push config =
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy
       ],
-      senderReceiverAddrInstructionView config.receiverDetails config.destination false
+      senderReceiverAddrInstructionView config.receiverDetails config.destination false,
+      parcelDetailsView push config
     ]
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
@@ -666,3 +677,84 @@ senderReceiverAddrInstructionView details' address isSource =
             ]  
           ]
         ]
+
+
+parcelDetailsView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
+parcelDetailsView push config =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , visibility $ boolToVisibility $ config.fareProductType == FPT.DELIVERY
+  ]
+  [
+    separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
+  , headingSection
+  , parcelDetailsCard config.parcelType config.parcelQuantity
+  ]
+
+headingSection :: forall w. PrestoDOM (Effect Unit) w
+headingSection =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 8
+  , color Color.black700
+  ]
+  [ textView $
+    [ text $ getStringV2 parcel_details
+    , color Color.black700
+    ] <> FontStyle.body3 TypoGraphy
+  ]
+
+parcelDetailsCard :: forall w. String -> Maybe Int -> PrestoDOM (Effect Unit) w
+parcelDetailsCard parcelType parcelQuantity =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background Color.blue600  -- Light blue background
+  , cornerRadius 8.0
+  , padding $ Padding 16 8 16 8
+  ]
+  [ parcelTypeSection parcelType
+  , parcelQuantitySection  parcelQuantity
+  ]
+
+parcelTypeSection :: forall w. String -> PrestoDOM (Effect Unit) w
+parcelTypeSection parcelType =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ MarginBottom 12
+  ]
+  [ textView $
+    [ text $ getStringV2 parcel_type
+    , color Color.black800
+    , margin $ MarginBottom 4
+    ] <> FontStyle.body3 TypoGraphy
+  , textView $
+    [ text $ parcelType
+    , color Color.black900
+    , width MATCH_PARENT
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+parcelQuantitySection :: forall w. Maybe Int -> PrestoDOM (Effect Unit) w
+parcelQuantitySection parcelQuantity =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ]
+  [ textView $
+    [ text $ getStringV2 parcel_quantity
+    , color Color.black800
+    , margin $ MarginBottom 4
+    ] <> FontStyle.body3 TypoGraphy
+  , textView $
+    [ text $ maybe "Loose" show parcelQuantity
+    , color Color.black900
+    ] <> FontStyle.body1 TypoGraphy
+  ]

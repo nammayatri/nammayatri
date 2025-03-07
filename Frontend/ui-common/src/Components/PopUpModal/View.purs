@@ -17,7 +17,7 @@ module Components.PopUpModal.View where
 import Prelude 
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView, singleLine)
-import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig, RouteInfo(..), dummyDeliveryPrimaryText)
+import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig, DropdownAction(..), DropdownConfig(..), DropdownItem(..), RouteInfo(..), dummyDeliveryPrimaryText)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
@@ -36,6 +36,7 @@ import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
+import Engineering.Helpers.Commons as EHC
 import Control.Monad.Trans.Class (lift)
 import Data.Function.Uncurried (runFn5)
 import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
@@ -63,10 +64,13 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Components.DropDownCard as DropDownCard
 import Prim.Boolean (True)
 import Debug
 import Constants (languageKey)
 import Locale.Utils (getLanguageLocale)
+import Common.Animation.Config (estimateExpandingAnimationConfig)
+import Debug (spy)
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectRouteButton as SelectRouteButton
 
@@ -401,6 +405,7 @@ view push state =
              ]
           ]
         , deliveryView push state
+        , parcelDetailsView push state
         , whereIsMyBusView push state
         , upiView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
@@ -423,12 +428,12 @@ view push state =
             , margin state.buttonLayoutMargin
             ]
             [   linearLayout
-                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) || ( state.deliveryDetailsConfig.visibility == VISIBLE ) then MATCH_PARENT else WRAP_CONTENT
+                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) || ( state.deliveryDetailsConfig.visibility == VISIBLE || state.parcelDetailsVisibility == VISIBLE) then MATCH_PARENT else WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
                 ]
                 [ linearLayout
-                    ([ if state.option2.visibility && state.deliveryDetailsConfig.visibility /= VISIBLE then width state.option1.width 
+                    ([ if state.option2.visibility && state.deliveryDetailsConfig.visibility  == GONE && state.parcelDetailsVisibility == GONE then width state.option1.width 
                        else weight 1.0
                     , background state.option1.background
                     , height $ state.option1.height
@@ -488,7 +493,7 @@ view push state =
                         ]
                     ]
                 , linearLayout
-                    ([ if state.deliveryDetailsConfig.visibility == VISIBLE then weight 1.0
+                    ([ if state.deliveryDetailsConfig.visibility == VISIBLE || state.parcelDetailsVisibility == VISIBLE then weight 1.0
                        else if not state.showRetry then width state.option1.width 
                        else if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
@@ -748,7 +753,7 @@ deliveryView push state =
       visibility state.deliveryDetailsConfig.visibility
     ]
     [
-        deliveryDetailsView push state 
+        deliveryDetailsView push state
     ]
     
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -868,6 +873,157 @@ checkBoxView push state =
             ]
         ]
     ]
+
+parcelDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+parcelDetailsView push state = 
+    linearLayout[
+        height WRAP_CONTENT,
+        width MATCH_PARENT,
+        orientation VERTICAL,
+        visibility state.parcelDetailsVisibility
+    ][
+        dropdownView (push <<< Dropdown1) state.parcelTypeConfig,
+        linearLayout [
+            width MATCH_PARENT,
+            height (V 4)
+        ][],
+        dropdownView (push <<< Dropdown2) state.parcelQuantityConfig
+    ]
+
+dropdownView :: forall w. (DropdownAction -> Effect Unit) -> DropdownConfig -> PrestoDOM (Effect Unit) w
+dropdownView push config = 
+  linearLayout
+  [ id $ EHC.getNewIDWithTag config.label
+  , width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ MarginTop 16
+  ]
+  [ textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , text config.label
+    , color Color.black800
+    , margin $ Margin 0 0 0 8
+    ] <> FontStyle.body3 TypoGraphy
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , cornerRadius 8.0
+    ]
+    [ dropdownHeader config push
+    , dropdownItems config push 
+    ]
+  , linearLayout [
+        width MATCH_PARENT,
+        height (V 4)
+    ][]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , visibility config.extraInput.visibility
+    ][PrimaryEditText.view (push <<< ExtraInput) config.extraInput]
+  ]
+
+dropdownHeader :: forall w. DropdownConfig -> (DropdownAction -> Effect Unit) -> PrestoDOM (Effect Unit) w
+dropdownHeader config push =
+ PrestoAnim.animationSet
+    ([ Anim.fadeInWithDuration 200 true ] <>
+    (if os == "IOS" then []
+    else [ Anim.listExpandingAnimation $ estimateExpandingAnimationConfig (0) (0.0) true ]))
+  $ linearLayout
+    [ width MATCH_PARENT
+    , height $ V 54
+    , padding $ Padding 16 0 16 0
+    , orientation HORIZONTAL
+    , onClick push $ const Toggle
+    , background Color.white900
+    , cornerRadius 8.0
+    , gravity CENTER_VERTICAL
+    , stroke $ if config.isOpen then ("1," <> Color.blue800) else ("1," <> Color.grey900)
+    ]
+    [ textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ case config.selectedItem of
+            Just item -> item.title
+            Nothing -> config.placeholder
+        , color $ case config.selectedItem of
+            Just item -> Color.black800
+            Nothing -> Color.grey900
+        , weight 1.0
+        ] <> FontStyle.subHeading1 TypoGraphy
+    , imageView
+        [ width $ V 24
+        , height $ V 24
+        , padding $ Padding 6 9 6 9
+        , imageWithFallback $ if config.isOpen 
+            then "ny_ic_chevron_up"
+            else "ny_ic_chevron_down"
+        , color Color.black800
+        ]
+    ]
+
+dropdownItems :: forall w. DropdownConfig -> (DropdownAction -> Effect Unit) -> PrestoDOM (Effect Unit) w
+dropdownItems config push =
+  scrollView
+    [ width MATCH_PARENT
+    , height $ V 250 
+    , visibility $ boolToVisibility config.isOpen
+    , background Color.white900
+    , cornerRadius 8.0
+    , margin $ MarginTop 8
+    , stroke ("1," <> Color.blue800)
+    ][
+        linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        (config.items # mapWithIndex \index item ->
+            linearLayout[
+                width MATCH_PARENT,
+                height WRAP_CONTENT,
+                orientation VERTICAL
+            ][
+                linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , padding $ Padding 16 12 16 12
+                , onClick push $ const $ (SelectItem item)
+                , rippleColor Color.grey900
+                ]
+                [ textView $
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , text item.title
+                , color Color.black900
+                ] <> FontStyle.body6 TypoGraphy
+                , if item.subtitle /= "" then
+                    textView $
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , text item.subtitle
+                    , color Color.black700
+                    , margin $ MarginTop 2
+                    ] <> FontStyle.body3 TypoGraphy
+                else
+                    linearLayout[][]
+                ],
+                if index < (length config.items - 1) then  -- Only add separator if not last item
+                    linearLayout
+                    [ width MATCH_PARENT
+                    , height (V 1)
+                    , background Color.grey900
+                    , margin (Margin 16 0 16 0)
+                    ][]
+                else
+                    linearLayout[][]
+            ])
+    ]
+
 
 whereIsMyBusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 whereIsMyBusView push state =

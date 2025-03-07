@@ -112,7 +112,7 @@ view push state =
 acCheckForDriversView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 acCheckForDriversView push state =
   let
-    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned && not (isAmbulance state.data.vehicleType)
+    acCheckVisibility = MP.boolToVisibility $ MB.isJust state.data.airConditioned && not (isAmbulance state.data.vehicleType) && not (HU.isDeliveryTruckVariant state.data.vehicleType)
 
     (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
 

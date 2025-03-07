@@ -23,7 +23,7 @@ import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), Unit)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=), not, (<<<), bind, discard, show, pure, map, when, mod)
 import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
@@ -54,6 +54,8 @@ data Action = OnButton1Click
             | BusType PrimaryEditTextController.Action
             | SelectRouteButton SelectRouteButton.Action
             | SelectRoute SelectRouteButton.Action
+            | Dropdown1 DropdownAction
+            | Dropdown2 DropdownAction
 
 type Config = {
     primaryText :: TextConfig,
@@ -108,6 +110,9 @@ type Config = {
     completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
     deliveryDetailsConfig :: DeliveryDetailsConfig,
+    parcelDetailsVisibility :: Visibility,
+    parcelTypeConfig :: DropdownConfig,
+    parcelQuantityConfig :: DropdownConfig,
     whereIsMyBusConfig :: WhereIsMyBusConfig
 }
 
@@ -128,6 +133,13 @@ type RouteInfo = {
   destination :: String
 }
 
+
+data DropdownAction 
+  = Toggle
+  | SelectItem DropdownItem
+  | ExtraInput PrimaryEditTextController.Action
+  | NoAction_
+
 type DeliveryDetailsConfig = {
   visibility :: Visibility,
   margin  :: Margin,
@@ -140,6 +152,21 @@ type DeliveryDetailsConfig = {
   locationDetails :: String,
   checkBoxDetails :: {text :: String, isSelected :: Boolean, visibility :: Boolean }
 }
+
+type DropdownConfig = 
+  { items :: Array DropdownItem
+  , selectedItem :: Mb.Maybe DropdownItem
+  , isOpen :: Boolean
+  , placeholder :: String
+  , label :: String
+  , extraInput :: PrimaryEditTextController.Config
+  }
+
+type DropdownItem = 
+  { id :: String
+  , title :: String
+  , subtitle :: String
+  }
 
 type UPIDetailConfig = {
   visibility :: Visibility,
@@ -764,6 +791,9 @@ config = {
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
   , completeProfileLayout : Mb.Nothing
+  , parcelDetailsVisibility : GONE
+  , parcelTypeConfig : defaultConfig
+  , parcelQuantityConfig : defaultConfig
   , whereIsMyBusConfig : {
     visibility : GONE,
     selectRouteStage : false,
@@ -828,3 +858,13 @@ dummyDeliveryPrimaryText =
         , width = MATCH_PARENT
         }
       in primaryEditTextConfig'
+
+defaultConfig :: DropdownConfig
+defaultConfig = 
+  { items: []
+  , selectedItem: Mb.Nothing
+  , isOpen: false
+  , placeholder: ""
+  , label: ""
+  , extraInput : dummyDeliveryPrimaryText { visibility = GONE, stroke = ("1,"<> Color.grey900)}
+  }

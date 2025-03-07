@@ -537,6 +537,7 @@
                                         app:contentPadding="8dp">
                                         
                                         <LinearLayout
+                                            android:id="@+id/vcTierAndACLayout"
                                             android:layout_width="match_parent"
                                             android:layout_height="wrap_content"
                                             android:gravity="center_vertical"
@@ -651,6 +652,25 @@
                                                 </RelativeLayout>
 
                                             </LinearLayout>
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:gravity="center_vertical"
+                                            android:orientation="vertical">
+                                             <TextView
+                                                android:id="@+id/tripCategory"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:textSize="18dp"
+                                                android:lineHeight="22dp"
+                                                android:textColor="@color/Black800"
+                                                android:gravity="center"
+                                                android:visibility="gone"
+                                                android:singleLine="true"
+                                                android:textFontWeight="600"
+                                                android:paddingBottom="2dp"
+                                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                                android:text="Delivery"/>
 
                                             <TextView
                                                 android:id="@+id/vehicleServiceTier"
@@ -665,6 +685,7 @@
                                                 android:paddingBottom="2dp"
                                                 android:fontFamily="@font/plus_jakartasans_semibold"
                                                 android:text="Comfy"/>
+                                        </LinearLayout>
                                         </LinearLayout>
 
                                     </com.google.android.material.card.MaterialCardView>
@@ -722,6 +743,100 @@
                                 </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
+
+                        <FrameLayout
+                            android:id="@+id/parcelDetailView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="@color/grey900"/>
+
+                            <LinearLayout
+                                android:id="@+id/parcelDetails"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="16dp"
+                                android:gravity="center">
+
+                                <com.google.android.material.card.MaterialCardView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_margin="4dp"
+                                    android:layout_weight="1"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardBackgroundColor="#F4F7FF"
+                                    app:cardCornerRadius="8dp"
+                                    app:contentPadding="12dp">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Parcel Type"
+                                            android:textColor="@color/black"
+                                            android:textSize="14sp" />
+
+                                        <TextView
+                                            android:id="@+id/parcelType"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Household Items "
+                                            android:textStyle="bold"
+                                            android:textColor="@color/black"
+                                            android:textSize="16sp"
+                                            android:maxWidth="200dp"
+                                            android:ellipsize="end"
+                                            android:singleLine="true"/>
+                                    </LinearLayout>
+
+                                </com.google.android.material.card.MaterialCardView>
+
+                                <com.google.android.material.card.MaterialCardView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_margin="4dp"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardBackgroundColor="#F4F7FF"
+                                    app:cardCornerRadius="8dp"
+                                    app:contentPadding="12dp">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Quantity "
+                                            android:textColor="@color/black"
+                                            android:textSize="14sp"/>
+
+                                        <TextView
+                                            android:id="@+id/parcelQuantity"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="3"
+                                            android:textStyle="bold"
+                                            android:textColor="@color/black"
+                                            android:textSize="16sp" />
+                                    </LinearLayout>
+
+                                </com.google.android.material.card.MaterialCardView>
+
+                            </LinearLayout>
+
+                        </FrameLayout>
 
                         <LinearLayout
                             android:layout_width="match_parent"

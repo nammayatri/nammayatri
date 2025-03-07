@@ -411,6 +411,10 @@ let getAllCityConfig = () => {
       "ambulance": {
         "freeSeconds": 480,
         "perMinCharges": 2.0
+      },
+      "deliveryTruck": {
+        "freeMinutes": 3600.0
+      , "perMinCharges": 5.0
       }
     },
     "rateCardConfig" : defRateCardConfig,

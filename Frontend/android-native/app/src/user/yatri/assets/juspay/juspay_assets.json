@@ -761,6 +761,7 @@
       "widget_close_gradient" : true,
       "zone_curve" : true,
       "ny_ic_earn_through_parcel" : true,
-      "ny_ic_ticket_clip_background" : true
+      "ny_ic_ticket_clip_background" : true,
+      "ic_fluent_box_filled" : true
    }
 }
