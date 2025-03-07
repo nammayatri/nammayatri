@@ -9,7 +9,9 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import qualified Lib.JourneyLeg.Types as LJT
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -39,9 +41,15 @@ driverArrivalNotfHandler (DANTypeValidationReq rideId _ status _) = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
 
   case status of
-    DRIVER_ON_THE_WAY -> Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory
-    DRIVER_REACHING -> Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
-    DRIVER_REACHED -> Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+    DRIVER_ON_THE_WAY -> do
+      QRBE.updateJourneyLegStatus (Just LJT.OnTheWay) booking.id
+      Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory
+    DRIVER_REACHING -> do
+      QRBE.updateJourneyLegStatus (Just LJT.Arriving) booking.id
+      Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+    DRIVER_REACHED -> do
+      QRBE.updateJourneyLegStatus (Just LJT.Arrived) booking.id
+      Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 
   pure Kernel.Types.APISuccess.Success

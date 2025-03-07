@@ -47,6 +47,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
@@ -108,7 +109,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) Nothing
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon)}))
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
