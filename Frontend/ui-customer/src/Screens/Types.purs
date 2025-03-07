@@ -842,7 +842,6 @@ type HomeScreenStateData =
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)
   , boostSearchEstimate :: ChooseVehicle.Config
-  , overChargingTag :: Maybe OverchargingTag
 }
 
 type UpcomingRideDetails = {
