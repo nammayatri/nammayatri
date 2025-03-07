@@ -199,6 +199,7 @@ getTruckVehicleVariant mbGrossVehicleWeight mbUnladdenWeight currentVariant = fl
   \(grossVehicleWeight, unladdenWeight) -> getVariantBasedOnWeight (grossVehicleWeight - unladdenWeight)
   where
     getVariantBasedOnWeight weight
+      | weight > 4000 = DELIVERY_LIGHT_GOODS_VEHICLE
       | weight >= 2500 = DELIVERY_TRUCK_ULTRA_LARGE
       | weight >= 1500 = DELIVERY_TRUCK_LARGE
       | weight >= 1000 = DELIVERY_TRUCK_MEDIUM
