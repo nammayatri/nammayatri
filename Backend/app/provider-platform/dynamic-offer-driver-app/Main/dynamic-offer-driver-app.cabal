@@ -308,6 +308,7 @@ library
       Lib.LocationUpdates
       Lib.Schema
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
@@ -484,6 +485,7 @@ library
       Storage.Clickhouse.BppTransactionJoin
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
+      Storage.Clickhouse.Estimate
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver

@@ -103,3 +103,18 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN estimated_duration intege
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN congestion_multiplier double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_congestion_from_loc_geohash_past double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_congestion_from_loc_geohash_distance_past double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_congestion_from_loc_geohash_distance double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_congestion_from_loc_geohash double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_congestion_city_past double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_congestion_city double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash_past double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash_distance_past double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_from_loc_geohash_distance double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city_past double precision ;
