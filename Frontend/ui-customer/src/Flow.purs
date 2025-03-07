@@ -1000,7 +1000,6 @@ currentFlowStatus prioritizeRating = do
                   , email = response ^. _email
                   , hasCompletedSafetySetup = hasCompletedSafetySetup
                   }
-                , overChargingTag = response ^. _overChargeTag
                 }
               , props
                 { isBanner = false

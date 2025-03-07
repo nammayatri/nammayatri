@@ -208,7 +208,6 @@ initData = let
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
-    , overChargingTag : Nothing
     },
     props: {
       rideRequestFlow : false
