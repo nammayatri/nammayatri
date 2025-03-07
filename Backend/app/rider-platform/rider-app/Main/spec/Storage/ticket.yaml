@@ -46,6 +46,7 @@ TicketPlace:
     closeTimings: Maybe TimeOfDay
     status: PlaceStatus
     allowSameDayBooking: Bool
+    priority: Int
 
   types:
     PlaceType:
@@ -53,12 +54,22 @@ TicketPlace:
     PlaceStatus:
       enum: "Active,Inactive,ComingSoon"
 
+  beamType:
+    priority: Maybe Int
+
+  fromTType:
+    priority: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    priority: Kernel.Prelude.Just|I
+
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
     shortDesc: "'Short description not available'"
     status: "'Active'"
     allowSameDayBooking: "true"
+    priority: "0"
 
   queries:
     getTicketPlaces:
