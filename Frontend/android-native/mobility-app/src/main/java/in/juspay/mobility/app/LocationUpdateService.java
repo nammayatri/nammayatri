@@ -207,7 +207,6 @@ public class LocationUpdateService extends Service {
         initialiseJSONObjects();
         isLocationUpdating = false;
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
         executorLocUpdate = Executors.newSingleThreadExecutor();
         executorLocUpdate.shutdown();
         timer = new Timer();
@@ -273,11 +272,8 @@ public class LocationUpdateService extends Service {
                 updateStorage("TRIP_DISTANCE", "0");
                 finalDistanceWithAcc = 0;
                 finalDistance = 0;
-                startDistanceCalculation();
             } else if (startDistanceCalStr != null && startDistanceCalStr.equals("ended")) {
                 Log.d(LOG_TAG, "OnStart - StopDistanceCalculation with values - FinalDistance: " + finalDistance + ", FinalAccDistance: " + finalDistanceWithAcc + " LFinalDistance - " + getValueFromStorage("TRIP_DISTANCE") + " LFinalAccDistance - " + getValueFromStorage("TRIP_DISTANCE_ACC"));
-                if (fusedLocClientForDistanceCal != null && calDistanceCallback != null)
-                    fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
                 finalDistanceWithAcc = 0;
                 finalDistance = 0;
                 isDistanceCalulation = false;
@@ -309,20 +305,11 @@ public class LocationUpdateService extends Service {
         return START_STICKY;
     }
 
-    private void startDistanceCalculation() {
-        LocationCallback locCallback = getDistanceCalCallback();
-        LocationRequest locReq = createDistanceCalculation(3000, 20, 3000);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        fusedLocClientForDistanceCal.requestLocationUpdates(locReq, locCallback, Looper.getMainLooper());
-    }
 
     private int getLocationPriority() {
-        int priority = Priority.PRIORITY_HIGH_ACCURACY;
+        int priority = Utils.getLocationPriority("driver_current_location_priority");
         if( !driverRideStatus.equals("ON_PICKUP")) {
-            String configPriority = remoteConfigs.getString("driver_location_priority");
-            priority = Utils.getPriority(configPriority);
+            priority = Utils.getLocationPriority("driver_fused_location_priority");
         }
         Log.d(LOG_TAG, "Location Priority is " + priority + " for driver app and ride status " + driverRideStatus);
         return priority;
@@ -335,34 +322,6 @@ public class LocationUpdateService extends Service {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                fusedLocClientForDistanceCal.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
-                        .addOnSuccessListener(location -> {
-                            if (location != null) {
-                                isDistanceCalulation = true;
-                                int distanceBtLatLng, distanceBtLatLngWithAcc;
-                                String accHolder = getValueFromStorage("ACCURACY_THRESHOLD");
-                                String accuracyThreshold = accHolder == null ? "100.0" : accHolder;
-                                if (prevLocation != null && prevAccLocation != null) {
-                                    distanceBtLatLng = (int) location.distanceTo(prevLocation);
-
-                                    finalDistance += distanceBtLatLng;
-                                    Log.d(LOG_TAG, "LiveFinalDistanceVal - " + finalDistance);
-                                    if (checkLocationAcc(location, accuracyThreshold)) {
-                                        distanceBtLatLngWithAcc = (int) location.distanceTo(prevAccLocation);
-                                        finalDistanceWithAcc += distanceBtLatLngWithAcc;
-                                        Log.d(LOG_TAG, "LiveFinalDistanceVal With Acc - " + finalDistanceWithAcc);
-                                        updateStorage("TRIP_DISTANCE_ACC", Integer.toString(finalDistanceWithAcc));
-                                        prevAccLocation = location;
-                                    }
-                                    updateStorage("TRIP_DISTANCE", Integer.toString(finalDistance));
-                                } else {
-                                    if (checkLocationAcc(location, accuracyThreshold))
-                                        prevAccLocation = location;
-                                }
-                                prevLocation = location;
-                            } else
-                                Log.d(LOG_TAG, "Got NULL in location service to calculate distance");
-                        });
             }
         };
         return calDistanceCallback;
@@ -454,9 +413,6 @@ public class LocationUpdateService extends Service {
         cancelTimer();
         if (fusedLocationProviderClient != null && locationCallback != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
-        }
-        if (fusedLocClientForDistanceCal != null && calDistanceCallback != null) {
-            fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
         }
         if (executorLocUpdate != null) executorLocUpdate.shutdown();
         stopForeground(true);
@@ -1086,7 +1042,7 @@ public class LocationUpdateService extends Service {
                     checkLocation();
                     if (gpsMethodSwitch.equals("CURRENT")) {
                         Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
-                        fusedLocationProviderClient.getCurrentLocation(getLocationPriority(), cancellationTokenSource.getToken())
+                        fusedLocationProviderClient.getCurrentLocation(Utils.getLocationPriority("driver_current_location_priority"), cancellationTokenSource.getToken())
                                 .addOnSuccessListener(location -> {
                                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));

@@ -82,6 +82,11 @@ type LocationUpdateServiceConfig = {
   rideGFrequencyWithoutFrequentUpdates :: String
 }
 
+type PerfConfig = {
+  mapRecenter :: Boolean,
+  disableBannerAnimation :: Boolean
+}
+
 type CoinsConfig = {
   minCoinSliderValue :: Int,
   maxCoinSliderValue :: Int,

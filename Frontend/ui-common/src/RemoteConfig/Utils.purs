@@ -106,6 +106,7 @@ filterCategoryBasedCarousel allowedFilter variantFilter configs =
     in
       if DA.null categoryList then true else elem allowedFilter categoryList || elem variantFilter categoryList
 
+
 fetchWhiteListedUser :: String -> Array String
 fetchWhiteListedUser configKey = fetchRemoteConfig configKey
 

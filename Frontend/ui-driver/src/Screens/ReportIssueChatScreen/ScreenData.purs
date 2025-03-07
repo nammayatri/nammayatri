@@ -83,6 +83,10 @@ chatConfig' = ChatView.config {
                      , enableSuggestionClick = false
                      , showTextEdit = false
                      , spanParent = true
+                     , footerBanner = {
+                        text : "",
+                        enable : true
+                    }
               }
 
 recordAudioState' = {
