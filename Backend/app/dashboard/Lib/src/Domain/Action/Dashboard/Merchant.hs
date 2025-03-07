@@ -251,5 +251,7 @@ buildPersonCreateReq req role = do
         verified = Nothing,
         receiveNotification = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }

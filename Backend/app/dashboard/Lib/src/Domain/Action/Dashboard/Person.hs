@@ -475,7 +475,9 @@ buildPerson req dashboardAccessType = do
         receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now,
-        verified = Nothing
+        verified = Nothing,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq
