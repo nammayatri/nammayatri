@@ -243,16 +243,13 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
+        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest isMeterRide,
         ..
       }
   where
     getIsMeterRideSearch rqst = case rqst of
       OneWaySearch reqData -> reqData.isMeterRideSearch
       _ -> Just False
-
-    isFirstRideFor :: Person.Person -> Bool
-    isFirstRideFor person = person.totalRidesCount == Just 0
 
     backfillCustomerNammaTags :: Person.Person -> Person.Person
     backfillCustomerNammaTags Person.Person {..} =
@@ -262,9 +259,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
+    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
-      let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),

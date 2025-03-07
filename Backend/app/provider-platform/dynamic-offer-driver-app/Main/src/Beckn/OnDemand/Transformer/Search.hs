@@ -42,7 +42,6 @@ buildSearchReq messageId subscriber req context = do
       disabilityTag_ = Beckn.OnDemand.Utils.Search.buildDisabilityTag req
       isReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
       isMeterRideSearch = Beckn.OnDemand.Utils.Search.getIsMeterRideSearch req
-      fareParametersInRateCard_ = Beckn.OnDemand.Utils.Search.fareParametersInRateCard req
       messageId_ = messageId
       routeDistance_ = Beckn.OnDemand.Utils.Search.getDistance req
       routeDuration_ = Beckn.OnDemand.Utils.Search.getDuration req

@@ -36,7 +36,6 @@ defaultSearchReq =
         sessionToken = Nothing,
         placeNameSource = Nothing,
         driverIdentifier = Nothing,
-        fareParametersInRateCard = Nothing,
         isMeterRideSearch = Just False
       }
 
@@ -104,7 +103,6 @@ searchReqFromUpdatesList updList =
               sessionToken = Nothing,
               placeNameSource = Nothing,
               driverIdentifier = Nothing,
-              fareParametersInRateCard = Nothing,
               isMeterRideSearch = Just False
             }
    in (origin, destination, req)
@@ -126,7 +124,6 @@ mkSearchReqFromLocations origin destination =
               sessionToken = Nothing,
               placeNameSource = Nothing,
               driverIdentifier = Nothing,
-              fareParametersInRateCard = Nothing,
               isMeterRideSearch = Just False
             }
    in (origin, destination, req)

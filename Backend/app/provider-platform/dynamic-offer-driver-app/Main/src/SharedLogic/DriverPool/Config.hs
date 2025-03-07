@@ -49,7 +49,6 @@ import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import Lib.Yudhishthira.Tools.Utils (convertTags)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
@@ -58,6 +57,7 @@ import qualified Storage.Cac.TransporterConfig as CTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.DynamicLogic as TDL
+import Tools.Utils (convertTags)
 import Utils.Common.CacUtils
 
 getDriverPoolConfigFromDB' ::

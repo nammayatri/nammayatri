@@ -127,7 +127,6 @@ data DSearchReq = DSearchReq
     customerNammaTags :: Maybe [Text],
     isReallocationEnabled :: Maybe Bool,
     isMeterRideSearch :: Maybe Bool,
-    fareParametersInRateCard :: Maybe Bool,
     disabilityTag :: Maybe Text,
     dropLocation :: Maybe LatLong,
     dropAddrress :: Maybe BA.Address,

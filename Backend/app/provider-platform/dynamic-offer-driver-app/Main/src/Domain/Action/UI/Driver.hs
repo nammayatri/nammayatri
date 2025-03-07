@@ -208,6 +208,7 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -2290,7 +2291,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               let mbScheduleBookingListEligibilityTags = (listToMaybe availableServiceTierItems) >>= (.scheduleBookingListEligibilityTags)
-              let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
+              let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
               if scheduleEnabled
                 then do
                   let vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
@@ -2311,6 +2312,15 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                 else return $ ScheduledBookingRes []
         _ -> pure $ ScheduledBookingRes []
   where
+    removeTagExpiry ::
+      Text ->
+      LYT.TagNameValue
+    removeTagExpiry txt = do
+      LYT.TagNameValue $ case T.splitOn "#" txt of
+        [tagName, tagValue, _oldExpiredAt] -> T.intercalate "#" [tagName, tagValue]
+        (tagName : tagValue : _oldExpiredAt : xs) -> T.intercalate "#" (tagName : tagValue : "" : xs)
+        _ -> txt
+
     getCurrentDriverLocUsingLTS driverId = do
       result <- try @_ @SomeException $ LTF.driversLocation [driverId]
       return $ case result of

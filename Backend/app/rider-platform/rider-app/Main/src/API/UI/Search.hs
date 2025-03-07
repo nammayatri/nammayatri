@@ -173,7 +173,7 @@ multiModalSearch ::
   Id DMOC.MerchantOperatingCity ->
   Meters ->
   Flow ()
-multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs = do
+multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance = do
   dest <- extractDest searchReq.destination
   let transitRoutesReq =
         GetTransitRoutesReq
