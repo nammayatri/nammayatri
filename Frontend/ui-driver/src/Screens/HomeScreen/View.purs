@@ -126,6 +126,7 @@ import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
 import Components.TripStageTopBar as TripStageTopBar
+import RemoteConfig.Utils (getPerfConfigData)
 
 screen :: HomeScreenState -> GlobalState -> LoggableScreen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -447,7 +448,7 @@ view push state =
           _ <- push action
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
-          _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) 0.0 0.0 push ShowMap
+          _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") ((enableCurrentLocation state) && perfConfig.mapRecenter) "satellite" (17.0) 0.0 0.0 push ShowMap
           _ <- push $ UpdateSpecialZoneList
           pure unit
         ) (const AfterRender)
@@ -519,6 +520,7 @@ view push state =
                   let _ = setValueToLocalStore LAST_EXECUTED_TIME currentDate
                   in currentDate
                 time -> time
+    perfConfig = getPerfConfigData (getValueToLocalStore DRIVER_LOCATION)
     showPopups = (DA.any (_ == true )
       [ state.props.bgLocationPopup,
         state.data.driverGotoState.gotoLocInRange,
@@ -836,7 +838,7 @@ getCarouselConfig view state = {
   , items : BannerCarousel.bannerTransformer $ getBannerConfigs state
   , orientation : VERTICAL
   , currentPage : state.data.bannerData.currentPage
-  , autoScroll : true
+  , autoScroll : true && disableAnimation
   , autoScrollDelay : 5000.0
   , id : "bannerCarousel"
   , autoScrollAction : Just UpdateBanner
@@ -848,6 +850,8 @@ getCarouselConfig view state = {
   , layoutHeight : V 100
   , overlayScrollIndicator : true
 }
+  where
+    disableAnimation = not ((getPerfConfigData (getValueToLocalStore DRIVER_LOCATION)).disableBannerAnimation)
 
 genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genericAccessibilityPopUpView push state = 
