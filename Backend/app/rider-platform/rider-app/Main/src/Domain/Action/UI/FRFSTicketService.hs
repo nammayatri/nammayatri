@@ -104,7 +104,7 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
                         ( \idx stop ->
                             FRFSStationAPI
                               { name = stop.stopName,
-                                code = stop.stopName,
+                                code = stop.stopCode,
                                 lat = Just stop.stopPoint.lat,
                                 lon = Just stop.stopPoint.lon,
                                 stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
@@ -185,7 +185,7 @@ getFrfsRoute (_personId, _mId) routeCode _mbCity _vehicleType = do
               ( \stop ->
                   FRFSStationAPI
                     { name = stop.stopName,
-                      code = stop.stopName,
+                      code = stop.stopCode,
                       lat = Just stop.stopPoint.lat,
                       lon = Just stop.stopPoint.lon,
                       stationType = Nothing,
