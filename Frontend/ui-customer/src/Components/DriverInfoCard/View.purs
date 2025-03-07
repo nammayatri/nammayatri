@@ -23,6 +23,8 @@ import CarouselHolder as CarouselHolder
 import Common.Styles.Colors as CommonColor
 import Animation (fadeIn, fadeInWithDelay, scaleYAnimWithDelay, shimmerAnimation, translateInXAnim)
 import Animation.Config as AnimConfig
+import ConfigProvider (getAppConfig, appConfig)
+import Data.Number.Format (toString)
 import Common.Types.App (LazyCheck(..))
 import Components.BannerCarousel as BannerCarousel
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
@@ -46,7 +48,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), userCommonAssetBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize, getDistanceBwCordinates,disableChat)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
-import Helpers.Utils (parseFloat)
+import Helpers.Utils (parseFloat, getCityFromString, getCityConfig)
 import JBridge (fromMetersToKm, getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -60,9 +62,10 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.LocalizableV2.Strings (getEN)
+import Resources.LocalizableV2.Strings (getStringV2, getEN)
+import Resources.LocalizableV2.Types
 import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
-import Storage (KeyStore(..))
+import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -234,7 +237,7 @@ deliveryImageAndOtpView push state =
 driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoViewSpecialZone push state =
   let 
-    currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
+    currentCityConfig = HU.getCityConfig state.data.config.cityConfig (show state.props.merchantCity)
     brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
   in 
   linearLayout
@@ -853,6 +856,11 @@ distanceView push state = let
       --  , maxLines 2
        ] <> FontStyle.body7 TypoGraphy
      , etaView push state
+     , linearLayout [
+            width MATCH_PARENT,
+            height (V 1)
+        ][]
+     , loadingTimeView push state
      , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -894,7 +902,7 @@ etaView push state =
   , cornerRadius 16.0
   , background Color.blue800
   , accessibilityHint $ "arriving in " <> fromMaybe "" state.data.estimatedTimeToReachDestination
-  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && state.data.estimatedTimeToReachDestination /= Nothing
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && state.data.estimatedTimeToReachDestination /= Nothing && not state.data.destinationReached
   ][ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -903,6 +911,47 @@ etaView push state =
     , text $ getString ESTIMATED_ARRIVAL_BY <> " " <> fromMaybe "" state.data.estimatedTimeToReachDestination
     ] <> FontStyle.body1 TypoGraphy
   ]
+
+loadingTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+loadingTimeView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , cornerRadius 20.0
+  , background Color.yellow900
+  , gravity CENTER
+  , padding $ Padding 8 2 8 2
+  , margin $ Margin 0 4 0 4
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && ((state.data.driverArrived && state.props.currentStage == RideAccepted ) || (state.data.destinationReached && state.props.currentStage == RideStarted && isJust state.data.destinationWaitingTime))
+  ]
+  [ textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , text $ getLoadingText
+    , color Color.black900
+    , accessibility ENABLE
+    , accessibilityHint formatTimeForAccessibility
+    , singleLine true
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+  where
+    getLoadingText :: String
+    getLoadingText = 
+      let config = getAppConfig appConfig
+          cityStr = getValueToLocalStore CUSTOMER_LOCATION
+          city = getCityFromString cityStr
+          cityConfig = getCityConfig config.cityConfig cityStr
+          deliveryTruckWaitingCharges = cityConfig.waitingChargeConfig.deliveryTruck
+          waitingtime = if state.data.destinationReached then 
+                          getStringV2 unloading_time <> ": " <> fromMaybe "" state.data.destinationWaitingTime 
+                        else getStringV2 loading_time <> ": " <> state.data.waitingTime
+      in waitingtime <> " / " <> toString deliveryTruckWaitingCharges.freeMinutes <> ".00"
+
+    formatTimeForAccessibility :: String
+    formatTimeForAccessibility = 
+      let label = if state.data.destinationReached then "unloading Time: " else "Loading Time: " 
+      in label <> (if state.data.destinationReached then fromMaybe "" state.data.destinationWaitingTime else state.data.waitingTime) <> " out of " <> "60:00"
+      
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> Boolean -> String -> PrestoDOM (Effect Unit) w
 brandingBannerView driverInfoConfig isVisible uid onUsRide providerName = 
@@ -996,6 +1045,7 @@ contactView push state airportZone =
                 , color Color.black900
                 ] <> FontStyle.body7 TypoGraphy
               ]
+          , loadingTimeView push state
           , textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
@@ -1621,7 +1671,11 @@ getTripDetails state = {
   , isOtpRideFlow : state.props.isOtpRideFlow
   , senderDetails : state.data.senderDetails
   , receiverDetails : state.data.receiverDetails
-}
+  , parcelType : fromMaybe "" state.data.parcelType
+  , parcelQuantity : state.data.parcelQuantity
+  }
+  where 
+    isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
 driverPickUpStatusText state _ = 

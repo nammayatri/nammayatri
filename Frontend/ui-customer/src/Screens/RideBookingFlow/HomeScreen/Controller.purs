@@ -1484,29 +1484,36 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
     ]
 eval (DriverArrivedAction driverArrivalTime) state =
   if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
-      if state.data.vehicleVariant /= "DELIVERY_BIKE" then do
-        _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-        exit $ RefreshHomeScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
-      else
-        continue state { data { driverInfoCardState { driverArrived = true } } }
-    else continue state
+    void $ pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
+    exit $ RefreshHomeScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+  else continue state
 
-eval (DriverReachedDestinationAction driverReachedDestinationTime) state =
+eval (DriverReachedDestinationAction driverReachedDestinationTime) state = do
+  let destinationReachedAt = (getExpiryTime driverReachedDestinationTime true) + (maybe 0 (\a -> getExpiryTime a true) state.data.driverArrivalTimeUTC) - (if state.data.startedAtUTC /= ""  then getExpiryTime state.data.startedAtUTC true else 0)
+      _ = spy "driverReachedDestinationTime" (getExpiryTime driverReachedDestinationTime true)
+      _ = spy "driverArrivalTimeUTC" (maybe 0 (\a -> getExpiryTime a true) state.data.driverArrivalTimeUTC)
+      _ = spy "startTimeUTC" (if state.data.startedAtUTC /= ""  then getExpiryTime state.data.startedAtUTC true else 0)
   if any (_ == state.props.currentStage) [ RideStarted] then do
-      if state.data.vehicleVariant /= "DELIVERY_BIKE" then do
-        _ <- pure $ setValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION "TRIGGER_DESTINATION_WAITING_ACTION"
-        exit $ RefreshHomeScreen state { data { driverInfoCardState { destinationReached = true, destinationReachedAt = getExpiryTime driverReachedDestinationTime true } } }
-      else
-        continue state { data { driverInfoCardState { destinationReached = true } } }
-    else continue state
+    void $ pure $ setValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION "TRIGGER_DESTINATION_WAITING_ACTION"
+    exit $ RefreshHomeScreen state { data { driverInfoCardState { destinationReached = true, destinationReachedAt =destinationReachedAt } } }
+  else continue state
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
-  _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
-                then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
-                else pure unit
+  if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
+      then void $ pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
+      else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.RideDurationTimer timerID timeInHHMM _)) state = 
+eval (DestinationWaitingTimeAction timerID timeInMinutes seconds) state = do
+  let validTimeInMinutes = 
+        if STR.contains (STR.Pattern "NaN") timeInMinutes
+        then "00:00" 
+        else timeInMinutes
+  when ((getValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION) == "TRIGGER_DESTINATION_WAITING_ACTION") $ do
+    void $ pure $ setValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION "DESTINATION_WAITING_ACTION_TRIGGERED"
+  continue state { data { driverInfoCardState { destinationWaitingTime = Just validTimeInMinutes}}, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
+
+eval (DriverInfoCardActionController (DriverInfoCardController.RideDurationTimer timerID timeInHHMM _)) state =
   continue state{props{rideDurationTimerId = timerID, rideDurationTimer = timeInHHMM}}
 
 eval (RideDurationTimer timerID timeInHHMM _) state = 

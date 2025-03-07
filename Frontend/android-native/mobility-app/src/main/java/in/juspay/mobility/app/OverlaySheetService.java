@@ -245,7 +245,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateRateView(holder, model);
+            RideRequestUtils.updateTripCategory(holder,model,OverlaySheetService.this);
             RideRequestUtils.updateTierAndAC(holder, model, OverlaySheetService.this);
+            RideRequestUtils.updateDeliveryInfo(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateRentalView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateIntercityView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateExtraChargesString(holder, model, OverlaySheetService.this);
@@ -653,6 +655,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
                     double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
                    
+                    String parcelType = rideRequestBundle.getString("parcelType");
+                    int parcelQuantity = rideRequestBundle.getInt("parcelQuantity");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
                     }
@@ -700,7 +704,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             notificationSource,
                             isThirdPartyBooking,
                             parkingCharge,
-                            getCurrTime
+                            getCurrTime,
+                            parcelType,
+                            parcelQuantity
                     );
 
                     if (floatyView == null) {

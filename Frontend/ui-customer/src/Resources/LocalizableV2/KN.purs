@@ -1725,4 +1725,12 @@ getKn = Keymap {
 , different_ambulance : "ವಿಭಿನ್ನ ಆಂಬುಲೆನ್ಸ್"
 , no_remaining_tickets : "ಯಾವುದೇ ಉಳಿದ ಟಿಕೆಟ್‌ಗಳಿಲ್ಲ"
 , ticket_not_booked_refund_initiated : "ಕ್ಷಮಿಸಿ, ಟಿಕೆಟ್ ಬುಕ್ ಆಗಿಲ್ಲ. ಮರುಪಾವತಿ ಪ್ರಕ್ರಿಯೆ ಪ್ರಾರಂಭಿಸಲಾಗಿದೆ."
+, parcel_details :  "ಪಾರ್ಸೆಲ್ ವಿವರಗಳು" 
+, parcel_type : "ಪಾರ್ಸೆಲ್ ಪ್ರಕಾರ" 
+, parcel_quantity : "ಪಾರ್ಸೆಲ್ ಪ್ರಮಾಣ"
+, unloading_time : "ಅನ್‌ಲೋಡಿಂಗ್ ಸಮಯ" 
+, loading_time : "ಲೋಡಿಂಗ್ ಸಮಯ"
+, helps_smooth_delivery : "ಇದು ನಮಗೆ ಸರಾಗ ವಿತರಣೆಯನ್ನು ಒದಗಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ" 
+, free_loading_unloading_time : (\a b ->"ಉಚಿತ ಸಂಯುಕ್ತ ಲೋಡಿಂಗ್/ಅನ್‌ಲೋಡಿಂಗ್ ಸಮಯ " <> a <> " ನಿಮಿಷಗಳಷ್ಟು ಒದಗಿಸಲಾಗುತ್ತದೆ. ಹೆಚ್ಚುವರಿ ಸಮಯಕ್ಕೆ " <> b <> " ದರದಲ್ಲಿ ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ." )
+, max_capacity_warning : "ಐಟಂಗಳು ಗರಿಷ್ಠ ಸಾಮರ್ಥ್ಯವನ್ನು ಮೀರಬಾರದು"
 }

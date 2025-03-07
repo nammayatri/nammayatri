@@ -23,7 +23,7 @@ import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), Unit)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=), not, (<<<), bind, discard, show, pure, map, when, mod)
 import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
@@ -48,6 +48,8 @@ data Action = OnButton1Click
             | PersonAddress PrimaryEditTextController.Action
             | PersonInstruction PrimaryEditTextController.Action
             | CheckBoxClick
+            | Dropdown1 DropdownAction
+            | Dropdown2 DropdownAction
 
 type Config = {
     primaryText :: TextConfig,
@@ -100,8 +102,17 @@ type Config = {
     coverLottie :: CoverLottie,
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
-    deliveryDetailsConfig :: DeliveryDetailsConfig
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    parcelDetailsVisibility :: Visibility,
+    parcelTypeConfig :: DropdownConfig,
+    parcelQuantityConfig :: DropdownConfig
 }
+
+data DropdownAction 
+  = Toggle
+  | SelectItem DropdownItem
+  | ExtraInput PrimaryEditTextController.Action
+  | NoAction_
 
 type DeliveryDetailsConfig = {
   visibility :: Visibility,
@@ -115,6 +126,21 @@ type DeliveryDetailsConfig = {
   locationDetails :: String,
   checkBoxDetails :: {text :: String, isSelected :: Boolean, visibility :: Boolean }
 }
+
+type DropdownConfig = 
+  { items :: Array DropdownItem
+  , selectedItem :: Mb.Maybe DropdownItem
+  , isOpen :: Boolean
+  , placeholder :: String
+  , label :: String
+  , extraInput :: PrimaryEditTextController.Config
+  }
+
+type DropdownItem = 
+  { id :: String
+  , title :: String
+  , subtitle :: String
+  }
 
 type UPIDetailConfig = {
   visibility :: Visibility,
@@ -730,6 +756,9 @@ config = {
       }
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
+  , parcelDetailsVisibility : GONE
+  , parcelTypeConfig : defaultConfig
+  , parcelQuantityConfig : defaultConfig
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
@@ -780,3 +809,13 @@ dummyDeliveryPrimaryText =
         , width = MATCH_PARENT
         }
       in primaryEditTextConfig'
+
+defaultConfig :: DropdownConfig
+defaultConfig = 
+  { items: []
+  , selectedItem: Mb.Nothing
+  , isOpen: false
+  , placeholder: ""
+  , label: ""
+  , extraInput : dummyDeliveryPrimaryText { visibility = GONE, stroke = ("1,"<> Color.grey900)}
+  }

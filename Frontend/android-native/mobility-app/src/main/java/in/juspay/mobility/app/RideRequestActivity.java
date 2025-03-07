@@ -121,6 +121,8 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
             String notificationSource= rideRequestBundle.getString("notificationSource");
                     
+            String parcelType = rideRequestBundle.getString("parcelType");
+            int parcelQuantity = rideRequestBundle.getInt("parcelQuantity");
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
                     tollCharges,
@@ -165,7 +167,9 @@ public class RideRequestActivity extends AppCompatActivity {
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
                     rideRequestBundle.getDouble("parkingCharge"),
-                    getCurrTime
+                    getCurrTime,
+                    parcelType,
+                    parcelQuantity
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -291,7 +295,9 @@ public class RideRequestActivity extends AppCompatActivity {
             RideRequestUtils.updateStepFeeAndButtonAlpha(holder, model, mainLooper);
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
+            RideRequestUtils.updateTripCategory(holder,model,RideRequestActivity.this);
             RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);
+            RideRequestUtils.updateDeliveryInfo(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);

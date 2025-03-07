@@ -1725,4 +1725,12 @@ getBn = Keymap {
 ,different_ambulance : "বিভিন্ন অ্যাম্বুলেন্স"
 , no_remaining_tickets : "কোনো অবশিষ্ট টিকিট নেই" 
 , ticket_not_booked_refund_initiated : "দুঃখিত, টিকিট বুক হয়নি। ফেরতের প্রক্রিয়া শুরু হয়েছে।"
+, parcel_details :  "পার্সেল বিবরণ"
+, parcel_type : "পার্সেল ধরন"
+, parcel_quantity : "পার্সেল পরিমাণ" 
+, unloading_time : "আনলোডিং সময়"
+, loading_time : "লোডিং সময়"
+, helps_smooth_delivery : "এটি আমাদের মসৃণ ডেলিভারি প্রদান করতে সহায়তা করে"
+, free_loading_unloading_time : (\a b ->  "ফ্রি সংযুক্ত লোডিং/আনলোডিং সময় " <> a <> " মিনিট প্রদান করা হয়। অতিরিক্ত সময়ের জন্য " <> b <> " হারে চার্জ করা হবে।")
+, max_capacity_warning : "আইটেম সর্বাধিক ক্ষমতা অতিক্রম করা উচিত নয়"
 }

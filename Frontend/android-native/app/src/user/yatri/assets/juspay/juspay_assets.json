@@ -748,6 +748,7 @@
       "ny_ic_bike_pickup_nav_on_map" : true,
       "ny_ic_bike_taxi_service" : true,
       "ny_ic_id_filled" : true,
-      "ny_ic_ticket_clip_background" : true
+      "ny_ic_ticket_clip_background" : true,
+      "ic_fluent_box_filled" : true
    }
 }

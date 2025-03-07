@@ -667,6 +667,24 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_delivery_instructions" : true,
+      "ny_ic_backpack" : true,
+      "ny_ic_prohibited" : true,
+      "ny_ic_streamline_fragile_solid" : true,
+      "ny_ic_dest_dot": true,
+      "ny_ic_id_filled": true,
+      "ny_ic_bike_delivery_nav_on_map": true,
+      "ny_ic_wallet_outline": true,
+      "ny_ic_refresh" : true,
+      "zone_curve" : true,
+      "ny_ic_bike_nav_on_map" : true,
+      "ny_ic_bike_pickup_nav_on_map" : true,
+      "ny_ic_bus_icon_light_blue" : true,
+      "ny_ic_discount_percentage" : true,
+      "ny_ic_qr_code_expired" : true,
+      "ny_ic_delivery_truck_nav_on_map" : true,
+      "ic_fluent_box_filled" : true,
+      "ny_ic_clock_filled_dark.png" : true
    }
 }

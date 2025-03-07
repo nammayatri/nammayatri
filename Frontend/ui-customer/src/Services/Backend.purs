@@ -482,11 +482,13 @@ addOrEditStop bookingId req isEdit = do
 
 selectEstimateBT :: DEstimateSelect -> String -> FlowBT String APISuccessResp
 selectEstimateBT payload estimateId = do
+        let _ = spy ("selectEstimateBT" <> estimateId) payload
         headers <- getHeaders' "" false
         withAPIResultBT (EP.selectEstimate estimateId) identity errorHandler (lift $ lift $ callAPI headers (SelectEstimateReq estimateId payload))
     where
       errorHandler errorPayload = do
-            let errResp = errorPayload.response
+            let _ = spy "errorHandler for selectEstimateBT" errorPayload
+                errResp = errorPayload.response
                 codeMessage = decodeError errResp.errorMessage "errorCode"
                 userMessage = decodeError errResp.errorMessage "errorMessage"
             case errorPayload.code, codeMessage, userMessage of
@@ -1096,6 +1098,13 @@ getTicketPlacesBT _ = do
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
+
+getTicketPlaces :: String -> Flow GlobalState (Either ErrorResponse TicketPlaceResponse)
+getTicketPlaces _ = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.ticketPlaces "") unwrapResponse $ callAPI headers TicketPlaceReq
+    where
+        unwrapResponse (x) = x
 
 bookTicketsBT :: TicketBookingReq -> String -> FlowBT String CreateOrderRes
 bookTicketsBT payload placeId = do

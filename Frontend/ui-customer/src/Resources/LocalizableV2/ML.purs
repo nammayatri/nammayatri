@@ -1726,4 +1726,12 @@ getMl = Keymap {
 , different_ambulance : "വിവിധ ആംബുലൻസ്"
 , no_remaining_tickets : "ഇനിയൊരു ടിക്കറ്റ് ശേഷിക്കുന്നില്ല"
 , ticket_not_booked_refund_initiated : "ക്ഷമിക്കണം, ടിക്കറ്റ് ബുക്ക് ചെയ്തിട്ടില്ല. റിഫണ്ട് ആരംഭിച്ചിരിക്കുന്നു."
+, parcel_details :  "പാഴ്സൽ വിശദാംശങ്ങൾ"
+, parcel_type : "പാഴ്സൽ തരം" 
+, parcel_quantity : "പാഴ്സൽ അളവ്" 
+, unloading_time : "അൺലോഡിംഗ് സമയം"
+, loading_time : "ലോഡിംഗ് സമയം" 
+, helps_smooth_delivery : "ഇത് ഞങ്ങൾക്ക് സുഗമമായ ഡെലിവറി നൽകാൻ സഹായിക്കുന്നു" 
+, free_loading_unloading_time : (\a b -> "ഉയർന്ന ലോഡിംഗ്/അൺലോഡിംഗ് സമയമായി " <> a <> " മിനിറ്റ് നൽകപ്പെടുന്നു. അധിക സമയം " <> b <> " നിരക്കിൽ ചാർജ് ചെയ്യപ്പെടും.")
+, max_capacity_warning : "ഇടങ്ങൾ പരമാവധി ശേഷി മികവോടെ നിൽക്കരുത്"
 }

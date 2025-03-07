@@ -11,9 +11,12 @@ import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), S
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App as App
 import Data.Foldable as DF
+import Mobility.Prelude (boolToVisibility)
 import Components.SeparatorView.View as SeparatorView
 import Components.PrimaryEditText as PrimaryEditText
 import Font.Style as FontStyle
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 import Engineering.Helpers.Commons as EHC
 import Components.SourceToDestination.Controller as SourceToDestination
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
@@ -82,14 +85,14 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
-getRoleConfig :: ST.ParcelDeliveryScreenState -> { details :: ST.PersonDeliveryDetails, checkBoxDetailsText :: String, headerText :: String, stepInfo :: String, helpText :: String, address :: ST.Address, addressArea :: Maybe String, isSelected :: Boolean, personNameLabel :: String, phoneLabel :: String, addressLabel :: String, instructionLabel :: String }
+getRoleConfig :: ST.ParcelDeliveryScreenState -> { details :: ST.PersonDeliveryDetails, checkBoxDetailsText :: String, headerText :: String, stepInfo :: String, helpText :: String, address :: ST.Address, addressArea :: Maybe String, isSelected :: Boolean, personNameLabel :: String, phoneLabel :: String, addressLabel :: String, instructionLabel :: String, deliveryDetailsVisibility :: Visibility }
 getRoleConfig state = 
   if state.data.currentStage == ST.SENDER_DETAILS
   then 
     { details: state.data.senderDetails
     , checkBoxDetailsText: getString I_AM_THE_SENDER
     , headerText: getString SENDER <> " " <> getString DETAILS
-    , stepInfo: getString STEP <> "1/2"
+    , stepInfo: getString STEP <> "1/3"
     , helpText: getString HELP_US_PROVIDE_SMOOTH_PICKUP
     , address: state.data.sourceAddress
     , addressArea: state.data.sourceAddress.area
@@ -98,12 +101,13 @@ getRoleConfig state =
     , phoneLabel: getString SENDER_PHONE
     , addressLabel: getString SENDERS_BUILDING_FLAT
     , instructionLabel: getString PICKUP_INSTRUCTIONS
+    , deliveryDetailsVisibility : VISIBLE
     }
-  else
+  else if state.data.currentStage == ST.RECEIVER_DETAILS then
     { details: state.data.receiverDetails
     , checkBoxDetailsText: getString I_AM_THE_RECEIVER
     , headerText: getString RECEIVER <> " " <> getString DETAILS
-    , stepInfo: getString STEP <> "2/2"
+    , stepInfo: getString STEP <> "2/3"
     , helpText: getString HELP_US_PROVIDE_SMOOTH_DROP
     , address: state.data.destinationAddress
     , addressArea: state.data.destinationAddress.area
@@ -112,6 +116,21 @@ getRoleConfig state =
     , phoneLabel: getString RECEIVER_PHONE
     , addressLabel: getString RECEIVERS_BUILDING_FLAT
     , instructionLabel: getString DROP_INSTRUCTIONS
+    , deliveryDetailsVisibility : VISIBLE
+    }
+  else { details: state.data.receiverDetails
+    , checkBoxDetailsText: getString I_AM_THE_RECEIVER
+    , headerText: getStringV2 parcel_details
+    , stepInfo: getString STEP <> "3/3"
+    , helpText: getStringV2 helps_smooth_delivery
+    , address: state.data.destinationAddress
+    , addressArea: state.data.destinationAddress.area
+    , isSelected: state.data.initiatedAs == API.Receiver
+    , personNameLabel: ""
+    , phoneLabel: ""
+    , addressLabel: ""
+    , instructionLabel: ""
+    , deliveryDetailsVisibility : GONE
     }
 
 deliveryPickupDetialsModalConfig :: ST.ParcelDeliveryScreenState -> PopUpModal.Config
@@ -167,7 +186,7 @@ deliveryPickupDetialsModalConfig state =
           , isClickable = validateInput state
           }
         , deliveryDetailsConfig
-          { visibility = VISIBLE
+          { visibility = roleConfig.deliveryDetailsVisibility
           , margin = Margin 0 20 0 0
           , isSource = state.data.currentStage == ST.SENDER_DETAILS
           , personNameDetails = personNameDetailsConfig roleConfig.details roleConfig.personNameLabel
@@ -185,6 +204,48 @@ deliveryPickupDetialsModalConfig state =
           , locationTitle = addressArea
           , locationDetails = decodedAddress
           }
+        , parcelTypeConfig {
+          items = appConfig'.parcelTypeConfig,
+          placeholder = "Household Items",
+          label = "Parcel Type",
+          selectedItem = if state.props.isEditModal then state.data.editParcelType else state.data.parcelType,
+          isOpen = state.props.dropdownStatus == ST.DROP_DOWN_1,
+          extraInput {
+            visibility = (
+              if state.props.isEditModal then 
+                case state.data.editParcelType of
+                  Just editParcelType -> boolToVisibility $ editParcelType.id == "Others"
+                  Nothing -> GONE
+              else
+                case state.data.parcelType of
+                Just parcelType -> boolToVisibility $ parcelType.id == "Others"
+                Nothing -> GONE
+              ),
+            topLabel {
+              text = "Parcel Type Details"
+            },
+            editText {
+              text = (
+                if state.props.isEditModal then
+                  case state.data.editParcelOthersType of
+                    Just text -> text
+                    Nothing -> ""
+                else
+                  case state.data.parcelOthersType of
+                    Just text -> text
+                    Nothing -> ""
+              )
+            }
+          }
+        }
+        , parcelQuantityConfig {
+          items = appConfig'.parcelQuantityConfig,
+          placeholder = "1",
+          label = "Parcel Quantity",
+          selectedItem = if state.props.isEditModal then state.data.editParcelQuantity else state.data.parcelQuantity,
+          isOpen = state.props.dropdownStatus == ST.DROP_DOWN_2
+        }
+        , parcelDetailsVisibility = boolToVisibility $ state.data.currentStage == ST.PARCEL_DETAILS
         }
   in
     popUpConfig'

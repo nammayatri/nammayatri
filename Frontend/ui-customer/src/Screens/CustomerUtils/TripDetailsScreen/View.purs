@@ -176,7 +176,7 @@ tripIdView push state =
       rideType = if cityConfig.enableAcViews 
                   then ServiceTierCard.parseName serviceTierName
                   else serviceTierName
-      hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing (if state.data.vehicleVariant == Just DELIVERY_BIKE then DELIVERY else ONE_WAY)
+      hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing state.data.rideType
       rideTypeWithAc = if hasAirConditioned && rideType /= "" && cityConfig.enableAcViews then "AC • " <> rideType else rideType
   in
   linearLayout

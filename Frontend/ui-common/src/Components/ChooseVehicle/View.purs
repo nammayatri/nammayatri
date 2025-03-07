@@ -307,6 +307,7 @@ getVehicleName config =
     "AMBULANCE_AC_OXY" -> "AC" <> "\x00B7" <> "O₂"
     "AMBULANCE_VENTILATOR" -> "Ventilator"
     "HERITAGE_CAB" -> "Heritage Cab"
+    _ | EHU.isDeliveryTruckVariant config.vehicleVariant -> "Delivery Truck"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
