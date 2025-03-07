@@ -53,6 +53,7 @@ import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Metrics.BAPMetrics.Types
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
 type SearchRequestFlow m r c =
@@ -246,7 +247,8 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     serviceTierName :: Maybe Text,
     bookingId :: Maybe (Id DBooking.Booking),
     rideId :: Maybe (Id DRide.Ride),
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    batchConfig :: Maybe SharedRedisKeys.BatchConfig
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -399,6 +401,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
   let skipBooking = fromMaybe False booking.isSkipped
   (status, _) <- getTaxiLegStatusFromBooking booking mRide
+  batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   return $
     LegInfo
       { skipBooking,
@@ -427,7 +430,8 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 serviceTierName = booking.serviceTierName,
                 bookingId = Just $ booking.id,
                 rideId = mRide <&> (.id),
-                vehicleIconUrl = booking.vehicleIconUrl
+                vehicleIconUrl = booking.vehicleIconUrl,
+                batchConfig
               },
         actualDistance = mRide >>= (.traveledDistance),
         totalFare = mRide >>= (.fare)
@@ -443,6 +447,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
         return $ (mbEst <&> (.totalFareRange), mbEst <&> (.status), mbEst)
       Nothing -> return (Nothing, Nothing, Nothing)
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
+  batchConfig <- SharedRedisKeys.getBatchConfig id.getId
   return $
     LegInfo
       { skipBooking = journeyLegInfo'.skipBooking,
@@ -471,7 +476,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 serviceTierName = mbEstimate >>= (.serviceTierName),
                 bookingId = Nothing,
                 rideId = Nothing,
-                vehicleIconUrl = Nothing
+                vehicleIconUrl = Nothing,
+                batchConfig
               },
         actualDistance = Nothing,
         totalFare = Nothing
