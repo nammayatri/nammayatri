@@ -70,7 +70,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
   let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
       phoneNumber = countryCode <> mobileNumber
 
-  when (booking.status /= DB.CANCELLED) do
+  when (booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) do
     case notificationType of
       CALL -> do
         callStatusId <- generateGUID
