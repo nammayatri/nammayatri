@@ -14,6 +14,8 @@
 
 module Lib.LocationUpdates.Internal
   ( RideInterpolationHandler (..),
+    SnapToRoadState (..),
+    onRideSnapToRoadStateKey,
     recalcDistanceBatches,
     addPointsImplementation,
     getWaypointsNumberImplementation,
@@ -291,6 +293,7 @@ mkRideInterpolationHandler ::
     HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
+  Integer ->
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m ()) ->
   (Id person -> HighPrecMoney -> [Text] -> m ()) ->
@@ -302,9 +305,9 @@ mkRideInterpolationHandler ::
   (Id person -> m ()) ->
   (Id person -> m ()) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide updateDistance updateTollChargesAndNames updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
+mkRideInterpolationHandler batchSize isEndRide updateDistance updateTollChargesAndNames updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
   RideInterpolationHandler
-    { batchSize = 98,
+    { batchSize = batchSize,
       addPoints = addPointsImplementation,
       clearLocationUpdates = clearLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,

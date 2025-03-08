@@ -89,7 +89,7 @@ data ServiceHandle m = ServiceHandle
 
 buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
 buildStartRideHandle merchantId merchantOpCityId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False Nothing
   pure
     ServiceHandle
       { findRideById = QRide.findById,

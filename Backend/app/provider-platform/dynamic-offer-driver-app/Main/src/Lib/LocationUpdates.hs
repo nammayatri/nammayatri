@@ -225,8 +225,8 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return (estimatedDistance, estimatedTollInfo)
 
-buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
-buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
+buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Integer -> Flow (RideInterpolationHandler Person Flow)
+buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
@@ -238,6 +238,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
         _ -> True
   return $
     mkRideInterpolationHandler
+      (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize) -- keeping batch size of 98 by default for bulk location updates to trigger snapToRoad
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
