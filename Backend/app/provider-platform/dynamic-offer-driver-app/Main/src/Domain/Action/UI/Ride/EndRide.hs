@@ -162,7 +162,7 @@ data ServiceHandle m = ServiceHandle
 
 buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
 buildEndRideHandle merchantId merchantOpCityId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True Nothing
   return $
     ServiceHandle
       { findBookingById = QRB.findById,

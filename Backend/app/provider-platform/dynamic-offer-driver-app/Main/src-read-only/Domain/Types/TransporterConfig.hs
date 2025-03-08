@@ -143,6 +143,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    meterRideBulkLocUpdateBatchSize :: Kernel.Prelude.Integer,
     minDistanceForStopFcm :: Kernel.Types.Common.HighPrecMeters,
     minLocationAccuracy :: Kernel.Prelude.Double,
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -152,6 +153,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,
     nightSafetyStartTime :: Kernel.Types.Common.Seconds,
+    normalRideBulkLocUpdateBatchSize :: Kernel.Prelude.Integer,
     notificationRetryCountThreshold :: Kernel.Prelude.Int,
     notificationRetryEligibleErrorCodes :: [Kernel.Prelude.Text],
     notificationRetryTimeGap :: Kernel.Prelude.NominalDiffTime,
@@ -287,7 +289,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read)
 
-type TransporterConfig = TransporterConfigD ('Safe)
+type TransporterConfig = TransporterConfigD 'Safe
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 

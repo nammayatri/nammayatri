@@ -228,8 +228,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       (safeInit stopLocations)
       journeySearchData
       driverIdentifier'
-      configVersionMap
       isMeterRide
+      configVersionMap
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId

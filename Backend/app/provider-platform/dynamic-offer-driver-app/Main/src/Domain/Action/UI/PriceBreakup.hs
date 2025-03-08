@@ -15,9 +15,11 @@ import qualified EulerHS.Prelude as Prelude
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.LocationUpdates.Internal as LU
 import SharedLogic.FarePolicy
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
@@ -59,13 +61,23 @@ getMeterRidePrice ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes
   )
-getMeterRidePrice (_, merchantId, merchantOpCityId) rideId = do
+getMeterRidePrice (Nothing, _, _) rideId = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
+getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters ride.traveledDistance) Nothing Nothing (OneWay MeterRide)
+  traveledDistance <-
+    if ride.status `elem` [Domain.Types.Ride.COMPLETED, Domain.Types.Ride.CANCELLED]
+      then do
+        pure ride.traveledDistance
+      else do
+        prevSnapToRoadState :: LU.SnapToRoadState <-
+          Redis.safeGet (LU.onRideSnapToRoadStateKey driverId)
+            <&> fromMaybe (LU.SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
+        pure prevSnapToRoadState.distanceTravelled
+  fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide)
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstiamte -> do
-        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = ride.traveledDistance}
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = traveledDistance}
     )
     mbMeterRideEstimate
