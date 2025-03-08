@@ -5618,3 +5618,27 @@ instance standardEncodeAddDestRes :: StandardEncode AddDestRes where standardEnc
 instance showAddDestRes :: Show AddDestRes where show = genericShow
 instance decodeAddDestRes :: Decode AddDestRes where decode = defaultDecode
 instance encodeAddDestRes :: Encode AddDestRes where encode = defaultEncode
+
+data GetMeterPriceReq = GetMeterPriceReq String
+
+newtype GetMeterPriceResp = GetMeterPriceResp {
+  distance :: Number
+, fare :: Number
+}
+
+instance makeGetMeterPriceReq :: RestEndpoint GetMeterPriceReq  where
+ makeRequest reqBody@(GetMeterPriceReq rideId) headers = defaultMakeRequestWithoutLogs GET (EP.getMeterPrice rideId) headers reqBody Nothing
+ encodeRequest req = encode req
+
+derive instance genericGetMeterPriceResp :: Generic GetMeterPriceResp _
+derive instance newtypeGetMeterPriceResp :: Newtype GetMeterPriceResp _
+instance standardEncodeGetMeterPriceResp :: StandardEncode GetMeterPriceResp where standardEncode (GetMeterPriceResp body) = standardEncode body
+instance showGetMeterPriceResp :: Show GetMeterPriceResp where show = genericShow
+instance decodeGetMeterPriceResp :: Decode GetMeterPriceResp where decode = defaultDecode
+instance encodeGetMeterPriceResp :: Encode GetMeterPriceResp where encode = defaultEncode
+
+derive instance genericGetMeterPriceReq :: Generic GetMeterPriceReq _
+instance standardEncodeGetMeterPriceReq :: StandardEncode GetMeterPriceReq where standardEncode (GetMeterPriceReq body) = standardEncode body
+instance showGetMeterPriceReq :: Show GetMeterPriceReq where show = genericShow
+instance decodeGetMeterPriceReq :: Decode GetMeterPriceReq where decode = defaultDecode
+instance encodeGetMeterPriceReq :: Encode GetMeterPriceReq where encode = defaultEncode

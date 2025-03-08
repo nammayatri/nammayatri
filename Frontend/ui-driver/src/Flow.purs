@@ -183,6 +183,7 @@ import Screens.Benefits.BenefitsScreen.Controller as BSC
 import PrestoDOM.Core (getPushFn)
 import Screens.NotificationsScreen.Controller (notificationTransformer, notifisDetailStateTransformer)
 import Resource.Constants (encodeAddress)
+import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -4821,18 +4822,21 @@ meterRideScreenFlow = do
           let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
           (LatLon lat lon ts) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 750 false true
           (GlobalState allState) <- getState
-          modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {data {timeSec = 0} ,props {isMeterRideStarted = false}})
+          modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> MeterRideScreenData.initData)
           endTheRide rideInfo.id "" Nothing Nothing lat lon ts allState.homeScreen
         Nothing -> pure unit
+    MRSO.TRIGGER_GLOBAL_EVENTS -> meterRideScreenFlow
     MRSO.UPDATE_RATE_CARD_API updatedState dist -> do
       (response :: (Either ErrorResponse API.GetDriverRateCardRes)) <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just dist)
       case response of
-        Left _ -> pure unit
+        Left _ -> do
+          modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {isRateCardLoading = false}})
+          meterRideScreenFlow
         Right (API.GetDriverRateCardRes resp) -> do
           case (head resp) of
             Nothing -> pure unit
             Just (API.RateCardRespItem res) -> do
-              modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props { rateCardConfig {sliderFare = (round res.totalFare.amount), ratePerKM = (toNumber (round (res.perKmRate.amount * 10.0))) / 10.0}}})
+              modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props { isRateCardLoading = false, rateCardConfig {sliderFare = (round res.totalFare.amount), ratePerKM = (toNumber (round (res.perKmRate.amount * 10.0))) / 10.0}}})
               meterRideScreenFlow
     MRSO.START_METER_RIDE state -> do
       let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
@@ -4854,7 +4858,7 @@ meterRideScreenFlow = do
               case rideSearchResp of
                 Right resp -> do
                   let _ = spy "RIDE_SEARCH_RESP $$$$$$$$$$$$$$$$$$$$$$$$ " resp
-                  modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {startButtonCountDown = 5, isMeterRideStarted = true}})
+                  modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {startButtonCountDown = 5}})
                   meterRideScreenFlow
                 Left err -> do
                   modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {startButtonCountDown = 5}})

@@ -1,5 +1,6 @@
 {
    "fonts" : {
+      "DigitalNumbers-Regular" : true,
       "FEFont" : true,
       "NotoSansKannada-Black" : true,
       "NotoSansKannada-Bold" : true,
@@ -33,7 +34,8 @@
       "PlusJakartaSans-MediumItalic" : true,
       "PlusJakartaSans-Regular" : true,
       "PlusJakartaSans-SemiBold" : true,
-      "PlusJakartaSans-SemiBoldItalic" : true
+      "PlusJakartaSans-SemiBoldItalic" : true,
+      "Seven-Segment" : true
    },
    "images" : {
       "app_notification_background" : true,
@@ -274,6 +276,7 @@
       "ny_ic_check_blue" : true,
       "ny_ic_checkbox_selected" : true,
       "ny_ic_checkbox_unselected" : true,
+      "ny_ic_checkcircle" : true,
       "ny_ic_checked" : true,
       "ny_ic_chennai_metro" : true,
       "ny_ic_chennai_metro_banner" : true,
@@ -441,6 +444,10 @@
       "ny_ic_help" : true,
       "ny_ic_help_and_support_dark" : true,
       "ny_ic_help_map" : true,
+      "ny_ic_heritage_cab_concept" : true,
+      "ny_ic_heritage_cab_nav_on_map" : true,
+      "ny_ic_heritage_cab_side" : true,
+      "ny_ic_hertiage_cab_left_side" : true,
       "ny_ic_high_hotspot" : true,
       "ny_ic_high_hotspot_dashed" : true,
       "ny_ic_history_unfilled" : true,
@@ -593,6 +600,7 @@
       "ny_ic_pickup_indicator" : true,
       "ny_ic_pin_drop_mark" : true,
       "ny_ic_pin_locate_safety" : true,
+      "ny_ic_play" : true,
       "ny_ic_play_black_white" : true,
       "ny_ic_play_btn" : true,
       "ny_ic_play_icon" : true,
@@ -726,6 +734,7 @@
       "ny_ic_stop_record" : true,
       "ny_ic_streamline_fragile_solid" : true,
       "ny_ic_submit_issue_arrow" : true,
+      "ny_ic_subtract" : true,
       "ny_ic_support_unfilled" : true,
       "ny_ic_suv" : true,
       "ny_ic_suv_concept" : true,

@@ -422,3 +422,6 @@ searchReq _ = (getCustomerBaseUrl "dummy") <> "/rideSearch"
 
 addDestination :: String -> String
 addDestination rideId = (getBaseUrl "dummy") <> "/meterRide/" <> rideId <> "/addDestination"
+
+getMeterPrice :: String -> String
+getMeterPrice rideId = (getBaseUrl "dummy") <> "/meterRide/price?rideId=" <> rideId

@@ -16,7 +16,7 @@ import Debug
 import Resource.Constants (decodeAddress)
 import Helpers.Utils
 import Common.Types.App
-import Data.Int (round, toNumber)
+import Data.Int (fromNumber, round, toNumber)
 import Engineering.Helpers.Commons as EHC
 
 instance showAction :: Show Action where
@@ -44,6 +44,7 @@ data Action = NoAction
             | EndRide
             | DebounceCallBack String Boolean
             | UpdateRateCard RateCardRespItem
+            | UpdateFare GetMeterPriceResp
             
 data ScreenOutput = GoBack MeterRideScreenState 
                   | GoToEnterDestination MeterRideScreenState
@@ -51,6 +52,7 @@ data ScreenOutput = GoBack MeterRideScreenState
                   | StartMeterRide MeterRideScreenState
                   | EndMeterRide MeterRideScreenState
                   | UpdatePrice MeterRideScreenState Int
+                  | TriggerGlobalEvents MeterRideScreenState
                   
 
 eval :: Action -> MeterRideScreenState -> Eval Action ScreenOutput MeterRideScreenState
@@ -71,7 +73,7 @@ eval CloseRateCard state = continue state {props {showRateCard = false}}
 
 eval HandleStartButton state = do
     if state.props.startButtonCountDown <= 3 then do
-      void $ pure $ clearTimerWithId "MeterRideStartTimer"
+      let _ = clearTimerWithId "MeterRideStartTimer"
       continue state { props { startButtonCountDown = 5 } }
     else
      continueWithCmd state { props { startButtonCountDown = 3 } } [ do
@@ -90,22 +92,22 @@ eval (MeterRideTimerCallback seconds status timerId) state = do
 eval (MeterRideStartedTimerCB timerId timeInString sec) state = do
   continue state {data {timeSec = sec}}
 
-eval (SliderCallback val) state = continue state {props {rateCardConfig{sliderVal = val}}}
+eval (SliderCallback val) state = continue state {props {rateCardConfig{sliderVal = val}, isRateCardLoading = true}}
 
 eval (ChangeSlider action) state = do
   let finalVal = if action then min state.props.rateCardConfig.sliderMaxValue (state.props.rateCardConfig.sliderVal + state.props.rateCardConfig.incrementUnit) else max state.props.rateCardConfig.sliderMinValue (state.props.rateCardConfig.sliderVal - state.props.rateCardConfig.incrementUnit)
-  let state' = state{props{rateCardConfig{sliderVal = finalVal}}}
+  let state' = state{props{rateCardConfig{sliderVal = finalVal}, isRateCardLoading = true}}
   updateAndExit state' $ UpdatePrice state' finalVal
 
 eval EnterDestination state = do
-  exit $ GoToEnterDestination state {props {isMeterClockRunning = false}}
+  exit $ GoToEnterDestination state
 
 eval OnNavigate state = do
   void $ pure $ openNavigation state.data.destinationLat state.data.destinationLng "TWOWHEELER"
   continue state
 
 eval GoToProfile state = do
-  exit $ GoToDriverProfile state {props {isMeterClockRunning = false}}
+  exit $ GoToDriverProfile state
 
 eval HideStopMeterRideConfirmCard state = do
   continue state {props {confirmMeterRideStop = false}}
@@ -117,31 +119,14 @@ eval (UpdateRidesInfo (RidesInfo resp)) state = do
   let {destAddr, lat, long} = case resp.toLocation of  
                                 Nothing -> {destAddr: "", lat: 0.0, long: 0.0}
                                 Just (LocationInfo location) -> {destAddr: decodeAddress (LocationInfo location) true, lat: location.lat, long: location.lon}
-
-  case resp.tripStartTime of
-    Just time -> do
-      let currentTime = (getCurrentUTC "")
-      let diffSec = runFn2 differenceBetweenTwoUTC currentTime time 
-      if diffSec > 0 then
-
-        continueWithCmd state { data {destinationAddress = destAddr, destinationLat = lat, destinationLng = long, ridesInfo = Just (RidesInfo resp)} ,props {isMeterRideStarted = true, startButtonCountDown = 5, isMeterClockRunning = true}} [do
-              push <- getPushFn Nothing "MeterRideScreen"
-              void $ waitingCountdownTimerV2 diffSec "1" "MeterRideStartedTimer" push MeterRideStartedTimerCB
-              pure $ NoAction
-          ]
-      else 
-        continueWithCmd state { data {destinationAddress = destAddr, destinationLat = lat, destinationLng = long, ridesInfo = Just (RidesInfo resp)} ,props {isMeterRideStarted = true, startButtonCountDown = 5, isMeterClockRunning = true}} [do
-              push <- getPushFn Nothing "MeterRideScreen"
-              void $ waitingCountdownTimerV2 0 "1" "MeterRideStartedTimer" push MeterRideStartedTimerCB
-              pure $ NoAction
-          ]
-    Nothing -> continue state
+  exit $ TriggerGlobalEvents state { data {destinationAddress = destAddr, destinationLat = lat, destinationLng = long, ridesInfo = Just (RidesInfo resp)} ,props {isMeterRideStarted = true, startButtonCountDown = 5, isMeterClockRunning = true}}
   
-
 eval EndRide state = exit $ EndMeterRide state {props {confirmMeterRideStop = false}}
 
-eval (DebounceCallBack _ _) state = updateAndExit state $ UpdatePrice state state.props.rateCardConfig.sliderVal
+eval (DebounceCallBack _ _) state = updateAndExit state{props{isRateCardLoading = true}} $ UpdatePrice state state.props.rateCardConfig.sliderVal
 
 eval (UpdateRateCard (RateCardRespItem res)) state = continue state {props { rateCardConfig {sliderFare = (round res.totalFare.amount), ratePerKM = (toNumber (round (res.perKmRate.amount * 10.0))) / 10.0}}}
+
+eval (UpdateFare (GetMeterPriceResp resp)) state = continue state{data{distance = (resp.distance / 1000.0)}, props{meterFare = fromMaybe 0 $ fromNumber $ resp.fare}}
 
 eval _ state = continue state

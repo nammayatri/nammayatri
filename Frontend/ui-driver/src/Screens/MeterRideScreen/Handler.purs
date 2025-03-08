@@ -38,3 +38,6 @@ meterRideScreen = do
     UpdatePrice updatedState val -> do
       modifyScreenState $ MeterRideScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_RATE_CARD_API updatedState val)
+    TriggerGlobalEvents updatedState -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ TRIGGER_GLOBAL_EVENTS)

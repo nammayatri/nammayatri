@@ -3490,7 +3490,8 @@ type MeterRideScreenProps = {
   },
   isMeterRideStarted :: Boolean,
   isMeterClockRunning :: Boolean,
-  confirmMeterRideStop :: Boolean
+  confirmMeterRideStop :: Boolean,
+  isRateCardLoading :: Boolean
 }
 
 data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY

@@ -3,6 +3,7 @@ module Screens.MeterRideScreen.ScreenData where
 import Services.API (RidesInfo(..))
 import Screens.Types (MeterRideScreenState)
 import Data.Maybe
+import Prelude
 
 initData :: MeterRideScreenState
 initData = {
@@ -30,6 +31,7 @@ initData = {
         },
         isMeterRideStarted : false,
         isMeterClockRunning : false,
-        confirmMeterRideStop : false
+        confirmMeterRideStop : false,
+        isRateCardLoading : false
     }
 }

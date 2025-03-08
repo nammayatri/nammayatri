@@ -96,7 +96,7 @@ getHeaders dummy isGzipCompressionEnabled = do
 getCustomerHeader :: String -> Boolean -> Flow GlobalState Headers
 getCustomerHeader dummy isGzipCompressionEnabled = do
     _ <- pure $ printLog "dummy" dummy
-    let regToken = Just "b610f76b-4891-4d3d-8b39-546444c6b500"
+    let regToken = Just "d89d0e8e-bb21-4538-af3d-1f0f31c89ce2"
     pure $ Headers $ [  Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
@@ -1962,3 +1962,10 @@ makeAddDestination srcLat srcLong dstLat dstLong dstAddr rideId =
         }
         ,destinationLocation : LocationAddressV2 dstAddr
     })
+
+getMeterPrice :: String -> Flow GlobalState (Either ErrorResponse GetMeterPriceResp)
+getMeterPrice rideId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.getMeterPrice rideId) unwrapResponse $ callAPI headers (GetMeterPriceReq rideId)
+    where
+      unwrapResponse (x) = x

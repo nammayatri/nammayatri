@@ -58,7 +58,7 @@ italic = do
   fontByOS (font <> "-Italic") (font <> "-Italic") "Arial"
 
 sevenSegment :: FontStyle
-sevenSegment = fontByOS ("Seven-Segment") ("Seven-Segment") "Seven-Segment"
+sevenSegment = fontByOS ("DigitalNumbers-Regular") ("DigitalNumbers-Regular") "DigitalNumbers-Regular"
 
 light :: LazyCheck -> FontStyle
 light style = do
