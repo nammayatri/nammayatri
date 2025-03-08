@@ -55,14 +55,15 @@ bulkLocUpdate req = do
   transportConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
+  let minUpdatesToTriggerSnapToRoad = getMinLocUpdateCountForDistanceCalculation transportConfig ride.tripCategory
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False (Just minUpdatesToTriggerSnapToRoad)
   rectificationServiceConfig <-
     if DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
   let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
   let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
-  logDebug $ "Did we passed through drop yet in bulkLocation " <> show passedThroughDrop <> " and points: " <> show loc
+  logDebug $ "Did we passed through drop yet in bulkLocation  " <> show passedThroughDrop <> " and points: " <> show loc
   _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop loc
 
   let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
@@ -90,3 +91,8 @@ bulkLocUpdate req = do
         QRide.updateEstimatedEndTimeRange newEstimatedEndTimeRange rideId
         CallBAP.sendRideEstimatedEndTimeRangeUpdateToBAP booking updatedRide
   pure Success
+  where
+    getMinLocUpdateCountForDistanceCalculation transporterConfig tripCategory =
+      case tripCategory of
+        (DC.OneWay DC.MeterRide) -> transporterConfig.meterRideBulkLocUpdateBatchSize
+        _ -> transporterConfig.normalRideBulkLocUpdateBatchSize

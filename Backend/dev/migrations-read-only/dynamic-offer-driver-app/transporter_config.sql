@@ -358,3 +358,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_thr
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_overcharging_blocker boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN normal_ride_bulk_loc_update_batch_size integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN meter_ride_bulk_loc_update_batch_size integer ;
