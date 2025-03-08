@@ -24,6 +24,7 @@ import Kernel.External.MultiModal.Interface.Types
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Distance
@@ -47,6 +48,8 @@ import Lib.JourneyLeg.Walk ()
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
+import Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.GateInfo as GD
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -212,9 +215,10 @@ addAllLegs journeyId journeyLegs = do
           DTrip.Subway -> do
             addSubwayLeg parentSearchReq journeyLeg
           DTrip.Walk -> do
+            snappedLeg <- snapWalkLegToNearestGate journeyLeg mbPrevJourneyLeg mbNextJourneyLeg
             let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
             let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
-            addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress
+            addWalkLeg parentSearchReq snappedLeg originAddress destinationAddress
           DTrip.Bus -> do
             addBusLeg parentSearchReq journeyLeg
       QJourneyLeg.upsert $ journeyLeg {DJourneyLeg.legSearchId = Just searchResp.id}
@@ -246,6 +250,91 @@ addAllLegs journeyId journeyLegs = do
           title = stopDetails.name,
           extras = Nothing
         }
+
+snapWalkLegToNearestGate ::
+  ( JL.SearchRequestFlow m r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  Maybe DJourneyLeg.JourneyLeg ->
+  Maybe DJourneyLeg.JourneyLeg ->
+  m DJourneyLeg.JourneyLeg
+snapWalkLegToNearestGate journeyLeg mbPrevJourneyLeg mbNextJourneyLeg = do
+  -- Check if start or end is inside a special location
+  mbSpecialLocationStart <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull (LatLong (journeyLeg.startLocation.latitude) (journeyLeg.startLocation.longitude))
+  mbSpecialLocationEnd <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull (LatLong (journeyLeg.endLocation.latitude) (journeyLeg.endLocation.longitude))
+
+  -- Determine if we should snap the start location
+  snappedStart <- case mbSpecialLocationStart of
+    Just specialLoc -> do
+      let isOrigin = isJust mbPrevJourneyLeg
+      let mbFilteredSpecialLoc = QSpecialLocation.filterGates (Just specialLoc) isOrigin
+      case mbFilteredSpecialLoc of
+        Just filteredSpecialLoc ->
+          if null (gatesInfo filteredSpecialLoc)
+            then return journeyLeg.startLocation
+            else findNearestGate journeyLeg.startLocation (gatesInfo filteredSpecialLoc)
+        Nothing -> return journeyLeg.startLocation
+    Nothing -> return journeyLeg.startLocation
+
+  -- Determine if we should snap the end location
+  snappedEnd <- case mbSpecialLocationEnd of
+    Just specialLoc -> do
+      let isOrigin = isNothing mbNextJourneyLeg
+      let mbFilteredSpecialLoc = QSpecialLocation.filterGates (Just specialLoc) isOrigin
+      case mbFilteredSpecialLoc of
+        Just filteredSpecialLoc ->
+          if null (gatesInfo filteredSpecialLoc)
+            then return journeyLeg.endLocation
+            else findNearestGate journeyLeg.endLocation (gatesInfo filteredSpecialLoc)
+        Nothing -> return journeyLeg.endLocation
+    Nothing -> return journeyLeg.endLocation
+
+  return journeyLeg {DJourneyLeg.startLocation = snappedStart, DJourneyLeg.endLocation = snappedEnd}
+  where
+    findNearestGate ::
+      ( JL.SearchRequestFlow m r c
+      ) =>
+      LatLngV2 ->
+      [GD.GateInfoFull] ->
+      m LatLngV2
+    findNearestGate originalLocation gates =
+      case gates of
+        [] -> return originalLocation
+        (firstGate : remainingGates) -> do
+          nearestGate <- foldM (findCloserGate originalLocation) firstGate remainingGates
+          return $ LatLngV2 (nearestGate.point.lat) (nearestGate.point.lon)
+
+    findCloserGate ::
+      ( JL.SearchRequestFlow m r c
+      ) =>
+      LatLngV2 ->
+      GD.GateInfoFull ->
+      GD.GateInfoFull ->
+      m GD.GateInfoFull
+    findCloserGate originalLocation currentGate candidateGate = do
+      currentDistance <- distanceBetween originalLocation (currentGate.point)
+      candidateDistance <- distanceBetween originalLocation (candidateGate.point)
+      return $ if candidateDistance < currentDistance then candidateGate else currentGate
+
+    distanceBetween ::
+      ( JL.SearchRequestFlow m r c
+      ) =>
+      LatLngV2 ->
+      LatLong ->
+      m Meters
+    distanceBetween loc1 loc2 = do
+      merchantId <- journeyLeg.merchantId & fromMaybeM (InvalidRequest $ "MerchantId not found for journeyLegId: " <> journeyLeg.id.getId)
+      merchantOperatingCityId <- journeyLeg.merchantOperatingCityId & fromMaybeM (InvalidRequest $ "MerchantOperatingCityId not found for journeyLegId: " <> journeyLeg.id.getId)
+      estimatedDistanceAndDuration <-
+        Maps.getMultimodalWalkDistance merchantId merchantOperatingCityId $
+          Maps.GetDistanceReq
+            { origin = LatLong {lat = loc1.latitude, lon = loc1.longitude},
+              destination = loc2,
+              travelMode = Just Maps.FOOT,
+              sourceDestinationMapping = Nothing,
+              distanceUnit = Meter
+            }
+      return estimatedDistanceAndDuration.distance
 
 addTaxiLeg ::
   JL.SearchRequestFlow m r c =>
