@@ -30,6 +30,10 @@ import Data.String as DS
 import Common.RemoteConfig.Types
 import Debug
 
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
+  show (NoAction) = "NoAction"
+
 data Action
   = OnClick Int
   | NoAction

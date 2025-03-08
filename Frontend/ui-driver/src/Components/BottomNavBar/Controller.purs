@@ -21,12 +21,15 @@ import Data.Maybe as Maybe
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import MerchantConfig.Types (BottomNavConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&&))
+import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&&), class Show)
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState, NavIcons)
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 
 data Action = OnNavigate String
+
+instance showAction :: Show Action where
+  show (OnNavigate _) = "OnNavigate"
 
 navData :: ScreenNames.ScreenName -> BottomNavConfig -> BottomNavBarState
 navData screenName bottomNavConfig = do

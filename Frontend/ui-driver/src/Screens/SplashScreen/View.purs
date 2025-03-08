@@ -28,13 +28,15 @@ import Common.Types.App as CTA
 import Data.Maybe (Maybe(..))
 import RemoteConfig as RemoteConfig
 
-screen :: ST.SplashScreenState -> Screen Action ST.SplashScreenState ScreenOutput
+screen :: ST.SplashScreenState -> LoggableScreen Action ST.SplashScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "SplashScreen"
   , globalEvents: globalEvents'
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.splashScreenLogWhitelist
   }
   where 
     globalEvents' = [

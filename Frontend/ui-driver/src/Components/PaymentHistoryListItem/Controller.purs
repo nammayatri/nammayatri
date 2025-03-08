@@ -1,6 +1,11 @@
 module Components.PaymentHistoryListItem.Controller where
 
 import Domain.Payments (PaymentStatus)
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
+  
 
 data Action
   = OnClick String

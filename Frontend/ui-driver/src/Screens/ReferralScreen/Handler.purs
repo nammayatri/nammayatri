@@ -21,7 +21,7 @@ import Control.Transformers.Back.Trans as App
 import Data.Maybe (isJust)
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.ReferralScreen.Controller (ScreenOutput(..), getReferralStage)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
@@ -35,7 +35,7 @@ import Common.Types.App (LazyCheck(..))
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = getReferralStage state.referralScreen } }
+  action <- lift $ lift $ runLoggableScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = getReferralStage state.referralScreen } }
   case action of
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)

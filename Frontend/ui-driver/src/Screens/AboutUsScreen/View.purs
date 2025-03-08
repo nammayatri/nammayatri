@@ -14,12 +14,14 @@
 -}
 module Screens.AboutUsScreen.View where
 
+import ConfigProvider
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.ComplaintsModel as ComplaintsModel
 import Components.PopUpModal as PopUpModal
-import Data.Maybe (Maybe(..),fromMaybe)
 import Data.Function.Uncurried (runFn3)
+import Data.Maybe (Maybe(..), fromMaybe)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -27,22 +29,23 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor)
+import Prim.TypeError (Above)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
-import DecodeUtil (getAnyFromWindow)
 import Styles.Colors as Color
-import ConfigProvider
 
-screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
+screen :: ST.AboutUsScreenState -> LoggableScreen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "AboutUsScreen"
   , globalEvents: []
   , eval
+  , parent: Nothing
+  , logWhitelist : initialState.appConfig.logWhitelistConfig.aboutUsScreenLogWhitelist
   }
 
 view ::
@@ -160,8 +163,7 @@ footerView state =
 --------------------------------- applicationInformationLayout ----------------------------
 applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 applicationInformationLayout state push =
-  let config = getAppConfig appConfig
-      appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  let appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in
   linearLayout
     [ width MATCH_PARENT
@@ -191,7 +193,7 @@ applicationInformationLayout state push =
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , visibility if config.showCorporateAddress then VISIBLE else GONE
+        , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
         ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push

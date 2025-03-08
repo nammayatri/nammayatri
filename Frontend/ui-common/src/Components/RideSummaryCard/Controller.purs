@@ -2,6 +2,8 @@ module Components.RideSummaryCard.Controller where
 
 import Prelude
 
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
 
 data Action = NoAction
 

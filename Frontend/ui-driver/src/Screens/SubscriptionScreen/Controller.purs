@@ -57,7 +57,59 @@ import Screens.SubscriptionScreen.Transformer as Transformer
 import Common.RemoteConfig.Utils as RC
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (OneTimeSettlement var1) = "OneTimeSettlement_" <> show var1
+  show (SwitchPlan var1) = "SwitchPlan_" <> show var1
+  show (JoinPlanAC var1) = "JoinPlanAC_" <> show var1
+  show (ManagePlanAC) = "ManagePlanAC"
+  show (SelectPlan _) = "SelectPlan"
+  show (ChoosePlan _) = "ChoosePlan"
+  show (ToggleDueDetails) = "ToggleDueDetails"
+  show (ToggleDueDetailsView) = "ToggleDueDetailsView"
+  show (NoAction) = "NoAction"
+  show (ViewPaymentHistory) = "ViewPaymentHistory"
+  show (ViewHelpCentre) = "ViewHelpCentre"
+  show (PopUpModalAC var1) = "PopUpModalAC_" <> show var1
+  show (HeaderRightClick _) = "HeaderRightClick"
+  show (CancelAutoPayAC) = "CancelAutoPayAC"
+  show (ViewAutopayDetails) = "ViewAutopayDetails"
+  show (ResumeAutoPay var1) = "ResumeAutoPay_" <> show var1
+  show (LoadPlans _) = "LoadPlans"
+  show (LoadHelpCentre _ _ _) = "LoadHelpCentre"
+  show (LoadMyPlans _) = "LoadMyPlans"
+  show (ShowError _) = "ShowError"
+  show (PaymentStatusAction _) = "PaymentStatusAction"
+  show (CheckPaymentStatus) = "CheckPaymentStatus"
+  show (LoadAlternatePlans _) = "LoadAlternatePlans"
+  show (ConfirmCancelPopup var1) = "ConfirmCancelPopup_" <> show var1
+  show (TryAgainButtonAC var1) = "TryAgainButtonAC_" <> show var1
+  show (RetryPaymentAC var1) = "RetryPaymentAC_" <> show var1
+  show (RefreshPage) = "RefreshPage"
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (CallSupport) = "CallSupport"
+  show (CallHelpCenter _) = "CallHelpCenter"
+  show (OpenGoogleMap _ _) = "OpenGoogleMap"
+  show (CheckPaymentStatusButton var1) = "CheckPaymentStatusButton_" <> show var1
+  show (ViewDuesOverView) = "ViewDuesOverView"
+  show (ViewDueDetails _) = "ViewDueDetails"
+  show (ClearManualDues var1) = "ClearManualDues_" <> show var1
+  show (DueDetailsListAction var1) = "DueDetailsListAction_" <> show var1
+  show (OfferCardBanner var1) = "OfferCardBanner_" <> show var1
+  show (TogglePlanDescription _) = "TogglePlanDescription"
+  show (EnableIntroductoryView) = "EnableIntroductoryView"
+  show (OpenReelsView _) = "OpenReelsView"
+  show (GetCurrentPosition _ _ _ _) = "GetCurrentPosition"
+  show (PlanCardAction var1) = "PlanCardAction_" <> show var1
+  show (SelectPlanAction var1) = "SelectPlanAction_" <> show var1
+  show (ChoosePlanAction var1) = "ChoosePlanAction_" <> show var1
+  show (TogglePlanAction var1) = "TogglePlanAction_" <> show var1
+  show (SelectPlansModalAction var1) = "SelectPlansModalAction_" <> show var1
+  show (OnCityOrVehicleChange _) = "OnCityOrVehicleChange"
+  show (PaymentUnderMaintenanceModalAC _) = "PaymentUnderMaintenanceModalAC"
+
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "SubscriptionScreen"

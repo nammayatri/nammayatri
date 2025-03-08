@@ -23,6 +23,15 @@ import Language.Types (STR(..))
 import MerchantConfig.Types
 import Components.PrimaryButton as PrimaryButto
 import PrestoDOM (Accessiblity(..), Visibility(..))
+import Prelude (show, class Show, (<>))
+
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (BackPressed) = "BackPressed"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (Rating _) = "Rating"
+  show (FeedbackChanged _) = "FeedbackChanged"
+  show (SelectPill _ _) = "SelectPill"
 
 data Action = NoAction
             | BackPressed

@@ -10,6 +10,10 @@ import Prelude
 import PrestoDOM 
 import Common.Types.App (TicketType(..))
 
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
+  show (NoAction) = "NoAction"
+
 data Action = OnClick TicketType | NoAction
 
 type BaseConfig =  {

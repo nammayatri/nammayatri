@@ -1,4 +1,9 @@
-module Screens.DocumentDetailsScreen.Controller where
+module Screens.DocumentDetailsScreen.Controller
+  ( Action(..)
+  , ScreenOutput(..)
+  , eval
+  )
+  where
 
 import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
@@ -16,7 +21,9 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 
 instance showAction :: Show Action where
-  show _ = ""
+  show BackPressed = "BackPressed"
+
+  
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     BackPressed -> pure unit

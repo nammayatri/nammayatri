@@ -12,7 +12,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
 import Screens.DocumentDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -21,7 +21,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
 import Mobility.Prelude as MP
 
-screen :: ST.DocumentDetailsScreenState -> Screen Action ST.DocumentDetailsScreenState ScreenOutput
+screen :: ST.DocumentDetailsScreenState -> LoggableScreen Action ST.DocumentDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -35,7 +35,12 @@ screen initialState =
             _ = spy "DocumentDetailsScreenState--------action" action
           eval state action
       )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.documentDetailsScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
 
 view :: forall w. (Action -> Effect Unit) -> ST.DocumentDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =

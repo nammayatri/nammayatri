@@ -23,13 +23,32 @@ import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), Unit)
+import Prelude ((<>), Unit, class Show, show)
 import Data.Maybe as Mb
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
+
+instance showAction :: Show Action where
+  show (OnButton1Click) = "OnButton1Click"
+  show (OnButton2Click) = "OnButton2Click"
+  show (NoAction) = "NoAction"
+  show (ETextController var1) = "ETextController_" <> show var1
+  show (CountDown _ _ _) = "CountDown"
+  show (OnImageClick) = "OnImageClick"
+  show (DismissPopup) = "DismissPopup"
+  show (OptionWithHtmlClick) = "OptionWithHtmlClick"
+  show (OnSecondaryTextClick) = "OnSecondaryTextClick"
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
+  show (TipsViewActionController var1) = "TipsViewActionController_" <> show var1
+  show (OnCoverImageClick) = "OnCoverImageClick"
+  show (PersonMobile var1) = "PersonMobile_" <> show var1
+  show (PersonName var1) = "PersonName_" <> show var1
+  show (PersonAddress var1) = "PersonAddress_" <> show var1
+  show (PersonInstruction var1) = "PersonInstruction_" <> show var1
+  show (CheckBoxClick) = "CheckBoxClick"
 
 data Action = OnButton1Click
             | OnButton2Click

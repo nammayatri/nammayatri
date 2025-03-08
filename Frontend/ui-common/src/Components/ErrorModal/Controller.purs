@@ -22,8 +22,13 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Prelude (class Show, show, (<>))
+
+instance showAction :: Show Action where
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
 
 data Action = PrimaryButtonActionController PrimaryButtonController.Action
+
 
 type Config =
   {

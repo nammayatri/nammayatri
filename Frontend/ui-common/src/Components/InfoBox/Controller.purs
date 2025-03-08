@@ -30,6 +30,10 @@ import Data.String as DS
 import Common.RemoteConfig.Types
 import Styles.Types (Color)
 
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
+  show (NoAction) = "NoAction"
+  
 data Action
   = OnClick
   | NoAction

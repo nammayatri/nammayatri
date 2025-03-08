@@ -15,7 +15,7 @@
 
 module Screens.WriteToUsScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), discard)
+import Prelude (class Show, pure, unit, ($), discard, show, (<>))
 import PrestoDOM (Eval, update, continue, exit)
 import Screens.Types (WriteToUsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
@@ -28,7 +28,11 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction ) = "NoAction"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController" <> show var1
+  show (PrimaryButtonActionController _ var1) = "PrimaryButtonActionController" <> show var1
+  show (BackPressed ) = "BackPressed"
+  show (AfterRender ) = "AfterRender"
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen WRITE_TO_US_SCREEN)

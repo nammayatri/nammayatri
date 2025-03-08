@@ -10,7 +10,73 @@ import Foreign.Object (fromHomogeneous)
 
 config :: AppConfig
 config =
-  { primaryTextColor: "#FCC32C"
+  { 
+    logWhitelistConfig: {
+      aadhaarVerificationScreenLogWhitelist : [],
+      aboutUsScreenLogWhitelist : ["props.demoModePopup", "props.enableConfirmPassword", "props.enableDemoModeCount"],
+      acknowledgementScreenLogWhitelist : [],
+      addVehicleDetailsScreenLogWhitelist : [],
+      applicationStatusScreenLogWhitelist : [],
+      bankDetailScreenLogWhitelist : [],
+      benefitsLogWhitelist : {benefitsScreenLogWhitelist : [], lmsQuizScreenLogWhitelist : [], lmsVideoScreenLogWhitelist : []},
+      bookingOptionsScreenLogWhitelist : [],
+      cancellationRateScreenLogWhitelist : [],
+      chooseCityScreenLogWhitelist : [],
+      chooseLanguageScreenLogWhitelist : [],
+      customerReferralTrackerScreenLogWhitelist : [],
+      documentCaptureScreenLogWhitelist : [],
+      documentDetailsScreenLogWhitelist : [],
+      driverCompleteProfileScreenLogWhitelist : [],
+      driverDetailsScreenLogWhitelist : [],
+      driverEarningsScreenLogWhitelist : [],
+      driverProfileScreenLogWhitelist : [],
+      driverRideRatingScreenLogWhitelist : [],
+      driverSavedLocationScreenLogWhitelist : [],
+      editAadhaarDetailsScreenLogWhitelist : [],
+      editBankDetailsScreenLogWhitelist : [],
+      enterMobileNumberScreenLogWhitelist : [],
+      enterOTPScreenLogWhitelist : [],
+      helpAndSupportScreenLogWhitelist : [],
+      homeScreenLogWhitelist : ["data.activeRide.dest_lat"
+        , "data.activeRide.dest_lon"
+        , "data.activeRide.destination.value0"
+        , "data.activeRide.destinationArea.value0"
+        , "data.activeRide.destinationCity.value0"
+        , "data.activeRide.distance"
+        , "data.activeRide.driverVehicle"
+        , "data.activeRide.riderName"
+        , "data.activeRide.source"
+        , "data.activeRide.sourceCity"
+        , "data.activeRide.src_lat"
+        , "data.activeRide.src_lon"],
+      hotspotScreenLogWhitelist : [],
+      metroWarriorsScreenLogWhitelist : [],
+      notificationsScreenLogWhitelist : [],
+      obBoardingSubscriptionScreenLogWhitelist : [],
+      paymentHistoryScreenLogWhitelist : [],
+      permissionsScreenLogWhitelist : [],
+      popUpScreenLogWhitelist : [],
+      rateCardScreenLogWhitelist : [],
+      referralScreenLogWhitelist : [],
+      registrationScreenLogWhitelist : [],
+      reportIssueChatScreenLogWhitelist : [],
+      rideHistoryScreenLogWhitelist : [],
+      rideRequestScreenLogWhitelist : [],
+      rideSelectionScreenLogWhitelist : [],
+      rideSummaryScreenLogWhitelist : [],
+      scheduledRideAcceptedScreenLogWhitelist : [],
+      selectLanguageScreenLogWhitelist : [],
+      splashScreenLogWhitelist : [],
+      subscriptionScreenLogWhitelist : [],
+      tripDetailsScreenLogWhitelist : [],
+      uploadAdhaarScreenLogWhitelist : [],
+      uploadDrivingLicenseScreenLogWhitelist : [],
+      uploadParcelImageScreenLogWhitelist : [],
+      vehicleDetailsScreenLogWhitelist : [],
+      welcomeScreenLogWhitelist : [],
+      writeToUsScreenLogWhitelist : []
+    }
+  ,  primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }

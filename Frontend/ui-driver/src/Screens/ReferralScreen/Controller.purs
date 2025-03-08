@@ -51,7 +51,33 @@ import Timers (clearTimerWithId)
 import Data.String as DS
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (GenericHeaderActionController var1) = "GenericHeaderActionController_" <> show var1
+  show (PrimaryEditTextAction1 var1) = "PrimaryEditTextAction1_" <> show var1
+  show (PrimaryEditTextAction2 var1) = "PrimaryEditTextAction2_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (PasswordModalAction var1) = "PasswordModalAction_" <> show var1
+  show (SuccessScreenExpireCountDwon _ _ _) = "SuccessScreenExpireCountDwon"
+  show (ContactSupportAction var1) = "ContactSupportAction_" <> show var1
+  show (GoToAlertScreen) = "GoToAlertScreen"
+  show (EnableReferralFlow) = "EnableReferralFlow"
+  show (BackPressed) = "BackPressed"
+  show (RefreshScreen) = "RefreshScreen"
+  show (EnableReferralFlowNoAction) = "EnableReferralFlowNoAction"
+  show (SuccessScreenRenderAction) = "SuccessScreenRenderAction"
+  show (ChangeLeaderBoardtab _) = "ChangeLeaderBoardtab"
+  show (DateSelectorAction) = "DateSelectorAction"
+  show (ChangeDate _) = "ChangeDate"
+  show (UpdateLeaderBoard _) = "UpdateLeaderBoard"
+  show (AfterRender) = "AfterRender"
+  show (UpdateLeaderBoardFailed) = "UpdateLeaderBoardFailed"
+  show (ReferralQrRendered _) = "ReferralQrRendered"
+  show (NoAction) = "NoAction"
+  show (ShareOptions) = "ShareOptions"
+  show (UpdateDriverPerformance _) = "UpdateDriverPerformance"
+  show (UpdateReferralCode _) = "UpdateReferralCode"
+  show (UpdateDriverPerformanceFailed) = "UpdateDriverPerformanceFailed"
+  show (UpdateReferralCodeFailed) = "UpdateReferralCodeFailed"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

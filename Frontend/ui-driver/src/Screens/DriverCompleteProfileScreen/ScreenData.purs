@@ -4,11 +4,12 @@ import Screens.Types (DriverCompleteProfileScreenState, Component(..), VehicleCa
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons as EHC
 import Prelude
-
+import ConfigProvider
 initData :: DriverCompleteProfileScreenState
 initData = {
   data : {
-    pledge : []
+     config : getAppConfig appConfig
+  ,  pledge : []
   , vehicalOffer : []
   , languages : []
   , aspirations : [] 

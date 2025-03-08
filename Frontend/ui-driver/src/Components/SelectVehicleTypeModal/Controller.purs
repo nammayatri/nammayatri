@@ -15,7 +15,13 @@
 
 module Components.SelectVehicleTypeModal.Controller where
 
+import Prelude (class Show)
+
 import Screens.Types (VehicalTypes)
+
+instance showAction :: Show Action where
+  show (OnCloseClick) = "OnCloseClick"
+  show (OnSelect _) = "OnSelect"
 
 data Action = OnCloseClick | OnSelect VehicalTypes
 

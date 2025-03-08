@@ -21,6 +21,12 @@ import PrestoDOM (LetterSpacing(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 
+instance showAction :: Show Action where
+  show (OnBackClick) = "OnBackClick"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (OnSubTextClick) = "OnSubTextClick"
+
 data Action =  OnBackClick
             | PrimaryEditTextActionController PrimaryEditTextController.Action
             | PrimaryButtonActionController PrimaryButtonController.Action

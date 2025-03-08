@@ -21,7 +21,7 @@ import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
 import Types.App (FlowBT, GlobalState(..),ScreenType(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -30,7 +30,7 @@ enterMobileNumber :: FlowBT String ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
 enterMobileNumber = do
   (GlobalState state) <- getState
   liftFlowBT $ markPerformance "ENTER_MOBILE_NUMBER_SCREEN"
-  act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
+  act <- lift $ lift $ runLoggableScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
   case act of
     GoBack -> do 
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → enterMobileNumber { data { mobileNumber = ""}, props{btnActive = false}})

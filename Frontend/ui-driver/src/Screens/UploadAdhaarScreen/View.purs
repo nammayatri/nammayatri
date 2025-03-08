@@ -16,7 +16,7 @@
 module Screens.UploadAdhaarScreen.View where
 
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, afterRender, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, imageWithFallback)
 import Animation as Anim
 import Effect (Effect)
 import Language.Strings (getString)
@@ -34,8 +34,9 @@ import Common.Types.App
 import Screens.UploadAdhaarScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import Data.Maybe (Maybe(..))
 
-screen :: ST.UploadAdhaarScreenState -> Screen Action ST.UploadAdhaarScreenState ScreenOutput
+screen :: ST.UploadAdhaarScreenState -> LoggableScreen Action ST.UploadAdhaarScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -44,7 +45,10 @@ screen initialState =
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     pure $ pure unit)]
   , eval
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.uploadAdhaarScreenLogWhitelist
   }
+
 
 view
   :: forall w

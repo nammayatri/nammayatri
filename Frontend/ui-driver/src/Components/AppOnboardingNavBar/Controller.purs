@@ -2,6 +2,7 @@ module Components.AppOnboardingNavBar.Controller where
 
 import MerchantConfig.Types (AppConfig)
 import PrestoDOM(Length(..), Visibility(..), Margin(..))
+import Prelude (class Show, show, (<>))
 import Components.GenericHeader as GenericHeader
 import Font.Style (Style(..))
 import Styles.Colors as Color
@@ -9,6 +10,11 @@ import Font.Style as Style
 import ConfigProvider
 import Language.Strings (getString)
 import Language.Types (STR(..))
+
+instance showAction :: Show Action where
+  show (Logout) = "Logout"
+  show (PrefixImgOnClick) = "PrefixImgOnClick"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
 
 data Action = Logout 
             | PrefixImgOnClick 

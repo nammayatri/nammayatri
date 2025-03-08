@@ -17,7 +17,7 @@ module Screens.SplashScreen.Handler where
 
 import Prelude
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (initUIWithScreen, initUIWithNameSpace, runScreenWithNameSpace, runScreen)
+import PrestoDOM.Core.Types.Language.Flow (initUIWithScreen, initUIWithNameSpace, runScreenWithNameSpace, runLoggableScreen)
 import Screens.SplashScreen.View as SplashScreen
 import Engineering.Helpers.Commons (liftFlow)
 import Engineering.Helpers.BackTrack as EHB
@@ -30,5 +30,5 @@ import DecodeUtil as DU
 splashScreen :: TA.FlowBT String Unit
 splashScreen = do
   (TA.GlobalState globalState) <- EHB.getState
-  void $ lift $ lift $ runScreen $ SplashScreen.screen globalState.splashScreen
+  void $ lift $ lift $ runLoggableScreen $ SplashScreen.screen globalState.splashScreen
   EHB.liftFlowBT HU.hideSplash

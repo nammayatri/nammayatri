@@ -13,7 +13,7 @@ import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (show, Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (-), unit, (/=), (||), (+), bind, discard, void, pure, (/))
 import Data.Array ( mapWithIndex, (..))
-import PrestoDOM (onAnimationEnd, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), relativeLayout, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, focus, visibility, clickable, singleLine, scrollView, editText, hint, pattern, id, onChange, hintColor, multiLineEditText, nestedScrollView)
+import PrestoDOM (onAnimationEnd, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), relativeLayout, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, focus, visibility, clickable, singleLine, scrollView, editText, hint, pattern, id, onChange, hintColor, multiLineEditText, nestedScrollView)
 import Screens.DriverCompleteProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.DriverCompleteProfileScreen.ComponentConfig
 import Screens.Types as ST
@@ -52,7 +52,7 @@ import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Resource.Constants
 import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..))
 
-screen :: ST.DriverCompleteProfileScreenState -> GlobalState -> Screen Action ST.DriverCompleteProfileScreenState ScreenOutput
+screen :: ST.DriverCompleteProfileScreenState -> GlobalState -> LoggableScreen Action ST.DriverCompleteProfileScreenState ScreenOutput
 screen initialState st =
   { initialState
   , view
@@ -74,6 +74,8 @@ screen initialState st =
                 pure unit
           eval action state
       )
+    , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.driverCompleteProfileScreenLogWhitelist
   }
   where
   globalEvents' :: (Action -> Effect Unit) -> Effect (Effect Unit)
@@ -82,6 +84,7 @@ screen initialState st =
     void $ JB.storeCallBackImageUpload push ImageUploadCallback
     void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
     pure $ pure unit
+
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverCompleteProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =

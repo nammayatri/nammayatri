@@ -3,6 +3,7 @@ module Screens.CancellationRateScreen.ScreenData where
 import Screens.Types(CancellationRateScreenState)
 import ConfigProvider (getAppConfig, appConfig)
 import Data.Maybe
+import ConfigProvider
 
 initData :: CancellationRateScreenState
 initData = {

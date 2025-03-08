@@ -33,7 +33,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, pure, unit, void, ($), (&&), (/=), (<), (<>), (==))
+import Prelude (class Show, Unit, bind, discard, pure, unit, void, ($), (&&), (/=), (<), (<>), (==), show)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -45,7 +45,24 @@ import Common.Resources.Constants (zoomLevel)
 import Helpers.Utils(getCurrentLocation, LatLon(..))
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (NoAction) = "NoAction"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (GoToLocationModalAC var1) = "GoToLocationModalAC_" <> show var1
+  show (OnTextChanged _) = "OnTextChanged"
+  show (DebounceCallback _ _) = "DebounceCallback"
+  show (ConfirmLocEDT _) = "ConfirmLocEDT"
+  show (MAPREADY _ _ _) = "MAPREADY"
+  show (LocateOnMap _) = "LocateOnMap"
+  show (UpdateLocation _ _ _) = "UpdateLocation"
+  show (ConfirmChangesAC var1) = "ConfirmChangesAC_" <> show var1
+  show (SuggestionClick _) = "SuggestionClick"
+  show (Respones _) = "Respones"
+  show (Error _) = "Error"
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (ClearSearch) = "ClearSearch"
+  show (OnAnimationEnd) = "OnAnimationEnd"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

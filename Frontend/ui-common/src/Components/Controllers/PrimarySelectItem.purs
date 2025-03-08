@@ -13,7 +13,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+
 module Components.PrimarySelectItem.Controller where
+
+import Prelude (class Show, show)
+
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
 
 data Action = OnClick PrimarySelectItemState
 
