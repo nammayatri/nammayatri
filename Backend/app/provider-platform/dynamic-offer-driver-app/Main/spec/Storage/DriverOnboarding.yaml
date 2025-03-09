@@ -129,8 +129,8 @@ DriverLicense:
     driverName: Maybe Text
     licenseNumber: EncryptedHashedField e Text
     licenseExpiry: UTCTime
-    classOfVehicles: '[Text]'
-    failedRules: '[Text]'
+    classOfVehicles: "[Text]"
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     vehicleCategory: Maybe VehicleCategory
     consent: Bool
@@ -171,13 +171,14 @@ VehicleRegistrationCertificate:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
     certificateNumber: EncryptedHashedField e Text
+    unencryptedCertificateNumber: Maybe Text
     fitnessExpiry: UTCTime
     permitExpiry: Maybe UTCTime
     pucExpiry: Maybe UTCTime
     insuranceValidity: Maybe UTCTime
     vehicleClass: Maybe Text
     vehicleVariant: Maybe VehicleVariant|NoRelation
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     vehicleManufacturer: Maybe Text
     vehicleCapacity: Maybe Int
     vehicleModel: Maybe Text
@@ -373,12 +374,12 @@ DocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     checkExtraction: Bool
     checkExpiry: Bool
     supportedVehicleClasses: SupportedVehicleClasses
     vehicleClassCheckType: VehicleClassCheckType
-    rcNumberPrefixList: '[Text]'
+    rcNumberPrefixList: "[Text]"
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
@@ -400,7 +401,7 @@ DocumentVerificationConfig:
     supportedVehicleClassesJSON: json
   beamFields:
     supportedVehicleClasses:
-     supportedVehicleClassesJSON: Value
+      supportedVehicleClassesJSON: Value
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
   fromTType:
@@ -567,7 +568,6 @@ FleetRCAssociation:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-
 DriverSSN:
   tableName: driver_ssn
   fields:
@@ -601,7 +601,7 @@ DriverPanCard:
     driverDob: Maybe UTCTime
     driverName: Maybe Text
     panCardNumber: EncryptedHashedField e Text
-    failedRules: '[Text]'
+    failedRules: "[Text]"
     verificationStatus: VerificationStatus
     consent: Bool
     consentTimestamp: UTCTime
@@ -672,7 +672,7 @@ FleetOwnerDocumentVerificationConfig:
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
-    dependencyDocumentType: '[DocumentType]'
+    dependencyDocumentType: "[DocumentType]"
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
     checkExtraction: Bool
@@ -694,7 +694,6 @@ FleetOwnerDocumentVerificationConfig:
       orderBy:
         field: order
         order: asc
-
 
 AadhaarCard:
   tableName: aadhaar_card
@@ -733,7 +732,14 @@ AadhaarCard:
       where: aadhaarNumberHash
     findByPhoneNumberAndUpdate:
       kvFunction: updateWithKV
-      params: [nameOnCard, driverGender, dateOfBirth, aadhaarNumberHash, verificationStatus]
+      params:
+        [
+          nameOnCard,
+          driverGender,
+          dateOfBirth,
+          aadhaarNumberHash,
+          verificationStatus,
+        ]
       where: driverId
     updateDriverImagePath:
       kvFunction: updateOneWithKV
@@ -810,7 +816,6 @@ HyperVergeSdkLogs:
       orderBy:
         field: createdAt
         order: asc
-
 
 HyperVergeVerification:
   tableName: hyperverge_verification

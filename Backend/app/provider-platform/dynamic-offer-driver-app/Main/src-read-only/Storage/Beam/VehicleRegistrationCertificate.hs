@@ -35,6 +35,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    unencryptedCertificateNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     userPassedVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

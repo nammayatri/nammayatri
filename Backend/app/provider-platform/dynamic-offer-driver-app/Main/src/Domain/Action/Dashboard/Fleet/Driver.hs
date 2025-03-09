@@ -246,7 +246,7 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
           DTR.EndRide DTR.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
             tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
-            void $ WMB.endTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval
+            void $ WMB.endOngoingTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval False
           _ -> pure ()
       _ -> pure ()
   pure Success
@@ -311,10 +311,9 @@ getDriverFleetGetAllVehicle ::
 getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
-  logDebug $ "reg number hash: " <> show mbRegNumberStringHash <> " param-string: " <> show mbRegNumberString
   merchant <- findMerchantByShortId merchantShortId
-  vehicleList <- RCQuery.findAllByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberStringHash
+  mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
+  vehicleList <- RCQuery.findAllByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
   vehicles <- traverse convertToVehicleAPIEntity vehicleList
   return $ Common.ListVehicleRes vehicles
 
@@ -626,13 +625,13 @@ calculateTimeDifference diffTime = Common.TotalDuration {..}
 
 getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Flow [VehicleRegistrationCertificate]
 getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId = do
+  let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
+      offset = fromIntegral $ fromMaybe 0 mbOffset
   case mbVehicleNo of
     Just vehicleNo -> do
-      vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNo fleetOwnerId
-      pure $ maybeToList vehicleInfo
+      vehicleInfo <- RCQuery.partialFindLastVehicleRCFleet vehicleNo fleetOwnerId limit offset
+      pure $ vehicleInfo
     Nothing -> do
-      let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
-          offset = fromIntegral $ fromMaybe 0 mbOffset
       case mbStatus of
         Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) Nothing limit offset merchantId
@@ -762,6 +761,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
                       driverId = Just driverId.getId,
                       verificationDocsStatus = Nothing,
                       isDriverOnRide = Nothing,
+                      isDriverOnPickup = Nothing,
                       ..
                     }
             pure listItem
@@ -847,12 +847,14 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
             pure (rides, earnings)
           _ -> pure (0, 0)
         let driverStatus = Just $ castDriverStatus driverInfo'.mode -- if isNothing vehicleNo then Nothing else Just $ castDriverStatus driverInfo'.mode
-        isDriverOnRide <-
+        (isDriverOnPickup, isDriverOnRide) <-
           if driverInfo'.onRide
             then do
-              currentTripTransaction <- WMB.findNextEligibleTripTransactionByDriverIdStatus driver.id IN_PROGRESS
-              return $ isJust currentTripTransaction
-            else pure False
+              currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
+              case currentTripTransaction of
+                Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS)
+                Nothing -> return (False, False)
+            else return (False, False)
         let isRcAssociated = isJust vehicleNo
         let isDriverActive = fda.isActive
         let driverId = Just $ driver.id.getId
@@ -862,6 +864,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
                   status = driverStatus,
                   isDriverActive = isDriverActive,
                   isDriverOnRide = Just isDriverOnRide,
+                  isDriverOnPickup = Just isDriverOnPickup,
                   verificationDocsStatus =
                     Just
                       Common.VerificationDocsStatus
@@ -938,6 +941,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
                 { vehicleNo = Just decryptedVehicleRC,
                   status = Just $ castDriverStatus driverStatus,
                   isDriverOnRide = Nothing,
+                  isDriverOnPickup = Nothing,
                   isDriverActive = isDriverActive,
                   earning = snd stats,
                   completedRides = fst stats,
@@ -1161,12 +1165,17 @@ postDriverDashboardFleetWmbTripEnd ::
 postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  currentDriverLocation <-
+  mbCurrentDriverLocation <-
     try @_ @SomeException (LF.driversLocation [tripTransaction.driverId])
       >>= \case
-        Left _ -> throwError $ InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
-        Right locations -> listToMaybe locations & fromMaybeM (InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip.")
-  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (LatLong currentDriverLocation.lat currentDriverLocation.lon) Dashboard
+        Left _ -> do
+          logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
+          return Nothing
+        Right locations -> do
+          let location = listToMaybe locations
+          when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
+          return location
+  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) Dashboard
   pure Success
 
 ---------------------------------------------------------------------
