@@ -17,14 +17,14 @@ module Screens.TicketBookingFlow.TicketList.Transformer where
 
 import Prelude
 
-import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services, _id, _categoryId, _name, _availableSeats, _allowedSeats, _bookedSeats, _peopleCategories, _isClosed)
+import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services, _id, _categoryId, _name, _availableSeats, _allowedSeats, _bookedSeats, _peopleCategories, _isClosed, _refundDetails)
 import Data.Array (head, concat, sortBy, elem, find, groupBy, length, mapWithIndex, (!!), filter)
 import Data.String (toUpper)
 import Data.String as DS
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Services.API as API
 import Data.Lens((^.))
-import Screens.Types(PeopleCategoriesData, OperationalDaysData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState(..), TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..), OperationalDate(..))
+import Screens.Types(PeopleCategoriesData, OperationalDaysData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState(..), TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..), OperationalDate(..),RefundInfo(..))
 import Data.Array.NonEmpty as DAN
 import Data.Int (ceil)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC)
@@ -56,7 +56,19 @@ ticketDetailsTransformer resp =
     amount : (resp ^. _amount),
     visitDate : (resp ^. _visitDate),
     status : (getBookingStatus (resp ^. _status)),
-    services : (ticketServicesTransformer (resp ^. _services) )
+    services : (ticketServicesTransformer (resp ^. _services) ),
+    refundDetails : refundDetailsTransformer (resp ^. _refundDetails)
+  }
+
+refundDetailsTransformer :: Maybe (Array API.RefundDetails) -> Maybe (Array RefundInfo)
+refundDetailsTransformer Nothing = Nothing
+refundDetailsTransformer (Just refunds) = Just $ map transformRefundDetail refunds
+
+transformRefundDetail :: API.RefundDetails -> RefundInfo
+transformRefundDetail (API.RefundDetails refund) =
+  {
+    status: refund.status,
+    refundAmount: refund.refundAmount
   }
 
 ticketServicesTransformer :: (Array API.TicketBookingServiceDetails) -> (Array TicketBookingServiceDetails)

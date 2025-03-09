@@ -85,7 +85,7 @@ paymentStatusPooling shortOrderId count delayDuration state push action =
     _ <- pure $ spy "ticketStatus" ticketStatus
     case ticketStatus of
       Right (API.GetTicketStatusResp resp) -> do
-        if (DA.any (_ == resp) ["Booked", "Failed"]) then do
+        if (DA.any (_ == resp) ["Booked", "Failed", "RefundInitiated"]) then do
             _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp
         else do

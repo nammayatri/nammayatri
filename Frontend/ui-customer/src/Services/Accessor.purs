@@ -383,3 +383,6 @@ _requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -
 
 _vehicleType :: forall a b c. Newtype a { vehicleType :: b | c } => Lens' a b
 _vehicleType = lens (unwrap >>> _.vehicleType) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleType = newVal }))
+
+_refundDetails :: forall a b c. Newtype a { refundDetails :: b | c } => Lens' a b
+_refundDetails = lens (unwrap >>> _.refundDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { refundDetails = newVal }))
