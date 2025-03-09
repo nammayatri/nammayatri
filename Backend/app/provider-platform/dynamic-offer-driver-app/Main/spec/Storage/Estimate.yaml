@@ -32,8 +32,18 @@ Estimate:
       fromLocGeohash: Maybe Text
       supplyDemandRatioFromLoc : Maybe Double
       supplyDemandRatioToLoc : Maybe Double
+      mbActualQARFromLocGeohashDistance : Maybe Double
       mbActualQARFromLocGeohash : Maybe Double
       mbActualQARCity : Maybe Double
+      mbActualQARFromLocGeohashDistancePast : Maybe Double
+      mbActualQARFromLocGeohashPast : Maybe Double
+      mbActualQARCityPast : Maybe Double
+      mbCongestionFromLocGeohashDistance : Maybe Double
+      mbCongestionFromLocGeohashDistancePast : Maybe Double
+      mbCongestionFromLocGeohash : Maybe Double
+      mbCongestionFromLocGeohashPast : Maybe Double
+      mbCongestionCity : Maybe Double
+      mbCongestionCityPast : Maybe Double
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
       congestionMultiplier : Maybe Centesimal
