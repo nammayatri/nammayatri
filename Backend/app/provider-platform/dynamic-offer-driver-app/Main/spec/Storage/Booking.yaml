@@ -34,9 +34,9 @@ Booking:
     transactionId: Text
     quoteId: Text
     status: BookingStatus
-    hasStops : Maybe Bool
-    dynamicPricingLogicVersion : Maybe Int
-    estimatedCongestionCharge : Maybe HighPrecMoney
+    hasStops: Maybe Bool
+    dynamicPricingLogicVersion: Maybe Int
+    estimatedCongestionCharge: Maybe HighPrecMoney
     tripCategory: TripCategory
     specialZoneOtpCode: Maybe Text
     specialLocationTag: Maybe Text
@@ -44,7 +44,7 @@ Booking:
     area: Maybe Area
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    fromLocGeohash : Maybe Text
+    fromLocGeohash: Maybe Text
     toLocGeohash: Maybe Text
     primaryExophone: Text
     bapId: Text
@@ -163,7 +163,7 @@ Booking:
     fromLocation: fst fromAndToLocation'|E
     toLocation: snd fromAndToLocation'|E
     vehicleServiceTier: vehicleVariant|E
-    stops : Storage.Queries.Transformers.Booking.getStops id hasStops|EM
+    stops: Storage.Queries.Transformers.Booking.getStops id hasStops|EM
     vehicleServiceTierName: fromMaybe (show vehicleVariant) vehicleServiceTierName|E
     #estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
     isScheduled: fromMaybe False isScheduled|E
@@ -196,7 +196,7 @@ Booking:
     estimateId: character varying(255)
 
   default:
-      bookingType: "'NormalBooking'"
+    bookingType: "'NormalBooking'"
 
   queries:
     updateEstimatedDistanceAndFare:
@@ -296,7 +296,6 @@ BookingLocation:
     door: character varying(255)
   constraints:
     id: PrimaryKey
-
 
   queries:
     findById:

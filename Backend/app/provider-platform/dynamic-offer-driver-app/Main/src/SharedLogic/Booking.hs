@@ -15,6 +15,7 @@ import qualified Domain.Types.Ride as SRide
 import Domain.Types.Trip
 import Domain.Types.VehicleVariant
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -70,7 +71,7 @@ cancelBooking booking mbDriver transporter = do
     void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id SRide.CANCELLED
     updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
-    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing Nothing
+    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon)}))
 
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing
