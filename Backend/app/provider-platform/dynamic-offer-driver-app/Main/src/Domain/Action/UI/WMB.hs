@@ -279,7 +279,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
           Right driverReq -> return $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
           Left _ -> throwError (InternalError "Process for Trip End is Already Ongoing, Please try again!")
     else do
-      void $ endTripTransaction fleetConfig tripTransaction req.location DriverDirect
+      void $ endOngoingTripTransaction fleetConfig tripTransaction req.location DriverDirect False
       pure $ TripEndResp {requestId = Nothing, result = SUCCESS}
 
 getWmbTripList ::

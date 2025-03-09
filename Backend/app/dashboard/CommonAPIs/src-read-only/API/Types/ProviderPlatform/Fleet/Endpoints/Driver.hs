@@ -93,6 +93,7 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
     vehicleType :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
     earning :: Kernel.Prelude.Int,
     isDriverOnRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDriverOnPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDriverActive :: Kernel.Prelude.Bool,
     isRcAssociated :: Kernel.Prelude.Bool,
     verificationDocsStatus :: Kernel.Prelude.Maybe VerificationDocsStatus
