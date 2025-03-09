@@ -231,7 +231,7 @@ let AllocatorJobType =
       | FleetAlert
       | SendWebhookToExternal
       | ScheduledFCMS
-      | CheckDashCamInstallationStatusJob
+      | CheckDashCamInstallationStatus
       >
 
 let jobInfoMapx =
@@ -278,7 +278,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
       , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
-      , { mapKey = AllocatorJobType.CheckDashCamInstallationStatusJob
+      , { mapKey = AllocatorJobType.CheckDashCamInstallationStatus
         , mapValue = True
         }
       ]

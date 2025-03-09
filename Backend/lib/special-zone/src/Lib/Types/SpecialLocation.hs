@@ -34,7 +34,7 @@ data Merchant
 data MerchantOperatingCity
 
 data SpecialLocation = SpecialLocation
-  { id :: Id SpecialLocation,
+  { id :: Id SpecialLocation,    
     locationName :: Text,
     category :: Text,
     merchantId :: Maybe (Id Merchant),
@@ -43,6 +43,7 @@ data SpecialLocation = SpecialLocation
     geom :: Maybe Text,
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
+    enabled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

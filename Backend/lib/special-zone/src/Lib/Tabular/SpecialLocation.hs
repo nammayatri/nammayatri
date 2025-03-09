@@ -31,7 +31,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationT sql=special_location
-      id Text
+      id Text      
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
@@ -39,6 +39,7 @@ mkPersist
       merchantOperatingCityId Text Maybe
       linkedLocationsIds (PostgresList Text)
       locationType Domain.SpecialLocationType Maybe
+      enabled Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
