@@ -231,11 +231,12 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
 
 buildBusTripInfo :: Text -> Text -> LatLong -> LT.RideInfo
 buildBusTripInfo vehicleNumber routeCode destinationLocation =
-  LT.Bus
-    { busNumber = vehicleNumber,
-      destination = destinationLocation,
-      ..
-    }
+  LT.Bus $
+    LT.BusRideInfo
+      { busNumber = vehicleNumber,
+        destination = destinationLocation,
+        ..
+      }
 
 assignTripTransaction :: TripTransaction -> Route -> Bool -> LatLong -> LatLong -> Bool -> Flow ()
 assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation destination notify = do

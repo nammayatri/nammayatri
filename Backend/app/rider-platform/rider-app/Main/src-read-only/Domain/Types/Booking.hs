@@ -25,6 +25,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.JourneyLeg.Types
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
@@ -64,6 +65,7 @@ data Booking = Booking
     isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
