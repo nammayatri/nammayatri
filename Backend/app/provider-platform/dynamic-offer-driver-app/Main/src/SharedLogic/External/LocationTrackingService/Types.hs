@@ -110,20 +110,36 @@ data DriverBlockTillReq = DriverBlockTillReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-data RideInfo = Bus
+data BusRideInfo = BusRideInfo
   { routeCode :: Text,
     busNumber :: Text,
     destination :: LatLong
   }
   deriving (Show, Eq, Generic, ToSchema)
 
+data CarRideInfo = CarRideInfo
+  { pickupLocation :: LatLong
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo
+  deriving (Show, Eq, Generic, ToSchema)
+
 instance ToJSON RideInfo where
-  toJSON (Bus routeCode busNumber destination) =
-    object
-      [ "bus"
-          .= object
-            [ "routeCode" .= routeCode,
-              "busNumber" .= busNumber,
-              "destination" .= destination
-            ]
-      ]
+  toJSON = \case
+    Bus (BusRideInfo routeCode busNumber destination) ->
+      object
+        [ "bus"
+            .= object
+              [ "routeCode" .= routeCode,
+                "busNumber" .= busNumber,
+                "destination" .= destination
+              ]
+        ]
+    Car (CarRideInfo pickupLocation) ->
+      object
+        [ "car"
+            .= object
+              [ "pickupLocation" .= pickupLocation
+              ]
+        ]

@@ -345,6 +345,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isDeleted = Just False,
           isSkipped = skipBooking,
           journeyId,
+          journeyLegStatus = Nothing,
           ..
         },
       bookingParties

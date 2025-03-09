@@ -34,7 +34,6 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
 import qualified Data.Text as Text
-import Domain.Action.Beckn.Common (driverHasReachedCacheKey)
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
@@ -61,9 +60,9 @@ import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Types
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.LocationMapping as SLM
@@ -81,7 +80,6 @@ import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import qualified Tools.Maps as MapSearch
-import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
 data PickupStage = OnTheWay | Reached | Reaching
@@ -90,7 +88,7 @@ data PickupStage = OnTheWay | Reached | Reaching
 data GetDriverLocResp = GetDriverLocResp
   { lat :: Double,
     lon :: Double,
-    pickupStage :: Maybe PickupStage,
+    pickupStage :: Maybe JourneyLegStatus,
     lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -147,55 +145,13 @@ getDriverLoc rideId = do
             { currPoint = MapSearch.LatLong {lat = trackingLoc.gps.lat, lon = trackingLoc.gps.lon},
               lastUpdate = trackingLoc.updatedAt
             }
-  let fromLocation = Maps.getCoordinates booking.fromLocation
-  merchant <- CQMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
-  mbHasReachedNotified <- Redis.get @() driverHasReached
-  mbHasReachingNotified <- Redis.get @() driverReaching
-  pickupStage <-
-    if ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)
-      then do
-        let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
-        mbStartDistance <- Redis.get @Meters distanceUpdates
-        case mbStartDistance of
-          Nothing -> do
-            Redis.setExp distanceUpdates distance 3600
-            return Nothing
-          Just startDistance -> do
-            if (startDistance - 50 > distance)
-              then do
-                if distance <= distanceToMeters merchant.arrivedPickupThreshold
-                  then do
-                    when (isNothing mbHasReachedNotified) $ do
-                      Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
-                      Redis.setExp driverHasReached () 1500
-                    return $ Just Reached
-                  else
-                    if distance <= distanceToMeters merchant.arrivingPickupThreshold
-                      then do
-                        when (isNothing mbHasReachingNotified) $ do
-                          Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
-                          Redis.setExp driverReaching () 1500
-                        return $ Just Reaching
-                      else do
-                        unless (isJust mbIsOnTheWayNotified) $ do
-                          Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory
-                          Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
-                        return $ Just OnTheWay
-              else return Nothing
-      else return Nothing
   return $
     GetDriverLocResp
       { lat = res.currPoint.lat,
         lon = res.currPoint.lon,
         lastUpdate = res.lastUpdate,
-        pickupStage
+        pickupStage = booking.journeyLegStatus
       }
-  where
-    distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
-    driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
-    driverHasReached = driverHasReachedCacheKey rideId.getId
-    driverReaching = "Ride:GetDriverLoc:DriverReaching " <> rideId.getId
 
 getDriverPhoto :: Text -> Flow Text
 getDriverPhoto filePath = S3.get $ Text.unpack filePath

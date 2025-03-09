@@ -104,6 +104,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.reviewRequired reviewRequired,
       Se.Set Beam.reviewedAt reviewedAt,
+      Se.Set Beam.unencryptedCertificateNumber unencryptedCertificateNumber,
       Se.Set Beam.userPassedVehicleCategory userPassedVehicleCategory,
       Se.Set Beam.vehicleCapacity vehicleCapacity,
       Se.Set Beam.vehicleClass vehicleClass,

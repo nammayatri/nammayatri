@@ -376,11 +376,7 @@ getTaxiLegStatusFromBooking booking mRide = do
           Right driverLocation -> do
             let journeyStatus =
                   case (ride.status, driverLocation.pickupStage) of
-                    (DRide.NEW, Just stage) -> do
-                      case stage of
-                        DARide.OnTheWay -> OnTheWay
-                        DARide.Reached -> Arrived
-                        DARide.Reaching -> Arriving
+                    (DRide.NEW, Just stage) -> stage
                     _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
             return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
       Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)

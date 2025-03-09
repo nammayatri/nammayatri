@@ -829,6 +829,7 @@ types:
     - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
     - isDriverOnRide: Maybe Bool
+    - isDriverOnPickup: Maybe Bool
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus

@@ -157,8 +157,8 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           ..
         }
 
-endTripTransaction :: FleetConfig -> TripTransaction -> LatLong -> ActionSource -> Flow ()
-endTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource = do
+endOngoingTripTransaction :: FleetConfig -> TripTransaction -> LatLong -> ActionSource -> Bool -> Flow ()
+endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource isCancelled = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey tripTransaction.driverId COMPLETED)
     60
@@ -166,7 +166,7 @@ endTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSo
         unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         now <- getCurrentTime
         void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing
-        QTT.updateOnEnd COMPLETED (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
+        QTT.updateOnEnd (if isCancelled then CANCELLED else COMPLETED) (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
         TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
         findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
           Just advancedTripTransaction -> do
@@ -219,7 +219,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                           Nothing -> do
                             QDI.updateOnRide False tripTransaction.driverId
                             unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
-                    IN_PROGRESS -> endTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource
+                    IN_PROGRESS -> endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource True
                     _ -> pure ()
                 else do
                   now <- getCurrentTime
@@ -231,11 +231,12 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
 
 buildBusTripInfo :: Text -> Text -> LatLong -> LT.RideInfo
 buildBusTripInfo vehicleNumber routeCode destinationLocation =
-  LT.Bus
-    { busNumber = vehicleNumber,
-      destination = destinationLocation,
-      ..
-    }
+  LT.Bus $
+    LT.BusRideInfo
+      { busNumber = vehicleNumber,
+        destination = destinationLocation,
+        ..
+      }
 
 assignTripTransaction :: TripTransaction -> Route -> Bool -> LatLong -> LatLong -> Bool -> Flow ()
 assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation destination notify = do
