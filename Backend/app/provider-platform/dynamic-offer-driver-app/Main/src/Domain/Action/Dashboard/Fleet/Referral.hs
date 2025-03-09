@@ -48,7 +48,7 @@ instance FromJSON FleetReferralRes where
 validateFleetReferralReq :: Validate FleetReferralReq
 validateFleetReferralReq FleetReferralReq {..} =
   sequenceA_
-    [ validateField "value" value $ ExactLength 6
+    [ validateField "value" value $ MinLength 6
     ]
 
 isValidReferralForRole ::

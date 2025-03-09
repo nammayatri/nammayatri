@@ -16,13 +16,12 @@ module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
-import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
-import qualified Domain.Action.UI.FleetOperatorAssociation as FOA
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.FleetOperatorAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -97,14 +97,6 @@ newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
-getOperatorIdFromReferralCode Nothing = return Nothing
-getOperatorIdFromReferralCode (Just refCode) = do
-  let referralReq = FleetReferralReq {value = refCode}
-  result <- isValidReferralForRole referralReq DP.OPERATOR
-  case result of
-    SuccessCode val -> return $ Just val
-
 fleetOwnerRegister :: FleetOwnerRegisterReq -> Flow FleetOwnerRegisterRes
 fleetOwnerRegister req = do
   let merchantId = ShortId req.merchantId
@@ -119,8 +111,8 @@ fleetOwnerRegister req = do
   case personOpt of
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
-      maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferredCodeForFleet
+      maybeOperatorId <- Registration.getOperatorIdFromReferralCode req.operatorReferralCode
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferralCodeForFleet
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
       fork "Uploading GST Image" $ do
@@ -130,6 +122,22 @@ fleetOwnerRegister req = do
           QFOI.updateGstImageId (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
+makeFleetOperatorAssociation :: (MonadFlow m) => Text -> Text -> Maybe UTCTime -> m FleetOperatorAssociation
+makeFleetOperatorAssociation fleetOwnerId operatorId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    FleetOperatorAssociation
+      { id = id,
+        operatorId = operatorId,
+        isActive = True,
+        fleetOwnerId = fleetOwnerId,
+        associatedOn = Just now,
+        associatedTill = end,
+        createdAt = now,
+        updatedAt = now
+      }
+
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow DP.Person
 createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber mbReferredOperatorId mbIsGenerateRefEntry = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -137,7 +145,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   void $ QP.create person
   createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber mbReferredOperatorId
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
-    fleetOperatorAssData <- FOA.makeFleetOperatorAssociation (person.id.getId) referredOperatorId Nothing
+    fleetOperatorAssData <- makeFleetOperatorAssociation (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
   whenJust mbIsGenerateRefEntry $ \isGenerateRefEntry -> when isGenerateRefEntry $ do
     void $ DR.generateReferralCode DP.FLEET_OWNER (person.id, merchantId, merchantOpCityId)

@@ -44,3 +44,18 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN gateway_and_registry_prio
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referred_code_for_operator boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referred_code_for_fleet boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referral_code_for_operator boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referral_code_for_fleet boolean  default false;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

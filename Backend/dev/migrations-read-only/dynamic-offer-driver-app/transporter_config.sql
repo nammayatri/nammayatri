@@ -374,3 +374,18 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_thr
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

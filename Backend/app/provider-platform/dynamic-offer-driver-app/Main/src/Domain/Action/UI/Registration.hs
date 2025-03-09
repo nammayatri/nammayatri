@@ -27,17 +27,18 @@ module Domain.Action.UI.Registration
     cleanCachedTokens,
     createDriverWithDetails,
     makePerson,
+    getOperatorIdFromReferralCode,
   )
 where
 
 import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.Dashboard.Fleet.Referral
-import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
+import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -45,8 +46,6 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.TransporterConfig as TC
 import qualified Email.AWS.Flow as Email
--- import qualified Kernel.Types.Beckn.City as City
-
 import Environment (Flow)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -59,6 +58,7 @@ import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
 import Kernel.Types.Id
@@ -72,6 +72,7 @@ import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -173,8 +174,7 @@ authWithOtp ::
   Maybe Text ->
   Flow AuthWithOtpRes
 authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice = do
-  let req = req'
-  -- let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+  let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
@@ -451,6 +451,22 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
+makeDriverOperatorAssociation :: (MonadFlow m) => Id SP.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
+makeDriverOperatorAssociation driverId operatorId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DriverOperatorAssociation
+      { id = id,
+        operatorId = operatorId,
+        isActive = True,
+        driverId = driverId,
+        associatedOn = Just now,
+        associatedTill = end,
+        createdAt = now,
+        updatedAt = now
+      }
+
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> Maybe Text -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard mbOperatorId mbFleetOwnerId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -459,7 +475,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig mbOperatorId mbFleetOwnerId
 
   whenJust mbOperatorId $ \operatorId -> do
-    driverOperatorAssData <- DOA.makeDriverOperatorAssociation person.id operatorId Nothing
+    driverOperatorAssData <- makeDriverOperatorAssociation person.id operatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     void $ QDOA.create driverOperatorAssData
 
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do

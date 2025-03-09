@@ -88,8 +88,8 @@ Merchant:
     registryUrl: BaseUrl
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
-    generateReferredCodeForFleet: Maybe Bool
-    generateReferredCodeForOperator: Maybe Bool
+    generateReferralCodeForFleet: Maybe Bool
+    generateReferralCodeForOperator: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -114,8 +114,8 @@ Merchant:
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: '''{"NY"}'''
-    generateReferredCodeForFleet: "false"
-    generateReferredCodeForOperator: "false"
+    generateReferralCodeForFleet: "false"
+    generateReferralCodeForOperator: "false"
 
   excludedFields:
     - merchantId
