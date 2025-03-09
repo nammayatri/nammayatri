@@ -722,7 +722,7 @@ getDriverFleetDriverVehicleAssociation ::
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing
+  listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
@@ -766,21 +766,24 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
                     }
             pure listItem
 
-getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Flow [FleetDriverAssociation]
-getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive mbLimit mbOffset mbMode = do
-  case mbDriverPhNo of
-    Just driverPhNo -> do
+getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Flow [FleetDriverAssociation]
+getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchantId mbIsActive mbLimit mbOffset mbMode mbName = do
+  let countryCode = fromMaybe "+91" mbCountryCode
+      limit = min 10 $ fromMaybe 5 mbLimit
+      offset = fromMaybe 0 mbOffset
+  case (mbDriverPhNo, mbName) of
+    (Just driverPhNo, _) -> do
       mobileNumberHash <- getDbHash driverPhNo
-      let countryCode = fromMaybe "+91" mbCountryCode
       mbDriver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId DP.DRIVER
       case mbDriver of
         Just driver -> do
           fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
           pure $ maybeToList fleetDriverAssociation
         Nothing -> pure $ []
-    Nothing -> do
-      let limit = min 10 $ fromMaybe 5 mbLimit
-          offset = fromMaybe 0 mbOffset
+    (Nothing, Just name) -> do
+      fleetDriverAssociation <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset Nothing (Just name)
+      pure $ fleetDriverAssociation
+    (Nothing, Nothing) -> do
       case mbMode of
         Just mode -> FDV.findAllDriversByFleetOwnerIdByMode fleetOwnerId (castDashboardDriverStatus mode) mbIsActive (fromIntegral limit) (fromIntegral offset)
         _ -> FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset
@@ -805,10 +808,11 @@ getDriverFleetDriverAssociation ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Common.DriverMode ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode = do
+getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName = do
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode
+  listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
