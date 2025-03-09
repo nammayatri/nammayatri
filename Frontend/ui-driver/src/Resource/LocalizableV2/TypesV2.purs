@@ -19,8 +19,14 @@ newtype Languages
   , odiya :: Keymap
   }
 
-newtype Keymap = Keymap
-  { lets_get_started :: String
+newtype Keymap = Keymap { 
+    namma_meter  :: String ,
+    bus_number  :: String ,
+    bus_type  :: String ,
+    confirm_destination  :: String ,
+    search_results  :: String ,
+    start_typing_to_search_places  :: String ,
+    lets_get_started :: String
   , language_updated :: String
   , your_application_has_been_submitted_successfully_and_is_under_verification :: String
   , view_status :: String
@@ -7201,3 +7207,19 @@ meter_running = a
 
 confirm_meter_stop :: Proxy "confirm_meter_stop"
 confirm_meter_stop = a
+
+confirm_destination :: Proxy "confirm_destination"
+confirm_destination = a
+search_results :: Proxy "search_results"
+search_results = a
+start_typing_to_search_places :: Proxy "start_typing_to_search_places"
+start_typing_to_search_places = a
+bus_number :: Proxy "bus_number"
+bus_number = a
+
+bus_type :: Proxy "bus_type"
+bus_type = a
+
+namma_meter :: Proxy "namma_meter"
+namma_meter = a
+

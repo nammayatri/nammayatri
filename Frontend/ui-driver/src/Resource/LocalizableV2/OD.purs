@@ -1801,4 +1801,10 @@ getOd =
     , upton2km: "2KM ପର୍ଯ୍ୟନ୍ତ"
     , meter_running: "ମିଟର୍ ଚାଲିଛି"
     , confirm_meter_stop: "ମିଟର୍ ବନ୍ଦ କରିବାକୁ ନିଶ୍ଚିତ କରନ୍ତୁ?"
+    , confirm_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ନିଶ୍ଚିତ କରନ୍ତୁ"
+    , search_results: "ସନ୍ଧାନ ଫଳାଫଳ"
+    , start_typing_to_search_places: "ସ୍ଥାନ ଖୋଜିବାକୁ ଟାଇପ୍ କରିବା ଆରମ୍ଭ କରନ୍ତୁ"
+    , bus_number: "ବସ୍ ନମ୍ବର୍"
+    , bus_type: "ବସ୍ ପ୍ରକାର"
+    , namma_meter: "ନମ୍ମ ମିଟର୍"
   }

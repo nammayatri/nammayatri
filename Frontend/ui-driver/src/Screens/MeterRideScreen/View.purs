@@ -15,6 +15,7 @@ module Screens.MeterRideScreen.View
 import Animation as Anim
 import Common.Types.App
 import Data.String (length)
+import Data.String as DS
 import Data.String.Unsafe (charAt)
 import Effect.Uncurried (runEffectFn1)
 import Data.Int (toNumber, round)
@@ -89,7 +90,7 @@ screen initialState =
         )
       , ( \push -> do
             if isNothing initialState.data.ridesInfo then do
-              fiber <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRide 20 1000.0 push initialState
+              fiber <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRide 20 2000.0 push initialState
               pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
             else
               pure $ pure $ unit
@@ -447,7 +448,7 @@ rideInitView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , background Color.blue600
-          , padding $ Padding 12 12 18 12
+          , padding $ Padding 12 12 12 12
           , cornerRadius 32.0
           , onClick push $ const BackPressed
           , gravity CENTER
@@ -459,7 +460,7 @@ rideInitView push state =
               , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
               ]
           , textView
-              $ [ text $ getString BACK
+              $ [ text $ DS.trim $ getString BACK
                 , color Color.black700
                 , margin $ MarginLeft 5
                 , padding $ PaddingBottom 4
@@ -1163,7 +1164,7 @@ sevenSegmentView push state =
             , textSize FontSize.a_48
             , fontWeight $ FontWeight 400
             , color if charA == "0" then Color.black600 else Color.black900
-            , fontStyle FontStyle.sevenSegment
+            , fontStyle "http://assets.moving.tech/beckn/fonts/DigitalNumbers-Regular.ttf"
             , letterSpacing $ PX 1.0
             ]
       , textView
@@ -1171,7 +1172,7 @@ sevenSegmentView push state =
             , textSize FontSize.a_48
             , fontWeight $ FontWeight 400
             , color if charA == "0" && charB == "0" then Color.black600 else Color.black900
-            , fontStyle FontStyle.sevenSegment
+            , fontStyle "http://assets.moving.tech/beckn/fonts/DigitalNumbers-Regular.ttf"
             , letterSpacing $ PX 1.0
             ]
       , textView
@@ -1179,7 +1180,7 @@ sevenSegmentView push state =
             , textSize FontSize.a_48
             , fontWeight $ FontWeight 400
             , color if charA == "0" && charB == "0" && charC == "0" then Color.black600 else Color.black900
-            , fontStyle FontStyle.sevenSegment
+            , fontStyle "http://assets.moving.tech/beckn/fonts/DigitalNumbers-Regular.ttf"
             , letterSpacing $ PX 1.0
             ]
       , textView
@@ -1187,7 +1188,7 @@ sevenSegmentView push state =
             , textSize FontSize.a_48
             , fontWeight $ FontWeight 400
             , color if charA == "0" && charB == "0" && charC == "0" && charD == "0" then Color.black600 else Color.black900
-            , fontStyle FontStyle.sevenSegment
+            , fontStyle "http://assets.moving.tech/beckn/fonts/DigitalNumbers-Regular.ttf"
             , letterSpacing $ PX 1.0
             ]
       ]
@@ -1221,8 +1222,10 @@ getActiveRide count duration push state = do
         getActiveRide (count - 1) duration push state
       else
         pure unit
-    Just resp -> do
-      let
-        _ = spy "FOUND_ACTIVE_RIDE$$$$$$$$$$$$$$$$$$$$$$$$$$$" resp
-      void $ lift $ lift $ doAff $ liftEffect $ push $ UpdateRidesInfo resp
-      pure unit
+    Just (RidesInfo resp) -> do
+      void $ lift $ lift $ doAff $ liftEffect $ push $ UpdateRidesInfo (RidesInfo resp)
+      if isNothing resp.tripStartTime then do
+        void $ lift $ lift $ delay $ Milliseconds duration
+        getActiveRide (count - 1) duration push state
+      else
+        pure unit

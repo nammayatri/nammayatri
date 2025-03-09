@@ -1801,4 +1801,10 @@ getKn =
     , upton2km: "2KM ತನಕ"
     , meter_running: "ಮೀಟರ್ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಿದೆ"
     , confirm_meter_stop: "ಮೀಟರ್ ನಿಲ್ಲಿಸುವುದನ್ನು ಖಚಿತಪಡಿಸಬಹುದಾ?"
+    , confirm_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ಖಚಿತಪಡಿಸಿ"
+    , search_results: "ಹುಡುಕಾಟ ಫಲಿತಾಂಶಗಳು"
+    , start_typing_to_search_places: "ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲು ಟೈಪ್ ಮಾಡು ಪ್ರಾರಂಭಿಸಿ"
+    , bus_number: "ಬಸ್ ಸಂಖ್ಯೆ"
+    , bus_type: "ಬಸ್ ಪ್ರಕಾರ"
+    , namma_meter: "ನಮ್ಮ ಮೀಟರ್"
     }

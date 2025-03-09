@@ -1801,4 +1801,10 @@ getHi =
     , upton2km: "2KM तक"
     , meter_running: "मीटर चल रहा है"
     , confirm_meter_stop: "मीटर बंद करने की पुष्टि करें?"
+    , confirm_destination: "गंतव्य की पुष्टि करें"
+    , search_results: "खोज परिणाम"
+    , start_typing_to_search_places: "स्थान खोजने के लिए टाइप करना शुरू करें"
+    , bus_number: "बस नंबर"
+    , bus_type: "बस प्रकार"
+    , namma_meter: "नम्मा मीटर"
     }

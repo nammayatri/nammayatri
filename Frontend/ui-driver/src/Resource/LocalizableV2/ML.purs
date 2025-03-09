@@ -1801,4 +1801,10 @@ getMl =
     , upton2km: "Upto\n2KM"
     , meter_running: "METER RUNNING"
     , confirm_meter_stop: "Confirm Meter Stop"
+    , confirm_destination: "Confirm Destination"
+    , search_results: "Search Results"
+    , start_typing_to_search_places: "Start typing to search places"
+    , bus_number: "Bus Number"
+    , bus_type: "Bus Type"
+    , namma_meter: "Namma Meter"
     }

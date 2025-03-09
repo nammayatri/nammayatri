@@ -861,7 +861,7 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][  meterBooking state push
+        ][  if fromMaybe false state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
           , locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
@@ -897,7 +897,7 @@ meterBooking state push =
         ]
       , textView $
         [ weight 1.0
-        , text $ "Namma Meter"
+        , text $ getString NAMMA_METER
         , gravity CENTER
         , margin $ MarginLeft 10
         , color Color.blue800
@@ -3398,7 +3398,7 @@ busOnline push state =
           ][  textView
               ([ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text "Bus Number"
+              , text $ getString BUS_NUMBER
               , color Color.greyTextColor
               , margin (MarginBottom 5)
               ] <> FontStyle.body3 TypoGraphy)
@@ -3437,7 +3437,7 @@ busOnline push state =
           ][  textView
               ([ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text "Bus Type"
+              , text $ getString BUS_TYPE
               , color Color.greyTextColor
               , margin (MarginBottom 5)
               ] <> FontStyle.body3 TypoGraphy) 

@@ -1801,4 +1801,10 @@ getTe =
     , upton2km: "2KM వరకు"
     , meter_running: "మీటర్ నడుస్తోంది"
     , confirm_meter_stop: "మీటర్ను ఆపడం నిర్ధారించాలా?"
+    , confirm_destination: "గమ్యస్థానాన్ని నిర్ధారించండి"
+    , search_results: "వెతకిన ఫలితాలు"
+    , start_typing_to_search_places: "ప్రదేశాలను వెతికేందుకు టైప్ చేయడం ప్రారంభించండి"
+    , bus_number: "బస్ నంబర్"
+    , bus_type: "బస్ రకం"
+    , namma_meter: "నమ్మా మీటర్"
     }

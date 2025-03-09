@@ -1801,4 +1801,10 @@ getTa =
     , upton2km: "2KM வரை"
     , meter_running: "மீட்டர் செயல்படுகிறது"
     , confirm_meter_stop: "மீட்டரை நிறுத்துவதை உறுதி செய்யவா?"
+    , confirm_destination: "இலக்கை உறுதி செய்யவும்"
+    , search_results: "தேடல் முடிவுகள்"
+    , start_typing_to_search_places: "இடங்களை தேட தட்டச்சு செய்ய தொடங்குங்கள்"
+    , bus_number: "பஸ் எண்"
+    , bus_type: "பஸ் வகை"
+    , namma_meter: "நம்ம மீட்டர்"
     }

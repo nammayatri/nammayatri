@@ -1801,4 +1801,10 @@ getBn =
     , upton2km: "2KM পর্যন্ত"
     , meter_running: "মিটার চলছে"
     , confirm_meter_stop: "মিটার বন্ধ নিশ্চিত করুন?"
+    , confirm_destination: "গন্তব্য নিশ্চিত করুন"
+    , search_results: "অনুসন্ধানের ফলাফল"
+    , start_typing_to_search_places: "স্থান অনুসন্ধান করতে টাইপ করা শুরু করুন"
+    , bus_number: "বাস নম্বর"
+    , bus_type: "বাসের ধরন"
+    , namma_meter: "নাম্মা মিটার"
     }

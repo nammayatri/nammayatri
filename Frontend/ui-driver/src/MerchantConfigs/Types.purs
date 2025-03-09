@@ -272,7 +272,8 @@ type CityConfig = {
   enableGullak :: Boolean,
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
-  showScheduledRides :: Boolean
+  showScheduledRides :: Boolean,
+  enableNammaMeter :: Maybe Boolean
 }
 
 type InAppKeyboardModalConfig = {

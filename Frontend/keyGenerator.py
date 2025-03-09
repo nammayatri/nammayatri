@@ -47,8 +47,8 @@ def update_types_v2_purs(types_v2_file, translations):
     with open(types_v2_file, 'a', encoding='utf-8') as f:
         for identifier, _ in translations.items():
             if identifier not in existing_keys:
-                f.write(f'    {identifier.lower()} :: Proxy "{identifier.lower()}"\n')
-                f.write(f'    {identifier.lower()} = a\n')
+                f.write(f'{identifier.lower()} :: Proxy "{identifier.lower()}"\n')
+                f.write(f'{identifier.lower()} = a\n\n')
 
 def update_keymap_types_v2(types_v2_file, translations):
     existing_keys = existing_keys_in_file(types_v2_file)
@@ -56,13 +56,13 @@ def update_keymap_types_v2(types_v2_file, translations):
         lines = f.readlines()
         keymap_start = None
         for i, line in enumerate(lines):
-            if line.strip().startswith("newtype Keymap = Keymap"):  # Find keyMap definition
+            if line.strip().startswith("newtype Keymap = Keymap {"):  # Find keyMap definition
                 keymap_start = i + 1
                 break
         
         if keymap_start is not None:
             f.seek(0)
-            new_lines = lines[:keymap_start] + [f'    {identifier} = {identifier.lower()}\n' for identifier in translations if identifier not in existing_keys] + lines[keymap_start:]
+            new_lines = lines[:keymap_start] + [f'    {identifier.lower()}  :: String ,\n' for identifier in translations if identifier not in existing_keys] + lines[keymap_start:]
             f.seek(0)
             f.writelines(new_lines)
 
@@ -96,12 +96,12 @@ def update_strings_v2(strings_v2_file, translations):
         
         if proxy_start is not None:
             f.seek(0)
-            new_lines = lines[:proxy_start] + [f'    {identifier} -> \\a -> a @~ {identifier.lower()}\n' for identifier in translations if identifier not in existing_keys] + lines[proxy_start:]
+            new_lines = lines[:proxy_start] + [f'  {identifier} -> \\a -> a @~ {identifier.lower()}\n' for identifier in translations if identifier not in existing_keys] + lines[proxy_start:]
             f.seek(0)
             f.writelines(new_lines)
 
 def main():
-    folder = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-driver/src/Screens/MeterRideScreen"
+    folder = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-driver/src/Screens/HomeScreen"
     types_file = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-driver/src/Resource/Localizable/Types.purs"
     types_v2_file = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-driver/src/Resource/LocalizableV2/TypesV2.purs"
     lang_folder = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-driver/src/Resource/LocalizableV2"

@@ -33,6 +33,7 @@ import Components.PopUpModal as PopUpModal
 import PrestoDOM.Types.DomAttributes as PTD
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import Common.Resources.Constants (zoomLevel)
+import Language.Strings (getString)
 import Timers
 
 screen :: ST.MeterScreenState -> Screen Action ST.MeterScreenState ScreenOutput
@@ -204,7 +205,7 @@ bottomMapView state push =
           , gravity CENTER
           ]
           [ textView
-              $ [ text "Confirm Destination"
+              $ [ text $ getString CONFIRM_DESTINATION
                 , visibility $ MP.boolToVisibility isMapSearchLocation
                 , color Color.black800
                 , padding $ Padding 10 15 10 15
@@ -470,7 +471,7 @@ searchResultsView state push =
         , orientation VERTICAL
         ]
         [ textView
-            $ [ text "Search Results"
+            $ [ text $ getString SEARCH_RESULTS
               , color Color.black700
               , margin $ MarginVertical 14 8
               ]
@@ -559,7 +560,7 @@ findPlacesIllustration push state =
           , gravity CENTER
           ]
           [ textView
-              $ [ text "Start typing to search places"
+              $ [ text $ getString START_TYPING_TO_SEARCH_PLACES
                 , gravity CENTER
                 , color Color.black700
                 ]
