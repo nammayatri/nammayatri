@@ -57,7 +57,7 @@ data ScreenOutput
 eval :: Action -> ST.MeterScreenState -> Eval Action ScreenOutput ST.MeterScreenState
 
 eval BackPressed state = do
-  void $ pure $ JB.hideKeyboardOnNavigation true
+  let _ = JB.hideKeyboardOnNavigation true
   _ <- pure $ JB.updateInputString ""
   if state.props.isSearchLocation == ST.LocateOnMap then continue state { props { isSearchLocation = ST.NoView } }
   else exit $ GoBack state
@@ -79,6 +79,7 @@ eval (DestinationChanged input) state = do
 
 eval (LocationListItemActionController (LocationListItem.OnClick item)) state = do
   let updatedState = state {data{destination = item.title}}
+  let _ = JB.hideKeyboardOnNavigation true
   updateAndExit updatedState $ GetPlaceName updatedState (fromMaybe "" item.placeId)
 
 eval (LocationListItemActionController _) state = do 
@@ -150,6 +151,7 @@ eval ShowVoiceToTextPopup state = do
 eval (VoiceToTextPopup PopUpModal.DismissPopup) state = continueWithCmd state { props { showVoiceToText = false, voiceToTextSuccess = false, confirmButtonText = initData.props.confirmButtonText }, data { voiceToText =  initData.data.voiceToText} } [ do
       void $ runEffectFn1 JB.stopVoiceRecognition ""
       void $ pure $ clearTimerWithId "confirmVoiceToText"
+      void $ JB.requestKeyboardShow $ getNewIDWithTag "DestinationEditTextMeterSreen"
       pure NoAction
   ]
 

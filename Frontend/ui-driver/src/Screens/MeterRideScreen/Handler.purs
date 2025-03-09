@@ -41,3 +41,9 @@ meterRideScreen = do
     TriggerGlobalEvents updatedState -> do
       modifyScreenState $ MeterRideScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ TRIGGER_GLOBAL_EVENTS)
+    RefreshTimeOut updatedState -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REFRESH_TRIPS)
+    GoToHelpAndSupportScreen updatedState -> do
+      modifyScreenState $ MeterRideScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_AND_SUPPORT_FROM_METER)

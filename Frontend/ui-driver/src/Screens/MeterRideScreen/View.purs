@@ -62,6 +62,7 @@ import Control.Monad.Trans.Class (lift)
 import Helpers.API as HelperAPI
 import Data.Function.Uncurried
 import Helpers.Utils
+import Animation.Config as AnimConfig
 
 screen :: MeterRideScreenState -> Screen Action MeterRideScreenState ScreenOutput
 screen initialState =
@@ -183,7 +184,7 @@ rateCardView push state =
             , background Color.blue600
             ]
             [ textView
-                $ [ text "Rate Card"
+                $ [ text $ getString RATE_CARD
                   , height WRAP_CONTENT
                   , width MATCH_PARENT
                   , color Color.black800
@@ -200,7 +201,7 @@ rateCardView push state =
                 , cornerRadius 12.0
                 ]
                 [ textView
-                    $ [ text "Auto Rickshaw"
+                    $ [ text $ getString AUTO_RICKSHAW
                       , height WRAP_CONTENT
                       , width MATCH_PARENT
                       , color Color.black800
@@ -292,7 +293,7 @@ rateCardView push state =
                 ]
             , sliderView push state
             , textView
-                $ [ text "Got It!"
+                $ [ text $ getString GOT_IT
                   , height WRAP_CONTENT
                   , width MATCH_PARENT
                   , color Color.blue800
@@ -391,7 +392,7 @@ sliderView push state =
             ]
             []
     , textView
-        $ [ text "Rate changes as the distance changes"
+        $ [ text $ getString RATE_CHANGES_AS_THE_DISTANCE_CHANGES
           , color Color.black700
           , margin $ Margin 10 10 10 5
           ]
@@ -458,7 +459,7 @@ rideInitView push state =
               , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
               ]
           , textView
-              $ [ text "Back"
+              $ [ text $ getString BACK
                 , color Color.black700
                 , margin $ MarginLeft 5
                 , padding $ PaddingBottom 4
@@ -543,16 +544,29 @@ rideInitView push state =
                         []
                     ]
                 ]
-            , Keyed.linearLayout
-                [ width $ V 216
-                , height $ V 216
-                , gravity CENTER
-                , cornerRadius 9999.0
-                , layoutGravity "center"
-                , onClick push $ const HandleStartButton
-                ]
-                [ if state.props.startButtonCountDown > 3 then Tuple "startPressView" $ startPressView push state else Tuple "startCounterView" $ startCounterView push state
-                ]
+            , if state.props.rideStartingLoader then
+                relativeLayout
+                  [ width $ V 216
+                  , height $ V 216
+                  , gravity CENTER
+                  ]
+                  [ progressBar
+                      [ width $ V 109
+                      , height $ V 108
+                      , progressBarColor Color.white900
+                      ]
+                  ]
+              else
+                Keyed.linearLayout
+                  [ width $ V 216
+                  , height $ V 216
+                  , gravity CENTER
+                  , cornerRadius 9999.0
+                  , layoutGravity "center"
+                  , onClick push $ const HandleStartButton
+                  ]
+                  [ if state.props.startButtonCountDown > 3 then Tuple "startPressView" $ startPressView push state else Tuple "startCounterView" $ startCounterView push state
+                  ]
             ]
       ]
 
@@ -566,14 +580,14 @@ rideInitView push state =
           , gravity CENTER
           ]
           [ textView
-              $ [ text "START"
+              $ [ text $ getString START'
                 , height WRAP_CONTENT
                 , color Color.white900
                 , letterSpacing $ PX 1.0
                 ]
               <> FontStyle.title3 TypoGraphy
           , textView
-              $ [ text "namma\nmeter"
+              $ [ text $ getString NAMMANMETER
                 , gravity CENTER
                 , height WRAP_CONTENT
                 , color Color.white900
@@ -599,7 +613,7 @@ rideInitView push state =
                 ]
               <> FontStyle.title5 TypoGraphy
           , textView
-              $ [ text "Press to Cancel"
+              $ [ text $ getString PRESS_TO_CANCEL
                 , gravity CENTER
                 , height WRAP_CONTENT
                 , color Color.white900
@@ -683,7 +697,7 @@ rideStartedView push state =
                         , clickable true
                         ]
                         [ textView
-                            $ [ text $ "Confirm Meter Stop"
+                            $ [ text $ getString CONFIRM_METER_STOP
                               , height WRAP_CONTENT
                               , width MATCH_PARENT
                               , color "#454545"
@@ -703,7 +717,7 @@ rideStartedView push state =
                             , onClick push $ const EndRide
                             ]
                             [ textView
-                                $ [ text $ "Confirm"
+                                $ [ text $ getString CONFIRM
                                   , height WRAP_CONTENT
                                   , width MATCH_PARENT
                                   , color Color.yellow900
@@ -712,7 +726,7 @@ rideStartedView push state =
                                 <> FontStyle.subHeading3 TypoGraphy
                             ]
                         , textView
-                            $ [ text $ "Cancel"
+                            $ [ text $ getString CANCEL
                               , height WRAP_CONTENT
                               , width MATCH_PARENT
                               , margin $ Margin 0 24 0 0
@@ -765,7 +779,7 @@ distAndTimeView push state =
                 , margin $ Margin 0 0 10 0
                 ]
             , textView
-                $ [ text "DIST."
+                $ [ text $ getString DIST
                   , height WRAP_CONTENT
                   , letterSpacing $ PX 2.0
                   , color Color.black500
@@ -783,7 +797,7 @@ distAndTimeView push state =
                   ]
                 <> FontStyle.body34 TypoGraphy
             , textView
-                $ [ text "KM"
+                $ [ text $ getString KM
                   , height WRAP_CONTENT
                   , letterSpacing $ PX 2.0
                   , margin $ Margin 4 0 0 0
@@ -791,9 +805,51 @@ distAndTimeView push state =
                   ]
                 <> FontStyle.h2 TypoGraphy
             ]
+        , linearLayout
+            [ height $ WRAP_CONTENT
+            , width $ WRAP_CONTENT
+            , orientation VERTICAL
+            , cornerRadius 10.0
+            ]
+            [ textView
+                $ [ text $ getString UPDATED_AT_
+                  , color Color.black500
+                  ]
+                <> FontStyle.body9 TypoGraphy
+            , linearLayout
+                [ height $ WRAP_CONTENT
+                , width $ WRAP_CONTENT
+                , gravity CENTER
+                , onClick push $ const RefreshTime
+                , rippleColor Color.rippleShade
+                ]
+                [ textView
+                    $ [ text $ EHC.convertUTCtoISC state.data.lastUpdatedTime "h:mm A"
+                      , color Color.black900
+                      , padding $ PaddingBottom 3
+                      ]
+                    <> FontStyle.body9 TypoGraphy
+                , PrestoAnim.animationSet
+                    [ PrestoAnim.Animation
+                        [ PrestoAnim.duration 500
+                        , PrestoAnim.fromRotation 0
+                        , PrestoAnim.toRotation 360
+                        , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+                        ]
+                        state.props.refreshAnimation
+                    ]
+                    $ imageView
+                        [ width $ V 16
+                        , height $ V 16
+                        , onAnimationEnd push StopRotation
+                        , margin $ MarginLeft 8
+                        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_refresh"
+                        ]
+                ]
+            ]
         ]
     , linearLayout
-        [ weight 1.0
+        [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , gravity RIGHT
         , orientation VERTICAL
@@ -807,7 +863,7 @@ distAndTimeView push state =
                 , margin $ Margin 0 4 10 0
                 ]
             , textView
-                $ [ text "TIME"
+                $ [ text $ getString TIME
                   , height WRAP_CONTENT
                   , margin $ Margin 0 0 5 0
                   , letterSpacing $ PX 2.0
@@ -857,6 +913,8 @@ enterDestinationView push state =
     , margin $ Margin 0 0 0 20
     , cornerRadius 15.0
     , onClick push (const $ EnterDestination)
+    , rippleColor Color.rippleShade
+    , clickable  (state.data.destinationAddress == "")
     ]
     [ imageView
         [ height $ V 20
@@ -864,11 +922,11 @@ enterDestinationView push state =
         , color Color.blue800
         , margin $ Margin 0 2 10 0
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_location_blue"
-        , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
+        , visibility $ boolToVisibility (state.data.destinationAddress == "")
         ]
     , linearLayout
         [ height WRAP_CONTENT
-        , visibility $ boolToVisibility (state.data.destinationLat /= 0.0)
+        , visibility $ boolToVisibility (state.data.destinationAddress /= "")
         , orientation VERTICAL
         , width MATCH_PARENT
         ]
@@ -878,7 +936,7 @@ enterDestinationView push state =
             , padding $ Padding 5 5 5 5
             ]
             [ textView
-                $ [ text "Destination"
+                $ [ text $ getString DESTINATION
                   , color "#A7A7A7"
                   , onClick
                       ( \action -> do
@@ -886,7 +944,7 @@ enterDestinationView push state =
                           pure unit
                       )
                       (const $ EnterDestination)
-                  , clickable (state.data.destinationLat == 0.0)
+                  , clickable (state.data.destinationAddress == "")
                   ]
                 <> FontStyle.body5 TypoGraphy
             ]
@@ -896,7 +954,7 @@ enterDestinationView push state =
               , ellipsize true
               , padding $ Padding 5 5 5 5
               , color Color.black800
-              , clickable (state.data.destinationLat == 0.0)
+              , clickable  (state.data.destinationAddress == "")
               , onClick
                   ( \action -> do
                       _ <- push action
@@ -933,20 +991,20 @@ enterDestinationView push state =
                     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_google_map_tracking"
                     ]
                 , textView
-                    $ [ text "Maps"
+                    $ [ text $ getString MAPS
                       , height WRAP_CONTENT
                       , color Color.white900
+                      , padding $ PaddingBottom 3
                       ]
                     <> FontStyle.body23 TypoGraphy
                 ]
             ]
         ]
     , textView
-        $ [ text "Enter Destination"
+        $ [ text $ getString ENTER_DESTINATION
           , height WRAP_CONTENT
           , color Color.blue800
-          , visibility $ boolToVisibility (state.data.destinationLat == 0.0)
-          , clickable (state.data.destinationLat == 0.0)
+          , visibility $ boolToVisibility (state.data.destinationAddress == "")
           ]
         <> FontStyle.h3 TypoGraphy
     ]
@@ -973,7 +1031,7 @@ stopMeterView push state =
         ]
         []
     , textView
-        $ [ text "STOP METER"
+        $ [ text $ getString STOP_METER
           , height WRAP_CONTENT
           , color Color.white900
           , letterSpacing $ PX 1.0
@@ -999,7 +1057,7 @@ fareView push state =
         , onClick push $ const $ if state.props.startButtonCountDown > 3 then ShowRateCard else NoAction
         ]
         [ textView
-            $ [ text "FARE"
+            $ [ text $ getString FARE
               , height WRAP_CONTENT
               , color Color.black600
               , letterSpacing $ PX 1.0
@@ -1033,13 +1091,12 @@ fareView push state =
             ]
         , sevenSegmentView push state
         , textView
-            $ [ text "Upto\n2KM"
+            $ [ text $ getString UPTON2KM
               , color Color.black900
               , margin $ MarginLeft 5
               , height MATCH_PARENT
               , gravity BOTTOM
-              , padding $ PaddingBottom 12
-              , alpha $ if  state.data.distance < 2.0 then 1.0 else 0.4
+              , alpha $ if state.data.distance < 2.0 then 1.0 else 0.4
               ]
             <> (FontStyle.body6 TypoGraphy)
         ]
@@ -1076,7 +1133,7 @@ fareView push state =
                     []
             ]
         , textView
-            $ [ text "METER RUNNING"
+            $ [ text $ getString METER_RUNNING
               , color Color.black600
               , margin $ MarginLeft 8
               , letterSpacing $ PX 2.0

@@ -84,7 +84,7 @@ getBaseUrl dummy = do
       in (config.baseUrl)
 
 getCustomerBaseUrl :: String -> String
-getCustomerBaseUrl dummy = "https://api.moving.tech/pilot/app/v2"
+getCustomerBaseUrl dummy = "https://api.sandbox.moving.tech/dev/app/v2"
 
 getSpecialZoneBaseUrl :: String -> String
 getSpecialZoneBaseUrl dummy = ""

@@ -3472,7 +3472,8 @@ type MeterRideScreenData = {
   destinationLat :: Number,
   destinationLng :: Number,
   ridesInfo :: Maybe RidesInfo,
-  rateCard :: Maybe Common.RateCard
+  rateCard :: Maybe Common.RateCard,
+  lastUpdatedTime :: String
 }
 
 type MeterRideScreenProps = {
@@ -3491,7 +3492,9 @@ type MeterRideScreenProps = {
   isMeterRideStarted :: Boolean,
   isMeterClockRunning :: Boolean,
   confirmMeterRideStop :: Boolean,
-  isRateCardLoading :: Boolean
+  isRateCardLoading :: Boolean,
+  refreshAnimation :: Boolean,
+  rideStartingLoader :: Boolean
 }
 
 data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY

@@ -82,6 +82,18 @@ getString language str =
 
 getProxy :: STR -> (Keymap -> String)
 getProxy str = case str of
+  CONFIRM_METER_STOP -> \a -> a @~ confirm_meter_stop
+  RATE_CHANGES_AS_THE_DISTANCE_CHANGES -> \a -> a @~ rate_changes_as_the_distance_changes
+  NAMMANMETER -> \a -> a @~ nammanmeter
+  PRESS_TO_CANCEL -> \a -> a @~ press_to_cancel
+  DIST -> \a -> a @~ dist
+  KM -> \a -> a @~ km
+  UPDATED_AT_ -> \a -> a @~ updated_at_
+  TIME -> \a -> a @~ time
+  ENTER_DESTINATION -> \a -> a @~ enter_destination
+  STOP_METER -> \a -> a @~ stop_meter
+  UPTON2KM -> \a -> a @~ upton2km
+  METER_RUNNING -> \a -> a @~ meter_running
   LETS_GET_STARTED -> \a -> a @~ lets_get_started
   LANGUAGE_UPDATED -> \a -> a @~ language_updated
   YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION -> \a -> a @~ your_application_has_been_submitted_successfully_and_is_under_verification

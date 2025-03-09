@@ -14,7 +14,8 @@ initData = {
         destinationLat : 0.0,
         destinationLng : 0.0,
         ridesInfo : Nothing,
-        rateCard : Nothing
+        rateCard : Nothing,
+        lastUpdatedTime: ""
     }
     , props : {
         meterFare : 0,
@@ -32,6 +33,8 @@ initData = {
         isMeterRideStarted : false,
         isMeterClockRunning : false,
         confirmMeterRideStop : false,
-        isRateCardLoading : false
+        isRateCardLoading : false,
+        refreshAnimation : false,
+        rideStartingLoader : false
     }
 }
