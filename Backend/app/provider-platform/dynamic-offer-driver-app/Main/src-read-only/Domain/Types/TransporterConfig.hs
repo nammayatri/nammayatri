@@ -108,6 +108,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     dummyFromLocation :: Domain.Types.Location.DummyLocationInfo,
     dummyShowDriverAdditions :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dummyToLocation :: Domain.Types.Location.DummyLocationInfo,
+    dynamicReferralCodeEnabled :: Kernel.Prelude.Bool,
+    dynamicReferralCodeValidForMinutes :: Kernel.Prelude.Integer,
     editLocDriverPermissionNeeded :: Kernel.Prelude.Bool,
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,

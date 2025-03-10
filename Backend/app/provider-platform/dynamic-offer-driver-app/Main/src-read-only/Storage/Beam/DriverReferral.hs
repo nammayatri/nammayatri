@@ -13,6 +13,8 @@ import Tools.Beam.UtilsTH
 
 data DriverReferralT f = DriverReferralT
   { driverId :: B.C f Data.Text.Text,
+    dynamicReferralCode :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    dynamicReferralCodeValidTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     linkedAt :: B.C f Kernel.Prelude.UTCTime,
     referralCode :: B.C f Data.Text.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
@@ -28,6 +30,6 @@ instance B.Table DriverReferralT where
 
 type DriverReferral = DriverReferralT Identity
 
-$(enableKVPG ''DriverReferralT ['referralCode] [['driverId]])
+$(enableKVPG ''DriverReferralT ['referralCode] [['driverId], ['dynamicReferralCode]])
 
 $(mkTableInstances ''DriverReferralT "driver_referral")

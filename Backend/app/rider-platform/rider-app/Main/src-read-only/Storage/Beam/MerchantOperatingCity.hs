@@ -16,6 +16,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
   { city :: B.C f Kernel.Types.Beckn.Context.City,
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    driverOfferMerchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f Kernel.Prelude.Double,
     long :: B.C f Kernel.Prelude.Double,

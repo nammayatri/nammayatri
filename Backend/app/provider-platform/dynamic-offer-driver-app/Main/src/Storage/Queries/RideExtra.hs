@@ -191,6 +191,21 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
 findOneByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 findOneByDriverId (Id personId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq personId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
+findOneCompletedOrInProgressANdCreatedWithinByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> m (Maybe Ride)
+findOneCompletedOrInProgressANdCreatedWithinByDriverId (Id personId) now = do
+  let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  listToMaybe
+    <$> findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is BeamR.driverId $ Se.Eq personId,
+            Se.Is BeamR.status $ Se.In [Ride.COMPLETED, Ride.INPROGRESS],
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
+          ]
+      ]
+      (Se.Desc BeamR.createdAt)
+      (Just 1)
+      Nothing
+
 getInProgressByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
