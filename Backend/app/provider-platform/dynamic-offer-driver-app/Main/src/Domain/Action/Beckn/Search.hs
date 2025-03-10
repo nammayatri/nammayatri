@@ -254,7 +254,7 @@ handler ValidatedDSearchReq {..} sReq = do
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocationName = allFarePoliciesProduct.specialLocationName
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
-  let mbDriverInfo = liftA2 (,) driverIdForSearch transporterConfig.driverDrivenSearchReqExpiry
+  let mbDriverInfo = (driverIdForSearch,transporterConfig.driverDrivenSearchReqExpiry)
   searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId fromLocation mbToLocation mbDistance mbDuration spcllocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
@@ -487,13 +487,13 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Int ->
   [DLoc.Location] ->
-  Maybe (Id DP.Person, NominalDiffTime) ->
+  (Maybe Id DP.Person, Maybe NominalDiffTime) ->
   m DSR.SearchRequest
 buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let mbExpiryTime :: Maybe NominalDiffTime = snd <$> mbDriverInfo
+  let mbExpiryTime :: Maybe NominalDiffTime = snd mbDriverInfo
   let validTill = fromMaybe searchRequestExpirationSeconds mbExpiryTime `addUTCTime` startTime
   pure
     DSR.SearchRequest
@@ -521,7 +521,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         poolingConfigVersion = Nothing,
         stops = stops',
         hasStops = Just . not $ null stops',
-        driverIdForSearch = fst <$> mbDriverInfo,
+        driverIdForSearch = fst mbDriverInfo,
         ..
       }
 
