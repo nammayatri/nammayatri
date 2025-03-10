@@ -49,13 +49,13 @@ helpAndSupportScreen = do
        App.BackT $ App.BackPoint <$> pure (DUMMY_RIDE_REQUEST updatedState)
     GoToProfileScreen updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_PROFILE_SCREEN updatedState)
+      App.BackT $ App.NoBack <$> pure (GO_BACK_TO_PROFILE_SCREEN updatedState)
     GoToHomeScreen updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_HOME_SCREEN_FROM_HELP updatedState)
+      App.BackT $ App.NoBack <$> pure (GO_BACK_TO_HOME_SCREEN_FROM_HELP updatedState)
     GoToTripDetailsScreen updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_TRIP_DETAILS updatedState)
+      App.BackT $ App.NoBack <$> pure (GO_BACK_TO_TRIP_DETAILS updatedState)
     GotoMeterRideScreen updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
       App.BackT $ pure App.GoBack
