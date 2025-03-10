@@ -1,0 +1,26 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  OperationHub: Domain.Types.OperationHub
+  APISuccess: Kernel.Types.APISuccess
+  RequestType: Domain.Types.OperationHubRequests
+
+module: OperationHub
+
+types:
+  DriverOperationHubRequest:
+    requestType: RequestType
+    operationHubId: Text
+apis:
+  - GET:
+      endpoint: /operation/getAllHubs
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[OperationHub]"
+  - POST:
+      endpoint: /operation/createRequest
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverOperationHubRequest
+      response:
+        type: APISuccess

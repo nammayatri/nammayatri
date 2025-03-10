@@ -25,6 +25,7 @@ import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
@@ -115,6 +116,7 @@ type API =
            :<|> ReferralPayout.API
            :<|> SpecialLocationWarrior.API
            :<|> WMB.API
+           :<|> OH.API
        )
 
 handler :: FlowServer API
@@ -164,3 +166,4 @@ handler =
     :<|> ReferralPayout.handler
     :<|> SpecialLocationWarrior.handler
     :<|> WMB.handler
+    :<|> OH.handler
