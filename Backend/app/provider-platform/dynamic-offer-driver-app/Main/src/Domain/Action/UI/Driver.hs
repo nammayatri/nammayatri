@@ -111,6 +111,7 @@ import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
+import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.Person as SP
@@ -296,6 +297,7 @@ data DriverInformationRes = DriverInformationRes
     subscribed :: Bool,
     paymentPending :: Bool,
     referralCode :: Maybe Text,
+    dynamicReferralCode :: Maybe Text,
     organization :: DM.MerchantAPIEntity,
     language :: Maybe Maps.Language,
     alternateNumber :: Maybe Text,
@@ -710,7 +712,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- maybe (QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound) return mbDriverInfo
-  driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
+  driverReferralCode <- QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
@@ -1112,7 +1114,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   QPerson.updatePersonRec personId updPerson
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION
-  driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
+  driverReferralCode <- QDR.findById personId
   let merchantId = person.merchantId
   org <-
     CQM.findById merchantId
@@ -1153,7 +1155,7 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
@@ -1166,11 +1168,23 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
         mbDriverBankAccount <- QDBA.findByPrimaryKey id
         return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {..})
       else return Nothing
+  (refCode, dynamicReferralCode) <-
+    case referralCode of
+      Nothing -> do
+        res <- DUR.generateReferralCode (driverStats.driverId, merchant.id, merchantOpCityId)
+        return (Just $ Id res.referralCode, res.dynamicReferralCode)
+      Just drc -> do
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        fmap (\drc' -> (Just drc'.referralCode, drc'.dynamicReferralCode)) $
+          if transporterConfig.dynamicReferralCodeEnabled
+            then DUR.checkAndUpdateDynamicReferralCode merchantOperatingCity.merchantId merchantOpCityId transporterConfig onRide drc
+            else pure drc
   CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes
         { organization = DM.makeMerchantAPIEntity merchant,
-          referralCode = referralCode <&> (.getId),
+          referralCode = refCode <&> (.getId),
+          dynamicReferralCode = dynamicReferralCode,
           numberOfRides = driverStats.totalRides,
           driverGoHomeInfo = dghInfo,
           isGoHomeEnabled = cfg.enableGoHome,

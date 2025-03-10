@@ -40,7 +40,9 @@ data RefereeLinkInfoReq = RefereeLinkInfoReq
     customerMobileCountryCode :: Text,
     isMultipleDeviceIdExist :: Maybe Bool,
     alreadyReferred :: Maybe Bool,
-    shareReferrerInfo :: Maybe Bool
+    shareReferrerInfo :: Maybe Bool,
+    merchantOperatingCityId :: Text,
+    refereeLocation :: Maybe LatLong
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -69,18 +71,22 @@ linkReferee ::
   Text ->
   Text ->
   Text ->
+  Text ->
   Maybe Bool ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe LatLong ->
   m LibTypes.LinkRefereeRes
-linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode isMultipleDeviceIdExist alreadyReferred shareReferrerInfo = do
+linkReferee apiKey internalUrl driverMerchantId driverMerchantOperatingCityId referralCode phoneNumber countryCode isMultipleDeviceIdExist alreadyReferred shareReferrerInfo mbCustomerLocation = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) buildLinkRefereeReq) "LinkReferee" likeRefereeApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient driverMerchantId (Just apiKey) buildLinkRefereeReq) "LinkReferee" likeRefereeApi
   where
     buildLinkRefereeReq = do
       RefereeLinkInfoReq
         { customerMobileNumber = phoneNumber,
           customerMobileCountryCode = countryCode,
+          merchantOperatingCityId = driverMerchantOperatingCityId,
+          refereeLocation = mbCustomerLocation,
           ..
         }
 

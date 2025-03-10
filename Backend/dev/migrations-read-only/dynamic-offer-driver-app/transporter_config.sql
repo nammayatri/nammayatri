@@ -365,3 +365,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_overchar
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN normal_ride_bulk_loc_update_batch_size integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN meter_ride_bulk_loc_update_batch_size integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_valid_for_minutes integer ;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_enabled boolean ;
+

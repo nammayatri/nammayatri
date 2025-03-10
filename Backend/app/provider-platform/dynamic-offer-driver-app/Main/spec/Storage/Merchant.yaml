@@ -1000,6 +1000,8 @@ TransporterConfig:
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer
     meterRideBulkLocUpdateBatchSize: Integer
+    dynamicReferralCodeValidForMinutes: Integer
+    dynamicReferralCodeEnabled: Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1051,6 +1053,8 @@ TransporterConfig:
     enableOverchargingBlocker: Maybe Bool
     normalRideBulkLocUpdateBatchSize: Maybe Integer
     meterRideBulkLocUpdateBatchSize: Maybe Integer
+    dynamicReferralCodeValidForMinutes: Maybe Integer
+    dynamicReferralCodeEnabled: Maybe Bool
 
   beamFields:
     fcmConfig:
@@ -1107,6 +1111,8 @@ TransporterConfig:
     enableOverchargingBlocker: Just enableOverchargingBlocker|E
     normalRideBulkLocUpdateBatchSize: Just normalRideBulkLocUpdateBatchSize|E
     meterRideBulkLocUpdateBatchSize: Just meterRideBulkLocUpdateBatchSize|E
+    dynamicReferralCodeValidForMinutes: Just dynamicReferralCodeValidForMinutes|E
+    dynamicReferralCodeEnabled: Just dynamicReferralCodeEnabled|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
@@ -1171,6 +1177,8 @@ TransporterConfig:
     enableOverchargingBlocker: fromMaybe False enableOverchargingBlocker|E
     normalRideBulkLocUpdateBatchSize: fromMaybe 98 normalRideBulkLocUpdateBatchSize|E
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
+    dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
+    dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E

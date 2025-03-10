@@ -458,7 +458,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   let mbNewOperatingCity =
         case cityAlreadyCreated of
           Nothing -> do
-            let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now newMerchantShortId
+            let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now newMerchantShortId req.driverOfferMerchantOperatingCityId
             Just newOperatingCity
           _ -> Nothing
 
@@ -639,11 +639,12 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           ..
         }
 
-    buildMerchantOperatingCity newMerchantId cityId currentTime newMerchantShortId = do
+    buildMerchantOperatingCity newMerchantId cityId currentTime newMerchantShortId driverMerchantCityId = do
       DMOC.MerchantOperatingCity
         { id = cityId,
           merchantId = newMerchantId,
           merchantShortId = newMerchantShortId,
+          driverOfferMerchantOperatingCityId = driverMerchantCityId,
           lat = req.lat,
           long = req.long,
           city = req.city,
