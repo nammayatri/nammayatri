@@ -902,6 +902,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Chennai",
         "mapImage" : "ny_ic_chennai_map",
+        "enableNammaMeter": true,
         "cityCode" : "std:044",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,

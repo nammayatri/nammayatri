@@ -77,6 +77,7 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToProfileScreen HelpAndSupportScreenState
                   | GoToHomeScreen HelpAndSupportScreenState
                   | GoToTripDetailsScreen HelpAndSupportScreenState
+                  | GotoMeterRideScreen HelpAndSupportScreenState
 data Action = NoAction
              | BackPressed
              | SourceToDestinationAction SourceToDestinationController.Action
@@ -109,6 +110,7 @@ eval BackPressed state = do
         DRIVER_PROFILE_SCREEN -> exit (GoToProfileScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         HOME_SCREEN -> exit (GoToHomeScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         TRIP_DETAILS_SCREEN -> exit (GoToTripDetailsScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
+        METER_RIDE_SCREEN -> exit (GotoMeterRideScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         _ -> continue state
 eval (SelectRide selectedCategory) state = do
   when (not (DS.null state.data.timerId)) $ do

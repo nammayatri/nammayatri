@@ -19,9 +19,14 @@ newtype Languages
   , odiya :: Keymap
   }
 
-newtype Keymap
-  = Keymap
-  { lets_get_started :: String
+newtype Keymap = Keymap { 
+    namma_meter  :: String ,
+    bus_number  :: String ,
+    bus_type  :: String ,
+    confirm_destination  :: String ,
+    search_results  :: String ,
+    start_typing_to_search_places  :: String ,
+    lets_get_started :: String
   , language_updated :: String
   , your_application_has_been_submitted_successfully_and_is_under_verification :: String
   , view_status :: String
@@ -1830,6 +1835,21 @@ newtype Keymap
   , overcharging_suspended_desc :: String
   , suspended_till :: String -> String -> String
   , fair_price_driver :: String
+  , resume_ride :: String
+  , end_ride_with_stops :: String
+  , stop :: String -> String 
+  , rate_changes_as_the_distance_changes :: String
+    , nammanmeter :: String
+    , press_to_cancel :: String
+    , dist :: String
+    , km :: String
+    , updated_at_ :: String
+    , time :: String
+    , enter_destination :: String
+    , stop_meter :: String
+    , upton2km :: String
+    , meter_running :: String
+    , confirm_meter_stop :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7141,55 +7161,55 @@ seamless_earning_experience_click_below :: Proxy "seamless_earning_experience_cl
 seamless_earning_experience_click_below = a
 
 metro_warrior_mode :: Proxy "metro_warrior_mode"
-metro_warrior_mode = Proxy
+metro_warrior_mode = a
 
 choose_metro_station :: Proxy "choose_metro_station"
-choose_metro_station = Proxy
+choose_metro_station = a
 
 primary_metro_station :: Proxy "primary_metro_station"
-primary_metro_station = Proxy
+primary_metro_station = a
 
 primary_station_info :: Proxy "primary_station_info"
-primary_station_info = Proxy
+primary_station_info = a
 
 nearby_stations :: Proxy "nearby_stations"
-nearby_stations = Proxy
+nearby_stations = a
 
 nearby_station_info :: Proxy "nearby_station_info"
-nearby_station_info = Proxy
+nearby_station_info = a
 
 change :: Proxy "change"
-change = Proxy
+change = a
 
 disable_metro_warriors_info :: Proxy "disable_metro_warriors_info"
-disable_metro_warriors_info = Proxy
+disable_metro_warriors_info = a
 
 choose_preferred_metro :: Proxy "choose_preferred_metro"
-choose_preferred_metro = Proxy
+choose_preferred_metro = a
 
 metro_warriors :: Proxy "metro_warriors"
-metro_warriors = Proxy
+metro_warriors = a
 
 search :: Proxy "search"
-search = Proxy
+search = a
 
 bus__ :: Proxy "bus__"
-bus__ = Proxy
+bus__ = a
 
 driver_unsubscribed :: Proxy "driver_unsubscribed"
-driver_unsubscribed = Proxy
+driver_unsubscribed = a
 
 drivers_are_permitted_to_cancel_ambulance_bookings :: Proxy "drivers_are_permitted_to_cancel_ambulance_bookings"
-drivers_are_permitted_to_cancel_ambulance_bookings = Proxy
-
-payment_under_maintenance :: Proxy "payment_under_maintenance"
-payment_under_maintenance = Proxy
-
-payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
-payments_temporarily_unavailable = Proxy
+drivers_are_permitted_to_cancel_ambulance_bookings = a
 
 canceling_this_booking_may_affect_the_emergency_medical :: Proxy "canceling_this_booking_may_affect_the_emergency_medical"
-canceling_this_booking_may_affect_the_emergency_medical = Proxy
+canceling_this_booking_may_affect_the_emergency_medical = a
+
+payment_under_maintenance :: Proxy "payment_under_maintenance"
+payment_under_maintenance = a
+
+payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
+payments_temporarily_unavailable = a  
 
 
 extra_charge_penalty :: Proxy "extra_charge_penalty"
@@ -7269,4 +7289,47 @@ suspended_till = Proxy
 
 fair_price_driver :: Proxy "fair_price_driver"
 fair_price_driver = Proxy
+stop :: Proxy "stop"
+stop = a 
+
+rate_changes_as_the_distance_changes :: Proxy "rate_changes_as_the_distance_changes"
+rate_changes_as_the_distance_changes = a
+nammanmeter :: Proxy "nammanmeter"
+nammanmeter = a
+press_to_cancel :: Proxy "press_to_cancel"
+press_to_cancel = a
+dist :: Proxy "dist"
+dist = a
+km :: Proxy "km"
+km = a
+updated_at_ :: Proxy "updated_at_"
+updated_at_ = a
+time :: Proxy "time"
+time = a
+enter_destination :: Proxy "enter_destination"
+enter_destination = a
+stop_meter :: Proxy "stop_meter"
+stop_meter = a
+upton2km :: Proxy "upton2km"
+upton2km = a
+meter_running :: Proxy "meter_running"
+meter_running = a
+
+confirm_meter_stop :: Proxy "confirm_meter_stop"
+confirm_meter_stop = a
+
+confirm_destination :: Proxy "confirm_destination"
+confirm_destination = a
+search_results :: Proxy "search_results"
+search_results = a
+start_typing_to_search_places :: Proxy "start_typing_to_search_places"
+start_typing_to_search_places = a
+bus_number :: Proxy "bus_number"
+bus_number = a
+
+bus_type :: Proxy "bus_type"
+bus_type = a
+
+namma_meter :: Proxy "namma_meter"
+namma_meter = a
 

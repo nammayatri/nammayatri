@@ -141,6 +141,13 @@ import Components.DropDownCard.Controller as DropDownCard
 import Components.SwitchButtonView as SwitchButtonView
 import Mobility.Prelude (boolToInt)
 import Constants.Configs (getPolylineAnimationConfig)
+import Presto.Core.Types.API (ErrorResponse(..))
+import Engineering.Helpers.Utils as EHU
+import Data.Ordering (Ordering(..))
+import Data.Newtype (unwrap)
+import Data.Traversable (for_)
+import Engineering.Helpers.RippleCircles as EHR
+import Components.TripStageTopBar.Controller as TripStageTopBar
 import Data.Array as DA
 
 instance showAction :: Show Action where
@@ -331,6 +338,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
+                    | MeterRideScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -461,7 +469,7 @@ data Action = NoAction
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
             | RideRequestsList
-            | SwitchBookingStage BookingTypes
+            | TripStageTopBarAC TripStageTopBar.Action
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
@@ -498,6 +506,10 @@ data Action = NoAction
             | HideBusOnline
             | BusNumber String
             | DriverBlockedPopUp PopUpModal.Action
+            | VOIPCallBack String String String Int Int String String String
+            | RideEndWithStopsPopupAction PopUpModal.Action
+            | UpdateRouteInState (Array Route)
+            | GotoMeterRideScreen
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -517,6 +529,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
+
+eval GotoMeterRideScreen state = exit $ MeterRideScreen state
 
 eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
 
@@ -618,7 +632,7 @@ eval (BannerChanged item) state = do
 
 eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
-  continue newState
+  update newState
 
 
 eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state =
@@ -1729,7 +1743,7 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {data
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {data {toll {showTollChargeAmbigousPopup = false}}}
 
-eval (SwitchBookingStage stage) state = do
+eval (TripStageTopBarAC (TripStageTopBar.SwitchBookingStage stage)) state = do
   if state.props.bookingStage == stage then continue state
   else do
     let currentRideData = if stage == CURRENT then fromMaybe state.data.activeRide state.data.currentRideData else state.data.activeRide
@@ -1740,6 +1754,8 @@ eval (SwitchBookingStage stage) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
+
+eval (TripStageTopBarAC (TripStageTopBar.HelpAndSupportScreen)) state = exit $ GoToHelpAndSupportScreen state
 
 eval (PlanListResponse (API.UiPlansResp plansListResp)) state = do
   let isTamilSelected = (getLanguageLocale languageKey) == "TA_IN"

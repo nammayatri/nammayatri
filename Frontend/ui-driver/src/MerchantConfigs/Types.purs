@@ -50,7 +50,8 @@ type AppConfigDriver a =
     showMonthlyLeaderBoard :: Boolean,
     hotspotConfig :: HotspotConfig,
     rentalRideVideoConfig :: RentalRideVideoConfig,
-    scheduledRideConfig :: ScheduledRideConfig
+    scheduledRideConfig :: ScheduledRideConfig,
+    customerTokenForMeterRide :: String
     | a
   } 
 
@@ -271,7 +272,8 @@ type CityConfig = {
   enableGullak :: Boolean,
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
-  showScheduledRides :: Boolean
+  showScheduledRides :: Boolean,
+  enableNammaMeter :: Maybe Boolean
 }
 
 type InAppKeyboardModalConfig = {

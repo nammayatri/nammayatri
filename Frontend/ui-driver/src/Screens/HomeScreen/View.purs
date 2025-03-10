@@ -125,6 +125,7 @@ import Components.PopUpModal.View as PopUpModal
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Components.SwitchButtonView as SwitchButtonView
 import DecodeUtil (getFromWindowString)
+import Components.TripStageTopBar as TripStageTopBar
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -861,8 +862,9 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][ locationUpdateView push state
-          , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
+        ][  if fromMaybe false state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
+          , locationUpdateView push state
+          , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
           , if hotspotsRemoteConfig.enableHotspotsFeature then seeNearbyHotspots state push else noView
           , rideRequestButton  push state
@@ -874,6 +876,35 @@ gotoRecenterAndSupport state push =
   where
     showReportText = state.props.currentStage == ST.HomeScreen
     centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen && state.data.config.gotoConfig.enableGoto
+
+meterBooking :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+meterBooking state push = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , cornerRadius 22.0
+    , onClick push $ const GotoMeterRideScreen
+    , background Color.white900
+    , padding $ Padding 15 11 15 11
+    , gravity CENTER
+    , stroke $ "1,"<> Color.grey900
+    , rippleColor Color.rippleShade
+    , margin $ MarginRight 8
+    ][ imageView
+        [ width $ V 15
+        , height $ V 15
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_odometer"
+        ]
+      , textView $
+        [ weight 1.0
+        , text $ getString NAMMA_METER
+        , gravity CENTER
+        , margin $ MarginLeft 10
+        , color Color.blue800
+        , padding $ PaddingBottom 3
+        ] <> FontStyle.tags TypoGraphy
+    ]
 
 locationUpdateView :: forall w .(Action -> Effect Unit) -> HomeScreenState  ->  PrestoDOM (Effect Unit) w
 locationUpdateView push state =
@@ -1219,7 +1250,7 @@ driverDetail push state =
   , clickable true
   , margin (MarginTop 5)
   ] [ driverProfile push state
-  , tripStageTopBar push state
+  , TripStageTopBar.view (push <<< TripStageTopBarAC) tripStageTopBarConfig
   , accessibilityHeaderView push state (getAccessibilityHeaderText state)
   , defaultTopBar
     ]
@@ -1247,6 +1278,23 @@ driverDetail push state =
     rideAccStage =  DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]
     rideStartedStage = DA.any (_ == state.props.currentStage) [RideStarted, ChatWithCustomer]
     disabiltiyRide = isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag
+
+
+    tripStageTopBarConfig :: TripStageTopBar.Config
+    tripStageTopBarConfig = 
+      {
+        data : {
+          cityConfig : state.data.cityConfig,
+          advancedRideData : state.data.advancedRideData,
+          activeRide : state.data.activeRide,
+          linkedVehicleVariant : state.data.linkedVehicleVariant
+        }
+        , props : {
+            currentStage : state.props.currentStage,
+            bookingStage : state.props.bookingStage
+        }
+      }
+
 
 driverProfile :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverProfile push state =
@@ -1294,93 +1342,92 @@ driverProfile push state =
         ]
     ]
 
+-- tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- tripStageTopBar push state = 
+--   let cityConfig = state.data.cityConfig
+--   in
+--     horizontalScrollView[
+--       width MATCH_PARENT,
+--       height WRAP_CONTENT,
+--       scrollBarX false,
+--       background Color.white900,
+--       visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (HU.isAmbulance state.data.linkedVehicleVariant)
+--     ][
+--       linearLayout[
+--         width MATCH_PARENT,
+--         height WRAP_CONTENT,
+--         background Color.white900,
+--         margin $ MarginRight 16,
+--         gravity CENTER_VERTICAL
+--       ] $ [ advanceBookingSwitch] 
+--       <> ( 
+--             map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
+--               -- [
+--               --   pillIcon  "ny_ic_blue_shield_white_plus",
+--               --   pillText  "Safety Center"
+--               -- ],
+--             ( Tuple [ pillIcon "ny_ic_red_triangle_warning",
+--                 pillText $ getString REPORT_ISSUE
+--               ] (const HelpAndSupportScreen))
+--             ]
+--           )
+--     ]
+--   where 
+--     tripStageTopBarPill action = 
+--       linearLayout [
+--         width WRAP_CONTENT,
+--         height WRAP_CONTENT,
+--         padding $ Padding 16 16 16 16,
+--         margin $ Margin 12 12 0 12,
+--         cornerRadius 32.0,
+--         background Color.blue600,
+--         onClick push action
+--       ] 
+    
+--     pillIcon imgStr = 
+--       imageView [
+--         width $ V 20,
+--         height $ V 20,
+--         imageWithFallback $ HU.fetchImage HU.FF_ASSET imgStr
+--       ]
+    
+--     pillText str = 
+--       textView $ [
+--         text str,
+--         color Color.blue900,
+--         margin $ MarginLeft 8
+--       ] <> FontStyle.body6 TypoGraphy
 
-tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-tripStageTopBar push state =
-  let cityConfig = state.data.cityConfig
-  in
-    horizontalScrollView[
-      width MATCH_PARENT,
-      height WRAP_CONTENT,
-      scrollBarX false,
-      background Color.white900,
-      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (HU.isAmbulance state.data.linkedVehicleVariant)
-    ][
-      linearLayout[
-        width MATCH_PARENT,
-        height WRAP_CONTENT,
-        background Color.white900,
-        margin $ MarginRight 16,
-        gravity CENTER_VERTICAL
-      ] $ [ advanceBookingSwitch]
-      <> (
-            map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
-              -- [
-              --   pillIcon  "ny_ic_blue_shield_white_plus",
-              --   pillText  "Safety Center"
-              -- ],
-            ( Tuple [ pillIcon "ny_ic_red_triangle_warning",
-                pillText $ getString REPORT_ISSUE
-              ] (const HelpAndSupportScreen))
-            ]
-          )
-    ]
-  where
-    tripStageTopBarPill action =
-      linearLayout [
-        width WRAP_CONTENT,
-        height WRAP_CONTENT,
-        padding $ Padding 16 16 16 16,
-        margin $ Margin 12 12 0 12,
-        cornerRadius 32.0,
-        background Color.blue600,
-        onClick push action
-      ]
+--     advanceBookingSwitch = 
+--       linearLayout [
+--         width WRAP_CONTENT,
+--         height WRAP_CONTENT,
+--         margin $ Margin 12 12 0 12,
+--         cornerRadius 32.0,
+--         background $ if isNothing state.data.advancedRideData then Color.grey700 else Color.blue600,
+--         padding $ Padding 4 4 4 4 
+--       ]$[ swichBtn (getString CURRENT_BUTTON_TEXT) CURRENT false $ state.props.bookingStage /= CURRENT
+--         , swichBtn (getString ADVANCE) ADVANCED (isNothing state.data.advancedRideData) (state.props.bookingStage /= ADVANCED)
+--         ]
 
-    pillIcon imgStr =
-      imageView [
-        width $ V 20,
-        height $ V 20,
-        imageWithFallback $ HU.fetchImage HU.FF_ASSET imgStr
-      ]
-
-    pillText str =
-      textView $ [
-        text str,
-        color Color.blue900,
-        margin $ MarginLeft 8
-      ] <> FontStyle.body6 TypoGraphy
-
-    advanceBookingSwitch =
-      linearLayout [
-        width WRAP_CONTENT,
-        height WRAP_CONTENT,
-        margin $ Margin 12 12 0 12,
-        cornerRadius 32.0,
-        background $ if isNothing state.data.advancedRideData then Color.grey700 else Color.blue600,
-        padding $ Padding 4 4 4 4
-      ]$[ swichBtn (getString CURRENT_BUTTON_TEXT) CURRENT false $ state.props.bookingStage /= CURRENT
-        , swichBtn (getString ADVANCE) ADVANCED (isNothing state.data.advancedRideData) (state.props.bookingStage /= ADVANCED)
-        ]
-
-    swichBtn txt stage isDisabled switchAllowed =
-      textView $ [
-        text $ txt,
-        color $
-          case state.props.bookingStage == stage, isDisabled of
-            true, _ -> Color.aliceBlueLight
-            false, true -> Color.black700
-            false, false -> Color.blue900,
-        background $
-          case state.props.bookingStage == stage, isDisabled of
-            true, _ -> Color.blue900
-            false, true -> Color.grey700
-            false, false -> Color.blue600,
-        padding $ Padding 12 12 12 12,
-        cornerRadius 32.0,
-        alpha $ if isDisabled then 0.5 else 1.0
-      ] <> FontStyle.body6 TypoGraphy
-        <> if isDisabled && switchAllowed then [] else [onClick push $ const $ SwitchBookingStage stage]
+--     swichBtn txt stage isDisabled switchAllowed = 
+--       textView $ [
+--         text $ txt,
+--         color $ 
+--           case state.props.bookingStage == stage, isDisabled of
+--             true, _ -> Color.aliceBlueLight
+--             false, true -> Color.black700
+--             false, false -> Color.blue900,
+--         background $ 
+--           case state.props.bookingStage == stage, isDisabled of
+--             true, _ -> Color.blue900
+--             false, true -> Color.grey700
+--             false, false -> Color.blue600,
+--         padding $ Padding 12 12 12 12,
+--         cornerRadius 32.0,
+--         alpha $ if isDisabled then 0.5 else 1.0
+--       ] <> FontStyle.body6 TypoGraphy
+--         <> if isDisabled && switchAllowed then [] else [onClick push $ const $ SwitchBookingStage stage]
 
 
 
@@ -3365,7 +3412,7 @@ busOnline push state =
           ][  textView
               ([ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text "Bus Number"
+              , text $ getString BUS_NUMBER
               , color Color.greyTextColor
               , margin (MarginBottom 5)
               ] <> FontStyle.body3 TypoGraphy)
@@ -3404,7 +3451,7 @@ busOnline push state =
           ][  textView
               ([ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text "Bus Type"
+              , text $ getString BUS_TYPE
               , color Color.greyTextColor
               , margin (MarginBottom 5)
               ] <> FontStyle.body3 TypoGraphy)

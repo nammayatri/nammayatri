@@ -101,7 +101,15 @@ type Config = {
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
     completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
     upiDetailConfig :: UPIDetailConfig,
-    deliveryDetailsConfig :: DeliveryDetailsConfig
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
+    voiceToTextConfig :: VoiceToTextConfig
+}
+
+
+type VoiceToTextConfig = {
+  id :: String,
+  enabled :: Boolean
 }
 
 type DeliveryDetailsConfig = {
@@ -731,7 +739,9 @@ config = {
       }
     }
   , deliveryDetailsConfig : dummyDeliveryDetailsConfig
+  , externalHeader : Mb.Nothing
   , completeProfileLayout : Mb.Nothing
+  , voiceToTextConfig : dummyVoiceToTextConfig 
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
@@ -782,3 +792,10 @@ dummyDeliveryPrimaryText =
         , width = MATCH_PARENT
         }
       in primaryEditTextConfig'
+
+dummyVoiceToTextConfig :: VoiceToTextConfig
+dummyVoiceToTextConfig = 
+  {
+    id : "",
+    enabled: false
+  }
