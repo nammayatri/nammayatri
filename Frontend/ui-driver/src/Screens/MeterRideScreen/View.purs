@@ -99,6 +99,7 @@ screen initialState =
       , ( \push -> do
             case initialState.data.ridesInfo of
               Just (RidesInfo resp) -> do
+                void $ fetchAndUpdateLocationUpdateServiceVars "ride_started" true "MeterRide"
                 fiber <- launchAff $ EHC.flowRunner defaultGlobalState $ getPrice push resp.id
                 pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
               Nothing -> pure $ pure unit
@@ -1147,7 +1148,7 @@ fareView push state =
 
 sevenSegmentView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 sevenSegmentView push state =
-  let digits = getDigits state.props.meterFare  
+  let digits = getDigits state.props.meterFare
       len = DA.length digits
       finalDigits = if state.props.meterFare == 0 then [-1,-1,-1,-1] else if len > 4 then digits else getArray (4 - len) <> digits
   in
@@ -1155,14 +1156,14 @@ sevenSegmentView push state =
       [ width WRAP_CONTENT
       , height MATCH_PARENT
       ](map (\item -> textView
-          $ [ text $ if item == -1 then "0" else show item 
+          $ [ text $ if item == -1 then "0" else show item
             , textSize FontSize.a_48
             , fontWeight $ FontWeight 400
             , color if item == -1 then Color.black600 else Color.black900
             , fontStyle "https://assets.moving.tech/beckn/fonts/DigitalNumbers-Regular.ttf"
             , letterSpacing $ PX 1.0
             ]) finalDigits)
-      
+
 
 getDigits :: Int -> Array Int
 getDigits input = if input > 9 then getDigits (div input 10) <> [mod input 10] else [input]

@@ -916,7 +916,9 @@ window.getMerchantConfig = function () {
           }
         },
         "mapImage" : "ny_ic_chennai_map",
-        "enableNammaMeter": true,
+        "enableNammaMeter": {
+          "AUTO_RICKSHAW" : true
+        },
         "cityCode" : "std:044",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
