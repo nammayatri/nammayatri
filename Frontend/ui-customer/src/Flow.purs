@@ -7416,7 +7416,7 @@ busTicketBookingFlow = do
             tickets = metroTicketBookingStatus.tickets
             busConfigs = RC.getBusFlowConfigs $ getValueToLocalStore CUSTOMER_LOCATION
           if (metroTicketBookingStatus.status == "CONFIRMED") then do 
-            let goToTracking = busConfigs.showPostBookingTracking && maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (metroTicketBookingStatus.tickets !! 0)
+            let goToTracking = true
             if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
               let route = spy "route" $ (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
                   _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
@@ -7427,6 +7427,7 @@ busTicketBookingFlow = do
     
               let source = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
               let dest = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
+              -- vehicleTrackingId
               modifyScreenState $ BusTrackingScreenStateType (\busScreen -> BusTrackingScreenData.initData { data { sourceStation = source, destinationStation = dest, busRouteCode = routeDetails.code, bookingId = bookingId, routeShortName = routeDetails.shortName}, props{ showRouteDetailsTab = false } })
               busTrackingScreenFlow
             else do

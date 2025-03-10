@@ -4350,7 +4350,8 @@ newtype VehicleInfo = VehicleInfo {
   nextStop:: RouteStopMapping,
   vehicleId:: String,
   vehicleInfo:: VehicleInfoForRoute,
-  nextStopTravelTime :: Maybe Int
+  nextStopTravelTime :: Maybe Int,
+  nextStopTravelDistance :: Maybe Int
 }
 
 newtype VehicleInfoForRoute = VehicleInfoForRoute {

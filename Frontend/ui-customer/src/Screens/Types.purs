@@ -3348,17 +3348,18 @@ type BusTrackingScreenData = {
   routePts :: Locations
 }
 
-type VehicleData
-  = { vehicleId :: String
-    , nextStop :: String
-    , nextStopDistance :: Number
-    , vehicleLat :: Number
-    , vehicleLon :: Number
-    , nextStopLat ::Number
-    , nextStopLon ::Number
-    , nextStopSequence :: Int
-    , nextStopTravelTime :: Maybe Int
-    }
+type VehicleData = 
+  { vehicleId :: String
+  , nextStop :: String
+  , nextStopDistance :: Number
+  , vehicleLat :: Number
+  , vehicleLon :: Number
+  , nextStopLat ::Number
+  , nextStopLon ::Number
+  , nextStopSequence :: Int
+  , nextStopTravelTime :: Maybe Int
+  , nextStopTravelDistance :: Maybe Int
+  }
 
 type BusTrackingScreenProps = {
   showRouteDetailsTab :: Boolean, 
@@ -3415,3 +3416,5 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+type OnboardedBusInfo = Array { bookingId :: String, vehicleId :: String }

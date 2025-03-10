@@ -98,7 +98,7 @@ screen initialState =
                     liftFlowBT $ push $ UpdateStops (API.GetMetroStationResponse initialState.data.stopsList)
                   let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" initialState.data.busRouteCode
                   if (showPreBookingTracking "BUS") 
-                    then lift $ lift $ busLocationTracking 3000.0 0 initialState.data.busRouteCode push
+                    then lift $ lift $ busLocationTracking 3000.0 0 initialState push
                     else pure unit
             pure $ pure unit
         )
@@ -263,7 +263,7 @@ bottomSheetView push state =
         [ bottomSheetLayout
             ( [ height WRAP_CONTENT
               , width MATCH_PARENT
-              , peakHeight 200
+              , peakHeight 250
               , enableShift false
               , cornerRadii $ Corners 24.0 true true false false
               ]
@@ -409,6 +409,7 @@ busStopsView push state = do
 
     scrollViewHeight = if state.props.showShimmer then 300 
                        else if lb.height > 300 then 300 
+                       else if lb.height < 100 then 150
                        else lb.height
   scrollView
     [ height $ V scrollViewHeight
@@ -474,14 +475,16 @@ stopListView push state showOnlyBullet =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) (findNextBusETA index)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
+        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) (findNextBusDistance index)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
   where
   stopMarginTop = if state.props.showRouteDetailsTab then 32 else 12
   
   stops = if DA.length state.data.stopsList <= 2 then [] else DA.slice 1 (DA.length state.data.stopsList - 1) state.data.stopsList
 
-  findNextBusETA index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelTime)) (stops DA.!! (index - 1))
+  -- findNextBusETA index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelTime)) (stops DA.!! (index - 1))
+  
+  findNextBusDistance index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelDistance)) (stops DA.!! (index - 1))
 
 stopsViewHeader :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 stopsViewHeader push state showOnlyBullet =
@@ -544,7 +547,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
         , visibility $ boolToVisibility $ index /= 0
         ]
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
-        , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS")
+        , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId)
             then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaTime
             else 
               MP.noView
@@ -598,9 +601,10 @@ separatorView color' margin' =
     ]
     []
 
-busLocationTracking :: Number -> Int -> String -> (Action -> Effect Unit) -> Flow GlobalState Unit
-busLocationTracking duration id routeCode push = do
+busLocationTracking :: Number -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Flow GlobalState Unit
+busLocationTracking duration id state push = do
   let
+    routeCode = state.data.busRouteCode
     trackingId = runFn3 getFromCache "BUS_LOCATION_TRACKING" Mb.Nothing Mb.Just
   if Mb.isJust trackingId && trackingId /= Mb.Just routeCode then
     pure unit
@@ -617,20 +621,21 @@ busLocationTracking duration id routeCode push = do
                   (API.RouteStopMapping nextStop) = item.nextStop
                   lat = Mb.fromMaybe 0.0 m.latitude
                   lon = Mb.fromMaybe 0.0 m.longitude
-                  markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
+                  pointerIcon = if (checkCurrentBusIsOnboarded state item.vehicleId) then "ny_ic_bus_marker" else ""
+                  markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon}
                   (API.LatLong nextStopPosition) = nextStop.stopPoint
                 void $ EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-                pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon, nextStopTravelTime : item.nextStopTravelTime, nextStopSequence : nextStop.sequenceNum}
+                pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon, nextStopTravelTime : item.nextStopTravelTime, nextStopSequence : nextStop.sequenceNum, nextStopTravelDistance : item.nextStopTravelDistance }
         EHC.liftFlow $ push $ UpdateTracking trackingInfo
         void $ delay $ Milliseconds $ duration
-        busLocationTracking duration id routeCode push
+        busLocationTracking duration id state push
       Left err -> do
         void $ delay $ Milliseconds $ duration
-        busLocationTracking duration id routeCode push
+        busLocationTracking duration id state push
 
 
 showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
-showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight nextStopTravelTime =
+showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStopTravelDistance =
   linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
   , width  MATCH_PARENT
@@ -638,26 +643,33 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight nextStopTr
   , stroke $ "1," <> Color.grey900
   , padding $ Padding 8 8 8 8
   , cornerRadius 12.0
-  , visibility $ boolToVisibility $ Mb.isJust nextStopTravelTime
+  , visibility $ boolToVisibility $ Mb.isJust mbNextStopTravelDistance && not state.props.individualBusTracking
   
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
   [ textView
-    $ [ text $ "Next Bus in " <> (show $ (Mb.fromMaybe 0 nextStopTravelTime) / 60) <> " min"
+    $ [ text $ "Next bus is " <> roundedNextStopDistance <> " meters away"
       , margin $ MarginLeft 8
-  , visibility $ boolToVisibility $ not showOnlyHeight
+      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   , linearLayout [weight 1.0] []
   -- This was dummy code to show the time in the UI, should be properly handled as per backend response
   -- , textView
-  --   $ [ text $  extractTimeInHHMMA $ Mb.maybe (EHC.getCurrentUTC "") (\item ->  Mb.fromMaybe (EHC.getCurrentUTC "") (show <$> item.nextStopTravelTime)) $ findStopInVehicleData (API.FRFSStationAPI stop) state
+  --   $ [ text $  extractTimeInHHMMA $ Mb.maybe (EHC.getCurrentUTC "") (\item ->  Mb.fromMaybe (EHC.getCurrentUTC "") (show <$> item.mbNextStopTravelDistance)) $ findStopInVehicleData (API.FRFSStationAPI stop) state
   -- , visibility $ boolToVisibility $ not showOnlyHeight
   --     ]
   --   <> FontStyle.body1 CTA.TypoGraphy
   ]
   where
+    extractTimeInHHMMA :: String -> String
     extractTimeInHHMMA timeStr = EHC.convertUTCtoISC timeStr "hh" <> ":" <> EHC.convertUTCtoISC timeStr "mm" <> " " <> EHC.convertUTCtoISC timeStr "a"
+    
     lb = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index
+    
+    roundedNextStopDistance :: String
+    roundedNextStopDistance = 
+      let nextStopTravelDistance = Mb.fromMaybe 0 mbNextStopTravelDistance
+      in show $ if nextStopTravelDistance > 1000 then nextStopTravelDistance / 1000 else nextStopTravelDistance
 
 findStopInVehicleData :: API.FRFSStationAPI -> ST.BusTrackingScreenState -> Mb.Maybe ST.VehicleData
 findStopInVehicleData (API.FRFSStationAPI stop) state = DA.find (\item -> item.nextStop == stop.code) state.data.vehicleData -- && Mb.isJust item.nextStopTravelTime
@@ -722,3 +734,6 @@ showPreBookingTracking :: String -> Boolean
 showPreBookingTracking _ = 
       let busConfig = RCU.getBusFlowConfigs (getValueToLocalStore CUSTOMER_LOCATION)
       in busConfig.showPreBookingTracking
+
+checkCurrentBusIsOnboarded :: ST.BusTrackingScreenState -> String -> Boolean
+checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
