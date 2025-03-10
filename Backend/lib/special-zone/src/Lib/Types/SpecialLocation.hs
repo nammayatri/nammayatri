@@ -34,7 +34,7 @@ data Merchant
 data MerchantOperatingCity
 
 data SpecialLocation = SpecialLocation
-  { id :: Id SpecialLocation,    
+  { id :: Id SpecialLocation,
     locationName :: Text,
     category :: Text,
     merchantId :: Maybe (Id Merchant),

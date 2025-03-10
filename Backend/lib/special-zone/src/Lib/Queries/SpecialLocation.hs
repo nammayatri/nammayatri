@@ -68,7 +68,7 @@ findByLocationName locationName =
   Esq.findOne $ do
     specialLocation <- from $ table @SpecialLocationT
     where_ $
-      specialLocation ^. SpecialLocationLocationName ==. val locationName        
+      specialLocation ^. SpecialLocationLocationName ==. val locationName
     return specialLocation
 
 findByIdWithGeom :: Transactionable m => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))

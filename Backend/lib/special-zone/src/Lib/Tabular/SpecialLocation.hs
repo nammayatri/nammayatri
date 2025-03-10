@@ -31,7 +31,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationT sql=special_location
-      id Text      
+      id Text
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)

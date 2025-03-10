@@ -28,21 +28,17 @@ module Domain.Action.Dashboard.Merchant
     buildMerchantServiceConfig,
     postMerchantConfigFailover,
     postMerchantTicketConfigUpsert,
-    postMerchantConfigSpecialLocationUpsert
+    postMerchantConfigSpecialLocationUpsert,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
 import Control.Applicative
 import qualified Data.Aeson as JSON
-import qualified Data.List as DL
-import Kernel.Utils.Geometry (getGeomFromKML)
-import qualified Lib.Types.GateInfo as D
-import qualified Lib.Types.GateInfo as DGI
-import qualified Lib.Types.SpecialLocation as DSL
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import qualified Data.List as DL
 import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
@@ -84,12 +80,16 @@ import Kernel.Types.Registry (SimpleLookupRequest (..), lookupRequestToRedisKey)
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import Kernel.Utils.Geometry (getGeomFromKML)
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.GateInfoGeom as QGIG
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
+import qualified Lib.Types.GateInfo as D
+import qualified Lib.Types.GateInfo as DGI
+import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
@@ -350,7 +350,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
       category <- fromMaybeM (InvalidRequest "Category is a required field for a new special location") $ request.category <|> (mbExistingSpLoc <&> (.category))
       return $
         SL.SpecialLocation
-          { gates = [],            
+          { gates = [],
             enabled = True,
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
@@ -1240,7 +1240,7 @@ cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
 data SpecialLocationCSVRow = SpecialLocationCSVRow
   { city :: Text,
-    locationName :: Text,    
+    locationName :: Text,
     enabled :: Text,
     locationFileName :: Text,
     locationType :: Text,
@@ -1261,7 +1261,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
   parseNamedRecord r =
     SpecialLocationCSVRow
       <$> r .: "city"
-      <*> r .: "location_name"      
+      <*> r .: "location_name"
       <*> r .: "enabled"
       <*> r .: "location_file_name"
       <*> r .: "location_type"
@@ -1304,7 +1304,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     makeSpecialLocation :: [(Text, FilePath)] -> [(Text, FilePath)] -> DMOC.MerchantOperatingCity -> Int -> SpecialLocationCSVRow -> Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))
     makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       now <- getCurrentTime
-      city :: Context.City <- readCSVField idx row.city "City"      
+      city :: Context.City <- readCSVField idx row.city "City"
       locationName :: Text <- cleanCSVField idx row.locationName "Location Name"
       locationFileName :: Text <- cleanCSVField idx row.locationFileName "Location File Name"
       (_, locationGeomFile) <- find (\(geomFileName, _) -> locationFileName == geomFileName) locationGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for location: " <> locationName)
@@ -1331,7 +1331,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           else return Nothing
       let specialLocation =
             DSL.SpecialLocation
-              { id = Id locationName,                
+              { id = Id locationName,
                 enabled = enabled,
                 locationName = locationName,
                 category = category,
@@ -1383,7 +1383,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       void $ runValidationOnSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates
       let (_city, locationName, (specialLocation, _)) = x
       specialLocationId <-
-        QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId 
+        QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
           |<|>| QSL.findByLocationName locationName
             >>= \case
               Just spl -> do
