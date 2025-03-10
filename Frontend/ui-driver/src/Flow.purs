@@ -1409,6 +1409,8 @@ driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{isRideActive = getValueToLocalStore IS_RIDE_ACTIVE == "true"} })
   action <- UI.driverProfileScreen
+  (GlobalState gState) <- getState
+  modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = gState.driverProfileScreen.data.driverInfoResponse}
   case action of
     GO_TO_HOME_FROM_PROFILE state -> do 
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = state.data.driverInfoResponse}
