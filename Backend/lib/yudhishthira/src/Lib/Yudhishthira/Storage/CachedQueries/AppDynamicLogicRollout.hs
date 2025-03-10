@@ -43,25 +43,23 @@ findBaseRolloutByMerchantOpCityAndDomain ::
   Lib.Yudhishthira.Types.LogicDomain ->
   m (Maybe Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout)
 findBaseRolloutByMerchantOpCityAndDomain merchantOperatingCityId domain = do
-  Hedis.safeGet (baseRolloutCacheKey merchantOperatingCityId domain)
-    >>= ( \case
-            Just a -> pure $ Just a
-            Nothing -> fetchAndCase
-        )
+  mbRollouts :: (Maybe [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]) <- Hedis.safeGet (baseRolloutCacheKey merchantOperatingCityId domain)
+  case mbRollouts of
+    Just rollouts -> pure $ listToMaybe rollouts
+    _ -> listToMaybe <$> fetchAndCase
   where
     fetchAndCase =
       ( \dataToBeCached -> do
           expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
           Hedis.setExp (baseRolloutCacheKey merchantOperatingCityId domain) dataToBeCached expTime
       )
-        /=<< listToMaybe
-          <$> findAllWithKV
-            [ Se.And
-                [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-                  Se.Is Beam.domain $ Se.Eq domain,
-                  Se.Is Beam.isBaseVersion $ Se.Eq (Just True)
-                ]
-            ]
+        /=<< findAllWithKV
+          [ Se.And
+              [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+                Se.Is Beam.domain $ Se.Eq domain,
+                Se.Is Beam.isBaseVersion $ Se.Eq (Just True)
+              ]
+          ]
 
 findByMerchantOpCityAndDomain ::
   BeamFlow.BeamFlow m r =>

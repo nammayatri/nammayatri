@@ -67,6 +67,7 @@ module Lib.Yudhishthira.Types
     UiConfigResponse (..),
     CreateConfigRequest (..),
     PlatformType (..),
+    ConfigHistory (..),
   )
 where
 
@@ -663,5 +664,17 @@ instance HideSecrets CreateConfigRequest where
 data ConfigVersionMap = ConfigVersionMap
   { config :: LogicDomain,
     version :: Int
+  }
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data ConfigHistory = ConfigHistory
+  { id :: Id ConfigHistory,
+    domain :: LogicDomain,
+    version :: Int,
+    status :: Maybe ExperimentStatus,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    configJson :: Value,
+    baseVersionUsed :: Int,
+    createdAt :: UTCTime
   }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

@@ -6,12 +6,14 @@ import qualified Data.Aeson as A
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 -- import qualified Storage.Queries.UiDriverConfig as QUiC
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
--- import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
-
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SchedulerJob ()
@@ -27,6 +29,40 @@ import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.PayoutConfig as SCP
 import qualified Storage.Queries.RideRelatedNotificationConfig as SQR
 import qualified Storage.Queries.TransporterConfig as SCMT
+import qualified Tools.DynamicLogic as DynamicLogic
+
+pushConfigHistory :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => LYT.LogicDomain -> Int -> Id LYT.MerchantOperatingCity -> m ()
+pushConfigHistory domain version merchantOpCityId = do
+  cfgType <- case domain of
+    LYT.DRIVER_CONFIG ct -> return ct
+    _ -> throwError $ InternalError "Unsupported logic domain"
+  configs <- (.configs) <$> returnConfigs cfgType (cast merchantOpCityId)
+  expRollout <- LYSQADLR.findByPrimaryKey domain (cast merchantOpCityId) "Unbounded" version >>= fromMaybeM (InternalError $ "Experiment Rollout not found for domain: " <> show domain <> " and version: " <> show version)
+  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain >>= fromMaybeM (InternalError "Base Rollout not found")
+  logicsObject <- CADLE.findByDomainAndVersion domain version
+  when (null logicsObject) $ throwError $ InternalError $ "Logics not found for domain: " <> show domain <> " and version: " <> show version
+  let logics = map (.logic) logicsObject
+  let configWrapper = LYT.Config configs Nothing 0
+  response <- try @_ @SomeException $ LYTU.runLogics logics configWrapper
+  finalConfig <- case response of
+    Left e -> do
+      throwError (InternalError $ "Error in push config history for cfgType: " <> show cfgType <> " and version: " <> show version <> " and error: " <> show e)
+    Right resp -> do
+      return resp.result
+  uuid <- generateGUID
+  now <- getCurrentTime
+  let configHistory =
+        LYT.ConfigHistory
+          { id = uuid,
+            domain,
+            version,
+            status = expRollout.experimentStatus,
+            merchantOperatingCityId = cast merchantOpCityId,
+            configJson = finalConfig,
+            baseVersionUsed = baseRollout.version,
+            createdAt = now
+          }
+  pushToKafka configHistory "config-history" ""
 
 returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.ConfigType -> Id MerchantOperatingCity -> m LYT.TableDataResp
 returnConfigs cfgType merchantOpCityId = do
@@ -55,17 +91,17 @@ handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYT.M
 handleConfigDBUpdate merchantOpCityId concludeReq baseLogics = do
   case concludeReq.domain of
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
-      handleConfigUpdateWithExtraDimensions SCMD.findAllByMerchantOpCityId SCMDPC.clearCache SCMD.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdateWithExtraDimensions SCMD.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DriverPoolConfig)) SCMD.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
-      handleConfigUpdate (normalizeMaybeFetch SCMT.findByMerchantOpCityId) SCMTC.clearCache SCMT.update (cast merchantOpCityId)
+      handleConfigUpdate (normalizeMaybeFetch SCMT.findByMerchantOpCityId) (SCMTC.clearCache (cast merchantOpCityId)) SCMT.update (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
-      handleConfigUpdate SCP.findAllByMerchantOpCityId SCMP.clearCacheById SCP.updateByPrimaryKey (cast merchantOpCityId) -- TODO use clearConfigCache
+      handleConfigUpdate SCP.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.PayoutConfig)) SCP.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
-      handleConfigUpdate SQR.findAllByMerchantOperatingCityId (const $ pure ()) SQR.updateByPrimaryKey (cast merchantOpCityId) -- TODO add clear cache
+      handleConfigUpdate SQR.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig)) SQR.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.MerchantMessage -> do
-      handleConfigUpdate SQM.findAllByMerchantOpCityId SCMM.clearCacheById SQM.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdate SQM.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantMessage)) SQM.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
-      handleConfigUpdate SQMPN.findAllByMerchantOpCityId SCMMPN.clearCacheById SQMPN.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdate SQMPN.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)) SQMPN.updateByPrimaryKey (cast merchantOpCityId)
     _ -> throwError $ InvalidRequest $ "Logic Domain not supported" <> show concludeReq.domain
   where
     convertToConfigWrapper :: [a] -> [LYT.Config a]
@@ -103,7 +139,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics = do
     handleConfigUpdate ::
       (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) =>
       (Id MerchantOperatingCity -> m [a]) -> -- Fetch function
-      (Id MerchantOperatingCity -> m ()) -> -- Optional cache clearing function
+      m () -> -- Cache clearing function
       (a -> m ()) -> -- Update function
       Id MerchantOperatingCity ->
       m ()
@@ -113,12 +149,12 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics = do
       patchedConfigs <- applyPatchToConfig configWrapper
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
       mapM_ updateFunc configsToUpdate
-      clearCacheFunc merchantOpCityId'
+      clearCacheFunc
 
     handleConfigUpdateWithExtraDimensions ::
       (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) =>
       (Maybe Int -> Maybe Int -> Id MerchantOperatingCity -> m [a]) -> -- Fetch function
-      (Id MerchantOperatingCity -> m ()) -> -- Optional cache clearing function
+      m () -> -- Cache clearing function
       (a -> m ()) -> -- Update function
       Id MerchantOperatingCity ->
       m ()
@@ -128,7 +164,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics = do
       patchedConfigs <- applyPatchToConfig configWrapper
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
       mapM_ updateFunc configsToUpdate
-      clearCacheFunc merchantOpCityId'
+      clearCacheFunc
 
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
