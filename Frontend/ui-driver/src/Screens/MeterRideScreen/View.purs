@@ -1117,7 +1117,7 @@ fareView push state =
             ]
             [ PrestoAnim.animationSet
                 [ PrestoAnim.Animation
-                    [ PrestoAnim.duration 1000
+                    [ PrestoAnim.duration 600
                     , PrestoAnim.fromAlpha 0.0
                     , PrestoAnim.toAlpha 1.0
                     , PrestoAnim.repeatMode PrestoAnim.Reverse
@@ -1149,7 +1149,7 @@ sevenSegmentView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState ->
 sevenSegmentView push state =
   let digits = getDigits state.props.meterFare  
       len = DA.length digits
-      finalDigits = if state.props.meterFare == 0 then [0,0,0,0] else if len > 4 then digits else getArray (4 - len) <> digits
+      finalDigits = if state.props.meterFare == 0 then [-1,-1,-1,-1] else if len > 4 then digits else getArray (4 - len) <> digits
   in
     linearLayout
       [ width WRAP_CONTENT
