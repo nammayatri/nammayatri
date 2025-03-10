@@ -536,7 +536,9 @@ config =
                   "od_in": "ଗ୍ରାହକଙ୍କ ପାଖରୁ ଅତିରିକ୍ତ ଦାବି କରିବେ ନାହିଁ"
                 })
               }),
-              enableNammaMeter : Just true,
+              enableNammaMeter : Just (fromHomogeneous ({
+                "AUTO_RICKSHAW" : true
+              })),
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
               showSubscriptions : false,

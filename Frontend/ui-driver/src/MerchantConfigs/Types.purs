@@ -331,7 +331,7 @@ type CityConfig = {
   rideStartAudio :: RideStartAudio,
   showScheduledRides :: Boolean,
   chatFooterBanner :: Maybe ChatFootBannerConfig,
-  enableNammaMeter :: Maybe Boolean
+  enableNammaMeter :: Maybe (Object Boolean)
 }
 
 
