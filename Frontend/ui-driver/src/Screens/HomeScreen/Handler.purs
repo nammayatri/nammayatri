@@ -226,3 +226,6 @@ homeScreen = do
     UpdateStopsStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_STOPS_STATUS updatedState)
+    MeterRideScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METER_RIDE_SCREEN)

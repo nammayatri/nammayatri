@@ -17,7 +17,7 @@ module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
 import Prelude (show, unit, (<>), (==), (*) , (&&) , (||))
-import Services.Config (getBaseUrl)
+import Services.Config (getBaseUrl, getCustomerBaseUrl)
 
 triggerOTP :: String -> String
 triggerOTP  dummy = (getBaseUrl "" ) <> "/auth"
@@ -425,3 +425,12 @@ arrivedStop rideId stopId = (getBaseUrl "") <> "/driver/ride/"<> rideId <>"/arri
 
 departedStop :: String -> String -> String
 departedStop rideId stopId = (getBaseUrl "") <> "/driver/ride/"<> rideId <>"/departed/" <> stopId <> "/stop"
+
+searchReq :: String -> String
+searchReq _ = (getCustomerBaseUrl "dummy") <> "/rideSearch"
+
+addDestination :: String -> String
+addDestination rideId = (getBaseUrl "dummy") <> "/meterRide/" <> rideId <> "/addDestination"
+
+getMeterPrice :: String -> String
+getMeterPrice rideId = (getBaseUrl "dummy") <> "/meterRide/price?rideId=" <> rideId

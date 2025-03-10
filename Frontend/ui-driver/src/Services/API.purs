@@ -43,6 +43,7 @@ import Presto.Core.Types.API (class RestEndpoint,class StandardEncode, ErrorResp
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
 import Screens.CustomerReferralTrackerScreen.Types as CRST
+import Presto.Core.Types.API (standardEncode)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -5563,3 +5564,163 @@ instance standardEncodeUpdateStopStatusReq :: StandardEncode UpdateStopStatusReq
 instance showUpdateStopStatusReq :: Show UpdateStopStatusReq where show = genericShow
 instance decodeUpdateStopStatusReq :: Decode UpdateStopStatusReq where decode = defaultDecode
 instance encodeUpdateStopStatusReq :: Encode UpdateStopStatusReq where encode = defaultEncode
+
+newtype SearchReq = SearchReq {
+  contents :: ContentType ,
+  fareProductType :: String
+}
+
+data ContentType = OneWaySearchRequest OneWaySearchReq
+newtype OneWaySearchReq = OneWaySearchReq {
+  origin :: SearchReqLocation,
+  isReallocationEnabled :: Maybe Boolean,
+  isSourceManuallyMoved :: Maybe Boolean,
+  isDestinationManuallyMoved :: Maybe Boolean,
+  sessionToken :: Maybe String,
+  isSpecialLocation :: Maybe Boolean,
+  startTime :: Maybe String,
+  quotesUnifiedFlow :: Maybe Boolean,
+  rideRequestAndRideOtpUnifiedFlow :: Maybe Boolean,
+  isMeterRideSearch :: Boolean,
+  driverIdentifier ::
+   {
+      type :: String
+    , value :: String
+  }
+}
+
+newtype SearchReqLocation = SearchReqLocation {
+    gps :: LatLong
+  , address :: LocationAddressV2
+  }
+
+instance makeSearchReq :: RestEndpoint SearchReq  where
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.searchReq "") headers reqBody Nothing
+ encodeRequest req = encode req
+
+derive instance genericSearchReq :: Generic SearchReq _
+derive instance newtypeSearchReq :: Newtype SearchReq _
+instance standardEncodeSearchReq :: StandardEncode SearchReq where standardEncode (SearchReq body) = standardEncode body
+instance showSearchReq :: Show SearchReq where show = genericShow
+instance decodeSearchReq :: Decode SearchReq where decode = defaultDecode
+instance encodeSearchReq:: Encode SearchReq where encode = defaultEncode
+
+derive instance genericOneWaySearchReq :: Generic OneWaySearchReq _
+derive instance newtypeOneWaySearchReq :: Newtype OneWaySearchReq _
+instance standardEncodeOneWaySearchReq :: StandardEncode OneWaySearchReq where standardEncode (OneWaySearchReq body) = standardEncode body
+instance showOneWaySearchReq :: Show OneWaySearchReq where show = genericShow
+instance decodeOneWaySearchReq :: Decode OneWaySearchReq where decode = defaultDecode
+instance encodeOneWaySearchReq :: Encode OneWaySearchReq where encode = defaultEncode
+
+derive instance genericSearchReqLocation :: Generic SearchReqLocation _
+derive instance newtypeSearchReqLocation :: Newtype SearchReqLocation _
+instance standardEncodeSearchReqLocation :: StandardEncode SearchReqLocation where standardEncode (SearchReqLocation body) = standardEncode body
+instance showSearchReqLocation :: Show SearchReqLocation where show = genericShow
+instance decodeSearchReqLocation :: Decode SearchReqLocation where decode = defaultDecode
+instance encodeSearchReqLocation :: Encode SearchReqLocation where encode = defaultEncode
+
+derive instance genericContentType :: Generic ContentType _
+instance standardEncodeContentType :: StandardEncode ContentType where
+  standardEncode (OneWaySearchRequest body) = standardEncode body
+
+instance showContentType :: Show ContentType where show = genericShow
+instance decodeContentType :: Decode ContentType
+  where
+    decode body = (OneWaySearchRequest <$> decode body) 
+instance encodeContentType  :: Encode ContentType where
+  encode (OneWaySearchRequest body) = encode body
+
+newtype SearchRes = SearchRes {
+  searchId :: String,
+  searchExpiry :: String,
+  routeInfo :: Maybe Route
+}
+
+derive instance genericSearchRes :: Generic SearchRes _
+derive instance newtypeSearchRes :: Newtype SearchRes _
+instance standardEncodeSearchRes :: StandardEncode SearchRes where standardEncode (SearchRes body) = standardEncode body
+instance showSearchRes :: Show SearchRes where show = genericShow
+instance decodeSearchRes :: Decode SearchRes where decode = defaultDecode
+instance encodeSearchRes :: Encode SearchRes where encode = defaultEncode
+
+
+newtype LocationAddressV2  = LocationAddressV2 {
+  area :: Maybe String
+, areaCode :: Maybe String
+, building :: Maybe String
+, city :: Maybe String
+, country :: Maybe String
+, door :: Maybe String
+, placeId :: Maybe String
+, state :: Maybe String
+, street :: Maybe String
+, ward :: Maybe String
+}
+
+derive instance genericLocationAddressV2:: Generic LocationAddressV2 _
+instance standardLocationAddressV2:: StandardEncode LocationAddressV2 where standardEncode (LocationAddressV2 res) = standardEncode res
+instance showLocationAddressV2 :: Show LocationAddressV2 where show = genericShow
+instance decodeLocationAddressV2:: Decode LocationAddressV2 where decode = defaultDecode
+instance encodeLocationAddressV2 :: Encode LocationAddressV2 where encode = defaultEncode
+instance eqLocationAddressV2 :: Eq LocationAddressV2 where eq = genericEq
+
+newtype AddDestReqBody = AddDestReqBody {
+  currentLatLong :: LatLong,
+  destinationLatLong :: LatLong,
+  destinationLocation :: LocationAddressV2
+}
+
+data AddDestReq = AddDestReq String AddDestReqBody
+
+instance makeAddDestReq :: RestEndpoint AddDestReq  where
+ makeRequest reqBody@(AddDestReq rideId body) headers = defaultMakeRequestWithoutLogs POST (EP.addDestination rideId) headers reqBody Nothing
+ encodeRequest req = encode req
+
+derive instance genericAddDestReq :: Generic AddDestReq _
+instance standardEncodeAddDestReq :: StandardEncode AddDestReq where standardEncode (AddDestReq id body) = standardEncode body
+instance showAddDestReq :: Show AddDestReq where show = genericShow
+instance decodeAddDestReq :: Decode AddDestReq where decode = defaultDecode
+instance encodeAddDestReq :: Encode AddDestReq where encode (AddDestReq id body) = standardEncode body
+
+derive instance genericAddDestReqBody :: Generic AddDestReqBody _
+derive instance newtypeAddDestReqBody :: Newtype AddDestReqBody _
+instance standardEncodeAddDestReqBody :: StandardEncode AddDestReqBody where standardEncode (AddDestReqBody body) = standardEncode body
+instance showAddDestReqBody :: Show AddDestReqBody where show = genericShow
+instance decodeAddDestReqBody :: Decode AddDestReqBody where decode = defaultDecode
+instance encodeAddDestReqBody :: Encode AddDestReqBody where encode (AddDestReqBody body) = standardEncode body
+
+newtype AddDestRes = AddDestRes {
+  estimatedDistance :: Number
+  ,estimatedFare :: Number
+}
+
+derive instance genericAddDestRes :: Generic AddDestRes _
+derive instance newtypeAddDestRes :: Newtype AddDestRes _
+instance standardEncodeAddDestRes :: StandardEncode AddDestRes where standardEncode (AddDestRes body) = standardEncode body
+instance showAddDestRes :: Show AddDestRes where show = genericShow
+instance decodeAddDestRes :: Decode AddDestRes where decode = defaultDecode
+instance encodeAddDestRes :: Encode AddDestRes where encode = defaultEncode
+
+data GetMeterPriceReq = GetMeterPriceReq String
+
+newtype GetMeterPriceResp = GetMeterPriceResp {
+  distance :: Number
+, fare :: Number
+}
+
+instance makeGetMeterPriceReq :: RestEndpoint GetMeterPriceReq  where
+ makeRequest reqBody@(GetMeterPriceReq rideId) headers = defaultMakeRequestWithoutLogs GET (EP.getMeterPrice rideId) headers reqBody Nothing
+ encodeRequest req = encode req
+
+derive instance genericGetMeterPriceResp :: Generic GetMeterPriceResp _
+derive instance newtypeGetMeterPriceResp :: Newtype GetMeterPriceResp _
+instance standardEncodeGetMeterPriceResp :: StandardEncode GetMeterPriceResp where standardEncode (GetMeterPriceResp body) = standardEncode body
+instance showGetMeterPriceResp :: Show GetMeterPriceResp where show = genericShow
+instance decodeGetMeterPriceResp :: Decode GetMeterPriceResp where decode = defaultDecode
+instance encodeGetMeterPriceResp :: Encode GetMeterPriceResp where encode = defaultEncode
+
+derive instance genericGetMeterPriceReq :: Generic GetMeterPriceReq _
+instance standardEncodeGetMeterPriceReq :: StandardEncode GetMeterPriceReq where standardEncode (GetMeterPriceReq body) = standardEncode body
+instance showGetMeterPriceReq :: Show GetMeterPriceReq where show = genericShow
+instance decodeGetMeterPriceReq :: Decode GetMeterPriceReq where decode = defaultDecode
+instance encodeGetMeterPriceReq :: Encode GetMeterPriceReq where encode = defaultEncode

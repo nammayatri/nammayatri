@@ -424,3 +424,12 @@ limeGreen = "#3AA215"
 
 brownishYellow :: Color
 brownishYellow = "#FFCC6E"
+
+lightHulkGreen :: Color
+lightHulkGreen = "#45C567"
+
+darkHulkGreen :: Color
+darkHulkGreen = "#24B04A"
+
+brightRed :: Color
+brightRed = "#E64848"
