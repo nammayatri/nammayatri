@@ -18,6 +18,7 @@ import qualified API.Action.Dashboard.AppManagement as AppManagementDSL
 import qualified API.Action.Dashboard.Fleet as FleetDSL
 import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
+import qualified API.Action.Dashboard.Operator as OperatorDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Fleet as Fleet
@@ -38,6 +39,7 @@ type API =
            :<|> IssueManagementDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
+           :<|> OperatorDSLAPI
        )
     :<|> Exotel.API
 
@@ -51,6 +53,7 @@ type APIV2 =
            :<|> IssueManagementDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
+           :<|> OperatorDSLAPI
        )
     :<|> Exotel.API
 
@@ -64,6 +67,8 @@ type RideBookingDSLAPI = DashboardTokenAuth :> RideBookingDSL.API
 
 type FleetDSLAPI = DashboardTokenAuth :> FleetDSL.API
 
+type OperatorDSLAPI = DashboardTokenAuth :> OperatorDSL.API -- Add handler also Todo
+
 -- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler =
@@ -75,6 +80,7 @@ handler =
         :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
+        :<|> operatorDSLHandler merchantId city
   )
     :<|> Exotel.handler
   where
@@ -95,6 +101,7 @@ handlerV2 =
         :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
+        :<|> operatorDSLHandler merchantId city
   )
     :<|> Exotel.handler
 
@@ -112,3 +119,6 @@ rideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId 
 
 fleetDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer FleetDSLAPI
 fleetDSLHandler merchantId city _auth = FleetDSL.handler merchantId city
+
+operatorDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperatorDSLAPI
+operatorDSLHandler merchantId city _auth = OperatorDSL.handler merchantId city

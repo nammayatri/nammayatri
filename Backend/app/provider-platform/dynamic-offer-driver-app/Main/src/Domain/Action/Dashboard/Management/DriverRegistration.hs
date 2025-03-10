@@ -87,6 +87,11 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
   vehicleLeftImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleLeft)
   vehicleFrontInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFrontInterior)
   vehicleBackInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBackInterior)
+  panImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.PanCard)
+  businessPanImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.BusinessPanCard)
+  businessLicenseImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.BusinessLicense)
+  aadhaarImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.AadhaarCard)
+  vehicleNOCImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleNOC)
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
@@ -116,7 +121,12 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
         vehicleRight = vehicleRightImgs,
         vehicleLeft = vehicleLeftImgs,
         vehicleFrontInterior = vehicleFrontInteriorImgs,
-        vehicleBackInterior = vehicleBackInteriorImgs
+        vehicleBackInterior = vehicleBackInteriorImgs,
+        pan = panImgs,
+        businessPan = businessPanImgs,
+        businessLicense = businessLicenseImgs,
+        aadhaar = aadhaarImgs,
+        vehicleNOC = vehicleNOCImgs
       }
   where
     convertDLToDLDetails dl = do
@@ -194,6 +204,7 @@ mapDocumentType Common.VehicleFrontInterior = Domain.VehicleFrontInterior
 mapDocumentType Common.VehicleBackInterior = Domain.VehicleBackInterior
 mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
 mapDocumentType Common.VehicleRight = Domain.VehicleRight
+mapDocumentType Common.BusinessPanCard = Domain.BusinessPanCard
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

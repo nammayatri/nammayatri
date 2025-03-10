@@ -175,11 +175,16 @@ types:
     - vehicleLeft: [Text]
     - vehicleFrontInterior: [Text]
     - vehicleBackInterior: [Text]
+    - pan: [Text]
+    - vehicleNOC: [Text]
+    - businessLicense: [Text]
+    - businessPan: [Text]
+    - aadhaar: [Text]
   GetDocumentResponse:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
   DocumentType:
-    - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior"
+    - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, BusinessPanCard"
   UploadDocumentReq:
     - imageBase64: Text
     - imageType: DocumentType

@@ -387,3 +387,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referra
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_enabled boolean ;
 
+
+
+
+------- SQL updates -------
+
