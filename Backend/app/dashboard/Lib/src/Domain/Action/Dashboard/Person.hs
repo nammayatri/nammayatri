@@ -21,6 +21,7 @@ import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as QPerson
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
@@ -42,6 +43,7 @@ import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
+import qualified "dynamic-offer-driver-app" Storage.Queries.MerchantOperatingCity as QMOC
 import qualified Storage.Queries.Person as QP
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QReg
@@ -190,7 +192,7 @@ createPerson ::
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
-createPerson _ personEntity = do
+createPerson tokenInfo personEntity = do
   runRequestValidation validateCreatePerson personEntity
   unlessM (isNothing <$> QP.findByEmail personEntity.email) $ throwError (InvalidRequest "Email already registered")
   unlessM (isNothing <$> QP.findByMobileNumber personEntity.mobileNumber personEntity.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
@@ -199,8 +201,55 @@ createPerson _ personEntity = do
   person <- buildPerson personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
-  QP.create person
-  return $ CreatePersonRes personAPIEntity
+  QP.create person {SP.verified = Just True}
+  createPersonInBPP tokenInfo person
+  return $ CreatePersonRes personAPIEntity {AP.verified = Just True}
+  where
+    createPersonInBPP :: (BeamFlow m r, EncFlow m r) => TokenInfo -> SP.Person -> m ()
+    createPersonInBPP tokenInf SP.Person {..} = do
+      pid <- generateGUID
+      let merchantId = cast tokenInf.merchantId
+          city = tokenInf.city
+      merchantOpCity <- QMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
+      QPerson.create $
+        QPerson.Person
+          { alternateMobileNumber = Nothing,
+            backendAppVersion = Nothing,
+            backendConfigVersion = Nothing,
+            clientBundleVersion = Nothing,
+            clientConfigVersion = Nothing,
+            clientDevice = Nothing,
+            clientId = Nothing,
+            clientSdkVersion = Nothing,
+            description = Nothing,
+            deviceToken = Nothing,
+            driverTag = Nothing,
+            email = Nothing,
+            faceImageId = Nothing,
+            gender = QPerson.UNKNOWN,
+            hometown = Nothing,
+            id = pid,
+            identifier = Nothing,
+            identifierType = QPerson.MOBILENUMBER,
+            isNew = False,
+            language = Nothing,
+            languagesSpoken = Nothing,
+            lastName = Just lastName,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCity.id,
+            middleName = Nothing,
+            mobileCountryCode = Just mobileCountryCode,
+            mobileNumber = Just mobileNumber,
+            onboardedFromDashboard = True,
+            registrationLat = Nothing,
+            registrationLon = Nothing,
+            role = QPerson.FLEET_OWNER,
+            totalEarnedCoins = 0,
+            useFakeOtp = Nothing,
+            usedCoins = 0,
+            whatsappNotificationEnrollStatus = Nothing,
+            ..
+          }
 
 listPerson ::
   (BeamFlow m r, EncFlow m r) =>
@@ -475,7 +524,9 @@ buildPerson req dashboardAccessType = do
         receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now,
-        verified = Nothing
+        verified = Nothing,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq

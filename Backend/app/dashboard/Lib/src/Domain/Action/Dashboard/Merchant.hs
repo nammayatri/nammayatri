@@ -137,7 +137,8 @@ buildMerchant req = do
         website = Just req.website,
         authToken = Just encryptedAuthToken,
         enabled = Just True,
-        createdAt = now
+        createdAt = now,
+        requireAdminApprovalForFleetOnboarding = Just True
       }
 
 changeMerchantEnableState ::
@@ -198,6 +199,37 @@ createUserForMerchant tokenInfo req = do
   _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = tokenInfo.city, merchantId = merchant.shortId}
   pure personEntity
 
+-- createUserForMerchant ::
+--   ( BeamFlow m r,
+--     EncFlow m r,
+--     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+--     HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]
+--   ) =>
+--   TokenInfo ->
+--   DPerson.CreatePersonReq ->
+--   m DPerson.CreatePersonRes
+-- createUserForMerchant tokenInfo req = do
+--   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+--   role <- QRole.findById req.roleId >>= fromMaybeM (RoleDoesNotExist req.roleId.getId)
+--   let isFleetOwner = role.dashboardAccessType == FLEET_OWNER
+--   when (isFleetOwner && fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) $ do
+--     QMerchant.updateEnableStatus merchant.shortId False
+--     throwError (InvalidRequest "Fleet owner registration requires admin approval for this merchant")
+--   merchantAssociatedAccount <- QMerchantAccess.findAllUserAccountForMerchant merchant.id
+--   merchantUserAccountLimit <- asks (.merchantUserAccountNumber)
+--   when (length merchantAssociatedAccount >= merchantUserAccountLimit) $
+--     throwError (MerchantAccountLimitExceeded (merchant.shortId.getShortId))
+--   personEntity <- DPerson.createPerson tokenInfo req
+--   _ <-
+--     DPerson.assignMerchantCityAccess
+--       tokenInfo
+--       personEntity.person.id
+--       DPerson.MerchantCityAccessReq
+--         { operatingCity = tokenInfo.city,
+--           merchantId = merchant.shortId
+--         }
+--   pure personEntity
+
 buildPersonCreateReq :: (BeamFlow m r, EncFlow m r) => CreateMerchantWithAdminReq -> DRole.Role -> m SP.Person
 buildPersonCreateReq req role = do
   pid <- generateGUID
@@ -219,5 +251,7 @@ buildPersonCreateReq req role = do
         verified = Nothing,
         receiveNotification = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }
