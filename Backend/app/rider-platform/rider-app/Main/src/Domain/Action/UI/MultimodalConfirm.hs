@@ -35,6 +35,7 @@ import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, when
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -171,11 +172,11 @@ getActiveJourneyIds riderId = do
   activeJourneys <- QJourney.findAllActiveByRiderId riderId
   return $ activeJourneys <&> (.id)
 
-generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> m ApiTypes.JourneyInfoResp
+generateJourneyInfoResponse :: (JMTypes.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> m ApiTypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs now = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR legs now
+  unifiedQR <- getUnifiedQR legs journey.id now
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- maybe (pure Nothing) CQMOC.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
