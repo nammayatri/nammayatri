@@ -370,6 +370,8 @@ screen initialState =
                 void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ UpdatePickupLocation key lat lon) (handleLocateOnMapCallback "HomeScreen")
                 pure unit
               RideStarted -> do
+                when ((getValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION) == "TRIGGER_DESTINATION_WAITING_ACTION") $ do
+                  void $ waitingCountdownTimerV2 ( initialState.data.driverInfoCardState.destinationReachedAt) "1" "countUpTimerId" push DestinationWaitingTimeAction
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 void $ pure $ setValueToLocalStore RATING_SKIPPED "false"
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -3317,22 +3319,26 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
         let 
             rideScheduledTime = state'.homeScreen.data.driverInfoCardState.rideScheduledAtUTC
             isScheduledRide = ((fromMaybe (getCurrentUTC "") rideScheduledTime) > (getCurrentUTC ""))
-            scheduledTimeDiff = compareUTCDate (getCurrentUTC "") (fromMaybe (getCurrentUTC "") rideScheduledTime) 
-            waitTimeStartTime = 
-                              if isScheduledRide then 
-                                case respBooking.driverArrivalTime ,rideScheduledTime of 
-                                  Just driverArrivalTime, Just rideScheduledTime -> 
-                                    if (compareUTCDate driverArrivalTime rideScheduledTime > 0) then 
+            scheduledTimeDiff = compareUTCDate (getCurrentUTC "") (fromMaybe (getCurrentUTC "") rideScheduledTime)
+            rideStartTime = state'.homeScreen.data.driverInfoCardState.rideStartTime
+            driverArrivalTime = state'.homeScreen.data.driverInfoCardState.driverArrivalTime
+            waitTimeStartTime =
+                              if isScheduledRide then
+                                case respBooking.driverArrivalTime ,rideScheduledTime of
+                                  Just driverArrivalTime, Just rideScheduledTime ->
+                                    if (compareUTCDate driverArrivalTime rideScheduledTime > 0) then
                                       driverArrivalTime
                                       else
                                       rideScheduledTime
                                   Just driverArrivalTime ,  Nothing -> driverArrivalTime
                                   _ , _ -> ""
                                 else fromMaybe "" respBooking.driverArrivalTime
-        if ((isScheduledRide && scheduledTimeDiff > 0 && (isJust respBooking.driverArrivalTime ))|| ((not isScheduledRide )&& respBooking.driverArrivalTime /= Nothing && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" )) then do
+        if ((isScheduledRide && scheduledTimeDiff > 0 && (isJust respBooking.driverArrivalTime ))|| ((not isScheduledRide )&& respBooking.driverArrivalTime /= Nothing && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" && state.props.currentStage /= RideStarted)) then do
               let _ = spy "WAIT_TIME_TRIGERRED" waitTimeStartTime
               doAff do liftEffect $ push $ driverArrivedAction waitTimeStartTime
-        else do 
+        else if (respBooking.destinationReachedAt /= Nothing && (getValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION) == "TRIGGER_DRIVER_REACHED_DESTINATION") then
+            doAff do liftEffect $ push $ driverReachedDestinationAction $ fromMaybe "" respBooking.destinationReachedAt
+        else do
           let _ = spy "WAIT_TIME_TRIGERRED" waitTimeStartTime
           pure unit
         case respBooking.rideStatus of
@@ -3370,10 +3376,9 @@ driverLocationTracking push action driverArrivedAction driverReachedDestinationA
                           Just driverArrivalTime ,  Nothing -> driverArrivalTime
                           _ , _ -> ""
                         else fromMaybe "" res.driverArrivalTime
-                if ((isScheduledRide && scheduledTimeDiff > 0 && (isJust res.driverArrivalTime ))|| ((not isScheduledRide )&& res.driverArrivalTime /= Nothing && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" )) then 
+                if ((isScheduledRide && scheduledTimeDiff > 0 && (isJust res.driverArrivalTime ))|| ((not isScheduledRide )&& res.driverArrivalTime /= Nothing && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" && state.props.currentStage /= RideStarted)) then
                   doAff do liftEffect $ push $ driverArrivedAction waitTimeStartTime
-                else pure unit
-                if (res.destinationReachedAt /= Nothing && (getValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION) == "TRIGGER_DRIVER_REACHED_DESTINATION") then
+                else if (res.destinationReachedAt /= Nothing && (getValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION) == "TRIGGER_DRIVER_REACHED_DESTINATION") then
                   doAff do liftEffect $ push $ driverReachedDestinationAction $ fromMaybe "" res.destinationReachedAt
                 else pure unit
               Nothing -> pure unit

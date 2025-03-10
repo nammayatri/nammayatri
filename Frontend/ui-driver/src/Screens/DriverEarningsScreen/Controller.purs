@@ -771,6 +771,12 @@ dummyRideHistoryItem = RidesInfo {
       parkingCharge : Nothing,
       senderDetails : Nothing,
       receiverDetails : Nothing,
+<<<<<<< HEAD
       coinsEarned : Nothing,
       extraFareMitigationFlag : Nothing
+=======
+      parcelType : Nothing,
+      parcelQuantity : Nothing,
+      coinsEarned : Nothing 
+>>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
 }

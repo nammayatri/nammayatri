@@ -1739,6 +1739,14 @@ newtype Keymap = Keymap {
 , different_ambulance :: String
 , no_remaining_tickets :: String
 , ticket_not_booked_refund_initiated :: String 
+, parcel_details :: String
+, parcel_type :: String
+, parcel_quantity :: String
+, unloading_time :: String
+, loading_time :: String
+, helps_smooth_delivery :: String
+, free_loading_unloading_time :: String -> String -> String
+, max_capacity_warning :: String
 }
 
 
@@ -6926,3 +6934,27 @@ no_remaining_tickets = a
 
 ticket_not_booked_refund_initiated :: Proxy "ticket_not_booked_refund_initiated"
 ticket_not_booked_refund_initiated = a
+
+parcel_details :: Proxy "parcel_details"
+parcel_details = a
+
+parcel_type :: Proxy "parcel_type"
+parcel_type = a
+
+parcel_quantity :: Proxy "parcel_quantity"
+parcel_quantity = a
+
+unloading_time :: Proxy "unloading_time"
+unloading_time = a
+
+loading_time :: Proxy "loading_time"
+loading_time = a
+
+helps_smooth_delivery :: Proxy "helps_smooth_delivery"
+helps_smooth_delivery = a
+
+free_loading_unloading_time :: Proxy "free_loading_unloading_time"
+free_loading_unloading_time = a
+
+max_capacity_warning :: Proxy "max_capacity_warning"
+max_capacity_warning = a
