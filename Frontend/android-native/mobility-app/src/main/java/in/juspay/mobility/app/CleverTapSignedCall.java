@@ -21,6 +21,10 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.widget.Button;
+import android.os.Handler;
+import android.os.Looper;
+import java.util.HashMap;
+import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -81,7 +85,11 @@ public class CleverTapSignedCall {
     private static final String KEY_NETWORK_QUALITY_MODERATE = "network_quality_moderate_threshold";
     private static final int DEFAULT_HIGH_THRESHOLD = 5000;
     private static final int DEFAULT_MODERATE_THRESHOLD = 1000;
-    
+
+    private final Map<String, Runnable> callTimeoutMap = new HashMap<>();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+
     private void init(Context cxt, Activity act) {
         context = cxt;
         activity = act;
@@ -125,8 +133,6 @@ public class CleverTapSignedCall {
             }
         }
     }
-
-
 
     public boolean isSignedCallInitialized(){
         return  SignedCallAPI.getInstance().isInitialized(context);
@@ -186,9 +192,12 @@ public class CleverTapSignedCall {
         return "Unknown";
     }
 
+    public void setExoPhoneNumber(String exoPhoneNum){
+        phone = exoPhoneNum;
+    }
+
     public void voipDialer(String configJson, String phoneNum, String callback, BridgeComponents bridgeComponents) {
         this.bridgeComponent = bridgeComponents;
-        this.phone = phoneNum;
         CleverTapSignedCall.callback = callback;
         useFallbackDialer = sharedPrefs.getInt("USE_FALLBACK_DIALER", 0);
         callAttempts = sharedPrefs.getInt("VOIP_CALL_ATTEMPTS", 0);
@@ -211,23 +220,13 @@ public class CleverTapSignedCall {
             isMissed = config.optBoolean("isMissed", false);
         } catch (JSONException e) {
             Log.e("SignedCall", "Invalid JSON format in voipDialer", e);
-            showDialer(phoneNum);
+            showDialer(phone);
             return;
         }
         isDriver = isDriverBool;
-
-        if (!isSignedCallInitialized()) {
-            JSONObject initConfig = new JSONObject();
-            try {
-                initConfig.put("rideId", rideId);
-                initConfig.put("cuid", callerCuid);
-                initConfig.put("isDriver", isDriver);
-            } catch (JSONException e) {
-                Log.e("SignedCall", "Error creating JSON config for initSignedCall", e);
-            }
-            initSignedCall(initConfig.toString());
+        if(!isMissed){
+            setExoPhoneNumber(phoneNum);
         }
-    
         try {
             voipCallConfig = new JSONObject(remoteConfig.getString("voip_call_config"));
             fallBackThreshold = voipCallConfig.optInt("fallbackDialerThreshold", 1);
@@ -237,7 +236,7 @@ public class CleverTapSignedCall {
         }
     
         if (useFallbackDialer > fallBackThreshold || callAttempts > callAttemptsThreshold) {
-            showDialer(phoneNum);
+            showDialer(phone);
             return;
         }
     
@@ -280,7 +279,7 @@ public class CleverTapSignedCall {
                     }
                     mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
                     callbackResult = "MIC_PERMISSION_DENIED";
-                } else if(callException.getErrorCode() == CallException.BadNetworkException.getErrorCode() || callException.getErrorCode() == CallException.ContactNotReachableException.getErrorCode()){
+                } else if((callException.getErrorCode() == CallException.BadNetworkException.getErrorCode()) || (callException.getErrorCode() == CallException.ContactNotReachableException.getErrorCode())){
                     showDialer(exoPhone);
                     mFirebaseAnalytics.logEvent("voip_call_failed_BAD_NETWORK_CALLER",bundle);
                     callbackResult = "NETWORK_ERROR";
@@ -306,16 +305,8 @@ public class CleverTapSignedCall {
             SignedCallAPI.getInstance().call(context, receiverCuid, callContext, callOptions, outgoingCallResponseListener);
             checkAndAskBluetoothPermission();
         } else {
-            boolean hasAskedMicPermission = sharedPrefs.getBoolean("MIC_PERMISSION_ASKED", false);
             mFirebaseAnalytics.logEvent("voip_call_failed_NO_MIC_PERM_CALLER",bundle);
-            if (activity != null && ActivityCompat.checkSelfPermission(context, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                if (!hasAskedMicPermission) {
-                    ActivityCompat.requestPermissions(activity, new String[]{RECORD_AUDIO}, REQUEST_MICROPHONE);
-                    sharedPrefs.edit().putBoolean("MIC_PERMISSION_ASKED", true).apply();
-                } else {
-                    showCustomBottomSheet(isDriver);
-                }
-            }
+            showCustomBottomSheet(isDriver);
             String finalNetworkType = getNetworkType();
             String finalNetworkQuality = getNetworkQuality();
             sendJavaScriptCallback(callback, "", "MIC_PERMISSION_DENIED", rideId, CallException.MicrophonePermissionNotGrantedException.getErrorCode(), isDriver, finalNetworkType, finalNetworkQuality, merchantId);
@@ -328,12 +319,12 @@ public class CleverTapSignedCall {
         if (activity != null && ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
         }
-        if(isSignedCallInitialized()) return;
         JSONObject initOptions = new JSONObject(), config = null;
-
         try {
             config = new JSONObject(configJson);
             String cuid = config.getString("cuid");
+            String exoPhone = config.optString("exoPhone");
+            setExoPhoneNumber(exoPhone);
             boolean isDriverBool = config.getBoolean("isDriver");
             rideId = config.optString("rideId");
             isDriver = isDriverBool;
@@ -344,6 +335,7 @@ public class CleverTapSignedCall {
         } catch (JSONException e) {
             Log.d("SignedCall", "JSON error at setting up SignedCall data: " + e.getMessage());
         }
+        if(isSignedCallInitialized()) return;
         Bundle bundle = new Bundle();
         bundle.putString("ride_id", rideId);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -379,6 +371,7 @@ public class CleverTapSignedCall {
                                                             .overrideDefaultBranding(callScreenBranding)
                                                             .setMissedCallActions(missedCallActionsList)
                                                             .setNotificationPermissionRequired(false)
+                                                            .promptReceiverReadPhoneStatePermission(true)
                                                             .build();
         CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
         SignedCallAPI.getInstance().init(context, initConfiguration, cleverTapAPI, signedCallInitListener);
@@ -471,10 +464,21 @@ public class CleverTapSignedCall {
 
                         case CALL_IS_PLACED:
                             sendJavaScriptCallback(callback, callId, "CALL_IS_PLACED", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            Runnable timeoutRunnable = () -> {
+                                Log.w("signedcall", "Call " + callId + " was placed but never rang.");
+                                sendJavaScriptCallback(callback, callId, "CALL_NOT_RINGING", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                                updateFallbackDialer();
+                            };
+                            callTimeoutMap.put(callId, timeoutRunnable);
+                            handler.postDelayed(timeoutRunnable, 10000);
                             break;
                         
                         case CALL_RINGING:
                             sendJavaScriptCallback(callback, callId, "CALL_RINGING", rideId, -2, isDriver, finalNetworkType, finalNetworkQuality, merchantId);
+                            Runnable pendingTimeout = callTimeoutMap.remove(callId);
+                            if (pendingTimeout != null) {
+                                handler.removeCallbacks(pendingTimeout);
+                            }
                             break;
                         
                         case CALL_MISSED:
