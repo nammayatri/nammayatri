@@ -159,6 +159,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.RideBooking.DriverRegistration
@@ -219,6 +220,7 @@ library
       Domain.Action.UI.MerchantServiceConfig
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
+      Domain.Action.UI.OperationHub
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
@@ -560,6 +562,7 @@ library
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
       Storage.Queries.NotificationExtra
+      Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
@@ -672,6 +675,8 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Operator
+      API.Action.Dashboard.Operator.Driver
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Driver
       API.Action.Dashboard.RideBooking.DriverRegistration
@@ -685,6 +690,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
+      API.Action.UI.OperationHub
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
@@ -720,6 +726,7 @@ library
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
+      API.Types.UI.OperationHub
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
@@ -811,6 +818,8 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.Notification
+      Domain.Types.OperationHub
+      Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -821,6 +830,7 @@ library
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
+      Domain.Types.RCValidationRules
       Domain.Types.ReelsData
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
@@ -942,6 +952,8 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.Notification
+      Storage.Beam.OperationHub
+      Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -952,6 +964,7 @@ library
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
+      Storage.Beam.RCValidationRules
       Storage.Beam.ReelsData
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
@@ -1076,6 +1089,8 @@ library
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
+      Storage.Queries.OperationHub
+      Storage.Queries.OperationHubRequests
       Storage.Queries.OrphanInstances.AadhaarCard
       Storage.Queries.OrphanInstances.ApprovalRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
@@ -1118,6 +1133,7 @@ library
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
       Storage.Queries.OrphanInstances.Notification
+      Storage.Queries.OrphanInstances.OperationHubRequests
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
@@ -1154,6 +1170,7 @@ library
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
+      Storage.Queries.RCValidationRules
       Storage.Queries.ReelsData
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback

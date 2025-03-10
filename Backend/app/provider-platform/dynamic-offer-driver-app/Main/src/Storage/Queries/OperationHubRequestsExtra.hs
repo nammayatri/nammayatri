@@ -1,0 +1,49 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Storage.Queries.OperationHubRequestsExtra where
+
+import qualified Database.Beam as B
+import qualified Database.Beam.Query ()
+import Domain.Types.OperationHubRequests
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.External.Encryption (DbHash)
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.OperationHubRequests as BeamOHR
+import qualified Storage.Beam.Person as BeamP
+import Storage.Queries.OrphanInstances.OperationHubRequests ()
+
+-- Extra code goes here --
+findAllRequestsInRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UTCTime -> UTCTime -> Int -> Int -> Maybe DbHash -> Maybe RequestStatus -> Maybe RequestType -> Maybe Text -> m [OperationHubRequests]
+findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbDriverId = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (toInteger limit) $
+            B.offset_ (toInteger offset) $
+              B.filter_'
+                ( \(operationHubRequests, driver) ->
+                    B.sqlBool_ (operationHubRequests.createdAt B.>=. B.val_ from)
+                      B.&&?. B.sqlBool_ (operationHubRequests.createdAt B.<=. B.val_ to)
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> operationHubRequests.driverId B.==?. B.val_ driverId) mbDriverId
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqType -> operationHubRequests.requestType B.==?. B.val_ reqType) mbReqType
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqStatus -> operationHubRequests.requestStatus B.==?. B.val_ reqStatus) mbReqStatus
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberHash
+                )
+                do
+                  operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
+                  driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamOHR.driverId operationHubRequests B.==. BeamP.id driver)
+                  pure (operationHubRequests, driver)
+  case res of
+    Right res' -> do
+      let operationHubRequests = fst <$> res'
+      catMaybes <$> mapM fromTType' operationHubRequests
+    Left _ -> pure []

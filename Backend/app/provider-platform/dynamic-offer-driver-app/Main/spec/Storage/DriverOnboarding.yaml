@@ -360,7 +360,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,BusinessPanCard"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
@@ -882,3 +882,20 @@ HyperVergeVerification:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: driverId
+
+RCValidationRules:
+  tableName: rc_validation_rules
+  fields:
+    id: Id RCValidationRules
+    maxVehicleAge: Maybe Int
+    fuelType: '[Text]'
+    vehicleClass: '[Text]'
+    vehicleOEM: '[Text]'
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId

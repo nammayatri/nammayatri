@@ -50,6 +50,7 @@ import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import Domain.Types.RCValidationRules
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
@@ -82,6 +83,7 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
+import Storage.Queries.RCValidationRules
 import Storage.Queries.Ride as RQuery
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
@@ -338,6 +340,10 @@ onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationR
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
+  rcValidationRules <- findByCityId person.merchantOperatingCityId
+  case rcValidationRules of
+    Nothing -> pure ()
+    Just rules -> Kernel.Prelude.unlessM (validateRCResponse rcVerificationResponse rules) $ throwError (InvalidRequest "Failed city based RC checks")
   let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear
   mVehicleRC <- do
     case mbVehicleVariant of
@@ -476,6 +482,16 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
         Nothing -> pure ()
+
+    validateRCResponse :: (MonadFlow m) => Verification.RCVerificationResponse -> RCValidationRules -> m Bool
+    validateRCResponse rc rule = do
+      now <- getCurrentTime
+      let fuelValid = maybe True (\ft -> Kernel.Prelude.any (`isInfixOf` ft) rule.fuelType) rc.fuelType
+          vehicleClassValid = maybe True (\vc -> Kernel.Prelude.any (`isInfixOf` vc) rule.vehicleClass) rc.vehicleClass
+          manufacturerValid = maybe True (\m -> Kernel.Prelude.any (`isInfixOf` m) rule.vehicleOEM) rc.manufacturer
+          vehicleAge = getVehicleAge (convertTextToDay (rc.mYManufacturing <> Just "-01")) now
+          vehicleAgeValid = ((.getMonths) <$> vehicleAge) >= rule.maxVehicleAge
+      return (fuelValid && vehicleClassValid && manufacturerValid && vehicleAgeValid)
 
 compareRegistrationDates :: Maybe Text -> Maybe UTCTime -> Bool
 compareRegistrationDates actualDate providedDate =
