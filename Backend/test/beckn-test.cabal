@@ -94,7 +94,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -threaded -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wwarn=ambiguous-fields
   build-depends:
       HUnit
     , aeson
@@ -107,6 +107,8 @@ library
     , driver-offer-allocator
     , dynamic-offer-driver-app
     , euler-hs
+    , fdep
+    , fieldInspector
     , generic-lens
     , hspec
     , hspec-core
@@ -189,7 +191,7 @@ test-suite beckn-integ-test
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -threaded -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false}
   build-depends:
       HUnit
     , aeson
@@ -203,6 +205,8 @@ test-suite beckn-integ-test
     , driver-offer-allocator
     , dynamic-offer-driver-app
     , euler-hs
+    , fdep
+    , fieldInspector
     , generic-lens
     , hspec
     , hspec-core

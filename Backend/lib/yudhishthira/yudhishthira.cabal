@@ -125,7 +125,7 @@ library
       PackageImports
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   extra-libraries:
       cac_client
   build-depends:
@@ -151,6 +151,8 @@ library
     , euler-hs
     , exceptions
     , extra
+    , fdep
+    , fieldInspector
     , generic-lens
     , geohash ==1.0.1
     , hashable
@@ -252,7 +254,7 @@ test-suite yudhishthira-tests
       PackageImports
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false}
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -275,6 +277,8 @@ test-suite yudhishthira-tests
     , euler-hs
     , exceptions
     , extra
+    , fdep
+    , fieldInspector
     , generic-lens
     , geohash ==1.0.1
     , hashable
