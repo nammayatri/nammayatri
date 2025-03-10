@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -39,11 +39,11 @@ type Language =
         value :: String
     }
 
-whiteListedInputString :: Array String 
+whiteListedInputString :: Array String
 whiteListedInputString = ["Hospital"]
 
 getLanguages :: Array Language
-getLanguages = 
+getLanguages =
     [
         {name:"English",value:"EN_US"},
         {name:"ಕನ್ನಡ",value:"KN_IN"},
@@ -54,7 +54,7 @@ getLanguages =
 
 decodeAddress :: LocationInfo -> Boolean -> String
 decodeAddress ( LocationInfo address) fullAddress =
-        if fullAddress then 
+        if fullAddress then
              if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
                     ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
             else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
@@ -67,7 +67,7 @@ decodeAddress ( LocationInfo address) fullAddress =
                     ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
                     else
                     ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-        else 
+        else
             if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == ""  ) then
                     (trim (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
             else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" ) then
@@ -88,10 +88,10 @@ decodeShortAddress (LocationInfo loc) =
 tripDatesCount :: Int
 tripDatesCount = 15
 
-getPspIcon :: String -> String 
+getPspIcon :: String -> String
 getPspIcon vpa = do
     let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
-    case handleName of 
+    case handleName of
         Nothing -> "ny_ic_defaultpg"
         Just handle -> case handle of
             "ybl" -> "ny_ic_phonepe"
@@ -118,7 +118,7 @@ waitTimeConstructor key = case key of
   _ -> ST.NoStatus
 
 transformDocText :: ST.RegisterationStep -> String
-transformDocText stage = 
+transformDocText stage =
   case stage of
     ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
     ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
@@ -134,7 +134,7 @@ transformDocText stage =
     ST.NO_OPTION -> ""
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
-transformToRegisterationStep doctype = 
+transformToRegisterationStep doctype =
   case doctype of
         "DriverLicense" -> ST.DRIVING_LICENSE_OPTION
         "VehicleRegistrationCertificate" -> ST.VEHICLE_DETAILS_OPTION
@@ -150,7 +150,7 @@ transformToRegisterationStep doctype =
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
-transformToDoctype step = 
+transformToDoctype step =
   case step of
     ST.DRIVING_LICENSE_OPTION -> "DriverLicense"
     ST.VEHICLE_DETAILS_OPTION -> "VehicleRegistrationCertificate"
@@ -186,12 +186,12 @@ decodeVehicleType value = case value of
     "BusCategory" -> Just ST.BusCategory
     _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
-rideTypeConstructor ( tripCategory) = 
+rideTypeConstructor ( tripCategory) =
   case tripCategory of
     Nothing -> ST.OneWay
     Just (TripCategory tripCategory') ->
         case toLower tripCategory'.tag of
-                "oneway" -> ST.OneWay 
+                "oneway" -> ST.OneWay
                 "roundtrip" -> ST.RoundTrip
                 "rental" -> ST.Rental
                 "intercity" -> ST.Intercity
@@ -201,9 +201,9 @@ rideTypeConstructor ( tripCategory) =
 
 
 constructLocationInfo :: Maybe Number -> Maybe Number -> Maybe LocationInfo
-constructLocationInfo (latitude) (longitude) = 
+constructLocationInfo (latitude) (longitude) =
     case latitude,longitude of
-        Just latitude',Just longitude' -> 
+        Just latitude',Just longitude' ->
                 Just $ LocationInfo {
                         area :  Just "",
                         state :  Just "",
@@ -221,8 +221,8 @@ constructLocationInfo (latitude) (longitude) =
         _,_ -> Nothing
 
 getLocationInfoFromStopLocation :: StopLocationAddress -> Number -> Number -> LocationInfo
-getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, area, city, state, country, areaCode}) lat lon = 
-     LocationInfo 
+getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, area, city, state, country, areaCode}) lat lon =
+     LocationInfo
         {
                 area :  area,
                 state :  state,
@@ -239,7 +239,7 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
         }
 
 getHomeStageFromString :: String -> ST.HomeScreenStage
-getHomeStageFromString localStage = 
+getHomeStageFromString localStage =
   case localStage of
         "HomeScreen" -> ST.HomeScreen
         "RideRequested" -> ST.RideRequested
@@ -278,7 +278,7 @@ dayEndTime :: String
 dayEndTime = "23:59:59"
 
 serviceTierMapping :: Boolean -> String -> Maybe Boolean -> String
-serviceTierMapping hideAcNonAc tierName acRide = 
+serviceTierMapping hideAcNonAc tierName acRide =
   case hideAcNonAc, acRide, tierName of
     _ ,Just true, "AC Mini" -> "Mini"
     _ , _ , "DELIVERY_BIKE" -> "Delivery"
@@ -291,7 +291,7 @@ serviceTierMapping hideAcNonAc tierName acRide =
     true,Just true,"Ventilator" ->  "Ventilator"
     true,Just false,"Non-AC ∙ O̶₂̶" -> "Non-AC ∙ O̶₂̶"
     true,Just false,"Non-AC ∙ O₂" ->  "Non-AC ∙ O₂"
-    true,Just true,"AC ∙ O̶₂̶" -> "AC ∙ O̶₂̶" 
+    true,Just true,"AC ∙ O̶₂̶" -> "AC ∙ O̶₂̶"
     true,Just true,"AC ∙ O₂" -> "AC ∙ O₂"
     _ , _ , _ -> tierName
 
@@ -358,7 +358,7 @@ getByTag tags componentName = (filter (\item -> contains (Pattern componentName)
 getAddress :: Array AddressComponents -> String
 getAddress address = joinWith ", " (reverse (map (\(AddressComponents item) -> item.longName) address))
 
-areaCodeRegex :: String 
+areaCodeRegex :: String
 areaCodeRegex = "\\b\\d{6}\\b"
 
 

@@ -191,20 +191,20 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | RemoveAlternateNumber DriverProfileScreenState
                     | ValidateAlternateNumber DriverProfileScreenState
                     | UpdateGender DriverProfileScreenState
-                    | GoToNotifications
-                    | GoToAboutUsScreen
-                    | OnBoardingFlow
-                    | DocumentsFlow
+                    | GoToNotifications DriverProfileScreenState
+                    | GoToAboutUsScreen DriverProfileScreenState
+                    | OnBoardingFlow DriverProfileScreenState
+                    | DocumentsFlow DriverProfileScreenState
                     | GoToHomeScreen DriverProfileScreenState
-                    | GoToReferralScreen
-                    | GoToLogout
+                    | GoToReferralScreen DriverProfileScreenState
+                    | GoToLogout DriverProfileScreenState
                     | GoBack DriverProfileScreenState
                     | ActivatingOrDeactivatingRC DriverProfileScreenState
                     | DeletingRc DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
                     | AddingRC DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
-                    | SubscriptionScreen
+                    | SubscriptionScreen DriverProfileScreenState
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
                     | GoToCompletingProfile DriverProfileScreenState
@@ -319,10 +319,10 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications
+      exit $ GoToNotifications state
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ GoToReferralScreen
+      exit $ GoToReferralScreen state
     _ -> continue state
 
 eval (UpdateValue value) state = do
@@ -342,14 +342,14 @@ eval (OptionClick optionIndex) state = do
     DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
     MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
     HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
-    ABOUT_APP -> exit $ GoToAboutUsScreen
+    ABOUT_APP -> exit $ GoToAboutUsScreen state
     DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
-    REFER -> exit $ OnBoardingFlow
+    REFER -> exit $ OnBoardingFlow state
     APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
       continue state
     LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
-    DOCUMENTS -> exit DocumentsFlow --TODO
+    DOCUMENTS -> exit $ DocumentsFlow state--TODO
 
 eval (UpiQrRendered id) state = do
   continueWithCmd state [ do
@@ -360,7 +360,7 @@ eval (DismissQrPopup) state = continue state {props { upiQrView = false}}
 
 eval (PaymentInfo) state = continue state {props { paymentInfoView = true }}
 
-eval (LeftKeyAction) state = exit $ SubscriptionScreen
+eval (LeftKeyAction) state = exit $ SubscriptionScreen state
 
 eval (DownloadQR (PrimaryButton.OnClick)) state = do
   continueWithCmd state [do
@@ -375,7 +375,7 @@ eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = 
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}})
 
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout state
 
 eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state = do
   let (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)

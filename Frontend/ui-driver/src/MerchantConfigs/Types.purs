@@ -2,6 +2,7 @@ module MerchantConfig.Types where
 
 import Common.Types.Config
 import Data.Maybe
+import Foreign.Object
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -273,7 +274,7 @@ type CityConfig = {
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
   showScheduledRides :: Boolean,
-  enableNammaMeter :: Maybe Boolean
+  enableNammaMeter :: Maybe (Object Boolean)
 }
 
 type InAppKeyboardModalConfig = {

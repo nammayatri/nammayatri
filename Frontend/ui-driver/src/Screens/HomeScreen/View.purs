@@ -72,6 +72,7 @@ import Engineering.Helpers.Utils (toggleLoader,getAndRemoveLatestNotificationTyp
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
+import Foreign.Object 
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -113,7 +114,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig, metroWarriorsConfig, profileCompletionReminder)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig, metroWarriorsConfig, profileCompletionReminder, getLocationUpdateServiceTripTypeBasedConfig)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -224,7 +225,7 @@ screen initialState (GlobalState globalState) =
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
                                     startingTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
-                                    locationUpdateServiceConfig = getLocationUpdateServiceConfig "ride_accepted"
+                                    locationUpdateServiceConfig = getLocationUpdateServiceTripTypeBasedConfig "ride_accepted" "OneWay"
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
@@ -239,7 +240,7 @@ screen initialState (GlobalState globalState) =
                                   void $ startTimer (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (getCurrentUTC "") initialState.data.activeRide.tripScheduledAt) (getCurrentUTC "")) ("rideStartRemainingTimeId_" <> initialState.data.activeRide.id) "1" push RideStartRemainingTime
                                   else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
-                                void $ fetchAndUpdateLocationUpdateServiceVars "ride_accepted" true
+                                void $ HU.fetchAndUpdateLocationUpdateServiceVars "ride_accepted" true "OneWay"
                                 if (not initialState.props.chatcallbackInitiated && not initialState.data.activeRide.bookingFromOtherPlatform) then do
                                   _ <- JB.clearChatMessages
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages AllChatsLoaded
@@ -262,7 +263,7 @@ screen initialState (GlobalState globalState) =
                                   else pure unit
                                 push GetMessages
             "RideStarted"    -> do
-                                void $ fetchAndUpdateLocationUpdateServiceVars "ride_started" initialState.data.activeRide.enableFrequentLocationUpdates
+                                void $ HU.fetchAndUpdateLocationUpdateServiceVars "ride_started" initialState.data.activeRide.enableFrequentLocationUpdates "OneWay"
                                 when (initialState.data.activeRide.tripType == ST.Rental) $ void $ HU.storeCallBackForAddRideStop push CallBackNewStop
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
@@ -311,7 +312,7 @@ screen initialState (GlobalState globalState) =
                                   pure unit
                                   else pure unit
             _                -> do
-                                void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
+                                void $ HU.fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true "OneWay"
                                 when (initialState.props.currentStage == RideCompleted) $ do
                                   let mbVal = runFn3 getFromWindowString "notificationType" Nothing Just
                                   case mbVal of
@@ -388,15 +389,7 @@ playRideAssignedAudio tripCategory rideId push = do
   else pure unit
 
 
-fetchAndUpdateLocationUpdateServiceVars :: String -> Boolean -> Effect Unit
-fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates = do
-  let locationUpdateServiceConfig = getLocationUpdateServiceConfig stage
-  void $ pure $ setValueToLocalStore RIDE_G_FREQUENCY
-                      $ if frequentLocationUpdates
-                        then locationUpdateServiceConfig.rideGFrequencyWithFrequentUpdates
-                        else locationUpdateServiceConfig.rideGFrequencyWithoutFrequentUpdates
-  void $ pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT locationUpdateServiceConfig.minDisplacement
-  void $ pure $ setValueToLocalStore RIDE_T_FREQUENCY locationUpdateServiceConfig.rideTFrequency
+
 
 checkAndStartChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> HomeScreenState -> Flow GlobalState Unit
 checkAndStartChatService push retry rideId state =
@@ -862,9 +855,9 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][  if fromMaybe false state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
+        ][  if fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
           , locationUpdateView push state
-          , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
+          , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
             then gotoButton push state else linearLayout[][]
           , if hotspotsRemoteConfig.enableHotspotsFeature then seeNearbyHotspots state push else noView
           , rideRequestButton  push state
@@ -878,7 +871,7 @@ gotoRecenterAndSupport state push =
     centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen && state.data.config.gotoConfig.enableGoto
 
 meterBooking :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
-meterBooking state push = 
+meterBooking state push =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -1281,7 +1274,7 @@ driverDetail push state =
 
 
     tripStageTopBarConfig :: TripStageTopBar.Config
-    tripStageTopBarConfig = 
+    tripStageTopBarConfig =
       {
         data : {
           cityConfig : state.data.cityConfig,
@@ -1343,7 +1336,7 @@ driverProfile push state =
     ]
 
 -- tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
--- tripStageTopBar push state = 
+-- tripStageTopBar push state =
 --   let cityConfig = state.data.cityConfig
 --   in
 --     horizontalScrollView[
@@ -1359,8 +1352,8 @@ driverProfile push state =
 --         background Color.white900,
 --         margin $ MarginRight 16,
 --         gravity CENTER_VERTICAL
---       ] $ [ advanceBookingSwitch] 
---       <> ( 
+--       ] $ [ advanceBookingSwitch]
+--       <> (
 --             map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
 --               -- [
 --               --   pillIcon  "ny_ic_blue_shield_white_plus",
@@ -1372,8 +1365,8 @@ driverProfile push state =
 --             ]
 --           )
 --     ]
---   where 
---     tripStageTopBarPill action = 
+--   where
+--     tripStageTopBarPill action =
 --       linearLayout [
 --         width WRAP_CONTENT,
 --         height WRAP_CONTENT,
@@ -1382,43 +1375,43 @@ driverProfile push state =
 --         cornerRadius 32.0,
 --         background Color.blue600,
 --         onClick push action
---       ] 
-    
---     pillIcon imgStr = 
+--       ]
+
+--     pillIcon imgStr =
 --       imageView [
 --         width $ V 20,
 --         height $ V 20,
 --         imageWithFallback $ HU.fetchImage HU.FF_ASSET imgStr
 --       ]
-    
---     pillText str = 
+
+--     pillText str =
 --       textView $ [
 --         text str,
 --         color Color.blue900,
 --         margin $ MarginLeft 8
 --       ] <> FontStyle.body6 TypoGraphy
 
---     advanceBookingSwitch = 
+--     advanceBookingSwitch =
 --       linearLayout [
 --         width WRAP_CONTENT,
 --         height WRAP_CONTENT,
 --         margin $ Margin 12 12 0 12,
 --         cornerRadius 32.0,
 --         background $ if isNothing state.data.advancedRideData then Color.grey700 else Color.blue600,
---         padding $ Padding 4 4 4 4 
+--         padding $ Padding 4 4 4 4
 --       ]$[ swichBtn (getString CURRENT_BUTTON_TEXT) CURRENT false $ state.props.bookingStage /= CURRENT
 --         , swichBtn (getString ADVANCE) ADVANCED (isNothing state.data.advancedRideData) (state.props.bookingStage /= ADVANCED)
 --         ]
 
---     swichBtn txt stage isDisabled switchAllowed = 
+--     swichBtn txt stage isDisabled switchAllowed =
 --       textView $ [
 --         text $ txt,
---         color $ 
+--         color $
 --           case state.props.bookingStage == stage, isDisabled of
 --             true, _ -> Color.aliceBlueLight
 --             false, true -> Color.black700
 --             false, false -> Color.blue900,
---         background $ 
+--         background $
 --           case state.props.bookingStage == stage, isDisabled of
 --             true, _ -> Color.blue900
 --             false, true -> Color.grey700

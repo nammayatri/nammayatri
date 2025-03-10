@@ -902,7 +902,9 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Chennai",
         "mapImage" : "ny_ic_chennai_map",
-        "enableNammaMeter": true,
+        "enableNammaMeter": {
+          "AUTO_RICKSHAW" : true
+        },
         "cityCode" : "std:044",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
