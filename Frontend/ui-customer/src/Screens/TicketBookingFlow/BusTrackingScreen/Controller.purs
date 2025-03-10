@@ -69,6 +69,12 @@ import Data.Tuple as DT
 import Data.Foldable (foldM)
 import Engineering.Helpers.RippleCircles as EHR
 import Effect.Uncurried (runEffectFn1)
+import Foreign.Class (encode)
+import Storage (setValueToLocalStore)
+import Data.Argonaut.Core as AC
+import DecodeUtil as DU
+import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Control.Alt ((<|>))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -163,10 +169,12 @@ eval (UpdateTracking trackingData) state = do
   where
     processTrackingData = do
       let
+        alreadyOnboardedThisBus = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) extractBusOnboardingInfo
         finalMap =
           DA.foldl
             ( \acc item -> do
-                if Mb.maybe false (_ < item.nextStopSequence)  state.props.destinationSequenceNumber && DS.null state.data.bookingId
+                let alreadyOnboardedThisVehicleInRouteOrPreTracking = Mb.isNothing alreadyOnboardedThisBus || (alreadyOnboardedThisBus <#> _.vehicleId) == Mb.Just item.vehicleId
+                if Mb.maybe false (_ < item.nextStopSequence)  state.props.destinationSequenceNumber && DS.null state.data.bookingId && (not alreadyOnboardedThisVehicleInRouteOrPreTracking)
                   then acc
                 else do
                   let
@@ -193,20 +201,24 @@ eval (UpdateTracking trackingData) state = do
             trackingData
 
       let nearByBusPosition =  Mb.maybe Mb.Nothing (\item -> Mb.Just {lat : item.vehicleLat, lng : item.vehicleLon}) (DT.snd finalMap)
-      continueWithCmd
-        state
-          { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData }
-          , props
-            { busNearSourceData = DT.snd finalMap
+      case alreadyOnboardedThisBus of
+        Mb.Just busInfo ->
+          continueWithCmd state { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData }, props { individualBusTracking = true, vehicleTrackingId = Mb.Just busInfo.vehicleId } }
+            [ pure UserBoarded ]
+        Mb.Nothing -> 
+          continueWithCmd state
+            { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData }
+            , props
+              { busNearSourceData = DT.snd finalMap
+              }
             }
-          }
-        [ do
-            case DT.snd finalMap of
-              Mb.Just pt -> do
-                void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
-              Mb.Nothing -> pure unit
-            pure NoAction
-        ]
+          [ do
+              case DT.snd finalMap of
+                Mb.Just pt -> do
+                  void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
+                Mb.Nothing -> pure unit
+              pure NoAction
+          ]
     
 
 eval (CurrentLocationCallBack lat lon _) state = case state.props.busNearSourceData of
@@ -226,11 +238,28 @@ eval UserBoarded state = do
       filteredStops = case filterStopsIndex of 
         Mb.Just index -> DA.slice index (DA.length state.data.stopsList) state.data.stopsList
         Mb.Nothing -> state.data.stopsList
-      vId = state.props.busNearSourceData <#> _.vehicleId
-  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId}, data{stopsList = filteredStops}}[do
+      -- findBusInfo = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) extractBusOnboardingInfo
+      vId = (state.props.busNearSourceData <#> _.vehicleId) <|> state.props.vehicleTrackingId
+  when (Mb.isJust vId && state.data.bookingId /= "" && Mb.isNothing state.props.vehicleTrackingId) do
+    void $ pure $ setValueToCache (show ONBOARDED_VEHICLE_INFO) updatedOnboardingVehicleInfo (DU.stringifyJSON <<< encode)
+  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId, expandStopsView = if (Mb.isNothing state.props.vehicleTrackingId) then false else state.props.expandStopsView}, data{stopsList = filteredStops}} [ do
     -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state
     pure NoAction
   ]
+  where
+    updatedOnboardingVehicleInfo :: ST.OnboardedBusInfo
+    updatedOnboardingVehicleInfo = 
+      case decodedOnboardedBusInfo of
+        Mb.Nothing -> vehicleInfoPerBookingId
+        Mb.Just info -> info <> vehicleInfoPerBookingId
+
+    decodedOnboardedBusInfo :: Mb.Maybe ST.OnboardedBusInfo
+    decodedOnboardedBusInfo = 
+      let cachedOnboardedBusInfo = JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
+      in DU.decodeForeignAny (DU.parseJSON cachedOnboardedBusInfo) Mb.Nothing
+
+    vehicleInfoPerBookingId :: ST.OnboardedBusInfo 
+    vehicleInfoPerBookingId = [{ bookingId: state.data.bookingId, vehicleId: Mb.fromMaybe "" $ state.props.busNearSourceData <#> _.vehicleId }]
 
 eval (SaveRoute route) state = continue state {data{routePts = route}}
 
@@ -246,7 +275,7 @@ userBoardedActions state vehicles vehicle = do
         else pure unit
   locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (vehicle.vehicleLat) (vehicle.vehicleLon) 1
   let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
-  EHC.liftFlow $ JB.drawRoute [ routeConfig{routeColor = Color.black600} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig{routeColor = Color.black800} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
 
   -- let markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker" }
   -- void $ EHC.liftFlow $ JB.showMarker markerConfig vehicle.vehicleLat vehicle.vehicleLon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
@@ -303,3 +332,12 @@ drawDriverRoute resp state = do
 
 getPoint :: API.GetDriverLocationResp -> CTA.Paths
 getPoint (API.GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }
+
+extractBusOnboardingInfo :: ST.OnboardedBusInfo
+extractBusOnboardingInfo = 
+  Mb.fromMaybe [] decodedOnboardedBusInfo
+  where
+    decodedOnboardedBusInfo :: Mb.Maybe ST.OnboardedBusInfo
+    decodedOnboardedBusInfo = 
+      let cachedOnboardedBusInfo = JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
+      in DU.decodeForeignAny (DU.parseJSON cachedOnboardedBusInfo) Mb.Nothing
