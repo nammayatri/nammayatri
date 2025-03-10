@@ -17,17 +17,3 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD PRIMARY KEY ( id)
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN distance_unit character varying(255) ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN driver_offer_merchant_operating_city_id text ;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-

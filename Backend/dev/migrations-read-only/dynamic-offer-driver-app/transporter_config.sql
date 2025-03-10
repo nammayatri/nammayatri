@@ -435,3 +435,23 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referra
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

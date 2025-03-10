@@ -3,6 +3,7 @@
 module API.Types.UI.MeterRide where
 
 import Data.OpenApi (ToSchema)
+import qualified Data.Text
 import qualified Domain.Types.Location
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -19,5 +20,9 @@ data MeterRideAddDestinationReq = MeterRideAddDestinationReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MeterRideAddDestinationResp = MeterRideAddDestinationResp {estimatedDistance :: Kernel.Types.Common.Meters, estimatedFare :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SendRecietRequest = SendRecietRequest {customerMobileCountryCode :: Data.Text.Text, customerMobileNumber :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

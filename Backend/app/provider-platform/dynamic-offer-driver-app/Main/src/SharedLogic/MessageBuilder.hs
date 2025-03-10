@@ -37,6 +37,8 @@ module SharedLogic.MessageBuilder
     buildFleetJoinAndDownloadAppMessage,
     BuildFleetDeepLinkAuthMessage (..),
     buildFleetDeepLinkAuthMessage,
+    BuildSendReceiptMessageReq (..),
+    buildSendReceiptMessage,
   )
 where
 
@@ -220,6 +222,23 @@ addBroadcastMessageToKafka check msg driverId = do
 
     addTranslation Message.RawMessage {..} trans =
       (show trans.language, Message.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
+
+data BuildSendReceiptMessageReq = BuildSendReceiptMessageReq
+  { totalFare :: Text,
+    totalDistance :: Text
+  }
+
+buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, Text)
+buildSendReceiptMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.SEND_FARE_RECEIPT_MESSAGE Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_FARE_RECEIPT_MESSAGE))
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "totalFare") req.totalFare
+          & T.replace (templateText "totalDistance") req.totalDistance
+
+  pure (merchantMessage.senderHeader, msg)
 
 data BuildFleetJoiningMessageReq = BuildFleetJoiningMessageReq
   { fleetOwnerName :: Text,
