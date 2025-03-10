@@ -12,6 +12,7 @@ MerchantOperatingCity:
     id: Id MerchantOperatingCity
     merchantId: Id Merchant
     merchantShortId: ShortId Merchant
+    driverOfferMerchantOperatingCityId: Maybe Text
     state: IndianState
     country: Country
     city: City

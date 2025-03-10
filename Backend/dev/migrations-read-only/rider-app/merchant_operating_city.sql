@@ -28,3 +28,8 @@ ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN country text NOT NULL d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN driver_offer_merchant_operating_city_id text ;

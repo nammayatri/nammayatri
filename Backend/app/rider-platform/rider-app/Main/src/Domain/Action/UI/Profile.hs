@@ -299,7 +299,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
-  void $ Referral.applyReferralCode person False `mapM` req.referralCode
+  void $ mapM (\refCode -> Referral.applyReferralCode person False refCode Nothing) req.referralCode
   void $
     QPerson.updatePersonalInfo
       personId

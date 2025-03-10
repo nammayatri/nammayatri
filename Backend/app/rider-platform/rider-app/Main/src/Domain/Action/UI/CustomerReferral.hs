@@ -44,7 +44,7 @@ postPersonApplyReferral :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> A
 postPersonApplyReferral (mbPersonId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  res <- Referral.applyReferralCode person shouldShareReferrerInfo req.code
+  res <- Referral.applyReferralCode person shouldShareReferrerInfo req.code req.gps
   let mbAndroidId = bool req.androidId Nothing (isJust person.androidId)
       mbDeviceId = bool req.deviceId Nothing (isJust person.deviceId)
   void $ QPerson.updateAndroidIdAndDeviceId personId mbAndroidId mbDeviceId
