@@ -19,7 +19,7 @@ newtype Languages
   , odiya :: Keymap
   }
 
-newtype Keymap = Keymap { 
+newtype Keymap = Keymap {
     namma_meter  :: String ,
     bus_number  :: String ,
     bus_type  :: String ,
@@ -1837,7 +1837,7 @@ newtype Keymap = Keymap {
   , fair_price_driver :: String
   , resume_ride :: String
   , end_ride_with_stops :: String
-  , stop :: String -> String 
+  , stop :: String -> String
   , rate_changes_as_the_distance_changes :: String
     , nammanmeter :: String
     , press_to_cancel :: String
@@ -1850,6 +1850,7 @@ newtype Keymap = Keymap {
     , upton2km :: String
     , meter_running :: String
     , confirm_meter_stop :: String
+  , package :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7209,7 +7210,7 @@ payment_under_maintenance :: Proxy "payment_under_maintenance"
 payment_under_maintenance = a
 
 payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
-payments_temporarily_unavailable = a  
+payments_temporarily_unavailable = a
 
 
 extra_charge_penalty :: Proxy "extra_charge_penalty"
@@ -7290,7 +7291,7 @@ suspended_till = Proxy
 fair_price_driver :: Proxy "fair_price_driver"
 fair_price_driver = Proxy
 stop :: Proxy "stop"
-stop = a 
+stop = a
 
 rate_changes_as_the_distance_changes :: Proxy "rate_changes_as_the_distance_changes"
 rate_changes_as_the_distance_changes = a
@@ -7333,3 +7334,5 @@ bus_type = a
 namma_meter :: Proxy "namma_meter"
 namma_meter = a
 
+package :: Proxy "package"
+package = Proxy

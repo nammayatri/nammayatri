@@ -1816,7 +1816,7 @@ getKn =
     suspended_till: (\time date -> "ನಿಲಂಬಿತವಾಗಿದೆ " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "ನ್ಯಾಯಯುತ ಬೆಲೆಯ ಚಾಲಕ"
     , resume_ride : "ಪ್ರಯಾಣವನ್ನು ಪುನರಾರಂಭಿಸಿ"
-    , end_ride_with_stops : "ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಇನ್ನೂ ಹೆಚ್ಚು ನಿಲ್ದಾಣಗಳಿವೆ. ಆದರೂ ಪ್ರಯಾಣವನ್ನು ಮುಗಿಸಬೇಕೇ?"  
+    , end_ride_with_stops : "ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಇನ್ನೂ ಹೆಚ್ಚು ನಿಲ್ದಾಣಗಳಿವೆ. ಆದರೂ ಪ್ರಯಾಣವನ್ನು ಮುಗಿಸಬೇಕೇ?"
     , stop: (\n -> "ನಿಲ್ದಾಣ " <> n)
     , rate_changes_as_the_distance_changes: "ಅಂತರ ಬದಲಾಗುತ್ತಿದ್ದಂತೆ ದರ ಬದಲಾಗುತ್ತದೆ"
     , nammanmeter: "ನಮ್ಮ\nಮೀಟರ್"
@@ -1836,4 +1836,5 @@ getKn =
     , bus_number: "ಬಸ್ ಸಂಖ್ಯೆ"
     , bus_type: "ಬಸ್ ಪ್ರಕಾರ"
     , namma_meter: "ನಮ್ಮ ಮೀಟರ್"
+    , package: "ಪ್ಯಾಕೇಜ್"
     }

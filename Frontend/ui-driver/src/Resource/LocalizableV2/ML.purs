@@ -1836,4 +1836,5 @@ getMl =
     , bus_number: "Bus Number"
     , bus_type: "Bus Type"
     , namma_meter: "Namma Meter"
+    , package: "പാക്കേജ്"
     }

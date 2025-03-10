@@ -84,10 +84,10 @@ getBadgeConfig stage mbRidesWithFareIssues mbTotalRidesConsideredForFareIssues =
       title : outOfRidesStr,
       subTitle : Just $ getStringV2 extra_charged,
       description : Nothing,
-      image : fetchImage COMMON_ASSET "ny_ic_extra_charge_gauge",
+      image : fetchImage COMMON_ASSET "ny_ic_ekd_low_gauge",
       pillBackground : Colors.yellow900,
       imageBackground : "#08FCC32C",
-      gaugeAngle : Just (270.0 + degreeMapping)
+      gaugeAngle : Nothing
     }
 
     highConfig = {
@@ -95,12 +95,12 @@ getBadgeConfig stage mbRidesWithFareIssues mbTotalRidesConsideredForFareIssues =
       title :  outOfRidesStr,
       subTitle : Just $ getStringV2 extra_charged,
       description : Nothing,
-      image : fetchImage COMMON_ASSET "ny_ic_extra_charge_gauge",
+      image : fetchImage COMMON_ASSET "ny_ic_ekd_heigh_gauge",
 
       pillBackground : Colors.orange900,
       imageBackground : "#10FF8B33",
 
-      gaugeAngle : Just (330.0 + degreeMapping)
+      gaugeAngle : Nothing
     }
 
     suspendedConfig = {
@@ -108,12 +108,12 @@ getBadgeConfig stage mbRidesWithFareIssues mbTotalRidesConsideredForFareIssues =
       title :  outOfRidesStr,
       subTitle : Just $ getStringV2 extra_charged,
       description : Nothing,
-      image : fetchImage COMMON_ASSET "ny_ic_extra_charge_gauge",
+      image : fetchImage COMMON_ASSET "ny_ic_ekd_suspended_gauge",
 
       pillBackground : Colors.red900,
       imageBackground : "#08E55454",
 
-      gaugeAngle : Just (390.0 + degreeMapping)
+      gaugeAngle : Nothing
     }
 
     blockedConfig = {
@@ -171,14 +171,17 @@ view push config =
           width $ V $ ((screenWidth unit) - 64) / 2
         , height $ V 90
         ][
-          linearLayout[
+          relativeLayout[
             cornerRadius 16.0
           , background config.badge.imageBackground
           , padding $ Padding 16 4 16 4
           , gravity CENTER
+          , width MATCH_PARENT
+          , width $ V $ (((screenWidth unit) - 64) / 2) - 32
           ][
             imageView[
               height $ V 80
+            , width $ MATCH_PARENT
             , imageWithFallback config.badge.image
             ]
           ]
@@ -251,7 +254,7 @@ view push config =
                 PrestoAnim.animationSet [ PrestoAnim.Animation [PrestoAnim.fromRotation 270, PrestoAnim.toRotation $ ceil(angle), PrestoAnim.interpolator interpolator, PrestoAnim.duration 2000] true ]$
                   imageView[
               height $ V 120
-            , width $ V 60
+            , width $ V 20
              , margin $ MarginTop 35
             , rotation $ 270.0
             , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_ec_gauge"

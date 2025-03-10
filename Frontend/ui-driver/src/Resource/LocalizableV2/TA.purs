@@ -1816,7 +1816,7 @@ getTa =
     suspended_till: (\time date -> "இடைநிறுத்தப்பட்டுள்ளது " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver : "நியாயமான ரேட்டுக்ககாரன்"
     , resume_ride : "பயணத்தை மீண்டும் தொடங்கவும்"
-    , end_ride_with_stops : "உங்களிடம் இன்னும் நிறுத்தங்கள் உள்ளன. இருப்பினும் பயணத்தை முடிக்கவா?"  
+    , end_ride_with_stops : "உங்களிடம் இன்னும் நிறுத்தங்கள் உள்ளன. இருப்பினும் பயணத்தை முடிக்கவா?"
     , stop: (\n -> "நிறுத்தம் " <> n)
     , rate_changes_as_the_distance_changes: "தூரம் மாறும்போது விகிதம் மாறும்"
     , nammanmeter: "நம்ம\nமீட்டர்"
@@ -1836,4 +1836,5 @@ getTa =
     , bus_number: "பஸ் எண்"
     , bus_type: "பஸ் வகை"
     , namma_meter: "நம்ம மீட்டர்"
+    , package: "பொதி"
     }
