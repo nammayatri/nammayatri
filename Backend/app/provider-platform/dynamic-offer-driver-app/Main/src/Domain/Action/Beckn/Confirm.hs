@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.Confirm where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import Domain.Types
 import Domain.Types.Booking as DRB
@@ -51,6 +52,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
+import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
@@ -133,8 +135,15 @@ handler merchant req validatedQuote = do
 
     handleMeterRideFlow isNewRider driver _ booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
+      driverReferral <- QDR.findById driver.id
+      dynamicReferralCode <-
+        case driverReferral of
+          Nothing -> do
+            res <- DUR.generateReferralCode (driver.id, driver.merchantId, booking.merchantOperatingCityId)
+            pure res.dynamicReferralCode
+          Just dr -> pure dr.dynamicReferralCode
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide)
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide)
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 

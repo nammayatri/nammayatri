@@ -18,6 +18,8 @@ instance FromTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferr
       Just
         Domain.Types.DriverReferral.DriverReferral
           { driverId = Kernel.Types.Id.Id driverId,
+            dynamicReferralCode = dynamicReferralCode,
+            dynamicReferralCodeValidTill = dynamicReferralCodeValidTill,
             linkedAt = linkedAt,
             referralCode = Kernel.Types.Id.Id referralCode,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -30,6 +32,8 @@ instance ToTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferral
   toTType' (Domain.Types.DriverReferral.DriverReferral {..}) = do
     Beam.DriverReferralT
       { Beam.driverId = Kernel.Types.Id.getId driverId,
+        Beam.dynamicReferralCode = dynamicReferralCode,
+        Beam.dynamicReferralCodeValidTill = dynamicReferralCodeValidTill,
         Beam.linkedAt = linkedAt,
         Beam.referralCode = Kernel.Types.Id.getId referralCode,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

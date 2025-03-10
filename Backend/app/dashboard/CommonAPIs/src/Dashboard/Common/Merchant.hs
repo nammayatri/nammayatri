@@ -660,7 +660,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
-    merchantData :: Maybe MerchantData
+    merchantData :: Maybe MerchantData,
+    driverOfferMerchantOperatingCityId :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

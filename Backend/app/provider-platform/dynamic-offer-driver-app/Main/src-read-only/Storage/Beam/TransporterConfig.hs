@@ -103,6 +103,8 @@ data TransporterConfigT f = TransporterConfigT
     dummyFromLocation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     dummyShowDriverAdditions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     dummyToLocation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    dynamicReferralCodeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    dynamicReferralCodeValidForMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),

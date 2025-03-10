@@ -27,12 +27,14 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RefereeLink as DReferral
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.Queries.MerchantOperatingCity as QMerchantO
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
@@ -43,10 +45,10 @@ data ValidatedRefCode
   | -- | (refCode, mobileNumber, countryCode)
     Driver Text Text Text
 
-applyReferralCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> Text -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
-applyReferralCode person shouldShareReferrerInfo refCode = withPersonIdLogTag person.id $ do
+applyReferralCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> Text -> Maybe LatLong -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
+applyReferralCode person shouldShareReferrerInfo refCode mbCustomerLocation = withPersonIdLogTag person.id $ do
   validatedCode <- validateRefCode person refCode
-  res <- getReferrerInfo person shouldShareReferrerInfo validatedCode
+  res <- getReferrerInfo person shouldShareReferrerInfo mbCustomerLocation validatedCode
   when (isNothing person.referralCode) $ do
     void $ QPerson.updateRefCode person.id refCode
     case validatedCode of
@@ -71,8 +73,8 @@ validateRefCode person refCode =
         referrerStats <- QPS.findByPersonId referredByPerson.id >>= fromMaybeM (PersonStatsNotFound person.id.getId)
         return $ Rider refCode referredByPerson referrerStats
       else withLogTag "Driver" $ do
-        unless (TU.validateAllDigitWithMinLength 6 refCode) $
-          throwError $ InvalidRequest "Referral Code must have 6 digits"
+        unless (TU.validateAllDigitWithMinLength 4 refCode) $
+          throwError $ InvalidRequest "Referral Code must have 4 digits"
         mobileNumber <- fromMaybeM (PersonMobileNumberIsNULL person.id.getId) person.mobileNumber >>= decrypt
         countryCode <- person.mobileCountryCode & fromMaybeM (PersonMobileNumberIsNULL person.id.getId)
         return $ Driver refCode mobileNumber countryCode
@@ -80,8 +82,8 @@ validateRefCode person refCode =
 isCustomerReferralCode :: Text -> Bool
 isCustomerReferralCode = T.isPrefixOf "C"
 
-getReferrerInfo :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> ValidatedRefCode -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
-getReferrerInfo person shouldShareReferrerInfo = \case
+getReferrerInfo :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> Maybe LatLong -> ValidatedRefCode -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
+getReferrerInfo person shouldShareReferrerInfo mbCustomerLocation = \case
   Rider _ referrer referrerStats -> do
     let avgRating = bool Nothing (Just . toCentesimal $ div' referrer.totalRatingScore referrer.totalRatings) (referrer.totalRatings > 0)
         referrerInfo =
@@ -106,6 +108,7 @@ getReferrerInfo person shouldShareReferrerInfo = \case
         return $ Left APISuccess.Success
       _ -> do
         merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+        merchantOpCity <- QMerchantO.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
         let alreadyReferred = isJust person.referralCode
         isMultipleDeviceIdExist <-
           maybe
@@ -115,7 +118,8 @@ getReferrerInfo person shouldShareReferrerInfo = \case
                 return $ Just (length personsWithSameDeviceId > 1)
             )
             (bool person.deviceId Nothing alreadyReferred)
-        DReferral.LinkRefereeRes res <- CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist (Just alreadyReferred) (Just shouldShareReferrerInfo)
+        mOpCityId <- merchantOpCity.driverOfferMerchantOperatingCityId & fromMaybeM (MerchantOperatingCityNotFound $ "Need driver offer merchant operating city id to be congifured in rider side merchant operating city table.")
+        DReferral.LinkRefereeRes res <- CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mOpCityId refCode mobileNumber countryCode isMultipleDeviceIdExist (Just alreadyReferred) (Just shouldShareReferrerInfo) mbCustomerLocation
         return $
           mapRight
             ( \info ->
