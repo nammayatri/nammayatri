@@ -31,14 +31,14 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationGeomT sql=special_location
-      id Text      
+      id Text
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
       merchantId Text Maybe
       merchantOperatingCityId Text Maybe
-      linkedLocationsIds (PostgresList Text),   
-      locationType Domain.SpecialLocationType   
+      linkedLocationsIds (PostgresList Text),
+      locationType Domain.SpecialLocationType
       geom Text Maybe
       enabled Bool
       createdAt UTCTime

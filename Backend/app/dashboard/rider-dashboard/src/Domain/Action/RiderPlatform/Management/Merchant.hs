@@ -26,7 +26,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     deleteMerchantSpecialLocationGatesDelete,
     postMerchantConfigFailover,
     postMerchantTicketConfigUpsert,
-    postMerchantConfigSpecialLocationUpsert
+    postMerchantConfigSpecialLocationUpsert,
   )
 where
 

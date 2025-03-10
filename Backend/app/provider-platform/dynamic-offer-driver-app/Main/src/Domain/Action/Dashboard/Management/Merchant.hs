@@ -1579,7 +1579,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 ---------------------------------------------------------------------
 data SpecialLocationCSVRow = SpecialLocationCSVRow
   { city :: Text,
-    locationName :: Text,    
+    locationName :: Text,
     enabled :: Text,
     locationFileName :: Text,
     locationType :: Text,
@@ -1600,7 +1600,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
   parseNamedRecord r =
     SpecialLocationCSVRow
       <$> r .: "city"
-      <*> r .: "location_name"      
+      <*> r .: "location_name"
       <*> r .: "enabled"
       <*> r .: "location_file_name"
       <*> r .: "location_type"
@@ -1670,7 +1670,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           else return Nothing
       let specialLocation =
             DSL.SpecialLocation
-              { id = Id locationName,                
+              { id = Id locationName,
                 enabled = enabled,
                 locationName = locationName,
                 category = category,
@@ -1723,9 +1723,9 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     processSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates@(x : _) = do
       void $ runValidationOnSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates
-      let (_city, locationName, (specialLocation, _)) = x      
+      let (_city, locationName, (specialLocation, _)) = x
       specialLocationId <-
-        QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId 
+        QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
           |<|>| QSL.findByLocationName locationName
             >>= \case
               Just spl -> do
@@ -1780,7 +1780,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
       category <- fromMaybeM (InvalidRequest "Category is a required field for a new special location") $ request.category <|> (mbExistingSpLoc <&> (.category))
       return $
         SL.SpecialLocation
-          { gates = [],            
+          { gates = [],
             enabled = True,
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
