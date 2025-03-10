@@ -96,6 +96,8 @@ public class LocationUpdateService extends Service {
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
     private static final String LOCATION_PAYLOAD = "LOCATION_PAYLOAD";
     private static final String LAST_LOCATION_TIME = "LAST_LOCATION_TIME";
+    private static final String DRIVER_CURRENT_LOCATION_PRIORITY_KEY = "driver_current_location_priority";
+    private static final String DRIVER_FUSED_LOCATION_PRIORITY_KEY = "driver_fused_location_priority";
     final int notificationServiceId = 15082022; // ARDU pilot launch date : DDMMYYYY
     final int alertNotificationId = 07102022;
     FusedLocationProviderClient fusedLocationProviderClient, fusedLocClientForDistanceCal;
@@ -307,9 +309,9 @@ public class LocationUpdateService extends Service {
 
 
     private int getLocationPriority() {
-        int priority = Utils.getLocationPriority("driver_current_location_priority");
+        int priority = Utils.getLocationPriority(DRIVER_CURRENT_LOCATION_PRIORITY_KEY);
         if( !driverRideStatus.equals("ON_PICKUP")) {
-            priority = Utils.getLocationPriority("driver_fused_location_priority");
+            priority = Utils.getLocationPriority(DRIVER_FUSED_LOCATION_PRIORITY_KEY);
         }
         Log.d(LOG_TAG, "Location Priority is " + priority + " for driver app and ride status " + driverRideStatus);
         return priority;
@@ -868,14 +870,6 @@ public class LocationUpdateService extends Service {
                 .build();
     }
 
-    private LocationRequest createDistanceCalculation(int intervalForLocationUpdate, float minDispDistance, int minInterval) {
-        return new LocationRequest.Builder(getLocationPriority())
-                .setIntervalMillis(intervalForLocationUpdate)
-                .setMinUpdateDistanceMeters(minDispDistance)
-                .setMinUpdateIntervalMillis(minInterval)
-                .build();
-    }
-
     /*Creating channel for sticky notification*/
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1029,69 +1023,112 @@ public class LocationUpdateService extends Service {
     /* create timer task */
     @SuppressLint("MissingPermission")
     private TimerTask createTimer() {
-//        System.out.println("LOCATION_UPDATE: Created Timer");
         timer = new Timer();
-        /* triggering the location update explicitly if we are not getting any updates for 5sec */
+
         timerTask = new TimerTask() {
             @Override
             public void run() {
-
-                if (timerTask != null) {
-                    Log.d(LOG_TAG, "TimerTriggered ");
-                    timer = new Timer();
-                    checkLocation();
-                    if (gpsMethodSwitch.equals("CURRENT")) {
-                        Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
-                        fusedLocationProviderClient.getCurrentLocation(Utils.getLocationPriority("driver_current_location_priority"), cancellationTokenSource.getToken())
-                                .addOnSuccessListener(location -> {
-                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                    if (location != null) {
-                                        long locTimeMilliSeconds = location.getTime();
-                                        Date locTime = new Date(locTimeMilliSeconds);
-                                        String thisLocationTimeStamp = sdf.format(locTime);
-                                        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                        callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        checkNearByPickupZone(location);
-                                    } else {
-                                        System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
-                                        callDriverCurrentLocationAPI(location, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        Exception exception = new Exception("Null Location in fusedLocationProviderClient$getCurrentLocation for ID : " + driverId);
-                                        FirebaseCrashlytics.getInstance().recordException(exception);
-                                    }
-                                })
-                                .addOnFailureListener(Throwable::printStackTrace);
-                    } else {
-                        Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS ELSE");
-                        fusedLocationProviderClient.getLastLocation()
-                                .addOnSuccessListener(location -> {
-                                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                    if (location != null) {
-                                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                        long locTimeMilliSeconds = location.getTime();
-                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                        Date locTime = new Date(locTimeMilliSeconds);
-                                        String thisLocationTimeStamp = sdf.format(locTime);
-                                        callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        checkNearByPickupZone(location);
-                                    } else {
-                                        Exception exception = new Exception("Null Location in fusedLocationProviderClient$getLastLocation for ID : " + driverId);
-                                        FirebaseCrashlytics.getInstance().recordException(exception);
-                                    }
-                                })
-                                .addOnFailureListener(Throwable::printStackTrace);
-                    }
-
-                    System.out.println("Inside else of handler");
+                // Location strategy: Use either getCurrentLocation with fallbacks or getLastKnownLocation based on GPS method setting
+                if (timerTask == null) return;
+                Log.d(LOG_TAG, "TimerTriggered");
+                timer = new Timer();
+                checkLocation();
+                if (gpsMethodSwitch.equals("CURRENT")) {
+                    Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS");
+                    fetchCurrentLocationWithFallback();
+                } else {
+                    Log.d(LOG_TAG, "TimerTriggered - CURRENT LOCATION FETCHED BY GPS ELSE");
+                    fetchLastKnownLocation();
                 }
+
+                Log.d(LOG_TAG, "Inside else of handler");
             }
         };
+
         return timerTask;
     }
+
+    @SuppressLint("MissingPermission")
+    private void fetchCurrentLocationWithFallback() {
+        fusedLocationProviderClient.getCurrentLocation(
+                Utils.getLocationPriority(DRIVER_CURRENT_LOCATION_PRIORITY_KEY),
+                cancellationTokenSource.getToken()
+        ).addOnSuccessListener(location -> {
+            long currentTimeMillis = System.currentTimeMillis();
+            SimpleDateFormat sdf = getUTCDateFormatter();
+
+            if (location != null) {
+                long locTimeMillis = location.getTime();
+                long locationTimeThreshold = remoteConfigs.getLong("location_time_expiry");
+                if( locationTimeThreshold == 0L ) locationTimeThreshold = 45000L;
+                if ((currentTimeMillis - locTimeMillis) > locationTimeThreshold) {
+                    Log.d(LOG_TAG, "LOCATION_UPDATE: Location too old, retrying with high accuracy...");
+                    fetchFreshLocationWithHighAccuracy(sdf);
+                    return;
+                }
+                processLocation(location, sdf.format(new Date(locTimeMillis)), "timer_task");
+            } else {
+                Log.d(LOG_TAG, "LOCATION_UPDATE: CURRENT LOCATION IS NULL");
+                processLocation(null, sdf.format(new Date()), "timer_task_null_location");
+            }
+        }).addOnFailureListener(e -> {
+            FirebaseCrashlytics.getInstance().recordException(e);
+            Log.e(LOG_TAG, "fetchCurrentLocationWithFallback Failure: " + e.getMessage());
+        });
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private void fetchFreshLocationWithHighAccuracy(SimpleDateFormat sdf) {
+        fusedLocationProviderClient.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                cancellationTokenSource.getToken()
+        ).addOnSuccessListener(freshLocation -> {
+            if (freshLocation != null) {
+                String timestamp = sdf.format(new Date(freshLocation.getTime()));
+                processLocation(freshLocation, timestamp, "fallback_high_accuracy");
+            } else {
+                System.out.println("FALLBACK_LOCATION: Still null");
+                processLocation(null, sdf.format(new Date()), "fallback_null_location");
+            }
+        }).addOnFailureListener(Throwable::printStackTrace);
+    }
+
+    private void processLocation(Location location, String timestamp, String trigger) {
+        if (location != null) {
+            updateStorage("LAST_KNOWN_LAT", String.valueOf(location.getLatitude()));
+            updateStorage("LAST_KNOWN_LON", String.valueOf(location.getLongitude()));
+            callDriverCurrentLocationAPI(location, timestamp, trigger, LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+            checkNearByPickupZone(location);
+        } else {
+            callDriverCurrentLocationAPI(null, timestamp, trigger, LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+            FirebaseCrashlytics.getInstance().recordException(new Exception("Null Location even after fallback for ID: " + driverId));
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchLastKnownLocation() {
+        fusedLocationProviderClient.getLastLocation()
+                .addOnSuccessListener(location -> {
+                    if (location != null) {
+                        updateStorage("LAST_KNOWN_LAT", String.valueOf(location.getLatitude()));
+                        updateStorage("LAST_KNOWN_LON", String.valueOf(location.getLongitude()));
+
+                        String timestamp = getUTCDateFormatter().format(new Date(location.getTime()));
+                        callDriverCurrentLocationAPI(location, timestamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
+                        checkNearByPickupZone(location);
+                    } else {
+                        FirebaseCrashlytics.getInstance().recordException(new Exception("Null Location in fusedLocationProviderClient$getLastLocation for ID : " + driverId));
+                    }
+                }).addOnFailureListener(Throwable::printStackTrace);
+    }
+    private SimpleDateFormat getUTCDateFormatter() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return sdf;
+    }
+
+
 
     // to cancel timer
     private void cancelTimer() {
