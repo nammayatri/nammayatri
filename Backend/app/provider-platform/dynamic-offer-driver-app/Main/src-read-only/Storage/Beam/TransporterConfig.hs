@@ -103,11 +103,14 @@ data TransporterConfigT f = TransporterConfigT
     dummyFromLocation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     dummyShowDriverAdditions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     dummyToLocation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    dynamicReferralCodeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    dynamicReferralCodeValidForMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
+    enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping),
@@ -139,6 +142,7 @@ data TransporterConfigT f = TransporterConfigT
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    meterRideBulkLocUpdateBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     minDistanceForStopFcm :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -148,6 +152,7 @@ data TransporterConfigT f = TransporterConfigT
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
     nightSafetyStartTime :: B.C f Kernel.Types.Common.Seconds,
+    normalRideBulkLocUpdateBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     notificationRetryCountThreshold :: B.C f Kernel.Prelude.Int,
     notificationRetryEligibleErrorCodes :: B.C f [Kernel.Prelude.Text],
     notificationRetryTimeGap :: B.C f Kernel.Types.Common.Seconds,
@@ -216,8 +221,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
