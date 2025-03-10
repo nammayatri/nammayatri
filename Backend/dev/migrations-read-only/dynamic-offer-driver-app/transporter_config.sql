@@ -359,19 +359,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN requires_onboar
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_overcharging_blocker boolean  default false;
 
 
@@ -386,4 +373,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN meter_ride_bulk
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_valid_for_minutes integer ;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_enabled boolean ;
+
+
+
+
+------- SQL updates -------
 

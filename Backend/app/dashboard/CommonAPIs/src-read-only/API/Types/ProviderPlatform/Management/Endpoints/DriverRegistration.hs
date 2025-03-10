@@ -82,6 +82,7 @@ data DocumentType
   | VehicleLeft
   | VehicleFrontInterior
   | VehicleBackInterior
+  | BusinessPanCard
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -103,7 +104,12 @@ data DocumentsListResponse = DocumentsListResponse
     vehicleRight :: [Kernel.Prelude.Text],
     vehicleLeft :: [Kernel.Prelude.Text],
     vehicleFrontInterior :: [Kernel.Prelude.Text],
-    vehicleBackInterior :: [Kernel.Prelude.Text]
+    vehicleBackInterior :: [Kernel.Prelude.Text],
+    pan :: [Kernel.Prelude.Text],
+    vehicleNOC :: [Kernel.Prelude.Text],
+    businessLicense :: [Kernel.Prelude.Text],
+    businessPan :: [Kernel.Prelude.Text],
+    aadhaar :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

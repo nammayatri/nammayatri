@@ -18,8 +18,6 @@ apis:
         - role: Role
       response:
         type: DocumentVerificationConfigList
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_ONBOARDING
       helperApi:
         - GET:
             endpoint: /document/configs/{fleetOwnerId}
@@ -42,8 +40,6 @@ apis:
         - providePrefillDetails: Bool
       response:
         type: StatusRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REGISTER_STATUS
       helperApi:
         - GET:
             endpoint: /register/status/{fleetOwnerId}

@@ -617,6 +617,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.VehicleLeft -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft
   Domain.Types.DocumentVerificationConfig.VehicleFrontInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior
   Domain.Types.DocumentVerificationConfig.VehicleBackInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior
+  Domain.Types.DocumentVerificationConfig.BusinessPanCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessPanCard
 
 castDocumentTypeToDomain :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType -> Domain.Types.DocumentVerificationConfig.DocumentType
 castDocumentTypeToDomain = \case
@@ -645,3 +646,4 @@ castDocumentTypeToDomain = \case
   API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft -> Domain.Types.DocumentVerificationConfig.VehicleLeft
   API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior -> Domain.Types.DocumentVerificationConfig.VehicleFrontInterior
   API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior -> Domain.Types.DocumentVerificationConfig.VehicleBackInterior
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessPanCard -> Domain.Types.DocumentVerificationConfig.BusinessPanCard

@@ -83,6 +83,9 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Operator
+      API.Types.ProviderPlatform.Operator.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.Driver
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer
