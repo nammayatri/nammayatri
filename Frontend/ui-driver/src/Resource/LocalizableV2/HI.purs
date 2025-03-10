@@ -1815,4 +1815,26 @@ getHi =
     overcharging_suspended_desc: "बार-बार अधिक शुल्क लेने के कारण, आपको ऑनलाइन जाने से निलंबित कर दिया गया है",
     suspended_till: (\time date -> "निलंबित है " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "उचित मूल्य चालक"
+    , resume_ride : "यात्रा फिर से शुरू करें"
+    , end_ride_with_stops : "आपके पास और स्टॉप हैं। फिर भी यात्रा समाप्त करें?"
+    , stop: (\n -> "स्टॉप " <> n)
+    , rate_changes_as_the_distance_changes: "दूरी बदलने पर दर बदलती है"
+    , nammanmeter: "नम्मा\nमीटर"
+    , press_to_cancel: "रद्द करने के लिए दबाएँ"
+    , dist: "दूरी"
+    , km: "कि.मी"
+    , updated_at_: "अपडेट किया गया समय"
+    , time: "समय"
+    , enter_destination: "गंतव्य दर्ज करें"
+    , stop_meter: "मीटर बंद करें"
+    , upton2km: "2KM तक"
+    , meter_running: "मीटर चल रहा है"
+    , confirm_meter_stop: "मीटर बंद करने की पुष्टि करें?"
+    , confirm_destination: "गंतव्य की पुष्टि करें"
+    , search_results: "खोज परिणाम"
+    , start_typing_to_search_places: "स्थान खोजने के लिए टाइप करना शुरू करें"
+    , bus_number: "बस नंबर"
+    , bus_type: "बस प्रकार"
+    , namma_meter: "नम्मा मीटर",
+    package: "पैकेज"
     }

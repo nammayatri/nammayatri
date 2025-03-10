@@ -1830,6 +1830,22 @@ newtype Keymap
   , overcharging_suspended_desc :: String
   , suspended_till :: String -> String -> String
   , fair_price_driver :: String
+  , resume_ride :: String
+  , end_ride_with_stops :: String
+  , stop :: String -> String
+  , rate_changes_as_the_distance_changes :: String
+    , nammanmeter :: String
+    , press_to_cancel :: String
+    , dist :: String
+    , km :: String
+    , updated_at_ :: String
+    , time :: String
+    , enter_destination :: String
+    , stop_meter :: String
+    , upton2km :: String
+    , meter_running :: String
+    , confirm_meter_stop :: String
+  , package :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7270,3 +7286,5 @@ suspended_till = Proxy
 fair_price_driver :: Proxy "fair_price_driver"
 fair_price_driver = Proxy
 
+package :: Proxy "package"
+package = Proxy

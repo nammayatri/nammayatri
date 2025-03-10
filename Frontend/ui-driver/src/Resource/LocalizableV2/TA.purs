@@ -1815,4 +1815,26 @@ getTa =
     overcharging_suspended_desc: "அடிக்கடி கூடுதல் கட்டணம் வசூலிக்க காரணமாக, நீங்கள் ஆன்லைனில் செல்ல தற்காலிகமாக இடைநிறுத்தப்பட்டுள்ளீர்கள்",
     suspended_till: (\time date -> "இடைநிறுத்தப்பட்டுள்ளது " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver : "நியாயமான ரேட்டுக்ககாரன்"
+    , resume_ride : "பயணத்தை மீண்டும் தொடங்கவும்"
+    , end_ride_with_stops : "உங்களிடம் இன்னும் நிறுத்தங்கள் உள்ளன. இருப்பினும் பயணத்தை முடிக்கவா?"
+    , stop: (\n -> "நிறுத்தம் " <> n)
+    , rate_changes_as_the_distance_changes: "தூரம் மாறும்போது விகிதம் மாறும்"
+    , nammanmeter: "நம்ம\nமீட்டர்"
+    , press_to_cancel: "ரத்து செய்ய அழுத்தவும்"
+    , dist: "தூரம்"
+    , km: "கி.மீ"
+    , updated_at_: "புதுப்பிக்கப்பட்ட நேரம்"
+    , time: "நேரம்"
+    , enter_destination: "இலக்கை உள்ளிடுக"
+    , stop_meter: "மீட்டரை நிறுத்து"
+    , upton2km: "2KM வரை"
+    , meter_running: "மீட்டர் செயல்படுகிறது"
+    , confirm_meter_stop: "மீட்டரை நிறுத்துவதை உறுதி செய்யவா?"
+    , confirm_destination: "இலக்கை உறுதி செய்யவும்"
+    , search_results: "தேடல் முடிவுகள்"
+    , start_typing_to_search_places: "இடங்களை தேட தட்டச்சு செய்ய தொடங்குங்கள்"
+    , bus_number: "பஸ் எண்"
+    , bus_type: "பஸ் வகை"
+    , namma_meter: "நம்ம மீட்டர்"
+    , package: "பொதி"
     }

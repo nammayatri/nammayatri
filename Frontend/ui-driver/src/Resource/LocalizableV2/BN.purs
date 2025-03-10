@@ -1815,4 +1815,26 @@ getBn =
     overcharging_suspended_desc: "বারবার অতিরিক্ত চার্জ নেওয়ার কারণে, আপনাকে অনলাইনে যাওয়া থেকে সাময়িকভাবে সাসপেন্ড করা হয়েছে",
     suspended_till: (\time date -> "সাসপেন্ড করা হয়েছে " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "ন্যায্য মূল্য চালক"
+    , resume_ride : "যাত্রা পুনরায় শুরু করুন"
+    , end_ride_with_stops : "আপনার আরও স্টপেজ রয়েছে। যাত্রা শেষ করবেন?"
+    , stop : (\n -> "স্টপ " <> n)
+    , rate_changes_as_the_distance_changes: "দূরত্ব পরিবর্তনের সাথে সাথে হার পরিবর্তিত হয়"
+    , nammanmeter: "নাম্মা\nমিটার"
+    , press_to_cancel: "বাতিল করতে চাপুন"
+    , dist: "দূরত্ব"
+    , km: "কি.মি"
+    , updated_at_: "আপডেটের সময়"
+    , time: "সময়"
+    , enter_destination: "গন্তব্য প্রবেশ করান"
+    , stop_meter: "মিটার বন্ধ করুন"
+    , upton2km: "2KM পর্যন্ত"
+    , meter_running: "মিটার চলছে"
+    , confirm_meter_stop: "মিটার বন্ধ নিশ্চিত করুন?"
+    , confirm_destination: "গন্তব্য নিশ্চিত করুন"
+    , search_results: "অনুসন্ধানের ফলাফল"
+    , start_typing_to_search_places: "স্থান অনুসন্ধান করতে টাইপ করা শুরু করুন"
+    , bus_number: "বাস নম্বর"
+    , bus_type: "বাসের ধরন"
+    , namma_meter: "নাম্মা মিটার"
+    , package: "প্যাকেজ"
     }

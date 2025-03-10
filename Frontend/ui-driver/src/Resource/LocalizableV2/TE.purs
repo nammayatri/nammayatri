@@ -1815,4 +1815,26 @@ getTe =
     overcharging_suspended_desc: "తరచూ అదనపు ఛార్జ్ విధించినందుకు, మీరు ఆన్‌లైన్‌కు వెళ్లడం నుండి తాత్కాలికంగా సస్పెండ్ చేయబడ్డారు",
     suspended_till: (\time date -> "సస్పెండ్ చేయబడింది: " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "న్యాయమైన ధర డ్రైవర్"
+    , resume_ride : "ప్రయాణాన్ని తిరిగి ప్రారంభించండి"
+    , end_ride_with_stops : "మీరు గమ్యస్థానం చేరుకునే వరకు ఇంకా కొన్ని స్టాప్‌లు ఉన్నాయి. అయినప్పటికీ రైడ్‌ను ముగించాలా?"
+    , stop: (\n -> "ఆగడం " <> n)
+    , rate_changes_as_the_distance_changes: "దూరం మారినప్పుడు రేటు మారుతుంది"
+    , nammanmeter: "నమ్మా\nమీటర్"
+    , press_to_cancel: "రద్దు చేయడానికి నొక్కండి"
+    , dist: "దూరం"
+    , km: "కిమీ"
+    , updated_at_: "నవీకరించబడిన సమయం"
+    , time: "సమయం"
+    , enter_destination: "గమ్యస్థానాన్ని నమోదు చేయండి"
+    , stop_meter: "మీటర్ను ఆపండి"
+    , upton2km: "2KM వరకు"
+    , meter_running: "మీటర్ నడుస్తోంది"
+    , confirm_meter_stop: "మీటర్ను ఆపడం నిర్ధారించాలా?"
+    , confirm_destination: "గమ్యస్థానాన్ని నిర్ధారించండి"
+    , search_results: "వెతకిన ఫలితాలు"
+    , start_typing_to_search_places: "ప్రదేశాలను వెతికేందుకు టైప్ చేయడం ప్రారంభించండి"
+    , bus_number: "బస్ నంబర్"
+    , bus_type: "బస్ రకం"
+    , namma_meter: "నమ్మా మీటర్"
+    , package: "ప్యాకేజ్"
     }

@@ -1815,4 +1815,26 @@ getKn =
     overcharging_suspended_desc: "ನಿರಂತರ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ವಸೂಲಿಗಾಗಿ, ನೀವು ಆನ್ಲೈನ್‌ಗೆ ಹೋಗುವುದರಿಂದ ತಾತ್ಕಾಲಿಕವಾಗಿ ನಿಲ್ಲಿಸಲಾಗಿದೆ",
     suspended_till: (\time date -> "ನಿಲಂಬಿತವಾಗಿದೆ " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "ನ್ಯಾಯಯುತ ಬೆಲೆಯ ಚಾಲಕ"
+    , resume_ride : "ಪ್ರಯಾಣವನ್ನು ಪುನರಾರಂಭಿಸಿ"
+    , end_ride_with_stops : "ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಇನ್ನೂ ಹೆಚ್ಚು ನಿಲ್ದಾಣಗಳಿವೆ. ಆದರೂ ಪ್ರಯಾಣವನ್ನು ಮುಗಿಸಬೇಕೇ?"
+    , stop: (\n -> "ನಿಲ್ದಾಣ " <> n)
+    , rate_changes_as_the_distance_changes: "ಅಂತರ ಬದಲಾಗುತ್ತಿದ್ದಂತೆ ದರ ಬದಲಾಗುತ್ತದೆ"
+    , nammanmeter: "ನಮ್ಮ\nಮೀಟರ್"
+    , press_to_cancel: "ರದ್ದು ಮಾಡಲು ಒತ್ತಿರಿ"
+    , dist: "ದೂರ"
+    , km: "ಕಿಮೀ"
+    , updated_at_: "ನವೀಕರಿಸಿದ ಸಮಯ"
+    , time: "ಸಮಯ"
+    , enter_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ನಮೂದಿಸಿ"
+    , stop_meter: "ಮೀಟರ್ ನಿಲ್ಲಿಸಿ"
+    , upton2km: "2KM ತನಕ"
+    , meter_running: "ಮೀಟರ್ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಿದೆ"
+    , confirm_meter_stop: "ಮೀಟರ್ ನಿಲ್ಲಿಸುವುದನ್ನು ಖಚಿತಪಡಿಸಬಹುದಾ?"
+    , confirm_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ಖಚಿತಪಡಿಸಿ"
+    , search_results: "ಹುಡುಕಾಟ ಫಲಿತಾಂಶಗಳು"
+    , start_typing_to_search_places: "ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲು ಟೈಪ್ ಮಾಡು ಪ್ರಾರಂಭಿಸಿ"
+    , bus_number: "ಬಸ್ ಸಂಖ್ಯೆ"
+    , bus_type: "ಬಸ್ ಪ್ರಕಾರ"
+    , namma_meter: "ನಮ್ಮ ಮೀಟರ್"
+    , package: "ಪ್ಯಾಕೇಜ್"
     }

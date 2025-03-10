@@ -1815,4 +1815,26 @@ getOd =
     overcharging_suspended_desc: "ବାରମ୍ବାର ଅତିରିକ୍ତ ଶୁଳ୍କ ନେବାର ଦ୍ୱାରା, ଆପଣ ଅନଲାଇନ୍ ଯିବାରୁ ସସ୍ପେନ୍ଡ ହୋଇଛନ୍ତି",
     suspended_till: (\time date -> "ସସ୍ପେନ୍ଡ ରହିବ " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "ନ୍ୟାୟସଙ୍ଗତ ମୂଲ୍ୟ ଡ୍ରାଇଭର୍"
+    , resume_ride : "ଯାତ୍ରା ପୁନରାରମ୍ଭ କରନ୍ତୁ"
+    , end_ride_with_stops : "ଆପଣଙ୍କ ଗମନ ଅବସ୍ଥାକୁ ପହଞ୍ଚିବା ପୂର୍ବରୁ ଆଉ କିଛି ଠିଆ ଅଛି। ଏହା ସତ୍ତ୍ୱେ ଯାତ୍ରା ସମାପ୍ତ କରିବେ?"
+    , stop: (\n -> "ଠିଆ " <> n)
+    , rate_changes_as_the_distance_changes: "ଦୂରତା ପରିବର୍ତ୍ତନ ସହିତ ଦର ପରିବର୍ତ୍ତିତ ହୁଏ"
+    , nammanmeter: "ନମ୍ମ\nମିଟର୍"
+    , press_to_cancel: "ବାତିଲ କରିବାକୁ ଦବାନ୍ତୁ"
+    , dist: "ଦୂରତା"
+    , km: "କି.ମି"
+    , updated_at_: "ଅପଡେଟ୍ କରାଯାଇଥିବା ସମୟ"
+    , time: "ସମୟ"
+    , enter_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ଭରଣ କରନ୍ତୁ"
+    , stop_meter: "ମିଟର୍ ବନ୍ଦ କରନ୍ତୁ"
+    , upton2km: "2KM ପର୍ଯ୍ୟନ୍ତ"
+    , meter_running: "ମିଟର୍ ଚାଲିଛି"
+    , confirm_meter_stop: "ମିଟର୍ ବନ୍ଦ କରିବାକୁ ନିଶ୍ଚିତ କରନ୍ତୁ?"
+    , confirm_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ନିଶ୍ଚିତ କରନ୍ତୁ"
+    , search_results: "ସନ୍ଧାନ ଫଳାଫଳ"
+    , start_typing_to_search_places: "ସ୍ଥାନ ଖୋଜିବାକୁ ଟାଇପ୍ କରିବା ଆରମ୍ଭ କରନ୍ତୁ"
+    , bus_number: "ବସ୍ ନମ୍ବର୍"
+    , bus_type: "ବସ୍ ପ୍ରକାର"
+    , namma_meter: "ନମ୍ମ ମିଟର୍"
+    , package: "ପ୍ୟାକେଜ୍"
   }

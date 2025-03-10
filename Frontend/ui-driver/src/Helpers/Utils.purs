@@ -170,6 +170,7 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+foreign import rentalPickupTimeFormat :: String -> String
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson =
@@ -508,6 +509,9 @@ fetchImage fetchImageFrom imageName =
       FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
       COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
       GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
+
+fetchAudio :: String -> String -> String
+fetchAudio folder file = "https://" <> assetDomain <> "/beckn/audios/" <> folder <>"/" <> file <> ".mp3"
 
 data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
 

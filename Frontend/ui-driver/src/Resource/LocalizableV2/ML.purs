@@ -1815,4 +1815,26 @@ getMl =
     overcharging_suspended_desc: "പതിവായി അധിക ചാർജ് ഈടാക്കിയതിനാൽ, നിങ്ങൾ ഓൺലൈനിൽ പോകുന്നത് താൽക്കാലികമായി നിർത്തിയിരിക്കുന്നു",
     suspended_till: (\time date -> "താൽക്കാലികമായി സസ്‌പെൻഡ് ചെയ്‌തിരിക്കുന്നു " <> time <> ", " <> date <> " ⚠️"),
     fair_price_driver: "ന്യായമായ നിരക്കുള്ള ഡ്രൈവർ"
+    , resume_ride : "യാത്ര പുനരാരംഭിക്കുക"
+    , end_ride_with_stops : "നിങ്ങൾക്ക് ഇനിയും நிறുത്തലുകൾ ഉണ്ട്. എങ്കിലും യാത്ര അവസാനിപ്പിക്കണോ?"
+    , stop: (\n -> "തുറക്ക് " <> n)
+    , rate_changes_as_the_distance_changes: "Rate changes as the distance changes"
+    , nammanmeter: "namma\nmeter"
+    , press_to_cancel: "Press to Cancel"
+    , dist: "DIST."
+    , km: "KM"
+    , updated_at_: "UPDATED AT "
+    , time: "TIME"
+    , enter_destination: "Enter Destination"
+    , stop_meter: "STOP METER"
+    , upton2km: "Upto\n2KM"
+    , meter_running: "METER RUNNING"
+    , confirm_meter_stop: "Confirm Meter Stop"
+    , confirm_destination: "Confirm Destination"
+    , search_results: "Search Results"
+    , start_typing_to_search_places: "Start typing to search places"
+    , bus_number: "Bus Number"
+    , bus_type: "Bus Type"
+    , namma_meter: "Namma Meter"
+    , package: "പാക്കേജ്"
     }

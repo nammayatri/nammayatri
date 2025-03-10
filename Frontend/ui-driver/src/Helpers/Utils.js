@@ -635,3 +635,21 @@ export function percentageToAngle(numerator, denominator, segmentAngle, segments
     }
     return segmentAngle;
 }
+
+
+export function rentalPickupTimeFormat(input) {
+  const date = new Date(input);
+  date.setMinutes(date.getMinutes() + date.getTimezoneOffset() + 330);
+  let hours = date.getHours();
+  let minutes = date.getMinutes();
+  let ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12;
+  const day = date.getDate();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = monthNames[date.getMonth()];
+  const today = new Date();
+  today.setMinutes(today.getMinutes() + today.getTimezoneOffset() + 330);
+  const isToday = today.toDateString() === date.toDateString();
+  return `${isToday ? 'Today' : 'Tomorrow'} ${hours}:${minutes.toString().padStart(2, '0')}${ampm} - ${day} ${month}`;
+}
+
