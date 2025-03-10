@@ -120,6 +120,8 @@ import Data.Ord (compare)
 import JBridge as JB
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
+import RemoteConfig
+import Storage as Storage
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -1307,3 +1309,18 @@ isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AM
 
 sortPredictionByDistance :: Array SA.Prediction -> Array SA.Prediction
 sortPredictionByDistance arr = DA.sortBy (comparing (_^._distance_meters)) arr
+
+
+fetchAndUpdateLocationUpdateServiceVars :: String -> Boolean -> String -> Effect Unit
+fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType = do
+  let
+    locationUpdateServiceConfig = getLocationUpdateServiceTripTypeBasedConfig stage tripType
+    _ = spy "locationUpdateServiceConfig" locationUpdateServiceConfig
+    _ = spy  "tripType" tripType
+    _ = spy "stage" stage
+  void $ pure $ Storage.setValueToLocalStore RIDE_G_FREQUENCY
+                      $ if frequentLocationUpdates
+                        then locationUpdateServiceConfig.rideGFrequencyWithFrequentUpdates
+                        else locationUpdateServiceConfig.rideGFrequencyWithoutFrequentUpdates
+  void $ pure $ Storage.setValueToLocalStore DRIVER_MIN_DISPLACEMENT locationUpdateServiceConfig.minDisplacement
+  void $ pure $ Storage.setValueToLocalStore RIDE_T_FREQUENCY locationUpdateServiceConfig.rideTFrequency

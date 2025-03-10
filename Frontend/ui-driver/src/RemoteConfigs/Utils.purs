@@ -34,6 +34,7 @@ import Resource.Constants (oneDayInMS)
 import Debug(spy)
 import Common.RemoteConfig (BundleLottieConfig, VariantLevelRemoteConfig)
 import RemoteConfig.Types as Types
+import Screens.Types
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -240,11 +241,54 @@ defaultLocationUpdateServiceConfig = {
   rideGFrequencyWithoutFrequentUpdates : "50000"
 }
 
+type TripBasedLocationUpdateServiceConfig = {
+  oneWay :: Array LocationUpdateServiceConfig
+, roundTrip :: Array LocationUpdateServiceConfig
+, rental :: Array LocationUpdateServiceConfig
+, intercity :: Array LocationUpdateServiceConfig
+, rideShare :: Array LocationUpdateServiceConfig
+, delivery :: Array LocationUpdateServiceConfig
+, meterRide ::  Array LocationUpdateServiceConfig
+}
+
+
+defaultTripBasedLocationUpdateServiceConfig :: TripBasedLocationUpdateServiceConfig
+defaultTripBasedLocationUpdateServiceConfig = {
+  oneWay : [defaultLocationUpdateServiceConfig]
+, roundTrip : []
+, rental : []
+, intercity : []
+, rideShare : []
+, delivery : []
+, meterRide : []
+}
+
+getLocationUpdateServiceTripTypeBasedConfig :: String -> String -> LocationUpdateServiceConfig
+getLocationUpdateServiceTripTypeBasedConfig stage tripType =
+  let
+    config = fetchRemoteConfigString "location_update_service_trip_type_config"
+    value = decodeForeignAny (parseJSON config) $ defaultTripBasedLocationUpdateServiceConfig
+    nullableTripBasedConfig = case tripType of
+      "OneWay" -> value.oneWay
+      "MeterRide" -> value.meterRide
+      "RoundTrip" -> value.roundTrip
+      "Rental" -> value.rental
+      "Intercity" -> value.intercity
+      "RideShare" -> value.rideShare
+      "Delivery" -> value.delivery
+      _ -> value.oneWay
+    tripBasedConfig = if DA.null nullableTripBasedConfig then value.oneWay else nullableTripBasedConfig
+    configForStage = DA.find(\item -> item.stage == stage) tripBasedConfig
+  in
+    fromMaybe defaultLocationUpdateServiceConfig configForStage
+
+
 getCoinsConfigData :: String -> CoinsConfig
 getCoinsConfigData city = do
     let config = fetchRemoteConfigString "coins_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
     getCityBasedConfig value $ toLower city
+
 
 getLocationUpdateServiceConfig :: String -> LocationUpdateServiceConfig
 getLocationUpdateServiceConfig stage = do

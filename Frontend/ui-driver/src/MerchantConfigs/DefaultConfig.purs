@@ -452,7 +452,9 @@ config =
             },
             {
               cityName : "Chennai",
-              enableNammaMeter : Just true,
+              enableNammaMeter : Just (fromHomogeneous ({
+                "AUTO_RICKSHAW" : true
+              })),
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
               showSubscriptions : false,
