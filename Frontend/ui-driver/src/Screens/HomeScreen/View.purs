@@ -2820,9 +2820,7 @@ in
      , orientation HORIZONTAL
      , gravity CENTER
      , color $ Color.blue600
-     , stroke ("1," <> Color.borderColorLight)
      , cornerRadius 12.0
-     , background Color.blue600
     ][ infoView state push
        ,linearLayout[
         weight 1.0
@@ -2835,7 +2833,7 @@ in
         imageView[
           width $ V 76
        , height $ V 46
-       , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_banner_background"
+       , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_banner_background"
         ]
         ,imageView[
           width $ V 76
@@ -2868,7 +2866,7 @@ infoView state push =
       ,width WRAP_CONTENT
       ,gravity CENTER_VERTICAL
       ,text $  getString YOU_HAVE_AN_UPCOMING <>" "<> tripType <>" "<> getString BOOKING
-      ,color $ Color.blue800
+      , color $ Color.white900
     ]<>FontStyle.tags TypoGraphy
     ,linearLayout [
       height WRAP_CONTENT
@@ -2878,7 +2876,7 @@ infoView state push =
     [ textView $ [
        height WRAP_CONTENT
       ,width WRAP_CONTENT
-      ,color $ Color.blue800
+      ,color $ Color.white900
       ,gravity CENTER_VERTICAL
       ,text $ date <> ", "
       ,textSize  $ FontSize.a_14
@@ -2886,7 +2884,7 @@ infoView state push =
     , textView $ [
        height WRAP_CONTENT
       ,width WRAP_CONTENT
-      ,color $ Color.blue800
+      ,color $ Color.white900
       ,gravity CENTER_VERTICAL
       ,margin $ MarginLeft 4
       ,text $ time

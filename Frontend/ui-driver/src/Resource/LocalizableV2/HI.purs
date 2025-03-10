@@ -1835,5 +1835,6 @@ getHi =
     , start_typing_to_search_places: "स्थान खोजने के लिए टाइप करना शुरू करें"
     , bus_number: "बस नंबर"
     , bus_type: "बस प्रकार"
-    , namma_meter: "नम्मा मीटर"
+    , namma_meter: "नम्मा मीटर",
+    package: "पैकेज"
     }

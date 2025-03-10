@@ -10,7 +10,7 @@ import PrestoDOM
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Services.API 
+import Services.API
 import Common.Types.App as CTA
 import Components.SourceToDestination
 import Resource.Constants
@@ -31,6 +31,9 @@ import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Services.API (ServiceTierType(..))
 import Debug
 import Mobility.Prelude (boolToVisibility)
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
+
 
 
 dummyLocation :: Location
@@ -71,7 +74,7 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
     destinationCity = fromMaybe "" destinationAddress.city
     sourceToDestinationConfig' =
       config
-        { 
+        {
           id = Just "rideScreenPickupMap",
           separatorMargin = 0,
           showDestination =  tripCategory.tag /= CTA.Rental,
@@ -133,7 +136,7 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
         }
       , pillsConfig
         { visibility = VISIBLE,
-          pillList = makePillList (BookingAPIEntity entity) entity.tripCategory
+          pillList = []
         }
       , overrideSeparatorCount = 15
       }
@@ -148,10 +151,10 @@ makePillList (BookingAPIEntity entity) (CTA.TripCategory tripCategory) =
     estimatedDistance = show ((fromMaybe 0 entity.estimatedDistance) / 1000)
     roundTrip = fromMaybe false entity.roundTrip
     tripType  = if roundTrip then LType.ROUND_TRIP else LType.INTERCITY
-                  
+
   in
     case tripCategory.tag of
-      CTA.InterCity -> [  
+      CTA.InterCity -> [
                           { text : estimatedDistance <> " km"
                           , imageUrl : ""
                           , imageVisibility : GONE
@@ -165,7 +168,7 @@ makePillList (BookingAPIEntity entity) (CTA.TripCategory tripCategory) =
                           , imageVisibility : VISIBLE
                           }
                         ]
-      CTA.Rental -> [  
+      CTA.Rental -> [
                       { text : estimatedDistance <> " km"
                       , imageUrl : ""
                       , imageVisibility : GONE
@@ -175,17 +178,17 @@ makePillList (BookingAPIEntity entity) (CTA.TripCategory tripCategory) =
                       , imageVisibility : GONE
                       }
                     ]
-      CTA.OneWay -> [  
+      CTA.OneWay -> [
                       { text : estimatedDistance <> " km"
                       , imageUrl : ""
                       , imageVisibility : GONE
                       }
                     ]
       _ -> []
-      
+
 rideSummaryCardConfig :: BookingAPIEntity -> RideSummaryCard.Config
-rideSummaryCardConfig (BookingAPIEntity entity) = 
-  let 
+rideSummaryCardConfig (BookingAPIEntity entity) =
+  let
     vehicleServiceTier = entity.vehicleServiceTier
     currency = entity.currency
     estimatedFare = entity.estimatedFare
@@ -198,13 +201,14 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
     destinationFullAddress = fromMaybe "" destinationAddress.fullAddress
     roundTrip = fromMaybe false entity.roundTrip
     vehicleServiceTierAirConditionedText = if vehicleServiceTierAirConditioned then (getString LType.AC) else (getString LType.NON_AC)
+    pickupFormattedTime' = rentalPickupTimeFormat entity.startTime
 
     returnTime = fromMaybe "" entity.returnTime
     (CTA.TripCategory tripCategory) = entity.tripCategory
-  in 
+  in
       { vehicleServiceTierImageUrl : fetchImage FF_COMMON_ASSET $ getVehicleServiceTierImage vehicleServiceTier
-      , rideAmount : (case currency of 
-                      INR -> "₹"    
+      , rideAmount : (case currency of
+                      INR -> "₹"
                       USD -> "$"
                       EUR -> "€") <> (show  (INT.ceil estimatedFare))
       , vehicleInfo :
@@ -219,13 +223,19 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
         , dropText : getString LType.DROP
         , dropTime : returnTime
         , showDropTime : roundTrip
+        , estimatedDistance : maybe "" (\estimatedDistance ->  (show (estimatedDistance / 1000)) <> " km") entity.estimatedDistance
+        , estimatedDuration : maybe "" (\estimatedDuration ->  (show (estimatedDuration / 3600)) <> "hr") entity.estimatedDuration
+        , pickupFormattedTime : pickupFormattedTime'
         }
-      , rideTypePill : 
-        { pillText : case tripCategory.tag of
-                        CTA.InterCity -> if roundTrip then getString LType.INTERCITY_RETURN else getString LType.INTERCITY
-                        CTA.Rental -> getString LType.RENTAL
-                        CTA.OneWay -> getString LType.REGULAR
-                        _ -> "Regular"
+      , rideTypePill :{
+        pillText :
+          case tripCategory.tag of
+            CTA.InterCity -> if roundTrip then getString LType.INTERCITY_RETURN else getString LType.INTERCITY
+            CTA.Rental -> getString LType.RENTAL
+            CTA.OneWay -> getString LType.REGULAR
+            _ -> "Regular"
+          <> " " <> (getStringV2 package)
+
         , pillImage : fetchImage FF_COMMON_ASSET (case tripCategory.tag of
                         CTA.InterCity -> "ny_ic_intercity"
                         CTA.Rental -> "ny_ic_rental_pill"
@@ -239,8 +249,8 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
         }
       }
 
-dropDownCard :: Boolean -> String -> (forall w . PrestoDOM (Effect Unit) w) -> DropDownCard.Config 
-dropDownCard isOpen title layout = 
+dropDownCard :: Boolean -> String -> (forall w . PrestoDOM (Effect Unit) w) -> DropDownCard.Config
+dropDownCard isOpen title layout =
   { isOpen : isOpen
   , title : title
   , layout : layout
@@ -252,7 +262,7 @@ dropDownCard isOpen title layout =
   , cardPadding : Padding 15 10 15 10
   , headingPadding : Padding 4 4 4 4
   , imageHeight : V 30
-  , imageWidth : V 30 
+  , imageWidth : V 30
   , headingCornerRadius : 0.0
   }
 
@@ -273,7 +283,7 @@ cancelConfirmationConfig state = let
       },
     option1 {
       text = (getString LT.CONTINUE)
-    , width = V $ (((EHC.screenWidth unit)-92)/2) 
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
     , isClickable = state.data.cancelRidePopUpData.continueEnabled
     , timerValue = state.data.cancelRidePopUpData.delayInSeconds
     , enableTimer = true
@@ -317,13 +327,13 @@ errorPopUpConfig state = let
     , margin = Margin 16 24 16 0 },
     secondaryText {
        text = getString LType.OR_RIDE_IS_CANCELLED_BY_CUSTOMER
-      ,margin = Margin  6 4 0 0  
+      ,margin = Margin  6 4 0 0
       ,color  = Color.black900
       ,textStyle = FontStyle.SubHeading2
       },
     option1 {
       text = (getString LT.CONTINUE)
-    , width = V $ (((EHC.screenWidth unit)-92)/2) 
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
     , isClickable = true
     , background = Color.white900
     , strokeColor = Color.black500
@@ -350,3 +360,14 @@ errorPopUpConfig state = let
     }
   }
   in popUpConfig'
+
+
+getLanguageBasedRentalAudio :: String -> String
+getLanguageBasedRentalAudio language =
+  case language of
+    "EN_US" -> fetchAudio "rental_ride_accepted" "en" -- TODO: Once other language audio ready change it.
+    "KN_IN" -> fetchAudio "rental_ride_accepted" "en"
+    "HI_IN" -> fetchAudio "rental_ride_accepted" "en"
+    "TA_IN" -> fetchAudio "rental_ride_accepted" "en"
+    "TE_IN" -> fetchAudio "rental_ride_accepted" "en"
+    _ -> fetchAudio "rental_ride_accepted" "en"

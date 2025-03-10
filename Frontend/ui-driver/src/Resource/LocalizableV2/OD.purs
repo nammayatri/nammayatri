@@ -1836,4 +1836,5 @@ getOd =
     , bus_number: "ବସ୍ ନମ୍ବର୍"
     , bus_type: "ବସ୍ ପ୍ରକାର"
     , namma_meter: "ନମ୍ମ ମିଟର୍"
+    , package: "ପ୍ୟାକେଜ୍"
   }
