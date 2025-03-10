@@ -52,7 +52,8 @@ type AppConfigDriver a =
     showMonthlyLeaderBoard :: Boolean,
     hotspotConfig :: HotspotConfig,
     rentalRideVideoConfig :: RentalRideVideoConfig,
-    scheduledRideConfig :: ScheduledRideConfig
+    scheduledRideConfig :: ScheduledRideConfig,
+    customerTokenForMeterRide :: String
     | a
   } 
 
@@ -329,7 +330,8 @@ type CityConfig = {
   purpleRideConfig :: PurpleRideConfigForVehicle,
   rideStartAudio :: RideStartAudio,
   showScheduledRides :: Boolean,
-  chatFooterBanner :: Maybe ChatFootBannerConfig
+  chatFooterBanner :: Maybe ChatFootBannerConfig,
+  enableNammaMeter :: Maybe Boolean
 }
 
 

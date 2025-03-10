@@ -3152,3 +3152,64 @@ export const executeJS = (params, codeString) => {
   }
 
 }
+
+export const voiceToTextImpl = function (cb, action, just, nothing) {
+  const callbackFallback = function () {
+    cb(action(nothing)(false))();
+  };
+  if (window.JBridge.voiceToText){
+    try {
+      const callback = callbackMapper.map(function (res, text) {
+        if(res == "SUCCESS"){
+          cb(action(just(text))(true))();
+        }
+        else if (res == "INIT") {
+          cb(action(just(""))(false))();
+        }
+        else if (res == "PARTIAL") {
+          cb(action(just(text))(false))();
+        }else {
+          cb(action(nothing)(false))();
+        }
+      });
+      return JBridge.voiceToText(callback);
+    } catch (err) {
+      callbackFallback();
+      console.log("Error in voiceToText", err);
+    }
+  }else{
+    callbackFallback();
+  }
+}
+
+export const stopVoiceRecognition = function(id) {
+  if (window.JBridge.stopVoiceRecognition){
+    try {
+      return window.JBridge.stopVoiceRecognition();
+    }catch (err) {
+      console.log("Error in stopVoiceRecognition", err);
+    }
+  }
+}
+export const startVoiceRecognition = function(id) {
+  if (window.JBridge.startVoiceRecognition){
+    try {
+      return window.JBridge.startVoiceRecognition();
+    }catch (err) {
+      console.log("Error in startVoiceRecognition", err);
+    }
+  }
+}
+
+export const setupVoiceRecognitionView = function(id) {
+  return function() {
+    console.log("setupVoiceRecognitionView is called with id " , id);
+    if (window.JBridge.setupVoiceRecognitionView){
+      try {
+        return window.JBridge.setupVoiceRecognitionView(id);
+      } catch (err) {
+        console.log("Error in setupVoiceRecognitionView", err);
+      }
+    }
+  }
+}

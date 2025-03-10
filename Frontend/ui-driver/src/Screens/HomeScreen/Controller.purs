@@ -151,6 +151,7 @@ import Data.Ordering (Ordering(..))
 import Data.Newtype (unwrap)
 import Data.Traversable (for_)
 import Engineering.Helpers.RippleCircles as EHR
+import Components.TripStageTopBar.Controller as TripStageTopBar
 
 instance showAction :: Show Action where
   show (NoAction) = "NoAction"
@@ -282,7 +283,8 @@ instance showAction :: Show Action where
   show (TollChargesPopUpAC var1) = "TollChargesPopUpAC_" <> show var1
   show (TollChargesAmbigousPopUpAC var1) = "TollChargesAmbigousPopUpAC_" <> show var1
   show (RideRequestsList) = "RideRequestsList"
-  show (SwitchBookingStage _) = "SwitchBookingStage"
+  show (TripStageTopBarAC var) = "TripStageTopBarAC_" <> show var
+  show (GotoMeterRideScreen) = "GotoMeterRideScreen"
   show (AccessibilityHeaderAction) = "AccessibilityHeaderAction"
   show (PopUpModalInterOperableAction var1) = "PopUpModalInterOperableAction_" <> show var1
   show (UpdateSpecialZoneList) = "UpdateSpecialZoneList"
@@ -508,6 +510,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateToggleMetroWarriors ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | UpdateStopsStatus ST.HomeScreenState
+                    | MeterRideScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -638,7 +641,7 @@ data Action = NoAction
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
             | RideRequestsList
-            | SwitchBookingStage BookingTypes
+            | TripStageTopBarAC TripStageTopBar.Action
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
@@ -677,6 +680,7 @@ data Action = NoAction
             | VOIPCallBack String String String Int Int String String String
             | RideEndWithStopsPopupAction PopUpModal.Action
             | UpdateRouteInState (Array Route)
+            | GotoMeterRideScreen
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -696,6 +700,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
+
+eval GotoMeterRideScreen state = exit $ MeterRideScreen state
 
 eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
 
@@ -797,7 +803,7 @@ eval (BannerChanged item) state = do
 
 eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
-  continue newState
+  update newState
 
 
 eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
@@ -1954,7 +1960,7 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {data
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {data {toll {showTollChargeAmbigousPopup = false}}}
 
-eval (SwitchBookingStage stage) state = do
+eval (TripStageTopBarAC (TripStageTopBar.SwitchBookingStage stage)) state = do
   if state.props.bookingStage == stage then continue state
   else do
     let currentRideData = if stage == CURRENT then fromMaybe state.data.activeRide state.data.currentRideData else state.data.activeRide
@@ -1965,6 +1971,8 @@ eval (SwitchBookingStage stage) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
+
+eval (TripStageTopBarAC (TripStageTopBar.HelpAndSupportScreen)) state = exit $ GoToHelpAndSupportScreen state
 
 eval (PlanListResponse (API.UiPlansResp plansListResp)) state = do
   let isTamilSelected = (getLanguageLocale languageKey) == "TA_IN"

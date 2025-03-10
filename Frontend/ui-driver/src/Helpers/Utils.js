@@ -622,3 +622,40 @@ export const renderSlider = function (cb) {
 // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
 //   cb(reqCode)(bundle)(); 
 // };
+export const requestKeyboardShow = function (id) {
+  return function () {
+    const delayInMilliseconds = 100;
+    setTimeout(function () {
+      window.JBridge.requestKeyboardShow(id);
+    }, delayInMilliseconds);
+  }
+}
+
+export const getLocationName = function (cb) {
+  return function (lat) {
+    return function (lng) {
+      return function (defaultText) {
+        return function (action) {
+          return function () {
+            const callback = callbackMapper.map(function (resultLat, resultLon, result) {
+              const decodedString = decodeURIComponent(result).replace(/\+/g, " ");
+              cb(action(parseFloat(resultLat))(parseFloat(resultLon))(decodedString))();
+            });
+            return window.JBridge.getLocationName(lat, lng, defaultText, callback);
+          }
+        }
+      }
+    }
+  }
+}
+
+export const extractKeyByRegex = (regex, text) => {
+  const matches = text.match(regex);
+  return matches ? matches[0] : "";
+}
+
+export const performHapticFeedback = function () {
+  if (window.JBridge.performHapticFeedback) {
+    return window.JBridge.performHapticFeedback();
+  }
+}

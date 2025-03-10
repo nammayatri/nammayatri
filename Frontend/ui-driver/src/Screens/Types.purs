@@ -19,14 +19,17 @@ module Screens.Types
   ) where
 
 import Common.Types.Config
-
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
 import Data.Either as Either
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
@@ -70,6 +73,7 @@ import Common.Types.App (CalendarDate)
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
+import JBridge as JB
 
 
 type EditTextInLabelState =
@@ -3425,3 +3429,146 @@ type MetroWarriorData = {
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
 }
+
+type MeterScreenState = {
+  data :: MeterScreenData,
+  props :: MeterScreenProps
+}
+
+type MeterScreenData = {
+  searchString :: Maybe String,
+  destination :: String,
+  destinationAddress :: Address,
+  locationList :: Array LocationListItemState,
+  voiceToText :: String
+}
+
+type MeterScreenProps = {
+  searchLocationModelProps :: SearchLocationModelProps,
+  isSearchLocation :: SearchLocationModelType,
+  destinationLat :: Number,
+  destinationLng :: Number,
+  destinationPlaceId :: Maybe String,
+  currentLocation :: JB.Location,
+  showVoiceToText :: Boolean,
+  voiceToTextSuccess :: Boolean,
+  confirmButtonText :: String,
+  voiceToTextSearchString :: String
+} 
+
+data SearchLocationModelType = SearchLocationType | LocateOnMap | NoView | RouteMap | SelectTripType
+
+derive instance genericSearchLocationModelType :: Generic SearchLocationModelType _
+instance eqSearchLocationModelType :: Eq SearchLocationModelType where eq = genericEq
+
+type LocationListItemState = {
+    prefixImageUrl :: String
+  , postfixImageUrl :: String
+  , postfixImageVisibility :: Boolean
+  , title :: String
+  , subTitle :: String
+  , placeId :: Maybe String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , description :: String
+  , tag :: String
+  , tagType :: Maybe String
+  , cardType :: Maybe String
+  , address :: String
+  , tagName :: String
+  , isEditEnabled :: Boolean
+  , savedLocation :: String
+  , placeName :: String
+  , isClickable :: Boolean
+  , alpha :: Number
+  , fullAddress :: Address
+  , locationItemType :: Maybe LocationItemType
+  , distance :: Maybe String
+  , showDistance :: Maybe Boolean
+  , actualDistance :: Maybe Int
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
+  , dynamicAction :: Maybe CommonRC.RemoteAC
+  , types :: Maybe (Array String)
+}
+
+type SearchLocationModelProps = {
+    isAutoComplete :: Boolean
+  , crossBtnDestVisibility :: Boolean
+}
+
+type Address =
+  { area :: Maybe String
+  , state :: Maybe String
+  , country :: Maybe String
+  , building  :: Maybe String
+  , door :: Maybe String
+  , street :: Maybe String
+  , city :: Maybe String
+  , areaCode :: Maybe String
+  , ward :: Maybe String
+  , placeId :: Maybe String
+  }
+
+data CustomerLocationSelectType = SEARCH | MAP | FAVOURITE | REPEAT_RIDE | RETRY_SEARCH | SUGGESTION
+derive instance genericCustomerLocationSelectType :: Generic CustomerLocationSelectType _
+instance eqCustomerLocationSelectType :: Eq CustomerLocationSelectType where eq = genericEq
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION | SUGGESTED_DESTINATIONS
+
+derive instance genericLocationItemType :: Generic LocationItemType _
+instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
+instance showLocationItemType :: Show LocationItemType where show = genericShow
+instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
+instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
+instance encodeJsonLocationItemType :: EncodeJson LocationItemType where
+  encodeJson = genericEncodeJson
+instance decodeJsonLocationItemType :: DecodeJson LocationItemType where
+  decodeJson = genericDecodeJson
+
+data LocItemType = LOC_LIST | CURR_LOC | LOC_ON_MAP
+derive instance genericLocItemType :: Generic LocItemType _
+instance eqLocItemType :: Eq LocItemType where eq = genericEq
+instance showLocItemType :: Show LocItemType where show = genericShow
+instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
+instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
+
+type MeterRideScreenState = {
+  data :: MeterRideScreenData,
+  props :: MeterRideScreenProps
+}
+
+type MeterRideScreenData = {
+  distance :: Number,
+  timeSec :: Int,
+  destinationAddress :: String,
+  destinationLat :: Number,
+  destinationLng :: Number,
+  ridesInfo :: Maybe RidesInfo,
+  rateCard :: Maybe Common.RateCard,
+  lastUpdatedTime :: String
+}
+
+type MeterRideScreenProps = {
+  meterFare :: Int,
+  showRateCard :: Boolean,
+  startButtonCountDown :: Int,
+  rateCardConfig :: {
+    sliderMaxValue :: Int,
+    sliderMinValue :: Int,
+    sliderDefVal :: Int,
+    incrementUnit :: Int,
+    sliderVal :: Int,
+    ratePerKM :: Number,
+    sliderFare :: Int
+  },
+  isMeterRideStarted :: Boolean,
+  isMeterClockRunning :: Boolean,
+  confirmMeterRideStop :: Boolean,
+  isRateCardLoading :: Boolean,
+  refreshAnimation :: Boolean,
+  rideStartingLoader :: Boolean
+}
+
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY

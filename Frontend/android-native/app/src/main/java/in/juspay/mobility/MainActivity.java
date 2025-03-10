@@ -329,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (MobilityServiceHolder.getInstance(context).onBackPressed()) {
+        if (!MobilityServiceHolder.getInstance(context).onBackPressed()) {
             super.onBackPressed();
         }
     }
@@ -778,6 +778,8 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = sharedPreff.edit();
         editor.putString("MERCHANT_ID", merchantId);
         editor.putString("BASE_URL", baseUrl);
+        editor.putString("CUSTOMER_BASE_URL", in.juspay.mobility.BuildConfig.CONFIG_URL_USER);
+        editor.putString("CUSTOMER_REG_TOKEN", BuildConfig.CUSTOMER_REG_TOKEN);
         editor.apply();
     }
 

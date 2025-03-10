@@ -216,6 +216,7 @@ config =
             {
               cityName : "Bangalore",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_bengalore_map",
               cityCode : "std:080",
               showSubscriptions : true,
@@ -298,6 +299,7 @@ config =
             {
               cityName : "Hyderabad",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_hyderabad_map",
               cityCode : "std:040",
               showSubscriptions : false,
@@ -375,6 +377,7 @@ config =
             {
               cityName : "Mysore",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_mysuru_map",
               cityCode : "std:0821",
               showSubscriptions : false,
@@ -447,6 +450,7 @@ config =
             {
               cityName : "Delhi",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_delhi_map",
               cityCode : "std:011",
               showSubscriptions : false,
@@ -532,6 +536,7 @@ config =
                   "od_in": "ଗ୍ରାହକଙ୍କ ପାଖରୁ ଅତିରିକ୍ତ ଦାବି କରିବେ ନାହିଁ"
                 })
               }),
+              enableNammaMeter : Just true,
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
               showSubscriptions : false,
@@ -604,6 +609,7 @@ config =
             {
               cityName : "Coimbatore",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_coimbatore_map",
               cityCode : "std:0422",
               showSubscriptions : false,
@@ -676,6 +682,7 @@ config =
             {
               cityName : "Puducherry",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_puducherry_map",
               cityCode : "std:0413",
               showSubscriptions : false,
@@ -748,6 +755,7 @@ config =
             {
               cityName : "Gurugram",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_gurugram_map",
               cityCode : "std:0124",
               showSubscriptions : false,
@@ -820,6 +828,7 @@ config =
             {             
               cityName : "Noida",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_noida_map",
               cityCode : "std:01189",
               showSubscriptions : false,
@@ -892,6 +901,7 @@ config =
             {
               cityName : "TamilNaduCities",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_tamilnadu_map",
               cityCode :  "std:0422",
               showSubscriptions : false,
@@ -964,6 +974,7 @@ config =
             {
               cityName : "Kolkata",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "",
               cityCode : "std:033",
               showSubscriptions : true,
@@ -1049,6 +1060,7 @@ config =
             {
               cityName : "Kochi",
               chatFooterBanner: Nothing,
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_kochi_map",
               cityCode : "std:0484",
               showSubscriptions : true,
@@ -1126,6 +1138,7 @@ config =
             -- {
             --   cityName : "Madurai",
             --   chatFooterBanner: Nothing,
+            -- enableNammaMeter : Nothing,
             --   mapImage : "ny_ic_madurai_map",
             --   cityCode : "std:0452",
             --   showSubscriptions : false,
@@ -1223,6 +1236,7 @@ config =
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }
+  , customerTokenForMeterRide : "c1e973c9-87d3-4921-bddf-f936f52293fa"
 }
 
 registrationConfig :: RegistrationConfig
@@ -1296,6 +1310,7 @@ allCitiesDefaultCityConfig :: CityConfig
 allCitiesDefaultCityConfig = {
   cityName : "",
   chatFooterBanner: Nothing,
+  enableNammaMeter : Nothing,
   mapImage : "",
   cityCode : "",
   showSubscriptions : false,
