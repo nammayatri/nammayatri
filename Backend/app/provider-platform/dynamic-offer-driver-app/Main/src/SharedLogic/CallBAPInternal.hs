@@ -16,6 +16,7 @@ module SharedLogic.CallBAPInternal where
 
 import API.Types.UI.MeterRide
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text
 import Domain.Types.Ride as DRide
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
@@ -116,8 +117,8 @@ type MeterRideAddDestinationAPI =
     :> Capture "bppRideId" Text
     :> "addDestination"
     :> Header "token" Text
-    :> ReqBody ('[JSON]) MeterRideAddDestinationReq
-    :> Post ('[JSON]) APISuccess
+    :> ReqBody '[JSON] MeterRideAddDestinationReq
+    :> Post '[JSON] APISuccess
 
 meterRideAddDestinationClient :: Text -> Maybe Text -> MeterRideAddDestinationReq -> EulerClient APISuccess
 meterRideAddDestinationClient = client (Proxy @MeterRideAddDestinationAPI)
@@ -138,3 +139,35 @@ meterRideAddDestination ::
 meterRideAddDestination apiKey internalUrl rideId request = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (meterRideAddDestinationClient rideId (Just apiKey) request) "StopEvents" meterRideAddDestinationAPI
+
+type GetCustomerReferralInfoAPI =
+  "internal"
+    :> "getCustomerInfo"
+    :> Header "token" Data.Text.Text
+    :> ReqBody '[JSON] SendRecietRequest
+    :> Get '[JSON] CustomerInfoResponse
+
+data CustomerInfoResponse = CustomerInfoResponse
+  { alreadyReferred :: Maybe Bool,
+    isMultipleDeviceIdExist :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+getCustomerReferralInfoClient :: Maybe Text -> SendRecietRequest -> EulerClient CustomerInfoResponse
+getCustomerReferralInfoClient = client (Proxy @GetCustomerReferralInfoAPI)
+
+getCustomerReferralInfoAPI :: Proxy GetCustomerReferralInfoAPI
+getCustomerReferralInfoAPI = Proxy
+
+getCustomerReferralInfo ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  SendRecietRequest ->
+  m CustomerInfoResponse
+getCustomerReferralInfo apiKey internalUrl request = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCustomerReferralInfoClient (Just apiKey) request) "StopEvents" getCustomerReferralInfoAPI
