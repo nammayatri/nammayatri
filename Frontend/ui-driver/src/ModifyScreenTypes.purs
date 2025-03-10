@@ -86,6 +86,8 @@ modifyScreenState st =
     UploadParcelImageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {uploadParcelImageScreen = a state.uploadParcelImageScreen})
     MetroWarriorsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroWarriorsScreen = a state.metroWarriorsScreen})
     ExtraChargeInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {extraChargeInfoScreen = a state.extraChargeInfoScreen})
+    MeterScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterScreen = a state.meterScreen})
+    MeterRideScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterRideScreen = a state.meterRideScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

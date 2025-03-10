@@ -108,3 +108,14 @@ _instructions = lens (unwrap >>> _.instructions) (\oldRec newVal -> wrap ((unwra
 
 _overchargingTag :: forall a b c. Newtype a { overchargingTag :: b | c } => Lens' a b
 _overchargingTag = lens (unwrap >>> _.overchargingTag) (\oldRec newVal -> wrap ((unwrap oldRec) { overchargingTag = newVal }))
+_description :: forall a b c. Newtype a {description :: c | b} => Lens' a c
+_description = lens (unwrap >>> _.description) (\oldRec newVal -> wrap ((unwrap oldRec) {description = newVal}))
+
+_place_id :: forall a b c. Newtype a {placeId :: c | b} => Lens' a c
+_place_id = lens (unwrap >>> _.placeId) (\oldRec newVal -> wrap ((unwrap oldRec) {placeId = newVal}))
+
+_distance_meters :: forall a b c. Newtype a { distance :: b | c} => Lens' a b
+_distance_meters = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
+
+_types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
+_types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))

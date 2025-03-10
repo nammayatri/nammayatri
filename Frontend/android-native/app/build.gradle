@@ -118,6 +118,7 @@ android {
             buildConfigField "String", "flavor", "\"prod\""
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CUSTOMER_REG_TOKEN", properties.getProperty("CUSTOMER_REG_TOKEN", "\"NA\"")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
 
@@ -140,6 +141,7 @@ android {
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CUSTOMER_REG_TOKEN", properties.getProperty("CUSTOMER_REG_TOKEN", "\"NA\"")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
 
             buildConfigField "String", "RS_ENC_KEY", properties.getProperty("RS_ENC_KEY", "")

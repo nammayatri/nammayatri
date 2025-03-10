@@ -20,6 +20,9 @@ module Helpers.Utils
 
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
 import Language.Strings (getString)
+import Data.Ord (comparing, Ordering)
+import Data.Lens ((^.))
+import Services.Accessor (_distance_meters)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
@@ -132,6 +135,7 @@ foreign import convertKmToM :: String -> String
 foreign import clearTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
 foreign import decodeError :: String -> String -> String
+foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -154,6 +158,7 @@ foreign import isYesterday :: String -> Boolean
 foreign import isDateNDaysAgo :: Fn2 String Int Boolean
 foreign import isMoreThanXMs :: Fn2 String Int Boolean
 foreign import percentageToAngle :: Fn4 Int Int Int (Array {min :: Int, max :: Int})  Number
+foreign import extractKeyByRegex :: Fn2 String String String
 
 foreign import isToday :: String -> Boolean
 
@@ -170,6 +175,8 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+
+foreign import performHapticFeedback :: Unit -> Effect Unit
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson =
@@ -1293,3 +1300,6 @@ getSrcDestConfig state =
   }
 isAmbulance :: String -> Boolean
 isAmbulance vehicleVariant = DA.any (_ == vehicleVariant) ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+
+sortPredictionByDistance :: Array SA.Prediction -> Array SA.Prediction
+sortPredictionByDistance arr = DA.sortBy (comparing (_^._distance_meters)) arr

@@ -1798,6 +1798,24 @@ data STR = LETS_GET_STARTED
         | DRIVER_UNSUBSCRIBED
         | OUT_OF_RIDES String String
         | SUSPENDED_TILL String String
+        | RATE_CHANGES_AS_THE_DISTANCE_CHANGES
+        | NAMMANMETER
+        | PRESS_TO_CANCEL
+        | DIST
+        | KM
+        | UPDATED_AT_
+        | TIME
+        | ENTER_DESTINATION
+        | STOP_METER
+        | UPTON2KM
+        | METER_RUNNING
+        | CONFIRM_METER_STOP
+        | CONFIRM_DESTINATION
+        | SEARCH_RESULTS
+        | START_TYPING_TO_SEARCH_PLACES
+        | BUS_NUMBER
+        | BUS_TYPE
+        | NAMMA_METER
 
 -- instance showSTR :: Show STR
 --   show = case _ of

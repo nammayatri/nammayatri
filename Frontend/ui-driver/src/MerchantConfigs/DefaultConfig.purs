@@ -6,6 +6,7 @@ import Engineering.Helpers.Commons as EHC
 import MerchantConfig.Utils as MU
 import Common.Types.App as CTA
 import Data.Maybe
+import Foreign.Object
 
 config :: AppConfig
 config =
@@ -148,6 +149,7 @@ config =
   , cityConfig : [
             {
               cityName : "Bangalore",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_bengalore_map",
               cityCode : "std:080",
               showSubscriptions : true,
@@ -229,6 +231,7 @@ config =
             },
             {
               cityName : "Hyderabad",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_hyderabad_map",
               cityCode : "std:040",
               showSubscriptions : false,
@@ -305,6 +308,7 @@ config =
             },
             {
               cityName : "Mysore",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_mysuru_map",
               cityCode : "std:0821",
               showSubscriptions : false,
@@ -376,6 +380,7 @@ config =
             },
             {
               cityName : "Delhi",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_delhi_map",
               cityCode : "std:011",
               showSubscriptions : false,
@@ -447,6 +452,7 @@ config =
             },
             {
               cityName : "Chennai",
+              enableNammaMeter : Just true,
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
               showSubscriptions : false,
@@ -518,6 +524,7 @@ config =
             },
             {
               cityName : "Coimbatore",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_coimbatore_map",
               cityCode : "std:0422",
               showSubscriptions : false,
@@ -589,6 +596,7 @@ config =
             },
             {
               cityName : "Puducherry",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_puducherry_map",
               cityCode : "std:0413",
               showSubscriptions : false,
@@ -660,6 +668,7 @@ config =
             },
             {
               cityName : "Gurugram",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_gurugram_map",
               cityCode : "std:0124",
               showSubscriptions : false,
@@ -731,6 +740,7 @@ config =
             },
             {             
               cityName : "Noida",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_noida_map",
               cityCode : "std:01189",
               showSubscriptions : false,
@@ -802,6 +812,7 @@ config =
             },
             {
               cityName : "TamilNaduCities",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_tamilnadu_map",
               cityCode :  "std:0422",
               showSubscriptions : false,
@@ -873,6 +884,7 @@ config =
             },
             {
               cityName : "Kolkata",
+              enableNammaMeter : Nothing,
               mapImage : "",
               cityCode : "std:033",
               showSubscriptions : true,
@@ -957,6 +969,7 @@ config =
             }, 
             {
               cityName : "Kochi",
+              enableNammaMeter : Nothing,
               mapImage : "ny_ic_kochi_map",
               cityCode : "std:0484",
               showSubscriptions : true,
@@ -1033,6 +1046,7 @@ config =
             --, For future use
             -- {
             --   cityName : "Madurai",
+            -- enableNammaMeter : Nothing,
             --   mapImage : "ny_ic_madurai_map",
             --   cityCode : "std:0452",
             --   showSubscriptions : false,
@@ -1130,6 +1144,7 @@ config =
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }
+  , customerTokenForMeterRide : "c1e973c9-87d3-4921-bddf-f936f52293fa"
 }
 
 registrationConfig :: RegistrationConfig
@@ -1202,6 +1217,7 @@ defaultCityConfig =
 allCitiesDefaultCityConfig :: CityConfig
 allCitiesDefaultCityConfig = {
   cityName : "",
+  enableNammaMeter : Nothing,
   mapImage : "",
   cityCode : "",
   showSubscriptions : false,

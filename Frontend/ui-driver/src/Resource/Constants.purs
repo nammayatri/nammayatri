@@ -18,20 +18,29 @@ module Resource.Constants where
 import Common.Types.App as Common
 import Data.Array as DA
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), split, toLower)
-import Data.String (trim)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Array (length, filter, reverse, (!!), null)
+import Data.String (Pattern(..), split, toLower, trim, contains, joinWith, replaceAll, Replacement(..))
 import Language.Strings (getString)
+-- import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
 import Language.Types (STR(..))
-import Prelude ((==), (&&), (<>), ($))
+import Prelude ((==), (&&), (<>), ($), (/=), (>), map, (-))
 import Screens.Types as ST
-import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..))
+import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..), AddressComponents(..))
+import JBridge as JB
+import Data.String as DS
+import Data.Function.Uncurried (runFn2, Fn2)
+
+foreign import extractKeyByRegex :: Fn2 String String String
 
 type Language =
     {
         name :: String,
         value :: String
     }
+
+whiteListedInputString :: Array String 
+whiteListedInputString = ["Hospital"]
 
 getLanguages :: Array Language
 getLanguages = 
@@ -303,3 +312,65 @@ twoHrsInSec = 7200
 
 fiveMinInSec :: Int
 fiveMinInSec = 300
+
+getDelayForAutoComplete :: Int
+getDelayForAutoComplete = 800
+
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
+encodeAddress fullAddress addressComponents placeId lat lon =
+  let
+    splitedAddress = split (Pattern ", ") fullAddress
+    totalAddressComponents = length splitedAddress
+    areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
+    areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
+    areaCodeComp = if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
+    areaCodeVal = Just if (trim areaCodeComp) == "" then (runFn2 extractKeyByRegex areaCodeRegex $ runFn2 JB.getLocationNameV2 lat lon) else areaCodeComp
+    gateName = getValueByComponent addressComponents "sublocality"
+  in
+    { area: if DS.null gateName then splitedAddress !! (totalAddressComponents - 4) else (Just gateName)
+    , areaCode: Just if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
+    , building: splitedAddress !! (totalAddressComponents - 6)
+    , city: splitedAddress !! (totalAddressComponents - 3)
+    , country: splitedAddress !! (totalAddressComponents - 1)
+    , state: splitedAddress !! (totalAddressComponents - 2)
+    , door:
+        if totalAddressComponents > 7 then
+          splitedAddress !! 0 <> Just ", " <> splitedAddress !! 1
+        else if totalAddressComponents == 7 then
+          splitedAddress !! 0
+        else
+          Nothing
+    , street: splitedAddress !! (totalAddressComponents - 5)
+    , ward:
+        if null addressComponents then
+          getWard Nothing (splitedAddress !! (totalAddressComponents - 4)) (splitedAddress !! (totalAddressComponents - 5)) (splitedAddress !! (totalAddressComponents - 6))
+        else
+          Just $ getValueByComponent addressComponents "sublocality"
+    , placeId: placeId
+    }
+
+getValueByComponent :: Array AddressComponents -> String -> String
+getValueByComponent address componentName = getAddress $ filter (\(AddressComponents item) -> length (getByTag item.types componentName) > 0) address
+
+getByTag :: Array String -> String -> Array String
+getByTag tags componentName = (filter (\item -> contains (Pattern componentName) item) tags)
+
+getAddress :: Array AddressComponents -> String
+getAddress address = joinWith ", " (reverse (map (\(AddressComponents item) -> item.longName) address))
+
+areaCodeRegex :: String 
+areaCodeRegex = "\\b\\d{6}\\b"
+
+
+getWard :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String
+getWard ward area street building =
+  let
+    actualWard = if (trim (replaceAll (Pattern ",") (Replacement "") (fromMaybe "" ward))) == "" then Nothing else ward
+
+    actualArea = if (trim (fromMaybe "" area)) == "" then Nothing else (area <> Just ", ")
+
+    actualStreet = if (trim (fromMaybe "" street)) == "" then Nothing else (street <> Just ", ")
+
+    actualBuilding = if (trim (fromMaybe "" building)) == "" then Nothing else building
+  in
+    if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)
