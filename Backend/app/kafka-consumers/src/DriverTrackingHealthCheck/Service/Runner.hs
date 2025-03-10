@@ -46,10 +46,10 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
   let locationDelay = healthCheckAppCfg.driverAllowedDelayForLocationUpdateInSec
       serviceInterval = healthCheckAppCfg.driverLocationHealthCheckIntervalInSec
       fcmNofificationSendCount = healthCheckAppCfg.fcmNofificationSendCount
-  withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
+  key <- incrementCounterAndReturnShard
+  withLock (key <> ":lock") $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    key <- incrementCounterAndReturnShard
     drivers <- getDriversBatchFromKey key locationDelay now
     case nonEmpty drivers of
       Just allDrivers -> do
@@ -65,7 +65,7 @@ redisKey driverId = "beckn:driver-tracking-healthcheck:drivers-to-ping:" <> driv
 
 driverDevicePingService :: Text -> Int -> Flow (Maybe Text)
 driverDevicePingService driverId fcmNofificationSendCount = do
-  log INFO "Ping driver"
+  log INFO ("Pinging driver: " <> driverId)
   SQP.findById (Id driverId) >>= \case
     Nothing -> log ERROR ("Driver not found: " <> driverId) >> pure (Just $ T.decodeUtf8 $ BSL.toStrict $ A.encode driverId)
     Just driver ->
@@ -108,7 +108,7 @@ getAllDrivers locationDelay now = do
 getDriversBatchFromKey :: Text -> Seconds -> UTCTime -> Flow [Text]
 getDriversBatchFromKey key locationDelay now = do
   let presentTime = negate (fromIntegral locationDelay) `addUTCTime` now
-  batchSize <- fromMaybe 100 . fmap (.batchSize) <$> asks (.healthCheckAppCfg)
+  batchSize <- 10 * (fromMaybe 10 . fmap (.batchSize) <$> asks (.healthCheckAppCfg))
   redisRes <- Redis.withCrossAppRedis $ Redis.zRangeByScoreByCount key 0 (utcToDouble presentTime) 0 batchSize
   pure $ mapMaybe decode redisRes
   where
