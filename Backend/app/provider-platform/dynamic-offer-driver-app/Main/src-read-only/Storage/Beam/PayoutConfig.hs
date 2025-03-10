@@ -42,6 +42,6 @@ instance B.Table PayoutConfigT where
 
 type PayoutConfig = PayoutConfigT Identity
 
-$(enableKVPG ''PayoutConfigT ['merchantOperatingCityId, 'vehicleCategory] [])
+$(enableKVPG (''PayoutConfigT) [('merchantOperatingCityId), ('vehicleCategory)] [])
 
-$(mkTableInstances ''PayoutConfigT "payout_config")
+$(mkTableInstances (''PayoutConfigT) "payout_config")

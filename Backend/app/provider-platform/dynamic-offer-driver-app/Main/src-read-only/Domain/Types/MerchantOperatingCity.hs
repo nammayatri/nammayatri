@@ -26,4 +26,4 @@ data MerchantOperatingCity = MerchantOperatingCity
     state :: Kernel.Types.Beckn.Context.IndianState,
     supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
+  deriving (Generic, (FromJSON), (ToJSON), (Show), (Eq), (ToSchema))
