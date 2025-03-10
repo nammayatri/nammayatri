@@ -129,7 +129,8 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId r
       MessageBuilder.buildSendReceiptMessage merchantOpCityId $
         MessageBuilder.BuildSendReceiptMessageReq
           { totalFare = show ride.currency <> " " <> show ride.fare,
-            totalDistance = show ride.chargeableDistance
+            totalDistance = show ride.chargeableDistance,
+            referralCode = driverReferral.referralCode.getId
           }
     smsCfg <- asks (.smsCfg)
     let sender = fromMaybe smsCfg.sender mbSender

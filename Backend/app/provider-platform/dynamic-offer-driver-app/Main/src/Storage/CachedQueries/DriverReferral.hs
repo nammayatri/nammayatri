@@ -30,7 +30,7 @@ getNextRefferalCode =
 getDynamicRefferalCode :: (CacheFlow m r, EsqDBFlow m r) => m Integer
 getDynamicRefferalCode = do
   count <- Hedis.incr makeLastDynamicRefferalCodeKey
-  pure $ div count 1000
+  pure $ mod count 1000
 
 cacheLastRefferalCode :: (CacheFlow m r) => Integer -> m ()
 cacheLastRefferalCode referralCode = do
