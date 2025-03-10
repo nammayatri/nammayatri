@@ -55,6 +55,7 @@ import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9, runEffectFn3)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap, markPerformance, splitString)
 import Engineering.Helpers.Commons as EHC
+import Data.Array as DA
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
@@ -261,7 +262,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "fvrts" -> hideSplashAndCallFlow savedLocationFlow
         "help" -> hideSplashAndCallFlow $ flowRouter HelpAndSupportScreenFlow
         "prof" -> hideSplashAndCallFlow myProfileScreenFlow
-        "lang" -> hideSplashAndCallFlow $ selectLanguageScreenFlow HomeScreenFlow
+        "lang" -> hideSplashAndCallFlow $ selectLanguageScreenFlow
         "tkts" -> do
           case globalPayload ^. _payload ^. _deepLinkJSON of
             Just (CTA.QueryParam queryParam) -> do
@@ -270,7 +271,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                   ticketPlacesResp <- lift $ lift $ Remote.getTicketPlaces ""
                   case ticketPlacesResp of
                     Right (API.TicketPlaceResponse ticketPlaces) -> do
-                      let ticketPlace = DA.find (\(API.TicketPlaceResp ticketplace) -> ticketplace.id == queryPlaceId) ticketPlaces
+                      let ticketPlace = Arr.find (\(API.TicketPlaceResp ticketplace) -> ticketplace.id == queryPlaceId) ticketPlaces
                       modifyScreenState $ TicketingScreenStateType (\ticketingScreen -> ticketingScreen{ data { placeInfoArray = ticketPlaces}})
                       if isJust ticketPlace then do
                         modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { navigateToHome = false, currentStage = DescriptionStage, previousStage = DescriptionStage }, data { totalAmount = 0, placeInfo = ticketPlace } })
