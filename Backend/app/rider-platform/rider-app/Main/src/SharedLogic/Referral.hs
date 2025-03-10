@@ -79,9 +79,6 @@ validateRefCode person refCode =
         countryCode <- person.mobileCountryCode & fromMaybeM (PersonMobileNumberIsNULL person.id.getId)
         return $ Driver refCode mobileNumber countryCode
 
-isCustomerReferralCode :: Text -> Bool
-isCustomerReferralCode = T.isPrefixOf "C"
-
 getReferrerInfo :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> Maybe LatLong -> ValidatedRefCode -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
 getReferrerInfo person shouldShareReferrerInfo mbCustomerLocation = \case
   Rider _ referrer referrerStats -> do
