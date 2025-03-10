@@ -213,6 +213,7 @@ import Helpers.TipConfig (isTipEnabled, setTipViewData)
 import Presto.Core.Types.API (ErrorResponse(..))
 import AssetsProvider (renewFile)
 import Data.Tuple
+import Services.API as API
 import Screens.HomeScreen.Controllers.Types
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
