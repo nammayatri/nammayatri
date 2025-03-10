@@ -1,9 +1,10 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.MeterRide (postAddDestination) where
+module Domain.Action.UI.MeterRideInternal (postAddDestination, getGetCustomerInfo) where
 
-import qualified API.Types.UI.MeterRide
+import qualified API.Types.UI.MeterRideInternal
 import Data.OpenApi (ToSchema)
+import qualified Data.Text
 import Domain.Types
 import Domain.Types.Location
 import Domain.Types.LocationAddress
@@ -14,6 +15,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
+import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -24,6 +26,7 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.Error
@@ -31,7 +34,7 @@ import Tools.Error
 postAddDestination ::
   ( Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    API.Types.UI.MeterRide.MeterRideAddDestinationReq ->
+    API.Types.UI.MeterRideInternal.MeterRideAddDestinationReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postAddDestination bppRideId mbToken addDestinationReq = do
@@ -70,3 +73,26 @@ buildLocation merchantId mbMerchantOperatingCityId gps locationAddress = do
         merchantId = merchantId,
         merchantOperatingCityId = mbMerchantOperatingCityId
       }
+
+getGetCustomerInfo :: (Kernel.Prelude.Maybe (Data.Text.Text) -> API.Types.UI.MeterRideInternal.CustomerInfo -> Environment.Flow API.Types.UI.MeterRideInternal.CustomerInfoResponse)
+getGetCustomerInfo mbToken API.Types.UI.MeterRideInternal.CustomerInfo {..} = do
+  internalAPIKey <- asks (.internalAPIKey)
+  unless (Just internalAPIKey == mbToken) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  phoneNumbersHashes <- getDbHash customerMobileNumber
+  person <- QP.findByMobileNumberHashAndCountryCode customerMobileCountryCode phoneNumbersHashes
+  case person of
+    Just person' -> do
+      personsWithSameDeviceId <- maybe (pure []) (QP.findAllByDeviceId . Just) person'.deviceId -- should consider merchant in querstion as well here, but for time being not doing that as very small set would be affected.
+      let isMultipleDeviceIdExist = Just (length personsWithSameDeviceId > 1)
+      pure $
+        API.Types.UI.MeterRideInternal.CustomerInfoResponse
+          { alreadyReferred = Just True,
+            isMultipleDeviceIdExist
+          }
+    Nothing ->
+      pure $
+        API.Types.UI.MeterRideInternal.CustomerInfoResponse
+          { alreadyReferred = Nothing,
+            isMultipleDeviceIdExist = Nothing
+          }

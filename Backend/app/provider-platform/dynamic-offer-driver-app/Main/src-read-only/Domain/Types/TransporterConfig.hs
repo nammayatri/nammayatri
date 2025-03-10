@@ -291,7 +291,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
-type TransporterConfig = TransporterConfigD 'Safe
+type TransporterConfig = TransporterConfigD ('Safe)
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 

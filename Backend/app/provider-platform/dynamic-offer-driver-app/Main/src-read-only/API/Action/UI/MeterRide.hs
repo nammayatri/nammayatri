@@ -17,6 +17,7 @@ import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -29,10 +30,22 @@ type API =
            ('[JSON])
            API.Types.UI.MeterRide.MeterRideAddDestinationReq
       :> Post ('[JSON]) API.Types.UI.MeterRide.MeterRideAddDestinationResp
+      :<|> TokenAuth
+      :> "meterRide"
+      :> Capture
+           "rideId"
+           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> "shareReceipt"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.MeterRide.SendRecietRequest
+      :> Post
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postMeterRideAddDestination
+handler = postMeterRideAddDestination :<|> postMeterRideShareReceipt
 
 postMeterRideAddDestination ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -44,3 +57,14 @@ postMeterRideAddDestination ::
     Environment.FlowHandler API.Types.UI.MeterRide.MeterRideAddDestinationResp
   )
 postMeterRideAddDestination a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRide.postMeterRideAddDestination (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMeterRideShareReceipt ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.MeterRide.SendRecietRequest ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMeterRideShareReceipt a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRide.postMeterRideShareReceipt (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

@@ -4,7 +4,7 @@ module API.Internal
   )
 where
 
-import qualified API.Action.UI.MeterRide as MeterRide
+import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.FRFS as FRFS
@@ -23,7 +23,7 @@ type API =
            :<|> StopEvents.API
            :<|> FrequentLocUser.API
            :<|> DriverArrivalNotf.API
-           :<|> MeterRide.API
+           :<|> MeterRideInternal.API
        )
 
 handler :: FlowServer API
@@ -34,4 +34,4 @@ handler =
     :<|> StopEvents.handler
     :<|> FrequentLocUser.handler
     :<|> DriverArrivalNotf.handler
-    :<|> MeterRide.handler
+    :<|> MeterRideInternal.handler
