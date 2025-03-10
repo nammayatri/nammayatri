@@ -1856,6 +1856,81 @@ window.getMerchantConfig = function () {
           "auto" : {},
           "bike" : {}
         }
+    },
+    {
+      "cityName" : "Srinagar",
+      "mapImage" : "ny_ic_srinagar_map",
+      "cityCode" : "std:0194",
+      "showSubscriptions" : false,
+      "enableAdvancedBooking" : true,
+      "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+      "cityLat" : 34.10603991,
+      "cityLong" : 74.81841324,
+      "supportNumber" : "+918069724848",
+      "languageKey" : "HI_IN",
+      "showScheduledRides" : false,
+      "showDriverReferral" : false,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true,
+      "enableYatriCoins" : false,
+      "enableGullak": false,
+      "vehicleNSImg" : "ny_ic_auto_image",
+      "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : staticSubscriptionConfig
+      },
+      "showEarningSection" : true,
+      "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : defWaitingChargesConfig,
+      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "gstPercentage": "18",
+      "enableHvSdk" : true,
+      "purpleRideConfig" : {
+        "purpleRideConfigForAuto" : {
+          "vehicleVariant" : "Auto",
+          "showVideo" : false,
+          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+        },
+        "purpleRideConfigForCabs" : {
+          "vehicleVariant" : "Cab",
+          "showVideo" : false,
+          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+        },
+        "purpleRideConfigForBikes" : {
+          "vehicleVariant" : "Bike",
+          "showVideo" : false,
+          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+        }
+      },
+      "rideStartAudio" : {
+        "acCab" : {},
+        "nonAcCab" : {},
+        "auto" : {},
+        "bike" : {}
+      },
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+      }
     }
   ]
   , "dashboard" : {
