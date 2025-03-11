@@ -39,10 +39,12 @@ import Domain.Types.RiderConfig as DRC
 import Domain.Types.SearchRequest as SearchRequest
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.Trip as Trip
+import qualified Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.Notification.FCM.Types as FCMType
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -50,7 +52,7 @@ import Kernel.Storage.Esqueleto hiding (count, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (getCurrentTime)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
@@ -72,6 +74,7 @@ import Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
@@ -126,6 +129,7 @@ notifyPerson ::
   Id MerchantOperatingCity ->
   Id Person ->
   Notification.NotificationReq a b ->
+  Maybe FCMType.LiveActivityReq ->
   m ()
 notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
 
@@ -134,20 +138,21 @@ clearDeviceToken = Person.clearDeviceTokenByPersonId
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (Notification.NotificationServiceConfig -> req -> m () -> m resp) ->
+  (Notification.NotificationServiceConfig -> req -> liveActivityReq -> m () -> m resp) ->
   (MerchantServiceUsageConfig -> Notification.NotificationService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Id Person ->
   req ->
+  liveActivityReq ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req = do
+runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req liveActivityReq = do
   merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantNotificationServiceConfig <-
     QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.NotificationService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
   case merchantNotificationServiceConfig.serviceConfig of
-    DMSC.NotificationServiceConfig msc -> func msc req (clearDeviceToken personId)
+    DMSC.NotificationServiceConfig msc -> func msc req liveActivityReq (clearDeviceToken personId)
     _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 -- dynamicNotifyPerson person notificationRequest notifyType dynamicParam entity tripCategory [varparams]
@@ -160,8 +165,9 @@ dynamicNotifyPerson ::
   Maybe TripCategory ->
   [(Text, Text)] ->
   Maybe [LYT.ConfigVersionMap] ->
+  Maybe FCMType.LiveActivityReq ->
   m ()
-dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams mbConfigVersionMap = do
+dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams mbConfigVersionMap liveActivityReq = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language mbConfigVersionMap
   when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
@@ -187,7 +193,7 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
                 dynamicParams = dynamicParams
               }
       --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
 
 --------------------------------------------------------------------------------------------------
 
@@ -203,7 +209,7 @@ notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList 
   isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
   let entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList
       notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
-  dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty Nothing
+  dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty Nothing Nothing
 
 -- title = "New driver offers incoming!"
 -- body = "There are new driver offers! Check the app for details"
@@ -238,9 +244,44 @@ notifyOnRideAssigned booking ride = do
       booking.tripCategory
       [("driverName", driverName)]
       (Just booking.configInExperimentVersions)
-
--- title = "Driver assigned!"
--- body = " {#driverName#} will be your driver for this trip."
+      ( case person.liveActivityToken of
+          Just _liveActivityToken ->
+            Just $
+              FCMType.LiveActivityReq
+                { liveActivityToken = _liveActivityToken,
+                  liveActivityReqType = "update",
+                  liveActivityNotificationType = "DRIVER_ASSIGNMENT",
+                  liveActivityContentState =
+                    FCMType.LiveActivityContentState
+                      { activityStatus = "ARRIVING",
+                        driverInfo =
+                          Just $
+                            FCMType.DriverInfo
+                              { rideOtp = Just ride.otp,
+                                driverName = Nothing,
+                                distanceLeft = Nothing,
+                                totalDistance = Nothing,
+                                driverNumber = Nothing,
+                                driverProfile = Nothing
+                              },
+                        bookingInfo =
+                          Just $
+                            FCMType.BookingInfo
+                              { vehicleColor = ride.vehicleColor,
+                                vehicleName = Just ride.vehicleModel,
+                                vehicleNumber = Just ride.vehicleNumber,
+                                vehicleVariant = Just (show ride.vehicleVariant),
+                                source = Nothing,
+                                destination = Nothing,
+                                estimatedFare = Nothing
+                              },
+                        timerDuration = Nothing,
+                        customMessage = Nothing
+                      },
+                  liveActivityApnsPriority = "10"
+                }
+          _ -> Nothing
+      )
 
 notifyOnScheduledRideAccepted ::
   ServiceFlow m r =>
@@ -277,7 +318,7 @@ notifyOnScheduledRideAccepted booking ride = do
             "will be your driver for your scheduled trip starting at ",
             showTimeIst booking.startTime
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 newtype RideStartedParam = RideStartedParam
   { driverName :: Text
@@ -302,6 +343,10 @@ notifyOnRideStarted booking ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product rideId.getId (TripAssignedData booking.tripCategory)
       dynamicParams = RideStartedParam driverName
+      toLocationDestination = do
+        loc <- ride.toLocation
+        let addr = loc.address
+        addr.building
   -- finding other booking parties for delivery --
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
@@ -316,6 +361,35 @@ notifyOnRideStarted booking ride = do
         ("serviceTierName", serviceTierName)
       ]
       (Just booking.configInExperimentVersions)
+      ( case person.liveActivityToken of
+          Just _liveActivityToken ->
+            Just $
+              FCMType.LiveActivityReq
+                { liveActivityToken = _liveActivityToken,
+                  liveActivityReqType = "update",
+                  liveActivityNotificationType = "TRIP_STARTED",
+                  liveActivityContentState =
+                    FCMType.LiveActivityContentState
+                      { activityStatus = "ONRIDE",
+                        driverInfo = Nothing,
+                        bookingInfo =
+                          Just $
+                            FCMType.BookingInfo
+                              { vehicleColor = Nothing,
+                                vehicleName = Nothing,
+                                vehicleNumber = Nothing,
+                                vehicleVariant = Just (show ride.vehicleVariant),
+                                source = Nothing,
+                                destination = toLocationDestination,
+                                estimatedFare = Just (show booking.estimatedFare)
+                              },
+                        timerDuration = Nothing,
+                        customMessage = Nothing
+                      },
+                  liveActivityApnsPriority = "10"
+                }
+          _ -> Nothing
+      )
 
 -- title = "Your {#serviceTierName#} ride has started!"
 -- body = "Your {#serviceTierName#} ride with {#driverName#} has started. Enjoy the ride!"
@@ -341,6 +415,10 @@ notifyOnRideCompleted booking ride otherParties = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product rideId.getId ()
       dynamicParams = RideCompleteParam driverName $ show totalFare.amountInt
+      toLocationDestination = do
+        loc <- ride.toLocation
+        let addr = loc.address
+        addr.building
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
   forM_ (person : otherParties) $ \person' -> do
@@ -355,6 +433,36 @@ notifyOnRideCompleted booking ride otherParties = do
         ("totalFare", showPriceWithRounding totalFare)
       ]
       (Just booking.configInExperimentVersions)
+      ( case person.liveActivityToken of
+          Just _liveActivityToken ->
+            Just $
+              FCMType.LiveActivityReq
+                { liveActivityToken = _liveActivityToken,
+                  liveActivityReqType = "end",
+                  liveActivityNotificationType = "TRIP_FINISHED",
+                  liveActivityContentState =
+                    FCMType.LiveActivityContentState
+                      { activityStatus = "COMPLETED",
+                        driverInfo = Nothing,
+                        bookingInfo =
+                          Just $
+                            FCMType.BookingInfo
+                              { vehicleColor = Nothing,
+                                vehicleName = Nothing,
+                                vehicleNumber = Nothing,
+                                vehicleVariant = Nothing,
+                                source = Nothing,
+                                destination = toLocationDestination,
+                                estimatedFare = Just (show booking.estimatedFare)
+                              },
+                        timerDuration = Nothing,
+                        customMessage = Nothing
+                      },
+                  liveActivityApnsPriority = "10"
+                }
+          _ -> Nothing
+      )
+
   fork "Create Post ride safety job" $ do
     safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
@@ -410,6 +518,7 @@ notifyOnExpiration searchReq = do
         tripCategory
         []
         (Just searchReq.configInExperimentVersions)
+        Nothing
     _ -> pure ()
 
 -- title = T.pack "Ride expired!"
@@ -436,6 +545,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
     entity
     Nothing
     []
+    Nothing
     Nothing
 
 -- title = T.pack "Registration Completed!"
@@ -468,6 +578,13 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
             Just _ -> Notification.CANCELLED_PRODUCT_DRIVER
         SBCR.ByUser -> Notification.CANCELLED_PRODUCT_USER
         _ -> Notification.CANCELLED_PRODUCT
+      liveActivityCustomMessage = case cancellationSource of
+        SBCR.ByDriver -> do
+          case mbRide of
+            Nothing -> Just "Sorry, we could not find any driver for your ride."
+            Just _ -> Just "The driver had to cancel the ride."
+        SBCR.ByUser -> Just "You have cancelled your ride."
+        _ -> Just "Sorry, we could not find any driver for your ride."
   fork "Disabling share ride" $ do
     disableFollowRide person.id
     Redis.del $ CQSos.mockSosKey person.id
@@ -497,6 +614,25 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
         ("orgName", bppDetails.name)
       ]
       (Just booking.configInExperimentVersions)
+      ( case person.liveActivityToken of
+          Just _liveActivityToken ->
+            Just $
+              FCMType.LiveActivityReq
+                { liveActivityToken = _liveActivityToken,
+                  liveActivityReqType = "end",
+                  liveActivityNotificationType = "CANCELLED_PRODUCT",
+                  liveActivityContentState =
+                    FCMType.LiveActivityContentState
+                      { activityStatus = "CANCELLED",
+                        driverInfo = Nothing,
+                        bookingInfo = Nothing,
+                        timerDuration = Nothing,
+                        customMessage = liveActivityCustomMessage
+                      },
+                  liveActivityApnsPriority = "10"
+                }
+          _ -> Nothing
+      )
 
 cancellationSourceToSubCategory :: SBCR.CancellationSource -> Notification.SubCategory
 cancellationSourceToSubCategory = \case
@@ -589,6 +725,7 @@ notifyOnBookingReallocated booking = do
       booking.tripCategory
       [("bookingStartTime", showTimeIst (booking.startTime))]
       (Just booking.configInExperimentVersions)
+      Nothing
 
 -- title = T.pack "Ride cancelled! We are allocating another driver"
 -- body =
@@ -599,7 +736,7 @@ notifyOnBookingReallocated booking = do
 --     ]
 
 notifyOnEstOrQuoteReallocated ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, CacheFlow m r) =>
   SBCR.CancellationSource ->
   SRB.Booking ->
   Text ->
@@ -607,6 +744,7 @@ notifyOnEstOrQuoteReallocated ::
 notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   tag <- getDisabilityTag person.hasDisability person.id
+  batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   let entity = Notification.Entity Notification.Product estOrQuoteId (BookingReallocatedParam booking.startTime booking.id)
       subCategory = cancellationSourceToSubCategory cancellationSource
   dynamicNotifyPerson
@@ -617,6 +755,25 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
     booking.tripCategory
     [("bookingStartTime", showTimeIst (booking.startTime))]
     (Just booking.configInExperimentVersions)
+    ( case person.liveActivityToken of
+        Just _liveActivityToken ->
+          Just $
+            FCMType.LiveActivityReq
+              { liveActivityToken = _liveActivityToken,
+                liveActivityReqType = "update",
+                liveActivityNotificationType = "EST_OR_QUOTE_REALLOCATED",
+                liveActivityContentState =
+                  FCMType.LiveActivityContentState
+                    { activityStatus = "REALLOCATION",
+                      driverInfo = Nothing,
+                      bookingInfo = Nothing,
+                      timerDuration = batchConfig,
+                      customMessage = Nothing
+                    },
+                liveActivityApnsPriority = "10"
+              }
+        _ -> Nothing
+    )
 
 -- title = T.pack "Searching for a New Driver!"
 -- body = case cancellationSource of
@@ -672,6 +829,7 @@ notifyOnQuoteReceived quote = do
     tripCategory
     [("quoteFareEstimate", show quote.estimatedFare)]
     (Just searchRequest.configInExperimentVersions)
+    Nothing
 
 -- title = T.pack "Quote received!"
 -- body =
@@ -684,8 +842,9 @@ notifyDriverOnTheWay ::
   ServiceFlow m r =>
   Id Person ->
   Maybe TripCategory ->
+  SRide.Ride ->
   m ()
-notifyDriverOnTheWay personId tripCategory = do
+notifyDriverOnTheWay personId tripCategory ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
@@ -696,6 +855,44 @@ notifyDriverOnTheWay personId tripCategory = do
     tripCategory
     []
     Nothing
+    ( case person.liveActivityToken of
+        Just _liveActivityToken ->
+          Just $
+            FCMType.LiveActivityReq
+              { liveActivityToken = _liveActivityToken,
+                liveActivityReqType = "update",
+                liveActivityNotificationType = "DRIVER_ON_THE_WAY",
+                liveActivityContentState =
+                  FCMType.LiveActivityContentState
+                    { activityStatus = "ONWAY",
+                      driverInfo =
+                        Just $
+                          FCMType.DriverInfo
+                            { rideOtp = Just ride.otp,
+                              driverName = Nothing,
+                              distanceLeft = Nothing,
+                              totalDistance = Nothing,
+                              driverNumber = Nothing,
+                              driverProfile = Nothing
+                            },
+                      bookingInfo =
+                        Just $
+                          FCMType.BookingInfo
+                            { vehicleColor = ride.vehicleColor,
+                              vehicleName = Just ride.vehicleModel,
+                              vehicleNumber = Just ride.vehicleNumber,
+                              vehicleVariant = Just (show ride.vehicleVariant),
+                              source = Nothing,
+                              destination = Nothing,
+                              estimatedFare = Nothing
+                            },
+                      timerDuration = Nothing,
+                      customMessage = Nothing
+                    },
+                liveActivityApnsPriority = "10"
+              }
+        _ -> Nothing
+    )
 
 -- title = T.pack "Driver On The Way!"
 -- body =
@@ -715,8 +912,11 @@ notifyDriverHasReached ::
   Maybe TripCategory ->
   Text ->
   Text ->
+  Maybe Text ->
+  Text ->
+  VehicleVariant.VehicleVariant ->
   m ()
-notifyDriverHasReached personId tripCategory otp vehicleNumber = do
+notifyDriverHasReached personId tripCategory otp vehicleNumber mbVehicleColor vehicleModel vehicleVariant = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product personId.getId ()
       dynamicParams = DriverReachedParam vehicleNumber otp
@@ -730,6 +930,44 @@ notifyDriverHasReached personId tripCategory otp vehicleNumber = do
       ("vehicleNumber", vehicleNumber)
     ]
     Nothing
+    ( case person.liveActivityToken of
+        Just _liveActivityToken ->
+          Just $
+            FCMType.LiveActivityReq
+              { liveActivityToken = _liveActivityToken,
+                liveActivityReqType = "update",
+                liveActivityNotificationType = "DRIVER_HAS_REACHED",
+                liveActivityContentState =
+                  FCMType.LiveActivityContentState
+                    { activityStatus = "WAITING",
+                      driverInfo =
+                        Just $
+                          FCMType.DriverInfo
+                            { rideOtp = Just otp,
+                              driverName = Nothing,
+                              distanceLeft = Nothing,
+                              totalDistance = Nothing,
+                              driverNumber = Nothing,
+                              driverProfile = Nothing
+                            },
+                      bookingInfo =
+                        Just $
+                          FCMType.BookingInfo
+                            { vehicleColor = mbVehicleColor,
+                              vehicleName = Just vehicleModel,
+                              vehicleNumber = Just vehicleNumber,
+                              vehicleVariant = Just (show vehicleVariant),
+                              source = Nothing,
+                              destination = Nothing,
+                              estimatedFare = Nothing
+                            },
+                      timerDuration = Nothing,
+                      customMessage = Nothing
+                    },
+                liveActivityApnsPriority = "10"
+              }
+        _ -> Nothing
+    )
 
 -- title = T.pack "Driver Has Reached!"
 -- body =
@@ -755,6 +993,7 @@ notifyDriverReaching personId tripCategory otp vehicleNumber = do
     entity
     tripCategory
     []
+    Nothing
     Nothing
 
 -- title = T.pack "Driver Arriving Now!"
@@ -794,7 +1033,7 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 notifySafetyAlert ::
   ServiceFlow m r =>
@@ -814,6 +1053,7 @@ notifySafetyAlert booking code = do
     booking.tripCategory
     []
     (Just booking.configInExperimentVersions)
+    Nothing
 
 -- title = "Everything okay?"
 -- body = "We noticed your ride is on a different route. Are you feeling safe on your trip?"
@@ -834,6 +1074,7 @@ notifyDriverBirthDay personId tripCategory driverName = do
     entity
     tripCategory
     [("driverName", driverName)]
+    Nothing
     Nothing
 
 -- title = T.pack "Driver's Birthday!"
@@ -878,6 +1119,7 @@ notifyRideStartToEmergencyContacts booking ride = do
               booking.tripCategory
               [("name", fromMaybe "" rider.firstName)]
               (Just booking.configInExperimentVersions)
+              Nothing
           -- title = T.pack "Follow Ride"
           -- body =
           --   unwords
@@ -934,6 +1176,7 @@ notifyOnStopReached booking ride = do
     booking.tripCategory
     [("driverName", driverName)]
     (Just booking.configInExperimentVersions)
+    Nothing
 
 -- title = T.pack "Stop Reached!"
 -- body =
@@ -989,7 +1232,7 @@ notifyPersonOnEvents person entityData notifType = do
         unwords
           [ entityData.message
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
@@ -1003,6 +1246,7 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
     [ ("ticketBookingCategoryName", ticketBookingCategoryName),
       ("ticketBookingId", ticketBookingId)
     ]
+    Nothing
     Nothing
 
 -- title = ticketBookingCategoryName <> " Ticket Service is Cancelled"
@@ -1030,6 +1274,7 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
     tripCategory
     []
     Nothing
+    Nothing
 
 -- title = fromMaybe (T.pack "First Ride Event") mbTitle
 -- body = fromMaybe (unwords ["Congratulations! You have taken your first ride with us."]) mbBody
@@ -1046,6 +1291,7 @@ notifyToAllBookingParties persons tripCategory notikey =
         entity
         tripCategory
         []
+        Nothing
         Nothing
 
 notifyOnTripUpdate ::
@@ -1080,7 +1326,41 @@ notifyOnTripUpdate booking ride err = do
             ttl = Nothing,
             sound = notificationSound
           }
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+      toLocationDestination = do
+        loc <- ride.toLocation
+        let addr = loc.address
+        addr.building
+      liveActivityReq =
+        ( case person.liveActivityToken of
+            Just _liveActivityToken ->
+              Just $
+                FCMType.LiveActivityReq
+                  { liveActivityToken = _liveActivityToken,
+                    liveActivityReqType = "update",
+                    liveActivityNotificationType = "TRIP_UPDATED",
+                    liveActivityContentState =
+                      FCMType.LiveActivityContentState
+                        { activityStatus = "ONRIDE",
+                          driverInfo = Nothing,
+                          bookingInfo =
+                            Just $
+                              FCMType.BookingInfo
+                                { vehicleColor = Nothing,
+                                  vehicleName = Nothing,
+                                  vehicleNumber = Nothing,
+                                  vehicleVariant = Just (show ride.vehicleVariant),
+                                  source = Nothing,
+                                  destination = toLocationDestination,
+                                  estimatedFare = Just (show booking.estimatedFare)
+                                },
+                          timerDuration = Nothing,
+                          customMessage = Nothing
+                        },
+                    liveActivityApnsPriority = "10"
+                  }
+            _ -> Nothing
+        )
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
 
 --"Destination and Fare Updated" "Your edit request was accepted by your driver!"
 
@@ -1089,7 +1369,7 @@ notifyAboutScheduledRide booking title body = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SCHEDULED_RIDE_REMINDER person.merchantOperatingCityId
   let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
-  let notificationData =
+      notificationData =
         Notification.NotificationReq
           { category = Notification.SCHEDULED_RIDE_REMINDER,
             subCategory = Nothing,
@@ -1103,7 +1383,7 @@ notifyAboutScheduledRide booking title body = do
             ttl = Nothing,
             sound = notificationSound
           }
-  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
 
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do
