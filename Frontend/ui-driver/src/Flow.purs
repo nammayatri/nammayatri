@@ -185,6 +185,7 @@ import Screens.NotificationsScreen.Controller (notificationTransformer, notifisD
 import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
+import Screens (ScreenName(..)) as Screen
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -1636,6 +1637,7 @@ driverProfileFlow = do
     GO_TO_EXTRA_CHARGE_INFO_SCREEN -> do
       extraChargeInfoScreenFlow
       driverProfileFlow
+    GO_TO_METER_RIDE_SCREEN_FROM_PROFILE -> meterRideScreenFlow
 
 documentDetailsScreen :: FlowBT String Unit
 documentDetailsScreen = do
@@ -4831,7 +4833,9 @@ meterRideScreenFlow = do
   action <- UI.meterRideScreen
   case action of
     MRSO.ENTER_DESTINATION state -> meterScreenFlow
-    MRSO.GO_TO_DRIVER_PROFILE state -> driverProfileFlow
+    MRSO.GO_TO_DRIVER_PROFILE state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{data{goBackTo = Screen.METER_RIDE_SCREEN}})
+      driverProfileFlow
     MRSO.END_METER_RIDE state -> do
       case state.data.ridesInfo of
         Just (RidesInfo rideInfo) -> do 
