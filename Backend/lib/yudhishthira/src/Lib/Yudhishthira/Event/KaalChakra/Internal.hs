@@ -2,6 +2,9 @@ module Lib.Yudhishthira.Event.KaalChakra.Internal
   ( Handle (..),
     kaalChakraEvent,
     clearEventData,
+    canRetry,
+    decrChakraBatchNumber,
+    resetRetryCounter,
     updateUserTagsHandler,
     runQueryRequestTemplate,
     ChakraEvent,
@@ -596,11 +599,26 @@ delChakraEventId chakra = Hedis.del (mkChakraEventIdKey chakra)
 batchNumberKey :: Yudhishthira.Chakra -> Text
 batchNumberKey chakra = "kaal_chkra_batch_number:" <> show chakra
 
+maxRetriesAllowedKey :: Text
+maxRetriesAllowedKey = "maxRetriesAllowedKeyForChakraJobs"
+
+retryCounter :: Yudhishthira.Chakra -> Text
+retryCounter chakra = "retryCounter:" <> show chakra
+
 resetChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m ()
 resetChakraBatchNumber = Hedis.del . batchNumberKey
+
+resetRetryCounter :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m ()
+resetRetryCounter = Hedis.del . retryCounter
 
 decrChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Int
 decrChakraBatchNumber = fmap fromIntegral . (\a -> Hedis.decr a <* Hedis.expire a 64800) . batchNumberKey
 
 nextChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Int
 nextChakraBatchNumber = fmap fromIntegral . (\a -> Hedis.incr a <* Hedis.expire a 64800) . batchNumberKey
+
+canRetry :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Bool
+canRetry chakra = do
+  retriedTimes :: Integer <- (\a -> Hedis.incr a <* Hedis.expire a 64800) $ retryCounter chakra
+  maxRetriesAllowed :: Integer <- fromMaybe 5 <$> Hedis.safeGet maxRetriesAllowedKey
+  pure $ retriedTimes < maxRetriesAllowed
