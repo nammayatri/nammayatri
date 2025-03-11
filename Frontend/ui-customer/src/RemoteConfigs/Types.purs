@@ -150,6 +150,13 @@ type CancellationThreshold = {
   percentage :: Number
 }
 
+type VehicleEnquiryBannerConfigs = {
+  auto :: Maybe EnquiryBannerConfigs
+, car :: Maybe EnquiryBannerConfigs
+, ambulance :: Maybe EnquiryBannerConfigs
+, bike :: Maybe EnquiryBannerConfigs
+}
+
 type EnquiryBannerConfigs = {
   question :: Maybe EnquiryBannerConfig
 , firstBtnBanner :: Maybe EnquiryBannerConfig
