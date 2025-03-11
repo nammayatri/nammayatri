@@ -41,6 +41,8 @@ import Common.Styles.Colors as Colors
 import ConfigProvider as CP
 import Constants as CS
 import Helpers.Utils as HU
+import Common.RemoteConfig.Utils as CommonRC
+import Common.RemoteConfig.Types (FeaturesConfigData(..))
 
 screen :: ST.BookingOptionsScreenState -> LoggableScreen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -734,7 +736,7 @@ rateCardBannerView push state =
   , rippleColor Color.rippleShade
   , gradient (Linear 90.0 [Colors.darkGradientBlue, Color.lightGradientBlue])
   , onClick push $ const $ RateCardBannerClick
-  , visibility $ MP.boolToVisibility state.props.rateCardLoaded
+  , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && showRateCard
   ][  relativeLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -782,3 +784,8 @@ rateCardBannerView push state =
         bgColor = if peakTime then Color.green900 else Color.blue800
         cornerRad = if peakTime then 8.0 else 24.0
         txt = if peakTime then "↑  Peak" else CP.getCurrency CS.appConfig
+        
+        showRateCard :: Boolean
+        showRateCard = 
+          let (FeaturesConfigData featuresRemoteConfig) = CommonRC.featuresConfigData (getValueToLocalStore DRIVER_LOCATION)
+          in featuresRemoteConfig.enableDriverRateCard == Just true
