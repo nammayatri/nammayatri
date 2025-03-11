@@ -66,6 +66,7 @@ import Data.Array as DA
 import Types.App
 import Engineering.Helpers.Commons as EHC
 import Mobility.Prelude(boolToInt)
+import Screens (ScreenName(..)) as Screen
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -258,6 +259,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToReferralScreen DriverProfileScreenState
                     | GoToLogout DriverProfileScreenState
                     | GoBack DriverProfileScreenState
+                    | GotoMeterRideScreen DriverProfileScreenState
                     | ActivatingOrDeactivatingRC DriverProfileScreenState
                     | DeletingRc DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
@@ -365,7 +367,9 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
                                 else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
-                                else exit $ GoBack state
+                                else case state.data.goBackTo of 
+                                      Screen.METER_RIDE_SCREEN -> exit $ GotoMeterRideScreen state{data{goBackTo = Screen.HOME_SCREEN}}
+                                      _ -> exit $ GoBack state
 
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
