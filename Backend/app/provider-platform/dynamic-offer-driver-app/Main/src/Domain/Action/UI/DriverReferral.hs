@@ -22,6 +22,7 @@ import qualified Kernel.Utils.Text as TU
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DriverReferral as CQD
 import qualified Storage.Queries.DriverReferral as QRD
+import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
@@ -87,11 +88,16 @@ generateReferralCode ::
     EsqDBFlow m r,
     MonadTime m
   ) =>
-  SP.Role ->
+  Maybe SP.Role ->
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m GenerateReferralCodeRes
-generateReferralCode role (driverId, merchantId, merchantOpCityId) = do
+generateReferralCode mbRole (driverId, merchantId, merchantOpCityId) = do
   mbReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
+  role <- case mbRole of
+    Just role -> pure role
+    Nothing -> do
+      person <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      pure person.role
 
   case mbReferralCodeWithDriver of
     Just driverReferral -> pure $ GenerateReferralCodeRes driverReferral.referralCode.getId

@@ -8,7 +8,6 @@ import qualified Domain.Types.FleetOperatorAssociation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,12 +19,6 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation] -> m ())
 createMany = traverse_ create
-
-deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
-deleteByOperatorId operatorId = do deleteWithKV [Se.Is Beam.operatorId $ Se.Eq operatorId]
-
-findAllOperatorByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation])
-findAllOperatorByFleetOwnerId fleetOwnerId = do findAllWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -42,7 +35,9 @@ updateByPrimaryKey (Domain.Types.FleetOperatorAssociation.FleetOperatorAssociati
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.isActive isActive,
       Se.Set Beam.operatorId operatorId,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -58,7 +53,9 @@ instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAsso
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
             operatorId = operatorId,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
@@ -71,5 +68,7 @@ instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssoci
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
         Beam.operatorId = operatorId,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

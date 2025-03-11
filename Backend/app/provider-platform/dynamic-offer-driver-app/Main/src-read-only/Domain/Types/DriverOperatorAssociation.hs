@@ -4,6 +4,8 @@
 module Domain.Types.DriverOperatorAssociation where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -17,6 +19,8 @@ data DriverOperatorAssociation = DriverOperatorAssociation
     id :: Kernel.Types.Id.Id Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation,
     isActive :: Kernel.Prelude.Bool,
     operatorId :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

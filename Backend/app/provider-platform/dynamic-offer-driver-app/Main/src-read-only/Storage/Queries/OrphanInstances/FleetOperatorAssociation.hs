@@ -24,7 +24,9 @@ instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAsso
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
             operatorId = operatorId,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            merchantId = fmap Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = fmap Kernel.Types.Id.Id merchantOperatingCityId
           }
 
 instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
@@ -37,5 +39,7 @@ instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssoci
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
         Beam.operatorId = operatorId,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = fmap Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = fmap Kernel.Types.Id.getId merchantOperatingCityId
       }

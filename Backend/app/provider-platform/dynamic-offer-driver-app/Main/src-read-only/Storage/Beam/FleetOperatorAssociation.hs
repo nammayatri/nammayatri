@@ -11,14 +11,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetOperatorAssociationT f = FleetOperatorAssociationT
-  { associatedOn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    associatedTill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    fleetOwnerId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    operatorId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { associatedOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    fleetOwnerId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    operatorId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +30,6 @@ instance B.Table FleetOperatorAssociationT where
 
 type FleetOperatorAssociation = FleetOperatorAssociationT Identity
 
-$(enableKVPG (''FleetOperatorAssociationT) [('id)] [[('fleetOwnerId)], [('operatorId)]])
+$(enableKVPG ''FleetOperatorAssociationT ['id] [['fleetOwnerId], ['operatorId]])
 
-$(mkTableInstances (''FleetOperatorAssociationT) "fleet_operator_association")
+$(mkTableInstances ''FleetOperatorAssociationT "fleet_operator_association")

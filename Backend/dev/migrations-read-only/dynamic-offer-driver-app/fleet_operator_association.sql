@@ -9,3 +9,10 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_association ADD COLUMN is_acti
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_association ADD COLUMN operator_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_association ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_association ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_association ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_association ADD COLUMN merchant_id character varying(36) ;

@@ -18,22 +18,10 @@ DriverOperatorAssociation:
 
   constraints:
     id: PrimaryKey
-    operatorId: SecondaryKey
-    driverId: SecondaryKey
-
-  queries:
-    findAllOperatorByDriverId:
-      kvFunction: findAllWithKV
-      where: driverId
-
-    deleteByOperatorId:
-      kvFunction: deleteWithKV
-      where: operatorId
+    operatorId: "!SecondaryKey"
+    driverId: "!SecondaryKey"
 
   sqlType:
     id: text
     operatorId: text
     driverId: text
-
-
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

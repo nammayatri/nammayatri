@@ -451,8 +451,8 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-makeDriverOperatorAssociation :: (MonadFlow m) => Id SP.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
-makeDriverOperatorAssociation driverId operatorId end = do
+makeDriverOperatorAssociation :: (MonadFlow m) => Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Id SP.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
+makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -464,7 +464,9 @@ makeDriverOperatorAssociation driverId operatorId end = do
         associatedOn = Just now,
         associatedTill = end,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOpCityId
       }
 
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> Maybe Text -> m SP.Person
@@ -475,7 +477,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig mbOperatorId mbFleetOwnerId
 
   whenJust mbOperatorId $ \operatorId -> do
-    driverOperatorAssData <- makeDriverOperatorAssociation person.id operatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId person.id operatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     void $ QDOA.create driverOperatorAssData
 
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
@@ -504,7 +506,7 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   fork "generating the referral code for driver" $ do
-    void $ generateReferralCode person.role (person.id, person.merchantId, Id merchantOperatingCityId)
+    void $ generateReferralCode (Just person.role) (person.id, person.merchantId, Id merchantOperatingCityId)
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken

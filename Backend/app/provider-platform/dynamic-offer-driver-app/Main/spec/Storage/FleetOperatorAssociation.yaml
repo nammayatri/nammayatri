@@ -18,22 +18,10 @@ FleetOperatorAssociation:
 
   constraints:
     id: PrimaryKey
-    operatorId: SecondaryKey
-    fleetOwnerId: SecondaryKey
-
-  queries:
-    findAllOperatorByFleetOwnerId:
-      kvFunction: findAllWithKV
-      where: fleetOwnerId
-
-    deleteByOperatorId:
-      kvFunction: deleteWithKV
-      where: operatorId
+    operatorId: "!SecondaryKey"
+    fleetOwnerId: "!SecondaryKey"
 
   sqlType:
     id: text
     operatorId: text
     fleetOwnerId: text
-
-
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

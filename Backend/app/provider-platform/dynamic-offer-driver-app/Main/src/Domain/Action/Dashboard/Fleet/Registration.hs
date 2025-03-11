@@ -123,8 +123,8 @@ fleetOwnerRegister req = do
           QFOI.updateGstImageId (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
-makeFleetOperatorAssociation :: (MonadFlow m) => Text -> Text -> Maybe UTCTime -> m FleetOperatorAssociation
-makeFleetOperatorAssociation fleetOwnerId operatorId end = do
+makeFleetOperatorAssociation :: (MonadFlow m) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Maybe UTCTime -> m FleetOperatorAssociation
+makeFleetOperatorAssociation merchantId merchantOpCityId fleetOwnerId operatorId end = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -136,7 +136,9 @@ makeFleetOperatorAssociation fleetOwnerId operatorId end = do
         associatedOn = Just now,
         associatedTill = end,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOpCityId
       }
 
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow DP.Person
@@ -148,11 +150,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
   createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber mbReferredOperatorId
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
-    fleetOperatorAssData <- makeFleetOperatorAssociation (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    fleetOperatorAssData <- makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
     incrementFleetOwnerCount (Id referredOperatorId)
   whenJust mbIsGenerateRefEntry $ \isGenerateRefEntry -> when isGenerateRefEntry $ do
-    void $ DR.generateReferralCode DP.FLEET_OWNER (person.id, merchantId, merchantOpCityId)
+    void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()

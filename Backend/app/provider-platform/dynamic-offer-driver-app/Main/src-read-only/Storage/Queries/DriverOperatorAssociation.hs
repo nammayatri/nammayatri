@@ -5,11 +5,9 @@
 module Storage.Queries.DriverOperatorAssociation where
 
 import qualified Domain.Types.DriverOperatorAssociation
-import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -21,12 +19,6 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation] -> m ())
 createMany = traverse_ create
-
-deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
-deleteByOperatorId operatorId = do deleteWithKV [Se.Is Beam.operatorId $ Se.Eq operatorId]
-
-findAllOperatorByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation]))
-findAllOperatorByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -43,7 +35,9 @@ updateByPrimaryKey (Domain.Types.DriverOperatorAssociation.DriverOperatorAssocia
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.isActive isActive,
       Se.Set Beam.operatorId operatorId,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -59,7 +53,9 @@ instance FromTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAs
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
             operatorId = operatorId,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
 
 instance ToTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation where
@@ -72,5 +68,7 @@ instance ToTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAsso
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
         Beam.operatorId = operatorId,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

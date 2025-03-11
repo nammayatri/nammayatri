@@ -33,4 +33,4 @@ createDriverReferral :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperating
 createDriverReferral (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.createDriverReferral (driverId, merchantId, merchantOpCityId) False SP.DRIVER
 
 generateReferralCode :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.GenerateReferralCodeRes
-generateReferralCode = withFlowHandlerAPI . Domain.generateReferralCode SP.DRIVER
+generateReferralCode = withFlowHandlerAPI . Domain.generateReferralCode Nothing
