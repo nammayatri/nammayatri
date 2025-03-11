@@ -3342,11 +3342,12 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnCli
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         let
           city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-          enquiryRemoteConfig = RC.getEnquiryBannerConfig city
+          vehicleCat = RC.getCategoryFromVariant state.data.vehicleVariant
+          mbEnquiryRemoteConfig = RC.getEnquiryBannerConfig city vehicleCat
           postIssueBody = API.PostIssueReqBody {
-            optionId : enquiryRemoteConfig.optionId --Just "f2be173d-4ea7-46e1-8962-6e64f5293232"
+            optionId : maybe Nothing (\enquiryRemoteConfig -> enquiryRemoteConfig.optionId ) mbEnquiryRemoteConfig
           , rideId : Just state.data.driverInfoCardState.rideId
-          , categoryId : enquiryRemoteConfig.categoryId --"a3267872-0748-4b33-8b7b-229dc5cb102c"
+          , categoryId : maybe "" (\enquiryRemoteConfig -> enquiryRemoteConfig.categoryId ) mbEnquiryRemoteConfig
           , mediaFiles : []
           , description : ""
           , chats : []

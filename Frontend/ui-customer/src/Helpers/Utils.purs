@@ -92,7 +92,7 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
 import Mobility.Prelude
-import MerchantConfig.Types 
+import MerchantConfig.Types
 import Common.Resources.Constants (assetDomain)
 import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Decode.Parser as ADP
@@ -111,7 +111,7 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Debug 
+import Debug
 import RemoteConfig as RC
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -159,17 +159,17 @@ foreign import getISTHours :: String -> Int
 foreign import getISTMinutes :: String -> Int
 foreign import getISTSeconds :: String -> Int
 
-foreign import getUTCDate :: String -> Int 
+foreign import getUTCDate :: String -> Int
 
-foreign import getUTCMonth :: String -> Int 
+foreign import getUTCMonth :: String -> Int
 
-foreign import getUTCFullYear :: String -> Int 
+foreign import getUTCFullYear :: String -> Int
 
-foreign import getUTCHours :: String -> Int 
+foreign import getUTCHours :: String -> Int
 
-foreign import getUTCMinutes :: String -> Int 
+foreign import getUTCMinutes :: String -> Int
 
-foreign import getUTCSeconds :: String -> Int 
+foreign import getUTCSeconds :: String -> Int
 
 foreign import makePascalCase :: String -> String
 
@@ -244,21 +244,21 @@ convertUTCToISTAnd12HourFormat inputTime = do
     [h, m, _] -> do
       hours <- fromString h
       minutes <- fromString m
-      
+
       -- Add 5 hours and 30 minutes
       let adjustRemainder = if minutes >= 30 then 1 else 0
           adjustedHours24 = (hours + 5 + adjustRemainder) `mod` 24
           adjustedMinutes = (minutes + 30) `mod` 60
-      
+
       -- Convert to 12-hour format with AM/PM
       let {adjustedHours, period} = if adjustedHours24 < 12 then {adjustedHours: adjustedHours24, period: "AM"} else {adjustedHours: adjustedHours24 - 12, period: "PM"}
-      
+
       let paddingHours = if adjustedHours < 10 then "0" else ""
           paddingMinutes = if adjustedMinutes < 10 then "0" else ""
 
       -- Format the adjusted time
       let adjustedTime = paddingHours <> show adjustedHours <> ":" <> paddingMinutes <> show adjustedMinutes <> " " <> period
-  
+
       pure adjustedTime
     _ -> Nothing
 
@@ -271,10 +271,10 @@ convertTo12HourFormat time = do
     [h, m, _] -> do
       hours <- fromString h
       minutes <- fromString m
-      let 
+      let
         {adjustedHours, period} = if hours < 12 then {adjustedHours: hours, period: "AM"} else {adjustedHours: hours - 12, period: "PM"}
         adjustedMinutes = (if minutes < 10 then "0" else "") <> show minutes
-        adjustedTime = show adjustedHours <> ":" <> adjustedMinutes <> " " <> period      
+        adjustedTime = show adjustedHours <> ":" <> adjustedMinutes <> " " <> period
       pure adjustedTime
     _ -> Nothing
 
@@ -295,7 +295,7 @@ getMinutesBetweenTwoUTChhmmss time1 time2 = do
             Just $ if cal1 > cal2 then cal1 - cal2 else cal2 - cal1
           _ -> Nothing
       _ -> Nothing
-  
+
 otpRule :: Reader.OtpRule
 otpRule =
   let config = getAppConfig appConfig
@@ -409,7 +409,7 @@ fetchMetroStations objName = do
   (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStore' objName Just Nothing
   void $ pure $ spy "fetchMetroStations: maybeEncodedState" maybeEncodedState
   case maybeEncodedState of
-    
+
     Just encodedState -> do
       case runExcept (decodeJSON encodedState) of
         Right obj -> pure $ Just obj
@@ -437,9 +437,9 @@ addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array 
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr = 
+addToRecentSearches prediction predictionArr =
     let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr) 
+      in (if (checkPrediction prediction' predictionArr)
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
@@ -498,22 +498,22 @@ getDistanceString distanceInMeters decimalPoint
   | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
   | otherwise = show distanceInMeters <> " m"
 
--- threshold is in kms 
-updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState 
-updateLocListWithDistance arr currLat currLon useThreshold threshold =  
+-- threshold is in kms
+updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState
+updateLocListWithDistance arr currLat currLon useThreshold threshold =
   arr
   # map updateItemDistance
   # filter withinThreshold
   # sortByFrequency
 
   where
-    updateItemDistance item = 
-      let 
+    updateItemDistance item =
+      let
         distance = round $ getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) * 1000.0
-      in 
+      in
         item { actualDistance = Just distance, distance = Just $ getDistanceString distance 1 }
 
-    withinThreshold item = 
+    withinThreshold item =
       maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
 
     sortByFrequency = sortBy (comparing (\item -> negate (fromMaybe 0 item.frequencyCount)))
@@ -549,7 +549,7 @@ userCommonAssetBaseUrl :: String
 userCommonAssetBaseUrl = "https://" <> assetDomain <> "/beckn/common/user/"
 
 getAppAssetUrl :: LazyCheck -> String
-getAppAssetUrl lazy = 
+getAppAssetUrl lazy =
   let  appName =  fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
   in if appName == "Mana Yatri" then "https://" <> assetDomain <> "/beckn/manayatri/user/" else getAssetsBaseUrl FunctionCall
 
@@ -597,7 +597,7 @@ reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getVehicleSize :: Unit -> Int
-getVehicleSize unit = 
+getVehicleSize unit =
   let mapConfig = (getAppConfig appConfig).mapConfig
   in mapConfig.vehicleMarkerSize
 
@@ -648,12 +648,12 @@ getGlobalPayload key = do
   maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload
 
 getSearchType :: Unit -> String
-getSearchType _ = 
+getSearchType _ =
   let mBPayload = getGlobalPayload globalPayload
   in maybe ("normal_search") (\payload -> fromMaybe "normal_search" $ payload ^. _payload ^. _search_type) mBPayload
 
 getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
-getDeepLinkOptions _ = 
+getDeepLinkOptions _ =
   let mBPayload = getGlobalPayload globalPayload
   in maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
 
@@ -661,15 +661,15 @@ isParentView :: LazyCheck -> Boolean
 isParentView lazy = maybe false (\(DeeplinkOptions options) -> fromMaybe false options.parent_view) $ getDeepLinkOptions lazy
 
 showTitle :: LazyCheck -> Boolean
-showTitle lazy = maybe true (\(DeeplinkOptions options) -> fromMaybe false options.show_title) $ getDeepLinkOptions lazy 
+showTitle lazy = maybe true (\(DeeplinkOptions options) -> fromMaybe false options.show_title) $ getDeepLinkOptions lazy
 
 getPaymentMethod :: Unit -> String
-getPaymentMethod _ = 
+getPaymentMethod _ =
   let mBPayload = getGlobalPayload globalPayload
   in maybe ("cash") (\payload -> fromMaybe "cash" $ payload ^. _payload ^. _paymentMethod) mBPayload
 
 
-triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 
+triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit
 triggerRideStatusEvent status amount bookingId screen = do
   let (payload :: InnerPayload) = { action : "trip_status"
     , ride_status : Just status
@@ -693,11 +693,11 @@ getVehicleVariantImage :: String -> VehicleViewType -> String
 getVehicleVariantImage variant viewType =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
       city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-  in 
+  in
     if viewType == LEFT_VIEW
-      then do 
+      then do
         case variant of
-          "TAXI"          -> variantConfig.taxi.leftViewImage 
+          "TAXI"          -> variantConfig.taxi.leftViewImage
           "TAXI_PLUS"     -> variantConfig.taxiPlus.leftViewImage
           "SEDAN"         -> variantConfig.sedan.leftViewImage
           "SUV"           -> variantConfig.suv.leftViewImage
@@ -705,14 +705,14 @@ getVehicleVariantImage variant viewType =
           "ECO"           -> variantConfig.hatchback.leftViewImage
           "COMFY"         -> variantConfig.sedan.leftViewImage
           "PREMIUM"       -> variantConfig.sedan.leftViewImage
-          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of 
-                              _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of
+                              _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.leftViewImage
-          "BOOK_ANY"      -> case getMerchant FunctionCall of 
-                              _ -> case city of 
+          "BOOK_ANY"      -> case getMerchant FunctionCall of
+                              _ -> case city of
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
@@ -724,7 +724,7 @@ getVehicleVariantImage variant viewType =
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
-          "TAXI"          -> variantConfig.taxi.image 
+          "TAXI"          -> variantConfig.taxi.image
           "TAXI_PLUS"     -> variantConfig.taxiPlus.image
           "SEDAN"         -> variantConfig.sedan.image
           "SUV"           -> variantConfig.suv.image
@@ -732,15 +732,15 @@ getVehicleVariantImage variant viewType =
           "ECO"           -> variantConfig.hatchback.image
           "COMFY"         -> variantConfig.sedan.image
           "PREMIUM"       -> variantConfig.sedan.image
-          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of 
-                              _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+          _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> case city of
+                              _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
+                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.image
-          "BOOK_ANY"      -> case getMerchant FunctionCall of 
+          "BOOK_ANY"      -> case getMerchant FunctionCall of
                               YATRISATHI -> variantConfig.bookAny.image
-                              _ -> case city of 
+                              _ -> case city of
                                       Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
                                       _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
                                       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
@@ -749,7 +749,7 @@ getVehicleVariantImage variant viewType =
           "BIKE"          -> variantConfig.bike.image
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
-        
+
 getVariantRideType :: String -> String
 getVariantRideType variant =
   case getMerchant FunctionCall of
@@ -766,19 +766,19 @@ getTitleConfig :: forall w. String -> {text :: String , color :: String}
 getTitleConfig vehicleVariant =
   case vehicleVariant of
         "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
-        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
+        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800
         _ | DA.elem vehicleVariant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
-        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
-  where mkReturnObj text' color' = 
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800
+  where mkReturnObj text' color' =
           {
             text : text',
             color : color'
           }
 
 cityCodeMap :: Array (Tuple (Maybe String) City)
-cityCodeMap = 
+cityCodeMap =
   [ Tuple (Just "std:080") Bangalore
   , Tuple (Just "std:033") Kolkata
   , Tuple (Just "std:001") Paris
@@ -818,11 +818,11 @@ cityCodeMap =
   , Tuple Nothing AnyCity
   ]
 
-quoteModalVariantImage :: String -> String 
-quoteModalVariantImage variant = 
-  let 
+quoteModalVariantImage :: String -> String
+quoteModalVariantImage variant =
+  let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-  in 
+  in
     if variant == "AUTO_RICKSHAW"
       then case city of
         Bangalore -> "ny_ic_no_quotes_auto_bang_del"
@@ -847,29 +847,29 @@ getCancellationImage vehicleVariant distance =
     "AMBULANCE" -> "ny_ic_driver_started_ambulance"
     _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
-getAutoRickshawNearImage  = 
+getAutoRickshawNearImage  =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
-    case city of 
+    case city of
     _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_driver_near_auto_yellow"
     Hyderabad -> "ny_ic_driver_near_auto_black"
     _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_driver_near_auto_black"
     _ -> "ny_ic_driver_near_auto_green"
 
 getAutoRickshawStartedImage :: String
-getAutoRickshawStartedImage  = 
+getAutoRickshawStartedImage  =
   let
    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
-      case city of 
+      case city of
        _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_driver_started_auto_yellow"
        Hyderabad -> "ny_ic_driver_started_auto_black"
        _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
- 
+
 getCityFromString :: String -> City
 getCityFromString cityString =
-  case cityString of 
+  case cityString of
     "Bangalore" -> Bangalore
     "Kolkata" -> Kolkata
     "Paris" -> Paris
@@ -903,41 +903,41 @@ getCityFromString cityString =
 
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =
-  let 
+  let
     cityCodeTuple = find (\ tuple -> (fst tuple) == mbCityCode) cityCodeMap
   in maybe AnyCity (\tuple -> snd tuple) cityCodeTuple
 
 getCityCodeFromCity :: City -> Maybe String
 getCityCodeFromCity city =
-    let 
+    let
       cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
     in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
 
-getCard :: CardType -> String 
-getCard cardType = case cardType of 
+getCard :: CardType -> String
+getCard cardType = case cardType of
   HOME_TAG -> "Home"
   WORK_TAG -> "Work"
   _ -> ""
 
 getSavedLocationByTag :: Array LocationListItemState -> CardType -> Maybe LocationListItemState
-getSavedLocationByTag list tag = 
+getSavedLocationByTag list tag =
   find (\item -> item.tag == getCard tag) list
 
 calculateSavedLocDist :: Array LocationListItemState -> String -> Number -> Number -> Array DistInfo
 calculateSavedLocDist savedLocs excludeTag lat lon =
-  sortBy compareByDistance $ map (\item -> getDistInfo item) $ listAfterExcludedTag excludeTag savedLocs 
-  where 
+  sortBy compareByDistance $ map (\item -> getDistInfo item) $ listAfterExcludedTag excludeTag savedLocs
+  where
     compareByDistance :: DistInfo -> DistInfo -> Ordering
     compareByDistance a b = compare (a.distanceDiff) (b.distanceDiff)
 
     getDistInfo :: LocationListItemState -> DistInfo
-    getDistInfo item = do 
+    getDistInfo item = do
       let x = getDistanceBwCordinates (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) lat lon
-      {locationName : item.tag, distanceDiff : x} 
+      {locationName : item.tag, distanceDiff : x}
 
 
 isValidLocation :: Array LocationListItemState -> String -> String -> Array DistInfo
-isValidLocation savedLocations excludeTag placeId = 
+isValidLocation savedLocations excludeTag placeId =
   map (\item -> {locationName : item.tag, distanceDiff : 100.0}) validList
   where
     validList :: Array LocationListItemState
@@ -950,7 +950,7 @@ isValidLocation savedLocations excludeTag placeId =
 listAfterExcludedTag :: String -> Array LocationListItemState -> Array LocationListItemState
 listAfterExcludedTag excludeTag = filter (\item -> (DS.toLower item.tag) /= (DS.toLower excludeTag))
 
-getDistInfo savedLoc excludeLocation lat lon placeId = do 
+getDistInfo savedLoc excludeLocation lat lon placeId = do
   let distArr = calculateSavedLocDist savedLoc excludeLocation lat lon
       rslt = isValidLocation savedLoc excludeLocation placeId
       placeIdExists = maybe { locationName: "", distanceDiff : 1.0 } identity $ head rslt
@@ -959,16 +959,16 @@ getDistInfo savedLoc excludeLocation lat lon placeId = do
                       false , _ -> placeIdExists.locationName
                       true  , true -> minDist.locationName
                       _ , _ -> ""
-      tagExists = not (null rslt) || minDist.distanceDiff <= 0.020 
+      tagExists = not (null rslt) || minDist.distanceDiff <= 0.020
   {tagExists, locExistsAs}
 
-getExistingTags :: Array LocationListItemState -> Array String 
+getExistingTags :: Array LocationListItemState -> Array String
 getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfigs cityName = do
   fromMaybe defaultCityConfig $ find (\item -> item.cityName == cityName) cityConfigs
-  
+
 getDefaultPixelSize :: Int -> Int
 getDefaultPixelSize size =
   if os == "IOS" then size
@@ -978,12 +978,12 @@ getDefaultPixelSize size =
 
 
 formatFareType :: String -> String
-formatFareType fareType = 
+formatFareType fareType =
   let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
   in
   spaceSeparatedPascalCase str
 
-newtype CityMetroConfig = CityMetroConfig { 
+newtype CityMetroConfig = CityMetroConfig {
     logoImage :: String
   , title :: String
   , mapImage :: String
@@ -1003,8 +1003,8 @@ getMetroConfigFromAppConfig config city = do
     Nothing -> {
         cityName : ""
       , cityCode : ""
-      , customEndTime : "01:00:00" 
-      , customDates : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"] 
+      , customEndTime : "01:00:00"
+      , customDates : ["23/04/2024","28/04/2024","01/05/2024","12/05/2024"]
       , metroStationTtl : 10080
       , metroHomeBannerImage : ""
       , metroBookingBannerImage : ""
@@ -1018,7 +1018,7 @@ getMetroConfigFromAppConfig config city = do
     Just cfg -> cfg
 
 getMetroConfigFromCity :: City -> Maybe MetroBookingConfigRes -> CityMetroConfig
-getMetroConfigFromCity city fcResponse = 
+getMetroConfigFromCity city fcResponse =
     let
         bookingStartTime = maybe "04:30:00" (\(MetroBookingConfigRes r) -> r.bookingStartTime) fcResponse
         bookingEndTime = maybe "22:30:00" (\(MetroBookingConfigRes r) -> r.bookingEndTime) fcResponse
@@ -1027,7 +1027,7 @@ getMetroConfigFromCity city fcResponse =
         isEventOngoing = maybe Nothing (\(MetroBookingConfigRes r) -> r.isEventOngoing) fcResponse
 
         convertedBookingStartTime = EHC.convertUTCtoISC bookingStartTime "HH:mm:ss"
-        convertedBookingEndTime = 
+        convertedBookingEndTime =
             if elem (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD/MM/YYYY") customDates
             then fromMaybe (EHC.convertUTCtoISC bookingEndTime "HH:mm:ss") customEndTime
             else EHC.convertUTCtoISC bookingEndTime "HH:mm:ss"
@@ -1063,7 +1063,7 @@ getMetroConfigFromCity city fcResponse =
                 (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 config
         _ ->
-            mkCityBasedConfig "" [] "" config 
+            mkCityBasedConfig "" [] "" config
   where
     mkCityBasedConfig title termsAndConditions errorPopupTitle config =
       CityMetroConfig
@@ -1081,13 +1081,13 @@ getMetroConfigFromCity city fcResponse =
 
 
 
-        
+
 getImageBasedOnCity :: String -> String
 getImageBasedOnCity image =
   let cityStr = getValueToLocalStore CUSTOMER_LOCATION
       city = getCityFromString cityStr
   in
-  if city == AnyCity 
+  if city == AnyCity
     then fetchImage FF_ASSET image
     else fetchImage FF_ASSET $ image <> "_" <> DS.toLower cityStr
 
@@ -1096,10 +1096,10 @@ intersection arr1 arr2 =
   filter (\x -> elem x arr2) arr1
 
 -- Deprecated function (using remote configs instead) 11th July 2024
-getAllServices :: LazyCheck -> Array String 
-getAllServices dummy = 
+getAllServices :: LazyCheck -> Array String
+getAllServices dummy =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-  in case city of 
+  in case city of
     Bangalore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Tumakuru -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Hyderabad -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
@@ -1116,9 +1116,9 @@ getAllServices dummy =
 
 -- Deprecated function (using remote configs instead) 11th July 2024
 getSelectedServices :: String -> Array String
-getSelectedServices preferedVarient = 
+getSelectedServices preferedVarient =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-  in case city of 
+  in case city of
     Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Hyderabad -> ["Non-AC Mini", "AC Mini", "Sedan"]
@@ -1131,25 +1131,25 @@ getSelectedServices preferedVarient =
     Pondicherry -> ["Eco", "Auto"]
     Noida -> ["AC Mini", "AC Sedan"]
     Gurugram -> ["AC Mini", "AC Sedan"]
-    _ ->  ["Eco", "Hatchback", "Sedan"] 
+    _ ->  ["Eco", "Hatchback", "Sedan"]
 
 encodeBookingTimeList :: Array BookingTime -> String
 encodeBookingTimeList bookingTimeList = do
   AC.stringify $ AE.encodeJson bookingTimeList
 
 decodeBookingTimeList :: LazyCheck -> (Array BookingTime)
-decodeBookingTimeList _ = 
-  fromMaybe [] $ 
+decodeBookingTimeList _ =
+  fromMaybe [] $
     case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore BOOKING_TIME_LIST)) of
       Right resp -> Just resp
       Left err   -> Nothing
 
 invalidBookingTime :: String -> Maybe Int -> Maybe BookingTime
 invalidBookingTime rideStartTime maybeEstimatedDuration =
-    if null bookingTimeList 
-      then Nothing 
+    if null bookingTimeList
+      then Nothing
       else fromMaybe Nothing $ head $ filter (isJust) $ map (overlappingRide rideStartTime maybeEstimatedDuration) bookingTimeList
-          
+
   where
     overlappingRide :: String -> Maybe Int -> BookingTime -> Maybe BookingTime
     overlappingRide rideTime maybeEstimatedDuration bookingDetails =
@@ -1184,7 +1184,7 @@ type Markers = {
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING | ADVANCED_RIDE_TRACKING
 
 getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Maybe Stage -> Markers
-getRouteMarkers variant city trackingType fareProductType currentStage = 
+getRouteMarkers variant city trackingType fareProductType currentStage =
   { srcMarker : mkSrcMarker city variant currentStage,
     destMarker : mkDestMarker trackingType fareProductType
   }
@@ -1195,7 +1195,7 @@ mkSrcMarker city variant currentStage =
   in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "ny_ic_blue_marker" -- Added local resource check for avoiding native crash
 
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
-getCitySpecificMarker city variant currentStage = 
+getCitySpecificMarker city variant currentStage =
     case variant of
         _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getAutoImage city
         "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
@@ -1206,8 +1206,8 @@ getCitySpecificMarker city variant currentStage =
         _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String
-mkDestMarker trackingType fareProductType = 
-    case trackingType of 
+mkDestMarker trackingType fareProductType =
+    case trackingType of
         RIDE_TRACKING -> if fareProductType == RENTAL then "ny_ic_blue_marker" else "ny_ic_dest_marker"
         DRIVER_TRACKING -> "ny_ic_src_marker"
         ADVANCED_RIDE_TRACKING -> "ny_ic_drop_loc_marker"
@@ -1226,7 +1226,7 @@ normalRoute _ = {
 }
 
 getLanguageBasedCityName :: String -> String
-getLanguageBasedCityName cityName = 
+getLanguageBasedCityName cityName =
   case getCityFromString cityName of
     Bangalore -> getString BANGALORE
     Kolkata -> getString KOLKATA
@@ -1249,11 +1249,11 @@ getLanguageBasedCityName cityName =
     Thrissur -> getString THRISSUR
     Trivandrum -> getString TRIVANDRUM
     Vellore -> getString VELLORE
-    Hosur -> getString HOSUR 
-    Madurai -> getString MADURAI 
-    Thanjavur -> getString THANJAVUR 
-    Tirunelveli -> getString TIRUNELVELI 
-    Salem -> getString SALEM 
+    Hosur -> getString HOSUR
+    Madurai -> getString MADURAI
+    Thanjavur -> getString THANJAVUR
+    Tirunelveli -> getString TIRUNELVELI
+    Salem -> getString SALEM
     Trichy -> getString TRICHY
     Davanagere -> getString DAVANAGERE
     Shivamogga -> getString SHIVAMOGGA
@@ -1294,8 +1294,8 @@ mkMapRouteConfig srcIcon destIcon isAnim animConfig =
     , isAnimation = isAnim
     , autoZoom = true
     , polylineAnimationConfig = animConfig
-    } 
-    
+    }
+
 formatDuration :: Int -> String
 formatDuration duration =
   let days = duration / (60 * 60 * 24)
@@ -1309,39 +1309,39 @@ formatDuration duration =
   in daysStr <> hoursStr <> minutesStr
 
 overlappingRides :: String -> Maybe String -> Int -> Maybe RideBookingListRes -> { overLapping :: Boolean , overLappedBooking :: Maybe RideBookingRes}
-overlappingRides rideStartTime maybeRideEndTime overlappingPollingTime savedScheduledRides = do 
-  let 
+overlappingRides rideStartTime maybeRideEndTime overlappingPollingTime savedScheduledRides = do
+  let
     rideEndTime = fromMaybe rideStartTime maybeRideEndTime
-  case savedScheduledRides of 
+  case savedScheduledRides of
       Just (RideBookingListRes response) -> do
-        let 
+        let
           overLappingRide = (DA.find (\item -> isJust (checkOverLap rideStartTime rideEndTime item overlappingPollingTime)) response.list)
-        case overLappingRide of 
+        case overLappingRide of
              Just resp -> { overLapping : true, overLappedBooking : Just resp }
              Nothing   -> { overLapping : false, overLappedBooking : Nothing }
       Nothing -> {overLapping : false , overLappedBooking : Nothing}
-  
+
 
 checkOverLap :: String -> String -> RideBookingRes -> Int -> Maybe RideBookingRes
-checkOverLap rideStartTime rideEndTime bookingResp overlappingPollingTime= do 
-  let 
-    bookingEndTime = calculateBookingEndTime bookingResp 
+checkOverLap rideStartTime rideEndTime bookingResp overlappingPollingTime= do
+  let
+    bookingEndTime = calculateBookingEndTime bookingResp
     (RideBookingRes res) = bookingResp
     rideScheduledTime = fromMaybe (getCurrentUTC "") res.rideScheduledTime
     bookingStartTime = getUTCBeforeNSeconds rideScheduledTime overlappingPollingTime
   if (isRidePossible rideStartTime rideEndTime bookingStartTime bookingEndTime ) then (Just bookingResp) else Nothing
 
-isRidePossible :: String -> String -> String -> String -> Boolean 
-isRidePossible searchStartTime searchEndTime bookingStartTime bookingEndTime = 
-  (bookingStartTime <= searchStartTime && searchStartTime <= bookingEndTime) 
+isRidePossible :: String -> String -> String -> String -> Boolean
+isRidePossible searchStartTime searchEndTime bookingStartTime bookingEndTime =
+  (bookingStartTime <= searchStartTime && searchStartTime <= bookingEndTime)
   || (bookingStartTime <= searchEndTime && searchEndTime <= bookingEndTime)
-  || (searchStartTime <= bookingStartTime && bookingEndTime <= searchEndTime) 
+  || (searchStartTime <= bookingStartTime && bookingEndTime <= searchEndTime)
   || (bookingStartTime <= searchStartTime && searchEndTime <= bookingEndTime)
 
 
 calculateBookingEndTime :: RideBookingRes -> String
 calculateBookingEndTime bookingResp =do
-  let     
+  let
     (RideBookingRes resp) = bookingResp
     (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
     (RideBookingDetails contents) = bookingDetails.contents
@@ -1351,26 +1351,26 @@ calculateBookingEndTime bookingResp =do
     rideScheduledTime = fromMaybe (getCurrentUTC "") resp.rideScheduledTime
     rideScheduledBufferTime = 60
     timeToTravelOneKm = 3
-    returnTime = (fromMaybe rideScheduledTime resp.returnTime) 
-  case fareProductType of 
+    returnTime = (fromMaybe rideScheduledTime resp.returnTime)
+  case fareProductType of
     INTER_CITY -> do
-      let roundTrip = isJust resp.returnTime 
-      case roundTrip of 
+      let roundTrip = isJust resp.returnTime
+      case roundTrip of
         true ->
             let bookingEndTime = getUTCAfterNSeconds returnTime rideScheduledBufferTime
             in bookingEndTime
-        false -> 
-            let 
+        false ->
+            let
               estimatedDistanceInKm = calculateEstimatedDistanceInKm estimatedDistance
               bookingEndTime =  getUTCAfterNSeconds rideScheduledTime $ estimatedDuration + rideScheduledBufferTime
-            in bookingEndTime 
+            in bookingEndTime
     RENTAL ->
           let bookingEndTime = getUTCAfterNSeconds rideScheduledTime (estimatedDuration + rideScheduledBufferTime)
           in bookingEndTime
-    _ -> 
+    _ ->
         let estimatedDistanceInKm = calculateEstimatedDistanceInKm estimatedDistance
             bookingEndTime = getUTCAfterNSeconds rideScheduledTime $ (estimatedDistanceInKm * timeToTravelOneKm * 60) + rideScheduledBufferTime
-        in bookingEndTime 
+        in bookingEndTime
 
 
 calculateEstimatedDistanceInKm :: Maybe Int  -> Int
@@ -1379,8 +1379,8 @@ calculateEstimatedDistanceInKm distance =
    in estimatedDistance `div` 1000
 
 getFareProductTypeByData :: Maybe API.QuoteAPIDetails -> FareProductType
-getFareProductTypeByData quoteDetails = 
-  case quoteDetails of 
+getFareProductTypeByData quoteDetails =
+  case quoteDetails of
     Just (API.OneWaySpecialZoneAPIDetails _) -> ONE_WAY_SPECIAL_ZONE
     Just (API.INTER_CITY _) -> INTER_CITY
     Just (API.RENTAL _) -> RENTAL
@@ -1389,18 +1389,18 @@ getFareProductTypeByData quoteDetails =
     _ -> ONE_WAY
 
 getFareProductType :: String ->  FareProductType
-getFareProductType fareProductType = 
-  case fareProductType of 
+getFareProductType fareProductType =
+  case fareProductType of
     "OneWaySpecialZoneAPIDetails" ->  ONE_WAY_SPECIAL_ZONE
     "INTER_CITY" ->  INTER_CITY
-    "RENTAL" ->  RENTAL 
+    "RENTAL" ->  RENTAL
     "ONE_WAY" ->  ONE_WAY
     "DRIVER_OFFER" ->  DRIVER_OFFER
     _ ->  ONE_WAY
 
 
 
-formatMonth :: Int -> String 
+formatMonth :: Int -> String
 formatMonth x
   | x == 1 = (getString JANUARY)
   | x == 2 = (getString FEBRUARY)
@@ -1417,15 +1417,15 @@ formatMonth x
   | otherwise = "Invalid"
 calculateDateInfo :: Int -> Int -> Int -> Int -> Int -> Int -> { returnTimeUTCString :: String, tripObj :: TripTypeData }
 calculateDateInfo year month day hour minute estDuration =
-  let 
+  let
       hours = estDuration `div` 3600
       remSeconds = estDuration `mod` 3600
-      mins = remSeconds / 60 
+      mins = remSeconds / 60
 
       totalMin = (mins + minute )
       totalHrs = hour + hours + (totalMin `div` 60)
       totalDays = day + (totalHrs `div` 24)
-    
+
       finalMin =  totalMin `mod` 60
       finalHrs =  totalHrs `mod` 24
       finalDay = totalDays
@@ -1433,8 +1433,8 @@ calculateDateInfo year month day hour minute estDuration =
       dateObj = addDaysToDate year (month+1) finalDay
       returnTimeUTCString = unsafePerformEffect $ convertDateTimeConfigToUTC dateObj.year (dateObj.month) dateObj.day finalHrs finalMin 0
       selectedDateTest = (show dateObj.day) <> " " <> (formatMonth (dateObj.month)) <> " , " <> (if(finalHrs > 12) then show (finalHrs - 12) else show finalHrs) <> ":" <>  (if finalMin < 10 then "0"  else "") <> (show finalMin) <> (if (finalHrs >= 12) then " PM" else " AM")
-      tripObj = 
-        { tripDateTimeConfig: 
+      tripObj =
+        { tripDateTimeConfig:
             { year: dateObj.year
             , month: dateObj.month
             , day: dateObj.day
@@ -1465,19 +1465,19 @@ formatDateInHHMM :: String -> String
 formatDateInHHMM timeUTC = convertUTCtoISC timeUTC "hh" <> ":" <> convertUTCtoISC timeUTC "mm" <> " " <> convertUTCtoISC timeUTC "a"
 
 fetchDriverInformation :: Array API.RideAPIEntity -> Maybe ScheduledRideDriverInfo
-fetchDriverInformation rideList = do 
-      case head rideList of 
+fetchDriverInformation rideList = do
+      case head rideList of
         Just (API.RideAPIEntity driverInfo) -> do
-                                        let 
+                                        let
                                           driverName = driverInfo.driverName
                                           vehicleNumber = driverInfo.vehicleNumber
                                         Just {driverName : driverName,vehicleNumber : vehicleNumber}
         Nothing -> Nothing
 
 fetchAddressDetails :: API.BookingLocationAPIEntity -> String
-fetchAddressDetails  (API.BookingLocationAPIEntity contents) = 
-   let 
-      door = fromMaybe "" contents.door 
+fetchAddressDetails  (API.BookingLocationAPIEntity contents) =
+   let
+      door = fromMaybe "" contents.door
       building = fromMaybe "" contents.building
       street = fromMaybe "" contents.street
       area = fromMaybe "" contents.area
@@ -1493,5 +1493,5 @@ fetchAddressDetails  (API.BookingLocationAPIEntity contents) =
                     <> (if (not $ DS.null state) then state <> " " else "")
                     <> (if (not $ DS.null country) then country else "")
       wardAddedString = if finalString == "" then finalString <> ward else finalString
-    in 
+    in
       wardAddedString
