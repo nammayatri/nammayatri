@@ -14,6 +14,7 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.Merchant as DM
@@ -113,7 +114,9 @@ data DriverBlockTillReq = DriverBlockTillReq
 data BusRideInfo = BusRideInfo
   { routeCode :: Text,
     busNumber :: Text,
-    destination :: LatLong
+    destination :: LatLong,
+    routeLongName :: Maybe Text,
+    driverName :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToSchema)
 
@@ -125,15 +128,34 @@ data CarRideInfo = CarRideInfo
 data RideInfo = Bus BusRideInfo | Car CarRideInfo
   deriving (Show, Eq, Generic, ToSchema)
 
+instance FromJSON RideInfo where
+  parseJSON = withObject "RideInfo" $ \obj ->
+    ( Bus
+        <$> ( obj .: "bus" >>= \busObj ->
+                BusRideInfo <$> busObj .: "routeCode"
+                  <*> busObj .: "busNumber"
+                  <*> busObj .: "destination"
+                  <*> busObj .:? "routeLongName"
+                  <*> busObj .:? "driverName"
+            )
+    )
+      <|> ( Car
+              <$> ( obj .: "car" >>= \carObj ->
+                      CarRideInfo <$> carObj .: "pickupLocation"
+                  )
+          )
+
 instance ToJSON RideInfo where
   toJSON = \case
-    Bus (BusRideInfo routeCode busNumber destination) ->
+    Bus (BusRideInfo routeCode busNumber destination routeLongName driverName) ->
       object
         [ "bus"
             .= object
               [ "routeCode" .= routeCode,
                 "busNumber" .= busNumber,
-                "destination" .= destination
+                "destination" .= destination,
+                "routeLongName" .= routeLongName,
+                "driverName" .= driverName
               ]
         ]
     Car (CarRideInfo pickupLocation) ->
