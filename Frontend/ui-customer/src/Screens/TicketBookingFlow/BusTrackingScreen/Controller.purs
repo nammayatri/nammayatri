@@ -75,6 +75,8 @@ import Data.Argonaut.Core as AC
 import DecodeUtil as DU
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Control.Alt ((<|>))
+import Common.RemoteConfig.Utils as RU
+import Common.Types.App as CT
 
 instance showAction :: Show Action where
   show _ = ""
@@ -174,7 +176,8 @@ eval (UpdateTracking trackingData) state = do
           DA.foldl
             ( \acc item -> do
                 let alreadyOnboardedThisVehicleInRouteOrPreTracking = Mb.isNothing alreadyOnboardedThisBus || (alreadyOnboardedThisBus <#> _.vehicleId) == Mb.Just item.vehicleId
-                if Mb.maybe false (_ < item.nextStopSequence)  state.props.destinationSequenceNumber && DS.null state.data.bookingId && (not alreadyOnboardedThisVehicleInRouteOrPreTracking)
+                    -- _ = spy "codex-coming-here" $ show $ filterVehicleInfoLogic item
+                if ((Mb.maybe false (_ < item.nextStopSequence) state.props.destinationSequenceNumber && DS.null state.data.bookingId) || (filterVehicleInfoLogic item.timestamp))
                   then acc
                 else do
                   let
@@ -341,3 +344,16 @@ extractBusOnboardingInfo =
     decodedOnboardedBusInfo = 
       let cachedOnboardedBusInfo = JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
       in DU.decodeForeignAny (DU.parseJSON cachedOnboardedBusInfo) Mb.Nothing
+
+-- Filtering Vehicle Info based on external logic based on remote config
+filterVehicleInfoLogic :: String -> Boolean
+filterVehicleInfoLogic timestamp =
+  let timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") timestamp 
+      wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+      _ = spy "codex-currrentTime" (EHC.getCurrentUTC "")
+      _ = spy "codex-timestamp" timestamp 
+      _ = spy "codex-timeDiff" timeDiff
+      _ = spy "codex-maxAllowedTimeDiffInLTSinSec" wmbFlowConfig.maxAllowedTimeDiffInLTSinSec
+  in (timeDiff > wmbFlowConfig.maxAllowedTimeDiffInLTSinSec)
+      -- && (item.nextStopDistance > wmbFlowConfig.maxDeviatedDistanceInMeters) -- Todo - check via haversine polyline distance calculation
+

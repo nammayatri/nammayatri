@@ -319,3 +319,9 @@ type BundleLottieConfig = {
   lottieUrl :: String
 , enable :: Boolean
 }
+
+type WmbFlowConfig = {
+  maxDeviatedDistanceInMeters :: Number,
+  showDeviatedBus :: Boolean,
+  maxAllowedTimeDiffInLTSinSec :: Int
+}
