@@ -44,6 +44,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetAddDriverBusRouteMapping,
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
+    postDriverFleetGetNearbyDrivers,
   )
 where
 
@@ -298,3 +299,10 @@ getDriverFleetWmbRouteDetails merchantShortId opCity apiTokenInfo routeCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetWmbRouteDetails) fleetOwnerId routeCode
+
+postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
+postDriverFleetGetNearbyDrivers merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetGetNearbyDrivers) fleetOwnerId req

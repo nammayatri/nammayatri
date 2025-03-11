@@ -12,6 +12,7 @@ imports:
   AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   Day: Data.Time
+  RideStatus:
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
   LatLong: Kernel.External.Maps.Types
   TimeBound: Kernel.Types.TimeBound
@@ -691,6 +692,24 @@ apis:
               type: RouteDetails
 
   - POST:
+      endpoint: /fleet/getNearbyDrivers
+      auth: ApiAuthV2
+      request:
+        type: NearbyDriverReq
+      response:
+        type: NearbyDriverResp
+      helperApi:
+        - POST:
+            endpoint: /fleet/getNearbyDrivers/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: NearbyDriverReq
+            response:
+              type: NearbyDriverResp
+
+  - POST:
       endpoint: /dashboard/fleet/track/driver
       auth: ApiAuthV2
       request:
@@ -708,6 +727,20 @@ apis:
             response:
               type: TrackDriverLocationsRes
 types:
+  NearbyDriverReq:
+    - point: LatLong
+    - radius: Int
+    - derive: "'HideSecrets"
+  NearbyDriverResp:
+    - drivers: [DriverInfo]
+  DriverInfo:
+    - routeCode: Text
+    - driverName: Text
+    - vehicleNumber: Text
+    - rideStatus: RideStatus
+    - routeLongName: Maybe Text
+  RideStatus:
+    enum: ON_PICKUP | ON_RIDE
   TrackDriverLocationsReq:
     - recordType: NewType
     - driverIds: [Id Driver]
