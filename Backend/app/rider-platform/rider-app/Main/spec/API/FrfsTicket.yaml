@@ -218,6 +218,7 @@ apis:
         startStationCode: Text
         endStationCode: Text
         location: LatLong
+        platformType: PlatformType
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -348,6 +349,8 @@ apis:
       mandatoryQuery:
         city: City
         vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
       auth: TokenAuth
       request:
         type: API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
@@ -375,5 +378,6 @@ apis:
         input: Text
         limit: Int
         offset: Int
+        platformType: PlatformType
       response:
         type: "API.Types.UI.FRFSTicketService.AutocompleteRes"
