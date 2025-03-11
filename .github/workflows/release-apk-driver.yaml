@@ -146,8 +146,10 @@ jobs:
         run: |
           echo "$LOCAL_PROPERTIES" > local.properties.b64
           base64 -d -i local.properties.b64 > local.properties
+          echo "$CT_KEYS_PRD" >> local.properties
         env:
           LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
+          CT_KEYS_PRD: ${{ secrets.CT_KEYS }}
 
       - name: Create Google Play Config file
         run: |
