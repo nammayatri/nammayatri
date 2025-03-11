@@ -495,7 +495,8 @@ type DriverProfileScreenData = {
   profileCompletedModules :: Int,
   driverBlocked :: Boolean,
   blockedExpiryTime :: String,
-  favCount :: Maybe Int
+  favCount :: Maybe Int,
+  goBackTo :: ScreenName
 }
 
 type CompletingProfileRes = {
