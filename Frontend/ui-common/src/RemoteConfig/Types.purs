@@ -15,7 +15,7 @@
 module Common.RemoteConfig.Types where
 
 import Prelude
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, Maybe(..))
 import Foreign.Class  (class Decode, decode, class Encode, encode)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
@@ -171,6 +171,7 @@ defaultForwardBatchConfigData = ForwardBatchConfigData
 
 newtype FeaturesConfigData = FeaturesConfigData
   { enableDeliveryBike :: Boolean
+  , enableDriverRateCard :: Maybe Boolean
   }
 derive instance genericFeaturesConfigData :: Generic FeaturesConfigData _
 
@@ -183,6 +184,7 @@ instance encodeFeaturesConfigData :: Encode FeaturesConfigData where
 defaultFeaturesConfigData :: FeaturesConfigData
 defaultFeaturesConfigData = FeaturesConfigData
   { enableDeliveryBike: false
+  , enableDriverRateCard: Nothing
   }
 
 type TipsConfig
