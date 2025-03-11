@@ -8,6 +8,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.VehicleCategory
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -37,6 +38,7 @@ data SearchTry = SearchTry
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Text
   }

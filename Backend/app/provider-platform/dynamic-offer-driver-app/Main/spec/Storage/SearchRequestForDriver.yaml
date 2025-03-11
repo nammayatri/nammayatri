@@ -11,12 +11,14 @@ imports:
   Device: Kernel.Types.Version
   Person: Domain.Types.Person
   DriverMode: Domain.Types.Common
+  Seconds: Kernel.Types.Common
   SearchRequestForDriverResponse: Domain.Types.Common
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
   Months: Kernel.Types.Time
   Value: Data.Aeson
   ParcelType: Domain.Types.DeliveryDetails
+  VehicleCategory: Domain.Types.VehicleCategory
 
 
 SearchRequestForDriver:
@@ -42,6 +44,7 @@ SearchRequestForDriver:
     startTime : UTCTime
     searchRequestValidTill : UTCTime
     vehicleAge : Maybe Months
+    vehicleCategory: Maybe VehicleCategory
     driverId : Id Person
     fromLocGeohash : Maybe Text
     actualDistanceToPickup : Meters
@@ -86,6 +89,8 @@ SearchRequestForDriver:
     middleStopCount: Maybe Int
     currency: Currency
     distanceUnit: DistanceUnit
+    tripEstimatedDistance : Maybe Meters
+    tripEstimatedDuration : Maybe Seconds
     totalRides: Int
     driverTags: Maybe Value
     customerTags: Maybe Value

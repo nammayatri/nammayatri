@@ -18,7 +18,7 @@ module SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 where
 
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.ServiceTierType as DServiceTierType
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -28,7 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..), SupplyDemandRequestJobData (..))
-import SharedLogic.DynamicPricing (mkActualQARKeyWithCity, mkActualQARKeyWithGeohash, mkSupplyDemandRatioKeyWithGeohash)
+import SharedLogic.DynamicPricing
 import qualified Storage.Clickhouse.SearchRequestForDriver as SRFD
 
 calculateSupplyDemand ::
@@ -46,6 +46,7 @@ calculateSupplyDemand Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
   let nextScheduleT = addUTCTime (intToNominalDiffTime (scheduleTimeIntervalInMin * 60)) now
   calculateAndUpdateCityQAR now from supplyDemandRatioTTLInSec
+  calculateAndUpdateGeohashAndDistanceBinQAR now from supplyDemandRatioTTLInSec
   query1Result <- SRFD.calulateSupplyDemandByGeohashAndServiceTier from now
   query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
   let queryResult = SRFD.concatFun query1Result query2Result
@@ -60,18 +61,21 @@ updateSupplyDemandRatio ::
     EsqDBFlow m r
   ) =>
   Int ->
-  (Maybe Text, Int, Int, Int, DServiceTierType.ServiceTierType) ->
+  (Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory) ->
   m ()
-updateSupplyDemandRatio supplyDemandRatioTTLInSec (geohash', acceptanceCount, supplyCount, demandCount, vehicleServiceTier) = do
+updateSupplyDemandRatio supplyDemandRatioTTLInSec (geohash', acceptanceCount, supplyCount, demandCount, vehicleCategory) = do
   let geohash = fromMaybe "" geohash'
-      key1 = mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier
+      key1 = mkSupplyDemandRatioKeyWithGeohash geohash vehicleCategory
       value1 :: Double = if demandCount == 0 then 0.0 else fromIntegral supplyCount / fromIntegral demandCount
-      key2 = mkActualQARKeyWithGeohash geohash vehicleServiceTier
+      key2 = mkActualQARKeyWithGeohash geohash vehicleCategory
+      key3 = mkActualQARKeyWithGeohashPast geohash vehicleCategory
       value2 :: Double = if demandCount == 0 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
   Hedis.withCrossAppRedis $ Hedis.setExp key1 value1 supplyDemandRatioTTLInSec
-  if demandCount < 10
+  (val :: Maybe Double) <- Hedis.withCrossAppRedis $ Hedis.get key2
+  if demandCount < 4
     then Hedis.withCrossAppRedis $ Hedis.del key2
     else Hedis.withCrossAppRedis $ Hedis.setExp key2 value2 supplyDemandRatioTTLInSec
+  Hedis.withCrossAppRedis $ Hedis.setExp key3 val supplyDemandRatioTTLInSec
 
 calculateAndUpdateCityQAR ::
   ( SchedulerFlow r,
@@ -98,10 +102,49 @@ updateCityActualQAR ::
     EsqDBFlow m r
   ) =>
   Int ->
-  (Id DMOC.MerchantOperatingCity, Int, Int, DServiceTierType.ServiceTierType) ->
+  (Id DMOC.MerchantOperatingCity, Int, Int, Maybe DVC.VehicleCategory) ->
   m ()
-updateCityActualQAR supplyDemandRatioTTLInSec (cityId, acceptanceCount, demandCount, vehicleServiceTier) = do
+updateCityActualQAR supplyDemandRatioTTLInSec (cityId, acceptanceCount, demandCount, vehicleCategory) = do
   let city = cityId.getId
-      key = mkActualQARKeyWithCity city vehicleServiceTier
-      value :: Double = if demandCount < 50 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
+      key = mkActualQARKeyWithCity city vehicleCategory
+      key1 = mkActualQARKeyWithCityPast city vehicleCategory
+      value :: Double = if demandCount < 30 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
+  (val :: Maybe Double) <- Hedis.withCrossAppRedis $ Hedis.get key
+  Hedis.withCrossAppRedis $ Hedis.setExp key1 val supplyDemandRatioTTLInSec
+  Hedis.withCrossAppRedis $ Hedis.setExp key value supplyDemandRatioTTLInSec
+
+calculateAndUpdateGeohashAndDistanceBinQAR ::
+  ( SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+  ) =>
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  m ()
+calculateAndUpdateGeohashAndDistanceBinQAR now from supplyDemandRatioTTLInSec = do
+  query1Result <- SRFD.calulateSupplyDemandByGeohashAndServiceTierAndDistanceBin from now
+  query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTierAndDistanceBin from now
+  let queryResult = SRFD.concatFun'' query1Result query2Result
+  logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
+  mapM_ (updateGeohashAndDistanceBinQAR supplyDemandRatioTTLInSec) queryResult
+
+updateGeohashAndDistanceBinQAR ::
+  ( SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Int ->
+  (Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory, Text) ->
+  m ()
+updateGeohashAndDistanceBinQAR supplyDemandRatioTTLInSec (geohash', acceptanceCount, _supplyCount, demandCount, vehicleCategory, distanceBin) = do
+  let geohash = fromMaybe "" geohash'
+      key = mkActualQARKeyWithGeohashAndDistanceBin geohash distanceBin vehicleCategory
+      key1 = mkActualQARKeyWithGeohashAndDistanceBinPast geohash distanceBin vehicleCategory
+      value :: Double = if demandCount < 4 then 0.0 else fromIntegral acceptanceCount / fromIntegral demandCount
+  (val :: Maybe Double) <- Hedis.withCrossAppRedis $ Hedis.get key
+  Hedis.withCrossAppRedis $ Hedis.setExp key1 val supplyDemandRatioTTLInSec
   Hedis.withCrossAppRedis $ Hedis.setExp key value supplyDemandRatioTTLInSec
