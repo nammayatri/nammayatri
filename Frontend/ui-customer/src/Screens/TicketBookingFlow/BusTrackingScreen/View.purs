@@ -484,7 +484,7 @@ stopListView push state showOnlyBullet =
 
   -- findNextBusETA index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelTime)) (stops DA.!! (index - 1))
   
-  findNextBusDistance index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelDistance)) (stops DA.!! (index - 1))
+  findNextBusDistance index = if state.props.individualBusTracking then Mb.Nothing else Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelDistance)) (stops DA.!! (index - 1))
 
 stopsViewHeader :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 stopsViewHeader push state showOnlyBullet =
@@ -621,11 +621,11 @@ busLocationTracking duration id state push = do
                   (API.RouteStopMapping nextStop) = item.nextStop
                   lat = Mb.fromMaybe 0.0 m.latitude
                   lon = Mb.fromMaybe 0.0 m.longitude
-                  pointerIcon = if (checkCurrentBusIsOnboarded state item.vehicleId) then "ny_ic_bus_marker" else ""
+                  pointerIcon = if (checkCurrentBusIsOnboarded state item.vehicleId && (filterVehicleInfoLogic m.timestamp)) then "ny_ic_bus_marker" else ""
                   markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon}
                   (API.LatLong nextStopPosition) = nextStop.stopPoint
                 void $ EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-                pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon, nextStopTravelTime : item.nextStopTravelTime, nextStopSequence : nextStop.sequenceNum, nextStopTravelDistance : item.nextStopTravelDistance }
+                pure { vehicleId: item.vehicleId, updatedAt : nextStop.updatedAt, createdAt : nextStop.createdAt, timestamp : m.timestamp, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon, nextStopTravelTime : item.nextStopTravelTime, nextStopSequence : nextStop.sequenceNum, nextStopTravelDistance : item.nextStopTravelDistance }
         EHC.liftFlow $ push $ UpdateTracking trackingInfo
         void $ delay $ Milliseconds $ duration
         busLocationTracking duration id state push
@@ -736,4 +736,4 @@ showPreBookingTracking _ =
       in busConfig.showPreBookingTracking
 
 checkCurrentBusIsOnboarded :: ST.BusTrackingScreenState -> String -> Boolean
-checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
+checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))

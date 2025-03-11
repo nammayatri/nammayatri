@@ -453,6 +453,7 @@ differenceOfLocationLists arr1 arr2 = filter ( \item1 -> length (filter( \ (item
 filterRecentSearches :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 filterRecentSearches arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId /= item1.placeId)) arr2) /= (length arr2)) arr1
 
+-- Haversine Distance Calculation
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
   let latPoint1 = toRad (lat1)
