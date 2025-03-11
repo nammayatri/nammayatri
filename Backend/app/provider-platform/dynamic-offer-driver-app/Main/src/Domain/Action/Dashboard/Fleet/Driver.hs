@@ -44,6 +44,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetAddDriverBusRouteMapping,
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
+    postDriverFleetGetNearbyDrivers,
   )
 where
 
@@ -76,6 +77,7 @@ import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
@@ -102,6 +104,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LTST
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
@@ -1647,3 +1650,32 @@ postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
 
 getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow Common.RouteDetails
 getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode
+
+postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
+postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id
+  return $
+    Common.NearbyDriverResp $
+      catMaybes $
+        map
+          ( \driverLocation ->
+              case (driverLocation.rideDetails >>= (.rideInfo), driverLocation.rideDetails <&> (.rideStatus)) of
+                (Just (LTST.Bus LTST.BusRideInfo {..}), Just rideStatus) ->
+                  case driverName of
+                    Just driverName' ->
+                      Just $
+                        Common.DriverInfo
+                          { driverName = driverName',
+                            vehicleNumber = busNumber,
+                            rideStatus = mkRideStatus rideStatus,
+                            ..
+                          }
+                    _ -> Nothing
+                _ -> Nothing
+          )
+          nearbyDriverLocations
+  where
+    mkRideStatus = \case
+      TR.INPROGRESS -> Common.ON_RIDE
+      _ -> Common.ON_PICKUP
