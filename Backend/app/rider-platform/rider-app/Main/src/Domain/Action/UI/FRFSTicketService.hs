@@ -211,11 +211,12 @@ getFrfsStations ::
   Kernel.Prelude.Maybe Context.City ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Text ->
   Spec.VehicleCategory ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mbStartStationCode vehicleType_ = do
+getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType mbRouteCode mbStartStationCode vehicleType_ = do
   merchantOpCity <-
     case mbCity of
       Nothing ->
@@ -224,9 +225,10 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
       Just city ->
         CQMOC.findByMerchantIdAndCity mId city
           >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> "-city-" <> show city)
+  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType_ ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType_ ||+ "Platform Type:" +|| platformType ||+ "")
   case (mbRouteCode, mbStartStationCode, mbEndStationCode) of
     -- Return possible Start stops, when End Stop is Known
     (Nothing, Nothing, Just endStationCode) -> do
@@ -925,6 +927,13 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
+  platformType' <- case (ticketBooking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
@@ -932,7 +941,7 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
   unless (ticketBooking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest "Cancellation during incorrect status")
   -- tickets <- QFRFSTicket.findAllByTicketBookingId ticketBooking.id
   -- unless (all (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets) $ throwError (InvalidRequest "Cancellation during incorrect status")
-  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL ticketBooking DIBC.APPLICATION
+  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL ticketBooking platformType'
   return APISuccess.Success
 
 getFrfsBookingCanCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
@@ -951,11 +960,18 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
+  platformType' <- case (ticketBooking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
-  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking DIBC.APPLICATION
+  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType'
   return APISuccess.Success
 
 getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus
@@ -991,18 +1007,20 @@ getFrfsAutocomplete ::
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Int ->
   Kernel.Prelude.Maybe Int ->
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
   Context.City ->
   Kernel.External.Maps.Types.LatLong ->
   BecknV2.FRFS.Enums.VehicleCategory ->
   Environment.Flow API.Types.UI.FRFSTicketService.AutocompleteRes
-getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset opCity origin vehicle = do
+getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origin vehicle = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
+  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOpCity.id []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
   integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicle) DIBC.APPLICATION
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicle ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicle) platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicle ||+ "Platform Type:" +|| platformType ||+ "")
   case mbInput of
     Nothing -> do
       allStops <- QStation.findAllByVehicleType Nothing Nothing vehicle integratedBPPConfig.id
@@ -1129,12 +1147,14 @@ postFrfsTicketVerify ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
   Context.City ->
   BecknV2.FRFS.Enums.VehicleCategory ->
   API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq ->
   Environment.Flow APISuccess.APISuccess
-postFrfsTicketVerify (_mbPersonId, merchantId) opCity vehicleCategory req = do
+postFrfsTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicleCategory req = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= fromMaybeM (InternalError "Beckn Config not found")
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData DIBC.APPLICATION
+  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
+  CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData platformType
   return APISuccess.Success

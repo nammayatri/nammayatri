@@ -52,6 +52,9 @@ type API =
            "location"
            Kernel.External.Maps.Types.LatLong
       :> QueryParam
+           "platformType"
+           Domain.Types.IntegratedBPPConfig.PlatformType
+      :> QueryParam
            "routeCode"
            Data.Text.Text
       :> QueryParam
@@ -213,6 +216,9 @@ type API =
       :> "frfs"
       :> "ticket"
       :> "verify"
+      :> QueryParam
+           "platformType"
+           Domain.Types.IntegratedBPPConfig.PlatformType
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
@@ -246,6 +252,9 @@ type API =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
+      :> QueryParam
+           "platformType"
+           Domain.Types.IntegratedBPPConfig.PlatformType
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
@@ -282,12 +291,13 @@ getFrfsStations ::
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
+    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
-getFrfsStations a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+getFrfsStations a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 getFrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -409,12 +419,13 @@ postFrfsTicketVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postFrfsTicketVerify a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postFrfsTicketVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -432,9 +443,10 @@ getFrfsAutocomplete ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Types.Beckn.Context.City ->
     Kernel.External.Maps.Types.LatLong ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.AutocompleteRes
   )
-getFrfsAutocomplete a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsAutocomplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+getFrfsAutocomplete a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsAutocomplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
