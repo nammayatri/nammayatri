@@ -28,6 +28,7 @@ import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfile
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
+import Screens (ScreenName(..)) as Screen
 
 initData :: DriverProfileScreenState
 initData =
@@ -39,6 +40,7 @@ initData =
     driverName : "",
     driverVehicleType : "",
     driverRating : Just 2.0,
+    goBackTo : Screen.HOME_SCREEN,
     base64Image : "",
     drivingLicenseNo : "",
     driverMobile : Just "",

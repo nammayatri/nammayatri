@@ -138,8 +138,7 @@ driverProfileScreen = do
                                                 , downgradeOptions = driverDetailsScreen.data.downgradeOptions
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
-      App.BackT $ pure App.GoBack
-      -- App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+      App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
     GoToCompletingProfile updatedState -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> pure (DRIVER_COMPLETING_PROFILE_SCREEN (getVehicleCategory updatedState))
@@ -151,6 +150,9 @@ driverProfileScreen = do
                                                    , cancellationWindow = state.data.cancellationWindow
                                                    , missedEarnings = state.data.analyticsData.missedEarnings}}
       App.BackT $ App.BackPoint <$> pure (CANCELLATION_RATE_SCREEN cancellationScreenState)
+    GotoMeterRideScreen state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> pure GO_TO_METER_RIDE_SCREEN_FROM_PROFILE
     GoToExtraChargeInfoScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       modifyScreenState $ ExtraChargeInfoScreenStateType (\exState -> exState {driverInfoResp = state.data.driverInfoResponse})
