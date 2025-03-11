@@ -232,7 +232,7 @@ data BuildSendReceiptMessageReq = BuildSendReceiptMessageReq
 buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, Text)
 buildSendReceiptMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.SEND_FARE_RECEIPT_MESSAGE Nothing
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.SEND_FARE_RECEIPT_MESSAGE Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_FARE_RECEIPT_MESSAGE))
   let msg =
         merchantMessage.message

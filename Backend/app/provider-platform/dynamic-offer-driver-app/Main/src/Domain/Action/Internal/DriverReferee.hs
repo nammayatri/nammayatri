@@ -252,7 +252,7 @@ updatePayoutRelatedFieldsIfRideValie transporterConfig merchOpCityId driverId ri
     then do
       let localTimeOfThatDay = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) ride.updatedAt
       vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound $ "driverId:-" <> driverId.getId)
-      payoutConfig <- CPC.findByPrimaryKey merchOpCityId (fromMaybe VC.AUTO_CATEGORY vehicle.category) >>= fromMaybeM (PayoutConfigNotFound (show vehicle.category) merchOpCityId.getId)
+      payoutConfig <- CPC.findByPrimaryKey merchOpCityId (fromMaybe VC.AUTO_CATEGORY vehicle.category) Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicle.category) merchOpCityId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + payoutConfig.referralRewardAmountPerRide) (cast driverId)
       QDailyStats.updateReferralStatsByDriverId (dailyStats.activatedValidRides + 1) (dailyStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) DDS.Initialized driverId (utctDay localTimeOfThatDay)
     else do

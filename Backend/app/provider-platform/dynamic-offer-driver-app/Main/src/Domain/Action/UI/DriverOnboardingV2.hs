@@ -32,6 +32,7 @@ import qualified EulerHS.Prelude
 import Kernel.Beam.Functions
 import qualified Kernel.External.BackgroundVerification.Interface as BackgroundVerification
 import Kernel.External.Encryption
+import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
@@ -54,6 +55,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
@@ -62,6 +64,7 @@ import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
@@ -158,14 +161,23 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
+  (mbTripCategory, mbPickup, mbVehicleServiceType) <-
+    if driverInfo.onRide
+      then do
+        ride <- QRideLite.findInProgressByDriverId personId >>= fromMaybeM (RideNotFound $ "Driver On Ride but ride not found for driverid:" <> personId.getId)
+        booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ "Booking not found for ride booking id:" <> ride.bookingId.getId)
+        pure (ride.tripCategory, Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon, Just booking.vehicleServiceTier)
+      else pure (Nothing, Nothing, Nothing)
   let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
-  case mbServiceTierType of
+  let mbServiceTierType' = mbServiceTierType <|> mbVehicleServiceType
+  let tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) mbTripCategory
+  case mbServiceTierType' of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
-      mbRateCard <- getRateCardForServiceTier mbDistance mbDuration transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit serviceTierType
+      mbRateCard <- getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit serviceTierType
       return $ maybeToList mbRateCard
     Nothing -> do
-      rateCards <- mapM (getRateCardForServiceTier mbDistance mbDuration transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit) driverVehicleServiceTierTypes
+      rateCards <- mapM (getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit) driverVehicleServiceTierTypes
       return $ catMaybes rateCards
   where
     mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
@@ -178,11 +190,11 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
 
-    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
-    getRateCardForServiceTier mbDistance mbDuration transporterConfig tripCategory distanceUnit serviceTierType = do
+    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe LatLong -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
+    getRateCardForServiceTier mbDistance mbDuration mbPickupLatLon transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
       eitherFullFarePolicy <-
-        try @_ @SomeException (getFarePolicy Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing Nothing)
+        try @_ @SomeException (getFarePolicy mbPickupLatLon Nothing Nothing Nothing Nothing merchantOperatingCityId False tripCategory serviceTierType Nothing Nothing Nothing Nothing)
           >>= \case
             Left _ -> try @_ @SomeException $ getFarePolicy Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing Nothing
             Right farePolicy -> return $ Right farePolicy

@@ -4,6 +4,7 @@ module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideSha
 
 import qualified API.Types.UI.MeterRide
 import Data.OpenApi (ToSchema)
+import Data.Time (utctDay)
 import qualified Domain.Action.Internal.DriverReferee as DAIDR
 import qualified Domain.Action.UI.FareCalculator as AUF
 import qualified Domain.Action.UI.Ride as AUR
@@ -26,9 +27,12 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverReferral as QDR
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
@@ -122,7 +126,13 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId r
               merchantOperatingCityId = merchantOpCityId.getId,
               refereeLocation = Nothing
             }
-    void $ DAIDR.linkReferee merchantId (Just merchant.internalApiKey) refreeLinkRequest
+    void $ DAIDR.linkReferee merchantId (Just merchant.internalApiKey) refreeLinkRequest -- this will not internally update the payout related tables, for that we have below.
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    driverStats <- QDriverStats.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    dailyStats <- QDailyStats.findByDriverIdAndDate driverId (utctDay localTime) >>= fromMaybeM (InternalError $ "Daily stats not found for driver with driverId: " <> driverId.getId)
+    DAIDR.updatePayoutRelatedFieldsIfRideValie transporterConfig merchantOpCityId driverId ride driverStats dailyStats
+
   let phoneNumber = customerMobileCountryCode <> customerMobileNumber
   withLogTag ("sending_communication_to_download_app" <> phoneNumber) $ do
     (mbSender, message) <-
