@@ -44,6 +44,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
@@ -143,10 +144,13 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
   createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber mbReferredOperatorId
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- makeFleetOperatorAssociation (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
+    incrementFleetOwnerCount (Id referredOperatorId)
   whenJust mbIsGenerateRefEntry $ \isGenerateRefEntry -> when isGenerateRefEntry $ do
     void $ DR.generateReferralCode DP.FLEET_OWNER (person.id, merchantId, merchantOpCityId)
   pure person
@@ -263,3 +267,17 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+incrementFleetOwnerCount :: Id DP.Person -> Flow ()
+incrementFleetOwnerCount referredOperatorId = do
+  let lockKey = "fleet_owner_count_lock_" <> getId referredOperatorId
+  Redis.withWaitAndLockRedis lockKey 10 5000 $ do
+    mbDriverStats <- QDriverStats.findByPrimaryKey referredOperatorId
+    case mbDriverStats of
+      Nothing -> do
+        logTagError "INCREMENT_FLEET_COUNT" ("DriverStats not found for operator " <> show referredOperatorId)
+        throwError $ InternalError "DriverStats not found for operator"
+      Just driverStats -> do
+        let newCount = driverStats.numFleetsOnboarded + 1
+        QDriverStats.updateNumFleetsOnboarded newCount referredOperatorId
+        logTagInfo "INCREMENT_FLEET_COUNT" $ "Successfully incremented fleet owner count for " <> show referredOperatorId <> " to " <> show newCount
