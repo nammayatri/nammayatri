@@ -271,3 +271,16 @@ instance ToTType' BeamP.Person Person.Person where
         mobileNumberHash = mobileNumber.hash,
         ..
       }
+
+findAllByFromDateAndToDateAndMobileNumberAndStatus :: BeamFlow m r => Maybe UTCTime -> Maybe UTCTime -> Maybe Text -> m [Person]
+findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus =
+  findOneWithKV
+    [Se.And [Se.Is BeamP.email $ Se.Eq email, Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq role_]]
+    findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate),
+          Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate),
+          Se.Is BeamP.mobileNumberEncrypted $ Se.Eq (fromJust mbMobileNumber),
+          Se.Is BeamP.mbStatus $ Se.Eq Nothing
+        ]
+    ]

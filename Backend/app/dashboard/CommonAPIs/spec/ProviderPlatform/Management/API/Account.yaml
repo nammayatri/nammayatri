@@ -16,7 +16,7 @@ apis:
         - mobileNumber: Text
         - status: FleetOwnerStatus
       response:
-        type: [Person]
+        type: "[Person]"
   - POST:
       endpoint: /verifyAccount
       auth: ApiAuthV2
