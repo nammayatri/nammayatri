@@ -2612,7 +2612,7 @@ homeScreenFlow = do
               else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
-    GO_TO_END_RIDE {id, endOtp, endOdometerReading, endOdometerImage, lat, lon, ts} state -> endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state
+    GO_TO_END_RIDE {id, endOtp, endOdometerReading, endOdometerImage, lat, lon, ts} state -> endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state false
     GO_TO_CANCEL_RIDE {id, info , reason} state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_cancelled" $ [{key : "Reason code", value : unsafeToForeign reason},
                                                                                         {key : "Additional info", value : unsafeToForeign $ if info == "" then "null" else info},
@@ -3082,10 +3082,12 @@ homeScreenFlow = do
         Left err -> pure unit
       void $ lift $ lift $ toggleLoader false
     GO_TO_METER_RIDE_SCREEN -> meterRideScreenFlow
+    SEND_RECIEPT_TO_CUSTOMER state -> homeScreenFlow
+    
   homeScreenFlow
 
-endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> FlowBT String Unit
-endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
+endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> Boolean -> FlowBT String Unit
+endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state isMeterRideEnd = do
       
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
@@ -3137,9 +3139,9 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
           let codeMessage = decodeErrorCode errResp.errorMessage
           liftFlowBT $ logEvent logField_ "incorrect flow"
           if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = endRideOtpModalOnError, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false, endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {meterRideEnd {isMeterRideEnd = isMeterRideEnd}, otpIncorrect = true, enterOtpModal = endRideOtpModalOnError, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false, endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
           else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = false,otpAttemptsExceeded = true, enterOtpModal = endRideOtpModalOnError, rideOtp = "",enterOdometerReadingModal= false,endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {meterRideEnd {isMeterRideEnd = isMeterRideEnd}, otpIncorrect = false,otpAttemptsExceeded = true, enterOtpModal = endRideOtpModalOnError, rideOtp = "",enterOdometerReadingModal= false,endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
           else do
             pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
             homeScreenFlow
@@ -3245,6 +3247,9 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide
+                      , meterRideEnd {
+                        isMeterRideEnd = isMeterRideEnd
+                      }
                     }
                   })
                 liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
@@ -3252,7 +3257,7 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
                                                                                             {key : "Actual Toll Charge", value : unsafeToForeign (fromMaybe 0.0 response.tollCharges)},
                                                                                             {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0.0 response.estimatedTollCharges)},
                                                                                             {key : "Has Toll", value : unsafeToForeign (maybe false (\charge -> charge /= 0.0) response.tollCharges)}]
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = false, endRideOdometerReadingModal = false, isInvalidOdometer = false,enterOdometerFocusIndex=0, showRideCompleted = true}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = false, endRideOdometerReadingModal = false, isInvalidOdometer = false,enterOdometerFocusIndex=0, showRideCompleted = true, meterRideEnd {isMeterRideEnd = isMeterRideEnd}}})
             void $ updateStage $ HomeScreenStage RideCompleted
             void $ lift $ lift $ toggleLoader false
             updateDriverDataToStates
@@ -4918,7 +4923,7 @@ meterRideScreenFlow = do
           (LatLon lat lon ts) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 750 false true
           (GlobalState allState) <- getState
           modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> MeterRideScreenData.initData)
-          endTheRide rideInfo.id "" Nothing Nothing lat lon ts allState.homeScreen
+          endTheRide rideInfo.id "" Nothing Nothing lat lon ts allState.homeScreen true
         Nothing -> pure unit
     MRSO.TRIGGER_GLOBAL_EVENTS -> meterRideScreenFlow
     MRSO.GO_TO_HELP_AND_SUPPORT_FROM_METER -> do

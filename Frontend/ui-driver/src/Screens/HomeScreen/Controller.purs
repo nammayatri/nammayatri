@@ -511,6 +511,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | UpdateStopsStatus ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
+                    | SendReciept ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -690,8 +691,7 @@ uploadFileConfig = Common.UploadFileConfig {
 }
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
-
-eval (CompleteProfileAction (PopUpModal.OnButton2Click) ) state = do
+eval (CompleteProfileAction PopUpModal.OnButton2Click) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   exit $ GoToCompleteProfile state
@@ -701,7 +701,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
 
-eval GotoMeterRideScreen state = exit $ MeterRideScreen state
+eval GotoMeterRideScreen state = do
+  exit $ MeterRideScreen state
 
 eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pure $ FavPopUpAction PopUpModal.DismissPopup]
 
@@ -1866,7 +1867,14 @@ eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.Dismis
 eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ GoToRideDetailsScreen state
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = continue state {props {showRideRating = true}}
 eval (RideCompletedAC (RideCompletedCard.BannerAction (Banner.OnClick))) state = continueWithCmd state [pure $ AutoPayBanner (Banner.OnClick) ]
-
+eval (RideCompletedAC (RideCompletedCard.ShareRecieptFocusChanged focussed)) state = do
+  if EHC.isTrue focussed then do
+    continue state {props {meterRideEnd {isTextFocussed = EHC.isTrue focussed}}}
+  else do
+    void $ pure $ hideKeyboardOnNavigation true
+    continue state {props {meterRideEnd {isTextFocussed = EHC.isTrue focussed}}}
+eval (RideCompletedAC (RideCompletedCard.ShareRecieptTextChanged val)) state = continue state {props {meterRideEnd {phone = val}}}
+eval (RideCompletedAC (RideCompletedCard.ShareRecieptClick)) state = updateAndExit state {props {meterRideEnd {isShared = ST.Sharing}}} $ SendReciept state
 
 eval (RatingCardAC (RatingCard.Rating selectedRating)) state = continue state {data {endRideData { rating = selectedRating}}}
 eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state {data {endRideData {feedback = feedback}}}

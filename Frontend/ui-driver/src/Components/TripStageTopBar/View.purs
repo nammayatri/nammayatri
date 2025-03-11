@@ -1,7 +1,6 @@
 module Components.TripStageTopBar.View where
 
 
-import Helpers.Utils as HU
 import Font.Style as FontStyle
 import Data.Maybe
 import Services.API (BookingTypes(..))
@@ -17,11 +16,10 @@ import ConfigProvider
 import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-
 import Prelude (Unit, const, map, not, (||), ($), (-), unit, (*), (/), (+), (<>), (==), show, (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, visibility, stroke, imageWithFallback, horizontalScrollView, scrollBarX)
 import Styles.Colors as Color
-
+import Helpers.Utils as HU
 
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

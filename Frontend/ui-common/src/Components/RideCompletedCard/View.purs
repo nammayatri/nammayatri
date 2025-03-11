@@ -75,6 +75,7 @@ topGradientView config push =
     , cornerRadii $ Corners radii false false true true
     , stroke $ borderWidth <> Color.grey900
     , id $ getNewIDWithTag "topViewId"
+    , onClick push $ const RemoveTextFocus
     ]
     [  topPillAndSupportView config push
       , priceAndDistanceUpdateView config push 
@@ -339,6 +340,7 @@ bottomCardView config push =
   , padding $ Padding 16 16 16 70
   , background if config.isDriver then Color.grey700 else Color.white900
   , gravity CENTER
+  , onClick push $ const RemoveTextFocus
   ] if config.isDriver then  [driverSideBottomCardsView config push] else [customerSideBottomCardsView config push]
 
 customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -724,9 +726,123 @@ driverSideBottomCardsView config push =
     , background Color.grey700
     , gravity CENTER
     , visibility $ if config.isDriver then VISIBLE else GONE 
-    ] $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 
+    ] 
+    -- $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 
+    [
+      shareReceiptView config push
+    ]
   ]
 
+shareReceiptView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+shareReceiptView config push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 30
+    ]
+    [ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginBottom 12
+      ][ textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "Share receipt with customer"
+          , singleLine true
+          , color Color.black800
+          ] <> FontStyle.body3 TypoGraphy
+      ]
+    , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , cornerRadius 8.0
+        , gravity CENTER_VERTICAL
+        , stroke $ if config.meterRideEnd.isTextFocussed then "1," <> Color.blue900 else "1," <> Color.grey900
+        , background Color.white900
+        ]
+        [ editText $ 
+          [ height MATCH_PARENT
+          , width WRAP_CONTENT
+          , weight 1.0
+          , padding $ Padding 20 17 20 17
+          , color Color.black800
+          , onChange push $ ShareRecieptTextChanged
+          , onFocus push $ ShareRecieptFocusChanged
+          , gravity LEFT
+          , cornerRadius 8.0
+          , hint "9876543210"
+          , hintColor Color.black600
+          , id $ EHC.getNewIDWithTag "shareRecieptWithCustomerEditText"
+          , pattern "[0-9.]*,10"
+          , inputType if config.meterRideEnd.isShared == Shared then Disabled else TypeText
+          ] <> FontStyle.subHeading1 LanguageStyle 
+            -- <> if EHC.os == "IOS" then [] else [onClick push $ ShareRecieptFocusChanged true] 
+        , linearLayout
+          [ height MATCH_PARENT
+          , width WRAP_CONTENT
+          , cornerRadius 20.0
+          , gravity CENTER
+          , margin $ Margin 10 10 10 10
+          , padding $ Padding 12 4 12 4
+          , onClick push (const ShareRecieptClick)
+          , clickable (DS.length config.meterRideEnd.phone == 10 && (config.meterRideEnd.isShared == NotShared))
+          , alpha case config.meterRideEnd.isShared of
+                    NotShared -> if config.meterRideEnd.isTextFocussed && DS.length config.meterRideEnd.phone == 10 then 1.0 else 0.4
+                    Shared -> 1.0
+                    _ -> if config.meterRideEnd.isTextFocussed then 1.0 else 0.4
+
+          , background case config.meterRideEnd.isShared of
+                          Shared -> Color.green900
+                          NotShared -> Color.blue800
+                          Failed -> Color.red900
+                          Sharing -> Color.blue800
+          ]
+          [ 
+            imageView $
+            [ width $ V (case config.meterRideEnd.isShared of
+                              NotShared -> 0
+                              Sharing -> 0
+                              _ -> 18)
+            , height $ V (case config.meterRideEnd.isShared of
+                              NotShared -> 0
+                              Sharing -> 0
+                              _ -> 18)
+            , margin $ Margin 0 2 2 2
+            , imageWithFallback $ case config.meterRideEnd.isShared of
+                                    Shared -> fetchImage COMMON_ASSET "ny_ic_checkcircle"
+                                    NotShared -> fetchImage COMMON_ASSET "ny_ic_info_white"
+                                    Failed -> fetchImage COMMON_ASSET "ny_ic_subtract"
+                                    Sharing -> fetchImage COMMON_ASSET "ny_ic_info_white" 
+            , visibility case config.meterRideEnd.isShared of
+                              NotShared -> GONE
+                              Sharing -> GONE
+                              _ -> VISIBLE
+            ]
+            ,progressBar $
+            [ width $ V 16
+            , height $ V 16
+            , margin $ Margin 0 2 2 2
+            , visibility case config.meterRideEnd.isShared of 
+                            Sharing -> VISIBLE
+                            _ -> GONE
+            , progressBarColor Color.white900
+            ]
+            ,textView $ 
+            [ height MATCH_PARENT
+            , width WRAP_CONTENT
+            , margin $ Margin 0 0 0 2
+            , text case config.meterRideEnd.isShared of
+                      Shared -> "Shared"
+                      NotShared -> "Share"
+                      Failed -> "Failed"
+                      Sharing -> "Sharing"
+            , singleLine true
+            , color Color.white900
+            ] <> FontStyle.subHeading3 TypoGraphy
+          ]
+        ]
+    ]
 
 getViewsByOrder :: forall w. Config -> RideCompletedElements -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 getViewsByOrder config item push = 

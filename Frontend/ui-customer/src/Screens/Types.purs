@@ -3359,3 +3359,16 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+type MeterRideScreenState = {
+  data :: MeterRideScreenData
+  , props :: MeterRideScreenProps
+}
+
+type MeterRideScreenData = {
+
+}
+
+type MeterRideScreenProps = {
+  showInfoCard :: Boolean
+}

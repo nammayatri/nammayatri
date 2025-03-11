@@ -1652,6 +1652,7 @@ getRideCompletedConfig state = let
   isVehicleAuto = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory
   endrideQrAnim = if isVehicleAuto then "lottie/end_ride_qr_anim.json" else "lottie/end_ride_qr_anim_cab.json"
   config' = config{
+    meterRideEnd = state.props.meterRideEnd,
     isFreeRide = state.props.isFreeRide,
     serviceTierAndAC = state.data.endRideData.serviceTier,
     capacity = state.data.endRideData.capacity,

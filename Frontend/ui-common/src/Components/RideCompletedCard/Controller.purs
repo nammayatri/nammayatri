@@ -9,6 +9,7 @@ import Data.Int (toNumber)
 import Helpers.Utils (parseFloat)
 import PrestoDOM 
 import Prim.TypeError as String
+import Data.Eq.Generic (genericEq)
 import Common.Styles.Colors as Color
 import Font.Style (Style (..))
 import Components.PopUpModal as PopUpModal
@@ -16,7 +17,6 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Common.Types.App 
 import Font.Style as FontStyle
 import Styles.Types (FontStyle)
-import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
@@ -44,6 +44,10 @@ instance showAction :: Show Action where
   show (NoAction) = "NoAction"
   show (BannerChanged _) = "BannerChanged"
   show (BannerMoving _) = "BannerMoving"
+  show (ShareRecieptTextChanged val) = "ShareRecieptTextChanged" <> show val
+  show (ShareRecieptFocusChanged val) = "ShareRecieptFocusChanged" <> show val
+  show (ShareRecieptClick) = "ShareRecieptClick"
+  show (RemoveTextFocus) = "RemoveTextFocus"
 
 data Action = Support
             | RideDetails
@@ -58,6 +62,21 @@ data Action = Support
             | NoAction
             | BannerChanged String
             | BannerMoving String
+            | ShareRecieptTextChanged String
+            | ShareRecieptFocusChanged Boolean
+            | ShareRecieptClick
+            | RemoveTextFocus
+
+data RecieptShared = NotShared | Shared | Sharing | Failed
+derive instance genericRecieptShared :: Generic RecieptShared _
+instance eqRecieptShared :: Eq RecieptShared where eq = genericEq
+
+type MeterRideEnd = {
+  isMeterRideEnd :: Boolean
+  , phone :: String
+  , isShared :: RecieptShared
+  , isTextFocussed :: Boolean
+}
 
 
 type RentalRideTextConfig = {
@@ -71,6 +90,7 @@ type RentalRideTextConfig = {
 }
 
 type Config = {
+  meterRideEnd :: MeterRideEnd,
   isDriver :: Boolean,
   topCard :: TopCard,
   customerIssue :: CustomerIssue,
@@ -141,8 +161,15 @@ type RentalTextConfig = {
   color :: String
 }
 
+
 config :: Config 
 config = {
+  meterRideEnd : {
+    isMeterRideEnd : false
+    , phone : ""
+    , isShared : NotShared
+    , isTextFocussed : false
+  },
   isDriver : true,
   isFreeRide : false,
   capacity : Nothing,

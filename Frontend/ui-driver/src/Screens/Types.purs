@@ -74,6 +74,7 @@ import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
 import JBridge as JB
+import Components.RideCompletedCard.Controller (MeterRideEnd(..), RecieptShared)
 
 
 type EditTextInLabelState =
@@ -1359,6 +1360,7 @@ type ActiveRide = {
 
 type HomeScreenProps =  {
   isFreeRide :: Boolean,
+  meterRideEnd :: MeterRideEnd,
   statusOnline :: Boolean,
   goOfflineModal :: Boolean,
   screenName :: String,
@@ -1456,6 +1458,7 @@ type HomeScreenProps =  {
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean
  }
+
 
 type RideRequestPill = {
   isPillClickable ::  Boolean,

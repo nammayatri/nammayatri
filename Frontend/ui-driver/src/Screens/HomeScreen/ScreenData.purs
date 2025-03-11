@@ -26,6 +26,7 @@ import RemoteConfig.Utils as RU
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
+import Common.Styles.Colors as Color
 
 initData :: HomeScreenState
 initData = 
@@ -206,6 +207,12 @@ initData =
     }
   , props:
       { isFreeRide: false
+      , meterRideEnd : {
+        isMeterRideEnd : false
+        , phone : ""
+        , isShared : NotShared
+        , isTextFocussed : false
+      }
       , arrivedAtStop: false
       , statusOnline: true
       , driverStatusSet: Online

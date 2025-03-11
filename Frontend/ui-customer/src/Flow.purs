@@ -2702,6 +2702,7 @@ homeScreenFlow = do
       modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData {props { busClicked = state.props.busClicked, showShimmer = false , ticketServiceType = state.props.ticketServiceType }})
       metroTicketBookingFlow
     GO_TO_RENTALS_FLOW state -> do
+      meterRideScreenFlow
       latestScheduledRides <- FlowCache.fetchAndUpdateScheduledRides true
       modifyScreenState
         $ RentalScreenStateType
@@ -7959,3 +7960,10 @@ rideCompletedEventParams state =
     {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
     {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} 
   ]
+
+meterRideScreenFlow :: FlowBT String Unit
+meterRideScreenFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  flow <- UI.meterRideScreen
+  case flow of
+    _ -> meterRideScreenFlow

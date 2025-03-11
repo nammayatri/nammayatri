@@ -229,3 +229,6 @@ homeScreen = do
     MeterRideScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METER_RIDE_SCREEN)
+    SendReciept state -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ SEND_RECIEPT_TO_CUSTOMER state)
