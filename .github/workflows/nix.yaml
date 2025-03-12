@@ -2,16 +2,18 @@ name: Nix CI
 
 on:
   push:
-    branches: 
+    branches:
       - "main"
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
+      - "wmb-fixes-hot-push-branch-bap"
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches: 
+    branches:
       - "main"
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
+      - "wmb-fixes-hot-push-branch-bap"
   workflow_dispatch:
 
 permissions:
@@ -33,7 +35,7 @@ jobs:
         uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-      
+
       - name: Check global conditions
         id: evaluate
         run: |
@@ -45,7 +47,7 @@ jobs:
           else
             echo "should_proceed=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Check for backend label
         id: check-labels
         run: |
@@ -67,6 +69,7 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/heads/main" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
+                "${{ github.ref }}" == "refs/heads/wmb-fixes-hot-push-branch-bap" ||
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
@@ -115,7 +118,7 @@ jobs:
           DOCKER_REGISTRY: ghcr.io
         run: |
           nix build .#packages.${{ matrix.system }}.dockerImage
-    
+
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
