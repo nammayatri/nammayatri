@@ -87,6 +87,7 @@ library
       API.UI.Sos
       API.UI.Support
       API.UI.Whatsapp
+      API.UI.RentalsIntercityCache
       App
       App.Server
       Beckn.ACL.Cancel
@@ -259,6 +260,7 @@ library
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
+      Domain.Action.UI.RentalsIntercityCache
       Environment
       ExternalBPP.CallAPI
       ExternalBPP.ExternalAPI.Bus.EBIX.Auth

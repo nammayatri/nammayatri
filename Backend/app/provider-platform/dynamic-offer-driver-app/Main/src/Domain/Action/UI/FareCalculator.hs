@@ -44,7 +44,7 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
   calculateFareUtil merchantId merchanOperatingCityId (Just dropLatLong) pickupLatlong mbDistance mbDuration mbRoute (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
 
 data CalculateFareReq = CalculateFareReq
-  { dropLatLong :: Kernel.External.Maps.Types.LatLong,
+  { dropLatLong :: Maybe Kernel.External.Maps.Types.LatLong,
     pickupLatLong :: Kernel.External.Maps.Types.LatLong,
     mbDistance :: Maybe Meters,
     mbDuration :: Maybe Seconds
@@ -57,7 +57,7 @@ calculateFare merchantId merchantCity apiKey CalculateFareReq {..} = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-  calculateFareUtil merchantId merchantOperatingCity.id (Just dropLatLong) pickupLatLong mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
+  calculateFareUtil merchantId merchantOperatingCity.id dropLatLong pickupLatLong mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
 
 calculateFareUtil ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
