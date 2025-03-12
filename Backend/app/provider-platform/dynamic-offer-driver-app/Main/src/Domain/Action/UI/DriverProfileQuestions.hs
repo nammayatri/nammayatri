@@ -28,6 +28,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.ChatCompletion as TC
 import Tools.Error
 import Data.Time.Format (formatTime, defaultTimeLocale)
+import qualified Domain.Types.DriverStats as DTS
 
 data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
 
@@ -126,7 +127,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
 
     buildChatCompletionReq prompt = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
 
-    -- calculateCancellationRate :: QDS.DriverStats -> Text
+    calculateCancellationRate :: DTS.DriverStats -> Text
     calculateCancellationRate driverStats =
       let cancelled = fromMaybe 0 driverStats.ridesCancelled
           total = nonZero driverStats.totalRidesAssigned
