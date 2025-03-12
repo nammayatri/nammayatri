@@ -4055,7 +4055,7 @@ pickupLocationView push state =
                  , cornerRadius 24.0
                  , background Color.blue600
                  , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-                 , visibility $ boolToVisibility $ applyReferral && not isPayoutEnabled
+                 , visibility $ boolToVisibility $ applyReferral || not isPayoutEnabled
                  ][ textView
                     [ text $ if applyReferral then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
                     , color Color.blue800
@@ -4080,7 +4080,7 @@ pickupLocationView push state =
                         , padding $ PaddingBottom 5
                         ] <> FontStyle.body1 TypoGraphy
                       , textView $
-                        [ text $ getString $ if showCollect then COLLECT_ else EARN_
+                        [ text $ getString $ if showCollect then COLLECT_ (show totalEarningPending) else EARN_ (show youGet)
                         , color if showCollect then Color.white900 else Color.blue900
                         , gravity CENTER
                         -- , padding $ PaddingBottom 3

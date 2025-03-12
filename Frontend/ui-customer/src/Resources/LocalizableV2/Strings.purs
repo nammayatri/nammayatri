@@ -107,8 +107,8 @@ getOD = getString "OD_IN"
 
 getProxy :: STR -> (Keymap -> String)
 getProxy str = case str of
-    EARN_ -> \a -> a @~ earn_
-    COLLECT_ -> \a -> a @~ collect_
+    EARN_ arg1 -> \a -> (a @~ earn_) arg1
+    COLLECT_ arg1 -> \a -> (a @~ collect_) arg1
     ABOUT -> \a -> a @~ about
     SAFETY -> \a -> a @~ safety
     SAFETY_CHECK_IN -> \a -> a @~ safety_check_in

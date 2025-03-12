@@ -1773,6 +1773,6 @@ getTa = Keymap {
     , amount: "தொகை"
     , downlaod_app: "அப்பிளிக்கேஷனை பதிவிறக்கு"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "அப்பிளிக்கேஷனை பதிவிறக்க QR குறியீட்டை ஸ்கேன் செய்து உங்கள் அழைப்பு குறியீட்டை தானாக சேர்க்கவும்"
-    , earn_: "Earn ₹"
-    , collect_: "Collect ₹"
+    , earn_:  \a ->  "₹" <> a <> " சம்பாதிக்கவும்"
+    ,  collect_:  \a ->  "₹" <> a <> " சேகரிக்கவும்"
 }

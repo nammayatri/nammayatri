@@ -44,8 +44,8 @@ odia :: Proxy "odia"
 odia = a
 
 newtype Keymap = Keymap {
-    earn_  :: String ,
-    collect_  :: String ,
+    earn_  :: String -> String ,
+    collect_  :: String -> String ,
     downlaod_app  :: String ,
     scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically  :: String ,
     amount  :: String ,

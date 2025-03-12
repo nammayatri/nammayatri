@@ -1773,6 +1773,6 @@ getHi = Keymap {
     , amount: "राशि"
     , downlaod_app: "ऐप डाउनलोड करें"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "ऐप डाउनलोड करने और अपना इनवाइट कोड स्वचालित रूप से लागू करने के लिए QR कोड स्कैन करें"
-    , earn_: "Earn ₹"
-    , collect_: "Collect ₹"
+    , earn_:  \a ->  "₹" <> a <> " कमाएं"
+    ,  collect_:  \a ->  "₹" <> a <> " इकट्ठा करें"
 }

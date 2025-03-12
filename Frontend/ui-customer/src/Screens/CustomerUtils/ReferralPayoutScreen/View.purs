@@ -134,11 +134,11 @@ shareAndEarnView push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    ] (if totalEarning > 0.0 then [collectEarningView push state] else []
-    
-    <> [ coverView push state
+    ][ 
+      collectEarningView push state
+    , coverView push state
     , referralDescriptionView push state
-    ])
+    ]
 
 earningsView push state =
   PrestoAnim.animationSet
@@ -906,7 +906,9 @@ collectEarningView push state =
             , color if isPayoutPending then Colors.blue900 else Colors.black800
             , gravity if isPayoutPending then CENTER else LEFT
             , singleLine false
+            , ellipsize true
             , padding $ PaddingBottom 3
+            , margin $ MarginRight 10
             ]
           <> FontStyle.h2 TypoGraphy
       , linearLayout

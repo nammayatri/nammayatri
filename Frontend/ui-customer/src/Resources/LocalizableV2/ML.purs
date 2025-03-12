@@ -1774,6 +1774,6 @@ getMl = Keymap {
     , amount: "തുക"
     , downlaod_app: "ആപ്പ് ഡൗൺലോഡ് ചെയ്യുക"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "ആപ്പ് ഡൗൺലോഡ് ചെയ്യാനും നിങ്ങളുടെ ക്ഷണ കോഡ് സ്വയം പ്രയോഗിക്കാനും QR കോഡ് സ്കാൻ ചെയ്യുക"
-    , earn_: "Earn ₹"
-    , collect_: "Collect ₹"
+    , earn_:  \a ->  "₹" <> a <> " സമ്പാദിക്കുക"
+    ,  collect_:  \a ->  "₹" <> a <> " ശേഖരിക്കുക"
 }

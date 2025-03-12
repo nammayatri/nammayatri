@@ -1773,6 +1773,6 @@ getOd = Keymap {
     , amount: "Amount"
     , downlaod_app: "Downlaod App"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "Scan QR code to download the app and apply your invite code automatically"
-    , earn_: "Earn ₹"
-    , collect_: "Collect ₹"
+    , earn_:  \a ->  "₹" <> a <> " ଉପାର୍ଜନ କରନ୍ତୁ"
+    ,  collect_:  \a ->  "₹" <> a <> " ସଂଗ୍ରହ କରନ୍ତୁ"
 }

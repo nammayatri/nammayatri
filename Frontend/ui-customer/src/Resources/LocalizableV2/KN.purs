@@ -1773,6 +1773,6 @@ getKn = Keymap {
     , amount: "ಮೊತ್ತ"
     , downlaod_app: "ಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "ಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಮತ್ತು ನಿಮ್ಮ ಆಹ್ವಾನ ಕೋಡ್ ಅನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅನ್ವಯಿಸಲು QR ಕೋಡ್ ಅನ್ನು ಸ್ಕಾನ್ ಮಾಡಿ"
-    , earn_: "Earn ₹"
-    , collect_: "Collect ₹"
+    , earn_:  \a ->  "₹" <> a <> " ಗಳಿಸಿ"
+    ,  collect_:  \a ->  "₹" <> a <> " ಸಂಗ್ರಹಿಸಿ"
 }
