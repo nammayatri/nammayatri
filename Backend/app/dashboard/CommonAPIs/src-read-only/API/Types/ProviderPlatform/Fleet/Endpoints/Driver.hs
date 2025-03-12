@@ -106,7 +106,8 @@ data DriverInfo = DriverInfo
     driverName :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     rideStatus :: RideStatus,
-    routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    point :: Kernel.External.Maps.Types.LatLong
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

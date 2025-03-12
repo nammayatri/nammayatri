@@ -739,6 +739,7 @@ types:
     - vehicleNumber: Text
     - rideStatus: RideStatus
     - routeLongName: Maybe Text
+    - point: LatLong
   RideStatus:
     enum: ON_PICKUP | ON_RIDE
   TrackDriverLocationsReq:
