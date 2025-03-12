@@ -1,8 +1,7 @@
 imports:
-  Person: Domain.Types.Person
+  Person: Dashboard.Common
+  Role: Dashboard.Common
 
-importPackageOverrides:
-  Domain.Types.Person: "lib-dashboard"
 
 module: Account
 
@@ -16,7 +15,7 @@ apis:
         - mobileNumber: Text
         - status: FleetOwnerStatus
       response:
-        type: "[Person]"
+        type: "[PersonAPIEntity]"
   - POST:
       endpoint: /verifyAccount
       auth: ApiAuthV2
@@ -29,7 +28,24 @@ apis:
 types:
   FleetOwnerStatus:
     - enum: Approved, Rejected
+    - derive: Kernel.Prelude.ToParamSchema
   VerifyAccountReq:
     - status: FleetOwnerStatus
     - reason: Maybe Text
     - fleetOwnerId: Id Person
+  PersonAPIEntity:
+    - id: Id Person
+    - firstName: Text
+    - lastName: Text
+    - roleId: Id Role
+    - email: Text
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  #  - dashboardAccessType: Maybe DRole.DashboardAccessType
+    - createdAt: UTCTime
+    - receiveNotification: Maybe Bool
+    - updatedAt: UTCTime
+    - verified: Maybe Bool
+    - rejectionReason: Maybe Text
+    - rejectedAt: Maybe UTCTime
+

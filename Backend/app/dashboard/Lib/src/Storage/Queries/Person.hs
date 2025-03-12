@@ -15,6 +15,7 @@
 
 module Storage.Queries.Person where
 
+import API.Types.ProviderPlatform.Management.Endpoints.Account (FleetOwnerStatus (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Database.Beam as B
@@ -272,15 +273,33 @@ instance ToTType' BeamP.Person Person.Person where
         ..
       }
 
-findAllByFromDateAndToDateAndMobileNumberAndStatus :: BeamFlow m r => Maybe UTCTime -> Maybe UTCTime -> Maybe Text -> m [Person]
+findAllByFromDateAndToDateAndMobileNumberAndStatus ::
+  BeamFlow m r =>
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe
+    FleetOwnerStatus
+    m
+    [Person]
 findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus =
   findOneWithKV
     [Se.And [Se.Is BeamP.email $ Se.Eq email, Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq role_]]
     findAllWithKV
     [ Se.And
-        [ Se.Is BeamP.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate),
-          Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate),
-          Se.Is BeamP.mobileNumberEncrypted $ Se.Eq (fromJust mbMobileNumber),
-          Se.Is BeamP.mbStatus $ Se.Eq Nothing
-        ]
+        ( [ Se.Or
+              [ Se.Is BeamP.verified $ Se.Eq (Just False),
+                Se.Is BeamP.verified $ Se.Eq Nothing
+              ]
+          ]
+            <> [Se.Is BeamP.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate]
+            <> [Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate]
+            <> [Se.Is BeamP.mobileNumberEncrypted $ Se.Eq (fromJust mbMobileNumber) | isJust mbMobileNumber]
+            <> [checkOfNull BeamP.rejectedAt | isJust mbStatus]
+        )
     ]
+  where
+    checkOfNull =
+      case mbStatus of
+        Just Approved -> Se.IsNull
+        _ -> Se.IsNotNull

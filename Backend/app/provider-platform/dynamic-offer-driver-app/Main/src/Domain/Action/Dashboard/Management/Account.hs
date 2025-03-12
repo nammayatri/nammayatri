@@ -17,9 +17,9 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Servant
-import "lib-dashboard" Storage.Queries.Person (findAllByFromDateAndToDateAndMobileNumberAndStatus)
 import Tools.Auth
 
+-- This function will not be called.
 getAccountFetchUnverifiedAccounts ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -27,14 +27,18 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Account.FleetOwnerStatus ->
-  Environment.Flow [Domain.Types.Person.Person]
-getAccountFetchUnverifiedAccounts _merchantShortId _opCity mbFromDate mbToDate mbMobileNumber mbStatus = do
-  findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus
+  Environment.Flow [API.Types.ProviderPlatform.Management.Account.PersonAPIEntity]
+getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate _mbMobileNumber _mbStatus = do
+  pure []
 
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   API.Types.ProviderPlatform.Management.Account.VerifyAccountReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postAccountVerifyAccount _merchantShortId _opCity req = do
+postAccountVerifyAccount _merchantShortId _opCity _req = do
+  -- Approve -> Enable the account and create at BPP
+  -- Reject -> Delete the account and store reason of rejection in
+  --  person table in another column rejection_reason.
+  --    Store timestamp as well - rejected_at
   pure Kernel.Types.APISuccess.Success

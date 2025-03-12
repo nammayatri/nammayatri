@@ -3,9 +3,9 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.Account where
 
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
-import qualified "lib-dashboard" Domain.Types.Person
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -19,9 +19,27 @@ data FleetOwnerStatus
   = Approved
   | Rejected
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data PersonAPIEntity = PersonAPIEntity
+  { id :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    firstName :: Kernel.Prelude.Text,
+    lastName :: Kernel.Prelude.Text,
+    roleId :: Kernel.Types.Id.Id Dashboard.Common.Role,
+    email :: Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    receiveNotification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VerifyAccountReq = VerifyAccountReq {status :: FleetOwnerStatus, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person}
+data VerifyAccountReq = VerifyAccountReq {status :: FleetOwnerStatus, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, fleetOwnerId :: Kernel.Types.Id.Id Dashboard.Common.Person}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -33,14 +51,14 @@ type GetAccountFetchUnverifiedAccounts =
            "mobileNumber"
            Kernel.Prelude.Text
       :> QueryParam "status" FleetOwnerStatus
-      :> Get ('[JSON]) [Domain.Types.Person.Person]
+      :> Get '[JSON] [PersonAPIEntity]
   )
 
-type PostAccountVerifyAccount = ("verifyAccount" :> ReqBody ('[JSON]) VerifyAccountReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostAccountVerifyAccount = ("verifyAccount" :> ReqBody '[JSON] VerifyAccountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data AccountAPIs = AccountAPIs
-  { getAccountFetchUnverifiedAccounts :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (FleetOwnerStatus) -> EulerHS.Types.EulerClient [Domain.Types.Person.Person]),
-    postAccountVerifyAccount :: (VerifyAccountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> EulerHS.Types.EulerClient [PersonAPIEntity],
+    postAccountVerifyAccount :: VerifyAccountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkAccountAPIs :: (Client EulerHS.Types.EulerClient API -> AccountAPIs)
@@ -54,4 +72,4 @@ data AccountUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''AccountUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AccountUserActionType])
