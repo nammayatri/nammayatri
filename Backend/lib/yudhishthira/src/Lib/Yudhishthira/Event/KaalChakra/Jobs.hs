@@ -58,7 +58,7 @@ runKaalChakraAndRescheduleJob h chakra jobData = do
       canRetry <- Event.canRetry chakra
       if canRetry
         then do
-          pure $ ReSchedule $ addUTCTime (fromIntegral (10 :: Integer)) now
+          pure $ ReSchedule $ addUTCTime (fromIntegral (10 :: Integer)) timeAfterRun
         else do
           Event.resetRetryCounter chakra
           let newScheduleTime = getNextChakraTime jobData.startTime timeAfterRun chakra
