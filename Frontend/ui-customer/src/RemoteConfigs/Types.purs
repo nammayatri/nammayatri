@@ -185,3 +185,10 @@ type CancellationThreshold = {
   showBanner :: Boolean,
   percentage :: Number
 }
+
+type ReferralPayoutConfig = {
+  youGet :: Maybe Number,
+  theyGet :: Maybe Number,
+  cover :: Maybe String,
+  enable :: Maybe Boolean
+}

@@ -306,3 +306,7 @@ homeScreen' = do
     GoToBusTicketBookingFlow state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
       App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN state)
+    GoToReferralPayout state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN state)
+    

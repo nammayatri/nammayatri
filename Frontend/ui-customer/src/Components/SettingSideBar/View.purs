@@ -106,16 +106,16 @@ settingsView state push =
   , orientation VERTICAL
   ](map (\item -> 
         case item of
-        "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : "", showNewTag : false} push
-        "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : "", showNewTag : false} push
-        "MetroTickets" -> if (DA.any (_ == city) [Kochi, Chennai, Delhi]) then settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey_small", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : "", showNewTag: true} push else linearLayout[visibility GONE][]
-        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
-        "NammaSafety" -> if state.appConfig.feature.enableSafetyFlow then settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push else emptyLayout
-        "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  if state.appConfig.feature.enableHelpAndSupport && not isOdishaApp then getString HELP_AND_SUPPORT else getString CONTACT_SUPPORT, accessibilityHint : "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
-        "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : "", showNewTag : false} push
-        "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_AND_REFER), accessibilityHint : "Refer And Share ", tag : SETTINGS_SHARE_APP, iconUrl : "", showNewTag : false} push
-        "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage, showNewTag : false} push
-        "About" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : "", showNewTag : false} push
+        "MyRides" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : "", showNewTag : false} push
+        "Tickets" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : "", showNewTag : false} push
+        "MetroTickets" -> if (DA.any (_ == city) [Kochi, Chennai, Delhi]) then settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey_small", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : "", showNewTag: true} push else linearLayout[visibility GONE][]
+        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
+        "NammaSafety" -> if state.appConfig.feature.enableSafetyFlow then settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push else emptyLayout
+        "HelpAndSupport" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  if state.appConfig.feature.enableHelpAndSupport && not isOdishaApp then getString HELP_AND_SUPPORT else getString CONTACT_SUPPORT, accessibilityHint : "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
+        "Language" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : "", showNewTag : false} push
+        "ShareApp" -> settingsMenuView {showReferralTag : true, imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_AND_REFER), accessibilityHint : "Refer And Share ", tag : SETTINGS_SHARE_APP, iconUrl : "", showNewTag : false} push
+        "LiveStatsDashboard" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage, showNewTag : false} push
+        "About" -> settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : "", showNewTag : false} push
         "Logout" -> logoutView state push
         "Separator" -> separator
         _ -> emptyLayout
@@ -154,7 +154,7 @@ logoutView state push =
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_logout", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : "", showNewTag : false} push
+  , settingsMenuView {showReferralTag : false, imageUrl : fetchImage FF_ASSET "ic_logout", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : "", showNewTag : false} push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -310,6 +310,30 @@ settingsMenuView item push  =
       , margin $ MarginLeft 4
       , cornerRadius 4.0
       ] <> FontStyle.body19 TypoGraphy
+    , linearLayout
+      [ weight 1.0
+      ][]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , cornerRadius 24.0
+      , background Color.blue600
+      , visibility $ boolToVisibility $ item.showReferralTag
+      , padding $ Padding 10 8 10 8
+      , gravity CENTER
+      ][ textView $
+          [ text "🚕 "
+          , color Color.blue900
+          , gravity CENTER
+          , padding $ PaddingBottom 5
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $
+          [ text "Earn ₹"
+          , color Color.blue900
+          , gravity CENTER
+          -- , padding $ PaddingBottom 3
+          ] <> FontStyle.body1 TypoGraphy
+      ]
     ]
 
 profileCompleteValue :: SettingSideBarState -> String
