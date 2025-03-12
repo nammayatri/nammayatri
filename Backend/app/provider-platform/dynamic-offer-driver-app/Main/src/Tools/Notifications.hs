@@ -1255,7 +1255,7 @@ runWithServiceConfigForProviders ::
   (FCMData a -> FCMData c) ->
   m () ->
   m ()
-runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification.notifyPersonWithAllProviders handler req
+runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification.notifyPersonWithAllProviders handler req Nothing
   where
     handler = Notification.NotficationServiceHandler {..}
 

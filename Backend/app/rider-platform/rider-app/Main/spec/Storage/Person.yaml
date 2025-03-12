@@ -108,6 +108,7 @@ Person:
     dateOfBirth: Maybe UTCTime
     profilePicture: Maybe Text
     verificationChannel: Maybe Text
+    liveActivityToken : Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -328,6 +329,11 @@ Person:
     updatePayoutVpa:
       kvFunction: updateWithKV
       params: [payoutVpa]
+      where: id
+
+    updateLiveActivityToken:
+      kvFunction: updateWithKV
+      params: [liveActivityToken]
       where: id
 
   extraOperations:
