@@ -492,7 +492,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq pushConfigHistory = 
   if isDriverOrRiderConfig domain
     then do
       version <- handleDriverOrRiderConfig domain merchantOpCityId now rolloutReq
-      pushConfigHistory domain version merchantOpCityId
+      fork "Pushing Config History" $ pushConfigHistory domain version merchantOpCityId
       return Kernel.Types.APISuccess.Success
     else handleOtherDomain merchantOpCityId now rolloutReq domain
   where
@@ -517,15 +517,15 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq pushConfigHistory = 
             return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
           CADLE.create $ mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now domain
           CADLE.clearCache domain
-          let baseRollout = mkBaseAppDynamicLogicRollout newVersion now domain (100 - configRolloutObject.percentageRollout)
+          let baseRollout = mkBaseAppDynamicLogicRollout newVersion now domain 100
           CADLR.create baseRollout
           CADLR.clearCache (cast merchantOpCityId') domain
           return baseRollout
       mbConfigRolloutObjectDB <- LYSQADLR.findByPrimaryKey configRolloutObject.domain merchantOpCityId configRolloutObject.timeBounds configRolloutObject.version
-      handleBaseRolloutUpdate configRolloutObject baseRollout mbConfigRolloutObjectDB merchantOpCityId' domain
+      handleRolloutUpdate configRolloutObject baseRollout mbConfigRolloutObjectDB merchantOpCityId' domain
 
-    handleBaseRolloutUpdate :: BeamFlow m r => AppDynamicLogicRollout -> AppDynamicLogicRollout -> Maybe AppDynamicLogicRollout -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Int
-    handleBaseRolloutUpdate configRolloutObject baseRollout mbConfigRolloutObjectDB merchantOpCityId' domain = case mbConfigRolloutObjectDB of
+    handleRolloutUpdate :: BeamFlow m r => AppDynamicLogicRollout -> AppDynamicLogicRollout -> Maybe AppDynamicLogicRollout -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Int
+    handleRolloutUpdate configRolloutObject baseRollout mbConfigRolloutObjectDB merchantOpCityId' domain = case mbConfigRolloutObjectDB of
       Just configRolloutObjectDB -> do
         let originalRolloutPercentage = configRolloutObjectDB.percentageRollout
         when ((baseRollout.percentageRollout - (configRolloutObject.percentageRollout - originalRolloutPercentage)) < 0) $ throwError $ InvalidRequest $ "Insufficient percentage on base version: " <> show baseRollout.percentageRollout <> " either conclude existing versions or reduce rollout percentage."
