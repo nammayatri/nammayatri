@@ -7,6 +7,9 @@ import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
+import Data.List (sortBy)
+import Data.Maybe ()
+import Data.Ord (comparing)
 import qualified Data.Text as T
 import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
@@ -14,7 +17,7 @@ import Domain.Types.Booking
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
-import Domain.Types.ServiceTierType
+import Domain.Types.ServiceTierType ()
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -249,6 +252,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
               mbDuration = Just taxiGetFareData.duration
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
-    let mbAutoFare = find (\f -> f.vehicleServiceTier == AUTO_RICKSHAW) fareData.estimatedFares
-    return $ mbAutoFare <&> \auto -> JT.GetFareResponse {estimatedMinFare = auto.minFare, estimatedMaxFare = auto.maxFare}
+    let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)
+    return $ mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare}
   getFare _ = throwError (InternalError "Not Supported")
