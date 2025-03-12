@@ -156,6 +156,7 @@ data AppCfg = AppCfg
     nyGatewayUrl :: BaseUrl,
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
+    locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic, FromDhall)
@@ -252,6 +253,7 @@ data AppEnv = AppEnv
     nyGatewayUrl :: BaseUrl,
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
+    locationTrackingServiceKey :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic)

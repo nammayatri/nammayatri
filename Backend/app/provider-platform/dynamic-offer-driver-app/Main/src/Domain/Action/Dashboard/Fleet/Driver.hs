@@ -1669,6 +1669,7 @@ postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
                           { driverName = driverName',
                             vehicleNumber = busNumber,
                             rideStatus = mkRideStatus rideStatus,
+                            point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon},
                             ..
                           }
                     _ -> Nothing

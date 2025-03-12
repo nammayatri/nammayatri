@@ -364,4 +364,5 @@ in  { esqDBCfg
     , ltsCfg = LocationTrackingeServiceConfig
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
+    , locationTrackingServiceKey = sec.locationTrackingServiceKey
     }
