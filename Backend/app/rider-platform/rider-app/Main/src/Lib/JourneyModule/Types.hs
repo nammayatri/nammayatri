@@ -10,6 +10,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Location
@@ -254,7 +255,15 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     vehicleIconUrl :: Maybe BaseUrl,
     batchConfig :: Maybe SharedRedisKeys.BatchConfig,
     tollDifference :: Maybe Kernel.Types.Common.Price,
-    differenceOfDistance :: Maybe HighPrecMeters
+    chargeableRideDistance :: Maybe HighPrecMeters,
+    waitingCharges :: Maybe Kernel.Types.Common.Price,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
+    extraTimeFare :: Maybe Kernel.Types.Common.Price,
+    extraDistanceFare :: Maybe Kernel.Types.Common.Price,
+    fareProductType :: Maybe Text,
+    bppRideId :: Maybe (Id DRide.BPPRide),
+    driverMobileNumber :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -398,14 +407,12 @@ getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
       Just DEstimate.CANCELLED -> Cancelled
       _ -> Assigning
 
-getTollDifferenceFromBookingAndRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DBooking.Booking -> Maybe DRide.Ride -> m Kernel.Types.Common.Price
-getTollDifferenceFromBookingAndRide booking mRide = do
-  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
+getTollDifference :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => [DFareBreakup.FareBreakup] -> [DFareBreakup.FareBreakup] -> m Kernel.Types.Common.Price
+getTollDifference fareBreakups estimatedFareBreakups = do
   let extractAmount = fromMaybe Kernel.Types.Common.Price {amountInt = 0, amount = 0.0, currency = KTP.INR} . fmap (getField @"amount")
       estimateAmount = extractAmount <$> safeHead $ filter (\item -> item.description == "TOLL_CHARGES") estimatedFareBreakups
       finalAmount = extractAmount <$> safeHead $ filter (\item -> item.description == "TOLL_CHARGES") fareBreakups
-  fareDiff <- subtractPrice finalAmount estimateAmount
-  pure fareDiff
+  subtractPrice finalAmount estimateAmount
 
 getDistance :: DBooking.BookingDetails -> HighPrecMeters
 getDistance = \case
@@ -422,11 +429,10 @@ mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe D
 mkLegInfoFromBookingAndRide booking mRide = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
   let skipBooking = fromMaybe False booking.isSkipped
-      estimatedDistance = getDistance booking.bookingDetails
       chargeableRideDistance = distanceToHighPrecMeters <$> (mRide >>= (.chargeableDistance))
-      differenceOfDistance = estimatedDistance - fromMaybe 0 chargeableRideDistance
   (status, _) <- getTaxiLegStatusFromBooking booking mRide
-  tollDifference <- getTollDifferenceFromBookingAndRide booking mRide
+  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
+  tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   return $
     LegInfo
@@ -460,11 +466,29 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 vehicleIconUrl = booking.vehicleIconUrl,
                 batchConfig,
                 tollDifference = Just tollDifference,
-                differenceOfDistance = Just differenceOfDistance
+                chargeableRideDistance = chargeableRideDistance,
+                waitingCharges = (.amount) <$> find (\item -> item.description == "WAITING_OR_PICKUP_CHARGES") fareBreakups,
+                rideStartTime = (.rideStartTime) =<< mRide,
+                rideEndTime = (.rideEndTime) =<< mRide,
+                extraTimeFare = (.amount) <$> find (\item -> item.description == "TIME_BASED_FARE") fareBreakups,
+                fareProductType = Just $ getBookingDetailsConstructor booking.bookingDetails,
+                extraDistanceFare = (.amount) <$> find (\item -> item.description == "DIST_BASED_FARE") fareBreakups,
+                bppRideId = mRide <&> (.bppRideId),
+                driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide
               },
         actualDistance = mRide >>= (.traveledDistance),
         totalFare = mRide >>= (.totalFare)
       }
+  where
+    getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
+    getBookingDetailsConstructor (DBooking.OneWayDetails _) = "OneWayDetails"
+    getBookingDetailsConstructor (DBooking.RentalDetails _) = "RentalDetails"
+    getBookingDetailsConstructor (DBooking.DriverOfferDetails _) = "DriverOfferDetails"
+    getBookingDetailsConstructor (DBooking.OneWaySpecialZoneDetails _) = "OneWaySpecialZoneDetails"
+    getBookingDetailsConstructor (DBooking.InterCityDetails _) = "InterCityDetails"
+    getBookingDetailsConstructor (DBooking.AmbulanceDetails _) = "AmbulanceDetails"
+    getBookingDetailsConstructor (DBooking.DeliveryDetails _) = "DeliveryDetails"
+    getBookingDetailsConstructor (DBooking.MeterRideDetails _) = "MeterRideDetails"
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
@@ -508,8 +532,16 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} = do
                 rideId = Nothing,
                 vehicleIconUrl = Nothing,
                 tollDifference = Nothing,
-                differenceOfDistance = Nothing,
-                batchConfig
+                batchConfig,
+                chargeableRideDistance = Nothing,
+                waitingCharges = Nothing,
+                rideStartTime = Nothing,
+                rideEndTime = Nothing,
+                extraTimeFare = Nothing,
+                extraDistanceFare = Nothing,
+                fareProductType = Nothing,
+                bppRideId = Nothing,
+                driverMobileNumber = Nothing
               },
         actualDistance = Nothing,
         totalFare = Nothing
