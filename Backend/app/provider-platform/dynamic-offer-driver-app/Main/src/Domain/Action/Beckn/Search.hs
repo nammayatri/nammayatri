@@ -794,9 +794,8 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
 
   TripOption {..}
   where
-    checkIfMeterRideSearch isMeterRideSearch = case isMeterRideSearch of
-      Just isMeterRide -> isMeterRide
-      Nothing -> False
+    checkIfMeterRideSearch :: Maybe Bool -> Bool
+    checkIfMeterRideSearch = fromMaybe False
 
 getDriverIdFromIdentifier :: DRL.DriverIdentifier -> Flow (Id DP.Person)
 getDriverIdFromIdentifier driverInfo =

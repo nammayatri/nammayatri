@@ -344,7 +344,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         SearchDetails
           { riderPreferredOption = SearchRequest.OneWay,
             roundTrip = False,
-            stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
+            stops = fromMaybe [] stops <> maybeToList destination,
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
             hasStops = reqDetails.stops >>= \s -> Just $ length s > 0,
@@ -410,12 +410,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       m RouteDetails
     processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide = do
       autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now
-      destinationLatLong <- case lastMaybe stopsLatLong of
-        Just latLong -> return (Just latLong)
-        Nothing -> do
-          case isMeterRide of
-            Just True -> return Nothing
-            _ -> throwError (InvalidRequest "Destination is required for Non-Meter Ride  OneWay Search ")
+      destinationLatLong <-
+        maybe
+          ( if isMeterRide == Just True
+              then return Nothing
+              else throwError (InvalidRequest "Destination is required for Non-Meter Ride OneWay Search")
+          )
+          (return . Just)
+          (lastMaybe stopsLatLong)
+
       latLongs <-
         if roundTrip
           then case destinationLatLong of
