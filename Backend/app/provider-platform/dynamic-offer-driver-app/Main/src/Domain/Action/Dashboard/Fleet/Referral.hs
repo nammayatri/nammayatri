@@ -32,16 +32,11 @@ data FleetReferralRes = SuccessCode {val :: Text}
 instance ToJSON FleetReferralRes where
   toJSON (SuccessCode val) = A.object ["result" .= ("SuccessCode" :: Text), "val" .= val]
 
--- toJSON AlreadyReferred = A.object ["result" .= ("AlreadyReferred" :: Text)]
--- toJSON InvalidCode = A.object ["result" .= ("InvalidCode" :: Text)]
-
 instance FromJSON FleetReferralRes where
   parseJSON (A.Object obj) = do
     result :: String <- obj .: "result"
     case result of
       "SuccessCode" -> SuccessCode <$> obj .: "val"
-      -- "AlreadyReferred" -> pure AlreadyReferred
-      -- "InvalidCode" -> pure InvalidCode
       _ -> parseFail "Expected \"SuccessCode\""
   parseJSON err = typeMismatch "String" err
 

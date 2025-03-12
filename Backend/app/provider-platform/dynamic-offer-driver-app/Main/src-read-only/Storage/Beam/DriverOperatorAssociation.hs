@@ -13,14 +13,14 @@ import Tools.Beam.UtilsTH
 data DriverOperatorAssociationT f = DriverOperatorAssociationT
   { associatedOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isActive :: B.C f Kernel.Prelude.Bool,
     operatorId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

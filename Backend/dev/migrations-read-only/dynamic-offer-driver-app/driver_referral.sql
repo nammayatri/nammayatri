@@ -23,8 +23,3 @@ ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN merchant_id charac
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN role text DEFAULT 'DRIVER';
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.driver_referral ALTER COLUMN role SET DEFAULT 'DRIVER';

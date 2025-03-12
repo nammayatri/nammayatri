@@ -13,8 +13,6 @@ DriverOperatorAssociation:
     driverId: Id Person
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
-    createdAt: UTCTime
-    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

@@ -60,12 +60,12 @@ createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard role R
   mbReferralCodeAlreadyLinked <- B.runInReplica $ QRD.findByRefferalCode $ Id referralCode
   whenJust mbReferralCodeAlreadyLinked $ \referralCodeAlreadyLinked ->
     unless (referralCodeAlreadyLinked.driverId == driverId) $ throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
-  driverRefferalRecord <- mkDriverRefferalType referralCode role
+  driverRefferalRecord <- mkDriverRefferalType referralCode
   when (all isNothing [mbReferralCodeAlreadyLinked, mbLastReferralCodeWithDriver]) $
     void (QRD.create driverRefferalRecord)
   pure Success
   where
-    mkDriverRefferalType rc roleData = do
+    mkDriverRefferalType rc = do
       now <- getCurrentTime
       pure $
         D.DriverReferral
@@ -76,7 +76,7 @@ createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard role R
             updatedAt = now,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
-            role = roleData
+            role
           }
 
 generateReferralCode ::

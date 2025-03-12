@@ -13,8 +13,6 @@ FleetOperatorAssociation:
     fleetOwnerId: Text
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
-    createdAt: UTCTime
-    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

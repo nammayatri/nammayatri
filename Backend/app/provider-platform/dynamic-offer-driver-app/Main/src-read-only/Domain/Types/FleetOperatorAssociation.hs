@@ -13,13 +13,13 @@ import qualified Tools.Beam.UtilsTH
 data FleetOperatorAssociation = FleetOperatorAssociation
   { associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    createdAt :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation,
     isActive :: Kernel.Prelude.Bool,
     operatorId :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

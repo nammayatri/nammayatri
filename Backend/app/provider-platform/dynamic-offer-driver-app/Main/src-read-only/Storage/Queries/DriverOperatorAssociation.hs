@@ -38,13 +38,13 @@ updateByPrimaryKey (Domain.Types.DriverOperatorAssociation.DriverOperatorAssocia
   updateWithKV
     [ Se.Set Beam.associatedOn associatedOn,
       Se.Set Beam.associatedTill associatedTill,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.isActive isActive,
       Se.Set Beam.operatorId operatorId,
-      Se.Set Beam.updatedAt _now,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -55,14 +55,14 @@ instance FromTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAs
         Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation
           { associatedOn = associatedOn,
             associatedTill = associatedTill,
-            createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
             operatorId = operatorId,
-            updatedAt = updatedAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation where
@@ -70,12 +70,12 @@ instance ToTType' Beam.DriverOperatorAssociation Domain.Types.DriverOperatorAsso
     Beam.DriverOperatorAssociationT
       { Beam.associatedOn = associatedOn,
         Beam.associatedTill = associatedTill,
-        Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
         Beam.operatorId = operatorId,
-        Beam.updatedAt = updatedAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }
