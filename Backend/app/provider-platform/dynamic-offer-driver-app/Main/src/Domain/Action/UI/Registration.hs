@@ -34,7 +34,6 @@ where
 import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.Dashboard.Fleet.Referral
 import Domain.Action.UI.DriverReferral
-import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -101,8 +100,7 @@ data AuthReq = AuthReq
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
-    operatorReferralCode :: Maybe Text,
-    fleetReferralCode :: Maybe Text
+    operatorReferralCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -187,7 +185,6 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
 
   maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-  maybeFleetOwnerId <- getFleetOwnerIdFromReferralCode req.fleetReferralCode
 
   (person, otpChannel) <-
     case identifierType of
@@ -197,13 +194,13 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId maybeFleetOwnerId) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId) return
         return (person, SP.MOBILENUMBER)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchant (Just email) merchant.id
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId maybeFleetOwnerId) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
 
@@ -244,8 +241,8 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       authId = SR.id token
   return $ AuthWithOtpRes {attempts, authId, otpCode}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> Maybe Text -> Maybe Text -> m ()
-createDriverDetails personId merchantId merchantOpCityId transporterConfig mbOperatorId mbFleetOwnerId = do
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> Maybe Text -> m ()
+createDriverDetails personId merchantId merchantOpCityId transporterConfig mbOperatorId = do
   now <- getCurrentTime
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
@@ -266,7 +263,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig mbOpe
             paymentPending = False,
             autoPayStatus = Nothing,
             referralCode = Nothing,
-            referredByFleetOwnerId = mbFleetOwnerId,
+            referredByFleetOwnerId = Nothing,
             referredByOperatorId = mbOperatorId,
             referredByDriverId = Nothing,
             totalReferred = Just 0,
@@ -469,20 +466,18 @@ makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId en
         merchantOperatingCityId = Just merchantOpCityId
       }
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> Maybe Text -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard mbOperatorId mbFleetOwnerId = do
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard mbOperatorId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
-  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig mbOperatorId mbFleetOwnerId
+  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig mbOperatorId
 
   whenJust mbOperatorId $ \operatorId -> do
+    hasAssociation <- checkDriverHasNoAssociation person.id
+    unless hasAssociation $ throwError $ InvalidRequest "Driver is already associated"
     driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId person.id operatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     void $ QDOA.create driverOperatorAssData
-
-  whenJust mbFleetOwnerId $ \fleetOwnerId -> do
-    fleetDriverAssData <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing
-    void $ QFDA.create fleetDriverAssData
 
   pure person
 
@@ -619,10 +614,8 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-getFleetOwnerIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
-getFleetOwnerIdFromReferralCode Nothing = return Nothing
-getFleetOwnerIdFromReferralCode (Just refCode) = do
-  let referralReq = FleetReferralReq {value = refCode}
-  result <- isValidReferralForRole referralReq SP.FLEET_OWNER
-  case result of
-    SuccessCode val -> return $ Just val
+checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
+checkDriverHasNoAssociation driverId = do
+  mbOperatorAssoc <- QDOA.findByDriverId (cast driverId) True
+  mbFleetAssoc <- QFDA.findByDriverId (cast driverId) True
+  pure $ isNothing mbOperatorAssoc && isNothing mbFleetAssoc

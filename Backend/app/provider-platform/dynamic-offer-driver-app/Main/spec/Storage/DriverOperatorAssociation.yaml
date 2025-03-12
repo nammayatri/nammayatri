@@ -21,6 +21,12 @@ DriverOperatorAssociation:
     operatorId: "!SecondaryKey"
     driverId: "!SecondaryKey"
 
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, isActive]
+
   sqlType:
     id: text
     operatorId: text

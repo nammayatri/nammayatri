@@ -41,8 +41,7 @@ auth merchantShortId opCity req = do
           name = Nothing,
           email = Nothing,
           identifierType = Just SP.MOBILENUMBER,
-          operatorReferralCode = Nothing,
-          fleetReferralCode = Nothing
+          operatorReferralCode = Nothing
         }
       Nothing
       Nothing

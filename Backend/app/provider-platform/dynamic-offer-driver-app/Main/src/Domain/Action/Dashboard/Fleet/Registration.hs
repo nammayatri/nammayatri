@@ -235,8 +235,7 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       email = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      operatorReferralCode = Nothing,
-      fleetReferralCode = Nothing
+      operatorReferralCode = Nothing
     }
 
 fleetOwnerVerify ::
