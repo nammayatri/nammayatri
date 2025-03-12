@@ -24,7 +24,7 @@ findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimen
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig :: Maybe a <- Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
+  cachedConfig :: Maybe a <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
   case cachedConfig of
     Just cfg -> return $ Just cfg
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -41,7 +41,7 @@ findAllConfigs merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDime
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig :: Maybe [a] <- Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
+  cachedConfig :: Maybe [a] <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion)
   case cachedConfig of
     Just cfgs -> return cfgs
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -58,7 +58,7 @@ findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersion
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig <- Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
+  cachedConfig <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
   case cachedConfig of
     Just cfg -> return $ Just cfg
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -75,7 +75,7 @@ findAllConfigsWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersio
   currentTime <- getCurrentTime
   let extraDimensionsWithTime = fmap (\dims -> case dims of A.Object obj -> A.Object (KM.insert "currentTime" (toJSON currentTime) obj); _ -> A.Object (KM.fromList [("currentTime", toJSON currentTime)])) extraDimensions
   mbVersion <- getConfigVersion merchantOpCityId mbConfigInExperimentVersions cfgDomain
-  cachedConfig :: Maybe [a] <- Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
+  cachedConfig :: Maybe [a] <- Hedis.withCrossAppRedis $ Hedis.safeHGet (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion)
   case cachedConfig of
     Just cfgs -> return cfgs
     Nothing -> fetchAndCacheConfig mbVersion extraDimensionsWithTime
@@ -236,7 +236,7 @@ getConfigVersionMapForStickiness merchantOpCityId = do
 cacheConfig :: (ToJSON a, CacheFlow m r) => Text -> Text -> a -> m ()
 cacheConfig redisHashKey configKey config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.hSetExp redisHashKey configKey config expTime
+  Hedis.withCrossAppRedis $ Hedis.hSetExp redisHashKey configKey config expTime
 
 makeRedisHashKeyForConfig :: Id MerchantOperatingCity -> LogicDomain -> Text
 makeRedisHashKeyForConfig cityId configDomain = "CacheHash:" <> show configDomain <> "-MerchantOperatingCityId:" <> cityId.getId
@@ -249,22 +249,24 @@ makeCacheKeyForConfigWithPrefix prefix mbVersion = prefix <> "-V:" <> show mbVer
 
 clearConfigCache :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCache merchanOperatingCityId configDomain mbVersion = do
-  case mbVersion of
-    Nothing -> do
-      rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
-      let allKeys = makeCacheKeyForConfig Nothing : map (\r -> makeCacheKeyForConfig (Just r.version)) rollouts
-      Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
-    Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfig (Just version)]
+  Hedis.withCrossAppRedis $
+    case mbVersion of
+      Nothing -> do
+        rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
+        let allKeys = makeCacheKeyForConfig Nothing : map (\r -> makeCacheKeyForConfig (Just r.version)) rollouts
+        Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
+      Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfig (Just version)]
 
 clearConfigCacheWithPrefix :: BeamFlow m r => Text -> Id MerchantOperatingCity -> LogicDomain -> Maybe Int -> m ()
 clearConfigCacheWithPrefix prefix merchanOperatingCityId configDomain mbVersion = do
-  case mbVersion of
-    Nothing -> do
-      rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
-      let allKeys = makeCacheKeyForConfigWithPrefix prefix Nothing : map (\r -> makeCacheKeyForConfigWithPrefix prefix (Just r.version)) rollouts
-      Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
-    Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfigWithPrefix prefix (Just version)]
+  Hedis.withCrossAppRedis $
+    case mbVersion of
+      Nothing -> do
+        rollouts <- DALR.findByMerchantOpCityAndDomain merchanOperatingCityId configDomain
+        let allKeys = makeCacheKeyForConfigWithPrefix prefix Nothing : map (\r -> makeCacheKeyForConfigWithPrefix prefix (Just r.version)) rollouts
+        Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) allKeys
+      Just version -> Hedis.hDel (makeRedisHashKeyForConfig merchanOperatingCityId configDomain) [makeCacheKeyForConfigWithPrefix prefix (Just version)]
 
 deleteConfigHashKey :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m ()
 deleteConfigHashKey merchantOpCityId configDomain = do
-  Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
+  Hedis.withCrossAppRedis $ Hedis.del (makeRedisHashKeyForConfig merchantOpCityId configDomain)
