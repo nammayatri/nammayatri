@@ -433,3 +433,6 @@ darkHulkGreen = "#24B04A"
 
 brightRed :: Color
 brightRed = "#E64848"
+
+mildYellow :: Color
+mildYellow = "#FFF9EB"

@@ -7966,4 +7966,20 @@ meterRideScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   flow <- UI.meterRideScreen
   case flow of
+    CUSTOMER_OTP_ENTERED otp -> do
+      
+      let currLat = fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+      let currLon = fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+      let deviceId = JB.getDeviceID unit
+      let androidId = JB.getAndroidId unit
+      res <- lift $ lift $ Remote.meterRideOTP androidId deviceId otp currLat currLon
+      case res of
+        Left err -> do
+          modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false, invalidOTP=true}})
+          meterRideScreenFlow
+        Right (MeterRideOTPRes res) -> do
+          modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false}})
+          let _ = spy "@@@@@@@@@@@@@" res
+          meterRideScreenFlow
+      meterRideScreenFlow
     _ -> meterRideScreenFlow

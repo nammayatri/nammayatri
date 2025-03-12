@@ -462,7 +462,7 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
   | LOGOUT_FROM_AADHAAR
   | GO_TO_TICKET_BOOKING_FROM_AADHAAR
 
-data METER_RIDE_SCREEN_OP = NO_OUTPUT_FROM_METER_RIDE_SCREEN
+data METER_RIDE_SCREEN_OP = CUSTOMER_OTP_ENTERED String 
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)

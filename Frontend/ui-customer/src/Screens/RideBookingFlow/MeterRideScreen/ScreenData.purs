@@ -10,5 +10,14 @@ initData = {
     }
     , props : {
         showInfoCard : false
+        , otp : {
+            one : ""
+            , two : ""
+            , three : ""
+            , four : ""
+        }
+        , invalidOTP : false
+        , isOTPLoading : false
+        , isFocussed : false
     }
 }

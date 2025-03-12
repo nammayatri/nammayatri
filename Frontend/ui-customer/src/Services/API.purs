@@ -4609,3 +4609,42 @@ instance standardDiscountItem :: StandardEncode FRFSDiscountReq where
 instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
 instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
 instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
+
+--------------------------------------------------- meterRideOTP ----------------------------------------------------
+
+newtype MeterRideOTPReq = MeterRideOTPReq {
+  androidId :: Maybe String,
+  code :: String,
+  deviceId :: Maybe String,
+  gps :: LatLong
+}
+
+newtype MeterRideOTPRes = MeterRideOTPRes {
+    firstName :: String
+  , lastName :: String
+  , middleName :: String
+  , rating :: Number
+  , referrerImageUri :: String
+  , regiteredAt :: String
+  , totalRides :: Int
+  , vehicleNumber :: String
+  , vehicleVariant :: String
+}
+
+instance makeMeterRideOTPReq :: RestEndpoint MeterRideOTPReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.meterRideOTP "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericMeterRideOTPReq :: Generic MeterRideOTPReq _
+derive instance newtypeMeterRideOTPReq :: Newtype MeterRideOTPReq _
+instance standardEncodeMeterRideOTPReq :: StandardEncode MeterRideOTPReq where standardEncode (MeterRideOTPReq body) = standardEncode body
+instance showMeterRideOTPReq :: Show MeterRideOTPReq where show = genericShow
+instance decodeMeterRideOTPReq :: Decode MeterRideOTPReq  where decode = defaultDecode
+instance encodeMeterRideOTPReq :: Encode MeterRideOTPReq where encode = defaultEncode
+
+derive instance genericMeterRideOTPRes :: Generic MeterRideOTPRes _
+derive instance newtypeMeterRideOTPRes :: Newtype MeterRideOTPRes _
+instance standardEncodeMeterRideOTPRes :: StandardEncode MeterRideOTPRes where standardEncode (MeterRideOTPRes body) = standardEncode body
+instance showMeterRideOTPRes :: Show MeterRideOTPRes where show = genericShow
+instance decodeMeterRideOTPRes :: Decode MeterRideOTPRes  where decode = defaultDecode
+instance encodeMeterRideOTPRes :: Encode MeterRideOTPRes where encode = defaultEncode

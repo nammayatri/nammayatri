@@ -1669,3 +1669,22 @@ confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
   where
     unwrapResponse x = x
+
+
+---------------------------------------- meterRideOTP ---------------------------------------------
+meterRideOTP :: String -> String -> String -> Number -> Number -> Flow GlobalState (Either ErrorResponse MeterRideOTPRes)
+meterRideOTP androidId deviceID otp lat lon = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.meterRideOTP "") unwrapResponse $ callAPI headers $ makeReq androidId deviceID otp lat lon
+  where
+    makeReq :: String -> String -> String -> Number -> Number -> MeterRideOTPReq
+    makeReq androidId deviceId otp lat lon = MeterRideOTPReq {
+      androidId : Just androidId
+      , deviceId : Just deviceId
+      , code : otp
+      , gps : LatLong {
+        lat : lat
+        , lon : lon
+      }
+    }
+    unwrapResponse x = x

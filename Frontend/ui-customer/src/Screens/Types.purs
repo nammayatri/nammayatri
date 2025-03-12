@@ -3371,4 +3371,13 @@ type MeterRideScreenData = {
 
 type MeterRideScreenProps = {
   showInfoCard :: Boolean
+  , otp :: {
+    one :: String
+    , two :: String
+    , three :: String
+    , four :: String
+  }
+  , invalidOTP :: Boolean
+  , isOTPLoading :: Boolean
+  , isFocussed :: Boolean
 }
