@@ -729,7 +729,8 @@ driverSideBottomCardsView config push =
     ] 
     -- $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 
     [
-      if config.meterRideEnd.isMeterRideEnd then shareReceiptView config push else linearLayout[][]
+      if config.meterRideEnd.isMeterRideEnd then shareReceiptView config push
+      else linearLayout[][]
     ]
   ]
 
@@ -757,7 +758,7 @@ shareReceiptView config push =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , cornerRadius 8.0
-        , gravity CENTER_VERTICAL
+        , gravity CENTER
         , stroke $ if config.meterRideEnd.isTextFocussed then "1," <> Color.blue900 else "1," <> Color.grey900
         , background Color.white900
         ]
@@ -784,7 +785,7 @@ shareReceiptView config push =
           , cornerRadius 20.0
           , gravity CENTER
           , margin $ Margin 10 10 10 10
-          , padding $ Padding 12 8 12 8
+          , padding $ Padding 12 4 12 4
           , onClick push (const ShareRecieptClick)
           , clickable (DS.length config.meterRideEnd.phone == 10 && (config.meterRideEnd.isShared == NotShared))
           , alpha case config.meterRideEnd.isShared of
@@ -831,7 +832,6 @@ shareReceiptView config push =
             ,textView $ 
             [ height MATCH_PARENT
             , width WRAP_CONTENT
-            , margin $ Margin 0 0 0 2
             , text case config.meterRideEnd.isShared of
                       Shared -> "Shared"
                       NotShared -> "Share"

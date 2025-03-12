@@ -2339,7 +2339,10 @@ currentRideFlow activeRideResp isActiveRide = do
           for_ activeRideResponse.list $ \(RidesInfo ride) -> do
             let isMeterRide = maybe false (\(API.TripCategory tripCategory) -> tripCategory.contents == Just "MeterRide" ) ride.tripCategory
             if isMeterRide then do
-              modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {isMeterRideStarted = true}})
+              -- modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {isMeterRideStarted = true}})
+              (GlobalState globalState) <- getState
+              (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalState) true
+              modifyScreenState $ MeterRideScreenStateType (\meteRideScreen -> meteRideScreen { data {dynamicReferralCode = getDriverInfoResp.dynamicReferralCode}, props {isMeterRideStarted = true}})
               meterRideScreenFlow
             else do
               let decodedSource = decodeAddress ride.fromLocation true
@@ -3083,7 +3086,11 @@ homeScreenFlow = do
               pure unit
         Left err -> pure unit
       void $ lift $ lift $ toggleLoader false
-    GO_TO_METER_RIDE_SCREEN -> meterRideScreenFlow
+    GO_TO_METER_RIDE_SCREEN -> do
+      (GlobalState globalState) <- getState
+      (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalState) true
+      modifyScreenState $ MeterRideScreenStateType (\meteRideScreen -> meteRideScreen { data {dynamicReferralCode = getDriverInfoResp.dynamicReferralCode} })
+      meterRideScreenFlow
     SEND_RECEIPT_TO_CUSTOMER state -> do
       addDestinationResp <- lift $ lift $ Remote.shareReceipt $ Remote.makeShareReceipt "+91" state.props.meterRideEnd.phone state.data.endRideData.rideId
       case addDestinationResp of
