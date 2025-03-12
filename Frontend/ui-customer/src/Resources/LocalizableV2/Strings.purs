@@ -1365,6 +1365,7 @@ getProxy str =
     SCHEDULED -> \a -> a @~ scheduled
     UPCOMING_BOOKINGS -> \a -> a @~ upcoming_bookings
     RENTALS_ -> \a -> a @~ rentals_
+    METER_RIDE -> \a -> a @~ meter_ride
     INTER_CITY_ -> \a -> a @~ inter_city_
     YOU_HAVE_UPCOMING_INTERCITY_BOOKING arg1 -> \a -> (a @~ you_have_upcoming_intercity_booking) arg1
     A_RIDE_ALREADY_EXISTS -> \a -> a @~ a_ride_already_exists

@@ -333,6 +333,7 @@ data HOME_SCREEN_OUTPUT = HybridAppExit
                         | GO_TO_SAFETY_SETTING_SCREEN
                         | GO_TO_RIDE_RELATED_ISSUES HomeScreenState
                         | GO_TO_RENTALS_FLOW HomeScreenState
+                        | GO_TO_METER_RIDE_FLOW
                         | GO_TO_SEARCH_LOCATION_SCREEN HomeScreenState Boolean
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE

@@ -523,6 +523,7 @@
       "ny_ic_message_black" : true,
       "ny_ic_message_square" : true,
       "ny_ic_meter_icon_yellow" : true,
+      "ny_ic_meter_ride" : true,
       "ny_ic_meterride_loading" : true,
       "ny_ic_metro_banner" : true,
       "ny_ic_metro_black" : true,

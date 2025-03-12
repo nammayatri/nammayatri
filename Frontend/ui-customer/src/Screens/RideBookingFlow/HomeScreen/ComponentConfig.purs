@@ -2456,14 +2456,16 @@ getMarkerActionImageConifg state driverWithinPickupThreshold = do
 
 nammaServices :: LazyCheck -> Array RemoteConfig.Service
 nammaServices dummy = 
-  let enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+  let enabledServices = (RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION)
       allServices = getAllServices FunctionCall
-  in DA.foldl (\acc x -> do 
+      finalVal = DA.foldl (\acc x -> do 
                           let mbService = DA.find(\service -> (show service.type == x)) allServices
                           case mbService of 
                             Just value -> acc <> [value]
                             Nothing -> acc
               ) [] enabledServices
+
+  in finalVal
 
 mapLottieConfig :: LazyCheck -> RemoteConfig.MapLottieConfig
 mapLottieConfig dummy = RemoteConfig.getMapViewLottieConfig FunctionCall
@@ -2482,6 +2484,7 @@ getAllServices dummy =
     , {type: RemoteConfig.METRO, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}
     , {type: RemoteConfig.METRO_OFFER, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: true}
     , {type: RemoteConfig.AMBULANCE_SERVICE, image: fetchImage COMMON_ASSET "ny_ic_ambulance", name: AMBULANCE_, backgroundColor: "#fdf3ec", preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}
+    , {type: RemoteConfig.METER_RIDE, image: fetchImage COMMON_ASSET "ny_ic_meter_ride", name: METER_RIDE, backgroundColor: "#f1f8fe", preferredEstimateOrder : [], secondaryPillColor : "#f1f8fe", hasSecondaryPill: false}
     ] <> (if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
       <> (if enableBusBooking then [{type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
 

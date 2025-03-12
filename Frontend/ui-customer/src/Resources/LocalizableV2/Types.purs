@@ -1294,6 +1294,7 @@ newtype Keymap = Keymap {
 , scheduled :: String
 , upcoming_bookings :: String
 , rentals_ :: String
+, meter_ride :: String
 , inter_city_ :: String
 , you_have_upcoming_intercity_booking :: String -> String
 , a_ride_already_exists :: String
@@ -5557,6 +5558,9 @@ upcoming_bookings = a
 
 rentals_ :: Proxy "rentals_"
 rentals_ = a
+
+meter_ride :: Proxy "meter_ride"
+meter_ride = a
 
 inter_city_ :: Proxy "inter_city_"
 inter_city_ = a

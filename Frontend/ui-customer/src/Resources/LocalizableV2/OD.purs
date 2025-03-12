@@ -1268,6 +1268,7 @@ getOd = Keymap {
 , scheduled: "ଶେଡ୍ୟୁଲ୍ କରାଯାଇଛି"
 , upcoming_bookings: "ଆପଣଙ୍କର ଆସନ୍ତା ବୁକିଂ ଅଛି"
 , rentals_: "ରେଣ୍ଟାଲ୍"
+, meter_ride : "ମିଟର୍ ରାଇଡ୍"
 , inter_city_: "ଆନ୍ତରିକ"
 , a_ride_already_exists: "ଏକ ରାଇଡ୍ ପୂର୍ବରୁ ଅଛି"
 , you_have_an_ride_from_to_scheduled_from_till: "ଆପଣଙ୍କର {} ରାଇଡ୍ {} ରୁ {} ରେ ଯାଇଛି ଯାହା ଆରମ୍ଭ ହୋଇଛି {} ରୁ {} ପର୍ଯ୍ୟନ୍ତ।"

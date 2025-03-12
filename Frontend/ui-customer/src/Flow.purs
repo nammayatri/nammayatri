@@ -2701,6 +2701,8 @@ homeScreenFlow = do
     GO_TO_METRO_BOOKING state -> do
       modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData {props { busClicked = state.props.busClicked, showShimmer = false , ticketServiceType = state.props.ticketServiceType }})
       metroTicketBookingFlow
+    GO_TO_METER_RIDE_FLOW -> do
+      meterRideScreenFlow
     GO_TO_RENTALS_FLOW state -> do
       meterRideScreenFlow
       latestScheduledRides <- FlowCache.fetchAndUpdateScheduledRides true

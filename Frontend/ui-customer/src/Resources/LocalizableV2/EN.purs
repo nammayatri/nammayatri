@@ -1266,6 +1266,7 @@ getEn = Keymap {
 , scheduled: "Scheduled"
 , upcoming_bookings: "You have upcoming bookings"
 , rentals_: "Rentals"
+, meter_ride : "Meter Ride"
 , inter_city_: "Intercity"
 , a_ride_already_exists: "A ride already exists"
 , you_have_an_ride_from_to_scheduled_from_till: "You have an {} ride from {} to {} which is scheduled from {} till {}. You can take normal rides or schedule another ride unless it does not overlap with the already scheduled ride timelines."

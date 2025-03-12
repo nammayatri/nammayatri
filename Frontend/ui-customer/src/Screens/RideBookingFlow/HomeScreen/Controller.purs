@@ -2999,6 +2999,7 @@ eval (DateSelectAction title dateResp respYear respMonth respDay timeResp respHo
 
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
   case tag of
+    "METER_RIDE" -> exit $ GotoMeterRideFlow state
     "RENTALS" -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
     "INTER_CITY" ->
       if state.data.currentCityConfig.enableIntercity then do
@@ -3468,6 +3469,9 @@ eval (ServicesOnClick service) state = do
   void $ pure $ performHapticFeedback unit
   let updatedState = state{data{selectedService = Just service}}
   case service.type of
+    RC.METER_RIDE -> do
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_meter_ride") { module = "onboarding"}
+      exit $ GotoMeterRideFlow updatedState
     RC.RENTAL -> do
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_rentals") { module = "onboarding"}
       exit $ GoToRentalsFlow updatedState { data {rentalsInfo = Nothing } }
