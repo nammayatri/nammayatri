@@ -1810,4 +1810,5 @@ getEn =
     , bus_number: "Bus Number"
     , bus_type: "Bus Type"
     , namma_meter: "Namma Meter"
+    , rate_your_metered_ride : "Rate your metered ride"
     }

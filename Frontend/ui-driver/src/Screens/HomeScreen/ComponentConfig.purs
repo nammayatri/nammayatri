@@ -1912,7 +1912,7 @@ getRatingCardConfig state = RatingCard.ratingCardConfig {
       alpha = if state.data.endRideData.rating > 0 then 1.0 else 0.4,
       id = "RatingCardPrimayButton"
     },
-    title = getString ( if state.data.activeRide.tripType == ST.Delivery then RATE_YOUR_DELIVERY_WITH else RATE_YOUR_RIDE_WITH1 )<> " " <> state.data.endRideData.riderName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
+    title = getString (if state.props.meterRideEnd.isMeterRideEnd then RATE_YOUR_METERED_RIDE else if state.data.activeRide.tripType == ST.Delivery then RATE_YOUR_DELIVERY_WITH else RATE_YOUR_RIDE_WITH1 )<> " " <> state.data.endRideData.riderName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
     feedbackPlaceHolder = getString HELP_US_WITH_YOUR_FEEDBACK,
     closeImgVisible = VISIBLE
   }

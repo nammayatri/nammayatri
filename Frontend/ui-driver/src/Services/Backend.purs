@@ -1972,3 +1972,19 @@ getMeterPrice rideId = do
         withAPIResult (EP.getMeterPrice rideId) unwrapResponse $ callAPI headers (GetMeterPriceReq rideId)
     where
       unwrapResponse (x) = x
+
+------------------------------- Share Receipt ------------------------------------
+
+shareReceipt :: ShareReceiptReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+shareReceipt (ShareReceiptReq rideId payload) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.shareReceipt rideId) unwrapResponse $ callAPI headers (ShareReceiptReq rideId payload)
+    where
+      unwrapResponse (x) = x
+
+makeShareReceipt :: String -> String -> String -> ShareReceiptReq
+makeShareReceipt customerCountryCode customerPhoneNumber rideId = 
+    ShareReceiptReq rideId (ShareReceiptReqBody {
+        customerMobileCountryCode : customerCountryCode,
+        customerMobileNumber : customerPhoneNumber
+    })

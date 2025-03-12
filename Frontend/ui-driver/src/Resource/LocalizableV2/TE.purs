@@ -1810,4 +1810,5 @@ getTe =
     , bus_number: "బస్ నంబర్"
     , bus_type: "బస్ రకం"
     , namma_meter: "నమ్మా మీటర్"
+    , rate_your_metered_ride : "మీ మీటర్‌డ్ రైడ్‌ని రేట్ చేయండి"  
     }

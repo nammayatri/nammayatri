@@ -818,3 +818,14 @@ instance showCity :: Show City where show = genericShow
 instance eqCity :: Eq City where eq = genericEq
 instance encodeCity :: Encode City where encode = defaultEnumEncode
 instance decodeCity :: Decode City where decode = defaultEnumDecode
+
+data RecieptShared = NotShared | Shared | Sharing | Failed
+derive instance genericRecieptShared :: Generic RecieptShared _
+instance eqRecieptShared :: Eq RecieptShared where eq = genericEq
+
+type MeterRideEnd = {
+    isMeterRideEnd :: Boolean
+  , phone :: String
+  , isShared :: RecieptShared
+  , isTextFocussed :: Boolean
+}

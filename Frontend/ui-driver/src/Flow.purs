@@ -30,6 +30,7 @@ import Common.Styles.Colors as Color
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType)
+import Common.Types.App (RecieptShared(..)) as CTA
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT, runExcept)
@@ -483,6 +484,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
         Right (GetDriverInfoResp getDriverInfoResp) -> do
           let cityConfigFromCityCode = HU.getCityConfigFromCityCode config.cityConfig (fromMaybe "" getDriverInfoResp.operatingCity)
           void $ pure $ setValueToLocalStore DRIVER_LOCATION  (capitalize $ cityConfigFromCityCode.cityName)
+          modifyScreenState $ MeterRideScreenStateType (\meteRideScreen -> meteRideScreen { data {dynamicReferralCode = getDriverInfoResp.dynamicReferralCode} })
           setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           when updateCTBasicData $ liftFlowBT $ updateInitialCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
@@ -3082,8 +3084,17 @@ homeScreenFlow = do
         Left err -> pure unit
       void $ lift $ lift $ toggleLoader false
     GO_TO_METER_RIDE_SCREEN -> meterRideScreenFlow
-    SEND_RECIEPT_TO_CUSTOMER state -> homeScreenFlow
-    
+    SEND_RECEIPT_TO_CUSTOMER state -> do
+      addDestinationResp <- lift $ lift $ Remote.shareReceipt $ Remote.makeShareReceipt "+91" state.props.meterRideEnd.phone state.data.endRideData.rideId
+      case addDestinationResp of
+        Right (API.ApiSuccessResult response) -> do
+          let _ = spy "GOT SHARE RECEIPT RESPONSE /////////////////////////////" response
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {meterRideEnd {isShared = CTA.Shared}} })
+          homeScreenFlow
+        Left errorResponse -> do
+          let _ = spy "GOT SHARE RECEIPT ERROR /////////////////////////////" errorResponse
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {meterRideEnd {isShared = CTA.Failed}} })
+          homeScreenFlow
   homeScreenFlow
 
 endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> Boolean -> FlowBT String Unit

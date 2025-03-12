@@ -220,6 +220,12 @@ subHeading2 typography = [
 , lineHeight "24"
 ] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
+subHeading4 :: LazyCheck ->  forall properties. (Array (Prop properties))
+subHeading4 typography = [
+  textSize FontSize.a_20
+, lineHeight "24"
+] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 600]
+
 body1 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body1 typography = [
   textSize $ if (getLanguageFromLocalStore unit) == "TA_IN" then FontSize.a_12 else FontSize.a_14
@@ -455,6 +461,12 @@ body36 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body36 typography = [
   textSize FontSize.a_26
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
+
+body37 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body37 typography = [
+  textSize FontSize.a_16
+, lineHeight "15"
+]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 600]
 
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [

@@ -15,7 +15,8 @@ initData = {
         destinationLng : 0.0,
         ridesInfo : Nothing,
         rateCard : Nothing,
-        lastUpdatedTime: ""
+        lastUpdatedTime: "",
+        dynamicReferralCode: Nothing
     }
     , props : {
         meterFare : 0,

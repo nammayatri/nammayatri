@@ -1810,4 +1810,5 @@ getOd =
     , bus_number: "ବସ୍ ନମ୍ବର୍"
     , bus_type: "ବସ୍ ପ୍ରକାର"
     , namma_meter: "ନମ୍ମ ମିଟର୍"
+    , rate_your_metered_ride : "ଆପଣଙ୍କର ମିଟର୍ ଚଳିତ ଯାତ୍ରାକୁ ମୂଲ୍ୟାଙ୍କନ କରନ୍ତୁ"  
   }

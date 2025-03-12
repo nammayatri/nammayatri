@@ -1810,4 +1810,5 @@ getBn =
     , bus_number: "বাস নম্বর"
     , bus_type: "বাসের ধরন"
     , namma_meter: "নাম্মা মিটার"
+    , rate_your_metered_ride : "আপনার মিটারযুক্ত যাত্রার মূল্যায়ন করুন"  
     }

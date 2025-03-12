@@ -1810,4 +1810,5 @@ getKn =
     , bus_number: "ಬಸ್ ಸಂಖ್ಯೆ"
     , bus_type: "ಬಸ್ ಪ್ರಕಾರ"
     , namma_meter: "ನಮ್ಮ ಮೀಟರ್"
+    , rate_your_metered_ride : "ನಿಮ್ಮ ಮೀಟರ್‌ ಮಾಡಿದ ಪ್ರಯಾಣವನ್ನು ಮೌಲ್ಯಮಾಪನ ಮಾಡಿ"  
     }

@@ -491,6 +491,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
     , subscriptionDown :: Maybe Boolean
+    , dynamicReferralCode :: Maybe String
     }
 
 
@@ -5724,3 +5725,28 @@ instance standardEncodeGetMeterPriceReq :: StandardEncode GetMeterPriceReq where
 instance showGetMeterPriceReq :: Show GetMeterPriceReq where show = genericShow
 instance decodeGetMeterPriceReq :: Decode GetMeterPriceReq where decode = defaultDecode
 instance encodeGetMeterPriceReq :: Encode GetMeterPriceReq where encode = defaultEncode
+
+newtype ShareReceiptReqBody = ShareReceiptReqBody {
+  customerMobileCountryCode :: String,
+  customerMobileNumber :: String
+}
+
+data ShareReceiptReq = ShareReceiptReq String ShareReceiptReqBody
+
+instance makeShareReceiptReq :: RestEndpoint ShareReceiptReq  where
+ makeRequest reqBody@(ShareReceiptReq rideId body) headers = defaultMakeRequestWithoutLogs POST (EP.shareReceipt rideId) headers reqBody Nothing
+ encodeRequest req = encode req
+
+derive instance genericShareReceiptReq :: Generic ShareReceiptReq _
+instance standardEncodeShareReceiptReq :: StandardEncode ShareReceiptReq where standardEncode (ShareReceiptReq id body) = standardEncode body
+instance showShareReceiptReq :: Show ShareReceiptReq where show = genericShow
+instance decodeShareReceiptReq :: Decode ShareReceiptReq where decode = defaultDecode
+instance encodeShareReceiptReq :: Encode ShareReceiptReq where encode (ShareReceiptReq id body) = standardEncode body
+
+derive instance genericShareReceiptReqBody :: Generic ShareReceiptReqBody _
+derive instance newtypeShareReceiptReqBody :: Newtype ShareReceiptReqBody _
+instance standardEncodeShareReceiptReqBody :: StandardEncode ShareReceiptReqBody where standardEncode (ShareReceiptReqBody body) = standardEncode body
+instance showAddShareReceiptReqBody :: Show ShareReceiptReqBody where show = genericShow
+instance decodeShareReceiptReqBody :: Decode ShareReceiptReqBody where decode = defaultDecode
+instance encodeShareReceiptReqBody :: Encode ShareReceiptReqBody where encode (ShareReceiptReqBody body) = standardEncode body
+

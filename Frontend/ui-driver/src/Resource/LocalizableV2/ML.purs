@@ -1810,4 +1810,5 @@ getMl =
     , bus_number: "Bus Number"
     , bus_type: "Bus Type"
     , namma_meter: "Namma Meter"
+    , rate_your_metered_ride : "നിങ്ങളുടെ മീറ്റർ ചെയ്‌ത യാത്ര റേറ്റുചെയ്യുക"  
     }

@@ -67,18 +67,6 @@ data Action = Support
             | ShareRecieptClick
             | RemoveTextFocus
 
-data RecieptShared = NotShared | Shared | Sharing | Failed
-derive instance genericRecieptShared :: Generic RecieptShared _
-instance eqRecieptShared :: Eq RecieptShared where eq = genericEq
-
-type MeterRideEnd = {
-  isMeterRideEnd :: Boolean
-  , phone :: String
-  , isShared :: RecieptShared
-  , isTextFocussed :: Boolean
-}
-
-
 type RentalRideTextConfig = {
   rideTime :: String,
   rideDistance :: String,

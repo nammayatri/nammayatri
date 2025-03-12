@@ -24,7 +24,7 @@ import Screens.HomeScreen.ComponentConfig
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..)) as Common
+import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..), RecieptShared(..)) as Common
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
@@ -1873,8 +1873,8 @@ eval (RideCompletedAC (RideCompletedCard.ShareRecieptFocusChanged focussed)) sta
   else do
     void $ pure $ hideKeyboardOnNavigation true
     continue state {props {meterRideEnd {isTextFocussed = EHC.isTrue focussed}}}
-eval (RideCompletedAC (RideCompletedCard.ShareRecieptTextChanged val)) state = continue state {props {meterRideEnd {phone = val}}}
-eval (RideCompletedAC (RideCompletedCard.ShareRecieptClick)) state = updateAndExit state {props {meterRideEnd {isShared = ST.Sharing}}} $ SendReciept state
+eval (RideCompletedAC (RideCompletedCard.ShareRecieptTextChanged val)) state = continue state {props {meterRideEnd {phone = val, isShared = Common.NotShared}}}
+eval (RideCompletedAC (RideCompletedCard.ShareRecieptClick)) state = updateAndExit state {props {meterRideEnd {isShared = Common.Sharing}}} $ SendReciept state
 
 eval (RatingCardAC (RatingCard.Rating selectedRating)) state = continue state {data {endRideData { rating = selectedRating}}}
 eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state {data {endRideData {feedback = feedback}}}

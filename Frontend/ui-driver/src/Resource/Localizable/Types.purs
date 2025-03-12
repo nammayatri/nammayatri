@@ -1817,3 +1817,4 @@ data STR = LETS_GET_STARTED
         | BUS_NUMBER
         | BUS_TYPE
         | NAMMA_METER
+        | RATE_YOUR_METERED_RIDE

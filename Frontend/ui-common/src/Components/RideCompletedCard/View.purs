@@ -729,7 +729,7 @@ driverSideBottomCardsView config push =
     ] 
     -- $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 
     [
-      shareReceiptView config push
+      if config.meterRideEnd.isMeterRideEnd then shareReceiptView config push else linearLayout[][]
     ]
   ]
 
@@ -784,7 +784,7 @@ shareReceiptView config push =
           , cornerRadius 20.0
           , gravity CENTER
           , margin $ Margin 10 10 10 10
-          , padding $ Padding 12 4 12 4
+          , padding $ Padding 12 8 12 8
           , onClick push (const ShareRecieptClick)
           , clickable (DS.length config.meterRideEnd.phone == 10 && (config.meterRideEnd.isShared == NotShared))
           , alpha case config.meterRideEnd.isShared of

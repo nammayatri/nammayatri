@@ -27,6 +27,7 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
 import Common.Styles.Colors as Color
+import Common.Types.App (MeterRideEnd(..), RecieptShared(..))
 
 initData :: HomeScreenState
 initData = 

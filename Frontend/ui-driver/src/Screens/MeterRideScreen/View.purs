@@ -16,6 +16,7 @@ import Animation as Anim
 import Common.Types.App
 import Data.String (length)
 import Data.String as DS
+import Data.String.CodeUnits (toCharArray, singleton)
 import Data.String.Unsafe (charAt)
 import Effect.Uncurried (runEffectFn1)
 import Data.Int (toNumber, round)
@@ -46,7 +47,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Types.App (defaultGlobalState, GlobalState(..))
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
-import Data.Array (head)
+import Data.Array (head, mapWithIndex)
 import Data.Array (length) as DA
 import Types.App (ScreenType(..), FlowBT)
 import Language.Strings (getString)
@@ -649,6 +650,7 @@ rideStartedView push state =
               ]
               [ fareView push state
               , distAndTimeView push state
+              , rideOtpView push state
               , linearLayout
                   [ gravity BOTTOM
                   , weight 1.0
@@ -758,6 +760,77 @@ rideStartedView push state =
         }
       }
 
+rideOtpView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
+rideOtpView push state =
+ let referralCode = fromMaybe "5432" state.data.dynamicReferralCode
+ in 
+  linearLayout 
+    [ width MATCH_PARENT
+    , height $ WRAP_CONTENT
+    , margin $ Margin 20 16 20 0
+    , orientation VERTICAL
+    ]
+    [  
+      linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background "#F4F7FF"
+        , margin $ Margin 0 0 0 16
+        ][]
+    , linearLayout 
+        [ orientation HORIZONTAL
+        , width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        [ linearLayout 
+          [ width WRAP_CONTENT 
+          , height WRAP_CONTENT
+          , background $ Color.white900
+          , weight 1.0
+          , gravity LEFT
+          ]
+          [ textView $ 
+              [ text "Ride OTP"
+              , maxLines 2
+              , ellipsize true
+              , padding $ Padding 5 5 5 5
+              , color Color.black600
+              ] <> FontStyle.body37 TypoGraphy
+          ]
+    , linearLayout 
+      [ width WRAP_CONTENT 
+      , height WRAP_CONTENT
+      , background $ Color.white900
+      , weight 1.0
+      , gravity RIGHT
+      ]
+      (mapWithIndex (\index item ->
+          otpBox push state item index
+        )(toCharArray referralCode))
+    ]
+  ]
+
+otpBox :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> Char -> Int -> PrestoDOM (Effect Unit) w
+otpBox push state number index = 
+  let isLast = index == 3
+  in
+  linearLayout
+    [ width $ V 35
+    , height $ V 35
+    , background "#F4F7FF"
+    , cornerRadius 10.0
+    , margin $ if not isLast then Margin 0 0 5 0 else Margin 0 0 0 0
+    , padding $ Padding 9 3 9 3
+    , gravity CENTER
+    ]
+    [
+      textView
+      $ [ text $ singleton number
+        , height WRAP_CONTENT
+        , color Color.black900
+        ] <> FontStyle.subHeading4 TypoGraphy
+    ]
+
 distAndTimeView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 distAndTimeView push state =
   linearLayout
@@ -806,48 +879,6 @@ distAndTimeView push state =
                   , color Color.black500
                   ]
                 <> FontStyle.h2 TypoGraphy
-            ]
-        , linearLayout
-            [ height $ WRAP_CONTENT
-            , width $ WRAP_CONTENT
-            , orientation VERTICAL
-            , cornerRadius 10.0
-            ]
-            [ textView
-                $ [ text $ getString UPDATED_AT_
-                  , color Color.black500
-                  ]
-                <> FontStyle.body9 TypoGraphy
-            , linearLayout
-                [ height $ WRAP_CONTENT
-                , width $ WRAP_CONTENT
-                , gravity CENTER
-                , onClick push $ const RefreshTime
-                , rippleColor Color.rippleShade
-                ]
-                [ textView
-                    $ [ text $ EHC.convertUTCtoISC state.data.lastUpdatedTime "h:mm A"
-                      , color Color.black900
-                      , padding $ PaddingBottom 3
-                      ]
-                    <> FontStyle.body9 TypoGraphy
-                , PrestoAnim.animationSet
-                    [ PrestoAnim.Animation
-                        [ PrestoAnim.duration 500
-                        , PrestoAnim.fromRotation 0
-                        , PrestoAnim.toRotation 360
-                        , PrestoAnim.repeatCount PrestoAnim.NoRepeat
-                        ]
-                        state.props.refreshAnimation
-                    ]
-                    $ imageView
-                        [ width $ V 16
-                        , height $ V 16
-                        , onAnimationEnd push StopRotation
-                        , margin $ MarginLeft 8
-                        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_refresh"
-                        ]
-                ]
             ]
         ]
     , linearLayout
@@ -1135,13 +1166,44 @@ fareView push state =
                     []
             ]
         , textView
-            $ [ text $ getString METER_RUNNING
+            $ [ text $ getString UPDATED_AT_
               , color Color.black600
               , margin $ MarginLeft 8
               , letterSpacing $ PX 2.0
               , padding $ PaddingBottom 3
               ]
             <> FontStyle.body22 TypoGraphy
+
+            , linearLayout
+                [ height $ WRAP_CONTENT
+                , width $ WRAP_CONTENT
+                , gravity CENTER
+                , onClick push $ const RefreshTime
+                , rippleColor Color.rippleShade
+                ]
+                [ textView
+                    $ [ text $ EHC.convertUTCtoISC state.data.lastUpdatedTime "h:mm A"
+                      , color Color.black900
+                      , padding $ PaddingBottom 3
+                      ]
+                    <> FontStyle.body22 TypoGraphy
+                , PrestoAnim.animationSet
+                    [ PrestoAnim.Animation
+                        [ PrestoAnim.duration 500
+                        , PrestoAnim.fromRotation 0
+                        , PrestoAnim.toRotation 360
+                        , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+                        ]
+                        state.props.refreshAnimation
+                    ]
+                    $ imageView
+                        [ width $ V 16
+                        , height $ V 16
+                        , onAnimationEnd push StopRotation
+                        , margin $ MarginLeft 8
+                        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_refresh"
+                        ]
+                ]
         ]
     ]
 

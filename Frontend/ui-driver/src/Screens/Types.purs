@@ -69,13 +69,11 @@ import MerchantConfig.Types
 import RemoteConfig.Types as RC
 import Services.API as API
 import Styles.Types (FontSize)
-import Common.Types.App (CalendarDate)
+import Common.Types.App (CalendarDate, MeterRideEnd(..))
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
 import JBridge as JB
-import Components.RideCompletedCard.Controller (MeterRideEnd(..), RecieptShared)
-
 
 type EditTextInLabelState =
  {
@@ -3550,7 +3548,8 @@ type MeterRideScreenData = {
   destinationLng :: Number,
   ridesInfo :: Maybe RidesInfo,
   rateCard :: Maybe Common.RateCard,
-  lastUpdatedTime :: String
+  lastUpdatedTime :: String,
+  dynamicReferralCode :: Maybe String
 }
 
 type MeterRideScreenProps = {

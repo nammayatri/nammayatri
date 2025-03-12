@@ -1810,4 +1810,5 @@ getHi =
     , bus_number: "बस नंबर"
     , bus_type: "बस प्रकार"
     , namma_meter: "नम्मा मीटर"
+    , rate_your_metered_ride : "अपनी मीटर्ड सवारी को रेट करें"  
     }

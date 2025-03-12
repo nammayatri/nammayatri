@@ -1810,4 +1810,5 @@ getTa =
     , bus_number: "பஸ் எண்"
     , bus_type: "பஸ் வகை"
     , namma_meter: "நம்ம மீட்டர்"
+    , rate_your_metered_ride : "உங்கள் மீட்டரிங் சவாரிக்கு மதிப்பீடு செய்யுங்கள்"  
     }

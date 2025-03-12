@@ -1812,6 +1812,7 @@ newtype Keymap = Keymap {
   , resume_ride :: String
   , end_ride_with_stops :: String
   , stop :: String -> String 
+  , rate_your_metered_ride :: String
   , rate_changes_as_the_distance_changes :: String
     , nammanmeter :: String
     , press_to_cancel :: String
@@ -7235,3 +7236,5 @@ bus_type = a
 namma_meter :: Proxy "namma_meter"
 namma_meter = a
 
+rate_your_metered_ride :: Proxy "rate_your_metered_ride"
+rate_your_metered_ride = a

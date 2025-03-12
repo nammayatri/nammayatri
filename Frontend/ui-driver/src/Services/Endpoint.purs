@@ -434,3 +434,6 @@ addDestination rideId = (getBaseUrl "dummy") <> "/meterRide/" <> rideId <> "/add
 
 getMeterPrice :: String -> String
 getMeterPrice rideId = (getBaseUrl "dummy") <> "/meterRide/price?rideId=" <> rideId
+
+shareReceipt :: String -> String
+shareReceipt rideId = (getBaseUrl "") <> "/meterRide/" <> rideId <> "/shareReceipt"

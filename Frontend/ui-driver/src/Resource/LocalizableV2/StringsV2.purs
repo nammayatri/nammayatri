@@ -1875,4 +1875,4 @@ getProxy str = case str of
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1
-  
+  RATE_YOUR_METERED_RIDE -> \a -> a @~ rate_your_metered_ride
