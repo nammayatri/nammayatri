@@ -1,25 +1,25 @@
-module API.Internal.DriverArrivalNotf where
+module API.Internal.DriverArrivalNotf
+  ( API,
+    handler,
+  )
+where
 
 import qualified Domain.Action.Internal.DriverArrivalNotf as Domain
-import Environment (FlowHandler, FlowServer)
+import Environment
 import GHC.Base
-import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Error
-import Kernel.Utils.Error.Throwing ()
-import Servant hiding (throwError)
-import Tools.Error
+import Servant
 
 type API =
-  "driverArrivalNotification"
-    :> Header "api-key" Text
-    :> ReqBody '[JSON] Domain.DANTypeValidationReq
-    :> Post '[JSON] APISuccess
+  ( "driverArrivalNotification"
+      :> ReqBody '[JSON] Domain.DANTypeValidationReq
+      :> Post '[JSON] APISuccess
+  )
 
 handler :: FlowServer API
-handler = driverArrivalNotfHandler
+handler =
+  driverArrivalNotfHandler
 
-driverArrivalNotfHandler :: Maybe Text -> Domain.DANTypeValidationReq -> FlowHandler APISuccess
-driverArrivalNotfHandler apiKey req = withFlowHandlerAPI $ do
-  unless (Just req.apiKey == apiKey) $ throwError $ AuthBlocked "Invalid api key"
-  Domain.driverArrivalNotfHandler req
+driverArrivalNotfHandler :: Domain.DANTypeValidationReq -> FlowHandler APISuccess
+driverArrivalNotfHandler = withFlowHandlerAPI . Domain.driverArrivalNotfHandler

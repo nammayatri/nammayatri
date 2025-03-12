@@ -3,7 +3,7 @@ module Domain.Action.Internal.DriverArrivalNotf where
 import Data.Aeson
 import Data.Text (pack)
 import Domain.Types.Ride
-import Environment (Flow)
+import Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -26,20 +26,16 @@ data RideNotificationStatus
 data DANTypeValidationReq = DANTypeValidationReq
   { rideId :: Text,
     driverId :: Value,
-    rideNotificationStatus :: RideNotificationStatus,
-    apiKey :: Text
+    rideNotificationStatus :: RideNotificationStatus
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 driverArrivalNotfHandler :: DANTypeValidationReq -> Flow APISuccess
-driverArrivalNotfHandler (DANTypeValidationReq rideId _ status _) = do
+driverArrivalNotfHandler (DANTypeValidationReq rideId _ status) = do
   ride <- B.runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
-
   when (ride.status == COMPLETED || ride.status == CANCELLED) $
     throwError $ RideInvalidStatus ("Cannot track this ride: " <> pack (show ride.status))
-
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-
   case status of
     DRIVER_ON_THE_WAY -> do
       QRBE.updateJourneyLegStatus (Just LJT.OnTheWay) booking.id
