@@ -297,6 +297,8 @@ drawDriverRoute resp state = do
         $ case response of
             Right (API.FRFSRouteAPI routeResp) -> DA.reverse $ Mb.fromMaybe [] routeResp.waypoints
             Left err -> []
+    _ = spy "codex-response" response
+    _ = spy "codex-route" route
 
     destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) resp
   filteredRoute <- case destinationStation, DS.null state.data.bookingId of
@@ -350,10 +352,6 @@ filterVehicleInfoLogic :: String -> Boolean
 filterVehicleInfoLogic timestamp =
   let timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") timestamp 
       wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
-      _ = spy "codex-currrentTime" (EHC.getCurrentUTC "")
-      _ = spy "codex-timestamp" timestamp 
-      _ = spy "codex-timeDiff" timeDiff
-      _ = spy "codex-maxAllowedTimeDiffInLTSinSec" wmbFlowConfig.maxAllowedTimeDiffInLTSinSec
   in (timeDiff > wmbFlowConfig.maxAllowedTimeDiffInLTSinSec)
       -- && (item.nextStopDistance > wmbFlowConfig.maxDeviatedDistanceInMeters) -- Todo - check via haversine polyline distance calculation
 
