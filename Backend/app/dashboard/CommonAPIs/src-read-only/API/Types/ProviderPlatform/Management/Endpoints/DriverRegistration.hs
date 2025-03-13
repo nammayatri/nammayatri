@@ -27,6 +27,13 @@ data ApproveDetails
   | VehicleInsurance VInsuranceApproveDetails
   | VehicleFitnessCertificate FitnessApproveDetails
   | VehicleInspectionForm VInspectionApproveDetails
+  | Pan PanApproveDetails
+  | NOC NOCApproveDetails
+  | BusinessLicenseImg BusinessLicenseApproveDetails
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BusinessLicenseApproveDetails = BusinessLicenseApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, businessLicenseNumber :: Kernel.Prelude.Text, licenseExpiry :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -40,7 +47,8 @@ data DLApproveDetails = DLApproveDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DLDetails = DLDetails
-  { driverLicenseNumber :: Kernel.Prelude.Text,
+  { driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverLicenseNumber :: Kernel.Prelude.Text,
     operatingCity :: Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     classOfVehicles :: [Kernel.Prelude.Text],
@@ -82,7 +90,7 @@ data DocumentType
   | VehicleLeft
   | VehicleFrontInterior
   | VehicleBackInterior
-  | BusinessPanCard
+  | Odometer
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -108,7 +116,7 @@ data DocumentsListResponse = DocumentsListResponse
     pan :: [Kernel.Prelude.Text],
     vehicleNOC :: [Kernel.Prelude.Text],
     businessLicense :: [Kernel.Prelude.Text],
-    businessPan :: [Kernel.Prelude.Text],
+    odometer :: [Kernel.Prelude.Text],
     aadhaar :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
@@ -159,6 +167,26 @@ data GetDocumentResponse = GetDocumentResponse {imageBase64 :: Kernel.Prelude.Te
 
 data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel.Prelude.Text, documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data NOCApproveDetails = NOCApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, nocNumber :: Kernel.Prelude.Text, nocExpiry :: Kernel.Prelude.UTCTime, rcNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PanApproveDetails = PanApproveDetails
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    panNumber :: Kernel.Prelude.Text,
+    docType :: Kernel.Prelude.Maybe PanType,
+    driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverNameOnGovtDB :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PanType
+  = INDIVIDUAL
+  | BUSINESS
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RCApproveDetails = RCApproveDetails
