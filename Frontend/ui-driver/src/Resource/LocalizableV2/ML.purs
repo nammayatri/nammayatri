@@ -1781,7 +1781,7 @@ getMl =
     , disable_metro_warriors_info : "ഗോ ടു മോഡ് സജീവമാക്കുന്നത് മെട്രോ വാരിയർസ് മോഡ് പ്രവർത്തനരഹിതമാക്കും."
     , choose_preferred_metro : "പ്രിയപ്പെട്ട മെട്രോ തിരഞ്ഞെടുക്കുക"
     , metro_warriors : "മെട്രോ വാരിയേഴ്സ്"
-    , search : "തിരയുക" 
+    , search : "തിരയുക"
     , bus__ : "ബസ്"
     , driver_unsubscribed : "ഡ്രൈവർ പ്ലാറ്റ്ഫോം നിലവിലില്ല. താഴെ കൊടുക്കേണ്ട തുക അടയ്ക്കാൻ വേണ്ടി പുനഃ സബ്സ്ക്രൈബ് ചെയ്യുക"
     , route_bus_number : "റൂട്ട്/ബസ് നമ്പർ"
@@ -1811,4 +1811,54 @@ getMl =
     , yes_end_ride: "അവശ്യം, യാത്ര അവസാനിപ്പിക്കുക"
     , canceling_this_booking_may_affect_the_emergency_medical : "ഈ ബുക്കിംഗ്キャンസル ചെയ്യുന്നത് രോഗിക്ക് അടിയന്തര മെഡിക്കൽ സേവനങ്ങൾക്ക് പ്രഭാവം വരുത്താം"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ഡ്രൈവർമാർ അവരുടെ വൈദ്യശാസ്ത്ര കാരണം അല്ലെങ്കിൽ veículo തകരാറുകൾ മൂലം മാത്രമേ റദ്ദുചെയ്യേണ്ടു"
+    , payment_under_maintenance : "പേയ്മെന്റ് പരിപാലനത്തിലാണ്"
+    , payments_temporarily_unavailable : "പേയ്മെന്റുകൾ താൽക്കാലികമായി ലഭ്യമല്ല, ഉടൻ തിരിച്ചുവരും. ദയവായി പിന്നീടു ശ്രമിക്കുക.",
+    extra_charge_penalty: "അധിക ചാർജ് പിഴ",
+    out_of_rides: (\numerator denaminator -> numerator <> " ൽ നിന്ന് " <> denaminator <> " യാത്രകൾ"),
+    extra_charged: "അധികം ചാർജ് ചെയ്തു",
+    get_clarified: "സർട്ടിഫൈഡ് ആകുക",
+    dont_ask_extra_suspend: "താൽക്കാലിക വിലക്ക് ഒഴിവാക്കാൻ അധികം ചോദിക്കരുത്",
+    dont_ask_extra_blocking: "ബ്ലോക്ക് ഒഴിവാക്കാൻ അധികം ചോദിക്കരുത്",
+    your_extra_charge_penalty: "നിങ്ങളുടെ അധിക ചാർജ് പിഴ",
+    what_does_this_mean: "ഇത് എന്താണ് അർത്ഥമാക്കുന്നത്?",
+    read_more: "കൂടുതൽ വായിക്കുക",
+    take_the_course: "കോഴ്സ് എടുത്തുക",
+    extra_charge_q1: "അധിക ചാർജ് പിഴ എന്താണ്?",
+    extra_charge_a1: "ഡ്രൈവർ ഉപഭോക്താവിൽ നിന്ന് അധികം ചോദിച്ചാൽ, ഈ സ്കോർ ഉയരും.",
+    extra_charge_q2: "പിഴ വർദ്ധിച്ചാൽ എന്ത് സംഭവിക്കും?",
+    extra_charge_a2: "സ്കോർ കൂടുതലായാൽ ഡ്രൈവർക്ക് കുറച്ച് യാത്രകൾ മാത്രമേ ലഭിക്കൂ.",
+    extra_charge_q3: "ഞാൻ എങ്ങനെ എന്റെ പിഴ കുറയ്ക്കാം?",
+    extra_charge_a3: "യാത്രകൾ നടത്തുക, അധികം ചോദിക്കരുത്. സമയത്തിനൊപ്പം സ്കോർ കുറയും.",
+    extra_charge_q4: "ഡ്രൈവർ തുടർന്നും അധികം ചോദിച്ചാൽ?",
+    extra_charge_a4: "ഡ്രൈവർക്ക് താൽക്കാലിക വിലക്ക് ലഭിക്കും. തുടർന്നും ചോദിച്ചാൽ, അവർ ബ്ലോക്ക് ചെയ്യപ്പെടും.",
+    zero: "പൂജ്യം",
+    low: "കുറവ്",
+    suspended: "താൽക്കാലിക വിലക്ക്",
+    blocked: "തടയുക",
+    overcharging_blocked_desc: "പതിവായി അധിക ചാർജ് ഈടാക്കിയതിനാൽ, നിങ്ങൾ റൈഡുകൾ എടുക്കുന്നതിൽ നിന്ന് തടയപ്പെട്ടിരിക്കുന്നു",
+    overcharging_suspended_desc: "പതിവായി അധിക ചാർജ് ഈടാക്കിയതിനാൽ, നിങ്ങൾ ഓൺലൈനിൽ പോകുന്നത് താൽക്കാലികമായി നിർത്തിയിരിക്കുന്നു",
+    suspended_till: (\time date -> "താൽക്കാലികമായി സസ്‌പെൻഡ് ചെയ്‌തിരിക്കുന്നു " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver: "ന്യായമായ നിരക്കുള്ള ഡ്രൈവർ"
+    , resume_ride : "യാത്ര പുനരാരംഭിക്കുക"
+    , end_ride_with_stops : "നിങ്ങൾക്ക് ഇനിയും நிறുത്തലുകൾ ഉണ്ട്. എങ്കിലും യാത്ര അവസാനിപ്പിക്കണോ?"
+    , stop: (\n -> "തുറക്ക് " <> n)
+    , rate_changes_as_the_distance_changes: "Rate changes as the distance changes"
+    , nammanmeter: "namma\nmeter"
+    , press_to_cancel: "Press to Cancel"
+    , dist: "DIST."
+    , km: "KM"
+    , updated_at_: "UPDATED AT "
+    , time: "TIME"
+    , enter_destination: "Enter Destination"
+    , stop_meter: "STOP METER"
+    , upton2km: "Upto\n2KM"
+    , meter_running: "METER RUNNING"
+    , confirm_meter_stop: "Confirm Meter Stop"
+    , confirm_destination: "Confirm Destination"
+    , search_results: "Search Results"
+    , start_typing_to_search_places: "Start typing to search places"
+    , bus_number: "Bus Number"
+    , bus_type: "Bus Type"
+    , namma_meter: "Namma Meter"
+    , package: "പാക്കേജ്"
     }

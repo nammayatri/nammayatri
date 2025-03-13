@@ -30,9 +30,9 @@ import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 
 initData :: DriverProfileScreenState
-initData = 
+initData =
   let config = getAppConfig appConfig
-  in 
+  in
   {
   data:  {
     vehicleDetails : [],
@@ -210,11 +210,11 @@ languagesChoices =
 dummyDriverInfo :: GetDriverInfoResp
 dummyDriverInfo = GetDriverInfoResp {
       id                    :  ""
-    , rating                :  Nothing 
-    , middleName            :  Nothing 
-    , lastName              :  Nothing 
+    , rating                :  Nothing
+    , middleName            :  Nothing
+    , lastName              :  Nothing
     , firstName             :  ""
-    , mobileNumber          :  Nothing 
+    , mobileNumber          :  Nothing
     , active                :  false
     , mode                  :  Nothing
     , onRide                :  false
@@ -222,9 +222,9 @@ dummyDriverInfo = GetDriverInfoResp {
     , organization          :  organizationInfo
     , enabled               :  false
     , verified              :  false
-    , language              :  Nothing 
-    , referralCode          :  Nothing 
-    , alternateNumber       :  Nothing 
+    , language              :  Nothing
+    , referralCode          :  Nothing
+    , alternateNumber       :  Nothing
     , canDowngradeToHatchback :  false
     , canDowngradeToSedan :  false
     , canDowngradeToTaxi :  false
@@ -238,7 +238,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , subscribed            :  false
     , autoPayStatus         : Nothing
     , mediaUrl              : Nothing
-    , aadhaarCardPhoto      : Nothing 
+    , aadhaarCardPhoto      : Nothing
     , freeTrialDaysLeft     : Nothing
     , payerVpa              : Nothing
     , currentDues           : Nothing
@@ -273,6 +273,9 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSpecialLocWarrior : Nothing
     , onboardingVehicleCategory : Nothing
     , subscriptionDown : Nothing
+    , overchargingTag : Nothing
+    , ridesWithFareIssues : Nothing
+    , totalRidesConsideredForFareIssues : Nothing
 }
 
 organizationInfo :: OrganizationInfo

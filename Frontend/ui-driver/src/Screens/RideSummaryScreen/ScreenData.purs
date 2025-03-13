@@ -27,7 +27,7 @@ type RideSummaryScreenData = {
 type RideSummaryScreenProps = {
   termsAndConditionOpen :: Boolean,
   excludedChargesOpen :: Boolean,
-  includedChargesOpen :: Boolean, 
+  includedChargesOpen :: Boolean,
   pickUpOpen :: Boolean ,
   showPopUp :: Boolean,
   throughBanner :: Boolean,
@@ -61,7 +61,7 @@ dummyAPI = BookingAPIEntity{
           deadKmFare : Nothing,
           distBasedFare : Nothing,
           distanceUnit : Nothing,
-          extraDistance : Nothing, 
+          extraDistance : Nothing,
           extraDuration : Nothing,
           timeBasedFare : Nothing
       },
@@ -119,7 +119,7 @@ dummyAPI = BookingAPIEntity{
   vehicleServiceTierSeatingCapacity :Nothing
 }
 
-dummyActiveRideData :: S.ActiveRide 
+dummyActiveRideData :: S.ActiveRide
 dummyActiveRideData = {
   id : "",
   source : "",
@@ -214,6 +214,6 @@ initData = {
     shimmerVisibility : true,
     errorPopUp : false
 
-    
+
   }
 }

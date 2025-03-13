@@ -32,7 +32,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
-import Data.Maybe(fromMaybe, Maybe(..), isJust)
+import Data.Maybe(fromMaybe, Maybe(..), isJust, maybe)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Prelude ((<>), (||),(&&),(==),(<), not, (>))
@@ -48,6 +48,11 @@ import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import Font.Style (Style(..))
 import ConfigProvider
+import Components.ExtraChargeCard as ExtraChargeCard
+import Services.API
+import Data.Array
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -177,7 +182,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.updateLanguages && DA.length (getSelectedLanguages state) > 0) || (state.props.showGenderView && isJust state.data.genderTypeSelect && state.data.driverGender /= state.data.genderTypeSelect) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber && state.data.driverAlternateNumber /= state.data.driverEditAlternateMobile) then 1.0 else 0.7
       }
   in primaryButtonConfig'
-
 
 updateButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
@@ -390,7 +394,7 @@ paymentInfoPopUpConfig push state =
     config' = PopUpModal.config
     popUpConfig' =
       config'
-        { 
+        {
          buttonLayoutMargin = Margin 16 24 16 20 ,
          padding = PaddingTop 24,
          backgroundClickable = true,
@@ -458,7 +462,7 @@ addRCButtonConfig state = let
       , cornerRadius = 10.0
       , background = Color.blue600
       , height = (V 60)
-      , id = "AddRCPrimaryButton" 
+      , id = "AddRCPrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -473,7 +477,7 @@ addRCButtonConfigs state = let
       , cornerRadius = 10.0
       , background = Color.blue600
       , height = (V 60)
-      , id = "AddRCPrimaryButton" 
+      , id = "AddRCPrimaryButton"
       }
   in primaryButtonConfig'
 
@@ -508,53 +512,67 @@ deleteRcPopUpConfig state =
     popUpConfig'
 
 driverBLockedPopup :: ST.DriverProfileScreenState -> PopUpModal.Config
-driverBLockedPopup state = 
-  PopUpModal.config {
-    gravity = CENTER,
-    backgroundClickable = false,
-    optionButtonOrientation = "VERTICAL",
-    buttonLayoutMargin = Margin 16 0 16 20,
-    margin = MarginHorizontal 25 25, 
-    primaryText {
-      text = getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
-    , textStyle = Heading2
-    , margin = Margin 16 0 16 10},
-    secondaryText{
-      text = getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
-    , textStyle = Body5
-    , margin = Margin 16 0 16 15 },
-    option1 {
-      text = getString CALL_SUPPORT
-    , color = Color.yellow900
-    , background = Color.black900
-    , strokeColor = Color.transparent
-    , textStyle = FontStyle.SubHeading1
-    , width = MATCH_PARENT
-    , image {
-        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
-        , height = V 16
-        , width = V 16
-        , visibility = VISIBLE
-        , margin = MarginRight 8
-      }
+driverBLockedPopup state =
+  let
+    mbOverchargingTag = maybe Nothing (\(GetDriverInfoResp resp) -> resp.overchargingTag) state.data.driverInfoResponse
+    isOverCharging = maybe false (\overchargingTag -> overchargingTag `elem` [MediumOverCharging, SuperOverCharging, HighOverCharging]) mbOverchargingTag
+    isSuspended = maybe false (\overchargingTag -> overchargingTag == MediumOverCharging) mbOverchargingTag
+
+    title = if isOverCharging  && isSuspended then getString $  SUSPENDED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+      else getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+
+    description = if isOverCharging && isSuspended then getStringV2 overcharging_suspended_desc
+      else if isOverCharging then getStringV2 overcharging_blocked_desc
+      else getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
+
+
+  in
+    PopUpModal.config {
+      gravity = CENTER,
+      backgroundClickable = false,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 25 25,
+      primaryText {
+        text = title
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10},
+      secondaryText{
+        text = description
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 },
+      option1 {
+        text = getString CALL_SUPPORT
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      , image {
+          imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
+          , height = V 16
+          , width = V 16
+          , visibility = VISIBLE
+          , margin = MarginRight 8
+        }
+      },
+      option2 {
+      text = getString CLOSE,
+      margin = MarginHorizontal 16 16,
+      color = Color.black650,
+      background = Color.white900,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT
     },
-    option2 {
-    text = getString CLOSE,
-    margin = MarginHorizontal 16 16,
-    color = Color.black650,
-    background = Color.white900,
-    strokeColor = Color.white900,
-    width = MATCH_PARENT
-  },
-    cornerRadius = Corners 15.0 true true true true,
-    coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
-    , visibility = VISIBLE
-    , margin = Margin 16 16 16 16
-    , width = MATCH_PARENT
-    , height = V 250
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 16
+      , width = MATCH_PARENT
+      , height = V 200
+      }
     }
-  }
 
 getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRailData
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
