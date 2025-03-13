@@ -621,7 +621,7 @@ busLocationTracking duration id state push = do
                   (API.RouteStopMapping nextStop) = item.nextStop
                   lat = Mb.fromMaybe 0.0 m.latitude
                   lon = Mb.fromMaybe 0.0 m.longitude
-                  pointerIcon = if (checkCurrentBusIsOnboarded state item.vehicleId && (filterVehicleInfoLogic m.timestamp)) then "ny_ic_bus_marker" else ""
+                  pointerIcon = if (checkCurrentBusIsOnboarded state item.vehicleId && (not $ filterVehicleInfoLogic m.timestamp)) then "ny_ic_bus_marker" else ""
                   markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon}
                   (API.LatLong nextStopPosition) = nextStop.stopPoint
                 void $ EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
