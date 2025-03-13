@@ -5,6 +5,7 @@ module Domain.Types.Booking where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FareParameters
@@ -52,6 +53,8 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    parcelType :: Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

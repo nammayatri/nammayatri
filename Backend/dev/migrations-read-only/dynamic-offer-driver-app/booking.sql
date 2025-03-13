@@ -122,3 +122,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dynamic_pricing_logic_vers
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_congestion_charge double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_type text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_quantity integer ;

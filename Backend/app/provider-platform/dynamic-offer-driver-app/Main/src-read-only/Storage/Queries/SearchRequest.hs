@@ -4,6 +4,7 @@
 
 module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, module ReExport) where
 
+import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
@@ -31,6 +32,11 @@ updateIsAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateWithKV [Se.
 
 updateIsReallocationEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateIsReallocationEnabled isReallocationEnabled id = do updateWithKV [Se.Set Beam.isReallocationEnabled isReallocationEnabled] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateParcelDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateParcelDetails parcelType parcelQuantity id = do updateWithKV [Se.Set Beam.parcelType parcelType, Se.Set Beam.parcelQuantity parcelQuantity] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePoolingConfigVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updatePoolingConfigVersion poolingConfigVersion id = do updateWithKV [Se.Set Beam.poolingConfigVersion poolingConfigVersion] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
