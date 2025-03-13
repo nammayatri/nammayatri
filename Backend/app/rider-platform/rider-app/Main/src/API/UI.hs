@@ -66,6 +66,7 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import Environment
 import EulerHS.Prelude
 import Servant
@@ -121,6 +122,7 @@ type API =
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> RentalsIntercityCache.API
        )
 
 handler :: FlowServer API
@@ -174,3 +176,4 @@ handler =
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> RentalsIntercityCache.handler
