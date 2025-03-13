@@ -278,14 +278,10 @@ findAllByFromDateAndToDateAndMobileNumberAndStatus ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
-  Maybe
-    FleetOwnerStatus
-    m
-    [Person]
+  Maybe FleetOwnerStatus ->
+  m [Person]
 findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus =
-  findOneWithKV
-    [Se.And [Se.Is BeamP.email $ Se.Eq email, Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq role_]]
-    findAllWithKV
+  findAllWithKV
     [ Se.And
         ( [ Se.Or
               [ Se.Is BeamP.verified $ Se.Eq (Just False),
@@ -295,11 +291,11 @@ findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileN
             <> [Se.Is BeamP.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate]
             <> [Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate]
             <> [Se.Is BeamP.mobileNumberEncrypted $ Se.Eq (fromJust mbMobileNumber) | isJust mbMobileNumber]
-            <> [checkOfNull BeamP.rejectedAt | isJust mbStatus]
+            <> [Se.Is BeamP.rejectedAt $ checkOfNull Nothing | isJust mbStatus]
         )
     ]
   where
     checkOfNull =
       case mbStatus of
-        Just Approved -> Se.IsNull
-        _ -> Se.IsNotNull
+        Just Approved -> Se.Eq
+        _ -> Se.Not . Se.Eq

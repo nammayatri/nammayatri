@@ -28,17 +28,18 @@ apis:
 types:
   FleetOwnerStatus:
     - enum: Approved, Rejected
-    - derive: Kernel.Prelude.ToParamSchema
+    - derive: "Read, HttpInstance"
   VerifyAccountReq:
     - status: FleetOwnerStatus
     - reason: Maybe Text
     - fleetOwnerId: Id Person
+    - derive: "'HideSecrets"
   PersonAPIEntity:
     - id: Id Person
     - firstName: Text
     - lastName: Text
     - roleId: Id Role
-    - email: Text
+    - email: Maybe Text
     - mobileNumber: Text
     - mobileCountryCode: Text
   #  - dashboardAccessType: Maybe DRole.DashboardAccessType

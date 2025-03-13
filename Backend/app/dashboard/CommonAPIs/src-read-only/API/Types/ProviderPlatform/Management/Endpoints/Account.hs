@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Management.Endpoints.Account where
 
 import qualified Dashboard.Common
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -11,14 +12,16 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
 data FleetOwnerStatus
   = Approved
   | Rejected
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data PersonAPIEntity = PersonAPIEntity
@@ -26,7 +29,7 @@ data PersonAPIEntity = PersonAPIEntity
     firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
     roleId :: Kernel.Types.Id.Id Dashboard.Common.Role,
-    email :: Kernel.Prelude.Text,
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -42,6 +45,9 @@ data PersonAPIEntity = PersonAPIEntity
 data VerifyAccountReq = VerifyAccountReq {status :: FleetOwnerStatus, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, fleetOwnerId :: Kernel.Types.Id.Id Dashboard.Common.Person}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets VerifyAccountReq where
+  hideSecrets = Kernel.Prelude.identity
 
 type API = ("account" :> (GetAccountFetchUnverifiedAccounts :<|> PostAccountVerifyAccount))
 
@@ -71,5 +77,7 @@ data AccountUserActionType
   | POST_ACCOUNT_VERIFY_ACCOUNT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''FleetOwnerStatus)
 
 $(Data.Singletons.TH.genSingletons [''AccountUserActionType])
