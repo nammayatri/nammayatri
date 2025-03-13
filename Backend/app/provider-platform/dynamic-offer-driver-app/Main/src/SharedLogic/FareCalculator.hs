@@ -635,6 +635,11 @@ calculateFareParameters params = do
             HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab.getKilometers
             EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw.getKilometers
             DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            DELIVERY_TRUCK_MINI -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            DELIVERY_TRUCK_SMALL -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            DELIVERY_TRUCK_MEDIUM -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            DELIVERY_TRUCK_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
+            DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
             BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
             BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
       if avgSpeedOfVehicle' > 0

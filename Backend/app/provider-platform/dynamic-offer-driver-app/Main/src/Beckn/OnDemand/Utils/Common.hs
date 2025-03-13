@@ -232,6 +232,11 @@ castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
 castVariant Variant.HERITAGE_CAB = (show Enums.CAB, "HERITAGE_CAB")
 castVariant Variant.EV_AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "EV_AUTO_RICKSHAW")
 castVariant Variant.DELIVERY_LIGHT_GOODS_VEHICLE = (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
+castVariant Variant.DELIVERY_TRUCK_MINI = (show Enums.TRUCK, "DELIVERY_TRUCK_MINI")
+castVariant Variant.DELIVERY_TRUCK_SMALL = (show Enums.TRUCK, "DELIVERY_TRUCK_SMALL")
+castVariant Variant.DELIVERY_TRUCK_MEDIUM = (show Enums.TRUCK, "DELIVERY_TRUCK_MEDIUM")
+castVariant Variant.DELIVERY_TRUCK_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_LARGE")
+castVariant Variant.DELIVERY_TRUCK_ULTRA_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_ULTRA_LARGE")
 castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
 castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
 
@@ -265,6 +270,11 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just Variant.AMBULANCE_AC_OXY
   (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just Variant.AMBULANCE_VENTILATOR
   (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just Variant.DELIVERY_LIGHT_GOODS_VEHICLE
+  (Just "TRUCK", Just "DELIVERY_TRUCK_MINI") -> Just Variant.DELIVERY_TRUCK_MINI
+  (Just "TRUCK", Just "DELIVERY_TRUCK_SMALL") -> Just Variant.DELIVERY_TRUCK_SMALL
+  (Just "TRUCK", Just "DELIVERY_TRUCK_MEDIUM") -> Just Variant.DELIVERY_TRUCK_MEDIUM
+  (Just "TRUCK", Just "DELIVERY_TRUCK_LARGE") -> Just Variant.DELIVERY_TRUCK_LARGE
+  (Just "TRUCK", Just "DELIVERY_TRUCK_ULTRA_LARGE") -> Just Variant.DELIVERY_TRUCK_ULTRA_LARGE
   (Just "BUS", Just "BUS_NON_AC") -> Just Variant.BUS_NON_AC
   (Just "BUS", Just "BUS_AC") -> Just Variant.BUS_AC
   _ -> Nothing
@@ -1549,6 +1559,11 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.HERITAGE_CAB -> avgSpeed.heritagecab.getKilometers
                 Variant.EV_AUTO_RICKSHAW -> avgSpeed.evautorickshaw.getKilometers
                 Variant.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.DELIVERY_TRUCK_MINI -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.DELIVERY_TRUCK_SMALL -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.DELIVERY_TRUCK_MEDIUM -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.DELIVERY_TRUCK_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
+                Variant.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
                 Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers
 

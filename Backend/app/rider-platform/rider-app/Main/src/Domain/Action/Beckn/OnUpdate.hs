@@ -532,6 +532,7 @@ onUpdate = \case
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
     let allBookingPartyIds = map (.partyId) allBookingParty
     allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+    mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
     Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id

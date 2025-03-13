@@ -97,3 +97,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN driver_id_for_searc
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN dynamic_pricing_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN parcel_type text ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN parcel_quantity integer ;

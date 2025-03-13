@@ -388,5 +388,10 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.HERITAGE_CAB -> buffer.heritagecab
     DST.EV_AUTO_RICKSHAW -> buffer.evautorickshaw
     DST.DELIVERY_LIGHT_GOODS_VEHICLE -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_MINI -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_SMALL -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_MEDIUM -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_LARGE -> buffer.deliveryLightGoodsVehicle
+    DST.DELIVERY_TRUCK_ULTRA_LARGE -> buffer.deliveryLightGoodsVehicle
     DST.BUS_NON_AC -> buffer.busNonAc
     DST.BUS_AC -> buffer.busAc

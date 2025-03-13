@@ -17,4 +17,4 @@ UPDATE atlas_driver_offer_bpp.person
     set unencrypted_mobile_number = '8888844444' where id = 'favorit-delivery-bike-00000000000000';
 
 UPDATE atlas_driver_offer_bpp.person
-    set unencrypted_mobile_number = '8888844445' where id = 'second-favorit-delivery-bike-0000000';
+    set unencrypted_mobile_number = '8888844445' where id = 'favorit-delivery-truck-medium-000000';
