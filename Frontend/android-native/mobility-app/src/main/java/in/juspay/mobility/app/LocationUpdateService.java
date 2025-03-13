@@ -708,6 +708,7 @@ public class LocationUpdateService extends Service {
     private void callDriverCurrentLocationAPI(Location location, String locTime, String log, String locationSource, String triggerFunctionValue) {
         try {
             float accuracy = location != null ? location.getAccuracy() : 0;
+            float locationBearing  = location != null ? location.hasBearing() ? location.getBearing() : 0.0f : 0.0f;
             double latitude = location != null ? location.getLatitude() : 0.0;
             double longitude = location != null ? location.getLongitude() : 0.0;
             double locSpeed = location != null && location.hasSpeed() ? location.getSpeed() : 0.0;
@@ -727,6 +728,7 @@ public class LocationUpdateService extends Service {
             locationData.put("pt", point);
             locationData.put("ts", locTime);
             locationData.put("acc", accuracy);
+            locationData.put("bear", locationBearing);
             locationData.put("source", locationSource);
             locationData.put("v", locSpeed);
             if (!locationData.has("pt")) return;
