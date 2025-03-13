@@ -28,8 +28,8 @@ import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
 
 initData :: HomeScreenState
-initData = 
-  { data: 
+initData =
+  { data:
       { linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
@@ -184,7 +184,7 @@ initData =
         , pledge : []
         , vehicalOffer : []
         , languages : []
-        , aspirations : [] 
+        , aspirations : []
         , homeTown : Nothing
         , calendarState:
           { calendarPopup: false
@@ -203,6 +203,9 @@ initData =
         }
       , isSpecialLocWarrior : false
       , bus_number : ""
+      , overchargingTag : Nothing
+      , driverBlocked : false
+      , blockedExpiryTime : ""
     }
   , props:
       { isFreeRide: false
@@ -285,7 +288,7 @@ initData =
       , showInterOperablePopUp : false
       , showReferralEarnedPopUp : false
       , showReferNowPopUp : false
-      , showAddUPIPopUp : false 
+      , showAddUPIPopUp : false
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
       , checkUpcomingRide : true
@@ -300,12 +303,13 @@ initData =
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
       , retryRideList : false
-      , showParcelIntroductionPopup : false 
+      , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
+      , showBlockerPopup : false
       }
   }
 
@@ -336,7 +340,7 @@ datePickerState' = {
 }
 
 initialTollState :: TollState
-initialTollState = { 
+initialTollState = {
   showTollChargePopup: true
 , showTollChargeAmbigousPopup: true
 , finalCharge : 0.0

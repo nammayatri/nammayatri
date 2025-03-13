@@ -77,7 +77,7 @@ hvConfigs appName = case appName of
     }
 
 reelsData :: String -> Array ReelItem
-reelsData key = 
+reelsData key =
   let reelDataString = getReelsData $ fetchRemoteConfigString key
   in decodeForeignAny reelDataString defaultReelsData
 
@@ -93,7 +93,7 @@ reduceCancellationRate key =
   in decodeForeignAny (parseJSON cancellationDataString) []
 
 cancellationThresholds :: String -> String -> CancellationThresholdConfig
-cancellationThresholds key city = 
+cancellationThresholds key city =
   let cancellationDataString = fetchRemoteConfigString key
       decodedConfg = decodeForeignObject (parseJSON cancellationDataString) $ defaultCityRemoteConfig defaultCancellationThresholdConfig
   in getCityBasedConfig decodedConfg $ toLower city
@@ -115,14 +115,14 @@ getReferralPopUpDelays :: ST.HomeScreenPopUpTypes -> Int
 getReferralPopUpDelays popUpType = do
     let config = fetchRemoteConfigString "referral_pop_up_delays"
         value = decodeForeignObject (parseJSON config) defaultReferralPopUpDelays
-    case popUpType of 
+    case popUpType of
       ST.ReferNow -> value.refer_now
       ST.AddUPI -> value.add_upi
       ST.VerifyUPI -> value.verify_upi
       _ -> oneDayInMS
 
-getReferralBonusVideo :: String -> String 
-getReferralBonusVideo city = 
+getReferralBonusVideo :: String -> String
+getReferralBonusVideo city =
   let config = fetchRemoteConfigString "referral_bonus_videos"
       value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ""
   in getCityBasedConfig value city
@@ -158,19 +158,19 @@ defaultEnableHotspotsFeature = {
 }
 
 getHotspotsFeatureData :: String -> EnableHotspotsFeature
-getHotspotsFeatureData city = 
-  let 
+getHotspotsFeatureData city =
+  let
     config = fetchRemoteConfigString "enable_hotspots_feature"
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEnableHotspotsFeature
-  in getCityBasedConfig value $ toLower city 
+  in getCityBasedConfig value $ toLower city
 
-getenableScheduledRideConfigData :: String -> EnableScheduledRides 
-getenableScheduledRideConfigData city = 
-  let 
+getenableScheduledRideConfigData :: String -> EnableScheduledRides
+getenableScheduledRideConfigData city =
+  let
     config = fetchRemoteConfigString "enable_scheduled_rides"
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultScheduledRideConfigData
-  in getCityBasedConfig value $ toLower city 
-    
+  in getCityBasedConfig value $ toLower city
+
 defaultMetroCoinsEvent :: MetroCoinsEvent
 defaultMetroCoinsEvent = {
   coinsFromMetroRide : 0,
@@ -178,7 +178,7 @@ defaultMetroCoinsEvent = {
 }
 
 getParcelConfig :: String -> ParcelConfig
-getParcelConfig city  = 
+getParcelConfig city  =
   let config = fetchRemoteConfigString "parcel_config"
       decodedConfg = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultParcelConfig
   in getCityBasedConfig decodedConfg $ toLower city
@@ -235,7 +235,7 @@ defaultCoinsConfig = {
   driverToCustomerRefCoinEvent : false,
   coinConversionPopupLottie : "",
   driverToCustomerRefPopupEndDate : "",
-  rideMoreEarnCoinIntervalLimit : 7, 
+  rideMoreEarnCoinIntervalLimit : 7,
   rideMoreEarnCoinPopupMaxLimit : 2,
   monsoonOfferDate : "",
   coinsValidTill : 150
@@ -316,7 +316,7 @@ getLocationUpdateServiceConfig stage = do
       value = decodeForeignAny (parseJSON config) $ []
       configForStage = DA.find(\item -> item.stage == stage) value
   fromMaybe defaultLocationUpdateServiceConfig configForStage
-  
+
 eventsConfig :: String -> Types.EventsConfig
 eventsConfig key =
     let stringifiedConf = fetchRemoteConfigString key
@@ -330,14 +330,14 @@ defEventsConfig = {
 }
 
 profileCompletionReminder :: ProfileCompletionReminder
-profileCompletionReminder = 
-  let 
+profileCompletionReminder =
+  let
     config = fetchRemoteConfigString "profile_completion_reminder"
     value = decodeForeignObject (parseJSON config) defaultProfileCompletionReminder
-  in 
+  in
     value
-  
-  where 
+
+  where
     defaultProfileCompletionReminder :: ProfileCompletionReminder
     defaultProfileCompletionReminder = {
         reminderDuration : 86400
@@ -345,13 +345,13 @@ profileCompletionReminder =
 
 fetchRideAssignedAudioConfig :: String -> RideAssignedAudioConfig
 fetchRideAssignedAudioConfig city =
-  let 
+  let
     config = fetchRemoteConfigString "ride_assigned_audio"
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideAssignedAudioConfig
-  in 
+  in
     getCityBasedConfig value $ toLower city
-  
-  where 
+
+  where
     defaultRideAssignedAudioConfig :: RideAssignedAudioConfig
     defaultRideAssignedAudioConfig = {
       rideShare : Nothing
@@ -362,7 +362,7 @@ fetchRideAssignedAudioConfig city =
     , rental : Nothing
     }
 
-    
+
 metroWarriorsConfig :: String -> String -> MetroWarriorConfigEntity
 metroWarriorsConfig city variant = do
   let remoteConfig = fetchRemoteConfigString "metro_warrior_config"
@@ -374,7 +374,7 @@ metroWarriorsConfig city variant = do
        Just variantConfig -> variantConfig
 
 defaultMetroWarriorConfig :: VariantLevelRemoteConfig (Maybe MetroWarriorConfigEntity)
-defaultMetroWarriorConfig = 
+defaultMetroWarriorConfig =
   { sedan: Nothing
   , suv: Nothing
   , hatchback: Nothing
@@ -395,7 +395,7 @@ defaultMetroWarriorConfig =
 
 
 defaultMetroWarriorConfigEntity :: MetroWarriorConfigEntity
-defaultMetroWarriorConfigEntity = 
+defaultMetroWarriorConfigEntity =
   { videoUrl : "",
     isMetroWarriorEnabled : false,
     cacheInvalidateCounter : 0,
@@ -415,3 +415,33 @@ getRideEndAudioConfig city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideEndAudioConfig
         cityValue = getCityBasedConfig value $ toLower city
     getCityBasedConfig value $ toLower city
+
+
+type ExtraChargeVideoConfig = {
+    low :: String
+  , high :: String
+  , zero :: String
+  , suspended :: String
+  , blocked :: String
+}
+
+type ExtraChargeConfig = {
+  enable :: Boolean
+, videos :: Maybe ExtraChargeVideoConfig
+, zeroImage :: String
+}
+
+defaultExtraChargeConfig = {
+  enable : false
+, videos : Nothing
+, zeroImage : "ny_ic_nyamana_rateu_karan,https://assets.moving.tech/beckn/common/driver/images/ny_ic_nyamana_rateu_karan.png"
+}
+
+
+getExtraChargeConfig :: String -> ExtraChargeConfig
+getExtraChargeConfig city =
+  let
+    config = fetchRemoteConfigString "extra_charge_config"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultExtraChargeConfig
+    cityValue = getCityBasedConfig value $ toLower city
+  in getCityBasedConfig value $ toLower city

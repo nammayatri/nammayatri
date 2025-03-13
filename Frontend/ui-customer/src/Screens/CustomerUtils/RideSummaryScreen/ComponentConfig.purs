@@ -40,7 +40,7 @@ dummyLocation = LocationInformation {
     country : Nothing,
     state : Nothing,
     street : Nothing,
-    door : Nothing,  
+    door : Nothing,
     ward : Nothing,
     placeId : Nothing
   },
@@ -64,7 +64,7 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
     destinationCity = fromMaybe "" destination.address.city
     sourceToDestinationConfig' =
       config
-        { 
+        {
           id = Just "rideScreenPickupMap",
           separatorMargin = 0,
           showDestination = tripCategory.tag /= CTA.Rental,
@@ -132,19 +132,19 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
   in
     sourceToDestinationConfig'
 
-      
+
 rideSummaryCardConfig :: BookingAPIEntity -> RideSummaryCard.Config
-rideSummaryCardConfig (BookingAPIEntity entity) = 
-  let 
+rideSummaryCardConfig (BookingAPIEntity entity) =
+  let
     vehicleServiceTier = entity.vehicleServiceTier
     currency = entity.currency
     estimatedFare = entity.estimatedFare
-    isAirConditioned = (fromMaybe false entity.isAirConditioned) || (fromMaybe false (map (\x -> x > 0.0) entity.vehicleServiceTierAirConditioned)) 
+    isAirConditioned = (fromMaybe false entity.isAirConditioned) || (fromMaybe false (map (\x -> x > 0.0) entity.vehicleServiceTierAirConditioned))
     isVehicleAirConditioned = any (_ == vehicleServiceTier)["COMFY","ECO","SUV","HATCHBACK_TIER","TAXI_PLUS","SUV_PLUS", "HERITAGE_CAB"]
     isVehicleNonAirConditioned = any (_ == vehicleServiceTier)["AUTO_RICKSHAW","SEDAN_TIER","PREMIUM","TAXI", "EV_AUTO_RICKSHAW"]
     vehicleServiceTierAirConditioned = isAirConditioned || (isVehicleAirConditioned && not isVehicleNonAirConditioned)
     vehicleServiceTierSeatingCapacity = fromMaybe 4 entity.vehicleServiceTierSeatingCapacity
-    vehicleServiceTierName =  case vehicleServiceTier of 
+    vehicleServiceTierName =  case vehicleServiceTier of
                               "TAXI" -> "Mini"
                               _ -> entity.vehicleServiceTierName
     vehicleServiceTierAirConditionedText = if vehicleServiceTierAirConditioned then (getString LType.AC) else (getString LType.NON_AC)
@@ -152,7 +152,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
     roundTrip = fromMaybe false entity.roundTrip
     returnTime = fromMaybe "" entity.returnTime
     (CTA.TripCategory tripCategory) = entity.tripCategory
-  in 
+  in
       { vehicleServiceTierImageUrl : fetchImage FF_COMMON_ASSET (case vehicleServiceTier of
                                                                   "AUTO_RICKSHAW" -> "ic_auto_rickshaw"
                                                                   "SEDAN_TIER" -> "ny_ic_sedan"
@@ -180,8 +180,11 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
         , dropText : getString LType.DROP
         , dropTime : returnTime
         , showDropTime : roundTrip
+        , estimatedDuration : "" -- viewV2
+        , estimatedDistance : "" -- viewV2
+        , pickupFormattedTime : "" -- viewV2
         }
-      , rideTypePill : 
+      , rideTypePill :
         { pillText : case tripCategory.tag of
                         CTA.InterCity -> if roundTrip then "Intercity Return" else "Intercity"
                         CTA.Rental -> "Rental"
@@ -200,8 +203,8 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
         }
       }
 
-dropDownCard :: Boolean -> String -> (forall w . PrestoDOM (Effect Unit) w) -> DropDownCard.Config 
-dropDownCard isOpen title layout = 
+dropDownCard :: Boolean -> String -> (forall w . PrestoDOM (Effect Unit) w) -> DropDownCard.Config
+dropDownCard isOpen title layout =
   { isOpen : isOpen
   , title : title
   , layout : layout
@@ -221,7 +224,7 @@ dropDownCard isOpen title layout =
 
 formatSecIntoHourMins :: Int -> String
 formatSecIntoHourMins seconds =
-  let 
+  let
     hours = seconds `div` 3600
     mins = (seconds `mod` 3600) `div` 60
   in (if hours > 0 then show hours <> " hr " else "") <> show mins <> " min"
@@ -265,4 +268,4 @@ cancelScheduledRideConfig state = PopUpModal.config
         , backgroundClickable = false
         }
 
-  
+
