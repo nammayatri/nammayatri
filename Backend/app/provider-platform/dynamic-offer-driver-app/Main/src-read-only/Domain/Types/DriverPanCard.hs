@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 data DriverPanCardE e = DriverPanCard
   { consent :: Kernel.Prelude.Bool,
     consentTimestamp :: Kernel.Prelude.UTCTime,
+    docType :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanType,
     documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -47,6 +48,7 @@ instance EncryptedItem DriverPanCard where
       DriverPanCard
         { consent = consent entity,
           consentTimestamp = consentTimestamp entity,
+          docType = docType entity,
           documentImageId1 = documentImageId1 entity,
           documentImageId2 = documentImageId2 entity,
           driverDob = driverDob entity,
@@ -69,6 +71,7 @@ instance EncryptedItem DriverPanCard where
       ( DriverPanCard
           { consent = consent entity,
             consentTimestamp = consentTimestamp entity,
+            docType = docType entity,
             documentImageId1 = documentImageId1 entity,
             documentImageId2 = documentImageId2 entity,
             driverDob = driverDob entity,
@@ -93,6 +96,10 @@ instance EncryptedItem' DriverPanCard where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
+data PanType = INDIVIDUAL | BUSINESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data VerifiedBy = FRONTEND_SDK | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PanType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerifiedBy)

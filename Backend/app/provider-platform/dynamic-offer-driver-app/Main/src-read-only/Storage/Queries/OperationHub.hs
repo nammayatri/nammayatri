@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.OperationHub.OperationHub] -> m ())
 createMany = traverse_ create
 
-findAllByCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.OperationHub.OperationHub]))
+findAllByCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.OperationHub.OperationHub])
 findAllByCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub -> m (Maybe Domain.Types.OperationHub.OperationHub))
@@ -32,6 +32,7 @@ updateByPrimaryKey (Domain.Types.OperationHub.OperationHub {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
+      Se.Set Beam.description description,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -49,6 +50,7 @@ instance FromTType' Beam.OperationHub Domain.Types.OperationHub.OperationHub whe
       Just
         Domain.Types.OperationHub.OperationHub
           { address = address,
+            description = description,
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
@@ -64,6 +66,7 @@ instance ToTType' Beam.OperationHub Domain.Types.OperationHub.OperationHub where
   toTType' (Domain.Types.OperationHub.OperationHub {..}) = do
     Beam.OperationHubT
       { Beam.address = address,
+        Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,
