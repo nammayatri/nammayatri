@@ -32,10 +32,10 @@ import Data.Int as INT
 import Components.PopUpModal as PopUpModal
 import Mobility.Prelude (boolToVisibility)
 import JBridge as JB
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried
 import Effect.Uncurried (runEffectFn1)
 import Timers (clearTimerWithId , startTimer,clearTimerWithIdEffect)
-import PrestoDOM.Elements.Keyed as Keyed 
+import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons as EHC
@@ -71,20 +71,20 @@ screen initialState =
   , name: "RideSummaryScreen"
   , globalEvents : [
      (\push -> do
-        let currentTime = getCurrentUTC "" 
-            tripStartTime = fromMaybe "" initialState.data.activeRideData.tripScheduledAt 
-            diff = runFn2 JB.differenceBetweenTwoUTC tripStartTime currentTime  
-            
+        let currentTime = getCurrentUTC ""
+            tripStartTime = fromMaybe "" initialState.data.activeRideData.tripScheduledAt
+            diff = runFn2 JB.differenceBetweenTwoUTC tripStartTime currentTime
+
         if(diff <=7800) then void $ startTimer initialState.props.timer "scheduledTimer" "60" push ScheduleTimer
         else pure unit
-        push $ NoAction       
+        push $ NoAction
         _ <- HU.storeCallBackForNotification push Notification
         pure $ runEffectFn1 clearTimerWithIdEffect "scheduledTimer"
       )
   ] <> if (isNothing initialState.data.route) then [(\push -> do
-        void $ 
+        void $
           launchAff $
-            EHC.flowRunner defaultGlobalState $ 
+            EHC.flowRunner defaultGlobalState $
                 runExceptT $ runBackT $
                   do
                     let (BookingAPIEntity entity) = initialState.data.rideDetails
@@ -93,10 +93,10 @@ screen initialState =
                         distanceToPickup = show (fromMaybe 0 entity.distanceToPickup)
                         (Location toLocation) = fromMaybe dummyLocation entity.toLocation
                         tag = tripCategory.tag
-                    routeApiResponse <- case tag of 
-                      CTA.InterCity -> do 
+                    routeApiResponse <- case tag of
+                      CTA.InterCity -> do
                              lift $ lift $ Remote.getRoute (Remote.makeGetRouteReq fromLocation.lat fromLocation.lon toLocation.lat toLocation.lon) "pickup"
-                      CTA.Rental -> do 
+                      CTA.Rental -> do
                         (LatLon lat lon _)  <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
                         let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ lat
                             currentDriverLon = fromMaybe 0.0 $ Number.fromString $ lon
@@ -105,16 +105,16 @@ screen initialState =
                         (LatLon lat lon _) <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
                         let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ lat
                         let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ lon
-                        lift $ lift $ Remote.getRoute  (Remote.makeGetRouteReqArray [LatLong{lat :currentDriverLat, lon: currentDriverLon}, LatLong{lat: fromLocation.lat ,lon: fromLocation.lon} ,LatLong{lat :toLocation.lat , lon:toLocation.lon }]) "pickup"   
+                        lift $ lift $ Remote.getRoute  (Remote.makeGetRouteReqArray [LatLong{lat :currentDriverLat, lon: currentDriverLon}, LatLong{lat: fromLocation.lat ,lon: fromLocation.lon} ,LatLong{lat :toLocation.lat , lon:toLocation.lon }]) "pickup"
                     case routeApiResponse of
-                        Right (GetRouteResp val)  -> do 
+                        Right (GetRouteResp val)  -> do
                             let shortRoute = (val !! 0)
                             case shortRoute of
-                              Just route -> void $ liftFlowBT $ push $ UpdateRoute route 
+                              Just route -> void $ liftFlowBT $ push $ UpdateRoute route
                               Nothing -> pure unit
                             pure unit
-                              
-                        Left (err) -> lift $ lift $ doAff do liftEffect $ push $ ApiError                              
+
+                        Left (err) -> lift $ lift $ doAff do liftEffect $ push $ ApiError
         pure $ pure unit
       )] else []
   , eval : (\action state -> do
@@ -123,9 +123,9 @@ screen initialState =
     eval action state)
   }
 
-view :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> PrestoDOM (Effect Unit) w 
+view :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> PrestoDOM (Effect Unit) w
 view push state  =
-  let 
+  let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
   in
@@ -141,7 +141,7 @@ view push state  =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation VERTICAL
-      , background Color.white900 
+      , background Color.white900
       ]
       [ headerLayout state push
       , linearLayout
@@ -159,13 +159,13 @@ view push state  =
             , height MATCH_PARENT
             , orientation VERTICAL
             ]
-            [  bannerView state push 
-            , RideSummaryCard.view (rideSummaryCardConfig state.data.rideDetails) (push <<< RideSummaryCardActionController)
+            [  bannerView state push
+            , RideSummaryCard.viewV2 (rideSummaryCardConfig state.data.rideDetails) (push <<< RideSummaryCardActionController)
             , DropDownCard.view (push <<< PickUp) (dropDownCard state.props.pickUpOpen (getString PICKUP_DROP) (pickUpCard state push))
-            -- , DropDownCard.view (push <<< IncludedCharges) (dropDownCard state.props.includedChargesOpen (getString INCLUDED_CHARGES) (includedChargesCard state push)) --might use later 
+            --, DropDownCard.view (push <<< IncludedCharges) (dropDownCard state.props.includedChargesOpen (getString INCLUDED_CHARGES) (includedChargesCard state push)) --might use later
             , if tripCategory.tag /= CTA.OneWay then DropDownCard.view (push <<< ExcludedCharges) (dropDownCard state.props.excludedChargesOpen (getString EXCLUDED_CHARGES) (excludedChargesCard state push)) else emptyLayout
             , DropDownCard.view (push <<< Terms) (dropDownCard state.props.termsAndConditionOpen (getString T_C) (termsAndConditionCard state push))
-            , cancelButtonView state push 
+            , cancelButtonView state push
             ]
           ]
       , linearLayout
@@ -175,14 +175,14 @@ view push state  =
           ][]
         ,  buttonLayout state push
         , goToPickUp state push
-      ] 
-      else Tuple "shimmerView" $ shimmerView state push 
+      ]
+      else Tuple "shimmerView" $ shimmerView state push
     ]<>if state.props.showPopUp then [Tuple "endRidePopView" $ endRidePopView state push]  else []
      <> if state.props.errorPopUp then [Tuple "apiError" $ apiErrorPopUp state push ] else [])
 
 
 emptyLayout :: forall w . PrestoDOM (Effect Unit) w
-emptyLayout = 
+emptyLayout =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -197,7 +197,7 @@ headerLayout state push =
     , background Color.white900
     , gravity CENTER_HORIZONTAL
     ][headerLeft state push
-    -- , headerRight state push   -- Might use later 
+    -- , headerRight state push   -- Might use later
     ]
 
 headerLeft :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -218,7 +218,7 @@ headerLeft state push =
       , margin $ Margin 5 0 0 0
       , rippleColor Color.rippleShade
       ]
-    , textView $ 
+    , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ getString RIDE_SUMMARY
@@ -250,7 +250,7 @@ headerRight state push =
       , margin $ Margin 5 0 0 0
       , rippleColor Color.rippleShade
       ]
-    , textView $ 
+    , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ getString CALL_CUSTOMER_TITLE
@@ -261,8 +261,8 @@ headerRight state push =
     ]
 
 pickUpCard :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-pickUpCard state push = 
-    let 
+pickUpCard state push =
+    let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
     in
@@ -275,23 +275,23 @@ pickUpCard state push =
           , height MATCH_PARENT
           , orientation VERTICAL
           ]
-          [ linearLayout
-              [ width MATCH_PARENT
-              , height $ if tripCategory.tag == CTA.InterCity then (V 160) else (V 246) 
-              , margin $ MarginBottom 16
-              , cornerRadius 8.0 
-              , stroke ("1," <> Color.grey900)
-              ][googleMap state push]
-          , linearLayout
+          [
+            linearLayout
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-
               ][SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state.data.rideDetails)]
+          ,  linearLayout
+              [ width MATCH_PARENT
+              , height $ if tripCategory.tag == CTA.InterCity then (V 160) else (V 246)
+              , margin $ MarginBottom 16
+              , cornerRadius 8.0
+              , stroke ("1," <> Color.grey900)
+              ][googleMap state push]
           ]
 
 googleMap :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 googleMap state push  =
-    let 
+    let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
       (Location fromLocation) = entity.fromLocation
@@ -311,7 +311,7 @@ googleMap state push  =
             , id (getNewIDWithTag "DriverSavedLoc1")
             , afterRender
                 ( \action -> do
-                    _ <- (JB.showMap (getNewIDWithTag "DriverSavedLoc1") false "satellite" (25.0) fromLocation.lat fromLocation.lon push (case tripCategory.tag of 
+                    _ <- (JB.showMap (getNewIDWithTag "DriverSavedLoc1") false "satellite" (25.0) fromLocation.lat fromLocation.lon push (case tripCategory.tag of
                                                                                                                                               CTA.InterCity -> ShowMapInterCity fromLocation.lat fromLocation.lon toLocation.lat toLocation.lon
                                                                                                                                               CTA.Rental -> ShowMapRental fromLocation.lat fromLocation.lon
                                                                                                                                               _ -> ShowMapRegular fromLocation.lat fromLocation.lon toLocation.lat toLocation.lon
@@ -326,7 +326,7 @@ googleMap state push  =
 
 mapPillView :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 mapPillView  state push =
- let 
+ let
       (BookingAPIEntity entity) = state.data.rideDetails
       distanceToPickup = fromMaybe 0 entity.distanceToPickup
   in
@@ -335,11 +335,11 @@ mapPillView  state push =
   , width WRAP_CONTENT
   , background Color.green900
   , gravity CENTER
-  , padding $ Padding 12 8 12 8 
+  , padding $ Padding 12 8 12 8
   , cornerRadii  (Corners 8.0 true false true false)
   , visibility $ boolToVisibility $ not state.props.throughBanner
   ]
-  [ textView $ 
+  [ textView $
     [ text ( getString PICK_UP <>" : " <>  (JB.fromMetersToKm (distanceToPickup)) <> getString AWAY)
     , color $ Color.white900
     ] <> FontStyle.subHeading2 LanguageStyle
@@ -348,32 +348,43 @@ mapPillView  state push =
 
 
 includedChargesCard :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-includedChargesCard state push = 
+includedChargesCard state push =
+  let
+    (BookingAPIEntity entity) = state.data.rideDetails
+  in
     PrestoAnim.animationSet
     ([ Anim.fadeInWithDuration 200 true ] <>
     (if os == "IOS" then []
     else [ Anim.listExpandingAnimation $ estimateExpandingAnimationConfig (0) (0.0) true ]))
-  $ linearLayout
-    [ width MATCH_PARENT
+    $ linearLayout[
+      width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , pivotY 0.0
-    ]
-    [ includedChargesBox state push 
-    , linearLayout
-        [width MATCH_PARENT
-        , height $ V 20
-        ][]
-    , includedChargesFooter state push 
+    , margin $ MarginLeft 2
+    ][
+      textView $ [
+        text $ "Total Fare: ₹"  <> (show $ INT.ceil entity.estimatedFare)
+      , width MATCH_PARENT
+      , height WRAP_CONTENT
+      , color Color.black800
+      , margin $ MarginBottom 20
+      ] <> (FontStyle.subHeading1 TypoGraphy)
+    -- , includedChargesBox state push
+    -- , linearLayout
+    --     [width MATCH_PARENT
+    --     , height $ V 20
+    --     ][]
+    -- , includedChargesFooter state push
     ]
 
 
 includedChargesBox :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-includedChargesBox state push =  
+includedChargesBox state push =
      let
       (BookingAPIEntity entity) = state.data.rideDetails
-      
-      
+
+
       (RateCardItem fare) = getFare SERVICE_CHARGE
       (RateCardItem governmentFare) = getFare GOVERNMENT_CHARGE
       (RateCardItem minFare) = getFare MIN_FARE
@@ -399,23 +410,23 @@ includedChargesBox state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            [ if tripCategory.tag==CTA.InterCity then chargesTile (getString  PER_KM_CHARGE) ("₹"<>(show plannedKMFare.price)<>"/km") true state push else chargesTile (getString $ BASE_CHARGE "(10km, 1hr)") ("₹"<>(show perHourFare.price)) true state push
-            , linearLayout 
+            [ if tripCategory.tag==CTA.InterCity then chargesTile (getString  PER_KM_CHARGE) ("₹"<>(show plannedKMFare.price)<>"/km") (plannedKMFare.price /= 0) state push else chargesTile (getString $ BASE_CHARGE "(10km, 1hr)") ("₹"<>(show perHourFare.price)) (perHourFare.price /= 0) state push
+            , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 ][]
-            , (case tripCategory.tag of 
-                CTA.InterCity -> chargesTile (getString EXTRA_TIME_CHARGE) ("₹"<>(show perMinFare.price)<>"/hr") true state push
+            , (case tripCategory.tag of
+                CTA.InterCity -> chargesTile (getString EXTRA_TIME_CHARGE) ("₹"<>(show perMinFare.price)<>"/hr") (perMinFare.price /=0 ) state push
                 CTA.Rental -> chargesTile (getString TOLL_CHARGES) (getString ADDED_AT_END_OF_TRIP) true state push
-                _ -> chargesTile (getString $ FARE_FOR "4km -10km") ("₹"<>(show fare.price)<>"/km") true state push)
-            , linearLayout 
+                _ -> chargesTile (getString $ FARE_FOR "4km -10km") ("₹"<>(show fare.price)<>"/km") (fare.price /= 0) state push)
+            , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
-                , visibility $ boolToVisibility $  tripCategory.tag /= CTA.InterCity 
+                , visibility $ boolToVisibility $  tripCategory.tag /= CTA.InterCity
                 ][]
-            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_TIME_CHARGE) ("₹"<>(show perMinFare.price)<>"/min") (tripCategory.tag /= CTA.InterCity) state push else chargesTile (getString $ FARE_FOR "10+km") ("₹"<>(show fare.price)<>"/km") (tripCategory.tag /= CTA.InterCity) state push
+            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_TIME_CHARGE) ("₹"<>(show perMinFare.price)<>"/min") (tripCategory.tag /= CTA.InterCity && perMinFare.price /= 0) state push else chargesTile (getString $ FARE_FOR "10+km") ("₹"<>(show fare.price)<>"/km") (tripCategory.tag /= CTA.InterCity && fare.price/= 0) state push
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -426,38 +437,38 @@ includedChargesBox state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            [ (case tripCategory.tag of 
-                CTA.Rental -> chargesTile (getString ADD_ON_KM_CHARGE) ("₹"<>(show plannedKMFare.price)<>"/km") true state push
-                _ -> chargesTile (getString PICKUP_CHARGE) ("₹"<>(show deadKMFare.price)) true state push)
-            , linearLayout 
+            [ (case tripCategory.tag of
+                CTA.Rental -> chargesTile (getString ADD_ON_KM_CHARGE) ("₹"<>(show plannedKMFare.price)<>"/km") (plannedKMFare.price /= 0) state push
+                _ -> chargesTile (getString PICKUP_CHARGE) ("₹"<>(show deadKMFare.price)) (deadKMFare.price /= 0) state push)
+            , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 ][]
-            , if tripCategory.tag==CTA.InterCity then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("₹"<>(show unplannedKMFare.price)<>"/km") true state push else chargesTile (getString WAITING_CHARGES) ("₹"<>(show waitPerMinFare.price)<>"/min") true state push 
-            , linearLayout 
+            , if tripCategory.tag==CTA.InterCity then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("₹"<>(show unplannedKMFare.price)<>"/km") (unplannedKMFare.price /= 0) state push else chargesTile (getString WAITING_CHARGES) ("₹"<>(show waitPerMinFare.price)<>"/min") (waitPerMinFare.price /= 0) state push
+            , linearLayout
                 [ width WRAP_CONTENT
                 , height $ V 24
                 , weight 1.0
                 , visibility if tripCategory.tag == CTA.InterCity then GONE else VISIBLE
                 ][]
-            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("₹"<>(show unplannedKMFare.price)<>"/km") (tripCategory.tag /= CTA.InterCity) state push else chargesTile (getString TOLL_CHARGES) ("₹"<>(show fare.price)) (tripCategory.tag /= CTA.InterCity) state push
+            , if tripCategory.tag==CTA.Rental then chargesTile (getString EXTRA_DISTANCE_CHARGES) ("₹"<>(show unplannedKMFare.price)<>"/km") (tripCategory.tag /= CTA.InterCity && unplannedKMFare.price/=0) state push else chargesTile (getString TOLL_CHARGES) ("₹"<>(show fare.price)) (tripCategory.tag /= CTA.InterCity && fare.price /= 0) state push
             ]
         ]
-      
-    where 
-      
+
+    where
+
 
       getFare :: TitleTag -> RateCardItem
-      getFare title = 
+      getFare title =
         let dummyFare = RateCardItem { price: 0, priceWithCurrency: { amount: 0.0, currency: "INR" }, title: UNPLANNED_PER_KM_CHARGE }
         in fromMaybe dummyFare ((filter (\(RateCardItem x) -> x.title == title) state.data.fareDetails) !! 0)
 
 
 
 includedChargesFooter :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-includedChargesFooter state push = 
-    let 
+includedChargesFooter state push =
+    let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
     in
@@ -471,7 +482,7 @@ includedChargesFooter state push =
         , orientation VERTICAL
         , pivotY 0.0
         ]
-        [ textView $ 
+        [ textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , text $ getString INC_1
@@ -479,7 +490,7 @@ includedChargesFooter state push =
             , margin $ MarginBottom 12
             , visibility if tripCategory.tag == CTA.OneWay then GONE else VISIBLE
             ] <> FontStyle.paragraphText TypoGraphy
-        , textView $ 
+        , textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , text if tripCategory.tag == CTA.OneWay then (getString $ INC_2A  "10am" "5pm" "1.1x") else (getString $ INC_2B "10am" "5pm" )
@@ -490,8 +501,8 @@ includedChargesFooter state push =
 
 
 chargesTile :: String -> String -> Boolean -> RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-chargesTile text1 text2 isVisible state push = 
-    linearLayout 
+chargesTile text1 text2 isVisible state push =
+    linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation VERTICAL
@@ -504,7 +515,7 @@ chargesTile text1 text2 isVisible state push =
           , color Color.black600
           , textSize FontSize.a_14
           ]
-      , textView $ 
+      , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text text2
@@ -517,8 +528,8 @@ chargesTile text1 text2 isVisible state push =
 
 
 excludedChargesCard :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-excludedChargesCard state push = 
-    let 
+excludedChargesCard state push =
+    let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
     in
@@ -542,16 +553,16 @@ excludedChargesCard state push =
                 , height $ V 20
                 , orientation HORIZONTAL
                 , margin $ MarginBottom 24
-                , visibility $ boolToVisibility $ tripCategory.tag == CTA.InterCity 
+                , visibility $ boolToVisibility $ tripCategory.tag == CTA.InterCity
                 ]
                 [ imageView
                     [ width $ V 20
                     , height $ V 20
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_car_8"
-                    , margin $ MarginRight 8 
+                    , margin $ MarginRight 8
                     , color Color.black900
                     ]
-                , textView $ 
+                , textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text $ getString TOLLS
@@ -563,16 +574,16 @@ excludedChargesCard state push =
                 , height $ V 20
                 , orientation HORIZONTAL
                 , margin $ MarginBottom 24
-                , visibility $ boolToVisibility $ tripCategory.tag == CTA.InterCity 
+                , visibility $ boolToVisibility $ tripCategory.tag == CTA.InterCity
                 ]
                 [ imageView
                     [ width $ V 20
                     , height $ V 20
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_certificate"
-                    , margin $ MarginRight 8 
+                    , margin $ MarginRight 8
                     , color Color.black900
                     ]
-                , textView $ 
+                , textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text $ getString STATE_PERMIT
@@ -588,10 +599,10 @@ excludedChargesCard state push =
                     [ width $ V 20
                     , height $ V 20
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_parking"
-                    , margin $ MarginRight 8 
+                    , margin $ MarginRight 8
                     , color Color.black900
                     ]
-                , textView $ 
+                , textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text $ getString PARKING_CHARGE
@@ -599,24 +610,24 @@ excludedChargesCard state push =
                     ] <> FontStyle.subHeading2 TypoGraphy
                 ]
             ]
-        , linearLayout 
+        , linearLayout
             [ width MATCH_PARENT
             , height $ V 20
             ][]
-        , textView $ 
+        , textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , text $ getString EXCLUDED_FOOTER
             , color Color.black600
-            ] <> FontStyle.paragraphText TypoGraphy 
+            ] <> FontStyle.paragraphText TypoGraphy
         ]
 
 
 
 
 termsAndConditionCard :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-termsAndConditionCard state push = 
-    let 
+termsAndConditionCard state push =
+    let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
     in
@@ -634,23 +645,23 @@ termsAndConditionCard state push =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
-            , visibility if state.props.termsAndConditionOpen then VISIBLE else GONE 
+            , visibility if state.props.termsAndConditionOpen then VISIBLE else GONE
             ]
-            [ textView $ 
+            [ textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_1A) else (getString $ TERM_1B "1")
                 , color Color.black600
                 , margin $ MarginBottom 12
                 ] <> FontStyle.paragraphText TypoGraphy
-            , textView $ 
+            , textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_2A) else (getString $ TERM_2B "40")
                 , color Color.black600
                 , margin $ MarginBottom 12
                 ] <> FontStyle.paragraphText TypoGraphy
-            , textView $ 
+            , textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_3A) else (getString $ TERM_3B "10km" "30")
@@ -664,7 +675,7 @@ termsAndConditionCard state push =
 
 
 buttonLayout :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-buttonLayout state push = 
+buttonLayout state push =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -673,22 +684,22 @@ buttonLayout state push =
     , gravity CENTER
     , visibility $ boolToVisibility $ not state.props.throughBanner
     ]
-    [ passButton state push 
+    [ passButton state push
     , linearLayout
         [ width $ V 20
         , height WRAP_CONTENT
         ][]
-    , acceptButton state push 
+    , acceptButton state push
     ]
 
 
 acceptButton :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-acceptButton state push = 
-    let 
+acceptButton state push =
+    let
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
     in
-      linearLayout 
+      linearLayout
         [ width $ V 232
         , height WRAP_CONTENT
         , padding $ Padding 16 18 16 18
@@ -699,10 +710,16 @@ acceptButton state push =
                         CTA.Rental -> Color.blueGreen
                         CTA.OneWay -> Color.green900
                         _ -> Color.blue600
-        , onClick push $ const AcceptClick
+        , onClick (\action -> do
+            let
+              language = JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"
+              audioUrl = getLanguageBasedRentalAudio language
+            pure $ runFn4 JB.startAudioPlayer audioUrl push OnRentalRideAcceptedAudioCompleted  "0"
+            push action
+          ) $ const AcceptClick
         , rippleColor Color.rippleShade
         ]
-        [ textView $ 
+        [ textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text $ getString ACCEPT
@@ -715,7 +732,7 @@ acceptButton state push =
 
 
 passButton :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-passButton state push = 
+passButton state push =
   linearLayout
     [ width   WRAP_CONTENT
     , height MATCH_PARENT
@@ -726,7 +743,7 @@ passButton state push =
     , gravity CENTER
     , rippleColor Color.rippleShade
     ]
-    [ textView $ 
+    [ textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ getString BACK
@@ -736,14 +753,14 @@ passButton state push =
 
 
 cancelButtonView :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-cancelButtonView  state push = 
+cancelButtonView  state push =
   linearLayout [
     height WRAP_CONTENT
     ,width MATCH_PARENT
     , gravity CENTER_HORIZONTAL
-    , padding $ PaddingVertical 10 20 
+    , padding $ PaddingVertical 10 20
     , onClick push $ const CancelClicked
-    , visibility $ boolToVisibility $ state.props.throughBanner 
+    , visibility $ boolToVisibility $ state.props.throughBanner
   ] [
     textView $ [
       height WRAP_CONTENT
@@ -764,13 +781,13 @@ endRidePopView state push =
 
 
 goToPickUp :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-goToPickUp state push = 
+goToPickUp state push =
    linearLayout [
-        height $  WRAP_CONTENT 
+        height $  WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.black900
-        , margin $ Margin 10 10 10 10 
-        , padding $ PaddingVertical 4 4 
+        , margin $ Margin 10 10 10 10
+        , padding $ PaddingVertical 4 4
         , cornerRadius  8.0
         , gravity CENTER
         ,  onClick push $ if checkRemainingSeconds state then (const $  GoToMap state.data.activeRideData.dest_lat state.data.activeRideData.dest_lon ) else (const  OnClick)
@@ -794,7 +811,7 @@ goToPickUp state push =
     ]
 
 bannerView :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-bannerView  state push  = 
+bannerView  state push  =
      linearLayout [
       height WRAP_CONTENT
      , width WRAP_CONTENT
@@ -802,20 +819,20 @@ bannerView  state push  =
      , margin $ MarginVertical 8 0
      , visibility $ boolToVisibility state.props.throughBanner
      , gravity CENTER_HORIZONTAL
-     
+
      ] [linearLayout[
        height WRAP_CONTENT
      , width WRAP_CONTENT
-     , margin $ MarginHorizontal 20 20 
-     , background  Color.blue600 
-     , padding $ Padding 8 8 10 8 
+     , margin $ MarginHorizontal 20 20
+     , background  Color.blue600
+     , padding $ Padding 8 8 10 8
      , cornerRadius 12.0
       ]
       [
       imageView [
          height $ V 80
        , width  $ V 80
-       , margin $ Margin 0 12 10 0 
+       , margin $ Margin 0 12 10 0
        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ride_scheduled_clock"
       ]
      ,linearLayout[
@@ -832,9 +849,9 @@ bannerView  state push  =
       , textView $ [
         height WRAP_CONTENT
       , width WRAP_CONTENT
-      , margin $ MarginVertical 4 0 
+      , margin $ MarginVertical 4 0
       , text $ getString $ PLEASE_BE_ONLINE "40"
-      ]<>FontStyle.body1 TypoGraphy 
+      ]<>FontStyle.body1 TypoGraphy
       , textView [
         height WRAP_CONTENT
       , width WRAP_CONTENT
@@ -844,7 +861,7 @@ bannerView  state push  =
         height WRAP_CONTENT
       , width WRAP_CONTENT
       , color Color.warningRed
-      , margin $ Margin 0 4 2 0 
+      , margin $ Margin 0 4 2 0
       , text $ getString TRIP_WILL_BE_ASSIGNED_TO_ANOTHER_DRIVER
       ]
 
@@ -854,14 +871,14 @@ bannerView  state push  =
 
 
 checkRemainingSeconds :: RideSummaryScreenState -> Boolean
-checkRemainingSeconds state =  
-   let currentTime = getCurrentUTC "" 
+checkRemainingSeconds state =
+   let currentTime = getCurrentUTC ""
        tripStartTime = fromMaybe "" state.data.activeRideData.tripScheduledAt
   in runFn2 JB.differenceBetweenTwoUTC tripStartTime currentTime <= 1800
-                
 
 
-shimmerView ::  RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w  
+
+shimmerView ::  RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 shimmerView state push   =
   shimmerFrameLayout
     [ height MATCH_PARENT
@@ -915,6 +932,35 @@ apiErrorPopUp state push =
       visibility $ boolToVisibility state.props.errorPopUp
     ][ PopUpModal.view (push <<< PopUpModalErrorAction) (errorPopUpConfig state )]
 
+
+-- includedChargesView ::  RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- includedChargesView state push =
+--   let
+--     (BookingAPIEntity entity) = state.data.rideDetails
+--   in
+--     linearLayout[
+--       width MATCH_PARENT
+--     , height WRAP_CONTENT
+--     ][
+--       textView [
+--         text $ "Total Fare: $"  <> (show entity.estimatedFare)
+--       , width MATCH_PARENT
+--       , height WRAP_CONTENT
+--       ]
+--     ]
+
+--   where
+--     rateView title subTitle =
+--       linearLayout[
+--         width $ V $((screenWidth unit) / 2) - 16
+--       , height WRAP_CONTENT
+--       , orientation VERTICAL
+--       ][
+--         textView [
+--           width MATCH_PARENT
+--         , height WRAP_CONTENT
+--         ] <> (FontStyle.body1 TypoGraphy)
+--       ]
 
 
 

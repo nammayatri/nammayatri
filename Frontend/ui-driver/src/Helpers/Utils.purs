@@ -141,7 +141,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorPayload :: String -> Foreign
 foreign import decodeErrorMessage :: String -> String
-foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Effect Unit 
+foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Effect Unit
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
@@ -156,6 +156,7 @@ foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
 foreign import isDateNDaysAgo :: Fn2 String Int Boolean
 foreign import isMoreThanXMs :: Fn2 String Int Boolean
+foreign import percentageToAngle :: Fn4 Int Int Int (Array {min :: Int, max :: Int})  Number
 
 foreign import isToday :: String -> Boolean
 
@@ -176,9 +177,10 @@ foreign import downloadQR  :: String -> Effect Unit
 foreign import startQRScanner :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> String -> Effect Unit
 
 foreign import stopScanning :: Unit -> Effect Unit
+foreign import rentalPickupTimeFormat :: String -> String
 
 decodeGeoJson :: String -> Maybe GeoJson
-decodeGeoJson stringGeoJson = 
+decodeGeoJson stringGeoJson =
   case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
     Right resp -> Just resp
     Left err   -> Nothing
@@ -189,13 +191,13 @@ decodeGeoJsonGeometry stringGeometry =
     Right resp -> Just resp
     Left err   -> Nothing
 
-decodeSpecialLocationList :: String -> SpecialLocationMap 
-decodeSpecialLocationList dummy = 
+decodeSpecialLocationList :: String -> SpecialLocationMap
+decodeSpecialLocationList dummy =
   case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore SPECIAL_LOCATION_LIST)) of
     Right resp -> resp
     Left err   -> DM.empty
 
-type SliderConfig = { 
+type SliderConfig = {
   id :: String,
   stepFunctionForCoinConversion :: Int,
   sliderConversionRate :: Number,
@@ -217,7 +219,7 @@ generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ 
     $> nonCanceler
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
-getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
+getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key)
 
 type Period
   = { period :: Int
@@ -229,7 +231,7 @@ type RenewFile = {
   location :: String
 }
 
-type LabelConfig = { 
+type LabelConfig = {
   label :: String,
   backgroundColor :: String,
   text :: String,
@@ -250,7 +252,7 @@ type SpecialLocationList = {
   , city :: String
 }
 
-dummyLabelConfig = { 
+dummyLabelConfig = {
   label : "",
   backgroundColor : "",
   text : "",
@@ -303,7 +305,7 @@ toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions variant = 
+getDowngradeOptions variant =
   case variant of
     "TAXI"  -> []
     "SUV"   -> ["SEDAN", "HATCHBACK"]
@@ -315,7 +317,7 @@ getDowngradeOptions variant =
     "AMBULANCE_AC_OXY" -> []
     "AMBULANCE_VENTILATOR" -> []
     "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
-    "HERITAGE_CAB" -> ["HATCHBACK"] 
+    "HERITAGE_CAB" -> ["HATCHBACK"]
     _       -> []
 
 
@@ -329,19 +331,19 @@ getDowngradeOptionsText vehicleType = do
     modifiedArray = DS.joinWith ", " $  map (\item -> getVehicleType item) subsetArray
     prefixString = if (DA.length downgradeOptions > 1) then ", " else " "
     downgradedToString = ( prefixString
-                        <> modifiedArray 
-                        <> case lastElement of 
+                        <> modifiedArray
+                        <> case lastElement of
                             Just lastElem -> (getString AND) <> " " <> (getVehicleType lastElem)
                             _ -> "" )
   getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 <> downgradeFrom <> downgradedToString <> getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3
 
 getUIDowngradeOptions :: String -> Array String
-getUIDowngradeOptions variant = 
+getUIDowngradeOptions variant =
   case variant of
     "TAXI"  -> []
     "BIKE"  -> []
     "SUV"   -> ["SEDAN", "HATCHBACK"]
-    "SEDAN" -> ["TAXI"] 
+    "SEDAN" -> ["TAXI"]
     "AMBULANCE_TAXI" -> []
     "AMBULANCE_TAXI_OXY" -> []
     "AMBULANCE_AC" -> []
@@ -350,7 +352,7 @@ getUIDowngradeOptions variant =
     "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
     "HERITAGE_CAB" -> ["HATCHBACK"]
     _       -> []
-  
+
 getVehicleType :: String -> String
 getVehicleType vehicleType =
   case vehicleType of
@@ -427,7 +429,7 @@ rideLabelConfig _ = [
       cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
       cancelConfirmImage = fetchImage FF_ASSET  "ny_ic_frequent_cancellation_blocking"
     },
-  dummyLabelConfig  
+  dummyLabelConfig
     { label = "GOTO",
       backgroundColor = "#2C2F3A",
       text = getString GO_TO,
@@ -455,8 +457,8 @@ getGenderIndex req arr = do
   reqIndex
 
 getMerchantVehicleSize :: Unit -> Int
-getMerchantVehicleSize unit = 
-  case getMerchant FunctionCall of 
+getMerchantVehicleSize unit =
+  case getMerchant FunctionCall of
     _ -> 90
 
 getAssetLink :: LazyCheck -> String
@@ -487,14 +489,17 @@ getCommonAssetLink lazy = case (getMerchant lazy) of
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
 
 fetchImage :: FetchImageFrom -> String -> String
-fetchImage fetchImageFrom imageName =   
+fetchImage fetchImageFrom imageName =
   if imageName  == "" then ","
-  else 
+  else
     case fetchImageFrom of
       FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
       FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
       COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
       GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
+
+fetchAudio :: String -> String -> String
+fetchAudio folder file = "https://" <> assetDomain <> "/beckn/audios/" <> folder <>"/" <> file <> ".mp3"
 
 data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
 
@@ -510,9 +515,9 @@ getNegotiationUnit :: String -> MCT.NegotiationUnit -> String
 getNegotiationUnit varient negotiationUnit = case varient of
   "AUTO_RICKSHAW" -> negotiationUnit.auto
   _ -> negotiationUnit.cab
-  
+
 getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
-getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min 
+getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 data LatLon = LatLon String String String
 
@@ -534,7 +539,7 @@ getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLo
           timeStamp = show $ if distanceDiff <= 0.10 then lastKnownTs else currentUtc
       pure (LatLon rideLat rideLong timeStamp)
       else if specialLocation then do
-        rideLat <- lift $ lift $ loadS $ show LAST_KNOWN_LAT 
+        rideLat <- lift $ lift $ loadS $ show LAST_KNOWN_LAT
         rideLong <- lift $ lift $ loadS $ show LAST_KNOWN_LON
         case rideLat,rideLong of
           Just lat, Just lon -> pure (LatLon lat lon lastKnownTs)
@@ -542,7 +547,7 @@ getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLo
         else pure (LatLon (show defaultLat) (show defaultLon) currentUtc)
 
 
-translateString :: String -> Int -> FlowBT String String 
+translateString :: String -> Int -> FlowBT String String
 translateString toTranslate timeOut = do
   (Translation translation) <- (lift $ lift $ doAff $ makeAff \cb -> translateStringWithTimeout (cb <<< Right) Translation timeOut toTranslate $> nonCanceler )
   pure $ ( translation)
@@ -556,7 +561,7 @@ getRideTypeColor variant = case getCategorizedVariant variant of
 
 getCategorizedVariant :: Maybe String -> String
 getCategorizedVariant variant = case variant of
-  Just var -> 
+  Just var ->
     case var of
       "SEDAN"  -> "Sedan"
       "HATCHBACK"  -> "Hatchback"
@@ -566,7 +571,7 @@ getCategorizedVariant variant = case variant of
       "BIKE" -> "Bike Taxi"
       "AMBULANCE_TAXI" -> "Ambulance_Taxi"
       "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
-      "AMBULANCE_AC" -> "Ambulance_AC" 
+      "AMBULANCE_AC" -> "Ambulance_AC"
       "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
       "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
       "SUV_PLUS" -> "XL Plus"
@@ -578,7 +583,7 @@ getCategorizedVariant variant = case variant of
 fetchFiles :: Effect Unit
 fetchFiles = do
   files <- preFetch
-  DA.fold $ map (\item -> launchAff_ $ do 
+  DA.fold $ map (\item -> launchAff_ $ do
     result <- download item.filePath item.location
     if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
 
@@ -593,11 +598,11 @@ download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
 
 onBoardingSubscriptionScreenCheck :: Int -> Boolean -> Boolean
-onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = isEnabled && 
-                                                                              getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" && 
-                                                                              even onBoardingSubscriptionViewCount && 
-                                                                              onBoardingSubscriptionViewCount <5 && 
-                                                                              isOnFreeTrial FunctionCall && 
+onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = isEnabled &&
+                                                                              getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" &&
+                                                                              even onBoardingSubscriptionViewCount &&
+                                                                              onBoardingSubscriptionViewCount <5 &&
+                                                                              isOnFreeTrial FunctionCall &&
                                                                               getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
 
 getVehicleVariantImage :: String -> String
@@ -644,7 +649,7 @@ getVehicleVariantImage variant =
       "DELIVERY_TRUCK_ULTRA_LARGE" -> "ny_ic_ultra_large_truck," <> commonUrl <> "ny_ic_ultra_large_truck.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
-isKeralaCity :: String -> Boolean 
+isKeralaCity :: String -> Boolean
 isKeralaCity city = DA.elem city ["Kochi", "Kozhikode", "Thrissur", "Trivandrum"]
 
 getVariantRideType :: String -> String
@@ -663,7 +668,7 @@ getVariantRideType variant =
     "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
     "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
     _               -> variant
-                    
+
 getStatus :: String -> PaymentStatus
 getStatus status = case status of
   "Success" -> Success
@@ -680,17 +685,17 @@ incrementValueOfLocalStoreKey key = do
       let _ = runFn2 setValueToLocalStore (show key) (show (val + 1))
       pure unit
     Nothing -> do
-      let _ = runFn2 setValueToLocalStore (show key) "1"  
+      let _ = runFn2 setValueToLocalStore (show key) "1"
       pure unit
 
 contactSupportNumber :: String -> Effect Unit
 contactSupportNumber supportType = do
-  void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do 
+  void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do
     config <- getAppConfigFlowBT appConfig
     let city = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
         supportNumber = if DSC.null city.supportNumber then getSupportNumber "" else city.supportNumber
-    if supportType == "WHATSAPP" && DSC.null city.supportNumber then 
-      liftFlowBT $ openWhatsAppSupport $ getWhatsAppSupportNo $ show (getMerchant FunctionCall) 
+    if supportType == "WHATSAPP" && DSC.null city.supportNumber then
+      liftFlowBT $ openWhatsAppSupport $ getWhatsAppSupportNo $ show (getMerchant FunctionCall)
       else
         pure $ showDialer supportNumber false
 
@@ -709,26 +714,26 @@ getCityConfigFromCityCode cityConfigArr cityCode =
   in setForwardBatchingData cityConfig
 
 formatSecIntoMinSecs :: Int -> String
-formatSecIntoMinSecs seconds = 
+formatSecIntoMinSecs seconds =
   let
     mins = seconds `div` 60
     secs = seconds `mod` 60
-  in 
+  in
     show mins <> ":" <> (if secs < 10 then "0" else "") <> show secs
 
 formatSecIntoHourMins :: Int -> String
 formatSecIntoHourMins seconds =
-  let 
+  let
     hours = seconds `div` 3600
     mins = (seconds `mod` 3600) `div` 60
   in (if hours > 0 then show hours <> " hr " else "") <> show mins <> " min"
 
 splitBasedOnLanguage :: String -> String
-splitBasedOnLanguage str = 
+splitBasedOnLanguage str =
     let strArray = DS.split (DS.Pattern "-*$*-") str
     in
     fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
-    where 
+    where
         getLanguage len = do
             case getLanguageLocale languageKey of
                 "KN_IN" | len > 1 -> 1
@@ -757,23 +762,23 @@ isParentView lazy = false -- NOTE:: Adding this temporary to pass the build chec
 
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
 generateReferralLink source medium term content campaign driverReferralType =
-  let config = getAppConfig appConfig 
+  let config = getAppConfig appConfig
       cityConfig = getCityConfig config.cityConfig source
       path = if driverReferralType == DRIVER then "/driverRefer" else "/refer"
       packageId = if driverReferralType == DRIVER then cityConfig.referral.driverAppId else cityConfig.referral.customerAppId
       domain = cityConfig.referral.domain
-  in domain <> path <> "?referrer=" 
-      <> "utm_source%3D" <> source 
-      <> "%26utm_medium%3D" <> medium 
-      <> "%26utm_term%3D" <> term 
-      <> "%26utm_content%3D" <> content 
-      <> "%26utm_campaign%3D" <> campaign 
+  in domain <> path <> "?referrer="
+      <> "utm_source%3D" <> source
+      <> "%26utm_medium%3D" <> medium
+      <> "%26utm_term%3D" <> term
+      <> "%26utm_content%3D" <> content
+      <> "%26utm_campaign%3D" <> campaign
       <> "%26anid%3Dadmob&id=" <> packageId
 
 getLanguageTwoLetters :: Maybe String ->  String
-getLanguageTwoLetters mbLanguage = 
+getLanguageTwoLetters mbLanguage =
   let language = fromMaybe (getLanguageLocale languageKey) mbLanguage
-  in 
+  in
   case language of
     "HI_IN" -> "hi"
     "KN_IN" -> "kn"
@@ -787,7 +792,7 @@ getLanguageTwoLetters mbLanguage =
 
 generateLanguageList :: Array String -> Array MCT.Language
 generateLanguageList languages = map getLanguage languages
-  where 
+  where
    getLanguage lang = case lang of
       "HINDI" -> {name : "हिंदी", value: "HI_IN", subtitle: "Hindi"}
       "KANNADA" -> {name : "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada"}
@@ -821,10 +826,10 @@ updateDriverStatus status = do
   if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
     else if status then Online
       else Offline
-      
+
 transformSpecialLocationList :: SA.SpecialLocationFullRes -> Effect Unit
 transformSpecialLocationList (SA.SpecialLocationFullRes specialLocations) = do
-  let transformedList = DA.foldr (\(SA.SpecialLocationFull specialLocation) hashMap -> 
+  let transformedList = DA.foldr (\(SA.SpecialLocationFull specialLocation) hashMap ->
                                     if not $ DA.null specialLocation.gatesInfo then
                                       updateHashMap (SA.SpecialLocationFull specialLocation) hashMap
                                     else hashMap
@@ -843,22 +848,22 @@ updateHashMap (SA.SpecialLocationFull specialLocation) hashMap =
   in DA.foldr (\gate hashMap' -> DM.insert (runFn3 EHG.encodeGeohash gate.lat gate.lng 7) { geoJson : geoJson, gates : gates, locationName : locationName, category : category, city : city } hashMap') hashMap gates
 
 transformGates :: Array SA.GateInfoFull -> Array Location
-transformGates gatesInfoFulls = 
+transformGates gatesInfoFulls =
   DA.foldr  (\(SA.GateInfoFull gateInfoFull) locations ->
                 case gateInfoFull.geoJson of
                   Just _ ->
-                    let (SA.LatLong point) = gateInfoFull.point 
+                    let (SA.LatLong point) = gateInfoFull.point
                     in locations <> [{ lat : point.lat, lng : point.lon, place : gateInfoFull.name, address : gateInfoFull.address, city : Nothing, isSpecialPickUp : Just true }]
                   Nothing -> locations
             ) [] gatesInfoFulls
 
 transformGeoJsonFeature :: Maybe String -> Array SA.GateInfoFull -> String
-transformGeoJsonFeature geoJson gateInfoFulls = 
+transformGeoJsonFeature geoJson gateInfoFulls =
   AC.stringify $ AE.encodeJson CC.defaultGeoJson { features = geoJsonFeatures }
   where
     geoJsonFeatures :: Array GeoJsonFeature
-    geoJsonFeatures = 
-      DA.foldr (\(SA.GateInfoFull gateInfoFull) specialZones -> 
+    geoJsonFeatures =
+      DA.foldr (\(SA.GateInfoFull gateInfoFull) specialZones ->
                   case gateInfoFull.geoJson of
                     Just _ -> specialZones <> [createGeoJsonFeature (SA.GateInfoFull gateInfoFull)]
                     Nothing -> specialZones
@@ -866,9 +871,9 @@ transformGeoJsonFeature geoJson gateInfoFulls =
       <> case geoJson of
             Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson') }
             Nothing -> []
-            
+
     createGeoJsonFeature :: SA.GateInfoFull ->  GeoJsonFeature
-    createGeoJsonFeature (SA.GateInfoFull gateInfoFull) = 
+    createGeoJsonFeature (SA.GateInfoFull gateInfoFull) =
       CC.defaultGeoJsonFeature {
           properties {
               name = gateInfoFull.name
@@ -900,12 +905,12 @@ findSpecialPickupZone lat lon =
                       Just zone -> ((DA.sortWith (\gate -> getDistanceBwCordinates lat lon gate.lat gate.lng) zone.gates) DA.!! 0)
                       Nothing -> Nothing
       pickupZone = case specialZone, nearestGate of
-                    Just zone, Just gate -> 
+                    Just zone, Just gate ->
                       case decodeGeoJson zone.geoJson of
-                        Just geoJson -> 
+                        Just geoJson ->
                           let feature = (DA.filter (\feature -> feature.properties.name == gate.place) geoJson.features) DA.!! 0
                           in case feature of
-                                Just feature' -> 
+                                Just feature' ->
                                   let properties = feature'.properties
                                       gatesInfoFull = SA.GateInfoFull { address : Nothing, canQueueUpOnGate : Just properties.canQueueUpOnGate, defaultDriverExtra : Just properties.defaultDriverExtra, geoJson : Just (AC.stringify $ AE.encodeJson feature'.geometry), name : properties.name, point : SA.LatLong { lat : gate.lat, lon : gate.lng } }
                                   in Just zone{ gates = [gate], geoJson = transformGeoJsonFeature Nothing [gatesInfoFull]  }
@@ -915,7 +920,7 @@ findSpecialPickupZone lat lon =
   in pickupZone
 
 checkSpecialPickupZone :: Maybe String -> Boolean
-checkSpecialPickupZone maybeLabel = 
+checkSpecialPickupZone maybeLabel =
   case maybeLabel of
     Just label -> let arr = DS.split (DS.Pattern "_") label
                       specialPickupZone = fromMaybe "" (arr DA.!! 3)
@@ -923,7 +928,7 @@ checkSpecialPickupZone maybeLabel =
     Nothing    -> false
 
 getChargesOb :: ST.TripType -> MCT.CityConfig -> String -> CTC.ChargesEntity
-getChargesOb tripType cityConfig driverVehicle = 
+getChargesOb tripType cityConfig driverVehicle =
   if tripType == ST.Rental then
     getRentalChargesOb cityConfig driverVehicle
   else
@@ -944,7 +949,7 @@ getChargesOb tripType cityConfig driverVehicle =
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
-getRentalChargesOb cityConfig driverVehicle = 
+getRentalChargesOb cityConfig driverVehicle =
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
     "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
@@ -963,11 +968,11 @@ getRentalChargesOb cityConfig driverVehicle =
 
 
 getRideInfoEntityBasedOnBookingType :: HomeScreenState -> ST.ActiveRide
-getRideInfoEntityBasedOnBookingType homeScreenState = 
+getRideInfoEntityBasedOnBookingType homeScreenState =
   case homeScreenState.props.bookingStage of
     CURRENT -> homeScreenState.data.activeRide
     ADVANCED -> fromMaybe homeScreenState.data.activeRide homeScreenState.data.advancedRideData
-    
+
 transformBapName :: String -> String
 transformBapName bapName =
   let lowerCase = DS.toLower bapName
@@ -978,14 +983,14 @@ transformBapName bapName =
 
 appName :: Boolean -> String
 appName removeDriver = do
-  let config = getAppConfig appConfig 
+  let config = getAppConfig appConfig
       driverAppName = fromMaybe config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   if removeDriver then
       foldl (\acc word -> DS.replaceAll (DS.Pattern word) (DS.Replacement "") acc) driverAppName ["Driver", "Partner"]
   else driverAppName
 
 setPerKmRate :: SA.GetDriverRateCardRes -> ST.RidePreference -> ST.RidePreference
-setPerKmRate (SA.GetDriverRateCardRes rateCardResp) prefOb = 
+setPerKmRate (SA.GetDriverRateCardRes rateCardResp) prefOb =
   let rateCardRespItem = DA.find (\(SA.RateCardRespItem item) -> item.serviceTierType == prefOb.serviceTierType) rateCardResp
   in case rateCardRespItem of
     Just (SA.RateCardRespItem rateCardRespItem) -> prefOb { perKmRate = Just $ rateCardRespItem.perKmRate.amount}
@@ -1045,19 +1050,19 @@ getLatestAndroidVersion merchant =
 
 shouldShowPurpleVideos :: ST.HomeScreenState -> Boolean
 shouldShowPurpleVideos state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
       purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
   purpleRideConfigForVehicle.showVideo
-  
+
 getGenericAccessibilityVideo :: ST.HomeScreenState -> String
 getGenericAccessibilityVideo state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
       purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
   purpleRideConfigForVehicle.genericVideoForVariant
 
 getPurpleRideConfigForVehicle :: String -> MCT.PurpleRideConfigForVehicle -> MCT.VariantToDisabilityVideo
-getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity = 
-  case linkedVehicleVariant of  
+getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity =
+  case linkedVehicleVariant of
     "AUTO_RICKSHAW" -> purpleRideConfigForCity.purpleRideConfigForAuto
     "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
     _ -> purpleRideConfigForCity.purpleRideConfigForCabs
@@ -1067,19 +1072,19 @@ getDefaultPixelSize size =
   let pixels = runFn1 getPixels ""
       androidDensity = (runFn1 getDeviceDefaultDensity "") / defaultDensity
   in ceil $ (toNumber size / pixels) * androidDensity
-    
-sortIssueCategories :: String -> GetCategoriesRes -> Array CategoryListType 
+
+sortIssueCategories :: String -> GetCategoriesRes -> Array CategoryListType
 sortIssueCategories language (GetCategoriesRes response) =
   let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       compareByOrder a b =
         let indexA = fromMaybe (DA.length categoryOrder) (a.categoryAction >>= flip DA.elemIndex categoryOrder)
             indexB = fromMaybe (DA.length categoryOrder) (b.categoryAction >>= flip DA.elemIndex categoryOrder)
-        in compare indexA indexB 
+        in compare indexA indexB
       temp = categoryTransformer response.categories language
   in DA.sortBy compareByOrder temp
-  
-categoryTransformer :: Array Category -> String -> Array CategoryListType 
-categoryTransformer categories language = 
+
+categoryTransformer :: Array Category -> String -> Array CategoryListType
+categoryTransformer categories language =
   map (\(Category catObj) ->
     { categoryName :
         if (language == "en")
@@ -1093,7 +1098,7 @@ categoryTransformer categories language =
     , categoryType : catObj.categoryType
     , allowedRideStatuses : catObj.allowedRideStatuses
     }) categories
-    
+
 getPlanPrice :: Array SA.PaymentBreakUp -> String -> String
 getPlanPrice fares priceType = do
   let price = (DA.filter(\(SA.PaymentBreakUp item) -> item.component == priceType) fares)
@@ -1108,8 +1113,8 @@ getAllFareFromArray fares titles = do
   price * -1.0
 
 driverVehicleToVechicleServiceTier :: String -> SA.ServiceTierType
-driverVehicleToVechicleServiceTier vehicle = 
-        case vehicle of 
+driverVehicleToVechicleServiceTier vehicle =
+        case vehicle of
         "SUV" -> SA.SUV_TIER
         "Sedan" -> SA.SEDAN_TIER
         "Non-AC Mini" -> SA.TAXI
@@ -1150,8 +1155,8 @@ vehicleVariantImage vehicle =
                   _       ->  "ny_ic_auto_left_view"
 
 getVehicleVariantName :: VehicleCategory -> String
-getVehicleVariantName variant = 
-    case variant of 
+getVehicleVariantName variant =
+    case variant of
                   AutoCategory -> getString AUTO
                   CarCategory -> getString CAB
                   BikeCategory -> getString BIKE_TAXI
@@ -1251,7 +1256,7 @@ getVehicleCategorySelectedEvent category = case category of
 
 
 getHvErrorMsg :: Maybe String -> String
-getHvErrorMsg errorCode = 
+getHvErrorMsg errorCode =
   case errorCode of
     Just "112" -> getString AADHAAR_FRONT_NOT_DETECTED
     Just "113" -> getString AADHAAR_BACK_NOT_DETECTED

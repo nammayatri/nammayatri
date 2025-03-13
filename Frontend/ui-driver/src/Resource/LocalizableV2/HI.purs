@@ -1781,20 +1781,68 @@ getHi =
     , disable_metro_warriors_info : "गो टू मोड सक्षम करने से मेट्रो वॉरियर्स मोड अक्षम हो जाएगा।"
     , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
     , metro_warriors : "मेट्रो वॉरियर्स"
-    , search : "खोजें"  
+    , search : "खोजें"
     , bus__ : "बस"
     , driver_unsubscribed : "ड्राइवर ने प्लेटफ़ॉर्म से अनग्रहित कर दिया है। वापस सब्सक्राइब करने के लिए लंबित राशि भुगतान करें"
     , canceling_this_booking_may_affect_the_emergency_medical : "इस बुकिंग को रद्द करने से मरीज के आपातकालीन चिकित्सा सेवाओं पर प्रभाव पड़ सकता है"
     , drivers_are_permitted_to_cancel_ambulance_bookings :"ड्राइवरों को केवल उनके चिकित्सा कारणों या वाहन के खराब होने की स्थिति में ही रद्द करने की अनुमति है"
+    , payment_under_maintenance : "भुगतान रखरखाव में है"
+    , payments_temporarily_unavailable : "भुगतान अस्थायी रूप से अनुपलब्ध है और जल्द ही वापस आ जाएगा। कृपया बाद में पुनः प्रयास करें।",
+    extra_charge_penalty: "अतिरिक्त शुल्क दंड",
+    out_of_rides: (\numerator denaminator -> numerator <> " में से " <> denaminator <> " सवारी"),
+    extra_charged: "अतिरिक्त शुल्क लिया गया",
+    get_clarified: "प्रमाणित प्राप्त करें",
+    dont_ask_extra_suspend: "निलंबन से बचने के लिए अतिरिक्त शुल्क न माँगें",
+    dont_ask_extra_blocking: "ब्लॉक होने से बचने के लिए अतिरिक्त शुल्क न माँगें",
+    your_extra_charge_penalty: "आपका अतिरिक्त शुल्क दंड",
+    what_does_this_mean: "इसका क्या मतलब है?",
+    read_more: "अधिक पढ़ें",
+    take_the_course: "कोर्स लें",
+    extra_charge_q1: "अतिरिक्त शुल्क दंड क्या है?",
+    extra_charge_a1: "यदि चालक ग्राहक से अतिरिक्त पैसे माँगता है, तो अधिक शुल्क स्कोर बढ़ जाएगा।",
+    extra_charge_q2: "अगर दंड बढ़ता है तो क्या होगा?",
+    extra_charge_a2: "यदि स्कोर अधिक होता है, तो चालक को कम सवारी मिलेंगी।",
+    extra_charge_q3: "मैं अपना दंड कैसे कम कर सकता हूँ?",
+    extra_charge_a3: "सवारी करें और अतिरिक्त शुल्क की मांग न करें। समय के साथ स्कोर कम हो जाएगा।",
+    extra_charge_q4: "अगर चालक अतिरिक्त शुल्क माँगना बंद न करे तो क्या होगा?",
+    extra_charge_a4: "चालक को कुछ समय के लिए निलंबित कर दिया जाएगा। यदि वह जारी रखता है, तो उसे ब्लॉक कर दिया जाएगा।",
+    zero: "शून्य",
+    low: "कम",
+    suspended: "निलंबित",
+    blocked: "ब्लॉक किया गया",
+    overcharging_blocked_desc: "बार-बार अधिक शुल्क लेने के कारण, आपको राइड लेने से ब्लॉक कर दिया गया है",
+    overcharging_suspended_desc: "बार-बार अधिक शुल्क लेने के कारण, आपको ऑनलाइन जाने से निलंबित कर दिया गया है",
+    suspended_till: (\time date -> "निलंबित है " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver: "उचित मूल्य चालक"
+    , resume_ride : "यात्रा फिर से शुरू करें"
+    , end_ride_with_stops : "आपके पास और स्टॉप हैं। फिर भी यात्रा समाप्त करें?"
+    , stop: (\n -> "स्टॉप " <> n)
+    , rate_changes_as_the_distance_changes: "दूरी बदलने पर दर बदलती है"
+    , nammanmeter: "नम्मा\nमीटर"
+    , press_to_cancel: "रद्द करने के लिए दबाएँ"
+    , dist: "दूरी"
+    , km: "कि.मी"
+    , updated_at_: "अपडेट किया गया समय"
+    , time: "समय"
+    , enter_destination: "गंतव्य दर्ज करें"
+    , stop_meter: "मीटर बंद करें"
+    , upton2km: "2KM तक"
+    , meter_running: "मीटर चल रहा है"
+    , confirm_meter_stop: "मीटर बंद करने की पुष्टि करें?"
+    , confirm_destination: "गंतव्य की पुष्टि करें"
+    , search_results: "खोज परिणाम"
+    , start_typing_to_search_places: "स्थान खोजने के लिए टाइप करना शुरू करें"
+    , bus_number: "बस नंबर"
+    , bus_type: "बस प्रकार"
+    , namma_meter: "नम्मा मीटर"
+    , package: "पैकेज"
     , route_bus_number : "रूट/बस नंबर"
     , bus_number : "बस नंबर"
     , bus_type : "बस का प्रकार"
     , route_number : "रूट नंबर"
     , select_route_number : "रूट नंबर चुनें"
     , scan_bus_qr : "बस का QR स्कैन करें"
-    , bus_no : "बस नंबर"
     , route_no : "रूट नंबर"
-    , bus_type_ : "बस का प्रकार"
     , recent_ride : "हाल की सवारी"
     , assigned_rides : "आवंटित सवारी"
     , on_duty : "ड्यूटी पर"

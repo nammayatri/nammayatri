@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -76,7 +76,7 @@ _lat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) {lat = n
 _lon :: forall a b c. Newtype a { lon :: b | c} => Lens' a b
 _lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = newVal}))
 
-_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b 
+_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b
 _certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) {certificateNumber = newVal})
 
 _distance :: forall a b c. Newtype a {distance :: c | b} => Lens' a c
@@ -154,3 +154,6 @@ _vehicleDetails = lens (unwrap >>> _.vehicleDetails) (\oldRec newVal -> wrap ((u
 
 _allowStartRideFromQR :: forall a b c. Newtype a { allowStartRideFromQR :: b | c } => Lens' a b
 _allowStartRideFromQR = lens (unwrap >>> _.allowStartRideFromQR) (\oldRec newVal -> wrap ((unwrap oldRec) { allowStartRideFromQR = newVal }))
+
+_overchargingTag :: forall a b c. Newtype a { overchargingTag :: b | c } => Lens' a b
+_overchargingTag = lens (unwrap >>> _.overchargingTag) (\oldRec newVal -> wrap ((unwrap oldRec) { overchargingTag = newVal }))

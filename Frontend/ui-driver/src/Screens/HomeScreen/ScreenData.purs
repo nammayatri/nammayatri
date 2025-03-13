@@ -28,8 +28,8 @@ import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
 
 initData :: HomeScreenState
-initData = 
-  { data: 
+initData =
+  { data:
       { linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
@@ -184,7 +184,7 @@ initData =
         , pledge : []
         , vehicalOffer : []
         , languages : []
-        , aspirations : [] 
+        , aspirations : []
         , homeTown : Nothing
         , calendarState:
           { calendarPopup: false
@@ -210,6 +210,9 @@ initData =
           lastCompletedTrip : Nothing,
           fleetConfig : Nothing
           }
+      , overchargingTag : Nothing
+      , driverBlocked : false
+      , blockedExpiryTime : ""
     }
   , props:
       { isFreeRide: false
@@ -292,7 +295,7 @@ initData =
       , showInterOperablePopUp : false
       , showReferralEarnedPopUp : false
       , showReferNowPopUp : false
-      , showAddUPIPopUp : false 
+      , showAddUPIPopUp : false
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
       , checkUpcomingRide : true
@@ -307,18 +310,12 @@ initData =
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
       , retryRideList : false
-      , showParcelIntroductionPopup : false 
+      , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
-      , showRecentBusTripModal : false
-      , whereIsMyBusConfig: {
-          showSelectAvailableBusRoutes : false
-        , selectRouteStage : false
-        , selectedRoute : Nothing
-        , tripTransactionId : Nothing
-        , selectedIndex : -1
-      }
+      , showEndRideWithStopPopup : false
+      , triggerGMapsIntent : false
       }
   }
 
@@ -349,7 +346,7 @@ datePickerState' = {
 }
 
 initialTollState :: TollState
-initialTollState = { 
+initialTollState = {
   showTollChargePopup: true
 , showTollChargeAmbigousPopup: true
 , finalCharge : 0.0
@@ -447,46 +444,3 @@ initialParkingData = {
   estimatedCharge : Nothing
 , finalCharge : Nothing
 }
-
-
-dummyStopInfo :: StopInfo
-dummyStopInfo = StopInfo
-  { name: "Dummy Stop"
-  , code: "DS001"
-  , lat: Just 12.9715987
-  , long: Just 77.594566
-  }
-
-dummyRouteInfo :: RouteInfo
-dummyRouteInfo = RouteInfo
-  { code : "RI001"
-  , shortName : "S-12"
-  , longName : "Bus Name"
-  , startPoint : (LatLong {
-    lat : 0.0,
-    lon : 0.0
-  })
-  , endPoint : (LatLong {
-    lat : 0.0,
-    lon : 0.0
-  })
-  }
-
-dummyBusVehicleDetails :: BusVehicleDetails
-dummyBusVehicleDetails = BusVehicleDetails
-  {
-    number : "S102"
-  , _type : "BUS_AC"
-  }
-
-dummyAvailableRoutes :: AvailableRoutes
-dummyAvailableRoutes = AvailableRoutes
-  { routeInfo : dummyRouteInfo
-  , source : dummyStopInfo
-  , destination : dummyStopInfo
-  , vehicleDetails : dummyBusVehicleDetails
-  , roundRouteCode : Nothing
-  }
-
-dummyAvailableRoutesList :: AvailableRoutesList
-dummyAvailableRoutesList = AvailableRoutesList []

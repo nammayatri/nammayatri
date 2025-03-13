@@ -29,7 +29,7 @@ import Common.Types.App (LazyCheck(..))
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
   case st of
-    DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen}) 
+    DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen})
     SplashScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { splashScreen = a state.splashScreen})
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
     DriverProfileScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverProfileScreen = a state.driverProfileScreen})
@@ -88,6 +88,7 @@ modifyScreenState st =
     MetroWarriorsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroWarriorsScreen = a state.metroWarriorsScreen})
     EducationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {educationScreen = a state.educationScreen})
     BusQrScanScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {qrCodeScanner = a state.qrCodeScanner})
+    ExtraChargeInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {extraChargeInfoScreen = a state.extraChargeInfoScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

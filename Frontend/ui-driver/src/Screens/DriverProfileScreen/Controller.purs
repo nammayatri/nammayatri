@@ -65,7 +65,9 @@ import Services.API (DriverProfileDataRes(..))
 import Data.Array as DA
 import Types.App
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils as HU
+import Mobility.Prelude(boolToInt)
+import Screens (ScreenName(..)) as Screen
+import Components.ExtraChargeCard as ExtraChargeCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -208,6 +210,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
                     | GoToCompletingProfile DriverProfileScreenState
                     | GoToCancellationRateScreen DriverProfileScreenState
+                    | GoToExtraChargeInfoScreen DriverProfileScreenState
 
 data Action = BackPressed
             | NoAction
@@ -264,10 +267,12 @@ data Action = BackPressed
             | ShareQR PrimaryButtonController.Action
             | ManageVehicleButtonAC PrimaryButtonController.Action
             | PendingVehicle String ST.VehicleCategory
-            | CompleteProfile 
+            | CompleteProfile
             | OpenCancellationRateScreen
             | ShowDrvierBlockedPopup
             | DriverBLockedPopupAction PopUpModal.Action
+            | ExtraChargeCardAC ExtraChargeCard.Action
+            | UpdateGlobalEvent
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -353,12 +358,12 @@ eval (PaymentInfo) state = continue state {props { paymentInfoView = true }}
 
 eval (LeftKeyAction) state = exit $ SubscriptionScreen
 
-eval (DownloadQR (PrimaryButton.OnClick)) state = do 
-  continueWithCmd state [do 
+eval (DownloadQR (PrimaryButton.OnClick)) state = do
+  continueWithCmd state [do
     _ <- downloadQR $ getNewIDWithTag "QRpaymentview"
     pure DismissQrPopup]
 
-eval (ShareQR (PrimaryButton.OnClick)) state = do 
+eval (ShareQR (PrimaryButton.OnClick)) state = do
   _ <- pure $ shareImageMessage "Hey!\nPay your Namma Yatri fare directly to me ..." (shareImageMessageConfig state)
   continue state
 
@@ -385,13 +390,20 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       payerVpa = fromMaybe "" driverProfileResp.payerVpa,
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus,
                                       goHomeActive = driverGoHomeInfo.status == Just "ACTIVE",
-                                      driverInfoResponse = Just resp,
+                                      driverInfoResponse = Just (SA.GetDriverInfoResp driverProfileResp
+                                      -- {
+                                        -- @TODO {DANGER} need to remove while merging
+                                      --   overchargingTag = Just SA.HighOverCharging
+                                      -- , ridesWithFareIssues = Just 9
+                                      -- , totalRidesConsideredForFareIssues = Just 10
+                                      -- }
+                                      ),
                                       cancellationRate = fromMaybe 0 driverProfileResp.cancellationRateInWindow,
                                       assignedRides = fromMaybe 0 driverProfileResp.assignedRidesCountInWindow,
                                       cancelledRides = fromMaybe 0 driverProfileResp.cancelledRidesCountInWindow,
                                       cancellationWindow = driverProfileResp.windowSize,
                                       favCount = driverProfileResp.favCount,
-                                      driverBlocked = fromMaybe false driverProfileResp.blocked,
+                                      driverBlocked =  fromMaybe false driverProfileResp.blocked,
                                       blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
@@ -399,11 +411,11 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
 eval (RegStatusResponse  (SA.DriverRegistrationStatusResp regStatusResp)) state =
   let driverVehicleData = mkDriverVehicleDetails
   in continue state {data{ vehicleDetails = driverVehicleData}}
-  where 
+  where
     mkDriverVehicleDetails :: Array DriverVehicleDetails
-    mkDriverVehicleDetails = 
+    mkDriverVehicleDetails =
       let vehicleData = regStatusResp.vehicleDocuments
-      in map (\(SA.VehicleDocumentItem vehicle) -> 
+      in map (\(SA.VehicleDocumentItem vehicle) ->
         { registrationNo : vehicle.registrationNo,
           userSelectedVehicleCategory : fromMaybe ST.AutoCategory $ transformVehicleType $ Just vehicle.userSelectedVehicleCategory,
           verifiedVehicleCategory : transformVehicleType vehicle.verifiedVehicleCategory,
@@ -436,9 +448,9 @@ eval ShowDrvierBlockedPopup state = continue state {props { showDriverBlockedPop
 
 eval (DriverBLockedPopupAction PopUpModal.OnButton2Click) state = continue state { props { showDriverBlockedPopup = false } }
 
-eval (DriverBLockedPopupAction PopUpModal.OnButton1Click) state = do 
+eval (DriverBLockedPopupAction PopUpModal.OnButton1Click) state = do
   void $ pure $ unsafePerformEffect $ contactSupportNumber ""
-  continue state 
+  continue state
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   if state.props.updateLanguages then continue state{props{updateLanguages = false}}
@@ -447,11 +459,11 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
 
 eval (ManageVehicleHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{props{manageVehicleVisibility = false}}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = 
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state =
   if state.data.fromHomeScreen then do
     void $ pure $ hideKeyboardOnNavigation true
-    exit $ GoBack state 
-  else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}} 
+    exit $ GoBack state
+  else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
@@ -610,6 +622,10 @@ eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
 eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = state.data.activeRCData.rcDetails.certificateNumber, isRCActive = state.data.activeRCData.rcStatus}} [
     pure $ DeactivateRc rcType ""
   ]
+
+eval (ExtraChargeCardAC (ExtraChargeCard.LearnMoreExtraChargeBtnAC (PrimaryButton.OnClick))) state = exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
+
+eval (UpdateGlobalEvent) state = update state {props {skipGlobalEvents = false}}
 
 eval _ state = update state
 

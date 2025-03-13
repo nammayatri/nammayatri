@@ -1767,7 +1767,7 @@ getBn =
     , sender_asking_different_location : "প্রেরক ভিন্ন স্থানে আসতে বলছে"
     , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
     , truck : "ট্রাক"
-    , register_your_truck : "আপনার ট্রাক রেজিস্টার করুন" 
+    , register_your_truck : "আপনার ট্রাক রেজিস্টার করুন"
     , no_plan_selected : "কোন পরিকল্পনা নির্বাচিত নেই"
     , a_new_way_to_earn_parcel: "আয়ের নতুন উপায় - পার্সেল 2W"
     , seamless_earning_experience_click_below: "সহজ আয়ের অভিজ্ঞতার জন্য নিচে ক্লিক করুন"
@@ -1781,7 +1781,7 @@ getBn =
     , disable_metro_warriors_info : "গো টু মোড সক্রিয় করা মেট্রো ওয়ারিয়র্স মোড নিষ্ক্রিয় করবে।"
     , choose_preferred_metro : "পছন্দের মেট্রো নির্বাচন করুন"
     , metro_warriors : "মেট্রো ওয়ারিয়র্স"
-    , search : "অনুসন্ধান করুন"  
+    , search : "অনুসন্ধান করুন"
     , bus__ : "বাস"
     , driver_unsubscribed : "ড্রাইভার প্ল্যাটফর্ম থেকে অনসাবস্ক্রাইব করা হয়েছে। প্রদান বাকি পরিমাণ প্রদান করতে সাবস্ক্রাইব করুন"
     , route_bus_number : "রুট/বাস নম্বর"
@@ -1811,4 +1811,54 @@ getBn =
     , yes_end_ride: "হ্যাঁ, যাত্রা শেষ করুন"
     , canceling_this_booking_may_affect_the_emergency_medical : "এই বুকিং বাতিল করলে রোগীর জরুরি চিকিৎসা সেবাগুলিতে প্রভাব পড়তে পারে"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ড্রাইভারদের শুধুমাত্র তাদের চিকিৎসা সংক্রান্ত কারণ বা যানবাহন সমস্যার জন্যই বাতিল করার অনুমতি রয়েছে"
+    , payment_under_maintenance : "পেমেন্ট রক্ষণাবেক্ষণের অধীনে"
+    , payments_temporarily_unavailable : "পেমেন্টগুলি অস্থায়ীভাবে অনুপলব্ধ এবং শীঘ্রই ফিরে আসবে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।",
+    extra_charge_penalty: "অতিরিক্ত চার্জ জরিমানা",
+    out_of_rides: (\numerator denaminator -> numerator <> " এর মধ্যে " <> denaminator <> " রাইড"),
+    extra_charged: "অতিরিক্ত চার্জ করা হয়েছে",
+    get_clarified: "প্রত্যয়িত হন",
+    dont_ask_extra_suspend: "সাসপেনশন এড়াতে অতিরিক্ত টাকা চাইবেন না",
+    dont_ask_extra_blocking: "ব্লক হওয়া এড়াতে অতিরিক্ত টাকা চাইবেন না",
+    your_extra_charge_penalty: "আপনার অতিরিক্ত চার্জ জরিমানা",
+    what_does_this_mean: "এর মানে কি?",
+    read_more: "আরও পড়ুন",
+    take_the_course: "কোর্স নিন",
+    extra_charge_q1: "অতিরিক্ত চার্জ জরিমানা কি?",
+    extra_charge_a1: "যদি চালক যাত্রীর কাছ থেকে অতিরিক্ত টাকা চায়, তাহলে ওভারচার্জ স্কোর বৃদ্ধি পাবে।",
+    extra_charge_q2: "জরিমানার পরিমাণ বাড়লে কি হবে?",
+    extra_charge_a2: "যদি স্কোর বেশি হয়, তাহলে চালক কম রাইড পাবে।",
+    extra_charge_q3: "আমি কিভাবে আমার জরিমানা কমাতে পারি?",
+    extra_charge_a3: "রাইড নিন এবং অতিরিক্ত টাকা চাইবেন না। সময়ের সাথে সাথে স্কোর কমবে।",
+    extra_charge_q4: "যদি চালক অতিরিক্ত টাকা চাওয়া বন্ধ না করে তাহলে কি হবে?",
+    extra_charge_a4: "চালককে স্বল্প সময়ের জন্য সাসপেন্ড করা হবে। যদি চালক চালিয়ে যায়, তবে তাকে ব্লক করা হবে।",
+    zero: "শূন্য",
+    low: "কম",
+    suspended: "সাসপেন্ডেড",
+    blocked: "ব্লকড",
+    overcharging_blocked_desc: "বারবার অতিরিক্ত চার্জ নেওয়ার কারণে, আপনাকে রাইড নেওয়া থেকে ব্লক করা হয়েছে",
+    overcharging_suspended_desc: "বারবার অতিরিক্ত চার্জ নেওয়ার কারণে, আপনাকে অনলাইনে যাওয়া থেকে সাময়িকভাবে সাসপেন্ড করা হয়েছে",
+    suspended_till: (\time date -> "সাসপেন্ড করা হয়েছে " <> time <> ", " <> date <> " ⚠️"),
+    fair_price_driver: "ন্যায্য মূল্য চালক"
+    , resume_ride : "যাত্রা পুনরায় শুরু করুন"
+    , end_ride_with_stops : "আপনার আরও স্টপেজ রয়েছে। যাত্রা শেষ করবেন?"
+    , stop : (\n -> "স্টপ " <> n)
+    , rate_changes_as_the_distance_changes: "দূরত্ব পরিবর্তনের সাথে সাথে হার পরিবর্তিত হয়"
+    , nammanmeter: "নাম্মা\nমিটার"
+    , press_to_cancel: "বাতিল করতে চাপুন"
+    , dist: "দূরত্ব"
+    , km: "কি.মি"
+    , updated_at_: "আপডেটের সময়"
+    , time: "সময়"
+    , enter_destination: "গন্তব্য প্রবেশ করান"
+    , stop_meter: "মিটার বন্ধ করুন"
+    , upton2km: "2KM পর্যন্ত"
+    , meter_running: "মিটার চলছে"
+    , confirm_meter_stop: "মিটার বন্ধ নিশ্চিত করুন?"
+    , confirm_destination: "গন্তব্য নিশ্চিত করুন"
+    , search_results: "অনুসন্ধানের ফলাফল"
+    , start_typing_to_search_places: "স্থান অনুসন্ধান করতে টাইপ করা শুরু করুন"
+    , bus_number: "বাস নম্বর"
+    , bus_type: "বাসের ধরন"
+    , namma_meter: "নাম্মা মিটার"
+    , package: "প্যাকেজ"
     }
