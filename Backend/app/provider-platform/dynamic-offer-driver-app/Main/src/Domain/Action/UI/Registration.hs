@@ -441,24 +441,6 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
--- makeDriverOperatorAssociation :: (MonadFlow m) => Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Id SP.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
--- makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
---   id <- generateGUID
---   now <- getCurrentTime
---   return $
---     DriverOperatorAssociation
---       { id = id,
---         operatorId = operatorId,
---         isActive = True,
---         driverId = driverId,
---         associatedOn = Just now,
---         associatedTill = end,
---         createdAt = now,
---         updatedAt = now,
---         merchantId = Just merchantId,
---         merchantOperatingCityId = Just merchantOpCityId
---       }
-
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -599,9 +581,3 @@ getOperatorIdFromReferralCode (Just refCode) = do
   result <- isValidReferralForRole referralReq SP.OPERATOR
   case result of
     SuccessCode val -> return $ Just val
-
--- checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
--- checkDriverHasNoAssociation driverId = do
---   mbOperatorAssoc <- QDOA.findByDriverId (cast driverId) True
---   mbFleetAssoc <- QFDA.findByDriverId (cast driverId) True
---   pure $ isNothing mbOperatorAssoc && isNothing mbFleetAssoc

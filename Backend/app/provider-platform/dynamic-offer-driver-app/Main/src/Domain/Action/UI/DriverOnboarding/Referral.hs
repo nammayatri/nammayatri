@@ -18,23 +18,32 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
-import Tools.Error (DriverInformationError (..), DriverReferralError (..))
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import Tools.Error
 
-newtype ReferralReq = ReferralReq
-  {value :: Text}
+data ReferralReq = ReferralReq
+  { value :: Text,
+    role :: Maybe Person.Role
+  }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 newtype GetReferredDriverRes = GetReferredDriverRes
@@ -61,28 +70,83 @@ instance FromJSON ReferralRes where
 validateReferralReq :: Validate ReferralReq
 validateReferralReq ReferralReq {..} =
   sequenceA_
-    [ validateField "value" value $ ExactLength 6
+    [ validateField "value" value $ MinLength 6
     ]
 
 addReferral ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ReferralReq ->
   Flow ReferralRes
-addReferral (personId, _, _) req = do
+addReferral (personId, merchantId, merchantOpCityId) req = do
   runRequestValidation validateReferralReq req
   di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
   if isJust di.referralCode || isJust di.referredByDriverId
     then return AlreadyReferred
     else do
       dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
-      DriverInformation.addReferralCode (Just req.value) (Just dr.driverId) personId
-      referredByDriver <- B.runInReplica (DriverInformation.findById dr.driverId) >>= fromMaybeM DriverInfoNotFound
-      let newtotalRef = fromMaybe 0 referredByDriver.totalReferred + 1
-      DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
-      return Success
+      let role = fromMaybe Person.DRIVER req.role
+      when (role /= dr.role) $ throwError (InvalidRequest "Invalid referral role")
+      transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+      unless (role `elem` transporterConfig.allowedRolesForReferred) $ throwError (InvalidRequest "Referral not allowed for this merchant")
+      case role of
+        Person.DRIVER -> do
+          DriverInformation.addReferralCode (Just req.value) (Just dr.driverId) personId
+          referredByDriver <- B.runInReplica (DriverInformation.findById dr.driverId) >>= fromMaybeM DriverInfoNotFound
+          let newtotalRef = fromMaybe 0 referredByDriver.totalReferred + 1
+          DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
+          return Success
+        Person.OPERATOR -> do
+          hasNoAssociation <- checkDriverHasNoAssociation personId
+          if hasNoAssociation
+            then do
+              DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
+              driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+              void $ QDOA.create driverOperatorAssData
+              incrementOnboardedDriverCountByOperator dr.driverId
+              return Success
+            else return AlreadyReferred
+        _ -> throwError (InvalidRequest "Invalid referral role")
 
 getReferredDrivers :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow GetReferredDriverRes
 getReferredDrivers (personId, _, _) = do
   di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
   let totalRef = fromMaybe 0 di.totalReferred
   pure $ GetReferredDriverRes {value = totalRef}
+
+incrementOnboardedDriverCountByOperator :: Id Person.Person -> Flow ()
+incrementOnboardedDriverCountByOperator referredOperatorId = do
+  let lockKey = "driver_count_lock_" <> getId referredOperatorId
+  Redis.withWaitAndLockRedis lockKey 10 5000 $ do
+    mbDriverStats <- QDriverStats.findByPrimaryKey referredOperatorId
+    case mbDriverStats of
+      Nothing -> do
+        logTagError "INCREMENT_DRIVER_COUNT" ("DriverStats not found for operator " <> show referredOperatorId)
+        throwError $ InternalError "DriverStats not found for operator"
+      Just driverStats -> do
+        let newCount = driverStats.numDriversOnboarded + 1
+        QDriverStats.updateNumDriversOnboarded newCount referredOperatorId
+        logTagInfo "INCREMENT_DRIVER_COUNT" $ "Successfully incremented driver count for " <> show referredOperatorId <> " to " <> show newCount
+
+makeDriverOperatorAssociation :: (MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
+makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DriverOperatorAssociation
+      { id = id,
+        operatorId = operatorId,
+        isActive = True,
+        driverId = driverId,
+        associatedOn = Just now,
+        associatedTill = end,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOpCityId
+      }
+
+checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m Bool
+checkDriverHasNoAssociation driverId = do
+  mbOperatorAssoc <- QDOA.findByDriverId (cast driverId) True
+  mbFleetAssoc <- QFDA.findByDriverId (cast driverId) True
+  pure $ isNothing mbOperatorAssoc && isNothing mbFleetAssoc

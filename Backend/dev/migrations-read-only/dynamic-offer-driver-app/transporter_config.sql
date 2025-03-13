@@ -354,38 +354,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_alert_thr
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_roles_for_referred text  default '[]';
 
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
 

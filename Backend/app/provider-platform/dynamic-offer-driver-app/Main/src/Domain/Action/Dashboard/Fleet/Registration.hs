@@ -152,7 +152,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
-    incrementFleetOwnerCount (Id referredOperatorId)
+    incrementFleetOwnerOnboardedCountByOperator (Id referredOperatorId)
   whenJust mbIsGenerateRefEntry $ \isGenerateRefEntry -> when isGenerateRefEntry $ do
     void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
@@ -268,8 +268,8 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
-incrementFleetOwnerCount :: Id DP.Person -> Flow ()
-incrementFleetOwnerCount referredOperatorId = do
+incrementFleetOwnerOnboardedCountByOperator :: Id DP.Person -> Flow ()
+incrementFleetOwnerOnboardedCountByOperator referredOperatorId = do
   let lockKey = "fleet_owner_count_lock_" <> getId referredOperatorId
   Redis.withWaitAndLockRedis lockKey 10 5000 $ do
     mbDriverStats <- QDriverStats.findByPrimaryKey referredOperatorId

@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.TransporterConfig
+import qualified Domain.Types.Person
 import qualified Domain.Types.UtilsTH
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
@@ -25,6 +26,7 @@ data TransporterConfigT f = TransporterConfigT
     actualRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: B.C f Kernel.Types.Common.HighPrecMeters,
     allowDefaultPlanAllocation :: B.C f Kernel.Prelude.Bool,
+    allowedRolesForReferred :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Person.Role]),
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     arrivalTimeBufferOfVehicle :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),

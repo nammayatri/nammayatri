@@ -45,6 +45,7 @@ imports:
   LLMChatCompletionService: ChatCompletion.Types
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
+  Role: Domain.Types.Person
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1001,6 +1002,8 @@ TransporterConfig:
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
+    allowedRolesForReferred: "[Role]"
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1049,6 +1052,7 @@ TransporterConfig:
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
     minThresholdForPassThroughDestination: Maybe Meters
+    allowedRolesForReferred: Maybe [Role]
 
   beamFields:
     fcmConfig:
@@ -1107,6 +1111,7 @@ TransporterConfig:
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    allowedRolesForReferred: Just allowedRolesForReferred|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1170,6 +1175,7 @@ TransporterConfig:
     recomputeDistanceThresholds: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    allowedRolesForReferred: fromMaybe [] allowedRolesForReferred|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1355,6 +1361,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: "false"
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
+    allowedRolesForReferred: "'[]'"
     recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
 
     minThreshildForPassThroughDestination: "1000"
