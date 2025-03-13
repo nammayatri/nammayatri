@@ -234,8 +234,7 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       identifierType = Just DP.MOBILENUMBER,
       email = Nothing,
       registrationLat = Nothing,
-      registrationLon = Nothing,
-      operatorReferralCode = Nothing
+      registrationLon = Nothing
     }
 
 fleetOwnerVerify ::

@@ -37,7 +37,6 @@ import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
-import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -71,7 +70,6 @@ import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -79,9 +77,7 @@ import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverLicense as QDL
-import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
@@ -99,8 +95,7 @@ data AuthReq = AuthReq
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double,
-    operatorReferralCode :: Maybe Text
+    registrationLon :: Maybe Double
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -184,8 +179,6 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
 
-  maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-
   (person, otpChannel) <-
     case identifierType of
       SP.MOBILENUMBER -> do
@@ -194,13 +187,13 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.MOBILENUMBER)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchant (Just email) merchant.id
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard maybeOperatorId) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
 
@@ -241,8 +234,8 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       authId = SR.id token
   return $ AuthWithOtpRes {attempts, authId, otpCode}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> Maybe Text -> m ()
-createDriverDetails personId merchantId merchantOpCityId transporterConfig mbOperatorId = do
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
+createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   now <- getCurrentTime
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
@@ -264,7 +257,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig mbOpe
             autoPayStatus = Nothing,
             referralCode = Nothing,
             referredByFleetOwnerId = Nothing,
-            referredByOperatorId = mbOperatorId,
+            referredByOperatorId = Nothing,
             referredByDriverId = Nothing,
             totalReferred = Just 0,
             lastEnabledOn = Nothing,
@@ -448,37 +441,30 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-makeDriverOperatorAssociation :: (MonadFlow m) => Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Id SP.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
-makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    DriverOperatorAssociation
-      { id = id,
-        operatorId = operatorId,
-        isActive = True,
-        driverId = driverId,
-        associatedOn = Just now,
-        associatedTill = end,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
+-- makeDriverOperatorAssociation :: (MonadFlow m) => Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Id SP.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
+-- makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
+--   id <- generateGUID
+--   now <- getCurrentTime
+--   return $
+--     DriverOperatorAssociation
+--       { id = id,
+--         operatorId = operatorId,
+--         isActive = True,
+--         driverId = driverId,
+--         associatedOn = Just now,
+--         associatedTill = end,
+--         createdAt = now,
+--         updatedAt = now,
+--         merchantId = Just merchantId,
+--         merchantOperatingCityId = Just merchantOpCityId
+--       }
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard mbOperatorId = do
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
-  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig mbOperatorId
-
-  whenJust mbOperatorId $ \operatorId -> do
-    hasAssociation <- checkDriverHasNoAssociation person.id
-    unless hasAssociation $ throwError $ InvalidRequest "Driver is already associated"
-    driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId person.id operatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-    void $ QDOA.create driverOperatorAssData
-
+  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person
 
 verify ::
@@ -614,8 +600,8 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
-checkDriverHasNoAssociation driverId = do
-  mbOperatorAssoc <- QDOA.findByDriverId (cast driverId) True
-  mbFleetAssoc <- QFDA.findByDriverId (cast driverId) True
-  pure $ isNothing mbOperatorAssoc && isNothing mbFleetAssoc
+-- checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
+-- checkDriverHasNoAssociation driverId = do
+--   mbOperatorAssoc <- QDOA.findByDriverId (cast driverId) True
+--   mbFleetAssoc <- QFDA.findByDriverId (cast driverId) True
+--   pure $ isNothing mbOperatorAssoc && isNothing mbFleetAssoc
