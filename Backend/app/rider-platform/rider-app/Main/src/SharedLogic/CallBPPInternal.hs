@@ -557,7 +557,8 @@ data CalculateFareReq = CalculateFareReq
   { dropLatLong :: Maybe Kernel.External.Maps.Types.LatLong,
     pickupLatLong :: Kernel.External.Maps.Types.LatLong,
     mbDistance :: Maybe Meters,
-    mbDuration :: Maybe Seconds
+    mbDuration :: Maybe Seconds,
+    mbTripCategory :: Maybe TripCategory
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -570,7 +571,7 @@ data FareData = FareData
     vehicleServiceTier :: ServiceTierType,
     vehicleServiceTierName :: Maybe Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic , Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data GetFareResponse = FareResponse {estimatedFares :: [FareData]}

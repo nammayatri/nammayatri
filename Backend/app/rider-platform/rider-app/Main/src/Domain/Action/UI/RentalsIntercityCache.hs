@@ -10,15 +10,19 @@ import Kernel.Utils.Common
 import qualified Kernel.Storage.Hedis as Redis
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Kernel.External.Maps.Types
-import Kernel.Types.Beckn.City as City
+import qualified Kernel.Types.Beckn.City as City
 import Data.List (minimumBy)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Storage.CachedQueries.Merchant as CQM
--- import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Kernel.Types.Id as Id
 import Kernel.Types.Error
+import qualified Domain.Types.Trip as DTC
+import qualified Domain.Action.UI.Serviceability as SVC
+import qualified Lib.Types.SpecialLocation as LSS
 
 
 
@@ -26,7 +30,7 @@ import Kernel.Types.Error
 
 data RentalsIntercityCacheReq = RentalsIntercityCacheReq
   { cityCenterLatLong :: Maybe LatLong,
-    currentCity :: Maybe City,
+    currentCity :: Maybe City.City,
     currentLatLong :: LatLong,
     interCitySearchLocations :: Maybe [LatLong],
     rentalsConfig :: Maybe [RentalsConfig]
@@ -60,24 +64,28 @@ rentalsIntercityCache ::
     Id.Id Merchant.Merchant ->
     RentalsIntercityCacheReq -> 
     m RentalsIntercityCacheResp
-rentalsIntercityCache _ merchantId req = do
+rentalsIntercityCache personId merchantId req = do
     merchant <- CQM.findById  (merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    let checkForSpecialLoation = False 
-        specialLocationId = Just ""
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show person.merchantOperatingCityId)
+    checkForServiceable <- SVC.checkServiceability (fetchOriginSuccessor) (personId,merchantId) req.currentLatLong False False
+    let checkForSpecialLoation = checkForServiceable.serviceable
+        specialLocationId = fmap (.id) checkForServiceable.specialLocation
+
     interCityResp <-
       case checkForSpecialLoation of
         True -> do
           Redis.safeGet (mkSpecialLocationRedisKey (specialLocationId) ":interCity") >>= \case
             Just resp -> pure resp
             Nothing -> do
-              interCityFareResp <- buildMininumIntercityFareArray req (Just req.currentLatLong) merchant
+              interCityFareResp <- buildMininumIntercityFareArray req (Just req.currentLatLong) merchant merchantOperatingCity.city
               Redis.setExp (mkSpecialLocationRedisKey specialLocationId ":interCity") interCityFareResp 3600 -- 1 hour
               pure interCityFareResp
         False -> do 
           Redis.safeGet (mkLocationRedisKey req.currentCity ":interCity") >>= \case 
               Just resp -> pure resp
               Nothing -> do
-                interCityFareResp <- buildMininumIntercityFareArray req req.cityCenterLatLong merchant
+                interCityFareResp <- buildMininumIntercityFareArray req req.cityCenterLatLong merchant merchantOperatingCity.city
                 Redis.setExp (mkLocationRedisKey req.currentCity ":interCity") interCityFareResp 3600 -- 1 hour
                 pure interCityFareResp
     rentalsResp <- case checkForSpecialLoation of
@@ -85,14 +93,14 @@ rentalsIntercityCache _ merchantId req = do
         Redis.safeGet (mkSpecialLocationRedisKey specialLocationId ":rentals") >>= \case
           Just resp -> pure resp
           Nothing -> do
-            rentalsAPIResp <- buildMininumRentalsFareArray req (Just req.currentLatLong) merchant
+            rentalsAPIResp <- buildMininumRentalsFareArray req (Just req.currentLatLong) merchant merchantOperatingCity.city
             Redis.setExp (mkSpecialLocationRedisKey specialLocationId ":rentals") rentalsAPIResp 3600 -- 1 hour
             pure rentalsAPIResp
       False -> do 
         Redis.safeGet (mkLocationRedisKey req.currentCity ":interCity") >>= \case
           Just resp -> pure resp
           Nothing -> do
-            rentalsAPIResp <- buildMininumRentalsFareArray req req.cityCenterLatLong merchant
+            rentalsAPIResp <- buildMininumRentalsFareArray req req.cityCenterLatLong merchant merchantOperatingCity.city
             Redis.setExp (mkLocationRedisKey req.currentCity ":rentals") rentalsAPIResp 3600 -- 1 hour
             pure rentalsAPIResp
     let res = RentalsIntercityCacheResp {   
@@ -100,14 +108,15 @@ rentalsIntercityCache _ merchantId req = do
                 rentalsMininumFareResp = rentalsResp
               }
     pure $ res
+    where 
+      fetchOriginSuccessor niggesh = niggesh.origin
 
-
-mkLocationRedisKey :: Maybe City -> Text -> Text
+mkLocationRedisKey :: Maybe City.City -> Text -> Text
 mkLocationRedisKey currentCityLatLong suffix = 
     case currentCityLatLong of
         Just currenCity -> (show currenCity) <> suffix
         Nothing ->  "unknown_city:" <> suffix
-mkSpecialLocationRedisKey :: Maybe Text -> Text -> Text
+mkSpecialLocationRedisKey :: Maybe (Id.Id LSS.SpecialLocation)-> Text -> Text
 mkSpecialLocationRedisKey specialLocationId suffix =
     case specialLocationId of
         Just locId -> (show locId) <> suffix
@@ -119,12 +128,12 @@ buildMininumIntercityFareArray ::
     RentalsIntercityCacheReq -> 
     Maybe LatLong ->
     Merchant.Merchant ->
+    City.City ->
     m (Maybe [IntercitySearchResp])
-buildMininumIntercityFareArray req mbSourceLatLong merchant= do
+buildMininumIntercityFareArray req mbSourceLatLong merchant merchanOperatingCity = do
     let 
         interCitySearchLocations_ = fromMaybe [] req.interCitySearchLocations
         sourceLatLong = fromMaybe req.currentLatLong mbSourceLatLong
-    -- merchantOperatingCity <- CQMOC.findById merchant.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show merchant.merchantOperatingCityId)
     buildMininumFare <- mapM
             (\destinationLatLon -> do
               let calculateFareReq =
@@ -132,16 +141,18 @@ buildMininumIntercityFareArray req mbSourceLatLong merchant= do
                       { pickupLatLong = LatLong {lat = sourceLatLong.lat, lon = sourceLatLong.lon},
                         dropLatLong = Just $ LatLong {lat = destinationLatLon.lat, lon = destinationLatLon.lon},
                         mbDistance = Nothing,
-                        mbDuration = Nothing
+                        mbDuration = Nothing,
+                        mbTripCategory = Just $ DTC.InterCity DTC.OneWayOnDemandDynamicOffer Nothing
                       }
-              fareData <- CallBPPInternal.getFare merchant merchant.defaultCity calculateFareReq
+              fareData <- CallBPPInternal.getFare merchant merchanOperatingCity calculateFareReq
               let
                 estimatedFares = fareData.estimatedFares 
                 minFareResp = minimumBy (comparing (.minFare)) estimatedFares
+              -- logDebug $ "MIN_FARE_ARRAY" <> show minFareResp
               let interCitySearchResp = IntercitySearchResp {
                   mininumFare = 
-                    Just $ minFareResp.minFare,
-                  destination = Just $ sourceLatLong
+                    Just $ minFareResp.maxFare,
+                  destination = Just $ destinationLatLon
               }
               pure interCitySearchResp 
           ) interCitySearchLocations_
@@ -153,8 +164,9 @@ buildMininumRentalsFareArray ::
     RentalsIntercityCacheReq -> 
     Maybe LatLong ->
     Merchant.Merchant ->
+    City.City ->
     m  (Maybe [RentalsSearchResp])
-buildMininumRentalsFareArray req mbSourceLatLong merchant = do
+buildMininumRentalsFareArray req mbSourceLatLong merchant merchantOperatingCity = do
     let 
         rentalsConfigList_ = fromMaybe [] req.rentalsConfig
         sourceLatLong = fromMaybe req.currentLatLong mbSourceLatLong
@@ -167,9 +179,10 @@ buildMininumRentalsFareArray req mbSourceLatLong merchant = do
                       { pickupLatLong = LatLong {lat = sourceLatLong.lat, lon = sourceLatLong.lon},
                         dropLatLong = Nothing,
                         mbDistance = Just rentalElem.rentalDistance,
-                        mbDuration = Just rentalElem.rentalDuration
+                        mbDuration = Just rentalElem.rentalDuration,
+                        mbTripCategory = Just $ DTC.Rental DTC.OnDemandStaticOffer
                       }
-              fareData <- CallBPPInternal.getFare merchant merchant.defaultCity calculateFareReq
+              fareData <- CallBPPInternal.getFare merchant merchantOperatingCity calculateFareReq
               -- let mbFilteredResponse =  (\f -> not (f.vehicleServiceTier `elem` excludedVehicleVariants)) fareData.estimatedFares
               let minFareResp = minimumBy (comparing (.minFare)) fareData.estimatedFares
               let rentalsSearchres = RentalsSearchResp {
@@ -184,5 +197,5 @@ buildMininumRentalsFareArray req mbSourceLatLong merchant = do
 --     Kernel.Types.Beckn.City -> 
 --     m [VehicleServiceTier]
 -- excludedVehicleVariants = getExcludedVehicleVariants req.currentCity
- 
-
+--  need to put this in config
+-- also need to figure out how to get these intercity fares

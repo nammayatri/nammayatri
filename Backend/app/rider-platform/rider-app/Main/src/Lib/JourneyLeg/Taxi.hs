@@ -245,7 +245,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latitude, lon = taxiGetFareData.startLocation.longitude},
               dropLatLong = Just $ LatLong {lat = taxiGetFareData.endLocation.latitude, lon = taxiGetFareData.endLocation.longitude},
               mbDistance = Just $ distanceToMeters taxiGetFareData.distance,
-              mbDuration = Just taxiGetFareData.duration
+              mbDuration = Just taxiGetFareData.duration,
+              mbTripCategory = Nothing
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
     let mbAutoFare = find (\f -> f.vehicleServiceTier == AUTO_RICKSHAW) fareData.estimatedFares
