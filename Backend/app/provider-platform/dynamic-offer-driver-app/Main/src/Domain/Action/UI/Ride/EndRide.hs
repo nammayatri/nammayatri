@@ -541,7 +541,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
       (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams
-      destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.destinationReachedAt))
+      destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> (pure tripEndTime) <*> ride.destinationReachedAt))
   vehicleAge <-
     if DTC.isAmbulanceTrip booking.tripCategory
       then do
@@ -725,5 +725,10 @@ shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
 isUnloadingTimeRequired :: DVST.ServiceTierType -> Bool
 isUnloadingTimeRequired str =
   str
-    `elem` [ DVST.DELIVERY_LIGHT_GOODS_VEHICLE
+    `elem` [ DVST.DELIVERY_LIGHT_GOODS_VEHICLE,
+             DVST.DELIVERY_TRUCK_MINI,
+             DVST.DELIVERY_TRUCK_SMALL,
+             DVST.DELIVERY_TRUCK_MEDIUM,
+             DVST.DELIVERY_TRUCK_LARGE,
+             DVST.DELIVERY_TRUCK_ULTRA_LARGE
            ]

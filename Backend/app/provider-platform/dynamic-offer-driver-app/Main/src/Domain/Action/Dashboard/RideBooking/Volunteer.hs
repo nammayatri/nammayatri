@@ -91,6 +91,11 @@ getVolunteerBooking merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.HERITAGE_CAB = Common.HERITAGE_CAB
     convertVehicleVariant DVST.EV_AUTO_RICKSHAW = Common.EV_AUTO_RICKSHAW
     convertVehicleVariant DVST.DELIVERY_LIGHT_GOODS_VEHICLE = Common.DELIVERY_LIGHT_GOODS_VEHICLE
+    convertVehicleVariant DVST.DELIVERY_TRUCK_MINI = Common.DELIVERY_TRUCK_MINI
+    convertVehicleVariant DVST.DELIVERY_TRUCK_SMALL = Common.DELIVERY_TRUCK_SMALL
+    convertVehicleVariant DVST.DELIVERY_TRUCK_MEDIUM = Common.DELIVERY_TRUCK_MEDIUM
+    convertVehicleVariant DVST.DELIVERY_TRUCK_LARGE = Common.DELIVERY_TRUCK_LARGE
+    convertVehicleVariant DVST.DELIVERY_TRUCK_ULTRA_LARGE = Common.DELIVERY_TRUCK_ULTRA_LARGE
     convertVehicleVariant DVST.BUS_NON_AC = Common.BUS_NON_AC
     convertVehicleVariant DVST.BUS_AC = Common.BUS_AC
 

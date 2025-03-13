@@ -170,6 +170,10 @@ Booking:
       otpCode: Maybe Text
       parcelType: ParcelType
       parcelQuantity: Maybe Int
+    MeterRideBookingDetails:
+      distanceCovered: Maybe Distance
+      toLocation: Maybe Location
+      derive': Generic,Show
 
   fields:
     id: Id Booking

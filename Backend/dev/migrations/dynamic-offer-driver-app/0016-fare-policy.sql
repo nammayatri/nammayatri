@@ -22,7 +22,7 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy_new OWNER TO atlas_driver_offer_b
 
 --
 CREATE TEMPORARY TABLE tmp_variants (variant text NOT NULL);
-INSERT INTO tmp_variants VALUES ('SUV'), ('SEDAN'), ('HATCHBACK'), ('AUTO_VARIANT'), ('BIKE'), ('DELIVERY_BIKE');
+INSERT INTO tmp_variants VALUES ('SUV'), ('SEDAN'), ('HATCHBACK'), ('AUTO_VARIANT'), ('BIKE'), ('DELIVERY_BIKE'), ('DELIVERY_TRUCK_MINI'), ('DELIVERY_TRUCK_SMALL'), ('DELIVERY_TRUCK_MEDIUM'), ('DELIVERY_TRUCK_LARGE'), ('DELIVERY_TRUCK_ULTRA_LARGE');
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy_new
 SELECT md5(random()::text || clock_timestamp()::text)::uuid, fp.organization_id, v.variant, 10, 3000, 12, 120, '{10, 20, 30}',
