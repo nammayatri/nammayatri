@@ -80,6 +80,7 @@ data DriverPanReq = DriverPanReq
   { consent :: Kernel.Prelude.Bool,
     consentTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docType :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanType,
     imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

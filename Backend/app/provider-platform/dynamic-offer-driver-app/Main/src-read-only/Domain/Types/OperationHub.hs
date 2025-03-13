@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data OperationHub = OperationHub
   { address :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,

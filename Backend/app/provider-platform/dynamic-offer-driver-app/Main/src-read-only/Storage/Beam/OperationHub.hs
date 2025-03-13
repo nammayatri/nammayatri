@@ -11,16 +11,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data OperationHubT f = OperationHubT
-  { address :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    lat :: (B.C f Kernel.Prelude.Double),
-    lon :: (B.C f Kernel.Prelude.Double),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    mobileNumber :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { address :: B.C f Kernel.Prelude.Text,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    mobileNumber :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +31,6 @@ instance B.Table OperationHubT where
 
 type OperationHub = OperationHubT Identity
 
-$(enableKVPG (''OperationHubT) [('id)] [])
+$(enableKVPG ''OperationHubT ['id] [])
 
-$(mkTableInstances (''OperationHubT) "operation_hub")
+$(mkTableInstances ''OperationHubT "operation_hub")
