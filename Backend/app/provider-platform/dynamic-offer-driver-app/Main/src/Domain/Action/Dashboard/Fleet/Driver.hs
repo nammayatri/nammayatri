@@ -56,6 +56,7 @@ import Data.Csv
 import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
 import Data.List.Split (chunksOf)
+import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
@@ -679,25 +680,32 @@ getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode m
       pure $ Just driver.id
     Nothing -> pure Nothing
   driverStatsList <- CQRide.fleetStatsByDriver rideIds driverId from to mbLimit mbOffset mbSortDesc mbSortOn
-  let driverList = mapMaybe (.driverId') driverStatsList
-  driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverList
-  res <- forM (zip driverListWithInfo driverStatsList) $ \((driver, driverInfo'), driverStats) -> do
+  let driverStatsMap = Map.fromList [(driverStatsId, stats) | stats <- driverStatsList, Just driverStatsId <- [stats.driverId']]
+      driverIds = Map.keys driverStatsMap
+
+  -- Fetch driver information only for drivers in the stats list
+  driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverIds
+
+  -- Process each driver with their corresponding stats
+  res <- forM driverListWithInfo $ \(driver, driverInfo') -> do
+    -- Common data preparation for all drivers
     let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
     mobileNumber <- mapM decrypt driver.mobileNumber
-    let totalDuration = calculateTimeDifference driverStats.totalDuration
+
+    let statsData = Map.lookup (driver.id) driverStatsMap
     pure $
       Common.FleetEarningRes
         { driverId = Just $ cast @DP.Person @Common.Driver driver.id,
           driverName = Just driverName,
-          totalRides = driverStats.completedRides,
-          totalEarning = driverStats.totalEarnings,
-          vehicleNo = Nothing,
           status = Just $ castDriverStatus driverInfo'.mode,
+          vehicleNo = Nothing,
           vehicleType = Nothing,
-          totalDuration = totalDuration,
-          distanceTravelled = fromIntegral driverStats.totalDistanceTravelled / 1000.0,
           driverPhoneNo = mobileNumber,
-          cancelledRides = driverStats.cancelledRides
+          totalRides = maybe 0 (.completedRides) statsData,
+          totalEarning = maybe 0 (.totalEarnings) statsData,
+          totalDuration = calculateTimeDifference $ maybe 0 (.totalDuration) statsData,
+          distanceTravelled = maybe 0 (\stats -> fromIntegral stats.totalDistanceTravelled / 1000.0) statsData,
+          cancelledRides = maybe 0 (.cancelledRides) statsData
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}
