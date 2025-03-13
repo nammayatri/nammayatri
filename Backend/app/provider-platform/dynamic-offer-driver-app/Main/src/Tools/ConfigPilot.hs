@@ -6,14 +6,10 @@ import qualified Data.Aeson as A
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 -- import qualified Storage.Queries.UiDriverConfig as QUiC
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
-import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SchedulerJob ()
@@ -31,59 +27,26 @@ import qualified Storage.Queries.RideRelatedNotificationConfig as SQR
 import qualified Storage.Queries.TransporterConfig as SCMT
 import qualified Tools.DynamicLogic as DynamicLogic
 
-pushConfigHistory :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => LYT.LogicDomain -> Int -> Id LYT.MerchantOperatingCity -> m ()
-pushConfigHistory domain version merchantOpCityId = do
-  cfgType <- case domain of
-    LYT.DRIVER_CONFIG ct -> return ct
-    _ -> throwError $ InternalError "Unsupported logic domain"
-  configs <- (.configs) <$> returnConfigs cfgType (cast merchantOpCityId)
-  expRollout <- LYSQADLR.findByPrimaryKey domain (cast merchantOpCityId) "Unbounded" version >>= fromMaybeM (InternalError $ "Experiment Rollout not found for domain: " <> show domain <> " and version: " <> show version)
-  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain >>= fromMaybeM (InternalError "Base Rollout not found")
-  logicsObject <- CADLE.findByDomainAndVersion domain version
-  when (null logicsObject) $ throwError $ InternalError $ "Logics not found for domain: " <> show domain <> " and version: " <> show version
-  let logics = map (.logic) logicsObject
-  let configWrapper = LYT.Config configs Nothing 0
-  response <- try @_ @SomeException $ LYTU.runLogics logics configWrapper
-  finalConfig <- case response of
-    Left e -> do
-      throwError (InternalError $ "Error in push config history for cfgType: " <> show cfgType <> " and version: " <> show version <> " and error: " <> show e)
-    Right resp -> do
-      return resp.result
-  uuid <- generateGUID
-  now <- getCurrentTime
-  let configHistory =
-        LYT.ConfigHistory
-          { id = uuid,
-            domain,
-            version,
-            status = expRollout.experimentStatus,
-            merchantOperatingCityId = cast merchantOpCityId,
-            configJson = finalConfig,
-            baseVersionUsed = baseRollout.version,
-            createdAt = now
-          }
-  pushToKafka configHistory "config-history" ""
-
-returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.ConfigType -> Id MerchantOperatingCity -> m LYT.TableDataResp
+returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.ConfigType -> Id LYT.MerchantOperatingCity -> m LYT.TableDataResp
 returnConfigs cfgType merchantOpCityId = do
   case cfgType of
     LYT.DriverPoolConfig -> do
-      driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+      driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just []) Nothing
       return LYT.TableDataResp {configs = map A.toJSON driverPoolCfg}
     LYT.TransporterConfig -> do
-      transporterCfg <- SCMTC.getTransporterConfigFromDB merchantOpCityId
+      transporterCfg <- SCMTC.getTransporterConfigFromDB (cast merchantOpCityId)
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList transporterCfg)}
     LYT.PayoutConfig -> do
-      payoutCfg <- SCMP.findAllByMerchantOpCityId merchantOpCityId (Just [])
+      payoutCfg <- SCMP.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYT.TableDataResp {configs = map A.toJSON payoutCfg}
     LYT.RideRelatedNotificationConfig -> do
-      rideRelatedNotificationCfg <- SCR.findAllByMerchantOperatingCityId merchantOpCityId (Just [])
+      rideRelatedNotificationCfg <- SCR.findAllByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
       return LYT.TableDataResp {configs = map A.toJSON rideRelatedNotificationCfg}
     LYT.MerchantMessage -> do
-      merchantMessage <- SCMM.findAllByMerchantOpCityId merchantOpCityId (Just [])
+      merchantMessage <- SCMM.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYT.TableDataResp {configs = map A.toJSON merchantMessage}
     LYT.MerchantPushNotification -> do
-      merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId merchantOpCityId (Just [])
+      merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYT.TableDataResp {configs = map A.toJSON merchantPushNotification}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 

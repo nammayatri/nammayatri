@@ -10,6 +10,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Scientific (toRealFloat)
 import qualified Data.Text as T
 import JsonLogic
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -483,16 +484,22 @@ upsertLogicRollout ::
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   [Lib.Yudhishthira.Types.LogicRolloutObject] ->
-  (LYT.LogicDomain -> Int -> Id LYT.MerchantOperatingCity -> m ()) ->
+  (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> m LYT.TableDataResp) ->
   m Kernel.Types.APISuccess.APISuccess
-upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq pushConfigHistory = do
+upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs = do
   unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
   domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
   now <- getCurrentTime
   if isDriverOrRiderConfig domain
     then do
       version <- handleDriverOrRiderConfig domain merchantOpCityId now rolloutReq
-      fork "Pushing Config History" $ pushConfigHistory domain version merchantOpCityId
+      fork "Pushing Config History" $ do
+        configType <- case domain of
+          LYT.DRIVER_CONFIG ct -> return ct
+          LYT.RIDER_CONFIG ct -> return ct
+          _ -> throwError $ InternalError "Unsupported logic domain"
+        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId)
+        pushConfigHistory domain version merchantOpCityId configsJson
       return Kernel.Types.APISuccess.Success
     else handleOtherDomain merchantOpCityId now rolloutReq domain
   where
@@ -705,8 +712,8 @@ getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
             isBasePatch = isBaseVersion == Just True
           }
 
-postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> m ()) -> (LYT.LogicDomain -> Int -> Id LYT.MerchantOperatingCity -> m ()) -> m Kernel.Types.APISuccess.APISuccess
-postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConfigDBUpdate' pushConfigHistory = do
+postNammaTagConfigPilotActionChange :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe (Id LYT.Merchant) -> Id LYT.MerchantOperatingCity -> LYT.ActionChangeRequest -> (Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> m ()) -> (LYT.ConfigType -> Id LYT.MerchantOperatingCity -> m LYT.TableDataResp) -> m Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConfigDBUpdate' giveConfigs = do
   case req of
     LYT.Conclude concludeReq -> do
       expRollout <- LYSQADLR.findByPrimaryKey concludeReq.domain (cast merchantOpCityId) "Unbounded" concludeReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show concludeReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show concludeReq.version)
@@ -777,13 +784,18 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
   where
     makeConfigHistory domain version = do
       fork "pushing config history" $ do
+        configType <- case domain of
+          LYT.DRIVER_CONFIG ct -> return ct
+          LYT.RIDER_CONFIG ct -> return ct
+          _ -> throwError $ InternalError "Unsupported logic domain"
+        configsJson <- (.configs) <$> giveConfigs configType (cast merchantOpCityId)
         case req of
           LYT.Abort _ -> do
-            pushConfigHistory domain version merchantOpCityId
+            pushConfigHistory domain version merchantOpCityId configsJson
           _ -> do
             allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
             let configRollouts = filter (\rollout -> rollout.domain == domain && (rollout.percentageRollout /= 0 || rollout.isBaseVersion == Just True)) allRollouts
-            mapM_ (\rollout -> pushConfigHistory domain rollout.version merchantOpCityId) configRollouts
+            mapM_ (\rollout -> pushConfigHistory domain rollout.version merchantOpCityId configsJson) configRollouts
 
     mkBaseAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> LYT.LogicDomain -> DTADLE.AppDynamicLogicElement
     mkBaseAppDynamicLogicElement version logic order now domain =
@@ -833,3 +845,35 @@ extractDriverConfig _ = Nothing
 extractRiderConfig :: Lib.Yudhishthira.Types.LogicDomain -> Maybe Lib.Yudhishthira.Types.ConfigType
 extractRiderConfig (Lib.Yudhishthira.Types.RIDER_CONFIG config) = Just config
 extractRiderConfig _ = Nothing
+
+pushConfigHistory :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => LYT.LogicDomain -> Int -> Id LYT.MerchantOperatingCity -> [A.Value] -> m ()
+pushConfigHistory domain version merchantOpCityId configsJson = do
+  expRollout <- LYSQADLR.findByPrimaryKey domain (cast merchantOpCityId) "Unbounded" version >>= fromMaybeM (InternalError $ "Experiment Rollout not found for domain: " <> show domain <> " and version: " <> show version)
+  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain >>= fromMaybeM (InternalError "Base Rollout not found")
+  logicsObject <- CADLE.findByDomainAndVersion domain version
+  when (null logicsObject) $ throwError $ InternalError $ "Logics not found for domain: " <> show domain <> " and version: " <> show version
+  let logics = map (.logic) logicsObject
+  let configWrappers = map (\cfg -> LYT.Config cfg Nothing 0) configsJson
+  finalConfigs <- mapM (runLogicsOnConfig logics) configWrappers
+  uuid <- generateGUID
+  now <- getCurrentTime
+  let configHistory =
+        LYT.ConfigHistory
+          { id = uuid,
+            domain,
+            version,
+            status = expRollout.experimentStatus,
+            merchantOperatingCityId = cast merchantOpCityId,
+            configJson = finalConfigs,
+            baseVersionUsed = baseRollout.version,
+            createdAt = now
+          }
+  pushToKafka configHistory "config-history" ""
+  where
+    runLogicsOnConfig logics configWrapper = do
+      response <- try @_ @SomeException $ runLogics logics configWrapper
+      case response of
+        Left e -> do
+          throwError (InternalError $ "Error in push config history for domain: " <> show domain <> " and version: " <> show version <> " and error: " <> show e)
+        Right resp -> do
+          return resp.result

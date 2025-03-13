@@ -673,7 +673,7 @@ data ConfigHistory = ConfigHistory
     version :: Int,
     status :: Maybe ExperimentStatus,
     merchantOperatingCityId :: Id MerchantOperatingCity,
-    configJson :: Value,
+    configJson :: [Value],
     baseVersionUsed :: Int,
     createdAt :: UTCTime
   }
