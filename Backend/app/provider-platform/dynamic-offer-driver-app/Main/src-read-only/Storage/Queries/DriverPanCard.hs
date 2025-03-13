@@ -5,6 +5,7 @@
 module Storage.Queries.DriverPanCard (module Storage.Queries.DriverPanCard, module ReExport) where
 
 import qualified Domain.Types.DriverPanCard
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -32,10 +33,18 @@ findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPanCard.DriverPanCard -> m (Maybe Domain.Types.DriverPanCard.DriverPanCard))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.DriverPanCard.DriverPanCard))
+findByImageId documentImageId1 = do findOneWithKV [Se.Is Beam.documentImageId1 $ Se.Eq (Kernel.Types.Id.getId documentImageId1)]
+
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVerificationStatus verificationStatus driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusByImageId verificationStatus documentImageId1 = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId1 $ Se.Eq (Kernel.Types.Id.getId documentImageId1)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPanCard.DriverPanCard -> m (Maybe Domain.Types.DriverPanCard.DriverPanCard))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -46,6 +55,7 @@ updateByPrimaryKey (Domain.Types.DriverPanCard.DriverPanCard {..}) = do
   updateWithKV
     [ Se.Set Beam.consent consent,
       Se.Set Beam.consentTimestamp consentTimestamp,
+      Se.Set Beam.docType docType,
       Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.driverDob driverDob,

@@ -1,6 +1,7 @@
 CREATE TABLE atlas_driver_offer_bpp.operation_hub ();
 
 ALTER TABLE atlas_driver_offer_bpp.operation_hub ADD COLUMN address text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.operation_hub ADD COLUMN description text ;
 ALTER TABLE atlas_driver_offer_bpp.operation_hub ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.operation_hub ADD COLUMN lat double precision NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.operation_hub ADD COLUMN lon double precision NOT NULL;

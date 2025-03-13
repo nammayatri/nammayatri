@@ -756,6 +756,7 @@ library
       Domain.Types.BookingLocation
       Domain.Types.BookingUpdateRequest
       Domain.Types.BusinessEvent
+      Domain.Types.BusinessLicense
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
       Domain.Types.CancellationFarePolicy
@@ -868,6 +869,7 @@ library
       Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
       Domain.Types.VehicleInsurance
+      Domain.Types.VehicleNOC
       Domain.Types.VehiclePermit
       Domain.Types.VehiclePUC
       Domain.Types.VehicleRegistrationCertificate
@@ -891,6 +893,7 @@ library
       Storage.Beam.BookingLocation
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BusinessEvent
+      Storage.Beam.BusinessLicense
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
       Storage.Beam.CancellationFarePolicy
@@ -1003,6 +1006,7 @@ library
       Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
       Storage.Beam.VehicleInsurance
+      Storage.Beam.VehicleNOC
       Storage.Beam.VehiclePermit
       Storage.Beam.VehiclePUC
       Storage.Beam.VehicleRegistrationCertificate
@@ -1029,6 +1033,7 @@ library
       Storage.Queries.BookingLocation
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BusinessEvent
+      Storage.Queries.BusinessLicense
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
       Storage.Queries.CancellationFarePolicy
@@ -1210,6 +1215,7 @@ library
       Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
       Storage.Queries.VehicleInsurance
+      Storage.Queries.VehicleNOC
       Storage.Queries.VehiclePermit
       Storage.Queries.VehiclePUC
       Storage.Queries.VehicleRegistrationCertificate

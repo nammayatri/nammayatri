@@ -138,7 +138,8 @@ data DocumentStatusItem = DocumentStatusItem
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data DLDetails = DLDetails
-  { driverLicenseNumber :: Text,
+  { driverName :: Maybe Text,
+    driverLicenseNumber :: Text,
     operatingCity :: Text,
     driverDateOfBirth :: Maybe UTCTime,
     classOfVehicles :: [Text],
@@ -365,7 +366,8 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
       driverLicenseNumberDec <- decrypt dl.licenseNumber
       pure $
         DLDetails
-          { driverLicenseNumber = driverLicenseNumberDec,
+          { driverName = dl.driverName,
+            driverLicenseNumber = driverLicenseNumberDec,
             operatingCity = show merchantOperatingCity.city,
             driverDateOfBirth = dl.driverDob,
             classOfVehicles = dl.classOfVehicles,

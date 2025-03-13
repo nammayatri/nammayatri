@@ -69,7 +69,7 @@ data DocumentType
   | VehicleBackInterior
   | VehicleNOC
   | BusinessLicense
-  | BusinessPanCard
+  | Odometer
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses

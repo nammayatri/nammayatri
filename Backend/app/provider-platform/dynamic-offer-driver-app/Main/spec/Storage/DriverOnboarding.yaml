@@ -336,6 +336,10 @@ Image:
       kvFunction: updateOneWithKV
       params: [documentExpiry]
       where: id
+    updateVerificationStatusAndExpiry:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, documentExpiry, imageType]
+      where: id
     deleteById:
       kvFunction: deleteWithKV
       where: id
@@ -361,7 +365,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,BusinessPanCard"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
@@ -515,6 +519,57 @@ VehicleFitnessCertificate:
     rcId: SecondaryKey
     documentImageId: SecondaryKey
 
+VehicleNOC:
+  tableName: vehicle_noc
+  fields:
+    id: Id VehicleNOC
+    nocNumber: EncryptedHashedField e Text
+    rcId: Id VehicleRegistrationCertificate
+    driverId: Id Person
+    documentImageId: Id Image
+    nocExpiry: UTCTime
+    verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    rcId: SecondaryKey
+    documentImageId: SecondaryKey
+  queries:
+    findByRcIdAndDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, driverId]
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+
+BusinessLicense:
+  tableName: business_license
+  fields:
+    id: Id BusinessLicense
+    licenseNumber: EncryptedHashedField e Text
+    driverId: Id Person
+    documentImageId: Id Image
+    licenseExpiry: UTCTime
+    verificationStatus: VerificationStatus
+  constraints:
+    id: PrimaryKey
+    documentImageId: SecondaryKey
+  queries:
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
+
 VehiclePUC:
   tableName: vehicle_puc
   fields:
@@ -597,6 +652,8 @@ DriverPanCard:
   types:
     VerifiedBy:
       enum: "FRONTEND_SDK,DASHBOARD"
+    PanType:
+      enum: "INDIVIDUAL,BUSINESS"
   fields:
     id: Id DriverPanCard
     driverId: Id Person
@@ -611,6 +668,7 @@ DriverPanCard:
     consentTimestamp: UTCTime
     verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
@@ -631,6 +689,13 @@ DriverPanCard:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
       where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId1
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
 

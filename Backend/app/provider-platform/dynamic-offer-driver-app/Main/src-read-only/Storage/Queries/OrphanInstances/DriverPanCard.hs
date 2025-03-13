@@ -19,6 +19,7 @@ instance FromTType' Beam.DriverPanCard Domain.Types.DriverPanCard.DriverPanCard 
         Domain.Types.DriverPanCard.DriverPanCard
           { consent = consent,
             consentTimestamp = consentTimestamp,
+            docType = docType,
             documentImageId1 = Kernel.Types.Id.Id documentImageId1,
             documentImageId2 = Kernel.Types.Id.Id <$> documentImageId2,
             driverDob = driverDob,
@@ -41,6 +42,7 @@ instance ToTType' Beam.DriverPanCard Domain.Types.DriverPanCard.DriverPanCard wh
     Beam.DriverPanCardT
       { Beam.consent = consent,
         Beam.consentTimestamp = consentTimestamp,
+        Beam.docType = docType,
         Beam.documentImageId1 = Kernel.Types.Id.getId documentImageId1,
         Beam.documentImageId2 = Kernel.Types.Id.getId <$> documentImageId2,
         Beam.driverDob = driverDob,

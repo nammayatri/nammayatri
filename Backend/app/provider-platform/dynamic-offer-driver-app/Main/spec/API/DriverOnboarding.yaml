@@ -18,6 +18,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Minutes: Kernel.Types.Common
   Image: Domain.Types.Image
+  PanType: Domain.Types.DriverPanCard
 
 module: DriverOnboardingV2
 types:
@@ -101,6 +102,7 @@ types:
     verifiedBy: Maybe VerifiedBy
     transactionId: Maybe Text
     nameOnGovtDB: Maybe Text
+    docType: Maybe PanType
   GetLiveSelfieResp:
     recordType: NewType
     image: Text
