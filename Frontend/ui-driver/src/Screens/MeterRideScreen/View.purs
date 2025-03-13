@@ -777,59 +777,59 @@ rideOtpView push state =
         , background "#F4F7FF"
         , margin $ Margin 0 0 0 16
         ][]
-    , linearLayout 
-        [ orientation HORIZONTAL
-        , width MATCH_PARENT
-        , height WRAP_CONTENT
-        ]
-        [ linearLayout 
-          [ width WRAP_CONTENT 
-          , height WRAP_CONTENT
-          , background $ Color.white900
-          , weight 1.0
-          , gravity LEFT
-          ]
-          [ textView $ 
-              [ text "Ride OTP"
-              , maxLines 2
-              , ellipsize true
-              , padding $ Padding 5 5 5 5
-              , color Color.black600
-              ] <> FontStyle.body37 TypoGraphy
-          ]
-    , linearLayout 
-      [ width WRAP_CONTENT 
-      , height WRAP_CONTENT
-      , background $ Color.white900
-      , weight 1.0
-      , gravity RIGHT
-      ]
-      (mapWithIndex (\index item ->
-          otpBox push state item index
-        )(toCharArray referralCode))
-    ]
+    -- , linearLayout 
+    --     [ orientation HORIZONTAL
+    --     , width MATCH_PARENT
+    --     , height WRAP_CONTENT
+    --     ]
+    --     [ linearLayout 
+    --       [ width WRAP_CONTENT 
+    --       , height WRAP_CONTENT
+    --       , background $ Color.white900
+    --       , weight 1.0
+    --       , gravity LEFT
+    --       ]
+    --       [ textView $ 
+    --           [ text "Ride OTP"
+    --           , maxLines 2
+    --           , ellipsize true
+    --           , padding $ Padding 5 5 5 5
+    --           , color Color.black600
+    --           ] <> FontStyle.body37 TypoGraphy
+    --       ]
+    -- , linearLayout 
+    --   [ width WRAP_CONTENT 
+    --   , height WRAP_CONTENT
+    --   , background $ Color.white900
+    --   , weight 1.0
+    --   , gravity RIGHT
+    --   ][]
+      -- (mapWithIndex (\index item ->
+      --     otpBox push state item index
+      --   )(toCharArray referralCode))
+    -- ]
   ]
 
-otpBox :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> Char -> Int -> PrestoDOM (Effect Unit) w
-otpBox push state number index = 
-  let isLast = index == 3
-  in
-  linearLayout
-    [ width $ V 35
-    , height $ V 35
-    , background "#F4F7FF"
-    , cornerRadius 10.0
-    , margin $ if not isLast then Margin 0 0 5 0 else Margin 0 0 0 0
-    , padding $ Padding 9 3 9 3
-    , gravity CENTER
-    ]
-    [
-      textView
-      $ [ text $ singleton number
-        , height WRAP_CONTENT
-        , color Color.black900
-        ] <> FontStyle.subHeading4 TypoGraphy
-    ]
+-- otpBox :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> Char -> Int -> PrestoDOM (Effect Unit) w
+-- otpBox push state number index = 
+--   let isLast = index == 3
+--   in
+--   linearLayout
+--     [ width $ V 35
+--     , height $ V 35
+--     , background "#F4F7FF"
+--     , cornerRadius 10.0
+--     , margin $ if not isLast then Margin 0 0 5 0 else Margin 0 0 0 0
+--     , padding $ Padding 9 3 9 3
+--     , gravity CENTER
+--     ]
+--     [
+--       textView
+--       $ [ text $ singleton number
+--         , height WRAP_CONTENT
+--         , color Color.black900
+--         ] <> FontStyle.subHeading4 TypoGraphy
+--     ]
 
 distAndTimeView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 distAndTimeView push state =
