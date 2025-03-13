@@ -56,7 +56,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState,NotificationBody, ParcelDeliveryScreenState, AadhaarVerificationScreenState) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState,NotificationBody, ParcelDeliveryScreenState, AadhaarVerificationScreenState)
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Screens.SelectContactsFlow.SelectContactsScreen.ScreenData as SelectContactsScreenData
@@ -67,7 +67,7 @@ import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Common.Types.App as CTA 
+import Common.Types.App as CTA
 import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
 import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
@@ -105,7 +105,7 @@ type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
     splashScreen :: SplashScreenState ,
-    ticketingScreen :: TicketingScreenState 
+    ticketingScreen :: TicketingScreenState
   , enterMobileNumberScreen :: EnterMobileNumberScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , accountSetUpScreen :: AccountSetUpScreenState
@@ -161,8 +161,8 @@ newtype GlobalState = GlobalState {
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-  ticketingScreen : TicketingScreenData.initData , 
-    splashScreen : {data : {message : "pass"}} 
+  ticketingScreen : TicketingScreenData.initData ,
+    splashScreen : {data : {message : "pass"}}
   , enterMobileNumberScreen : EnterMobileNumberScreenData.initData
   , chooseLanguageScreen : ChooseLanguageScreenData.initData
   , accountSetUpScreen : AccountSetUpScreenData.initData
@@ -201,7 +201,7 @@ defaultGlobalState = GlobalState {
   , globalProps : defaultGlobalProps
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
   , metroTicketStatusScreen : MetroTicketStatusScreenData.initData
-  , globalFlowCache : defaultGlobalFlowCache 
+  , globalFlowCache : defaultGlobalFlowCache
   , rentalScreen : RentalScreenData.initData
   , pickupInstructionsScreen : PickupInstructionsScreenData.initData
   , riderDriverProfileScreen : DriverProfileScreenCommonState.initData
@@ -216,7 +216,7 @@ defaultGlobalState = GlobalState {
   , selectBusRouteScreen : SelectBusRouteScreenData.initData
   }
 
-defaultGlobalProps :: GlobalProps 
+defaultGlobalProps :: GlobalProps
 defaultGlobalProps = {
   savedLocations : [] ,
   recentSearches : [] ,
@@ -331,7 +331,7 @@ data HOME_SCREEN_OUTPUT = HybridAppExit
                         | GO_TO_RIDE_RELATED_ISSUES HomeScreenState
                         | GO_TO_RENTALS_FLOW HomeScreenState
                         | GO_TO_SEARCH_LOCATION_SCREEN HomeScreenState Boolean
-                        | GO_TO_RIDE_SEARCH_FLOW 
+                        | GO_TO_RIDE_SEARCH_FLOW
                         | CONFIRM_RENTAL_RIDE
                         | GO_TO_DRIVER_PROFILES HomeScreenState
                         | STAY_IN_HOME_SCREEN
@@ -378,12 +378,12 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
                                     | REFRESH_PAYMENT_STATUS TicketBookingScreenState
                                     | GO_TO_TICKET_LIST TicketBookingScreenState
                                     | GO_TO_TICKET_BOOK TicketBookingScreenState String
-                                    
+
 
 data METRO_TICKET_STATUS_SCREEN_OUTPUT = GO_TO_METRO_TICKET_DETAILS MetroTicketStatusScreenState FRFSTicketBookingStatusAPIRes
                                        | REFRESH_STATUS_AC MetroTicketStatusScreenState
                                        | GO_TO_TRY_AGAIN_PAYMENT MetroTicketStatusScreenState
-                                       | GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN 
+                                       | GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN
                                        | GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN
                                        | GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN
 
@@ -392,13 +392,13 @@ data METRO_TICKET_STATUS_SCREEN_OUTPUT = GO_TO_METRO_TICKET_DETAILS MetroTicketS
 data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
                                     | EXIT_TO_MY_TICKETS TicketingScreenState
                                     | BOOK_TICKETS TicketingScreenState
-data FOLLOW_RIDE_SCREEN_OUTPUT 
+data FOLLOW_RIDE_SCREEN_OUTPUT
   = RESTART_TRACKING
   | GO_TO_HS_FROM_FOLLOW_RIDE FollowRideScreenState Boolean
   | OPEN_GOOGLE_MAPS_FOLLOW_RIDE FollowRideScreenState
   | GO_TO_DRIVER_PROFILE_FROM_FOLLOWRIDE FollowRideScreenState
 
-data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT 
+data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT
                                         | BACK_TO_SEARCH_METRO_LOCATION
                                         | GO_BACK_TO_HOME_SCREEN
                                         | GO_TO_MY_METRO_TICKETS_FLOW
@@ -409,8 +409,8 @@ data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_
 
 data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_TO_METRO_TICKET_DETAILS_FLOW String
-                                    | GO_TO_METRO_TICKET_STAUS_FLOW FRFSTicketBookingStatusAPIRes 
-                                    | GO_HOME_FROM_MEtRO_MY_TICKETS_SCREEN 
+                                    | GO_TO_METRO_TICKET_STAUS_FLOW FRFSTicketBookingStatusAPIRes
+                                    | GO_HOME_FROM_MEtRO_MY_TICKETS_SCREEN
                                     | GO_HOME_FROM_METRO_MY_TICKETS
                                     | GO_METRO_BOOKING_FROM_METRO_MY_TICKETS
                                     | GO_BUS_BOOKING_FROM_METRO_MY_TICKETS
@@ -429,7 +429,7 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 
-data DRIVER_PROFILE_SCREEN = GO_TO_HOME_SCREEN_FROM_DRIVER_PROFILE  
+data DRIVER_PROFILE_SCREEN = GO_TO_HOME_SCREEN_FROM_DRIVER_PROFILE
 
 data RIDER_RIDECOMPLETED_SCREEN_OP = RIDER_DETAILS_SCREEN RiderRideCompletedScreenState | GO_TO_HELP_AND_SUPPORTS | HOME_SCREENS String | GOTO_NAMMASAFETY RiderRideCompletedScreenState Boolean Boolean | SUBMIT_RATINGS RiderRideCompletedScreenState String | GO_TO_DRIVER_PROFILE RiderRideCompletedScreenState | GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE RiderRideCompletedScreenState CustomerIssueTypes
 
@@ -444,14 +444,14 @@ data RIDE_SUMMARY_SCREEN_OUTPUT =     GO_TO_RIDE_REQUEST
                                     | NOTIFICATION_LISTENER String NotificationBody
                                     | REFRESH_RIDE_SUMMARY_SCREEN (Maybe String)
                                     | CALL_DRIVER RideSummaryScreenData.RideSummaryScreenState CallType String
-                                    
+
 data SELECT_CONTACT_SCREEN_OUTPUT = SELECT_CONTACTS_BACK_PRESSED
                                   | EXECUTE_CALLBACK SelectContactsScreenState
-                                  
+
 data SELECT_BUS_ROUTE_SCREEN_OUTPUT = TRACK_BUS SelectBusRouteScreenData.SelectBusRouteScreenState
                                     | GO_TO_SEARCH_LOCATION_FROM_SELECT_ROUTE
 
-data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationScreenState 
+data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationScreenState
   | VERIFY_AADHAAR_OTP AadhaarVerificationScreenState
   | RESEND_AADHAAR_OTP AadhaarVerificationScreenState
   | SEND_UNVERIFIED_AADHAAR_DATA AadhaarVerificationScreenState

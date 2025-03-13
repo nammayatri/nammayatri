@@ -19,7 +19,7 @@ newtype Languages
   , odiya :: Keymap
   }
 
-newtype Keymap = Keymap { 
+newtype Keymap = Keymap {
     namma_meter  :: String ,
     bus_number  :: String ,
     bus_type  :: String ,
@@ -1635,7 +1635,7 @@ newtype Keymap = Keymap {
   , pet_friendly :: String
   , hometown :: String
   , why_ny :: String -> String
-  , cab :: String 
+  , cab :: String
   , new_home :: String
   , kid_education :: String
   , new_vehicle :: String
@@ -1803,15 +1803,41 @@ newtype Keymap = Keymap {
   , choose_preferred_metro :: String
   , metro_warriors :: String
   , search :: String
-  , bus__ :: String 
+  , bus__ :: String
   , driver_unsubscribed :: String
   , canceling_this_booking_may_affect_the_emergency_medical :: String
   , drivers_are_permitted_to_cancel_ambulance_bookings :: String
   , payment_under_maintenance :: String
   , payments_temporarily_unavailable :: String
+  , extra_charge_penalty :: String
+  , out_of_rides :: String -> String -> String
+  , extra_charged :: String
+  , get_clarified :: String
+  , dont_ask_extra_suspend :: String
+  , dont_ask_extra_blocking :: String
+  , your_extra_charge_penalty :: String
+  , what_does_this_mean :: String
+  , read_more :: String
+  , take_the_course :: String
+  , extra_charge_q1 :: String
+  , extra_charge_a1 :: String
+  , extra_charge_q2 :: String
+  , extra_charge_a2 :: String
+  , extra_charge_q3 :: String
+  , extra_charge_a3 :: String
+  , extra_charge_q4 :: String
+  , extra_charge_a4 :: String
+  , zero :: String
+  , low :: String
+  , suspended :: String
+  , blocked :: String
+  , overcharging_blocked_desc :: String
+  , overcharging_suspended_desc :: String
+  , suspended_till :: String -> String -> String
+  , fair_price_driver :: String
   , resume_ride :: String
   , end_ride_with_stops :: String
-  , stop :: String -> String 
+  , stop :: String -> String
   , rate_changes_as_the_distance_changes :: String
     , nammanmeter :: String
     , press_to_cancel :: String
@@ -1824,6 +1850,7 @@ newtype Keymap = Keymap {
     , upton2km :: String
     , meter_running :: String
     , confirm_meter_stop :: String
+    , package :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6505,7 +6532,7 @@ this_area_is_experiencing_high_searches :: Proxy "this_area_is_experiencing_high
 this_area_is_experiencing_high_searches = a
 
 navigate :: Proxy "navigate"
-navigate = a 
+navigate = a
 
 hotspots_not_available_currently :: Proxy "hotspots_not_available_currently"
 hotspots_not_available_currently = a
@@ -6970,7 +6997,7 @@ tomorrow :: Proxy "tomorrow"
 tomorrow = a
 
 we_are_not_able_to_fetch_your_current_location :: Proxy "we_are_not_able_to_fetch_your_current_location"
-we_are_not_able_to_fetch_your_current_location = a 
+we_are_not_able_to_fetch_your_current_location = a
 
 you_have_an_upcoming :: Proxy "you_have_an_upcoming"
 you_have_an_upcoming = a
@@ -7183,16 +7210,88 @@ payment_under_maintenance :: Proxy "payment_under_maintenance"
 payment_under_maintenance = a
 
 payments_temporarily_unavailable :: Proxy "payments_temporarily_unavailable"
-payments_temporarily_unavailable = a  
+payments_temporarily_unavailable = a
 
-resume_ride :: Proxy "resume_ride"
-resume_ride = a
 
-end_ride_with_stops :: Proxy "end_ride_with_stops"
-end_ride_with_stops = a
+extra_charge_penalty :: Proxy "extra_charge_penalty"
+extra_charge_penalty = Proxy
 
+out_of_rides :: Proxy "out_of_rides"
+out_of_rides = Proxy
+
+extra_charged :: Proxy "extra_charged"
+extra_charged = Proxy
+
+get_clarified :: Proxy "get_clarified"
+get_clarified = Proxy
+
+dont_ask_extra_suspend :: Proxy "dont_ask_extra_suspend"
+dont_ask_extra_suspend = Proxy
+
+dont_ask_extra_blocking :: Proxy "dont_ask_extra_blocking"
+dont_ask_extra_blocking = Proxy
+
+your_extra_charge_penalty :: Proxy "your_extra_charge_penalty"
+your_extra_charge_penalty = Proxy
+
+what_does_this_mean :: Proxy "what_does_this_mean"
+what_does_this_mean = Proxy
+
+read_more :: Proxy "read_more"
+read_more = Proxy
+
+take_the_course :: Proxy "take_the_course"
+take_the_course = Proxy
+
+extra_charge_q1 :: Proxy "extra_charge_q1"
+extra_charge_q1 = Proxy
+
+extra_charge_a1 :: Proxy "extra_charge_a1"
+extra_charge_a1 = Proxy
+
+extra_charge_q2 :: Proxy "extra_charge_q2"
+extra_charge_q2 = Proxy
+
+extra_charge_a2 :: Proxy "extra_charge_a2"
+extra_charge_a2 = Proxy
+
+extra_charge_q3 :: Proxy "extra_charge_q3"
+extra_charge_q3 = Proxy
+
+extra_charge_a3 :: Proxy "extra_charge_a3"
+extra_charge_a3 = Proxy
+
+extra_charge_q4 :: Proxy "extra_charge_q4"
+extra_charge_q4 = Proxy
+
+extra_charge_a4 :: Proxy "extra_charge_a4"
+extra_charge_a4 = Proxy
+
+zero :: Proxy "zero"
+zero = Proxy
+
+low :: Proxy "low"
+low = Proxy
+
+suspended :: Proxy "suspended"
+suspended = Proxy
+
+blocked :: Proxy "blocked"
+blocked = Proxy
+
+overcharging_blocked_desc :: Proxy "overcharging_blocked_desc"
+overcharging_blocked_desc = Proxy
+
+overcharging_suspended_desc :: Proxy "overcharging_suspended_desc"
+overcharging_suspended_desc = Proxy
+
+suspended_till :: Proxy "suspended_till"
+suspended_till = Proxy
+
+fair_price_driver :: Proxy "fair_price_driver"
+fair_price_driver = Proxy
 stop :: Proxy "stop"
-stop = a 
+stop = a
 
 rate_changes_as_the_distance_changes :: Proxy "rate_changes_as_the_distance_changes"
 rate_changes_as_the_distance_changes = a
@@ -7235,3 +7334,12 @@ bus_type = a
 namma_meter :: Proxy "namma_meter"
 namma_meter = a
 
+package :: Proxy "package"
+package = a
+
+
+end_ride_with_stops ::Proxy "package"
+end_ride_with_stops = a
+
+resume_ride :: Proxy "resume_ride"
+resume_ride = a

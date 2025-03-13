@@ -125,7 +125,7 @@ driverProfileScreen = do
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
-    GoToDriverSavedLocationScreen state -> do 
+    GoToDriverSavedLocationScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> pure SAVED_LOCATIONS_SCREEN
     GoToPendingVehicle updatedState rcNumber vehicleCategory -> do
@@ -153,3 +153,8 @@ driverProfileScreen = do
     GotoMeterRideScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> pure GO_TO_METER_RIDE_SCREEN_FROM_PROFILE
+
+    GoToExtraChargeInfoScreen state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      modifyScreenState $ ExtraChargeInfoScreenStateType (\exState -> exState {driverInfoResp = state.data.driverInfoResponse})
+      App.BackT $ App.BackPoint <$> pure GO_TO_EXTRA_CHARGE_INFO_SCREEN
