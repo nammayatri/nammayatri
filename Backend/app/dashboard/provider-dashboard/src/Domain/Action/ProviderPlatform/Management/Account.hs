@@ -22,7 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Person (findAllByFromDateAndToDateAndMobileNumberAndStatus)
+import "lib-dashboard" Storage.Queries.Person (findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset)
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -36,9 +36,11 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Common.FleetOwnerStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Environment.Flow [Common.PersonAPIEntity]
-getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromDate mbToDate mbMobileNumber mbStatus = do
-  encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus
+getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset = do
+  encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset
   traverse convertPersonToPersonAPIEntity encryptPersonLs
   where
     convertPersonToPersonAPIEntity DP.Person {..} = do

@@ -27,8 +27,10 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Account.FleetOwnerStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Environment.Flow [API.Types.ProviderPlatform.Management.Account.PersonAPIEntity]
-getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate _mbMobileNumber _mbStatus = do
+getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate _mbMobileNumber _mbStatus _mbLimit _mbOffset = do
   pure []
 
 postAccountVerifyAccount ::

@@ -75,13 +75,19 @@ type GetAccountFetchUnverifiedAccounts =
            "mobileNumber"
            Kernel.Prelude.Text
       :> QueryParam "status" FleetOwnerStatus
-      :> Get '[JSON] [PersonAPIEntity]
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           [PersonAPIEntity]
   )
 
 type PostAccountVerifyAccount = ("verifyAccount" :> ReqBody '[JSON] VerifyAccountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data AccountAPIs = AccountAPIs
-  { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> EulerHS.Types.EulerClient [PersonAPIEntity],
+  { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [PersonAPIEntity],
     postAccountVerifyAccount :: VerifyAccountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 

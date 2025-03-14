@@ -273,16 +273,18 @@ instance ToTType' BeamP.Person Person.Person where
         ..
       }
 
-findAllByFromDateAndToDateAndMobileNumberAndStatus ::
+findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset ::
   (BeamFlow m r, EncFlow m r) =>
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe FleetOwnerStatus ->
+  Maybe Int ->
+  Maybe Int ->
   m [Person]
-findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus = do
+findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset = do
   mbMobileNumberDbHash <- traverse getDbHash mbMobileNumber
-  findAllWithKV
+  findAllWithOptionsKV
     [ Se.And
         ( [ Se.Or
               [ Se.Is BeamP.verified $ Se.Eq (Just False),
@@ -295,6 +297,9 @@ findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileN
             <> [Se.Is BeamP.rejectedAt $ checkOfNull Nothing | isJust mbStatus]
         )
     ]
+    (Se.Asc BeamP.createdAt)
+    (Just $ fromMaybe 100 mbLimit)
+    (Just $ fromMaybe 0 mbOffset)
   where
     checkOfNull =
       case mbStatus of
