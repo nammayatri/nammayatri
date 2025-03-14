@@ -1,0 +1,23 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  HighPrecMeters: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VoipReq: Utils.Common.Voip.Types.VoipApiType
+
+module: Voip
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /call/voip
+      auth: TokenAuth
+      request:
+        type: VoipReq
+      response:
+        type: APISuccess
