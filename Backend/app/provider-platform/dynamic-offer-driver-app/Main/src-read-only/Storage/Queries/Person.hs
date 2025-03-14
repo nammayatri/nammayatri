@@ -127,6 +127,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.language language,
       Se.Set Beam.languagesSpoken languagesSpoken,
       Se.Set Beam.lastName lastName,
+      Se.Set Beam.maskedMobileDigits maskedMobileDigits,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.middleName middleName,

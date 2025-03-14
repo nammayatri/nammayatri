@@ -403,7 +403,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLon = req.registrationLon,
         useFakeOtp,
         clientId = Nothing,
-        driverTag = Just [safetyCohortNewTag]
+        driverTag = Just [safetyCohortNewTag],
+        maskedMobileDigits = req.mobileNumber
       }
 
 makeSession ::
