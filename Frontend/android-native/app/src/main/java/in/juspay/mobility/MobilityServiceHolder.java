@@ -1,5 +1,6 @@
 package in.juspay.mobility;
 
+import static android.content.Context.MODE_PRIVATE;
 import static in.juspay.mobility.MainActivity.getService;
 import static in.juspay.mobility.Utils.getInnerPayload;
 
@@ -18,6 +19,7 @@ import androidx.fragment.app.FragmentActivity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.UUID;
@@ -25,6 +27,7 @@ import java.util.UUID;
 import in.juspay.hypersdk.core.MerchantViewType;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
+import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallback;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 
@@ -44,6 +47,19 @@ public class MobilityServiceHolder {
         if (instance == null) {
             Log.i("APP_PERF", "ON_CREATE_HYPER_SERVICE : " + System.currentTimeMillis());
             instance = new MobilityServiceHolder(context);
+            // Backward Compatibility
+            boolean isUpdated = Boolean.parseBoolean(KeyValueStore.read(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"isUpdated","false"));
+            if (!isUpdated) {
+                try {
+                    File deleteFile = new File(context.getDir("juspay",MODE_PRIVATE), "v1-assets_downloader_godel_2.1.33.jsa");
+                    if (deleteFile.exists()) deleteFile.delete();
+                    deleteFile = new File(context.getDir("juspay",MODE_PRIVATE), "v1-index_bundle_godel_2.1.33.jsa");
+                    if (deleteFile.exists()) deleteFile.delete();
+                    KeyValueStore.write(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"isUpdated","true");
+                } catch (Exception e) {
+                    Log.e("MobilityServiceHolder",e.toString());
+                }
+            }
             Log.i("APP_PERF", "ON_CREATE_HYPER_END : " + System.currentTimeMillis());
         }
         return instance;
