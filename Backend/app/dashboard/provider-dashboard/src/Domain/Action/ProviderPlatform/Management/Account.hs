@@ -10,6 +10,7 @@ import qualified API.Client.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Person.Type as DP
+import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
@@ -22,8 +23,10 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person (findAllByFromDateAndToDateAndMobileNumberAndStatus)
+import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+import "lib-dashboard" Tools.Error (RoleError (RoleDoesNotExist))
 
 getAccountFetchUnverifiedAccounts ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -39,16 +42,37 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromD
   traverse convertPersonToPersonAPIEntity encryptPersonLs
   where
     convertPersonToPersonAPIEntity DP.Person {..} = do
+      role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
       mobileNumber' <- decrypt mobileNumber
       email' <- traverse decrypt email
       pure $
         Common.PersonAPIEntity
           { id = Kernel.Types.Id.cast id,
-            roleId = Kernel.Types.Id.cast roleId,
+            roleAPIEntity = convertRoleToRoleAPIEntity role,
             email = email',
             mobileNumber = mobileNumber',
+            dashboardAccessType = castDashboardAccessType <$> dashboardAccessType,
             ..
           }
+    convertRoleToRoleAPIEntity DRole.Role {..} =
+      Common.RoleAPIEntity
+        { id = Kernel.Types.Id.cast id,
+          name = name,
+          dashboardAccessType = castDashboardAccessType dashboardAccessType,
+          description = description
+        }
+
+castDashboardAccessType :: DRole.DashboardAccessType -> Common.DashboardAccessType
+castDashboardAccessType = \case
+  DRole.DASHBOARD_USER -> Common.DASHBOARD_USER
+  DRole.DASHBOARD_ADMIN -> Common.DASHBOARD_ADMIN
+  DRole.FLEET_OWNER -> Common.FLEET_OWNER
+  DRole.DASHBOARD_RELEASE_ADMIN -> Common.DASHBOARD_RELEASE_ADMIN
+  DRole.MERCHANT_ADMIN -> Common.MERCHANT_ADMIN
+  DRole.RENTAL_FLEET_OWNER -> Common.RENTAL_FLEET_OWNER
+  DRole.MERCHANT_MAKER -> Common.MERCHANT_MAKER
+  DRole.MERCHANT_SERVER -> Common.MERCHANT_SERVER
+  DRole.DASHBOARD_OPERATOR -> Common.DASHBOARD_OPERATOR
 
 postAccountVerifyAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.VerifyAccountReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do

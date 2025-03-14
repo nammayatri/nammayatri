@@ -18,6 +18,19 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data DashboardAccessType
+  = DASHBOARD_USER
+  | DASHBOARD_ADMIN
+  | FLEET_OWNER
+  | DASHBOARD_RELEASE_ADMIN
+  | MERCHANT_ADMIN
+  | RENTAL_FLEET_OWNER
+  | MERCHANT_MAKER
+  | MERCHANT_SERVER
+  | DASHBOARD_OPERATOR
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FleetOwnerStatus
   = Approved
   | Rejected
@@ -28,10 +41,11 @@ data PersonAPIEntity = PersonAPIEntity
   { id :: Kernel.Types.Id.Id Dashboard.Common.Person,
     firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
-    roleId :: Kernel.Types.Id.Id Dashboard.Common.Role,
+    roleAPIEntity :: RoleAPIEntity,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Text,
+    dashboardAccessType :: Kernel.Prelude.Maybe DashboardAccessType,
     createdAt :: Kernel.Prelude.UTCTime,
     receiveNotification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -39,6 +53,10 @@ data PersonAPIEntity = PersonAPIEntity
     rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rejectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RoleAPIEntity = RoleAPIEntity {id :: Kernel.Types.Id.Id Dashboard.Common.Role, name :: Kernel.Prelude.Text, dashboardAccessType :: DashboardAccessType, description :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
