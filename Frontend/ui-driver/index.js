@@ -43,6 +43,17 @@ window.fetchCachedSessionInfo = (key) => {
 
 window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "RestartAutoScroll"];
 
+window.callUICallback = function () {};
+
+
+if (window.JOS.self != "in.mobility.core") {
+  window.JOS.emitEventOriginal = window.JOS.emitEvent;
+  window.JOS.emitEvent = (_parent, _event, payload) => {
+    return () => {
+      window.JOS.emitEventOriginal(_parent)(_event)(payload)()();
+    }
+  }
+}
 
 const logger = function () {
   let oldConsoleLog = null;
@@ -80,8 +91,6 @@ function getPureScript() {
   }
   return purescript;
 }
-
-// JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", event: "initiate",service : JOS.self }))()();
 
 function callInitiateResult() {
   const payload = {
@@ -179,6 +188,7 @@ window.onMerchantEvent = function (_event, payload) {
         clientPayload.payload &&
         Object.prototype.hasOwnProperty.call(clientPayload.payload, "onCreateTimeStamp") &&
         Object.prototype.hasOwnProperty.call(clientPayload.payload, "initiateTimeStamp") &&
+        window.events &&
         typeof window.events.onCreateToInitiateDuration === "undefined" &&
         typeof window.events.initAppToInitiateDuration === "undefined"
       ) {
@@ -436,17 +446,14 @@ if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.incl
   window.Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
 }
 
-JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
-  action: "DUI_READY",
-  event: "initiate",
-  service: JOS.self
-}), "");
+JOS.emitEvent("java","onEvent",JSON.stringify({ action: "DUI_READY", event: "initiate",service : JOS.self }))();
 
-eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
+if (!window.JOS.tracker) {
+  eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
+  window.JOS.tracker = window.getTrackerModule.Main.initTracker()
+  window.tracker =  window.JOS.tracker
 
-
-window.JOS.tracker = window.getTrackerModule.Main.initTracker()
-window.tracker =  window.JOS.tracker
+}
 
 
 if (window.eventQueue) {
