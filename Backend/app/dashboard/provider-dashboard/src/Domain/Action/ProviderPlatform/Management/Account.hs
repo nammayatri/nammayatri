@@ -12,7 +12,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Person.Type as DP
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -35,20 +35,18 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Common.FleetOwnerStatus ->
   Environment.Flow [Common.PersonAPIEntity]
 getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromDate mbToDate mbMobileNumber mbStatus = do
-  mbEncryptMobileNumber <- traverse encrypt mbMobileNumber
-  encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbEncryptMobileNumber mbStatus
+  encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatus mbFromDate mbToDate mbMobileNumber mbStatus
   traverse convertPersonToPersonAPIEntity encryptPersonLs
   where
-    --convertPersonToPersonAPIEntity :: DP.Person -> Common.PersonAPIEntity
     convertPersonToPersonAPIEntity DP.Person {..} = do
-      mobileNumber <- decrypt mobileNumber
-      email <- traverse decrypt email
+      mobileNumber' <- decrypt mobileNumber
+      email' <- traverse decrypt email
       pure $
         Common.PersonAPIEntity
           { id = Kernel.Types.Id.cast id,
             roleId = Kernel.Types.Id.cast roleId,
-            email = email,
-            mobileNumber = mobileNumber,
+            email = email',
+            mobileNumber = mobileNumber',
             ..
           }
 
