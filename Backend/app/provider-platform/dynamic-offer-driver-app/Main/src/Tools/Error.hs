@@ -1530,6 +1530,24 @@ instance IsHTTPError FleetOwnerNotFoundError where
 
 instance IsAPIError FleetOwnerNotFoundError
 
+data OperatorError
+  = OperatorNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OperatorError
+
+instance IsBaseError OperatorError where
+  toMessage = \case
+    OperatorNotFound id -> Just $ "Requested Operator not found: " <> id
+
+instance IsHTTPError OperatorError where
+  toErrorCode = \case
+    OperatorNotFound _ -> "OPERATOR_NOT_FOUND"
+  toHttpCode = \case
+    OperatorNotFound _ -> E500
+
+instance IsAPIError OperatorError
+
 data WMBErrors
   = DriverNotInFleet Text Text
   | DriverNotActiveInFleet Text Text
@@ -1556,6 +1574,7 @@ data WMBErrors
   | NoActiveFleetAssociated Text
   | FleetConfigNotFound Text
   | InactiveFleetDriverAssociationNotFound Text
+  | InactiveOperatorDriverAssociationNotFound Text -- TODO separate error type
   | VehicleRouteMappingNotFound Text Text
   | InvalidTripStatus Text
   | DriverNotFoundWithId
@@ -1596,6 +1615,7 @@ instance IsBaseError WMBErrors where
     NoActiveFleetAssociated id -> Just $ "No Active Fleet Associated for driver :" <> id
     FleetConfigNotFound id -> Just $ "Fleet Config Info not found for owner id : " <> id
     InactiveFleetDriverAssociationNotFound id -> Just $ "Inactive Fleet Driver Association Not Found for driver : " <> id
+    InactiveOperatorDriverAssociationNotFound id -> Just $ "Inactive Operator Driver Association Not Found for driver : " <> id
     VehicleRouteMappingNotFound vhclNo routeCode -> Just $ "Vehicle Route Mapping not found for vehicle no hash : " <> vhclNo <> " and route code :" <> routeCode
     InvalidTripStatus id -> Just $ "Invalid trip status, current status : " <> id
     DriverNotFoundWithId -> Just "Driver Not Found"
@@ -1632,6 +1652,7 @@ instance IsHTTPError WMBErrors where
     NoActiveFleetAssociated _ -> "NO_ACTIVE_FLEET_ASSOCIATED"
     FleetConfigNotFound _ -> "FLEET_CONFIG_NOT_FOUND"
     InactiveFleetDriverAssociationNotFound _ -> "INACTIVE_FLEET_DRIVER_ASSOCIATION_NOT_FOUND"
+    InactiveOperatorDriverAssociationNotFound _ -> "INACTIVE_OPERATOR_DRIVER_ASSOCIATION_NOT_FOUND"
     VehicleRouteMappingNotFound _ _ -> "VEHICLE_ROUTE_MAPPING_NOT_FOUND"
     InvalidTripStatus _ -> "INVALID_TRIP_STATUS"
     DriverNotFoundWithId -> "DRIVER_NOT_FOUND"
@@ -1667,6 +1688,7 @@ instance IsHTTPError WMBErrors where
     NoActiveFleetAssociated _ -> E400
     FleetConfigNotFound _ -> E404
     InactiveFleetDriverAssociationNotFound _ -> E404
+    InactiveOperatorDriverAssociationNotFound _ -> E404
     VehicleRouteMappingNotFound _ _ -> E404
     InvalidTripStatus _ -> E400
     DriverNotFoundWithId -> E400

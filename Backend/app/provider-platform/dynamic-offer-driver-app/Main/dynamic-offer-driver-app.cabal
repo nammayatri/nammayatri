@@ -521,6 +521,7 @@ library
       Storage.Queries.DriverInformationExtra
       Storage.Queries.DriverLicenseExtra
       Storage.Queries.DriverLocation.Internal
+      Storage.Queries.DriverOperatorAssociationExtra
       Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlanExtra
       Storage.Queries.DriverProfileQuestionsExtra
@@ -1134,6 +1135,7 @@ library
       Storage.Queries.OrphanInstances.DriverHomeLocation
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
+      Storage.Queries.OrphanInstances.DriverOperatorAssociation
       Storage.Queries.OrphanInstances.DriverPanCard
       Storage.Queries.OrphanInstances.DriverPlan
       Storage.Queries.OrphanInstances.DriverProfileQuestions

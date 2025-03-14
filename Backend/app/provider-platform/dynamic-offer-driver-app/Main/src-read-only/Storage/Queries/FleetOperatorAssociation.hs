@@ -8,6 +8,7 @@ import qualified Domain.Types.FleetOperatorAssociation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +20,18 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation] -> m ())
 createMany = traverse_ create
+
+findByOperatorIdAndFleetOwnerId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation))
+findByOperatorIdAndFleetOwnerId operatorId fleetOwnerId isActive = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.operatorId $ Se.Eq operatorId,
+          Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is Beam.isActive $ Se.Eq isActive
+        ]
+    ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

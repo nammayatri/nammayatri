@@ -158,6 +158,7 @@ makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId en
         driverId = driverId,
         associatedOn = Just now,
         associatedTill = end,
+        onboardingVehicleCategory = Nothing,
         createdAt = now,
         updatedAt = now,
         merchantId = Just merchantId,

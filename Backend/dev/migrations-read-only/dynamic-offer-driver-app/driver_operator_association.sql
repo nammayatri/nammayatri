@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD PRIMARY KEY (
 
 ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN merchant_id character varying(36) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN onboarding_vehicle_category text ;

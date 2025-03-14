@@ -1,4 +1,4 @@
-imports:
+imports: #
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
@@ -18,6 +18,13 @@ FleetOperatorAssociation:
     id: PrimaryKey
     operatorId: "!SecondaryKey"
     fleetOwnerId: "!SecondaryKey"
+
+  queries:
+    findByOperatorIdAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [operatorId, fleetOwnerId, isActive]
+          # - gt: [associatedTill] # what if associatedTill is Nothing?
 
   sqlType:
     id: text

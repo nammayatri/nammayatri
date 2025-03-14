@@ -12,6 +12,7 @@ module Domain.Action.UI.WMB
     postWmbTripEnd,
     getWmbTripList,
     postFleetConsent,
+    postOperatorConsent,
     getFleetConfig,
     getWmbRouteDetails,
   )
@@ -29,6 +30,7 @@ import qualified Domain.Action.UI.Call as Call
 import Domain.Types.ApprovalRequest
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
+import Domain.Types.DriverOperatorAssociation
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Extra.TransporterConfig
 import Domain.Types.FleetConfig
@@ -69,6 +71,7 @@ import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
+import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
@@ -378,6 +381,30 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
     let body = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.body
+    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
+  pure Success
+
+-- TODO should we also check onboarding docs ?
+postOperatorConsent ::
+  ( ( Maybe (Id Person),
+      Id Merchant,
+      Id MerchantOperatingCity
+    ) ->
+    Flow APISuccess
+  )
+postOperatorConsent (mbDriverId, _, merchantOperatingCityId) = do
+  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverOperatorAssociation <- QDriverOperatorAssociation.findByDriverId driverId False >>= fromMaybeM (InactiveOperatorDriverAssociationNotFound driverId.getId)
+  onboardingVehicleCategory <- driverOperatorAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
+  operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
+  QDriverOperatorAssociation.updateByPrimaryKey (driverOperatorAssociation {isActive = True})
+  QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
+  QDI.updateEnabledVerifiedState driverId True (Just True)
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title
+    let body = T.replace "{#operatorName#}" operator.firstName merchantPN.body
     TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
   pure Success
 

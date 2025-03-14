@@ -632,6 +632,16 @@ apis:
         type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
+      helperApi:
+      - POST: # BulkUploadDriversForFleetAPI
+          endpoint: /fleet/addDrivers
+          auth: ApiAuthV2
+          query:
+            - requestorId: Text
+          multipart:
+            type: CreateDriversReq
+          response:
+            type: APISuccessWithUnprocessedEntities
 
   - POST: # Add Driver Bus Route Bulk Mapping
       endpoint: /fleet/addDriverBusRouteMapping
@@ -798,6 +808,7 @@ types:
     - dateOfRegistration: Maybe UTCTime
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
+    - vehicleTags: Maybe [Text]
     - derive: "'HideSecrets"
   ListVehicleRes:
     - recordType: NewType

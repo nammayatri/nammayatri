@@ -53,6 +53,7 @@ import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
+import qualified Data.ByteString.Lazy as LBS
 import Data.Text
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -279,8 +280,11 @@ postDriverFleetAddDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo ->
 postDriverFleetAddDrivers merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
-  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddDrivers)) req{fleetOwnerId = Just fleetOwnerId}
+  -- here we send fleetOwnerId from request, because all association logic is on bpp side
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddDrivers)) (Just apiTokenInfo.personId.getId) req
+  where
+    addMultipartBoundary :: LBS.ByteString -> (Maybe Text -> (LBS.ByteString, req) -> res) -> Maybe Text -> req -> res
+    addMultipartBoundary boundary clientFn requestorId reqBody = clientFn requestorId (boundary, reqBody)
 
 postDriverFleetAddDriverBusRouteMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateDriverBusRouteMappingReq -> Flow Common.APISuccessWithUnprocessedEntities
 postDriverFleetAddDriverBusRouteMapping merchantShortId opCity apiTokenInfo req = do

@@ -447,7 +447,7 @@ data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
 instance Kernel.Types.HideSecrets.HideSecrets VerifyFleetJoiningOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (PostDriverFleetAddVehicles :<|> PostDriverFleetAddVehicleHelper :<|> GetDriverFleetDriverRequestsHelper :<|> PostDriverFleetDriverRequestRespondHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicleHelper :<|> GetDriverFleetGetAllDriverHelper :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetGetFleetDriverAssociationHelper :<|> GetDriverFleetGetFleetVehicleAssociationHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfo :<|> GetDriverFleetOwnerInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> GetDriverFleetRoutesHelper :<|> GetDriverFleetPossibleRoutesHelper :<|> PostDriverFleetTripPlannerHelper :<|> GetDriverFleetTripTransactionsHelper :<|> PostDriverFleetAddDrivers :<|> PostDriverFleetAddDriverBusRouteMapping :<|> PostDriverFleetLinkRCWithDriverHelper :<|> PostDriverDashboardFleetWmbTripEndHelper :<|> GetDriverFleetWmbRouteDetailsHelper :<|> PostDriverFleetGetNearbyDriversHelper :<|> PostDriverDashboardFleetTrackDriverHelper))
+type API = ("driver" :> (PostDriverFleetAddVehicles :<|> PostDriverFleetAddVehicleHelper :<|> GetDriverFleetDriverRequestsHelper :<|> PostDriverFleetDriverRequestRespondHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicleHelper :<|> GetDriverFleetGetAllDriverHelper :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetGetFleetDriverAssociationHelper :<|> GetDriverFleetGetFleetVehicleAssociationHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfo :<|> GetDriverFleetOwnerInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> GetDriverFleetRoutesHelper :<|> GetDriverFleetPossibleRoutesHelper :<|> PostDriverFleetTripPlannerHelper :<|> GetDriverFleetTripTransactionsHelper :<|> PostDriverFleetAddDriversHelper :<|> PostDriverFleetAddDriverBusRouteMapping :<|> PostDriverFleetLinkRCWithDriverHelper :<|> PostDriverDashboardFleetWmbTripEndHelper :<|> GetDriverFleetWmbRouteDetailsHelper :<|> PostDriverFleetGetNearbyDriversHelper :<|> PostDriverDashboardFleetTrackDriverHelper))
 
 type PostDriverFleetAddVehicles = ("fleet" :> "addVehicles" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp CreateVehiclesReq :> Post '[JSON] APISuccessWithUnprocessedEntities)
 
@@ -993,6 +993,14 @@ type GetDriverFleetTripTransactionsHelper =
 
 type PostDriverFleetAddDrivers = ("fleet" :> "addDrivers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp CreateDriversReq :> Post '[JSON] APISuccessWithUnprocessedEntities)
 
+type PostDriverFleetAddDriversHelper =
+  ( "fleet" :> "addDrivers" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           CreateDriversReq
+      :> Post '[JSON] APISuccessWithUnprocessedEntities
+  )
+
 type PostDriverFleetAddDriverBusRouteMapping =
   ( "fleet" :> "addDriverBusRouteMapping"
       :> Kernel.ServantMultipart.MultipartForm
@@ -1076,7 +1084,7 @@ data DriverAPIs = DriverAPIs
     getDriverFleetPossibleRoutes :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient RouteAPIResp,
     postDriverFleetTripPlanner :: Kernel.Prelude.Text -> TripPlannerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetTripTransactions :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient TripTransactionResp,
-    postDriverFleetAddDrivers :: (Data.ByteString.Lazy.ByteString, CreateDriversReq) -> EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
+    postDriverFleetAddDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Data.ByteString.Lazy.ByteString, CreateDriversReq) -> EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
     postDriverFleetAddDriverBusRouteMapping :: (Data.ByteString.Lazy.ByteString, CreateDriverBusRouteMappingReq) -> EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
     postDriverFleetLinkRCWithDriver :: Kernel.Prelude.Text -> LinkRCWithDriverForFleetReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverDashboardFleetWmbTripEnd :: Kernel.Types.Id.Id Dashboard.Common.TripTransaction -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
