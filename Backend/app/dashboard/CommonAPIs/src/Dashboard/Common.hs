@@ -72,6 +72,10 @@ data TripTransaction
 
 data CoinsConfig
 
+data Person
+
+data Role
+
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
