@@ -57,7 +57,7 @@ import Data.String.CodeUnits (fromCharArray, toCharArray, splitAt)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
-import DecodeUtil (stringifyJSON)
+import DecodeUtil (stringifyJSON, removeFromWindow)
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
@@ -471,6 +471,7 @@ enterOTPFlow mbEvent = do
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe (Either ErrorResponse GetDriverInfoResp) -> Boolean -> Maybe Boolean -> Boolean -> FlowBT String Unit
 getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isAdvancedBookingEnabled updateCTBasicData = do
   liftFlowBT $ markPerformance "GET_DRIVER_INFO_FLOW_START"
+  let _ = removeFromWindow "RideList"
   case driverInfoResp of
     Just driverInfoResp -> runDriverInfoFlow driverInfoResp true
     Nothing -> do

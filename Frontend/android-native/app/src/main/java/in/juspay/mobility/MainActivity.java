@@ -509,6 +509,7 @@ public class MainActivity extends AppCompatActivity {
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
+        MobilityServiceHolder.getInstance(this).initiate(this);
         onCreateTimeStamp = System.currentTimeMillis();
         currentLocExecuter = Executors.newSingleThreadExecutor();
         ActivityLifecycleCallback.register(this.getApplication());
