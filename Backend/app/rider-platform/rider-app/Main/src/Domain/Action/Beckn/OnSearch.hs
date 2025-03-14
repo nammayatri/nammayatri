@@ -282,7 +282,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         QPFS.clearCache searchRequest.riderId
 
       when (searchRequest.isMeterRideSearch == Just True) $ do
-        quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
+        quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest $ "Quote for SearchId: " <> (show searchRequest.id) <> " is not found")
         void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
