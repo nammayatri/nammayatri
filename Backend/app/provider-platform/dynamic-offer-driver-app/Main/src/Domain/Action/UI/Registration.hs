@@ -463,6 +463,7 @@ makeDriverOperatorAssociation driverId operatorId end = do
         driverId = driverId,
         associatedOn = Just now,
         associatedTill = end,
+        onboardingVehicleCategory = Nothing,
         createdAt = now,
         updatedAt = now
       }

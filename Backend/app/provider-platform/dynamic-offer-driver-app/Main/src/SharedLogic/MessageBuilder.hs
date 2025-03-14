@@ -37,6 +37,8 @@ module SharedLogic.MessageBuilder
     buildFleetJoinAndDownloadAppMessage,
     BuildFleetDeepLinkAuthMessage (..),
     buildFleetDeepLinkAuthMessage,
+    BuildOperatorDeepLinkAuthMessage (..),
+    buildOperatorDeepLinkAuthMessage,
   )
 where
 
@@ -263,4 +265,17 @@ buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
   let dynamicMsg =
         staticMsg
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+  pure (senderHeader, dynamicMsg)
+
+newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage
+  { operatorName :: Text
+  }
+
+-- TODO add template
+buildOperatorDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorDeepLinkAuthMessage -> m (Maybe Text, Text)
+buildOperatorDeepLinkAuthMessage merchantOperatingCityId req = do
+  (senderHeader, staticMsg) <- buildGenericMessage merchantOperatingCityId DMM.OPERATOR_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
+  let dynamicMsg =
+        staticMsg
+          & T.replace (templateText "operatorName") req.operatorName
   pure (senderHeader, dynamicMsg)

@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
 
 DriverOperatorAssociation:
   tableName: driver_operator_association
@@ -13,8 +14,7 @@ DriverOperatorAssociation:
     driverId: Id Person
     associatedOn: Maybe UTCTime
     associatedTill: Maybe UTCTime
-    createdAt: UTCTime
-    updatedAt: UTCTime
+    onboardingVehicleCategory: Maybe VehicleCategory
 
   constraints:
     id: PrimaryKey
@@ -30,10 +30,18 @@ DriverOperatorAssociation:
       kvFunction: deleteWithKV
       where: operatorId
 
+    # # do we need cached queries?
+    # findByfleetOperatorIdAndFleetOwnerId:
+    #   kvFunction: findOneWithKV
+    #   where:
+    #     and: [operatorId, fleetOwnerId, enabled]
+
   sqlType:
     id: text
     operatorId: text
     driverId: text
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [merchantOperatingCityId, merchantId]

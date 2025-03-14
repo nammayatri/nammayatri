@@ -50,6 +50,7 @@ instance ToJSON InternalAuthResp where
 instance FromJSON InternalAuthResp where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; other -> other}
 
+-- now this function is wrong becuase api can be used not only by fleetOwner, but by Operator or Admin
 getFleetOwnerId :: Text -> Flow Text
 getFleetOwnerId memberPersonId = do
   fleetMemberAssociation <- FMA.findByPrimaryKey memberPersonId

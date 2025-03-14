@@ -9,3 +9,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN is_act
 ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN operator_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_operator_association ADD COLUMN onboarding_vehicle_category text ;

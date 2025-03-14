@@ -30,10 +30,16 @@ FleetOperatorAssociation:
       kvFunction: deleteWithKV
       where: operatorId
 
+    # do we need cached queries?
+    findByfleetOperatorIdAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [operatorId, fleetOwnerId, isActive]
+          # - gt: [associatedTill] # what if associatedTill is Nothing?
+
   sqlType:
     id: text
     operatorId: text
     fleetOwnerId: text
-
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

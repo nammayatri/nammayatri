@@ -27,6 +27,18 @@ deleteByOperatorId operatorId = do deleteWithKV [Se.Is Beam.operatorId $ Se.Eq o
 findAllOperatorByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation])
 findAllOperatorByFleetOwnerId fleetOwnerId = do findAllWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
 
+findByfleetOperatorIdAndFleetOwnerId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation))
+findByfleetOperatorIdAndFleetOwnerId operatorId fleetOwnerId isActive = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.operatorId $ Se.Eq operatorId,
+          Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is Beam.isActive $ Se.Eq isActive
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation -> m (Maybe Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation))
