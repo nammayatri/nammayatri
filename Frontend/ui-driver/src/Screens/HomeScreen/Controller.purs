@@ -1603,7 +1603,8 @@ eval (TimeUpdate time lat lng errorCode) state = do
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
             checkPermissionAndUpdateDriverMarker true
-      else void $ launchAff $ flowRunner defaultGlobalState $ updateRouteOnMap newState driverLat driverLong
+      else if state.props.currentStage == ST.RideStarted && (not $ Array.null state.data.activeRide.stops) then void $ launchAff $ flowRunner defaultGlobalState $ updateRouteOnMap newState driverLat driverLong
+      else pure unit
 
       case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
         true, ST.RideAccepted, false, false, true, _ -> do
@@ -2551,7 +2552,7 @@ updateRoute state = do
                         else map (\(API.Stop item) -> getLatlon item.location ) leftStops)
                   <> (Array.singleton $ API.LatLong {lat : destLat, lon : destLon})
         getLatlon (API.LocationInfo location) = API.LatLong {lat : location.lat, lon : location.lon}
-    eRouteAPIResponse <- Remote.getRoute (Remote.makeGetRouteReq srcLat srcLon destLat destLon) routeType
+    eRouteAPIResponse <- Remote.getRoute (Remote.makeGetRouteReqArray points) routeType
     case eRouteAPIResponse of
       Right (GetRouteResp routeApiResponse) -> do
         let shortRoute = (routeApiResponse Array.!! 0)
