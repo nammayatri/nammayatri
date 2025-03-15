@@ -3,6 +3,7 @@ module Lib.JourneyModule.Base where
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortBy)
+import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
@@ -25,6 +26,7 @@ import Kernel.External.MultiModal.Interface.Types
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Distance
@@ -48,6 +50,8 @@ import Lib.JourneyLeg.Walk ()
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
+import Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.GateInfo as GD
 import qualified Sequelize as Se
 import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
@@ -210,9 +214,10 @@ addAllLegs journeyId journeyLegs = do
       searchResp <-
         case journeyLeg.mode of
           DTrip.Taxi -> do
+            snappedLeg <- snapJourneyLegToNearestGate journeyLeg mbPrevJourneyLeg
             let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
             let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
-            addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress
+            addTaxiLeg parentSearchReq snappedLeg originAddress destinationAddress
           DTrip.Metro -> do
             addMetroLeg parentSearchReq journeyLeg
           DTrip.Subway -> do
@@ -252,6 +257,57 @@ addAllLegs journeyId journeyLegs = do
           title = stopDetails.name,
           extras = Nothing
         }
+
+snapJourneyLegToNearestGate ::
+  ( JL.SearchRequestFlow m r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  Maybe DJourneyLeg.JourneyLeg ->
+  m DJourneyLeg.JourneyLeg
+snapJourneyLegToNearestGate journeyLeg mbPrevJourneyLeg = do
+  mbSpecialLocationStart <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull (LatLong (journeyLeg.startLocation.latitude) (journeyLeg.startLocation.longitude))
+  snappedStart <- case mbSpecialLocationStart of
+    Just specialLoc -> do
+      let isOrigin = isJust mbPrevJourneyLeg
+      let mbFilteredSpecialLoc = QSpecialLocation.filterGates (Just specialLoc) isOrigin
+      case mbFilteredSpecialLoc of
+        Just filteredSpecialLoc ->
+          if null (gatesInfo filteredSpecialLoc)
+            then return journeyLeg.startLocation
+            else findNearestGate journeyLeg.endLocation (gatesInfo filteredSpecialLoc)
+        Nothing -> return journeyLeg.startLocation
+    Nothing -> return journeyLeg.startLocation
+  return journeyLeg {DJourneyLeg.startLocation = snappedStart}
+  where
+    findNearestGate ::
+      ( JL.SearchRequestFlow m r c
+      ) =>
+      LatLngV2 ->
+      [GD.GateInfoFull] ->
+      m LatLngV2
+    findNearestGate originalLocation gates = do
+      case nonEmpty gates of
+        Nothing -> return originalLocation
+        Just nonEmptyGates -> do
+          merchantId <- journeyLeg.merchantId & fromMaybeM (InvalidRequest $ "MerchantId not found for journeyLegId: " <> journeyLeg.id.getId)
+          merchantOperatingCityId <- journeyLeg.merchantOperatingCityId & fromMaybeM (InvalidRequest $ "MerchantOperatingCityId not found for journeyLegId: " <> journeyLeg.id.getId)
+          let originLocs = LatLong (originalLocation.latitude) (originalLocation.longitude) :| []
+          let destinations = fmap (.point) nonEmptyGates
+          distanceResponses <-
+            Maps.getMultimodalWalkDistances merchantId merchantOperatingCityId $
+              Maps.GetDistancesReq
+                { origins = originLocs,
+                  destinations = destinations,
+                  travelMode = Just Maps.CAR,
+                  sourceDestinationMapping = Nothing,
+                  distanceUnit = Meter
+                }
+          let nearestResp = minimumBy (compare `on` (.distance)) (toList distanceResponses)
+          let nearestGateLocation =
+                fromMaybe originalLocation $
+                  fmap (\g -> LatLngV2 (g.point.lat) (g.point.lon)) $
+                    find (\g -> g.point == nearestResp.destination) (toList nonEmptyGates)
+          return nearestGateLocation
 
 addTaxiLeg ::
   JL.SearchRequestFlow m r c =>
