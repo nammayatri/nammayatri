@@ -45,6 +45,7 @@ data PersonT f = PersonT
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Types.Language),
     languagesSpoken :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     lastName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    maskedMobileDigits :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     middleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
