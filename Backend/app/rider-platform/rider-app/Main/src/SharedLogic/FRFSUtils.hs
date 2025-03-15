@@ -352,7 +352,7 @@ trackVehicles personId merchantId routeCode = do
         pure (minDistanceFromVehicle, nextStop)
     let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
         nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
-        nextStopTravelTime = (\speed -> Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed
+        nextStopTravelTime = (\speed -> Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac (max 1.0 speed))) <$> vehicleInfo.speed
     pure $
       VehicleTracking
         { nextStopTravelDistance = highPrecMetersToMeters nextStopTravelDistance,
