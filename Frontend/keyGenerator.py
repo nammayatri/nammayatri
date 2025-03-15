@@ -96,12 +96,12 @@ def update_strings_v2(strings_v2_file, translations):
         
         if proxy_start is not None:
             f.seek(0)
-            new_lines = lines[:proxy_start] + [f'  {identifier} -> \\a -> a @~ {identifier.lower()}\n' for identifier in translations if identifier not in existing_keys] + lines[proxy_start:]
+            new_lines = lines[:proxy_start] + [f'    {identifier} -> \\a -> a @~ {identifier.lower()}\n' for identifier in translations if identifier not in existing_keys] + lines[proxy_start:]
             f.seek(0)
             f.writelines(new_lines)
 
 def main():
-    folder = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Screens/RideBookingFlow/HomeScreen"
+    folder = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Screens/CustomerUtils/ReferralPayoutScreen"
     types_file = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/Localizable/Types.purs"
     types_v2_file = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2/Types.purs"
     lang_folder = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2"

@@ -2655,7 +2655,7 @@ homeScreenFlow = do
       modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode }})
       case gState.globalFlowCache.profileResp of
         Nothing -> pure unit
-        Just (GetProfileRes resp) -> modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, vpa = fromMaybe "" resp.payoutVpa, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}})
+        Just (GetProfileRes resp) -> modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, existingVpa = resp.payoutVpa, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}})
       referralPayoutScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (APISuccessResp res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
@@ -2933,7 +2933,7 @@ referralPayoutScreenFlow = do
       resp <- lift $ lift $ Remote.updateVpa state.data.vpa
       case resp of
         Right _ -> do 
-          modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUpiSuccess = true, showUPIPopUp = false}})
+          modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUpiSuccess = true, showUPIPopUp = false}, data{ existingVpa = Just state.data.vpa}})
           void $ lift $ lift $ fork $ do
             resp <- Remote.getProfile ""
             case resp of
@@ -2941,7 +2941,6 @@ referralPayoutScreenFlow = do
               Left _ -> pure unit
             pure unit
         Left resp -> do
-          -- (\(GlobalState state) -> GlobalState $ state { referralPayoutScreen = a state.referralPayoutScreen })
           modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{data{verificationStatus = ST.UpiFailed}})
       referralPayoutScreenFlow
 

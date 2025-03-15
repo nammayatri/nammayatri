@@ -1775,4 +1775,7 @@ getOd = Keymap {
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "Scan QR code to download the app and apply your invite code automatically"
     , earn_:  \a ->  "₹" <> a <> " ଉପାର୍ଜନ କରନ୍ତୁ"
     ,  collect_:  \a ->  "₹" <> a <> " ସଂଗ୍ରହ କରନ୍ତୁ"
+    , add_upi_id: "UPI ID ଯୋଡନ୍ତୁ"
+    , earnings: "ରୋଜଗାର"
+    , enter_upi_id: "UPI ID ପ୍ରବେଶ କରନ୍ତୁ"
 }

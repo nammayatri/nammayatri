@@ -1775,4 +1775,7 @@ getEn = Keymap {
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "Scan QR code to download the app and apply your invite code automatically"
     , earn_: \a ->  "Earn ₹" <> a
     , collect_: \a -> "Collect ₹" <> a
+    , add_upi_id: "Add UPI ID"
+    , earnings: "Earnings"
+    , enter_upi_id: "Enter UPI ID"
 }

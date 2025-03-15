@@ -1,0 +1,113 @@
+{
+    "aadhaarVerified": false,
+    "androidId": "0c5...711",
+    "bundleVersion": {
+        "build": null,
+        "maintenance": 0,
+        "major": 1,
+        "minor": 0,
+        "preRelease": null
+    },
+    "cancellationRate": null,
+    "clientVersion": {
+        "build": null,
+        "maintenance": 37,
+        "major": 3,
+        "minor": 0,
+        "preRelease": null
+    },
+    "customerReferralCode": "CWV5H2",
+    "deviceId": "478..._64",
+    "disability": null,
+    "email": null,
+    "firstName": "hjnghn",
+    "followsRide": false,
+    "frontendConfigHash": "99914b932bd37a50b983c5e7c90ae93b",
+    "gender": "FEMALE",
+    "hasCompletedMockSafetyDrill": null,
+    "hasCompletedSafetySetup": false,
+    "hasDisability": false,
+    "hasTakenRide": true,
+    "hasTakenValidAmbulanceRide": false,
+    "hasTakenValidAutoRide": true,
+    "hasTakenValidBikeRide": false,
+    "hasTakenValidBusRide": false,
+    "hasTakenValidCabRide": false,
+    "hasTakenValidRide": true,
+    "hasTakenValidTruckRide": false,
+    "id": "18d29afe-b543-43cf-954d-60dbf99661f7",
+    "isBlocked": false,
+    "isPayoutEnabled": true,
+    "isSafetyCenterDisabled": false,
+    "language": "ENGLISH",
+    "lastName": null,
+    "maskedDeviceToken": "eLi...Rr0",
+    "maskedMobileNumber": "783...968",
+    "middleName": null,
+    "payoutVpa": "vigneshsrinivasan772@okhdfcbank",
+    "referralAmountPaid": 0,
+    "referralCode": "CMXoL6",
+    "referralEarnings": 0,
+    "referredByEarnings": 1,
+    "whatsappNotificationEnrollStatus": "OPT_IN"
+}
+
+
+{
+    "aadhaarVerified": false,
+    "androidId": "1f2...3ba",
+    "bundleVersion": {
+        "build": null,
+        "maintenance": 0,
+        "major": 1,
+        "minor": 0,
+        "preRelease": null
+    },
+    "cancellationRate": null,
+    "clientVersion": {
+        "build": null,
+        "maintenance": 37,
+        "major": 3,
+        "minor": 0,
+        "preRelease": null
+    },
+    "customerReferralCode": "CMXoL6",
+    "deviceId": "ece..._64",
+    "disability": null,
+    "email": null,
+    "firstName": "nbfn",
+    "followsRide": false,
+    "frontendConfigHash": "99914b932bd37a50b983c5e7c90ae93b",
+    "gender": "FEMALE",
+    "hasCompletedMockSafetyDrill": null,
+    "hasCompletedSafetySetup": false,
+    "hasDisability": false,
+    "hasTakenRide": false,
+    "hasTakenValidAmbulanceRide": false,
+    "hasTakenValidAutoRide": false,
+    "hasTakenValidBikeRide": false,
+    "hasTakenValidBusRide": false,
+    "hasTakenValidCabRide": false,
+    "hasTakenValidRide": false,
+    "hasTakenValidTruckRide": false,
+    "id": "2e96bd8e-59bd-4d2c-9bd9-91e685ff54d5",
+    "isBlocked": false,
+    "isPayoutEnabled": true,
+    "isSafetyCenterDisabled": false,
+    "language": "ENGLISH",
+    "lastName": null,
+    "maskedDeviceToken": "dLg...7iI",
+    "maskedMobileNumber": "983...898",
+    "middleName": null,
+    "payoutVpa": null,
+    "referralAmountPaid": 0,
+    "referralCode": null,
+    "referralEarnings": 0,
+    "referredByEarnings": 0,
+    "whatsappNotificationEnrollStatus": "OPT_IN"
+}
+
+₹50 will be credited soon to
+ 9876543210@ptyes
+
+ add_upi_id: "Add UPI ID"

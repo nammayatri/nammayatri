@@ -48,7 +48,7 @@ genericHeaderConfig state = let
       , enableRipple = true
       } 
     , textConfig {
-        text = (if state.props.isEarnings then "Earnings" else "Refer & Share")
+        text = getString $ if state.props.isEarnings then EARNINGS else SHARE_AND_REFER
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {
@@ -61,7 +61,7 @@ genericHeaderConfig state = let
 primaryButtonConfig :: ST.ReferralPayoutScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config{
   textConfig {
-    text = "Add UPI ID"
+    text = getString ADD_UPI_ID
   }, 
   margin = MarginTop 24
   , alpha = if state.data.verificationStatus == ST.UpiVerified then 1.0 else 0.4
@@ -72,7 +72,7 @@ primaryButtonConfig state = PrimaryButton.config{
 donePrimaryButtonConfig :: ST.ReferralPayoutScreenState -> PrimaryButton.Config
 donePrimaryButtonConfig state = PrimaryButton.config{
   textConfig {
-    text = "Done"
+    text = getString DONE
   }, 
   margin = MarginTop 24
   , id = "ReferralPayoutScreenPBDone"

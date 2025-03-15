@@ -4,6 +4,8 @@ import ConfigProvider
 import Prelude
 import MerchantConfig.Types (AppConfig)
 import Screens.Types ( ReferralType(..))
+import Data.Maybe(Maybe(..))
+import Services.API
 
 
 data UpiVerificationStatus = UpiVerified | UpiNotVerified | UpiFailed | UpiVerifying
@@ -36,9 +38,11 @@ type ReferralPayoutScreenData
     , verificationStatus :: UpiVerificationStatus
     , vpa :: String
     , referralCode :: String
+    , existingVpa :: Maybe String
     , referralType :: ReferralType
     , referralEarnings :: Number
     , referredByEarnings :: Number
+    , history :: Array PayoutItem
     , referralAmountPaid :: Number
     }
 
@@ -48,11 +52,13 @@ initData =
       { appConfig: getAppConfig appConfig
       , verificationStatus : UpiNotVerified
       , vpa : ""
+      , existingVpa : Nothing
       , referralCode : ""
       , referralType : GIVE_REFERRAL
       , referralEarnings : 0.0
       , referredByEarnings : 0.0
       , referralAmountPaid : 0.0
+      , history : []
       }
   , props:
       { enableDemoModeCount: 0

@@ -1775,4 +1775,7 @@ getBn = Keymap {
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "অ্যাপ ডাউনলোড করতে এবং আপনার আমন্ত্রণ কোড স্বয়ংক্রিয়ভাবে প্রয়োগ করতে QR কোড স্ক্যান করুন"
     , earn_:  \a ->  "₹" <> a <> " উপার্জন করুন"
     ,  collect_:  \a ->  "₹" <> a <> " সংগ্রহ করুন"
+    , add_upi_id: "UPI আইডি যোগ করুন"
+    , earnings: "উপার্জন"
+    , enter_upi_id: "UPI ID প্রবেশ করুন"
 }

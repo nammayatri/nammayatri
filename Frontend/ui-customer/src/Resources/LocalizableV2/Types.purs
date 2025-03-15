@@ -44,6 +44,9 @@ odia :: Proxy "odia"
 odia = a
 
 newtype Keymap = Keymap {
+    enter_upi_id  :: String ,
+    earnings  :: String ,
+    add_upi_id  :: String ,
     earn_  :: String -> String ,
     collect_  :: String -> String ,
     downlaod_app  :: String ,
@@ -7132,4 +7135,13 @@ earn_ = a
 
 collect_ :: Proxy "collect_"
 collect_ = a
+
+add_upi_id :: Proxy "add_upi_id"
+add_upi_id = a
+
+earnings :: Proxy "earnings"
+earnings = a
+
+enter_upi_id :: Proxy "enter_upi_id"
+enter_upi_id = a
 

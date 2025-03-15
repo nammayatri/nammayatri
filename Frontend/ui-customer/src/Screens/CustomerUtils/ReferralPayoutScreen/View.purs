@@ -20,7 +20,7 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.ComplaintsModel as ComplaintsModel
 import Components.GenericHeader as GenericHeader
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -61,6 +61,8 @@ import Types.App
 import Services.API
 import Data.Either
 import Data.Int (fromNumber)
+import Locale.Utils (getLanguageLocale)
+import Constants (languageKey)
 
 screen :: ST.ReferralPayoutScreenState -> Screen Action ST.ReferralPayoutScreenState ScreenOutput
 screen initialState =
@@ -130,15 +132,15 @@ shareAndEarnView push state =
   let
     totalEarning = state.data.referralEarnings + state.data.referredByEarnings
   in
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ][ 
-      collectEarningView push state
-    , coverView push state
-    , referralDescriptionView push state
-    ]
+    linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ]
+      [ collectEarningView push state
+      , coverView push state
+      , referralDescriptionView push state
+      ]
 
 earningsView push state =
   PrestoAnim.animationSet
@@ -164,7 +166,7 @@ earningsView push state =
                 , orientation VERTICAL
                 ]
                 [ textView
-                    $ [ text state.data.vpa
+                    $ [ text $ fromMaybe "" state.data.existingVpa
                       , color Colors.black900
                       , ellipsize true
                       , singleLine true
@@ -451,39 +453,41 @@ referralDescriptionView push state =
 
 descView :: forall w. ST.ReferralPayoutScreenState -> Array (PrestoDOM (Effect Unit) w)
 descView state =
-  let referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
-      youGet = fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.youGet
-      theyGet = fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.theyGet
-  in map
-    ( \item ->
-        linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation VERTICAL
-          , margin $ MarginVertical 10 10
-          ]
-          [ textView
-              $ [ 
-                  text $ item.title
-                , color Colors.black900
-                ]
-              <> FontStyle.body8 TypoGraphy
-          , textView
-              $ [ 
-                  text $ item.desc
-                , color Colors.black900
-                ]
-              <> FontStyle.body1 TypoGraphy
-          ]
-    )
-    ( [ { title: getString YOU_GET
-        , desc: (if youGet > 0 then "₹" <> show youGet else (getString AMOUNT)) <>  " " <> (getString CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE)
-        }
-      , { title: getString THEY_GET
-        , desc: (if theyGet > 0 then "₹" <> show theyGet else (getString AMOUNT)) <> (getString CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE)
-        }
-      ]
-    )
+  let
+    referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+
+    youGet = fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.youGet
+
+    theyGet = fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.theyGet
+  in
+    map
+      ( \item ->
+          linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , margin $ MarginVertical 10 10
+            ]
+            [ textView
+                $ [ text $ item.title
+                  , color Colors.black900
+                  ]
+                <> FontStyle.body8 TypoGraphy
+            , textView
+                $ [ text $ item.desc
+                  , color Colors.black900
+                  ]
+                <> FontStyle.body1 TypoGraphy
+            ]
+      )
+      ( [ { title: getString YOU_GET
+          , desc: (if youGet > 0 then "₹" <> show youGet else (getString AMOUNT)) <> " " <> (getString CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE)
+          }
+        , { title: getString THEY_GET
+          , desc: (if theyGet > 0 then "₹" <> show theyGet else (getString AMOUNT)) <> (getString CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE)
+          }
+        ]
+      )
 
 haveQuestionView :: forall w. (Action -> Effect Unit) -> ST.ReferralPayoutScreenState -> PrestoDOM (Effect Unit) w
 haveQuestionView push state =
@@ -494,14 +498,20 @@ haveQuestionView push state =
     [ textView
         $ [ text $ getString HAVE_QUESTIONS
           , color Colors.black900
+          , weight 1.0
+          , gravity RIGHT
+          , padding $ PaddingRight 5
           ]
         <> FontStyle.subHeading2 TypoGraphy
     , textView
         $ [ text $ getString VIEW_THE_FAQS
           , color Colors.blue800
+          , weight 2.0
           , onClick push $ const ShowReferralFAQ
           , rippleColor Colors.rippleShade
           , cornerRadius 24.0
+          , padding $ PaddingLeft 5
+          , gravity LEFT
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
@@ -575,8 +585,7 @@ referralFaqsView push state =
                                             ]
                                           <> FontStyle.body2 TypoGraphy
                                       , textView
-                                          $ [ 
-                                             text item
+                                          $ [ text item
                                             , color Colors.black800
                                             ]
                                           <> FontStyle.body2 TypoGraphy
@@ -686,7 +695,7 @@ referralView push state =
                 , onChange push VpaTextChanged
                 , gravity LEFT
                 , cornerRadius 8.0
-                , hint $ "Enter UPI ID"
+                , text $ getString ENTER_UPI_ID
                 , hintColor Colors.black600
                 , inputType TypeText
                 , id $ EHC.getNewIDWithTag "VpaEditText"
@@ -699,7 +708,7 @@ referralView push state =
                         ST.UpiVerifying -> "Verifying UPI ID"
                 ]
               <> FontStyle.subHeading1 LanguageStyle
-              <> if state.data.verificationStatus == UpiVerified then [ text state.data.vpa, setCursorAtEnd true ] else []
+              <> if state.data.verificationStatus == UpiVerified then [ text $ fromMaybe "" state.data.existingVpa, setCursorAtEnd true ] else []
           , linearLayout
               [ height MATCH_PARENT
               , width WRAP_CONTENT
@@ -806,93 +815,94 @@ referralView push state =
 
 referralQrView :: forall w. (Action -> Effect Unit) -> ST.ReferralPayoutScreenState -> PrestoDOM (Effect Unit) w
 referralQrView push state =
-  let appName = fromMaybe state.data.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  let
+    appName = fromMaybe state.data.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in
-  PrestoAnim.animationSet
-    [ PrestoAnim.Animation
-        [ PrestoAnim.duration 50
-        , PrestoAnim.fromAlpha 0.0
-        , PrestoAnim.toAlpha 1.0
-        ]
-        true
-    ]
-    $ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , background Colors.blackLessTrans
-        , gravity CENTER
-        , padding $ Padding 24 24 24 24
-        ]
-        [ PrestoAnim.animationSet
-            [ PrestoAnim.Animation
-                [ PrestoAnim.duration 100
-                , PrestoAnim.fromScaleY 0.0
-                , PrestoAnim.toScaleY 1.0
-                , PrestoAnim.fromScaleX 0.0
-                , PrestoAnim.toScaleX 1.0
-                ]
-                true
-            ]
-            $ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                ]
-                [ linearLayout
-                    [ height WRAP_CONTENT
-                    , orientation VERTICAL
-                    , width MATCH_PARENT
-                    , background Colors.white900
-                    , padding $ Padding 16 20 16 20
-                    , cornerRadius $ 12.0
-                    , gravity CENTER
-                    ]
-                    [ textView
-                        $ [ text $ getString DOWNLAOD_APP
-                          , color Colors.black900
+    PrestoAnim.animationSet
+      [ PrestoAnim.Animation
+          [ PrestoAnim.duration 50
+          , PrestoAnim.fromAlpha 0.0
+          , PrestoAnim.toAlpha 1.0
+          ]
+          true
+      ]
+      $ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , background Colors.blackLessTrans
+          , gravity CENTER
+          , padding $ Padding 24 24 24 24
+          ]
+          [ PrestoAnim.animationSet
+              [ PrestoAnim.Animation
+                  [ PrestoAnim.duration 100
+                  , PrestoAnim.fromScaleY 0.0
+                  , PrestoAnim.toScaleY 1.0
+                  , PrestoAnim.fromScaleX 0.0
+                  , PrestoAnim.toScaleX 1.0
+                  ]
+                  true
+              ]
+              $ linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , gravity CENTER
+                  ]
+                  [ linearLayout
+                      [ height WRAP_CONTENT
+                      , orientation VERTICAL
+                      , width MATCH_PARENT
+                      , background Colors.white900
+                      , padding $ Padding 16 20 16 20
+                      , cornerRadius $ 12.0
+                      , gravity CENTER
+                      ]
+                      [ textView
+                          $ [ text $ getString DOWNLAOD_APP
+                            , color Colors.black900
+                            ]
+                          <> FontStyle.h1 TypoGraphy
+                      , textView
+                          $ [ text $ getString SCAN_QR_CODE_TO_DOWNLOAD_THE_APP_AND_APPLY_YOUR_INVITE_CODE_AUTOMATICALLY
+                            , color Colors.black800
+                            , gravity CENTER
+                            , margin $ MarginVertical 12 12
+                            ]
+                          <> FontStyle.body2 TypoGraphy
+                      , imageView
+                          [ qr $ Qr (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" state.data.referralCode) ((EHC.screenWidth unit) - 80) 0
+                          , height $ V $ (EHC.screenWidth unit) - 150
+                          , width $ V $ (EHC.screenWidth unit) - 80
                           ]
-                        <> FontStyle.h1 TypoGraphy
-                    , textView
-                        $ [ text $ getString SCAN_QR_CODE_TO_DOWNLOAD_THE_APP_AND_APPLY_YOUR_INVITE_CODE_AUTOMATICALLY
-                          , color Colors.black800
+                      , linearLayout
+                          [ background Colors.white900
+                          , stroke $ "1," <> Colors.black500
+                          , width MATCH_PARENT
+                          , height WRAP_CONTENT
+                          , padding $ PaddingVertical 14 14
                           , gravity CENTER
-                          , margin $ MarginVertical 12 12
+                          , cornerRadius 10.0
+                          , rippleColor Colors.rippleShade
+                          , onClick push $ const CloseQR
+                          , margin $ MarginTop 20
                           ]
-                        <> FontStyle.body2 TypoGraphy
-                    , imageView
-                        [ qr $ Qr (generateReferralLink (getValueToLocalStore CUSTOMER_LOCATION) "share" "referral" "refer" state.data.referralCode) ((EHC.screenWidth unit) - 80) 0
-                        , height $ V $ (EHC.screenWidth unit) - 150
-                        , width $ V $ (EHC.screenWidth unit) - 80
-                        ]
-                    , linearLayout
-                        [ background Colors.white900
-                        , stroke $ "1," <> Colors.black500
-                        , width MATCH_PARENT
-                        , height WRAP_CONTENT
-                        , padding $ PaddingVertical 14 14
-                        , gravity CENTER
-                        , cornerRadius 10.0
-                        , rippleColor Colors.rippleShade
-                        , onClick push $ const CloseQR
-                        , margin $ MarginTop 20
-                        ]
-                        [ textView
-                            $ [ text $ getString GO_BACK
-                              , color Colors.black700
-                              , padding $ PaddingBottom 3
-                              ]
-                            <> FontStyle.subHeading1 TypoGraphy
-                        ]
-                    ]
-                ]
-        ]
+                          [ textView
+                              $ [ text $ getString GO_BACK
+                                , color Colors.black700
+                                , padding $ PaddingBottom 3
+                                ]
+                              <> FontStyle.subHeading1 TypoGraphy
+                          ]
+                      ]
+                  ]
+          ]
 
 collectEarningView :: forall w. (Action -> Effect Unit) -> ST.ReferralPayoutScreenState -> PrestoDOM (Effect Unit) w
 collectEarningView push state =
   let
     totalEarning = state.data.referralEarnings + state.data.referredByEarnings
 
-    isPayoutPending = (totalEarning - state.data.referralAmountPaid) /= 0.0
+    isPayoutPending = (totalEarning - state.data.referralAmountPaid) /= 0.0 && isNothing state.data.existingVpa
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -902,24 +912,20 @@ collectEarningView push state =
       , gravity CENTER
       ]
       [ textView
-          $ [ text if isPayoutPending then getString YAY_YOU_HAVE_REFERRAL_EARNINGS else getString YOUR_EARNINGS_N_ <> show totalEarning 
+          $ [ text if isPayoutPending then getString YAY_YOU_HAVE_REFERRAL_EARNINGS else getString YOUR_EARNINGS_N_ <> show totalEarning
             , color if isPayoutPending then Colors.blue900 else Colors.black800
-            , gravity if isPayoutPending then CENTER else LEFT
-            , singleLine false
             , ellipsize true
             , padding $ PaddingBottom 3
             , margin $ MarginRight 10
+            , weight 2.0
             ]
           <> FontStyle.h2 TypoGraphy
-      , linearLayout
-          [ weight 1.0 ]
-          []
       , if isPayoutPending then collectNowView push state else detailsView push state
       ]
 
 collectNowView push state =
   linearLayout
-    [ height WRAP_CONTENT
+    ([ height WRAP_CONTENT
     , width WRAP_CONTENT
     , background Colors.blue900
     , padding $ Padding 16 8 16 8
@@ -928,13 +934,17 @@ collectNowView push state =
     , rippleColor Colors.rippleShade
     , gravity CENTER
     ]
-    [ textView
-        $ [ text $ getString COLLECT_NOW
-          , color Colors.white900
-          , padding $ PaddingBottom 3
+    <> if (getLanguageLocale languageKey) == "TA_IN" then
+        [ weight 1.0 ]
+      else
+        [])
+          [ textView
+              $ [ text $ getString COLLECT_NOW
+                , color Colors.white900
+                , padding $ PaddingBottom 3
+                ]
+              <> FontStyle.h3 TypoGraphy
           ]
-        <> FontStyle.h3 TypoGraphy
-    ]
 
 detailsView push state =
   linearLayout
@@ -972,13 +982,13 @@ upiAddedSuccessfully push state =
       , background Colors.blackLessTrans
       , gravity CENTER
       , padding $ Padding 24 24 24 24
-      , onClick push $ const CloseUPI
+      , onClick push $ const (DonePrimaryButtonAC PrimaryButton.OnClick)
       ]
       [ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
-          , padding $ Padding 16 0 16 16
+          , padding $ Padding 16 16 16 16
           , background Colors.white900
           , gravity CENTER
           , cornerRadius 10.0
@@ -994,13 +1004,13 @@ upiAddedSuccessfully push state =
                 ]
               <> FontStyle.h2 TypoGraphy
           , textView
-              $ [ text $ "₹" <> show pendingAmount <> " will be credited soon to \n" <> state.data.vpa
-                , text $ getString $ PENDINGAMOUNT_WILL_BE_CREDITED_SOON_TO_N_STATEDATAVPA (show pendingAmount) state.data.vpa
+              $ [ text $ getString $ PENDINGAMOUNT_WILL_BE_CREDITED_SOON_TO_N_STATEDATAVPA ("₹" <> show pendingAmount) (fromMaybe "" state.data.existingVpa)
                 , margin $ MarginTop 8
+                , text $ getString EARNINGS
                 , color Colors.black700
                 , gravity CENTER
                 ]
               <> FontStyle.body1 TypoGraphy
+          , PrimaryButton.view (push <<< DonePrimaryButtonAC) (donePrimaryButtonConfig state)
           ]
-      , PrimaryButton.view (push <<< DonePrimaryButtonAC) (donePrimaryButtonConfig state)
       ]

@@ -159,6 +159,8 @@ eval BackPressed state =
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = exit $ AddVPAOut state
 
-eval (DonePrimaryButtonAC PrimaryButtonController.OnClick) state = continue state
+eval (DonePrimaryButtonAC PrimaryButtonController.OnClick) state = continue state{ props { showUpiSuccess = false } }
+
+eval (HandlePayoutHistory (PayoutHistoryResp resp)) state = continue state{data{history = resp.history}}
 
 eval _ state = update state

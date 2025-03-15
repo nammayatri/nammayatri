@@ -1775,4 +1775,7 @@ getKn = Keymap {
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "ಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಮತ್ತು ನಿಮ್ಮ ಆಹ್ವಾನ ಕೋಡ್ ಅನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅನ್ವಯಿಸಲು QR ಕೋಡ್ ಅನ್ನು ಸ್ಕಾನ್ ಮಾಡಿ"
     , earn_:  \a ->  "₹" <> a <> " ಗಳಿಸಿ"
     ,  collect_:  \a ->  "₹" <> a <> " ಸಂಗ್ರಹಿಸಿ"
+    , add_upi_id: "UPI ಐಡಿ ಸೇರಿಸಿ"
+    , earnings: "ಆದಾಯ"
+    , enter_upi_id: "UPI ID ನಮೂದಿಸಿ"
 }

@@ -1775,4 +1775,7 @@ getTe = Keymap {
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "యాప్‌ను డౌన్‌లోడ్ చేసేందుకు మరియు మీ ఆహ్వాన కోడ్‌ను ఆటోమేటిక్‌గా వర్తింపజేయడానికి QR కోడ్‌ను స్కాన్ చేయండి"
     , earn_: \a ->  "₹" <> a <> " సంపాదించండి"
     , collect_:  \a ->  "₹" <> a <> " సేకరించండి"
+    , add_upi_id: "UPI ఐడి జోడించండి"
+    , earnings: "ఆదాయము"
+    , enter_upi_id: "UPI IDని నమోదు చేయండి"
 }
