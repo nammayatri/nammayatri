@@ -36,6 +36,7 @@ import Storage.Beam.Message
 import Storage.Beam.MessageReport
 import Storage.Beam.MessageTranslation
 import Storage.Beam.Notification
+import Storage.Beam.OperationHubRequests
 import Storage.Beam.Person
 import Storage.Beam.Quote
 import Storage.Beam.Rating (RatingT, ratingTable)
@@ -78,7 +79,8 @@ atlasDB =
         driverGoHomeRequest = driverGoHomeRequestTable,
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
-        route = routeTable
+        route = routeTable,
+        operationHubRequests = operationHubRequestsTable
       }
 
 data AtlasDB f = AtlasDB
@@ -110,6 +112,7 @@ data AtlasDB f = AtlasDB
     notification :: f (B.TableEntity NotificationT),
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
-    route :: f (B.TableEntity RouteT)
+    route :: f (B.TableEntity RouteT),
+    operationHubRequests :: f (B.TableEntity OperationHubRequestsT)
   }
   deriving (Generic, B.Database be)

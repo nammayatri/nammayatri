@@ -26,6 +26,7 @@ import qualified API.Action.ProviderPlatform.AppManagement as AppManagementDSL
 import qualified API.Action.ProviderPlatform.Fleet as FleetDSL
 import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
+import qualified API.Action.ProviderPlatform.Operator as OperatorDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.InternalAuth as InternalAuth
@@ -59,6 +60,7 @@ type API' =
     :<|> ManagementDSL.API
     :<|> IssueManagementDSL.API
     :<|> RideBookingDSL.API
+    :<|> OperatorDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -69,6 +71,7 @@ handler merchantId = do
     :<|> ManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
+    :<|> OperatorDSL.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.Bangalore
@@ -83,6 +86,7 @@ handlerV2 merchantId city =
     :<|> ManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
+    :<|> OperatorDSL.handler merchantId city
 
 handlerV3 :: FlowServer InternalAPI
 handlerV3 =

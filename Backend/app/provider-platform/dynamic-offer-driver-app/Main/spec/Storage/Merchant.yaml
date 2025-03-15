@@ -997,6 +997,7 @@ TransporterConfig:
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
+    requiresOnboardingInspection: Maybe Bool
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer
     meterRideBulkLocUpdateBatchSize: Integer

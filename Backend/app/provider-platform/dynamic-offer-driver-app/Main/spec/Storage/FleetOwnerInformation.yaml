@@ -17,7 +17,7 @@ FleetOwnerInformation:
   excludedFields: [merchantOperatingCityId]
   types:
     FleetType:
-      enum: "RENTAL_FLEET,NORMAL_FLEET"
+      enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
 
   constraints:
     fleetOwnerPersonId : PrimaryKey

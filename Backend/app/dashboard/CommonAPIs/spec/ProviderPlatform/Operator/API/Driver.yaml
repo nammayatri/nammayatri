@@ -1,0 +1,76 @@
+module: Driver
+
+apis:
+  - GET: # FetchOperationHubRequests
+      endpoint: /operator/fetch/hubRequests
+      auth: ApiAuthV2
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbStatus: RequestStatus
+        - mbReqType: RequestType
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbDriverId: Text
+        - mbMobileNumber: Text
+      response:
+        type: OperationHubReqResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OPERATOR GET_HUB_REQUESTS
+      helperApi:
+        - GET:
+            endpoint: /operator/fetch/hubRequests
+            auth: ApiAuthV2
+            query:
+              - mbFrom: UTCTime
+              - mbTo: UTCTime
+              - mbStatus: RequestStatus
+              - mbReqType: RequestType
+              - mbLimit: Int
+              - mbOffset: Int
+              - mbDriverId: Text
+              - mbMobileNumber: Text
+            response:
+              type: OperationHubReqResp
+
+  - POST: # RespondOperationHubRequest
+      endpoint: /operator/respond/hubRequest
+      auth: ApiAuthV2
+      request:
+        type: RespondHubRequest
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OPERATOR RESPOND_HUB_REQUEST
+      helperApi:
+        - POST:
+            endpoint: /operator/respond/hubRequest
+            auth: ApiAuthV2
+            request:
+              type: RespondHubRequest
+            response:
+              type: APISuccess
+
+types:
+  RequestStatus:
+    enum: "PENDING,APPROVED,REJECTED"
+    derive': "HttpInstance, ToJSON, FromJSON, Generic, ToSchema, Eq"
+  RequestType:
+    enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
+    derive': "HttpInstance, ToJSON, FromJSON, Generic, ToSchema, Eq"
+  OperationHubReqResp:
+    requests: [OperationHubDriverRequest]
+  OperationHubDriverRequest:
+    id: Text
+    operationHubId: Text
+    driverId: Text
+    requestType: RequestType
+    requestStatus: RequestStatus
+    requestTime: UTCTime
+  RespondHubRequest:
+    status: RequestStatus
+    driverId: Text
+    operationHubRequestId: Text
+    operatorId: Text
+    remarks: Text
+    derive: "'HideSecrets"

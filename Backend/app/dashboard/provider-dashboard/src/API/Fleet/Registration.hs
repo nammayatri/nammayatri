@@ -105,4 +105,5 @@ castFleetType :: Maybe FOI.FleetType -> Maybe DashboardReg.FleetType
 castFleetType req = case req of
   Just FOI.RENTAL_FLEET -> Just DashboardReg.RENTAL_FLEET
   Just FOI.NORMAL_FLEET -> Just DashboardReg.NORMAL_FLEET
+  Just FOI.BUSINESS_FLEET -> Just DashboardReg.BUSINESS_FLEET
   _ -> Nothing

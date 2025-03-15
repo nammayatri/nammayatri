@@ -7,6 +7,7 @@ module Storage.Queries.FleetOwnerDocumentVerificationConfig where
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,14 +28,26 @@ findAllByMerchantOpCityId ::
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
+findAllByMerchantOpCityIdAndRole ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
+findAllByMerchantOpCityIdAndRole merchantOperatingCityId role = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.role $ Se.Eq role
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig))
-findByPrimaryKey documentType merchantOperatingCityId = do
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m (Maybe Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig))
+findByPrimaryKey documentType merchantOperatingCityId role = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.role $ Se.Eq role
         ]
     ]
 
@@ -48,6 +61,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.description description,
       Se.Set Beam.disableWarning disableWarning,
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
+      Se.Set Beam.documentCategory documentCategory,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,
       Se.Set Beam.isHidden isHidden,
@@ -62,7 +76,8 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
     ]
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.role $ Se.Eq role
         ]
     ]
 
@@ -77,6 +92,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             description = description,
             disableWarning = disableWarning,
             doStrictVerifcation = doStrictVerifcation,
+            documentCategory = documentCategory,
             documentType = documentType,
             isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
             isDisabled = isDisabled,
@@ -87,6 +103,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             order = order,
+            role = role,
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -101,6 +118,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.description = description,
         Beam.disableWarning = disableWarning,
         Beam.doStrictVerifcation = doStrictVerifcation,
+        Beam.documentCategory = documentCategory,
         Beam.documentType = documentType,
         Beam.isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
         Beam.isDisabled = isDisabled,
@@ -111,6 +129,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.order = order,
+        Beam.role = role,
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

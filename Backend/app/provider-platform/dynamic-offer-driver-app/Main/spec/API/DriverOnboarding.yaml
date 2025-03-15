@@ -2,6 +2,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
+  DocumentCategory: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
@@ -32,6 +33,7 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
+    documentCategory: Maybe DocumentCategory
     title: Text
     description: Maybe Text
     isMandatory: Bool
