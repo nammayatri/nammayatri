@@ -3957,7 +3957,17 @@ getHeaderLogo state =
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state =
-  linearLayout
+  let applyReferral = not $ state.props.isReferred
+      referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      youGet = fromMaybe 0.0 referralPayoutConfig.youGet
+      {isPayoutEnabled, totalEarningPending} = 
+          case state.data.profile of 
+            Nothing -> {isPayoutEnabled : false, totalEarningPending: 0.0 }
+            Just (GetProfileRes profile) -> {isPayoutEnabled : fromMaybe false profile.isPayoutEnabled, totalEarningPending: (fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid)}
+      showEarnNow = if isPayoutEnabled then youGet > 0.0 && totalEarningPending == 0.0 else false 
+      showCollect = if isPayoutEnabled then totalEarningPending > 0.0 else false
+  in 
+    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -4039,21 +4049,43 @@ pickupLocationView push state =
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity RIGHT
+              , visibility $ boolToVisibility state.data.config.feature.enableReferral
               ][ linearLayout
                  [ width WRAP_CONTENT
                  , height WRAP_CONTENT
-                 , cornerRadius 8.0
+                 , cornerRadius 24.0
                  , background Color.blue600
                  , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-                 , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide)
+                 , visibility $ boolToVisibility $ applyReferral || not isPayoutEnabled
                  ][ textView
-                    [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
+                    [ text $ if applyReferral then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
                     , color Color.blue800
                     , gravity CENTER_HORIZONTAL
                     , textSize FontSize.a_14
-                    , padding $ Padding 12 8 12 8
+                    , padding $ Padding 10 8 10 8
                     ]
                  ]
+                  , linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , cornerRadius 24.0
+                    , background if showCollect then Color.blue900 else Color.blue600
+                    , onClick push $ const ReferralPayout
+                    , visibility $ boolToVisibility $ (not applyReferral) && (showEarnNow ||  showCollect)
+                    , padding $ Padding 10 8 10 8
+                    , gravity CENTER
+                    ][ textView $
+                        [ text $ "🚕 "
+                        , color if showCollect then Color.white900 else Color.blue900
+                        , gravity CENTER
+                        , padding $ PaddingBottom 5
+                        ] <> FontStyle.body1 TypoGraphy
+                      , textView $
+                        [ text $ getString $ if showCollect then COLLECT_ (show totalEarningPending) else EARN_ (show youGet)
+                        , color if showCollect then Color.white900 else Color.blue900
+                        , gravity CENTER
+                        ] <> FontStyle.body1 TypoGraphy
+                    ]
               ]
             ]
         ]
