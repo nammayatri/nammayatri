@@ -193,6 +193,7 @@ initData = let
     , rideCompletedData : initialRideCompletedData
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
+    , isSafetyPlus : false
     , famousDestinations : []
     , chatPersonId : "Customer"
     , parking : initialParkingData
@@ -209,6 +210,8 @@ initData = let
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
     , cancellationRate : Nothing
+    , preferSafetyPlus : false
+    , specialZoneQuoteListWithOutConditionalCharges : []
     },
     props: {
       rideRequestFlow : false
@@ -384,6 +387,8 @@ initData = let
     , suggestedRideFlow : false
     , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false, cameraAnimatedToSource : true }
     , showSpecialZoneInfoPopup : false
+    , showSafetyPlusInfoPopup : false
+    , showSafetyPlusInfoIntoPopup : true
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
     , repeatRideVariant : ""
     , repeatRideServiceTierName : Nothing
@@ -514,6 +519,7 @@ dummyPreviousRiderating = {
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []
+,isSafetyPlus : false
 }
 
 
@@ -578,6 +584,7 @@ dummyDriverInfo =
   , receiverDetails : Nothing
   , estimatedTimeToReachDestination : Nothing
   , isAirConditioned : Nothing
+  , isSafetyPlus : false
   }
 
 dummySettingBar :: SettingSideBarState
@@ -682,7 +689,8 @@ dummyRideBooking = RideBookingRes
   rideDuration : Just 0,
   vehicleServiceTierAirConditioned : Nothing,
   vehicleServiceTierSeatingCapacity : Nothing,
-  returnTime : Nothing
+  returnTime : Nothing,
+  isSafetyPlus : Nothing
 }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

@@ -1837,4 +1837,18 @@ getEn =
     , bus_type: "Bus Type"
     , namma_meter: "Namma Meter"
     , package : "Package"
+    , dashcam : "Dashcam"
+    , ride_plans : "Ride Plans"
+    , dashcam_benefits : "Dashcam Benefits"
+    , dashcam_benefits_1 : "Get EXTRA ₹5 per SafetyPLUS Ride"
+    , dashcam_benefits_2 : "24/7 In cabin and 270° front view recording"
+    , dashcam_benefits_3 : "Traffic and accident recordings"
+    , pay_n_to_join_this_rental_plan : (\amount -> "Register for installation at ₹" <> amount)
+    , my_safety_plus : "My SafetyPLUS"
+    , _online_ : "ONLINE"
+    , camera_status : "Camera Status"
+    , dashcam_registered : "Registered for Dashcam!"
+    , installation_pending_para : "Cautio is preparing the dashcam to be \n\n installed in your vehicle. You will be \n\n contacted when your dashcam is ready"
+    , tncDashcam : "I agree to sharing of my Namma Yatri data with Cautio \n\n and the Cautio"
+    , terms_and_conditions_full: "Terms & Conditions"
     }

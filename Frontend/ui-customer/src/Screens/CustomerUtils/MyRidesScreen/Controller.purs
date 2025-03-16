@@ -255,7 +255,8 @@ myRideListTransformerProp listRes =
         itemRideType : toPropValue (rideTypeString),
         rideTypeVisibility : toPropValue (if (rideType == FPT.INTER_CITY || rideType == FPT.RENTAL) then "visible" else "gone"),
         rideTypeBackground : toPropValue $ rideTypeBackground,
-        cornerRadius : toPropValue $ "40.0"
+        cornerRadius : toPropValue $ "40.0",
+        isSafetyPlus : toPropValue (if (fromMaybe false ride.isSafetyPlus) then "visible" else "gone")
       }) $ reverse $ sortWith (\(RideBookingRes ride) ->fromMaybe ride.createdAt $ if any (_ == ride.status) ["CONFIRMED","TRIP_ASSIGNED"] then ride.rideScheduledTime else ride.rideStartTime) listRes)
 
 
@@ -359,6 +360,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP
   , rideCreatedAt : ride.createdAt
   , rideStatus : rideStatus
+  , isSafetyPlus : fromMaybe false ride.isSafetyPlus
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt $ if  any(_ == ride.status ) ["CONFIRMED","TRIP_ASSIGNED"] then ride.rideScheduledTime else ride.rideStartTime) listRes ))
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

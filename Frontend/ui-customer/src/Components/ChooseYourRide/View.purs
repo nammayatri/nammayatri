@@ -1,53 +1,54 @@
 module Components.ChooseYourRide.View where
 
 import Common.Types.App
+import ConfigProvider
+import Data.Maybe
 import Debug
-import Animation (translateYAnim,translateYAnimFromTop, fadeIn)
-import PrestoDOM.Animation as PrestoAnim
+import Mobility.Prelude
+
+import Animation (translateYAnim, translateYAnimFromTop, fadeIn)
 import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
+import Components.ChooseVehicle.Controller as CCC
 import Components.ChooseYourRide.Controller (Action(..), Config, BookAnyProps, bookAnyProps, getBookAnyProps, getMinMaxPrice, getMinMaxCapacity)
 import Components.PrimaryButton as PrimaryButton
+import Data.Array (groupBy, head, sortBy, fromFoldable, all)
 import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem, null)
+import Data.Foldable (minimumBy, maximumBy)
+import Data.Function (on)
 import Data.Function.Uncurried (runFn1)
+import Data.Int (toNumber, ceil, fromString)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
+import Data.Ord (compare)
+import Data.Ord (comparing)
+import Data.Ord (min, max)
+import Data.String as DS
+import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils as HU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
+import Helpers.SpecialZoneAndHotSpots as HS
+import Helpers.Utils as HU
 import JBridge (getLayoutBounds, getHeightFromPercent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Types (AppConfig(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, bind, negate, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=), (<), (<>), otherwise)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout, alpha)
-import PrestoDOM.Properties (cornerRadii)
-import Data.Tuple (Tuple(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Styles.Colors as Color
-import ConfigProvider
-import PrestoDOM.Properties (sheetState)
-import Data.Int (toNumber,ceil, fromString)
-import MerchantConfig.Types(AppConfig(..))
-import Mobility.Prelude
-import Screens.Types (ZoneType(..), TipViewStage(..), FareProductType(..))
-import Data.Ord(min, max)
-import Resources.Constants (intMin, intMax)
-import Helpers.SpecialZoneAndHotSpots as HS
-import Data.Array (groupBy, head, sortBy, fromFoldable, all)
-import Data.Maybe
-import Data.Ord (comparing)
-import Data.Traversable (traverse)
-import Data.String as DS
-import Data.Foldable (minimumBy, maximumBy)
-import Data.Ord (compare)
-import Data.Function (on)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Elements.Keyed as Keyed
-import Data.Tuple (Tuple(..))
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (sheetState)
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import RemoteConfig as RC
+import Resources.Constants (intMin, intMax)
+import Screens.Types (ZoneType(..), TipViewStage(..), FareProductType(..))
 import Storage as ST
-import Components.ChooseVehicle.Controller as CCC
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -111,10 +112,89 @@ bottomLayoutView push config visibility' id' =
   , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5
   ][
     deliveryPaymentAtReceivingEndLayout push config
+   , preferSafetyPlusView push config
    , addTipView push config
    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm")
    ]
-   
+
+preferSafetyPlusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+preferSafetyPlusView push state =
+  linearLayout[
+    height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+  ]
+  [
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 0 24 0 24
+    , gravity CENTER
+    , afterRender push $ const $ NoAction state
+    , visibility $ boolToVisibility state.addSafetyPlusCheckbox
+    , orientation HORIZONTAL
+    , weight 1.0
+    ]
+    [ 
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity LEFT
+      , accessibility DISABLE
+      , margin $  MarginLeft 18
+      , onClick push $ const $ PreferSafetyPlus (not state.preferSafetyPlus) (state.quoteList)
+      ][
+        checkBoxView push state
+        , textView
+          ([ textFromHtml $ getString PREFER_SAFTEY_PLUS_CAUTIO
+            , color Color.black700
+            , accessibility ENABLE
+            , accessibilityHint $ "prefer safety plus by cautio"
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding $  PaddingLeft 18
+          ] <> FontStyle.body1 LanguageStyle)
+    ]
+    ,imageView
+        [  height (V 18)
+          , width (V 18)
+          , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info"
+          , gravity RIGHT
+          , onClick push $ const $ OnClickSafetyInfo
+          , margin $  MarginRight 18
+
+        ]
+    ]
+    
+  ]
+
+
+checkBoxView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+checkBoxView push config  =
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , accessibility ENABLE
+    , accessibilityHint $ if config.preferSafetyPlus then "prefer safety plus enabled" else "prefer safety plus disabled"
+    ][ frameLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT      
+        ][ linearLayout
+            [ height (V 18)
+            , width (V 18)
+            , stroke ("1," <> Color.black900)
+            , cornerRadius 2.0
+            ][
+            imageView
+                [ width (V 18)
+                , height (V 18)
+                , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_check_box"
+                , visibility if config.preferSafetyPlus then VISIBLE else GONE
+                ]
+            ]
+        ]
+    ]
+
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state =
   Keyed.linearLayout

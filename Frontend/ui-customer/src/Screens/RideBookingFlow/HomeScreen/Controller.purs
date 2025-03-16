@@ -89,7 +89,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not , mod, div, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not , mod, div, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>),(>>=))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -171,6 +171,7 @@ import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Foreign.Generic (class Decode, decodeJSON, encode, encodeJSON)
 import Common.RemoteConfig (fetchRemoteConfigString)
 import Engineering.Helpers.Events as EHE
+import Debug
 
 -- Controllers
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -826,6 +827,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) stat
 
 eval (DriverInfoCardActionController (DriverInfoCardController.SpecialZoneInfoTag)) state = continue state{ props{ showSpecialZoneInfoPopup = true } }
 
+eval (DriverInfoCardActionController (DriverInfoCardController.SafetyPlusInfoTag)) state = continue state{ props{ showSafetyPlusInfoPopup = true } }
+
 eval DirectSearch state =continue state{props{currentStage = SearchLocationModel}}
 
 eval BackPressed state = do
@@ -1049,6 +1052,12 @@ eval BackPressed state = do
                             continue state{props{showEducationalCarousel = false}}
                           else if state.data.waitTimeInfo then continue state { data {waitTimeInfo =false} }
                           else if state.props.showSpecialZoneInfoPopup then continue state { props{ showSpecialZoneInfoPopup = false } }
+                          else if state.props.showSafetyPlusInfoPopup then continue state{ props{ showSafetyPlusInfoPopup = false } }
+                          else if state.props.showSafetyPlusInfoIntoPopup then do
+                            let customerId = getValueToLocalStore CUSTOMER_ID
+                                counter = (getValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) )
+                            void $ pure $ setValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) (show $ (fromMaybe 0.0 (NUM.fromString counter) ) + 1.0)
+                            continue state{ props{ showSafetyPlusInfoPopup = false } }
                           else if state.props.zoneOtpExpired then continue state {props {zoneOtpExpired = false}}
                           else if state.props.showScheduledRideExistsPopUp then continue state { props { showScheduledRideExistsPopUp = false }}
                           else if state.data.intercityBus.showWebView then continueWithCmd state [ do
@@ -2067,6 +2076,14 @@ eval (PopUpModalAction (PopUpModal.TipsViewActionController (TipsView.TipBtnClic
     TipsPopUp -> continue state{props{customerTip{tipActiveIndex = index, tipForDriver= value, isTipSelected = not (index == 0)}}}
     _ -> continue state
 
+
+eval (PopUpModalAction (PopUpModal.PreferSafetyPlus preferSafetyPlus')) state = do
+  void $ pure $ performHapticFeedback unit
+  case state.props.isPopUp of
+    TipsPopUp -> continue state{data{preferSafetyPlus = preferSafetyPlus'}}
+    _ -> continue state
+
+
 eval (PopUpModalAction (PopUpModal.DismissPopup)) state = do
   let newState = if (isLocalStageOn QuoteList) then state else state{props{isPopUp = NoPopUp, customerTip{tipActiveIndex = 1,tipForDriver = 10, isTipSelected = false} }}
   continue newState
@@ -2207,6 +2224,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
           , hasTopProviderEstimate = not $ null nYQuotes
           , showMultiProvider = showMultiProvider'
           }
+        , preferSafetyPlus = false
         }
       , props
         { currentStage = SettingPrice
@@ -2282,7 +2300,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
 
     if isLocalStageOn QuoteList then do
       logInfo "retry_finding_quotes" ( "QuoteList : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
-      let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp  ,findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack}}
+      let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp  ,findingQuotesProgress = 0.0}, data{preferSafetyPlus = false}} else newState{props{isPopUp = ConfirmBack}}
       exit $ GetSelectList updatedState
     else if state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN" then do
       logInfo "retry_finding_quotes" ( "SelectedQuote: Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
@@ -2445,11 +2463,16 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state =
     continue state{ props{ showSpecialZoneInfoPopup = false } }
   else if state.props.searchLocationModelProps.showRideInfo then
     continue state{props {searchLocationModelProps { showRideInfo = false}}}
+  else if state.props.showSafetyPlusInfoPopup then 
+    continue state{ props{ showSafetyPlusInfoPopup = false } }
   else
     continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
 
 eval SpecialZoneInfoTag state =
   continue state{ props{ showSpecialZoneInfoPopup = true } }
+
+eval SafetyPlusInfoTag state =
+  continue state{ props{ showSafetyPlusInfoPopup = true } }
 
 eval (RentalInfoAction PopUpModal.DismissPopup) state = continue state
 
@@ -2852,6 +2875,48 @@ eval (ChooseYourRideAction (ChooseYourRideController.AddTip tipViewProps)) state
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChangeTip tipViewProps)) state = do
   continue state { props {tipViewProps = tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.PreferSafetyPlus preferSafetyPlus' quoteList')) state = do
+  let updatedQuoteList = if preferSafetyPlus' then mapQuoteList else quoteList'
+  continue $ 
+    state { data {preferSafetyPlus = preferSafetyPlus' 
+                  , specialZoneQuoteList = if preferSafetyPlus' then updatedQuoteList else state.data.specialZoneQuoteListWithOutConditionalCharges  
+                  , specialZoneQuoteListWithOutConditionalCharges = if preferSafetyPlus' then quoteList' else state.data.specialZoneQuoteListWithOutConditionalCharges
+                  }}
+  where
+  mapQuoteList = do
+    map (\it -> do
+            let currency = getCurrency appConfig
+            let maxPrice' = it.maxPrice >>= (\a -> Just $ it.safetyPlusCharges + a)
+                minPrice' = it.minPrice >>= (\a -> if isNothing it.maxPrice then Just $ it.safetyPlusCharges + a else Just a)
+                basePrice' = it.basePrice + it.safetyPlusCharges
+                price' = if maxPrice' == minPrice' then currency <> (show basePrice') else  currency <> (show $ fromMaybe 0 minPrice') <> " - " <> currency <> (show  $  fromMaybe 0 maxPrice')
+            
+            it{
+              maxPrice = maxPrice'
+            , minPrice = minPrice'
+            , price = price'
+            , basePrice = basePrice'
+            }
+      ) quoteList'
+
+eval (PopUpModalSafetyPlusIntroInfo PopUpModal.OnButton1Click) state = do
+  let customerId = getValueToLocalStore CUSTOMER_ID
+      counter = (getValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) )
+  void $ pure $ setValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) (show $ (fromMaybe 0.0 (NUM.fromString counter) ) + 1.0)
+  continue state {props{showSafetyPlusInfoIntoPopup = false}}
+
+eval (PopUpModalSafetyPlusIntroInfo PopUpModal.DismissPopup) state = do
+  let customerId = getValueToLocalStore CUSTOMER_ID
+      counter = (getValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) )
+  void $ pure $ setValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) (show $ (fromMaybe 0.0 (NUM.fromString counter) ) + 1.0)
+  continue state {props{showSafetyPlusInfoIntoPopup = false}}
+
+eval (PopUpModalSafetyPlusLearnMoreInfo PopUpModal.OnButton1Click) state = continue state {props{showSafetyPlusInfoPopup = false}}
+
+eval (PopUpModalSafetyPlusLearnMoreInfo PopUpModal.DismissPopup) state = continue state {props{showSafetyPlusInfoPopup = false}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.OnClickSafetyInfo)) state = continue state{ props{ showSafetyPlusInfoPopup = true } }
 
 eval CheckAndAskNotificationPermission state = do
   _ <- pure $ checkAndAskNotificationPermission false
@@ -3630,7 +3695,8 @@ dummyRideRatingState = {
   offeredFare         : 0,
   distanceDifference  : 0,
   feedback            : "",
-  feedbackList        : []
+  feedbackList        : [],
+  isSafetyPlus        : false
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

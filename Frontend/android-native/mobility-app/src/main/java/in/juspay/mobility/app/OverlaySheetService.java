@@ -112,14 +112,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
     private TextView tipBanner1, tipBanner2, tipBanner3;
-    private ImageView tipBannerImage1, tipBannerImage2, tipBannerImage3;
+    private ImageView tipBannerImage1, tipBannerImage2, tipBannerImage3,safetyPlus1,safetyPlus2,safetyPlus3;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList, vehicleVariantList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> indicatorTipBannerList;
-    private ArrayList<ImageView> indicatorTipBannerImageList;
+    private ArrayList<ImageView> indicatorTipBannerImageList,safetyImageList;
     private ArrayList<LinearLayout> indicatorTipList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
@@ -153,7 +153,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
 //            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip();
+            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip() || model.isSafetyPlus();
             if (updateTags) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
@@ -162,6 +162,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.safetyPlusTag.setVisibility(model.isSafetyPlus() ? View.VISIBLE : View.GONE);
+                holder.safetyPlusTagText.setText(model.isSafetyPlus() ? holder.safetyPlusTagText.getText().toString().replace("{#amount#}", Double.toString(model.getSafetyPlusCharges())) : "");
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
@@ -664,6 +666,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String notificationSource= rideRequestBundle.getString("notificationSource");
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
                     Boolean isFavourite = rideRequestBundle.getBoolean("isFavourite");
+                    Boolean isSafetyPlus = rideRequestBundle.getBoolean("isSafetyPlus", false);
+                    double safetyPlusCharges = rideRequestBundle.getDouble("safetyPlusCharges", 0.0);
                     double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
                     int stops = rideRequestBundle.getInt("middleStopCount", 0);
                     boolean roundTrip = rideRequestBundle.getBoolean("roundTrip");
@@ -714,6 +718,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             notificationSource,
                             isThirdPartyBooking,
                             isFavourite,
+                            isSafetyPlus,
+                            safetyPlusCharges,
                             parkingCharge,
                             getCurrTime,
                             stops,
@@ -1192,6 +1198,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             indicatorText1 = floatyView.findViewById(R.id.indicatorText1);
             indicatorText2 = floatyView.findViewById(R.id.indicatorText2);
             indicatorText3 = floatyView.findViewById(R.id.indicatorText3);
+            safetyPlus1 = floatyView.findViewById(R.id.safetyPlus1);
+            safetyPlus2 = floatyView.findViewById(R.id.safetyPlus2);
+            safetyPlus3 = floatyView.findViewById(R.id.safetyPlus3);
             vehicleText1 = floatyView.findViewById(R.id.variant1);
             vehicleText2 = floatyView.findViewById(R.id.variant2);
             vehicleText3 = floatyView.findViewById(R.id.variant3);
@@ -1221,6 +1230,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             shimmerTip2 = floatyView.findViewById(R.id.shimmer_view_container_1);
             shimmerTip3 = floatyView.findViewById(R.id.shimmer_view_container_2);
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
+            safetyImageList = new ArrayList<>(Arrays.asList(safetyPlus1, safetyPlus2, safetyPlus3));
             for (int i = 0; i < 3; i++) {
                 if (i < sheetArrayList.size()) {
                     shimmerTipList.get(i).setVisibility(View.VISIBLE);
@@ -1229,6 +1239,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     vehicleVariantList.get(i).setVisibility(View.GONE);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
+                    safetyImageList.get(i).setVisibility(sheetArrayList.get(i).isSafetyPlus() ? View.VISIBLE : View.GONE);
                     boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
                     if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
                         indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ?  R.color.green100 : R.color.yellow200));

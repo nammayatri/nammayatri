@@ -19,7 +19,7 @@ module Screens.SubscriptionScreen.ScreenData where
 import Domain.Payments (PaymentStatus(..))
 import Data.Maybe as Mb
 import ConfigProvider
-import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
+import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem, ServiceName(..))
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
 import RemoteConfig as RC
 import Common.RemoteConfig.Utils as CommonRC
@@ -53,7 +53,9 @@ initData =
             mandateStatus : "",
             selectedDue : "",
             dueBoothCharges : Mb.Nothing,
-            coinEntity : Mb.Nothing
+            coinEntity : Mb.Nothing,
+            isEligibleForCharge : Mb.Nothing,
+            safetyPlusData :  Mb.Nothing
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,
@@ -88,7 +90,9 @@ initData =
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing,
-            isIntroductory : false
+            isIntroductory : false,
+            tncRentals : false,
+            tncRentalsImage : "ny_ic_checkbox_unselected"
         },
         myPlanProps : {
             isDuesExpanded : false,
@@ -111,7 +115,9 @@ initData =
         redirectToNav : "",
         lastPaymentType : Mb.Nothing,
         offerBannerProps : CommonRC.defaultOfferBannerConfig,
-        isEndRideModal : false
+        isEndRideModal : false,
+        serviceName : YATRI_SUBSCRIPTION,
+        servicesEnabled : []
     }
 }
 

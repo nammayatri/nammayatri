@@ -115,6 +115,7 @@ dummyPreviousRiderating = {
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []
+, isSafetyPlus : false
 }
 
 dummyRentalRowConfig :: FPT.RentalRowConfig
@@ -194,6 +195,7 @@ dummyDriverInfo =
   , receiverDetails : Nothing
   , estimatedTimeToReachDestination : Nothing
   , isAirConditioned : Nothing
+  , isSafetyPlus : false
   }
 
 dummyRentalBookingConfig :: CT.RentalBookingConfig
@@ -271,7 +273,8 @@ dummyRideBooking = RideBookingRes
   vehicleServiceTierAirConditioned : Nothing,
   vehicleServiceTierSeatingCapacity : Nothing,
   returnTime : Nothing,
-  isAirConditioned : Nothing
+  isAirConditioned : Nothing,
+  isSafetyPlus : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

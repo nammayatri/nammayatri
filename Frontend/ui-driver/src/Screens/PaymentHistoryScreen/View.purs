@@ -75,7 +75,7 @@ screen initialState =
           lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
           lift $ lift $ EHU.toggleLoader true
           let tab = if initialState.props.autoPayHistory then "AUTOPAY_INVOICE" else "MANUAL_INVOICE"
-          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" (show initialState.props.offset) tab
+          resp <- lift $ lift $ Remote.paymentHistoryListV2 "15" (show initialState.props.offset) tab (show initialState.props.serviceName)
           case resp of
             Right (SA.HistoryEntityV2Resp resp) -> do
               lift $ lift $ doAff do liftEffect $ push $ UpdatePaymentHistory (SA.HistoryEntityV2Resp resp)

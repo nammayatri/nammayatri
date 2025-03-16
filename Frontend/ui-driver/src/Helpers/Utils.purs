@@ -604,11 +604,11 @@ download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
 
 onBoardingSubscriptionScreenCheck :: Int -> Boolean -> Boolean
-onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = isEnabled &&
-                                                                              getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" &&
-                                                                              even onBoardingSubscriptionViewCount &&
-                                                                              onBoardingSubscriptionViewCount <5 &&
-                                                                              isOnFreeTrial FunctionCall &&
+onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = isEnabled && 
+                                                                              (getValueToLocalNativeStore (DRIVER_SUBSCRIBED "YATRI_SUBSCRIPTION")) == "false" && 
+                                                                              even onBoardingSubscriptionViewCount && 
+                                                                              onBoardingSubscriptionViewCount <5 && 
+                                                                              isOnFreeTrial FunctionCall && 
                                                                               getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
 
 getVehicleVariantImage :: String -> String

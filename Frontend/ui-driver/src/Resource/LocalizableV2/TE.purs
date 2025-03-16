@@ -1837,4 +1837,19 @@ getTe =
     , bus_type: "బస్ రకం"
     , namma_meter: "నమ్మా మీటర్"
     , package: "ప్యాకేజ్"
+    , dashcam : "డాష్‌క్యామ్"
+    , ride_plans : "ప్రయాణ ప్రణాళికలు"
+    , dashcam_benefits : "డాష్‌క్యామ్ లాభాలు"
+    , dashcam_benefits_1 : "ప్రతి SafetyPLUS రైడ్‌కు అదనపు ₹5 పొందండి"
+    , dashcam_benefits_2 : "24/7 క్యాబిన్ లో మరియు 270° ముందు దృశ్య రికార్డింగ్"
+    , dashcam_benefits_3 : "ట్రాఫిక్ మరియు ప్రమాద రికార్డింగ్"
+    , pay_n_to_join_this_rental_plan : (\amount -> "ఇన్‌స్టాలేషన్ కోసం ₹" <> amount)
+    , my_safety_plus : "నా SafetyPLUS"
+    , _online_ : "ఆన్‌లైన్"
+    , camera_status : "క్యామెరా స్థితి"
+    , dashcam_registered : "డాష్‌క్యామ్ కోసం రిజిస్టర్ చేయబడింది!"
+    , installation_pending_para : "Cautio మీ వాహనంలో డాష్‌కామ్‌ను ఇన్‌స్టాల్ చేయడానికి సిద్ధమవుతోంది. మీ డాష్‌కామ్ సిద్ధమైతే మేము మీతో సంప్రదిస్తాము."
+    , tncDashcam : "నేను నా Namma Yatri డేటాను Cautio తో పంచుకోవడానికి అంగీకరిస్తున్నాను"
+    , terms_and_conditions_full: "నిబంధనలు మరియు షరతులు"
+
     }

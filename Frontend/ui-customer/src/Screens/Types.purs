@@ -330,7 +330,9 @@ type TripDetailsScreenProps =
     canConnectWithDriver :: Boolean,
     triggerUIUpdate :: Boolean,
     showIssueOptions :: Boolean,
-    isContactSupportPopUp :: Boolean
+    isContactSupportPopUp :: Boolean,
+    safetyPlusHelp :: Boolean,
+    safetyPlusContact :: Boolean
   }
 
 data TripDetailsGoBackType = Home | MyRides | HelpAndSupport | ReportIssueChat | RideCompletedScreen
@@ -507,6 +509,7 @@ type IndividualRideCardState =
   , rideCreatedAt :: String
   , rideStatus :: String
   , isAirConditioned :: Maybe Boolean
+  , isSafetyPlus :: Boolean
   }
 
 data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE | EV_AUTO_RICKSHAW | HERITAGE_CAB
@@ -545,7 +548,8 @@ type ItemState =
     itemRideType :: PropValue,
     rideTypeVisibility :: PropValue,
     rideTypeBackground :: PropValue,
-    cornerRadius :: PropValue
+    cornerRadius :: PropValue,
+    isSafetyPlus :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -850,6 +854,9 @@ type HomeScreenStateData =
   , requestorPartyRoles :: Maybe (Array String)
   , boostSearchEstimate :: ChooseVehicle.Config
   , cancellationRate :: Maybe Number
+  , isSafetyPlus :: Boolean
+  , preferSafetyPlus :: Boolean
+  , specialZoneQuoteListWithOutConditionalCharges :: Array ChooseVehicle.Config
 }
 
 type UpcomingRideDetails = {
@@ -1162,6 +1169,8 @@ type HomeScreenStateProps =
   , bookAmbulanceModal :: Boolean
   , firstTimeAmbulanceSearch :: Boolean
   , searchType :: Maybe String
+  , showSafetyPlusInfoPopup :: Boolean
+  , showSafetyPlusInfoIntoPopup :: Boolean
   }
 
 type EditedLocation = {
@@ -1560,6 +1569,7 @@ type DriverInfoCard =
   , senderDetails :: Maybe PersonDeliveryDetails
   , receiverDetails :: Maybe PersonDeliveryDetails
   , estimatedTimeToReachDestination :: Maybe String
+  , isSafetyPlus :: Boolean
   }
 
 type RatingCard =
@@ -1583,6 +1593,7 @@ type RatingCard =
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array CTA.FeedbackAnswer
+  , isSafetyPlus :: Boolean
   }
 
 type Address =
@@ -3359,3 +3370,19 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+---------------------------------------------- SAFETY PLUS ------------------------------------
+type SafetyPlusTagConfig = {
+    icon :: String
+  , text :: String
+  , infoPopUpConfig :: Maybe SafetyPlusInfoPopUp
+  , backgroundColor :: String
+}
+
+type SafetyPlusInfoPopUp = {
+    title :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , primaryButtonText :: String
+  , icon :: String
+}

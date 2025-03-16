@@ -2802,7 +2802,7 @@ isAcWorkingPopupView push state =
 
 getPlansList :: forall action. (action -> Effect Unit) ->  (APITypes.UiPlansResp -> action) -> Flow GlobalState Unit
 getPlansList push action = do
-  plans <- Remote.getUiPlans "null"
+  plans <- Remote.getUiPlans "null" Nothing
   case plans of
     Right plansResp -> doAff do liftEffect $ push $ action plansResp
     Left err -> pure unit

@@ -50,6 +50,7 @@
     <string name="please_start_moving_towards_the_pickup_location">பிக் அப் இடத்திற்கு செல்லத் தொடங்குங்கள்</string>
     <string name="quick_chats">விரைவு அரட்டைகள்:</string>
     <string name="assistance_required">உதவி தேவை</string>
+    <string name = "safety_plus" > சேஃப்டிப்ளஸ் (₹{#amount#})</string>
     <string name="tip">டிப்</string>
     <string name="qr_for_your_vpa_is_downloaded">உங்கள் vpa க்கான QR பதிவிறக்கப்பட்டது!!!</string>
     <string name="invoice_downloaded">விலைப்பட்டியல் பதிவிறக்கப்பட்டது!!!</string>

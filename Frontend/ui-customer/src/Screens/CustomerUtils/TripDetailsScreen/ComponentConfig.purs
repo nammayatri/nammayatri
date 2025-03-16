@@ -38,6 +38,8 @@ import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
 import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
 import Data.Maybe
+import Resources.LocalizableV2.Strings (getStringV2)
+import PrestoDOM.Types.DomAttributes (Gravity(..))
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -186,3 +188,36 @@ getConfig  isExpanded =
     , fromY : 0
     , toY : -100
     }
+
+safetyPlusContactModal :: ST.TripDetailsScreenState ->  PopUpModal.Config 
+safetyPlusContactModal state = let 
+    config' = PopUpModal.config 
+    popUpConfig' = config' {
+      primaryText { text = (getString SAFETY_PLUS_BY), gravity = LEFT, margin =( Margin 20 20 0 20)},
+      secondaryText {
+        text = (getString REACH_OUT_TO_CAUTIO)
+      , gravity = LEFT
+      , margin = (Margin 0 4 0 4)}
+      , optionButtonOrientation = "VERTICAL"
+      , backgroundClickable = true
+      , dismissPopup = true
+      , option1 { 
+          background = state.data.config.primaryBackground
+        , strokeColor = state.data.config.primaryBackground
+        , color = state.data.config.primaryTextColor
+        , text = (getString CALL_CAUTIO_SUPPORT)
+        , gravity = CENTER
+        , width = MATCH_PARENT
+        , margin = (Margin 3 4 3 4)
+        }
+      , option2 { 
+          color = state.data.config.primaryBackground
+        , strokeColor = state.data.config.popupBackground 
+        , background = state.data.config.popupBackground 
+        , text = (getString CANCEL_)
+        , gravity = CENTER
+        , margin = (Margin 3 4 3 4)
+        , width = MATCH_PARENT
+        }
+    }
+    in popUpConfig'

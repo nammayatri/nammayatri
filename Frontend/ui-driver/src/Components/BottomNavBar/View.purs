@@ -96,7 +96,7 @@ view push state =
                               "Earnings"      -> getString EARNINGS
                               "Profile"       -> getString PROFILE
                               "Alert"         -> getString MESSAGES
-                              "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
+                              "Join"          -> getString if getValueToLocalNativeStore (DRIVER_SUBSCRIBED "YATRI_SUBSCRIPTION") == "true" then MY_PLAN else PLANS
                               _               -> ""
                     ] <> FontStyle.tags TypoGraphy)
                 ]

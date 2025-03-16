@@ -117,6 +117,7 @@ import MerchantConfig.Types
 import Data.Tuple as DT
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Components.MessagingView.Controller as CMC
+import Data.Int (fromString)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -639,6 +640,8 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
       customerTipArray = tipConfig.customerTipArray
 
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+
+      safetyPlusConfig = RemoteConfig.getSafetyPlusConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
     PopUpModal.config
       { optionButtonOrientation = "VERTICAL"
       , dismissIconMargin = Margin 0 0 14 13
@@ -693,6 +696,10 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
         , height = WRAP_CONTENT
         }
       , cornerRadius = (Corners 15.0 true true false false)
+      , preferSafetyPlus = state.data.preferSafetyPlus
+      , safetyPlusCheckboxText = getString ENABLE_CAUTIO
+      , safetyPlusCharges = fromMaybe 0 (fromString $ getValueToLocalStore SAFTEY_PLUS_CHARGES)
+      , addSafetyPlusCheckbox = safetyPlusConfig.isSafetyPlusEnabled
       }
   ST.CancelConfirmingQuotes ->
     let
@@ -1229,6 +1236,7 @@ driverInfoTransformer state =
   let
     cardState = state.data.driverInfoCardState
     appConfig = state.data.config { driverInfoConfig { numberPlateBackground = if any (_ == cardState.vehicleVariant) ["BIKE", "DELIVERY_BIKE"] then Color.white900 else state.data.config.driverInfoConfig.numberPlateBackground}}
+    safetyPlusConfig = RemoteConfig.getSafetyPlusConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
   in
     { otp : cardState.otp
     , driverName : (DS.toUpper (DS.take 1 cardState.driverName)) <> (DS.toLower (DS.drop 1 cardState.driverName))
@@ -1284,6 +1292,7 @@ driverInfoTransformer state =
     , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
     , requestorPartyRoles : state.data.requestorPartyRoles
     , isAirConditioned : cardState.isAirConditioned
+    , isSafetyPlus : cardState.isSafetyPlus
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1619,6 +1628,7 @@ chooseYourRideConfig state =
     startTimeUTC = if state.data.startTimeUTC == "" then Nothing else Just state.data.startTimeUTC
     returnTimeUTC = if state.data.returnTimeUTC == "" || state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP then Nothing else Just state.data.returnTimeUTC
     roundTrip = isJust returnTimeUTC
+    safetyPlusConfig = RemoteConfig.getSafetyPlusConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
     tipProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     ChooseYourRide.config
@@ -1644,6 +1654,8 @@ chooseYourRideConfig state =
       , startTimeUTC = startTimeUTC
       , returnTimeUTC =  returnTimeUTC
       , roundTrip = roundTrip
+      , preferSafetyPlus = state.data.preferSafetyPlus
+      , addSafetyPlusCheckbox = safetyPlusConfig.isSafetyPlusEnabled
       }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -1852,6 +1864,7 @@ chooseVehicleConfig state = let
     , validTill = selectedEstimates.validTill
     , hasTollCharges = selectedEstimates.hasTollCharges
     , hasParkingCharges = selectedEstimates.hasParkingCharges
+    , safetyPlusCharges = 0
     }
   in chooseVehicleConfig'
 
@@ -2182,6 +2195,105 @@ specialZoneInfoPopupConfig infoConfig =
         }
   in
     specialZonePopupConfig
+
+safetyPlusInfoPopupConfig :: ST.SafetyPlusInfoPopUp -> PopUpModal.Config
+safetyPlusInfoPopupConfig infoConfig =
+  let
+    config = PopUpModal.config
+    config' = config
+      { 
+        gravity = CENTER,
+        margin = MarginHorizontal 30 30 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        topTitle
+        { text = infoConfig.title
+          , gravity = LEFT
+        , visibility = VISIBLE
+        , width = MATCH_PARENT
+        , textStyle = SubHeading1
+        , margin = Margin 16 4 16 8
+        }
+      ,primaryText {
+          visibility = GONE
+        }
+      , coverImageConfig
+        { imageUrl = fetchImage FF_ASSET infoConfig.icon
+        , height = V 212
+        , width = V 296
+        , padding = Padding 0 2 2 0
+        , visibility = VISIBLE
+        }
+      , secondaryText {
+        text = (getString DASHCAM_LEARN_MORE_BULLET_1) <> (getString  DASHCAM_LEARN_MORE_BULLET_2)
+        , gravity = LEFT
+        , visibility = VISIBLE
+        , margin = Margin 16 0 12 12
+        , padding = Padding 0 0 6 0
+        , textStyle = Body2
+      }
+      ,option1 {
+          text = getString GOT_IT
+          , width = MATCH_PARENT
+          , gravity = CENTER
+          , background = Color.black900
+          , color = Color.yellow900
+          , strokeColor = Color.black900
+        },
+        cornerRadius = (Corners 15.0 true true true true),
+        option2 { visibility = false}
+      }
+    in config'
+
+safetyPlusInfoIntroPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyPlusInfoIntroPopUpConfig state =
+  let
+    config = PopUpModal.config
+    config' = config
+      {
+        gravity = CENTER,
+        margin = MarginHorizontal 30 30 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        dismissPopup = true,
+        optionButtonOrientation = "VERTICAL",
+        topTitle {
+          text = getString DASHCAM_LEARN_MORE_POP_UP
+        , gravity = LEFT
+        , visibility = VISIBLE
+        , width = MATCH_PARENT
+        , textStyle = SubHeading1
+        , margin = Margin 16 4 16 8
+        },
+        primaryText {
+          visibility = GONE
+        },
+        secondaryText {
+          text = (getString DASHCAM_INTRO_POP_UP_BULLET_1) <> (getString  DASHCAM_INTRO_POP_UP_BULLET_2)
+          , gravity = LEFT
+          , visibility = VISIBLE
+          , margin = Margin 16 0 16 12
+          , textStyle = Body2
+          , accessibilityHint = DS.replaceAll (DS.Pattern "<br>") (DS.Replacement "") $ (getString DASHCAM_INTRO_POP_UP_BULLET_1) <> (getString  DASHCAM_INTRO_POP_UP_BULLET_2)
+        },
+        option1 {
+          text = getString GOT_IT
+          , width = MATCH_PARENT
+          , gravity = CENTER
+          , background = Color.black900
+          , color = Color.yellow900
+          , strokeColor = Color.black900
+        },
+        option2 { visibility = false},
+        backgroundClickable = true,
+        cornerRadius = (Corners 15.0 true true true true),
+        coverImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_cautio_learn_more"
+        , visibility = VISIBLE
+        , height = V 212
+        , width = V 296
+        , margin = Margin 12 4 12 4
+        }
+      }
+  in config'
 
 generateReferralLink :: String -> String -> String -> String -> String -> String
 generateReferralLink source medium term content campaign =

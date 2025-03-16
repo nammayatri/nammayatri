@@ -44,6 +44,7 @@
     <string name="please_start_moving_towards_the_pickup_location">দয়া করে পিকআপ লোকেশনের দিকে এগিয়ে যান</string>
     <string name="quick_chats">দ্রুত চ্যাট:</string>
     <string name="assistance_required">সহায়তা প্রয়োজন</string>
+    <string name = "safety_plus" > সেফটিপ্লাস (₹{#amount#})</string>
     <string name="tip">টিপ</string>
     <string name="qr_for_your_vpa_is_downloaded">আপনার ভিপিএর জন্য QR ডাউনলোড করা হয়েছে!!!</string>
     <string name="invoice_downloaded">চালান ডাউনলোড হয়েছে!!!</string>

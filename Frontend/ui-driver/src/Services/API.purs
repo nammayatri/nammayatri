@@ -417,13 +417,13 @@ instance encodeLogOutReq :: Encode LogOutReq where encode = defaultEncode
 ------------------------------------------------------------GET DRIVER PROFILE----------------------------------------------------------------------------------------------------------------------------------------------
 
 -- GetDriverInfo API request, response types
-newtype GetDriverInfoReq = GetDriverInfoReq {
- }
+newtype GetDriverInfoReq = GetDriverInfoReq (Maybe String)
 
 newtype DriverInfoReq = DriverInfoReq {
   isAdvancedBookingEnabled :: Maybe Boolean,
   isInteroperable :: Maybe Boolean,
-  isCategoryLevelSubscriptionEnabled :: Maybe Boolean
+  isCategoryLevelSubscriptionEnabled :: Maybe Boolean,
+  serviceName :: Maybe String
  }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
@@ -554,7 +554,7 @@ instance standardEncodePayoutVpaStatus :: StandardEncode PayoutVpaStatus
     standardEncode _ = standardEncode {}
 
 instance makeDriverInfoReq :: RestEndpoint DriverInfoReq where
-    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.getDriverInfoV2 "") headers reqBody Nothing
+    makeRequest reqBody@(DriverInfoReq req)  headers = defaultMakeRequestWithoutLogs POST (EP.getDriverInfoV2 "" req.serviceName) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericDriverInfoReq :: Generic DriverInfoReq _
@@ -564,7 +564,7 @@ instance decodeDriverInfoReq :: Decode DriverInfoReq where decode = defaultDecod
 instance encodeDriverInfoReq :: Encode DriverInfoReq where encode = defaultEncode
 
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq where
-    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getDriverInfo "") headers reqBody Nothing
+    makeRequest reqBody@(GetDriverInfoReq serviceName) headers = defaultMakeRequestWithoutLogs GET (EP.getDriverInfo "" serviceName) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericGetDriverInfoReq :: Generic GetDriverInfoReq _
@@ -2728,7 +2728,7 @@ instance encodeUnVerifiedDataReq :: Encode UnVerifiedDataReq where encode = defa
 
 -------------------------------------------------- getUiPlans -------------------------------------
 
-data UiPlansReq = UiPlansReq String
+data UiPlansReq = UiPlansReq String (Maybe String)
 
 newtype UiPlansResp = UiPlansResp {
   list :: Array PlanEntity,
@@ -2802,11 +2802,11 @@ instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode 
 instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq where
- makeRequest reqBody@(UiPlansReq vehicleVariant) headers = defaultMakeRequestWithoutLogs GET (EP.getUiPlans vehicleVariant) headers reqBody Nothing
- encodeRequest req = standardEncode req
+ makeRequest reqBody@(UiPlansReq vehicleVariant serviceName) headers = defaultMakeRequestWithoutLogs GET (EP.getUiPlans vehicleVariant serviceName) headers reqBody Nothing
+ encodeRequest req = encode req
 
 derive instance genericUiPlansReq :: Generic UiPlansReq _
-instance standardEncodeUiPlansReq :: StandardEncode UiPlansReq where standardEncode (UiPlansReq dummy ) = standardEncode dummy
+instance standardEncodeUiPlansReq :: StandardEncode UiPlansReq where standardEncode _ = standardEncode {}
 instance showUiPlansReq :: Show UiPlansReq where show = genericShow
 instance decodeUiPlansReq :: Decode UiPlansReq where decode = defaultDecode
 instance encodeUiPlansReq :: Encode UiPlansReq where encode = defaultEncode
@@ -2847,10 +2847,33 @@ instance showCoinEntity :: Show CoinEntity where show = genericShow
 instance decodeCoinEntity :: Decode CoinEntity where decode = defaultDecode
 instance encodeCoinEntity :: Encode CoinEntity where encode = defaultEncode
 
+-------------------------------- Subscription Service List ----------------------------------
+newtype SubscriptionServiceReq = SubscriptionServiceReq String
 
+newtype SubscriptionServiceResp = SubscriptionServiceResp {
+  services :: Array String
+}
+
+instance makeSubscriptionServiceReq :: RestEndpoint SubscriptionServiceReq where
+    makeRequest reqBody@(SubscriptionServiceReq dummy) headers = defaultMakeRequestWithoutLogs GET (EP.listServices dummy) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericSubscriptionServiceReq :: Generic SubscriptionServiceReq _
+derive instance newtypeSubscriptionServiceReq :: Newtype SubscriptionServiceReq _
+instance standardEncodeSubscriptionServiceReq :: StandardEncode SubscriptionServiceReq where standardEncode (SubscriptionServiceReq body) = standardEncode body
+instance showSubscriptionServiceReq :: Show SubscriptionServiceReq where show = genericShow
+instance decodeSubscriptionServiceReq :: Decode SubscriptionServiceReq  where decode = defaultDecode
+instance encodeSubscriptionServiceReq :: Encode SubscriptionServiceReq where encode = defaultEncode
+
+derive instance genericSubscriptionServiceResp :: Generic SubscriptionServiceResp _
+derive instance newtypeSubscriptionServiceResp :: Newtype SubscriptionServiceResp _
+instance standardEncodeSubscriptionServiceResp :: StandardEncode SubscriptionServiceResp where standardEncode (SubscriptionServiceResp res) = standardEncode res
+instance showSubscriptionServiceResp :: Show SubscriptionServiceResp where show = genericShow
+instance decodeSubscriptionServiceResp :: Decode SubscriptionServiceResp where decode = defaultDecode
+instance encodeSubscriptionServiceResp :: Encode SubscriptionServiceResp where encode = defaultEncode
 -------------------------------------------------- SubscribePlan ------------------------------
 
-newtype SubscribePlanReq = SubscribePlanReq String
+data SubscribePlanReq = SubscribePlanReq String (Maybe String)
 
 newtype SubscribePlanResp = SubscribePlanResp {
   orderResp :: CreateOrderRes,
@@ -2858,12 +2881,11 @@ newtype SubscribePlanResp = SubscribePlanResp {
 }
 
 instance makeSubscribePlanReq :: RestEndpoint SubscribePlanReq where
-    makeRequest reqBody@(SubscribePlanReq planId) headers = defaultMakeRequestWithoutLogs POST (EP.subscribePlan planId) headers reqBody Nothing
-    encodeRequest req = standardEncode req
+    makeRequest reqBody@(SubscribePlanReq planId serviceName) headers = defaultMakeRequestWithoutLogs POST (EP.subscribePlan planId serviceName) headers reqBody Nothing
+    encodeRequest req = encode req
 
 derive instance genericSubscribePlanReq :: Generic SubscribePlanReq _
-derive instance newtypeSubscribePlanReq :: Newtype SubscribePlanReq _
-instance standardEncodeSubscribePlanReq :: StandardEncode SubscribePlanReq where standardEncode (SubscribePlanReq body) = standardEncode body
+instance standardEncodeSubscribePlanReq :: StandardEncode SubscribePlanReq where standardEncode _ = standardEncode {}
 instance showSubscribePlanReq :: Show SubscribePlanReq where show = genericShow
 instance decodeSubscribePlanReq :: Decode SubscribePlanReq  where decode = defaultDecode
 instance encodeSubscribePlanReq :: Encode SubscribePlanReq where encode = defaultEncode
@@ -2878,7 +2900,7 @@ instance encodeSubscribePlanResp :: Encode SubscribePlanResp where encode = defa
 
 --------------------------------------- PaymentDues -----------------------
 
-data PaymentDuesReq = PaymentDuesReq String
+data PaymentDuesReq = PaymentDuesReq String (Maybe String)
 
 newtype PaymentDuesResp = PaymentDuesResp {
   maxAmount :: Int,
@@ -2895,11 +2917,11 @@ newtype DuesEntity = DuesEntity {
 
 
 instance makePaymentDuesReq :: RestEndpoint PaymentDuesReq where
- makeRequest reqBody@(PaymentDuesReq dummy) headers = defaultMakeRequestWithoutLogs GET (EP.paymentDues dummy) headers reqBody Nothing
- encodeRequest req = standardEncode req
+ makeRequest reqBody@(PaymentDuesReq dummy serviceName) headers = defaultMakeRequestWithoutLogs GET (EP.paymentDues dummy serviceName) headers reqBody Nothing
+ encodeRequest req = encode req
 
 derive instance genericPaymentDuesReq :: Generic PaymentDuesReq _
-instance standardEncodePaymentDuesReq :: StandardEncode PaymentDuesReq where standardEncode (PaymentDuesReq dummy ) = standardEncode dummy
+instance standardEncodePaymentDuesReq :: StandardEncode PaymentDuesReq where standardEncode _ = standardEncode {}
 instance showPaymentDuesReq :: Show PaymentDuesReq where show = genericShow
 instance decodePaymentDuesReq :: Decode PaymentDuesReq where decode = defaultDecode
 instance encodePaymentDuesReq :: Encode PaymentDuesReq where encode = defaultEncode
@@ -2920,15 +2942,15 @@ instance encodeDuesEntity :: Encode DuesEntity where encode = defaultEncode
 
 --------------------------------------------- ResumeMandate --------------------------------------------------
 
-data ResumeMandateReq = ResumeMandateReq String
+data ResumeMandateReq = ResumeMandateReq String (Maybe String)
 
 
 instance makeResumeMandateReq :: RestEndpoint ResumeMandateReq where
- makeRequest reqBody@(ResumeMandateReq driverId) headers = defaultMakeRequestWithoutLogs PUT (EP.resumeMandate driverId) headers reqBody Nothing
- encodeRequest req = standardEncode req
+ makeRequest reqBody@(ResumeMandateReq driverId serviceName) headers = defaultMakeRequestWithoutLogs PUT (EP.resumeMandate driverId serviceName) headers reqBody Nothing
+ encodeRequest req = encode req
 
 derive instance genericResumeMandateReq :: Generic ResumeMandateReq _
-instance standardEncodeResumeMandateReq :: StandardEncode ResumeMandateReq where standardEncode (ResumeMandateReq dummy) = standardEncode dummy
+instance standardEncodeResumeMandateReq :: StandardEncode ResumeMandateReq where standardEncode _ = standardEncode {}
 instance showResumeMandateReq :: Show ResumeMandateReq where show = genericShow
 instance decodeResumeMandateReq :: Decode ResumeMandateReq where decode = defaultDecode
 instance encodeResumeMandateReq :: Encode ResumeMandateReq where encode = defaultEncode
@@ -2937,15 +2959,15 @@ instance encodeResumeMandateReq :: Encode ResumeMandateReq where encode = defaul
 
 --------------------------------------------- SuspendMandate --------------------------------------------------
 
-data SuspendMandateReq = SuspendMandateReq String
+data SuspendMandateReq = SuspendMandateReq String (Maybe String)
 
 
 instance makeSuspendMandateReq :: RestEndpoint SuspendMandateReq where
- makeRequest reqBody@(SuspendMandateReq id) headers = defaultMakeRequestWithoutLogs PUT (EP.suspendMandate id) headers reqBody Nothing
- encodeRequest req = standardEncode req
+ makeRequest reqBody@(SuspendMandateReq id serviceName) headers = defaultMakeRequestWithoutLogs PUT (EP.suspendMandate id serviceName) headers reqBody Nothing
+ encodeRequest req = encode req
 
 derive instance genericSuspendMandateReq :: Generic SuspendMandateReq _
-instance standardEncodeSuspendMandateReq :: StandardEncode SuspendMandateReq where standardEncode (SuspendMandateReq dummy) = standardEncode dummy
+instance standardEncodeSuspendMandateReq :: StandardEncode SuspendMandateReq where standardEncode _ = standardEncode {}
 instance showSuspendMandateReq :: Show SuspendMandateReq where show = genericShow
 instance decodeSuspendMandateReq :: Decode SuspendMandateReq where decode = defaultDecode
 instance encodeSuspendMandateReq :: Encode SuspendMandateReq where encode = defaultEncode
@@ -2953,22 +2975,21 @@ instance encodeSuspendMandateReq :: Encode SuspendMandateReq where encode = defa
 
 ------------------------------------------ SelectPlan ------------------------------------------------------
 
-newtype SelectPlanReq = SelectPlanReq String
+data SelectPlanReq = SelectPlanReq String (Maybe String)
 
 
 instance makeSelectPlanReq :: RestEndpoint SelectPlanReq where
-    makeRequest reqBody@(SelectPlanReq id) headers = defaultMakeRequestWithoutLogs PUT (EP.selectPlan id) headers reqBody Nothing
-    encodeRequest req = standardEncode req
+    makeRequest reqBody@(SelectPlanReq id serviceName) headers = defaultMakeRequestWithoutLogs PUT (EP.selectPlan id serviceName) headers reqBody Nothing
+    encodeRequest req = encode req
 
 derive instance genericSelectPlanReq :: Generic SelectPlanReq _
-derive instance newtypeSelectPlanReq :: Newtype SelectPlanReq _
-instance standardEncodeSelectPlanReq :: StandardEncode SelectPlanReq where standardEncode (SelectPlanReq body) = standardEncode body
+instance standardEncodeSelectPlanReq :: StandardEncode SelectPlanReq where standardEncode _ = standardEncode {}
 instance showSelectPlanReq :: Show SelectPlanReq where show = genericShow
 instance decodeSelectPlanReq :: Decode SelectPlanReq  where decode = defaultDecode
 instance encodeSelectPlanReq :: Encode SelectPlanReq where encode = defaultEncode
 
 ---------------------------------------------- CurrentPlanAPI ---------------------------------------------------
-data GetCurrentPlanReq = GetCurrentPlanReq String
+data GetCurrentPlanReq = GetCurrentPlanReq String (Maybe String)
 
 newtype GetCurrentPlanResp = GetCurrentPlanResp {
   currentPlanDetails :: Maybe PlanEntity,
@@ -2976,9 +2997,11 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean,
+  isEligibleForCharge :: Maybe Boolean,
   lastPaymentType :: Maybe LastPaymentType,
   askForPlanSwitchByCity :: Maybe Boolean,
-  askForPlanSwitchByVehicle :: Maybe Boolean
+  askForPlanSwitchByVehicle :: Maybe Boolean,
+  safetyPlusData :: Maybe SafetyPlusData
 }
 
 newtype MandateData = MandateData {
@@ -2997,12 +3020,22 @@ newtype BankError = BankError {
   amount :: Number
 }
 
+newtype SafetyPlusData = SafetyPlusData
+  { safetyPlusTrips :: Number,
+    safetyPlusEarnings :: PriceAPIEntity
+  }
+
+newtype PriceAPIEntity =  PriceAPIEntity
+  { amount :: Number,
+    currency :: String
+  }
+
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq where
- makeRequest reqBody@(GetCurrentPlanReq driverId) headers = defaultMakeRequestWithoutLogs GET (EP.getCurrentPlan driverId) headers reqBody Nothing
- encodeRequest req = standardEncode req
+ makeRequest reqBody@(GetCurrentPlanReq driverId serviceName) headers = defaultMakeRequestWithoutLogs GET (EP.getCurrentPlan driverId serviceName) headers reqBody Nothing
+ encodeRequest req = encode req
 
 derive instance genericGetCurrentPlanReq :: Generic GetCurrentPlanReq _
-instance standardEncodeGetCurrentPlanReq :: StandardEncode GetCurrentPlanReq where standardEncode (GetCurrentPlanReq dummy ) = standardEncode dummy
+instance standardEncodeGetCurrentPlanReq :: StandardEncode GetCurrentPlanReq where standardEncode _ = standardEncode {}
 instance showGetCurrentPlanReq :: Show GetCurrentPlanReq where show = genericShow
 instance decodeGetCurrentPlanReq :: Decode GetCurrentPlanReq where decode = defaultDecode
 instance encodeGetCurrentPlanReq :: Encode GetCurrentPlanReq where encode = defaultEncode
@@ -3027,6 +3060,20 @@ instance standardEncodeBankError :: StandardEncode BankError where standardEncod
 instance showBankError :: Show BankError where show = genericShow
 instance decodeBankError :: Decode BankError where decode = defaultDecode
 instance encodeBankError :: Encode BankError where encode = defaultEncode
+
+derive instance genericSafetyPlusData :: Generic SafetyPlusData _
+derive instance newtypeSafetyPlusData:: Newtype SafetyPlusData _
+instance standardEncodeSafetyPlusData :: StandardEncode SafetyPlusData where standardEncode (SafetyPlusData res) = standardEncode res
+instance showSafetyPlusData :: Show SafetyPlusData where show = genericShow
+instance decodeSafetyPlusData :: Decode SafetyPlusData where decode = defaultDecode
+instance encodeSafetyPlusData :: Encode SafetyPlusData where encode = defaultEncode
+
+derive instance genericPriceAPIEntity :: Generic PriceAPIEntity _
+derive instance newtypePriceAPIEntity:: Newtype PriceAPIEntity _
+instance standardEncodePriceAPIEntity :: StandardEncode PriceAPIEntity where standardEncode (PriceAPIEntity res) = standardEncode res
+instance showPriceAPIEntity :: Show PriceAPIEntity where show = genericShow
+instance decodePriceAPIEntity :: Decode PriceAPIEntity where decode = defaultDecode
+instance encodePriceAPIEntity :: Encode PriceAPIEntity where encode = defaultEncode
 
 ---------------------------------------------- KioskLocations ---------------------------------------------------
 
@@ -3143,7 +3190,7 @@ instance standardEncodeLastPaymentType :: StandardEncode LastPaymentType where s
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 
-data HistoryEntityV2Req = HistoryEntityV2Req String String String
+data HistoryEntityV2Req = HistoryEntityV2Req String String String String
 
 newtype HistoryEntityV2Resp = HistoryEntityV2Resp {
     autoPayInvoices :: Array AutoPayInvoiceHistory,
@@ -3173,7 +3220,7 @@ newtype ManualInvoiceHistory = ManualInvoiceHistory {
 }
 
 instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req where
-    makeRequest reqBody@(HistoryEntityV2Req limit offset historyType) headers = defaultMakeRequestWithoutLogs GET (EP.paymentHistoryListV2 limit offset historyType) headers reqBody Nothing
+    makeRequest reqBody@(HistoryEntityV2Req limit offset historyType serviceName) headers = defaultMakeRequestWithoutLogs GET (EP.paymentHistoryListV2 limit offset historyType (Just serviceName)) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 
@@ -3292,7 +3339,7 @@ instance standardEncodeInvoiceStatus :: StandardEncode InvoiceStatus
     standardEncode _ = standardEncode {}
 -----------------------------------------------------------------------------------------------------------------------------------------------
 
-newtype ClearDuesReq = ClearDuesReq String
+data ClearDuesReq = ClearDuesReq String String
 
 newtype ClearDuesResp = ClearDuesResp {
   orderResp :: CreateOrderRes,
@@ -3300,7 +3347,7 @@ newtype ClearDuesResp = ClearDuesResp {
 }
 
 instance makeClearDuesReq :: RestEndpoint ClearDuesReq where
-    makeRequest reqBody@(ClearDuesReq id) headers = defaultMakeRequestWithoutLogs GET (EP.cleardues id) headers reqBody Nothing
+    makeRequest reqBody@(ClearDuesReq id serviceName) headers = defaultMakeRequestWithoutLogs GET (EP.cleardues id (Just serviceName)) headers reqBody Nothing
     encodeRequest req = standardEncode req
 
 

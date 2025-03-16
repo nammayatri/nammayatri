@@ -185,3 +185,9 @@ type CancellationThreshold = {
   showBanner :: Boolean,
   percentage :: Number
 }
+
+type SafetyPlusConfigs = {
+ isSafetyPlusEnabled :: Boolean,
+ safetyPlusPopUpCounter :: Number,
+ contactNumber :: String
+}

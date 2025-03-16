@@ -77,7 +77,8 @@ type Config
     , hasParkingCharges :: Boolean
     , smartTipSuggestion :: Maybe Int
     , specialLocationTag :: Maybe String
-    , smartTipReason :: Maybe String 
+    , smartTipReason :: Maybe String
+    , safetyPlusCharges :: Int
     }
 
 data SearchResultType = QUOTES FareProductType | ESTIMATES
@@ -155,4 +156,5 @@ config =
   , specialLocationTag : Nothing
   , smartTipSuggestion: Nothing
   , smartTipReason : Nothing
+  , safetyPlusCharges : 0
   }

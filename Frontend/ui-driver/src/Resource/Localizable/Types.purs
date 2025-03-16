@@ -1819,3 +1819,17 @@ data STR = LETS_GET_STARTED
         | NAMMA_METER
         | OUT_OF_RIDES String String
         | SUSPENDED_TILL String String
+        | RIDE_PLANS
+        | DASHCAM
+        | DASHCAM_BENEFITS
+        | DASHCAM_BENEFITS_1
+        | DASHCAM_BENEFITS_2
+        | DASHCAM_BENEFITS_3
+        | PAY_TO_JOIN_THIS_RENTAL_PLAN String
+        | MY_SAFETY_PLUS
+        | ONLINE_CAPS
+        | CAMERA_STATUS
+        | DASHCAM_REGISTRATION
+        | INSTALLATION_PENDING_PARA
+        | TNCDASHCAM
+        | TERMS_AND_CONDITIONS_FULL

@@ -506,14 +506,15 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> Maybe DeliveryDetails -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled deliveryDetails = DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> Maybe DeliveryDetails -> Boolean -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled deliveryDetails preferSafetyPlus = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
       "autoAssignEnabledV2": isAutoAssigned,
       "otherSelectedEstimates": otherSelectedEstimates,
       "isAdvancedBookingEnabled": isAdvancedBookingEnabled,
-      "deliveryDetails": deliveryDetails
+      "deliveryDetails": deliveryDetails,
+      "preferSafetyPlus" : preferSafetyPlus
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------

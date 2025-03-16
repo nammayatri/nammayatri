@@ -251,7 +251,8 @@ shimmerData i = {
   itemRideType : toPropValue "ONE_WAY",
   rideTypeVisibility : toPropValue "gone",
   rideTypeBackground : toPropValue "#FFFFFF",
-  cornerRadius : toPropValue "0"
+  cornerRadius : toPropValue "0",
+  isSafetyPlus : toPropValue "gone"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> RideSelectionScreenState ->  Flow GlobalState Unit

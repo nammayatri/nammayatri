@@ -50,6 +50,7 @@
     <string name="please_start_moving_towards_the_pickup_location">कृपया पिकअप स्थान की ओर बढ़ना शुरू करें</string>
     <string name="quick_chats">त्वरित चैट:</string>
     <string name="assistance_required">सहायता आवश्यक है</string>
+    <string name = "safety_plus" > सेफ्टीप्लस (₹{#amount#})</string>
     <string name="tip">टिप</string>
     <string name="driver_receipt_downloaded">ड्राइवर रसीद डाउनलोड हो गई!!!</string>
     <string name="driver_receipt_for_your_ride_is_downloaded">आपकी सवारी के लिए ड्राइवर रसीद डाउनलोड हो गई है!!!</string>

@@ -49,6 +49,7 @@ instance showAction :: Show Action where
   show (PersonAddress var1) = "PersonAddress_" <> show var1
   show (PersonInstruction var1) = "PersonInstruction_" <> show var1
   show (CheckBoxClick) = "CheckBoxClick"
+  show (PreferSafetyPlus var) = "PreferSafetyPlus_"<> show var
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -67,6 +68,7 @@ data Action = OnButton1Click
             | PersonAddress PrimaryEditTextController.Action
             | PersonInstruction PrimaryEditTextController.Action
             | CheckBoxClick
+            | PreferSafetyPlus Boolean
 
 type Config = {
     primaryText :: TextConfig,
@@ -122,7 +124,11 @@ type Config = {
     upiDetailConfig :: UPIDetailConfig,
     deliveryDetailsConfig :: DeliveryDetailsConfig,
     externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
-    voiceToTextConfig :: VoiceToTextConfig
+    voiceToTextConfig :: VoiceToTextConfig,
+    preferSafetyPlus :: Boolean,
+    addSafetyPlusCheckbox :: Boolean,
+    safetyPlusCheckboxText :: String,
+    safetyPlusCharges :: Int
 }
 
 
@@ -761,6 +767,10 @@ config = {
   , externalHeader : Mb.Nothing
   , completeProfileLayout : Mb.Nothing
   , voiceToTextConfig : dummyVoiceToTextConfig 
+  , preferSafetyPlus : false
+  , addSafetyPlusCheckbox : false
+  , safetyPlusCharges : 0
+  , safetyPlusCheckboxText : ""
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

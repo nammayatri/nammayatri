@@ -57,6 +57,7 @@ data Action = NoAction
             | EditingLocation LocationType
             | GoToDriverProfile
             | ShowDeliveryImageAndOtp
+            | SafetyPlusInfoTag
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -139,4 +140,5 @@ type DriverInfoCardData =
   , estimatedTimeToReachDestination :: Maybe String
   , requestorPartyRoles :: Maybe (Array String)
   , isAirConditioned :: Maybe Boolean
+  , isSafetyPlus :: Boolean
   }

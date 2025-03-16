@@ -92,6 +92,22 @@
                                 android:textColor="@color/Black800"
                                 android:textSize="14dp" />
 
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center"
+                                >
+
+                            <ImageView
+                                android:id="@+id/safetyPlus1"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:src="@drawable/ny_ic_safety_plus_blue"
+                                android:visibility="gone"
+                                android:layout_marginRight="4dp" />
+
                             <TextView
                                 android:id="@+id/indicatorText1"
                                 android:layout_width="wrap_content"
@@ -101,6 +117,8 @@
                                 android:text="₹120"
                                 android:textColor="@color/Black800"
                                 android:textSize="20dp" />
+
+                            </LinearLayout>
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_1"
@@ -188,7 +206,20 @@
                                 android:textColor="@color/Black800"
                                 android:textSize="14dp" />
 
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center"
+                                >
 
+                                <ImageView
+                                    android:id="@+id/safetyPlus2"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_safety_plus_blue"
+                                    android:visibility="gone"
+                                    android:layout_marginRight="4dp" />
                             <TextView
                                 android:id="@+id/indicatorText2"
                                 android:layout_width="wrap_content"
@@ -198,6 +229,7 @@
                                 android:text="₹40"
                                 android:textColor="@color/Black800"
                                 android:textSize="20dp" />
+                            </LinearLayout>
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_2"
@@ -282,8 +314,20 @@
                                 android:text="Ac"
                                 android:textColor="@color/Black800"
                                 android:textSize="14dp" />
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center"
+                                >
 
-
+                                <ImageView
+                                    android:id="@+id/safetyPlus3"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_safety_plus_blue"
+                                    android:visibility="gone"
+                                    android:layout_marginRight="4dp" />
                             <TextView
                                 android:id="@+id/indicatorText3"
                                 android:layout_width="wrap_content"
@@ -293,6 +337,7 @@
                                 android:text="₹160"
                                 android:textColor="@color/Black800"
                                 android:textSize="20dp" />
+                            </LinearLayout>
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/progress_indicator_3"

@@ -64,6 +64,7 @@ import Presto.Core.Types.Language.Flow (callAPI, APIResult(..), Flow)
 import Types.App (defaultGlobalState, GlobalState(..))
 import Control.Monad.Except.Trans (lift)
 import Components.RideCompletedCard as RideCompletedCard
+import Components.DriverInfoCard as DriverInfoCard
 
 screen :: RiderRideCompletedScreenState -> Screen Action RiderRideCompletedScreenState ScreenOutput
 screen initialState =
@@ -368,6 +369,7 @@ bottomCardView state push =
   , alignParentBottom "true,-1"
   , background Color.white900
   ] [
+      safetyPlusInfo state push, 
       if state.showRentalRideDetails then rentalTripDetailsViewWrapper state push else customerIssueView push customerIssue state,
       rideCustomerExperienceView state push
     ]
@@ -1407,4 +1409,40 @@ audioRecorder state push =
           ]
         ]
         ]
+    ]
+------------------------------------------------
+safetyPlusInfo :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+safetyPlusInfo state push =
+  let tagConfig = DriverInfoCard.safetyPlusTagConfig
+  in
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background tagConfig.backgroundColor
+    , cornerRadii $ Corners 8.0 true true true true
+    , gravity CENTER
+    , orientation HORIZONTAL
+    , padding (PaddingVertical 6 6)
+    , margin $ MarginBottom 6
+    , visibility $ boolToVisibility $ state.rideRatingState.isSafetyPlus
+    , clickable $ isJust tagConfig.infoPopUpConfig
+    , onClick push $ const $ SafetyPlusInfoTag
+    ][ textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , textSize FontSize.a_14
+      , accessibility ENABLE
+      , accessibilityHint "Safety Plus Ride"
+      , textFromHtml tagConfig.text
+      , color Color.white900
+      ]
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , textSize FontSize.a_12
+      , accessibilityHint "Safety Plus Ride"
+      , textFromHtml $ "  |  " <> "<u>" <> getString LEARN_MORE <> "</u>"
+      , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
+      , color Color.white900
+      ]
     ]

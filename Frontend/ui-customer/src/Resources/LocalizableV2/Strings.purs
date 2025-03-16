@@ -1828,5 +1828,18 @@ getProxy str =
     NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
     AMBULANCE_ -> \a -> a @~ ambulance_
+    DASHCAM_LEARN_MORE_POP_UP -> \a -> a @~ dashcam_learn_more_pop_up
+    DASHCAM_LEARN_MORE_BULLET_1 -> \a -> a @~ dashcam_learn_more_bullet_1
+    DASHCAM_LEARN_MORE_BULLET_2 -> \a -> a @~ dashcam_learn_more_bullet_2
+    DASHCAM_INTRO_POP_UP_TITLE -> \a -> a @~ dashcam_intro_pop_up_title
+    DASHCAM_INTRO_POP_UP_BULLET_1 -> \a ->  a @~ dashcam_intro_pop_up_bullet_1
+    DASHCAM_INTRO_POP_UP_BULLET_2 -> \a ->  a @~ dashcam_intro_pop_up_bullet_2
+    HELP_AND_SUPPORT_SAFETY_PLUS -> \a -> a @~ help_and_support_safety_plus
+    SECURED_WITH_SAFETY_PLUS -> \a -> a @~ secured_with_safety_plus
+    CALL_CAUTIO_SUPPORT -> \a -> a @~ call_cautio_support
+    REACH_OUT_TO_CAUTIO -> \a -> a @~ reach_out_to_cautio
+    ENABLE_CAUTIO -> \a -> a @~ enable_cautio
+    SAFETY_PLUS_BY -> \a -> a @~ safety_plus_by
+    PREFER_SAFTEY_PLUS_CAUTIO -> \a -> a @~ prefer_saftey_plus_cautio
 
 

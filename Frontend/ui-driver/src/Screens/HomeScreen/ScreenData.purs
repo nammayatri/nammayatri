@@ -310,6 +310,7 @@ initData =
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
       , showBlockerPopup : false
+      , safteyPlusInfoPopup : false
       }
   }
 

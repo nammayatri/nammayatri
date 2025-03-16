@@ -61,7 +61,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.LocalizableV2.Strings (getEN)
-import Screens.Types (Stage(..), ZoneType(..), SheetState(..), NavigationMode(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..), NavigationMode(..), SafetyPlusTagConfig(..))
 import Storage (KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color
@@ -694,7 +694,8 @@ navigateView push state =
 
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
-  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+  let tagConfig =  if state.data.isSafetyPlus then safetyPlusTagConfig else specialZoneTagConfig state.props.zoneType.priorityTag
+      bgColor = if true then tagConfig.backgroundColor else Color.grey900
       rideStarted = not $ rideNotStarted state
       currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
       brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
@@ -713,7 +714,7 @@ driverInfoView push state =
          [ orientation VERTICAL
          , height WRAP_CONTENT
          , width MATCH_PARENT
-         , background if state.props.zoneType.priorityTag /= NOZONE then tagConfig.backgroundColor else Color.grey900
+         , background if state.props.zoneType.priorityTag /= NOZONE then tagConfig.backgroundColor else bgColor
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
@@ -722,42 +723,7 @@ driverInfoView push state =
               , width MATCH_PARENT
               , orientation VERTICAL
               , id $ getNewIDWithTag "driverInfoView"
-              ][linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , background tagConfig.backgroundColor
-                , cornerRadii $ Corners 24.0 true true false false
-                , gravity CENTER
-                , orientation HORIZONTAL
-                , padding (PaddingVertical 6 6)
-                , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType.priorityTag) [ METRO, SPECIAL_PICKUP ]
-                , clickable $ isJust tagConfig.infoPopUpConfig
-                , onClick push $ const $ SpecialZoneInfoTag
-                ][imageView
-                  [ width (V 15)
-                  , height (V 15)
-                  , margin (MarginRight 6)
-                  , accessibility DISABLE
-                  , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
-                  ]
-                , textView
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , textSize FontSize.a_14
-                  , accessibility if state.props.zoneType.priorityTag == METRO then ENABLE else DISABLE
-                  , accessibilityHint "Metro Ride"
-                  , text tagConfig.text
-                  , color Color.white900
-                  , accessibility DISABLE
-                  ]
-                , imageView
-                  [ width (V 18)
-                  , height (V 18)
-                  , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
-                  , margin (MarginLeft 6)
-                  , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_white_info"
-                  ]
-                ]
+              ][  if state.data.isSafetyPlus then safetyPlusView tagConfig else specialZoneView tagConfig
               , linearLayout
                 [ orientation VERTICAL
                 , height WRAP_CONTENT
@@ -806,6 +772,74 @@ driverInfoView push state =
          ]
       ]
   ]
+  where
+    specialZoneView tagConfig = 
+      linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background tagConfig.backgroundColor
+        , cornerRadii $ Corners 24.0 true true false false
+        , gravity CENTER
+        , orientation HORIZONTAL
+        , padding (PaddingVertical 6 6)
+        , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType.priorityTag) [ METRO, SPECIAL_PICKUP ]
+        , clickable $ isJust tagConfig.infoPopUpConfig
+        , onClick push $ const $ SpecialZoneInfoTag
+        ][imageView
+          [ width (V 15)
+          , height (V 15)
+          , margin (MarginRight 6)
+          , accessibility DISABLE
+          , imageWithFallback $ fetchImage COMMON_ASSET tagConfig.icon
+          ]
+        , textView
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , textSize FontSize.a_14
+          , accessibility if state.props.zoneType.priorityTag == METRO then ENABLE else DISABLE
+          , accessibilityHint "Metro Ride"
+          , text tagConfig.text
+          , color Color.white900
+          , accessibility DISABLE
+          ]
+        , imageView
+          [ width (V 18)
+          , height (V 18)
+          , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
+          , margin (MarginLeft 6)
+          , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_white_info"
+          ]
+        ]
+    safetyPlusView tagConfig = 
+      linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background tagConfig.backgroundColor
+        , cornerRadii $ Corners 24.0 true true false false
+        , gravity CENTER
+        , orientation HORIZONTAL
+        , padding (PaddingVertical 6 6)
+        , visibility $ boolToVisibility $ state.data.isSafetyPlus
+        , clickable $ isJust tagConfig.infoPopUpConfig
+        ][ textView
+          ([ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , accessibility ENABLE
+          , accessibilityHint "Safety Plus Ride"
+          , textFromHtml tagConfig.text
+          , color Color.white900
+          ] <> FontStyle.body1 TypoGraphy)
+        , textView
+          ([ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , accessibilityHint "Safety Plus Ride"
+          , textFromHtml $ "  |  " <> "<u>" <> getString LEARN_MORE <> "</u>"
+          , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
+          , color Color.white900
+          , onClick push $ const $ SafetyPlusInfoTag
+          , accessibility DISABLE
+          ] <> FontStyle.body9 TypoGraphy)
+        ]
 
 getCarouselConfig ∷ PrestoList.ListItem → DriverInfoCardState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
 getCarouselConfig view state = {
@@ -1822,3 +1856,15 @@ isOtpRideFlow state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || 
 
 showCancelRideCTA :: DriverInfoCardState -> Boolean
 showCancelRideCTA state = rideNotStarted state && HU.isDeliveryInitiator state.data.requestorPartyRoles
+
+safetyPlusTagConfig :: SafetyPlusTagConfig
+safetyPlusTagConfig =
+      { icon : "ny_ic_cautio_driver_info_tag"
+      , text : getString SAFETY_PLUS_BY
+      , infoPopUpConfig : Just $ { title : getString DASHCAM_LEARN_MORE_POP_UP
+                                 , primaryText : getString WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE
+                                 , secondaryText : getString THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE
+                                 , primaryButtonText : getString GOT_IT
+                                 , icon : "ny_ic_t_n_c" }
+      , backgroundColor : "#0026A3"
+      }

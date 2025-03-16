@@ -1837,4 +1837,18 @@ getTa =
     , bus_type: "பஸ் வகை"
     , namma_meter: "நம்ம மீட்டர்"
     , package: "பொதி"
+    , dashcam : "டாஷ்காம்"
+    , ride_plans : "பயணத் திட்டங்கள்"
+    , dashcam_benefits : "டாஷ்கேம் பயன்கள்"
+    , dashcam_benefits_1 : "ஒவ்வொரு SafetyPLUS பயணத்திற்கு கூடுதல் ₹5 பெறுக"
+    , dashcam_benefits_2 : "24/7 cabin இல் மற்றும் 270° முன்னணி காட்சி பதிவு"
+    , dashcam_benefits_3 : "பாதை மற்றும் விபத்து பதிவுகள்"
+    , pay_n_to_join_this_rental_plan : (\amount -> "இன்ஸ்டாலேஷன் பதிவு செய்ய ₹" <> amount)
+    , my_safety_plus : "என் SafetyPLUS"
+    , _online_ : "ஆன்லைன்"
+    , camera_status : "கேமரா நிலை"
+    , dashcam_registered : "டாஷ்கேம் பதிவு செய்யப்பட்டது!"
+    , installation_pending_para : "Cautio உங்கள் வாகனத்தில் டாஷ்கேம் நிறுவ தயாராக உள்ளது. உங்கள் டாஷ்கேம் தயாராக இருந்தால் உங்களை தொடர்புகொள்வர்"
+    , tncDashcam : "நான் என் நம்மா யாத்திரி தரவை Cautio உடன் பகிர்வதற்கு ஒப்புக்கொள்கிறேன்"
+    , terms_and_conditions_full: "விவரங்கள் மற்றும் நிபந்தனைகள்"
     }

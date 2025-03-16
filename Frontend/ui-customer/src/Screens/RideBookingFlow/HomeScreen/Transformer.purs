@@ -41,10 +41,10 @@ import Data.Either (Either(..))
 import Data.Foldable (maximum)
 import Data.Function.Uncurried (runFn1)
 import Data.Function.Uncurried (runFn2)
-import Data.Int (toNumber, round, fromString)
+import Data.Int (toNumber, round, fromString, fromNumber)
 import Data.Number as DN
 import Data.Lens ((^.), view)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null, toLower)
 import Data.Tuple as DT
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -102,6 +102,8 @@ import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
 import SuggestionUtils
 import Engineering.Helpers.Utils (getCityFromString)
+import Common.Types.App as CTA
+import Debug
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -264,6 +266,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , senderDetails : senderDetails
       , receiverDetails : receiverDetails
       , estimatedTimeToReachDestination : prevState.estimatedTimeToReachDestination
+      , isSafetyPlus : fromMaybe false resp.isSafetyPlus
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -647,6 +650,9 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       extractFare f =  estimate.totalFareRange >>= \(FareRange fareRange) -> Just (f fareRange)
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
       selectedServices = if estimate.serviceTierName == Just "Book Any" then intersection allSelectedServices availableServices else []
+      maxPrice' = extractFare _.maxFare
+      minPrice' = extractFare _.minFare
+      safetyPlusCharges' = getSafetyPlusCharges (EstimateAPIEntity estimate)
       availableServices =
         if estimate.serviceTierName == Just "Book Any" then
           foldl
@@ -680,8 +686,8 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       , providerName = fromMaybe "" estimate.providerName
       , providerId = fromMaybe "" estimate.providerId
       , providerType = maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
-      , maxPrice = extractFare _.maxFare
-      , minPrice = extractFare _.minFare
+      , maxPrice = maxPrice'
+      , minPrice = minPrice'
       , priceShimmer = false
       , fareInfoDescription = breakupConfig.fareInfo
       , isNightShift = breakupConfig.isNightShift
@@ -697,6 +703,7 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       , specialLocationTag = estimate.specialLocationTag
       , smartTipReason = estimate.smartTipReason
       , smartTipSuggestion = estimate.smartTipSuggestion
+      , safetyPlusCharges = safetyPlusCharges'
       }
     
     where 
@@ -705,6 +712,13 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
 
       checkFareBreakupHasKey :: EstimateAPIEntity -> String -> Boolean
       checkFareBreakupHasKey (EstimateAPIEntity estimate) key = maybe false ( DA.any (\ (CT.EstimateFares fare) -> fare.title == key)) estimate.estimateFareBreakup 
+
+      getSafetyPlusCharges :: EstimateAPIEntity -> Int
+      getSafetyPlusCharges esimates = do
+        let fareBreakup' = fromMaybe [] estimate.estimateFareBreakup
+            mbSafetyPlusFare = find (\(CTA.EstimateFares a) -> a.title == "SAFETY_PLUS_CHARGES") fareBreakup'
+            safetyPlusCharges = maybe 0.0 (\(CTA.EstimateFares f) -> f.priceWithCurrency.amount) mbSafetyPlusFare
+        fromMaybe 0 $ fromNumber safetyPlusCharges
 
 getEstimateIdFromSelectedServices :: Array ChooseVehicle.Config -> ChooseVehicle.Config -> Array String
 getEstimateIdFromSelectedServices estimates config =
@@ -806,6 +820,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       startTime = fromMaybe "" rideDetails.rideStartTime      
       dropLocation = if rideType == FPT.RENTAL then _stopLocation else _toLocation
       rideStatus = fromMaybe "" (ride.rideList !! 0 <#> \(RideAPIEntity ride) -> ride.status)
+      _ = spy "trip details safety plusd" (show  ride.isSafetyPlus)
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -853,6 +868,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       },
       vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
     }
+    , props{safetyPlusHelp = fromMaybe false ride.isSafetyPlus}
   }
 
 

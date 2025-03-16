@@ -1837,4 +1837,18 @@ getBn =
     , bus_type: "বাসের ধরন"
     , namma_meter: "নাম্মা মিটার"
     , package: "প্যাকেজ"
+    , dashcam : "ড্যাশক্যাম"
+    , ride_plans : "রাইড পরিকল্পনা"
+    , dashcam_benefits : "ড্যাশক্যাম সুবিধা"
+    , dashcam_benefits_1 : "প্রতিটি SafetyPLUS রাইডে অতিরিক্ত ₹5 পান"
+    , dashcam_benefits_2 : "২৪/৭ কেবিনে এবং ২৭০° সামনে দৃশ্য রেকর্ডিং"
+    , dashcam_benefits_3 : "ট্রাফিক এবং দুর্ঘটনার রেকর্ডিং"
+    , pay_n_to_join_this_rental_plan : (\amount -> "ইনস্টলেশনের জন্য ₹" <> amount)
+    , my_safety_plus : "আমার SafetyPLUS"
+    , _online_ : "অনলাইন"
+    , camera_status : "ক্যামেরা স্ট্যাটাস"
+    , dashcam_registered : "ড্যাশক্যাম নিবন্ধিত!"
+    , installation_pending_para : "Cautio আপনার গাড়িতে ড্যাশক্যাম ইনস্টল করার প্রস্তুতি নিচ্ছে। যখন আপনার ড্যাশক্যাম প্রস্তুত হবে, আমরা আপনাকে যোগাযোগ করব।"
+    , tncDashcam : "আমি আমার Namma Yatri ডেটা Cautio-এর সাথে শেয়ার করতে রাজি আছি"
+    , terms_and_conditions_full: "শর্তাবলী"
     }

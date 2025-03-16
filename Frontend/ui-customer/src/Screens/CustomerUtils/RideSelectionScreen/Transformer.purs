@@ -109,7 +109,8 @@ myRideListTransformerProp listRes selectedCategory = mapMaybe transformRide list
                  itemRideType : toPropValue $ (show rideType),
                  rideTypeVisibility : toPropValue $ "gone",
                  rideTypeBackground : toPropValue $ Color.white900,
-                 cornerRadius : toPropValue $ "0"
+                 cornerRadius : toPropValue $ "0",
+                 isSafetyPlus : toPropValue $ if  (fromMaybe false ride.isSafetyPlus) then "gone" else "visible"
                }
           )
         else Nothing
@@ -220,6 +221,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               , rideScheduledTime : fromMaybe "" ride.rideScheduledTime
               , rideCreatedAt : ride.createdAt
               , rideStatus : rideStatus
+              , isSafetyPlus : fromMaybe false ride.isSafetyPlus
               }
         else Nothing
 

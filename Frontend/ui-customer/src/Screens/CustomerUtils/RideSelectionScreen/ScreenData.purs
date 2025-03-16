@@ -177,4 +177,5 @@ dummyIndividualCard = {
   , isAirConditioned : Nothing
   , rideCreatedAt : ""
   , rideStatus : ""
+  , isSafetyPlus : false
 }

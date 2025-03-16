@@ -15,61 +15,62 @@ JB
 -}
 module Components.PopUpModal.View where
 
-import Prelude 
-import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView)
-import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
-import PrestoDOM.Properties (lineHeight, cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Font.Style as FontStyle
-import Common.Styles.Colors as Color
-import Components.TipsView as TipsView
-import Font.Size as FontSize
-import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
-import Data.String as DS
-import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
-import Language.Strings (getString)
-import Language.Types (STR(..))
+import Debug
+import JBridge
+import Prelude
 import Timers
+
+import Animation (fadeIn) as Anim
 import Animation (fadeIn, translateOutXBackwardAnimY) as Anim
+import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Common.Styles.Colors as Color
+import Common.Styles.Colors as Color
+import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.TipsView as TipsView
+import Components.TipsView as TipsView
+import Constants (languageKey)
 import Control.Monad.Trans.Class (lift)
+import Data.Array ((!!), mapWithIndex, null, length, findIndex)
+import Data.Function.Uncurried (runFn5)
 import Data.Function.Uncurried (runFn5)
 import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.String (replaceAll, Replacement(..), Pattern(..))
+import Data.String (replaceAll, Replacement(..), Pattern(..))
+import Data.String as DS
+import Effect (Effect)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
-import Data.Array ((!!), mapWithIndex, null, length, findIndex)
-import JBridge 
-import Animation (fadeIn) as Anim
-import Data.String (replaceAll, Replacement(..), Pattern(..))
-import Data.Function.Uncurried (runFn5)
-import PrestoDOM.Animation as PrestoAnim
+import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import Engineering.Helpers.Utils (splitIntoEqualParts)
+import Engineering.Helpers.Utils (splitIntoEqualParts)
 import Font.Size as FontSize
+import Font.Size as FontSize
+import Font.Style as FontStyle
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Locale.Utils (getLanguageLocale)
 import Mobility.Prelude (boolToVisibility, noView)
-import Engineering.Helpers.Utils(splitIntoEqualParts)
-import Animation as Anim
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=), not, (<<<), bind, discard, show, pure, map, when, mod)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, rippleColor, lottieAnimationView, frameLayout, maxLines, ellipsize, scrollView)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Prim.Boolean (True)
-import Debug
-import Constants (languageKey)
-import Locale.Utils (getLanguageLocale)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -326,7 +327,7 @@ view push state =
                , margin state.primaryText.prefixImage.margin
                 ]
             , textView $
-                [ text $ state.primaryText.text
+                [ textFromHtml $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
                 , accessibility ENABLE
                 , color $ state.primaryText.color
@@ -422,6 +423,7 @@ view push state =
             ]
             [ PrimaryEditText.view (push <<< ETextController) (state.eTextConfig) ]
         , tipsView push state
+        , safetyPlusView push state
         , case state.layout of
             Just layout -> layout { visibility : VISIBLE }
             Nothing -> textView [ visibility GONE]
@@ -442,6 +444,7 @@ view push state =
                        else weight 1.0
                     , background state.option1.background
                     , height $ state.option1.height
+                    , width $ state.option1.width
                     , cornerRadius 8.0
                     , visibility $ if state.option1.visibility then VISIBLE else GONE
                     , stroke $ "1," <> state.option1.strokeColor
@@ -619,6 +622,88 @@ tipsView push state =
   , width MATCH_PARENT
   , visibility $ boolToVisibility state.isTipPopup
   ][ TipsView.view (push <<< TipsViewActionController) $ tipsViewConfig state ]
+
+safetyPlusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+safetyPlusView push state =
+  linearLayout[
+    height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+  ]
+  [
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ boolToVisibility state.addSafetyPlusCheckbox
+    , orientation HORIZONTAL
+    , padding $ Padding 20 13 20 20
+    ]
+    [ checkBoxViewSafetyPlus push state
+      ,textView
+        ([ textFromHtml state.safetyPlusCheckboxText
+          , color Color.black700
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , padding $ PaddingLeft 8
+          , accessibility ENABLE
+          , accessibilityHint $ replaceAll (Pattern "<br>") (Replacement " ")  state.safetyPlusCheckboxText
+        ] <> FontStyle.body1 LanguageStyle)
+      , imageView
+          [ height (V 18)
+          , width (V 18)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cautio_driver_info_tag"
+        ]
+       ,linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ boolToVisibility state.addSafetyPlusCheckbox
+    , orientation HORIZONTAL
+    , gravity RIGHT
+    ][textView
+        ([ text $ "+₹" <> show state.safetyPlusCharges
+          , color Color.black700
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+        ] <> FontStyle.body1 LanguageStyle)
+    , imageView
+        [  height (V 18)
+          , width (V 18)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+        ]    
+    ]
+    ]
+  ]
+
+
+checkBoxViewSafetyPlus :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+checkBoxViewSafetyPlus push config  =
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , accessibility ENABLE
+    , accessibilityHint $ if config.preferSafetyPlus then "safety plus enabled" else "safety plus disabled"
+    , onClick push $ const $ PreferSafetyPlus (not config.preferSafetyPlus)
+    ][ frameLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT   
+        , accessibility DISABLE   
+        ][ linearLayout
+            [ height (V 18)
+            , width (V 18)
+            , stroke ("1," <> Color.black900)
+            , cornerRadius 2.0
+            ][
+            imageView
+                [ width (V 18)
+                , height (V 18)
+                , accessibility DISABLE
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
+                , visibility if config.preferSafetyPlus then VISIBLE else GONE
+                ]
+            ]
+        ]
+    ]
+
 
 listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 listView push state = 

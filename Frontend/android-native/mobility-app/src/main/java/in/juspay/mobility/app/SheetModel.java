@@ -31,7 +31,9 @@ public class SheetModel {
     private final int tollCharges;
     private final int stops;
 
-    private final Boolean disabilityTag, isFavourite;
+    private final double safetyPlusCharges;
+
+    private final Boolean disabilityTag, isFavourite, isSafetyPlus;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking , roundTrip;
     private double srcLat, srcLng, destLat, destLng;
@@ -80,6 +82,8 @@ public class SheetModel {
                       String notificationSource,
                       Boolean isThirdPartyBooking,
                       Boolean isFavourite,
+                      Boolean isSafetyPlus,
+                      double safetyPlusCharges,
                       double parkingCharge,
                       String renderedAt,
                       int stops,
@@ -140,6 +144,8 @@ public class SheetModel {
         this.renderedAt = renderedAt;
         this.stops = stops;
         this.roundTrip = roundTrip;
+        this.isSafetyPlus = isSafetyPlus;
+        this.safetyPlusCharges = safetyPlusCharges;
     }
 
     public String getRenderedAt(){
@@ -212,6 +218,10 @@ public class SheetModel {
     public Boolean isFavourite() {return isFavourite;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
+
+    public Boolean isSafetyPlus() {return isSafetyPlus;}
+
+    public double getSafetyPlusCharges() {return safetyPlusCharges;}
 
     public Boolean isThirdPartyBooking() {return isThirdPartyBooking;}
 

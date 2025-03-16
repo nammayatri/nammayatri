@@ -249,6 +249,32 @@ window.getMerchantConfig = function () {
       "earnAmountInADay" : 5000,
       "showFeeBreakup" : true
     } 
+    , "subscriptionConfigDashCam" : {
+      "enableBlocking" : false,
+      "completePaymentPopup" : false,
+      "supportNumber" : "08069724949",
+      "enableSubscriptionPopups" : true,
+      "faqLink" : "https://yatrisathi.in/plans/",
+      "optionsMenuItems" : {
+        "viewFaqs" : true,
+        "viewAutopayDetails" : true,
+        "paymentHistory" : true,
+        "kioskLocation" : true
+      },
+      "offerBannerConfig" : {
+        "showDUOfferBanner" : true,
+        "offerBannerValidTill" : "2023-12-01T00:00:00",
+        "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
+        "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
+      },
+      "highDueWarningLimit" : 250.0,
+      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
+      "enableSubscriptionSupportPopup" : true,
+      "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
+      "overlayYoutubeLink" : "https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtu.be/RSKNT3NccPo-*$*-https://youtu.be/RSKNT3NccPo",
+      "earnAmountInADay" : 5000,
+      "showFeeBreakup" : true
+    } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
     , "rideActionModelConfig" : {

@@ -213,6 +213,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
                     rideRequestBundle.getBoolean("isFavourite"),
+                    rideRequestBundle.getBoolean("isSafetyPlus", false),
+                    rideRequestBundle.getInt("safetyPlusCharges", 0),
                     rideRequestBundle.getDouble("parkingCharge"),
                     getCurrTime,
                     stops,
@@ -243,9 +245,11 @@ public class RideRequestActivity extends AppCompatActivity {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
 //            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || model.isFavourite() || model.getRoundTrip()) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || model.isFavourite() || model.getRoundTrip() || model.isSafetyPlus()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
+                holder.safetyPlusTag.setVisibility(model.isSafetyPlus() ? View.VISIBLE : View.GONE);
+                holder.safetyPlusTagText.setText(model.isSafetyPlus() ? holder.safetyPlusTagText.getText().toString().replace("{#amount#}", Double.toString(model.getSafetyPlusCharges())) : "");
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);

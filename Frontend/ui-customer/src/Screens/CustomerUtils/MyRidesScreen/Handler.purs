@@ -50,7 +50,7 @@ myRidesScreen = do
         else App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_SCREEN)
     MyRidesScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)
     GoToTripDetails updatedState -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen → tripDetailsScreen{ data {tripId = (updatedState.data.selectedItem).shortRideId ,source = updatedState.data.selectedItem.source, destination = updatedState.data.selectedItem.destination,date =updatedState.data.selectedItem.date, time = updatedState.data.selectedItem.time, rating = updatedState.data.selectedItem.rating, driverName = updatedState.data.selectedItem.driverName,totalAmount = updatedState.data.selectedItem.totalAmount , selectedItem = updatedState.data.selectedItem}})
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen → tripDetailsScreen{ data {tripId = (updatedState.data.selectedItem).shortRideId ,source = updatedState.data.selectedItem.source, destination = updatedState.data.selectedItem.destination,date =updatedState.data.selectedItem.date, time = updatedState.data.selectedItem.time, rating = updatedState.data.selectedItem.rating, driverName = updatedState.data.selectedItem.driverName,totalAmount = updatedState.data.selectedItem.totalAmount , selectedItem = updatedState.data.selectedItem}, props{safetyPlusHelp = (updatedState.data.selectedItem).isSafetyPlus}})
       App.BackT $ App.BackPoint <$> (pure $ TRIP_DETAILS updatedState)
     LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER_OUTPUT updatedState)
     BookRide -> App.BackT $ App.BackPoint <$> (pure $ BOOK_RIDE )

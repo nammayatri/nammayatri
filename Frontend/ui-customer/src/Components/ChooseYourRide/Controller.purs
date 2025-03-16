@@ -33,6 +33,8 @@ data Action
   | TipBtnClick Int Int (Array Int)
   | AddTip TipViewProps
   | ChangeTip TipViewProps
+  | PreferSafetyPlus Boolean (Array ChooseVehicleController.Config)
+  | OnClickSafetyInfo
 
 
 type Config
@@ -59,6 +61,8 @@ type Config
     , startTimeUTC :: Maybe String
     , returnTimeUTC :: Maybe String
     , roundTrip :: Boolean
+    , addSafetyPlusCheckbox :: Boolean
+    , preferSafetyPlus :: Boolean
     }
 
 type BookAnyProps 
@@ -105,6 +109,8 @@ config =
   , startTimeUTC : Nothing
   , returnTimeUTC : Nothing
   , roundTrip : false
+  , addSafetyPlusCheckbox : false
+  , preferSafetyPlus : false
   }
 
 bookAnyProps :: BookAnyProps

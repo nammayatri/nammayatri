@@ -1837,4 +1837,18 @@ getOd =
     , bus_type: "ବସ୍ ପ୍ରକାର"
     , namma_meter: "ନମ୍ମ ମିଟର୍"
     , package: "ପ୍ୟାକେଜ୍"
+    , dashcam : "ଡ୍ୟାଶକ୍ୟାମ୍"
+    , ride_plans : "ଯାତ୍ରା ଯୋଜନା"
+    , dashcam_benefits : "ଡ୍ୟାଶକ୍ୟାମ୍ ଉପକାର"
+    , dashcam_benefits_1 : "ପ୍ରତି SafetyPLUS ରାଇଡ୍ ରେ ଅଧିକ ₹5 ପାଆନ୍ତୁ"
+    , dashcam_benefits_2 : "24/7 କ୍ୟାବିନ୍ ଓ 270° ଫ୍ରଣ୍ଟ୍ ଭିଉ ରେକର୍ଡିଂ"
+    , dashcam_benefits_3 : "ଟ୍ରାଫିକ୍ ଓ ଦୁର୍ଘଟନା ରେକର୍ଡିଂ"
+    , pay_n_to_join_this_rental_plan : (\amount -> "ଇନ୍ସ୍ଟଲେସନ୍ ପାଇଁ ₹" <> amount)
+    , my_safety_plus : "ମୋ SafetyPLUS"
+    , _online_ : "ଅନଲାଇନ୍"
+    , camera_status : "କ୍ୟାମେରା ସ୍ଥିତି"
+    , dashcam_registered : "ଡ୍ୟାଶକ୍ୟାମ୍ ପାଇଁ ରେଜିସ୍ଟର୍ କରାଯାଇଛି!"
+    , installation_pending_para : "Cautio ଆପଣଙ୍କର ଗାଡିରେ ଡ୍ୟାଶକ୍ୟାମ୍ ଇନ୍ସ୍ଟଲ୍ କରିବା ପାଇଁ ପ୍ରସ୍ତୁତ ହେଉଛି। ଯେତେବେଳେ ଆପଣଙ୍କର ଡ୍ୟାଶକ୍ୟାମ୍ ପ୍ରସ୍ତୁତ ହେବ, ଆମେ ଆପଣଙ୍କୁ ସମ୍ପର୍କ କରିବା।"
+    , tncDashcam : "ମୁଁ ମୋର Namma Yatri ତଥ୍ୟକୁ Cautio ସହିତ ସେୟାର କରିବାକୁ ସମ୍ମତି ଦେଉଛି"
+    , terms_and_conditions_full: "ଶରତ୍ ଓ ନିବନ୍ଧନା"
   }

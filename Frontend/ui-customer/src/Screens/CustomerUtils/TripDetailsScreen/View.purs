@@ -35,6 +35,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getVariantRideType, getCityConfig)
 import Language.Strings (getString)
+import Resources.LocalizableV2.Strings (getStringV2)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility, capitalize)
@@ -96,10 +97,12 @@ view push state =
         , gravity CENTER_VERTICAL
         ][tripDetailsLayout state push (DA.length filteredTopics > 0)
         , reportIssueView state push filteredTopics
+        , safetyPlusView state push
         ]
       ]
     ] 
  ]<> (if state.props.isContactSupportPopUp then [PopUpModal.view (push <<< ContactSupportPopUpAction) (CommonComponentConfig.contactSupportPopUpConfig state.data.config)] else [])
+  <> (if state.props.safetyPlusContact then [PopUpModal.view (push <<< CautioContactSupportPopUpAction) (safetyPlusContactModal state)] else [])
 
 
 providerDetails :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -150,6 +153,7 @@ tripDetailsLayout state push showDivider =
            , distanceAndTimeTaken state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
+           , safetyPlusInfoView state push
            ]
         , linearLayout
           [ height WRAP_CONTENT
@@ -423,6 +427,30 @@ ratingAndInvoiceView state push =
                             ]) [1 ,2 ,3 ,4 ,5])
     ]
 
+safetyPlusInfoView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+safetyPlusInfoView state push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding $ Padding 12 4 12 4
+    , margin $ Margin 10 2 10 2
+    , gravity CENTER
+    , margin $ MarginLeft 5
+    , background Color.white900
+    , orientation HORIZONTAL
+    , visibility $ boolToVisibility state.props.safetyPlusHelp
+    , cornerRadius 8.0
+    ]
+    [
+      textView
+        ([ textFromHtml $ getString SECURED_WITH_SAFETY_PLUS
+          , color "#0026A3"
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , padding $ PaddingLeft 8
+        ] <> FontStyle.body1 LanguageStyle)
+    ]
+
 -------- invoice --------
 invoiceView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 invoiceView state push =
@@ -503,6 +531,50 @@ reportIssueView state push filteredTopics =
         ]
 
 
+---------------- safety plus ----------------
+
+safetyPlusView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+safetyPlusView state push =
+  linearLayout
+    [ orientation VERTICAL
+    , width MATCH_PARENT
+    , height WRAP_CONTENT
+    , disableClickFeedback true
+    , visibility $ boolToVisibility true
+     , disableClickFeedback true
+    , onClick push $ const SafetyPlusContact
+    ][  linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        , orientation HORIZONTAL
+        , margin $ Margin 16 0 16 16
+        ][  
+          imageView
+            [ width $ V 20
+            , height $ V 20 
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.safetyPlusContact then "ny_ic_help_and_support_dark" else "ny_ic_help"
+            , margin $ MarginRight 12
+            ]
+        , textView $
+            [ text $ getStringV2 help_and_support_safety_plus
+            , accessibilityHint "Help from cautio : Button"
+            , accessibility ENABLE
+            , color if state.props.safetyPlusContact then Color.black900 else Color.black800
+            ] <> (if state.props.safetyPlusContact then FontStyle.body4 else FontStyle.body1) LanguageStyle 
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity RIGHT
+            ][imageView[ 
+                imageWithFallback $ fetchImage FF_COMMON_ASSET $ if (not state.props.safetyPlusContact) then "ny_ic_chevron_right" else "ny_ic_chevron_down_light" 
+              , height $ V 20
+              , width $ V 20
+              ]
+            ]
+          ] 
+      ]
+
 allTopicsView :: forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
 allTopicsView state push topicList = 
   PrestoAnim.animationSet ([] <>
@@ -517,7 +589,7 @@ allTopicsView state push topicList =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation VERTICAL
-    , margin $ Margin 32 16 16 0 
+    , margin $ Margin 32 16 16 16
     , visibility $ boolToVisibility $ state.props.reportIssue
     , onAnimationEnd push $ const ListExpandAinmationEnd
     ](DA.mapWithIndex (\index item ->

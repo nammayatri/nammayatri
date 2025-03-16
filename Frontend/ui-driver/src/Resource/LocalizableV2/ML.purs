@@ -1837,4 +1837,19 @@ getMl =
     , bus_type: "Bus Type"
     , namma_meter: "Namma Meter"
     , package: "പാക്കേജ്"
+    , dashcam : "ഡാഷ്‌ക്യാം"
+    , ride_plans : "യാത്രാ പദ്ധതികൾ"
+    , dashcam_benefits : "ഡാഷ്കാം ബിനിഫിറ്റുകൾ"
+    , dashcam_benefits_1 : "ഓരോ SafetyPLUS റൈഡിനും അധികം ₹5 നേടൂ"
+    , dashcam_benefits_2 : "24/7 കാബിനിൽ അല്ലെങ്കിൽ 270° മുന്നിൽ കാഴ്ച രേഖപ്പെടുത്തൽ"
+    , dashcam_benefits_3 : "റോഡ് ട്രാഫിക്, ദുർഘടനാ രേഖകൾ"
+    , pay_n_to_join_this_rental_plan : (\amount -> "ഇൻസ്റ്റാളേഷൻക്ക് ₹" <> amount)
+    , my_safety_plus : "എന്റെ SafetyPLUS"
+    , _online_ : "ഓൺലൈൻ"
+    , camera_status : "ക്യാമറ നില"
+    , dashcam_registered : "ഡാഷ്കാം രജിസ്റ്റർ ചെയ്തിരിക്കുന്നു!"
+    , installation_pending_para : "Cautio നിങ്ങളുടെ വാഹനത്തിൽ ഡാഷ്കാമിന്റെ ഇൻസ്റ്റലേഷൻ തയ്യാറാക്കുകയാണ്. നിങ്ങളുടെ ഡാഷ്കാം തയ്യാറായാൽ ഞങ്ങൾ നിങ്ങളോട് ബന്ധപ്പെടും."
+    , tncDashcam : "ഞാൻ എന്റെ Namma Yatri ഡാറ്റ Cautio-യുമായി പങ്കിടാൻ സമ്മതിക്കുന്നു"
+    , terms_and_conditions_full: "നിബന്ധനകളും വ്യവസ്ഥകളും"
+
     }

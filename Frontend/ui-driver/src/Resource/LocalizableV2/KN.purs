@@ -1837,4 +1837,18 @@ getKn =
     , bus_type: "ಬಸ್ ಪ್ರಕಾರ"
     , namma_meter: "ನಮ್ಮ ಮೀಟರ್"
     , package: "ಪ್ಯಾಕೇಜ್"
+    , dashcam : "ಡ್ಯಾಶ್‌ಕ್ಯಾಮ್"
+    , ride_plans : "ರೈಡ್ ಯೋಜನೆಗಳು"
+    , dashcam_benefits : "ಡ್ಯಾಷ್‌ಕ್ಯಾಮ್ ಪ್ರಯೋಜನಗಳು"
+    , dashcam_benefits_1 : "ಪ್ರತಿ SafetyPLUS ರೈಡ್‌ಗೆ ಹೆಚ್ಚುವರಿ ₹5 ಪಡೆಯಿರಿ"
+    , dashcam_benefits_2 : "24/7 ಕೇಬಿನ್‌ನಲ್ಲಿಯೂ ಮತ್ತು 270° ಮುಂಭಾಗ ದೃಶ್ಯ ದಾಖಲಿಸುವುದು"
+    , dashcam_benefits_3 : "ಪಥ ಮತ್ತು ಅಪಘಾತ ದಾಖಲಿಸುವುದು"
+    , pay_n_to_join_this_rental_plan : (\amount -> "ಸ್ಥಾಪನೆಗಾಗಿ ₹" <> amount)
+    , my_safety_plus : "ನನ್ನ SafetyPLUS"
+    , _online_ : "ಆನ್ಲೈನ್"
+    , camera_status : "ಕ್ಯಾಮೆರಾ ಸ್ಥಿತಿ"
+    , dashcam_registered : "ಡ್ಯಾಷ್‌ಕ್ಯಾಮ್‌ಗೆ ನೋಂದಣಿಯಾಗಿದೆ!"
+    , installation_pending_para : "Cautio ನಿಮ್ಮ ವಾಹನದಲ್ಲಿ ಡ್ಯಾಷ್‌ಕ್ಯಾಮ್ ಅನ್ನು ಸ್ಥಾಪಿಸಲು ಸಿದ್ಧಪಡಿಸುತ್ತಿದೆ. ನಿಮ್ಮ ಡ್ಯಾಷ್‌ಕ್ಯಾಮ್ ಸಿದ್ಧವಾಗಿದ್ದಾಗ ನಾವು ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸೋಣ."
+    , tncDashcam : "ನಾನು ನನ್ನ Namma Yatri ಡೇಟಾವನ್ನು Cautio ಗೆ ಹಂಚಲು ಒಪ್ಪಿಗೆಯಾಗಿದ್ದೇನೆ"
+    , terms_and_conditions_full: "ನಿಯಮಗಳು ಮತ್ತು ಷರತ್ತುಗಳು"
     }

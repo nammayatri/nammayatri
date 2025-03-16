@@ -75,7 +75,8 @@ import Helpers.API as HAPI
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
 import Services.CallAPI (callAPI)
-
+import Data.Function.Uncurried (runFn2, runFn3)
+import LocalStorage.Cache
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -438,7 +439,9 @@ getDriverInfoBT dummy = do
 getDriverInfoBTGet :: FlowBT String GetDriverInfoResp
 getDriverInfoBTGet = do
     headers <- getHeaders' "" true
-    withAPIResultBT ((EP.getDriverInfo "" )) identity errorHandler (lift $ lift $ callAPI headers  (GetDriverInfoReq {}))
+    let
+        serviceName = runFn3 getFromCache "SUBSCRIPTION_SERVICE_NAME" Nothing Just
+    withAPIResultBT ((EP.getDriverInfo "" serviceName)) identity errorHandler (lift $ lift $ callAPI headers  (GetDriverInfoReq serviceName))
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
@@ -449,7 +452,8 @@ getDriverInfoBTPost cityConfig = do
     let config = getAppConfig appConfig
         isAdvancedBookingEnabled = cityConfig.enableAdvancedBooking
         subsEnabledForCityUI = checkSubsV2EnabledForCity cityConfig
-    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just isAdvancedBookingEnabled, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI}))
+        serviceName = runFn3 getFromCache "SUBSCRIPTION_SERVICE_NAME" Nothing Just
+    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" serviceName)) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just isAdvancedBookingEnabled, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI, serviceName : serviceName}))
     pure (resp1)
     where
         errorHandler (ErrorPayload errorPayload) =  do
@@ -481,7 +485,9 @@ checkSubsV2EnabledForCity cityConfig =
 getDriverInfoApiGet :: Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
 getDriverInfoApiGet = do
     headers <- getHeaders "" true
-    withAPIResult (EP.getDriverInfo "") unwrapResponse $ callAPI headers  (GetDriverInfoReq {})
+    let
+        serviceName = runFn3 getFromCache "SUBSCRIPTION_SERVICE_NAME" Nothing Just
+    withAPIResult (EP.getDriverInfo "" serviceName) unwrapResponse $ callAPI headers  (GetDriverInfoReq serviceName)
     where
         unwrapResponse (x) = x
 
@@ -491,7 +497,8 @@ getDriverInfoApiPost cityConfig = do
     let config = getAppConfig appConfig
         enableAdvancedBooking = cityConfig.enableAdvancedBooking
         subsEnabledForCityUI = checkSubsV2EnabledForCity cityConfig
-    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI})
+        serviceName = runFn3 getFromCache "SUBSCRIPTION_SERVICE_NAME" Nothing Just
+    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" serviceName)) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI, serviceName : serviceName})
     case resp1 of
         Right (UpdateFeatureInDInfoResp resp1) -> do
             let (GetDriverInfoResp resp ) = resp1
@@ -1316,64 +1323,81 @@ getKioskLocations dummy = do
     where
         unwrapResponse (x) = x
 
-getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
-getUiPlans vehicleVariant = do
+getUiPlans :: String -> Maybe ST.ServiceName -> Flow GlobalState (Either ErrorResponse UiPlansResp)
+getUiPlans vehicleVariant serviceName = do
     headers <- getHeaders "" false
-    withAPIResult (EP.getUiPlans vehicleVariant) unwrapResponse $ callAPI headers (UiPlansReq vehicleVariant)
+    withAPIResult (EP.getUiPlans vehicleVariant (show <$> serviceName)) unwrapResponse $ callAPI headers (UiPlansReq vehicleVariant (show <$> serviceName))
     where
         unwrapResponse (x) = x
 
-getUiPlansBT :: String -> FlowBT String UiPlansResp
-getUiPlansBT vehicleVariant = do
+getUiPlansBT :: String -> Maybe ST.ServiceName -> FlowBT String UiPlansResp
+getUiPlansBT vehicleVariant serviceName = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getUiPlans vehicleVariant) identity errorHandler (lift $ lift $ callAPI headers (UiPlansReq vehicleVariant))
+    withAPIResultBT (EP.getUiPlans vehicleVariant (show <$> serviceName)) identity errorHandler (lift $ lift $ callAPI headers (UiPlansReq vehicleVariant (show <$> serviceName)))
     where
         errorHandler (ErrorPayload errorPayload) =  do
             pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
             BackT $ pure GoBack
 
-getCurrentPlan :: String -> Flow GlobalState (Either ErrorResponse GetCurrentPlanResp)
-getCurrentPlan driverId = do
+getCurrentPlan :: String -> Maybe ST.ServiceName -> Flow GlobalState (Either ErrorResponse GetCurrentPlanResp)
+getCurrentPlan driverId serviceName = do
     headers <- getHeaders "" false
-    withAPIResult (EP.getCurrentPlan driverId) unwrapResponse $ callAPI headers (GetCurrentPlanReq driverId)
+    withAPIResult (EP.getCurrentPlan driverId (show <$> serviceName)) unwrapResponse $ callAPI headers (GetCurrentPlanReq driverId (show <$> serviceName))
     where
         unwrapResponse (x) = x
 
 
-subscribePlan :: String  -> Flow GlobalState (Either ErrorResponse SubscribePlanResp)
-subscribePlan planId = do
+subscribePlan :: String  -> Maybe ST.ServiceName ->  Flow GlobalState (Either ErrorResponse SubscribePlanResp)
+subscribePlan planId serviceName = do
   headers <- getHeaders "" false
-  withAPIResult (EP.subscribePlan planId) unwrapResponse $ callAPI headers $ (SubscribePlanReq planId)
+  withAPIResult (EP.subscribePlan planId (show <$> serviceName)) unwrapResponse $ callAPI headers $ (SubscribePlanReq planId (show <$> serviceName))
   where
     unwrapResponse x = x
 
-paymentDues :: String -> Flow GlobalState (Either ErrorResponse PaymentDuesResp)
-paymentDues dummy = do
+paymentDues :: String -> Maybe ST.ServiceName ->  Flow GlobalState (Either ErrorResponse PaymentDuesResp)
+paymentDues dummy serviceName = do
     headers <- getHeaders "" false
-    withAPIResult (EP.paymentDues "") unwrapResponse $ callAPI headers (PaymentDuesReq "")
+    withAPIResult (EP.paymentDues "" (show <$> serviceName)) unwrapResponse $ callAPI headers (PaymentDuesReq "" (show <$> serviceName))
     where
         unwrapResponse (x) = x
 
-selectPlan :: String  -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
-selectPlan planId = do
+selectPlan :: String  -> Maybe ST.ServiceName -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+selectPlan planId serviceName = do
   headers <- getHeaders "" false
-  withAPIResult (EP.selectPlan planId) unwrapResponse $ callAPI headers (SelectPlanReq planId)
+  withAPIResult (EP.selectPlan planId (show <$> serviceName)) unwrapResponse $ callAPI headers (SelectPlanReq planId (show <$> serviceName))
   where
     unwrapResponse x = x
 
-resumeMandate :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
-resumeMandate driverId = do
+resumeMandate :: String -> Maybe ST.ServiceName -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+resumeMandate driverId serviceName = do
     headers <- getHeaders "" false
-    withAPIResult (EP.resumeMandate driverId) unwrapResponse $ callAPI headers (ResumeMandateReq driverId)
+    withAPIResult (EP.resumeMandate driverId (show <$> serviceName)) unwrapResponse $ callAPI headers (ResumeMandateReq driverId (show <$> serviceName))
     where
         unwrapResponse (x) = x
 
-suspendMandate :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
-suspendMandate _ = do
+suspendMandate :: String -> Maybe ST.ServiceName -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+suspendMandate _ serviceName = do
     headers <- getHeaders "" false
-    withAPIResult (EP.suspendMandate "") unwrapResponse $ callAPI headers (SuspendMandateReq "")
+    withAPIResult (EP.suspendMandate "" (show <$> serviceName)) unwrapResponse $ callAPI headers (SuspendMandateReq "" (show <$> serviceName))
     where
         unwrapResponse (x) = x
+
+listServices :: String -> Flow GlobalState (Either ErrorResponse SubscriptionServiceResp)
+listServices _ = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.listServices "") unwrapResponse $ callAPI headers (SubscriptionServiceReq "")
+    where
+        unwrapResponse (x) = x
+
+
+listServicesBT :: String -> Maybe ST.ServiceName -> FlowBT String SubscriptionServiceResp
+listServicesBT _ _ = do
+    headers <- getHeaders' "" true
+    withAPIResultBT (EP.listServices "") identity errorHandler (lift $ lift $ callAPI headers (SubscriptionServiceReq ""))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+            BackT $ pure GoBack
 
 postRideFeedback :: String ->  Int -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 postRideFeedback rideId rating feedback = do 
@@ -1388,10 +1412,10 @@ postRideFeedback rideId rating feedback = do
         }
         unwrapResponse (x) = x 
 
-paymentHistoryListV2 :: String -> String -> String -> Flow GlobalState (Either ErrorResponse HistoryEntityV2Resp)
-paymentHistoryListV2 limit offset historyType = do 
+paymentHistoryListV2 :: String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse HistoryEntityV2Resp)
+paymentHistoryListV2 limit offset historyType serviceName = do 
     headers <- getHeaders "" false 
-    withAPIResult (EP.paymentHistoryListV2 limit offset historyType) unwrapResponse $ callAPI headers (HistoryEntityV2Req limit offset historyType)
+    withAPIResult (EP.paymentHistoryListV2 limit offset historyType (Just serviceName)) unwrapResponse $ callAPI headers (HistoryEntityV2Req limit offset historyType serviceName)
     where
         unwrapResponse (x) = x 
 
@@ -1402,10 +1426,10 @@ paymentEntityDetails id = do
     where
         unwrapResponse (x) = x 
 
-cleardues :: String -> Flow GlobalState (Either ErrorResponse ClearDuesResp)
-cleardues _ = do
+cleardues :: String -> String -> Flow GlobalState (Either ErrorResponse ClearDuesResp)
+cleardues _ serviceName = do
     headers <- getHeaders "" false
-    withAPIResult (EP.cleardues "") unwrapResponse $ callAPI headers (ClearDuesReq "")
+    withAPIResult (EP.cleardues "" (Just serviceName)) unwrapResponse $ callAPI headers (ClearDuesReq "" serviceName)
     where
         unwrapResponse (x) = x
 

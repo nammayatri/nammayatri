@@ -29,7 +29,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==), const, not, show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility, rippleColor, textFromHtml)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -101,6 +101,7 @@ cardView push state =
       ]([  rideDetails push state
         , separator
         , sourceAndDestination push state 
+        , safetyPlusInfoView state
       ] <> (if state.optionsVisibility then [separator, viewDetailsAndRepeatRide push state] else []))
    ]
 
@@ -515,3 +516,27 @@ separatorConfig =
   , color : Color.black500
   }
 
+
+safetyPlusInfoView ::  forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w
+safetyPlusInfoView state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding $ Padding 12 4 12 4
+    , margin $ Margin 10 2 10 2
+    , gravity CENTER
+    , margin $ MarginLeft 5
+    , background Color.blue600
+    , orientation HORIZONTAL
+    , PrestoList.visibilityHolder "isSafetyPlus"
+    , cornerRadius 8.0
+    ]
+    [
+      textView
+        ([ textFromHtml $ getString SECURED_WITH_SAFETY_PLUS
+          , color "#0026A3"
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , padding $ PaddingLeft 8
+        ] <> FontStyle.body1 LanguageStyle)
+    ]

@@ -131,7 +131,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AddDestRes(..),LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
+import Services.API (AddDestRes(..),LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..), SubscriptionServiceResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -186,6 +186,7 @@ import Engineering.Helpers.Utils as EHU
 import Resource.Constants (encodeAddress)
 import Screens.MeterRideScreen.ScreenData as MeterRideScreenData
 import Screens (ScreenName(..)) as Screen
+import Screens.Types (ServiceName(..))
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -2483,7 +2484,7 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
       case state.data.selectedPlanItem of
         Just selectedPlan -> do
           setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT "100"
-          nyPaymentFlow selectedPlan "ONBOARDING"
+          nyPaymentFlow selectedPlan "ONBOARDING" YATRI_SUBSCRIPTION
         Nothing -> onBoardingSubscriptionScreenFlow (state.props.screenCount-1)
   pure unit
 
@@ -2899,7 +2900,7 @@ homeScreenFlow = do
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       homeScreenFlow
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
-    CLEAR_PENDING_DUES -> clearPendingDuesFlow true
+    CLEAR_PENDING_DUES -> clearPendingDuesFlow true ST.YATRI_SUBSCRIPTION
     GO_TO_RIDE_REQ_SCREEN state lat lon -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> (RideRequestData.initData "") {data{driverLat = Just lat , driverLong = Just lon}})
       rideRequestScreenFlow
@@ -3020,9 +3021,9 @@ homeScreenFlow = do
     SWITCH_PLAN_FROM_HS plan state -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
       void $ lift $ lift $ toggleLoader true
-      selectPlanResp <- lift $ lift $ Remote.selectPlan plan.id
-      case selectPlanResp of
-        Right resp -> do
+      selectPlanResp <- lift $ lift $ Remote.selectPlan plan.id (Just ST.YATRI_SUBSCRIPTION)
+      case selectPlanResp of 
+        Right resp -> do 
           getDriverInfoResp <- Remote.getDriverInfoBT ""
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
@@ -3267,11 +3268,11 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
             void $ pure $ runFn2  EHC.updatePushInIdMap "PlayEndRideAudio" true
             homeScreenFlow
 
-clearPendingDuesFlow :: Boolean -> FlowBT String Unit
-clearPendingDuesFlow showLoader = do
+clearPendingDuesFlow :: Boolean -> ST.ServiceName -> FlowBT String Unit
+clearPendingDuesFlow showLoader serviceName = do
   void $ lift $ lift $ toggleLoader showLoader
   liftFlowBT $ initiatePaymentPage
-  clearduesResp' <- lift $ lift $ Remote.cleardues ""
+  clearduesResp' <- lift $ lift $ Remote.cleardues "" (show serviceName)
   case clearduesResp' of
     Right (ClearDuesResp clearduesResp) -> do
       let (CreateOrderRes orderResp) = clearduesResp.orderResp
@@ -3313,10 +3314,10 @@ clearPendingDuesFlow showLoader = do
   pure $ toggleBtnLoader "" false
   subScriptionFlow
 
-nyPaymentFlow :: PlanCardConfig -> String -> FlowBT String Unit
-nyPaymentFlow planCardConfig fromScreen = do
+nyPaymentFlow :: PlanCardConfig -> String -> ServiceName -> FlowBT String Unit
+nyPaymentFlow planCardConfig fromScreen serviceName = do
   liftFlowBT $ initiatePaymentPage
-  response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
+  response <- lift $ lift $ Remote.subscribePlan planCardConfig.id (Just serviceName)
   case response of
     Right (SubscribePlanResp listResp) -> do
       if fromScreen /= "MYPLAN" then do
@@ -3386,8 +3387,8 @@ paymentHistoryFlow = do
   case action of
     GoToSetupAutoPay state ->
       if state.data.autoPayStatus == ST.SUSPENDED then do
-        resumeMandate <- lift $ lift $ Remote.resumeMandate ""
-        case resumeMandate of
+        resumeMandate  <- lift $ lift $ Remote.resumeMandate "" (Just state.props.serviceName)
+        case resumeMandate of 
           Right resp -> do
             getDriverInfoResp <- Remote.getDriverInfoBT ""
             modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
@@ -3397,7 +3398,7 @@ paymentHistoryFlow = do
             pure $ toast $ getString RESUMED_AUTOPAY
           Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
         subScriptionFlow
-      else nyPaymentFlow state.data.planData "MYPLAN"
+      else nyPaymentFlow state.data.planData "MYPLAN" state.props.serviceName
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
       let cityConfig = HU.getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -3522,6 +3523,7 @@ subScriptionFlow = do
   reelsResp <- lift $ lift $ Remote.getReelsVideo "reels_data" $ HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey)
   globalState <- getState
   GetDriverInfoResp getDriverInfoResp <- getDriverInfoDataFromCache globalState false
+  services <- getServicesEnabledForDriver
   let reelsRespData = case reelsResp of
                         Left err -> API.ReelsResp {reels : []}
                         Right resp -> resp
@@ -3542,6 +3544,7 @@ subScriptionFlow = do
       , props
           { offerBannerProps = fromMaybe CommonRC.defaultOfferBannerConfig vehicleAndCityConfig.offerBannerConfig
           , isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"
+          , servicesEnabled = services
           }
       }
 
@@ -3558,16 +3561,16 @@ subScriptionFlow = do
       case state.props.joinPlanProps.selectedPlanItem of
         Just selectedPlan -> do
           setValueToLocalStore DISABLE_WIDGET "true"
-          nyPaymentFlow selectedPlan "JOINPLAN"
+          nyPaymentFlow selectedPlan "JOINPLAN" state.props.serviceName
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{autoPayStatus = state.data.myPlanData.autoPayStatus, planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.subscriptionConfig.gradientConfig}})
+      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory, serviceName = state.props.serviceName}, data{autoPayStatus = state.data.myPlanData.autoPayStatus, planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.subscriptionConfig.gradientConfig}})
       paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
-      suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
-      case suspendMandate of
-        Right resp -> do
+      suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId (Just state.props.serviceName) 
+      case suspendMandate of 
+        Right resp -> do 
           getDriverInfoResp <- Remote.getDriverInfoBT ""
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
@@ -3581,8 +3584,8 @@ subScriptionFlow = do
           modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ props{ showError = true, showShimmer = false }})
       subScriptionFlow
     SWITCH_PLAN state planId -> do
-      selectPlanResp <- lift $ lift $ Remote.selectPlan planId
-      case selectPlanResp of
+      selectPlanResp <- lift $ lift $ Remote.selectPlan planId (Just state.props.serviceName)
+      case selectPlanResp of 
         Right resp -> do
           let (GlobalState defGlobalState) = defaultGlobalState
           void $ pure $ cleverTapCustomEvent "ny_driver_switch_plan"
@@ -3594,8 +3597,8 @@ subScriptionFlow = do
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     RESUME_AUTOPAY state -> do
-      resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId
-      case resumeMandate of
+      resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId (Just state.props.serviceName)
+      case resumeMandate of 
         Right resp -> do
           getDriverInfoResp <- Remote.getDriverInfoBT ""
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
@@ -3605,7 +3608,7 @@ subScriptionFlow = do
           pure $ toast $ getString RESUMED_AUTOPAY
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
-    RETRY_PAYMENT_AC state planId -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN"
+    RETRY_PAYMENT_AC state planId -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN" state.props.serviceName
     CHECK_ORDER_STATUS state orderId-> do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
       case orderStatus of
@@ -3625,7 +3628,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
-      uiPlans <- Remote.getUiPlansBT "null"
+      uiPlans <- Remote.getUiPlansBT "null" (Just state.props.serviceName)
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
       subScriptionFlow
     GO_TO_FIND_HELP_CENTRE state -> do
@@ -3640,14 +3643,14 @@ subScriptionFlow = do
     GO_TO_OPEN_GOOGLE_MAPS state -> do
       void $ pure $ openNavigation state.props.destLat state.props.destLon "DRIVE"
       subScriptionFlow
-    SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN"
-    CLEAR_DUES_ACT -> clearPendingDuesFlow false
+    SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN" state.props.serviceName
+    CLEAR_DUES_ACT -> clearPendingDuesFlow false ST.YATRI_SUBSCRIPTION
     SWITCH_PLAN_ON_CITY_VEHICLE_CHANGE plan state -> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
       void $ lift $ lift $ toggleLoader true
-      selectPlanResp <- lift $ lift $ Remote.selectPlan plan.id
-      case selectPlanResp of
-        Right resp -> do
+      selectPlanResp <- lift $ lift $ Remote.selectPlan plan.id (Just state.props.serviceName)
+      case selectPlanResp of 
+        Right resp -> do 
           getDriverInfoResp <- Remote.getDriverInfoBT ""
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
@@ -3656,6 +3659,9 @@ subScriptionFlow = do
         Left errorPayload -> do
           void $ lift $ lift $ toggleLoader false
           pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+      subScriptionFlow
+    SWITCH_SERVICE state  -> do
+      modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> state)
       subScriptionFlow
     _ -> subScriptionFlow
 
@@ -3884,7 +3890,7 @@ updateDriverDataToStates = do
     , showGenderBanner = showGender
     , checkUpcomingRide = true
     }})
-  setValueToLocalStore DRIVER_SUBSCRIBED $ show $ isJust getDriverInfoResp.autoPayStatus
+  setValueToLocalStore ( DRIVER_SUBSCRIBED "YATRI_SUBSCRIPTION") $ show $ isJust getDriverInfoResp.autoPayStatus
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant appConfig.rideRequest.negotiationUnit
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
@@ -5009,3 +5015,8 @@ extraChargeInfoScreenFlow :: FlowBT String Unit
 extraChargeInfoScreenFlow = do
   output <- UI.extraChargeInfoScreen
   pure unit
+
+getServicesEnabledForDriver ::  FlowBT String (Array String)
+getServicesEnabledForDriver = do
+  (SubscriptionServiceResp services) <- Remote.listServicesBT "" Nothing
+  pure services.services

@@ -21,7 +21,7 @@ import Components.PopUpModal as PopUpModalController
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Array (null)
-import Data.String (length)
+import Data.String (length, toLower)
 import Data.String (trim)
 import JBridge (hideKeyboardOnNavigation, copyToClipboard, showDialer, openUrlInApp, openUrlInMailApp)
 import Language.Strings (getString)
@@ -39,6 +39,9 @@ import Services.Config (getSupportNumber)
 import Resources.Constants (mailToLink)
 import Helpers.Utils (emitTerminateApp, isParentView)
 import Data.Maybe (Maybe(..))
+import RemoteConfig as RemoteConfig
+import Storage (getValueToLocalStore)
+import Storage as ST
 
 instance showAction :: Show Action where
     show _ = ""
@@ -59,6 +62,7 @@ instance loggableAction :: Loggable Action where
         ViewInvoice -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "view_invoice"
         Copy -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "copy"
         ShowPopUp -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "show_confirmation_popup"
+        SafetyPlusContact -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "safety_plus_contact"
         PopUpModalAction act -> case act of
             PopUpModalController.OnButton1Click -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_decline"
             PopUpModalController.OnButton2Click -> do
@@ -91,6 +95,8 @@ instance loggableAction :: Loggable Action where
             PopUpModalController.DismissPopup -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
             PopUpModalController.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
             _ -> pure unit
+        CautioContactSupportPopUpAction act -> pure unit
+
 
 data Action = GenericHeaderActionController GenericHeaderController.Action
             | SourceToDestinationActionController SourceToDestinationController.Action 
@@ -106,6 +112,8 @@ data Action = GenericHeaderActionController GenericHeaderController.Action
             | OpenChat CategoryListType
             | ListExpandAinmationEnd
             | ContactSupportPopUpAction PopUpModalController.Action
+            | CautioContactSupportPopUpAction PopUpModalController.Action
+            | SafetyPlusContact
 
 data ScreenOutput = GoBack TripDetailsGoBackType TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState | GetCategorieList TripDetailsScreenState | GoToIssueChatScreen TripDetailsScreenState CategoryListType
 
@@ -128,6 +136,8 @@ eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ Con
 
 eval (ContactSupportPopUpAction (PopUpModalController.DismissPopup)) state = continue state{props{isContactSupportPopUp = false}}
 
+eval (CautioContactSupportPopUpAction (PopUpModalController.DismissPopup)) state = continue state{props{safetyPlusContact = false}}
+
 eval (ContactSupportPopUpAction (PopUpModalController.OnSecondaryTextClick)) state =   
     continueWithCmd state{props{isContactSupportPopUp = false}} [do
         void $ openUrlInMailApp $ mailToLink <> (getAppConfig appConfig).appData.supportMail
@@ -139,6 +149,13 @@ eval (ContactSupportPopUpAction (PopUpModalController.OnButton1Click)) state = d
     continue state{props{isContactSupportPopUp = false}}
 
 eval (ContactSupportPopUpAction (PopUpModalController.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportPopUpAction PopUpModalController.DismissPopup]
+
+eval (CautioContactSupportPopUpAction (PopUpModalController.OnButton1Click)) state = do
+    let safetyPlusConfig = RemoteConfig.getSafetyPlusConfig $ toLower $ getValueToLocalStore ST.CUSTOMER_LOCATION
+    void $ pure $ showDialer (safetyPlusConfig.contactNumber) false
+    continue state{props{safetyPlusContact = false}}
+
+eval (CautioContactSupportPopUpAction (PopUpModalController.OnButton2Click)) state = continueWithCmd state [pure $ CautioContactSupportPopUpAction PopUpModalController.DismissPopup] 
 
 eval ViewInvoice state = do
     let onUsRide  = state.data.selectedItem.providerType == ONUS
@@ -153,6 +170,9 @@ eval ReportIssue state =  do
             let updatedState = state { props { reportIssue = not state.props.reportIssue, showIssueOptions = true } }
             if  null state.data.categories then exit $ GetCategorieList updatedState else continue updatedState
         else continue state {props{isContactSupportPopUp = true}}
+
+eval SafetyPlusContact state = do
+   continue state{props{safetyPlusContact = not state.props.safetyPlusContact}}
 
 eval (MessageTextChanged a) state = continue state { data { message = trim(a) }, props{activateSubmit = if (length (trim(a)) > 1) then true else false}}
 

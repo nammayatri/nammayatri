@@ -554,3 +554,16 @@ getCustomerVoipConfig city = do
     let config = fetchRemoteConfigString "voip_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig
     getCityBasedConfig value $ toLower city
+
+defaultSafetyPlusConfig :: SafetyPlusConfigs 
+defaultSafetyPlusConfig = {
+    isSafetyPlusEnabled : false,
+    safetyPlusPopUpCounter : 2.0,
+    contactNumber : ""
+}
+
+getSafetyPlusConfig :: String -> SafetyPlusConfigs
+getSafetyPlusConfig city = do
+    let config = fetchRemoteConfigString "safety_plus_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultSafetyPlusConfig
+    getCityBasedConfig value $ toLower city

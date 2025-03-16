@@ -16,6 +16,7 @@ type AppConfigDriver a =
     rideCompletedCardConfig :: RideCompletedCardConfig, 
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
+    subscriptionConfigDashCam :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
     profile :: ProfileConfig,
     showPaymentDetails :: Boolean,

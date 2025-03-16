@@ -15,8 +15,8 @@
 
 module Services.EndPoints where
 
-import Data.Maybe (Maybe(..))
-import Prelude (show, unit, (<>), (==), (*) , (&&) , (||))
+import Data.Maybe (Maybe(..),maybe)
+import Prelude (show, unit, (<>), (==), (*) , (&&) , (||), identity)
 import Services.Config (getBaseUrl, getCustomerBaseUrl)
 
 triggerOTP :: String -> String
@@ -49,11 +49,11 @@ cancelRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/cancel"
 logout :: String -> String
 logout dummyString = (getBaseUrl "") <> "/auth/logout"
 
-getDriverInfo :: String -> String
-getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
+getDriverInfo :: String -> Maybe String -> String
+getDriverInfo dummyString serviceName = (getBaseUrl "") <> "/driver/profile" <> addServiceQuery serviceName
 
-getDriverInfoV2 :: String -> String
-getDriverInfoV2 dummyString = (getBaseUrl "") <> "/driver/profile/info"
+getDriverInfoV2 :: String ->  Maybe String ->  String
+getDriverInfoV2 dummyString serviceName = (getBaseUrl "") <> "/driver/profile/info"<> addServiceQuery serviceName
 
 getRideHistory :: String -> String -> String -> String -> String -> String
 getRideHistory limit offset isActive status day= do
@@ -222,28 +222,41 @@ unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaar
 getKioskLocations :: String -> String
 getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
 
-getUiPlans :: String -> String 
-getUiPlans vehicleVariant = case vehicleVariant of
-  "null" -> (getBaseUrl "") <> "/plan/list"
-  _ -> (getBaseUrl "") <> "/plan/list" <> "?vehicleVariant=" <> show vehicleVariant
+getUiPlans :: String -> Maybe String -> String 
+getUiPlans vehicleVariant serviceName = case vehicleVariant of
+  "null" -> (getBaseUrl "") <> "/plan/list"  <> (addServiceQuery serviceName)
+  _ -> (getBaseUrl "") <> "/plan/list" <> "?vehicleVariant=" <> show vehicleVariant  <> "&" <> addServiceQuery serviceName
 
-getCurrentPlan :: String -> String 
-getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"
+getCurrentPlan :: String -> Maybe String -> String 
+getCurrentPlan driverId serviceName = (getBaseUrl "") <> "/plan/currentPlan"  <> (addServiceQuery serviceName)
 
-subscribePlan :: String -> String 
-subscribePlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/subscribe"
+subscribePlan :: String ->  Maybe String -> String 
+subscribePlan planId serviceName = (getBaseUrl "") <> "/plan/"<> planId <>"/subscribe" <> (addServiceQuery serviceName)
 
-paymentDues :: String -> String 
-paymentDues _ = (getBaseUrl "") <> "/payment/dues"
+paymentDues :: String -> Maybe String -> String 
+paymentDues _ serviceName = (getBaseUrl "") <> "/payment/dues" <> (addServiceQuery serviceName)
 
-resumeMandate :: String -> String 
-resumeMandate _ = (getBaseUrl "") <> "/plan/resume"
+resumeMandate :: String ->  Maybe String -> String 
+resumeMandate _ serviceName = (getBaseUrl "") <> "/plan/resume" <> (addServiceQuery serviceName)
 
-selectPlan :: String -> String
-selectPlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/select"
+selectPlan :: String -> Maybe String -> String
+selectPlan planId serviceName = (getBaseUrl "") <> "/plan/"<> planId <>"/select" <> (addServiceQuery serviceName)
 
-suspendMandate :: String -> String 
-suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend" 
+suspendMandate :: String -> Maybe String -> String 
+suspendMandate driverId serviceName = (getBaseUrl "") <> "/plan/suspend" <> (addServiceQuery serviceName)
+
+listServices :: String -> String
+listServices _ = (getBaseUrl "") <> "/plan/services"
+
+addServiceQuery :: Maybe String -> String
+addServiceQuery serviceName = "?serviceName=" <>( maybe "\"YATRI_SUBSCRIPTION\"" getServiceDataByService serviceName)
+
+getServiceDataByService :: String -> String
+getServiceDataByService serviceName = do
+  case serviceName of
+    "YATRI_SUBSCRIPTION" -> "\"YATRI_SUBSCRIPTION\""
+    "DASHCAM_RENTAL_CAUTIO" -> "\"DASHCAM_RENTAL_CAUTIO\""
+    _ -> "\"YATRI_SUBSCRIPTION\""
 
 postRideFeedback :: String -> String 
 postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"
@@ -251,14 +264,14 @@ postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"
 generateReferralCode :: String -> String
 generateReferralCode dummyString = (getBaseUrl "") <> "/driver/generateReferralCode"
 
-paymentHistoryListV2 :: String -> String -> String -> String
-paymentHistoryListV2 limit offset historyType = (getBaseUrl "") <> "/driver/v2/payments/history?limit=" <> limit <> "&offset=" <> offset <> "&paymentMode=" <> show historyType
+paymentHistoryListV2 :: String -> String -> String -> Maybe String -> String 
+paymentHistoryListV2 limit offset historyType serviceName = (getBaseUrl "") <> "/driver/v2/payments/history?limit=" <> limit <> "&offset=" <> offset <> "&paymentMode=" <> show historyType <> "&serviceName=" <>( maybe "YATRI_SUBSCRIPTION" identity serviceName)
 
 paymentEntityDetails :: String -> String 
 paymentEntityDetails id = (getBaseUrl "") <> "/driver/v2/payments/history/" <> id <> "/entity"
 
-cleardues :: String -> String 
-cleardues _ = (getBaseUrl "") <> "/driver/cleardues"
+cleardues :: String ->  Maybe String  -> String 
+cleardues _ serviceName = (getBaseUrl "") <> "/driver/cleardues" <> (addServiceQuery serviceName)
 
 autoComplete :: String -> String
 autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"

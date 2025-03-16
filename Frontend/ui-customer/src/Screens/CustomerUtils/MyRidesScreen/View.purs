@@ -265,6 +265,7 @@ shimmerData i = {
   showDestination : toPropValue "visible",
   itemRideType : toPropValue "ONE_WAY",
   rideTypeVisibility : toPropValue "gone",
+  isSafetyPlus : toPropValue "gone",
   rideTypeBackground : toPropValue "#454545",
   cornerRadius : toPropValue "24.0"
 }

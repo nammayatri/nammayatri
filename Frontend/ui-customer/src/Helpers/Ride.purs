@@ -69,6 +69,7 @@ import ConfigProvider (getCurrency)
 import Constants (appConfig)
 import Resources.LocalizableV2.Strings (getStringV2)
 import Resources.LocalizableV2.Types
+import Debug (spy)
 
 customerFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
 customerFeedbackPillData (RideBookingRes state) vehicleVariant = if ((state.bookingDetails) ^. _fareProductType) == "DELIVERY" then parcelFeedbackPillData else normalRideFeedbackPillData (RideBookingRes state) vehicleVariant
@@ -240,6 +241,7 @@ checkRideStatus rideAssigned prioritizeRating = do
             (BookingLocationAPIEntity dropLocationDetails)= fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation)
             (BookingLocationAPIEntity pickupLocationDetails) = resp.fromLocation
             response = listResp.list
+            _ = spy "isSaftey plus data " (show resp.isSafetyPlus)
             activeRideListData = map (\resp -> let listData = fetchListData resp state 
               in listData) (response)
             requestorPartyRoles = (resp.bookingDetails ^._contents^._requestorPartyRoles)
@@ -264,6 +266,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                     , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
                     , startedAtUTC = fromMaybe "" resp.rideStartTime
                     , sourceFromFCM = ""
+                    , isSafetyPlus = fromMaybe false resp.isSafetyPlus
                     , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
                       , bookingId : resp.id
@@ -330,7 +333,10 @@ checkRideStatus rideAssigned prioritizeRating = do
                       , nearestRideScheduledAtUTC : ""
                       , vehicleVariant : fromMaybe "" resp.vehicleServiceTierType
                       , driverInformation : fetchDriverInformation resp.rideList
-                      }))}})
+                      }))
+                      , isSafetyPlus = fromMaybe false resp.isSafetyPlus
+                      }
+                      })
           updateLocalStage HomeScreen
         else do
           when (not rideAssigned) $ do
@@ -358,6 +364,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                     , data
                       { driverInfoCardState
                         { otp = otp' }
+                      , isSafetyPlus = fromMaybe false resp.isSafetyPlus
                       }
                     })
                 Nothing -> pure unit
@@ -447,7 +454,9 @@ checkRideStatus rideAssigned prioritizeRating = do
                               , dateDDMMYY =  case currRideListItem.rideStartTime of
                                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                                 Nothing        -> ""
+                              , isSafetyPlus = fromMaybe false resp.isSafetyPlus
                               }
+                              , isSafetyPlus = fromMaybe false resp.isSafetyPlus
                               , driverInfoCardState {
                                 price = resp.estimatedTotalFare,
                                 rideId = currRideListItem.id,
@@ -580,6 +589,7 @@ changeRideCompletedState state (RideAPIEntity currRideListItem) (RideBookingRes 
                   , distanceDifference = differenceOfDistance
                   , rideStartTime = maybe "" (\startTime -> convertUTCtoISC startTime "h:mm A") currRideListItem.rideStartTime
                   , rideEndTime = maybe "" (\endTime -> convertUTCtoISC endTime "h:mm A") currRideListItem.rideEndTime
+                  , isSafetyPlus = fromMaybe false resp.isSafetyPlus
                   }
               , ratingViewState
                   { rideBookingRes = (RideBookingRes resp)
