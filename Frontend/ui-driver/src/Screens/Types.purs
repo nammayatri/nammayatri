@@ -63,7 +63,8 @@ import Control.Monad.Except (runExcept)
 import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..),CoinEntity(..), PayoutVpaStatus(..))
+import Screens (ScreenName)
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..),CoinEntity(..), PayoutVpaStatus(..),SafetyPlusData(..))
 import Styles.Types (FontSize)
 import MerchantConfig.Types
 import RemoteConfig.Types as RC
@@ -1460,7 +1461,8 @@ type HomeScreenProps =  {
   bus_input_data :: String,
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean,
-  showBlockerPopup :: Boolean
+  showBlockerPopup :: Boolean,
+  safteyPlusInfoPopup :: Boolean
  }
 
 type RideRequestPill = {
@@ -2415,7 +2417,8 @@ type SubscriptionScreenProps = {
   redirectToNav :: String,
   lastPaymentType :: Maybe LastPaymentType,
   offerBannerProps :: CommonRC.OfferBanner,
-  isEndRideModal :: Boolean
+  isEndRideModal :: Boolean,
+  serviceName :: ServiceName
 }
 
 type JoinPlanData = {
@@ -2426,7 +2429,9 @@ type JoinPlanData = {
 type JoinPlanProps = {
   paymentMode :: String,
   selectedPlanItem :: Maybe PlanCardConfig,
-  isIntroductory :: Boolean
+  tncRentals :: Boolean,
+  isIntroductory :: Boolean,
+  tncRentalsImage :: String
 }
 
 type ManagePlanData = {
@@ -2452,7 +2457,9 @@ type MyPlanData = {
   mandateStatus :: String,
   selectedDue :: String,
   dueBoothCharges :: Maybe Number,
-  coinEntity :: Maybe CoinEntity
+  coinEntity :: Maybe CoinEntity,
+  isEligibleForCharge :: Maybe Boolean,
+  safetyPlusData :: Maybe SafetyPlusData
 }
 
 type MyPlanProps = {
@@ -2549,6 +2556,14 @@ type LocalStoreSubscriptionInfo = {
   expiry :: String
 }
 
+data ServiceName = YATRI_SUBSCRIPTION | DASHCAM_RENTAL_CAUTIO | UNKNOWN
+
+derive instance genericServiceName :: Generic ServiceName _
+instance eqServiceName :: Eq ServiceName where eq = genericEq
+instance showServiceName :: Show ServiceName where show = genericShow
+instance decodeServiceName :: Decode ServiceName where decode = defaultEnumDecode
+instance encodeServiceName :: Encode ServiceName where encode = defaultEnumEncode
+instance standardEncodeServiceName :: StandardEncode ServiceName where standardEncode _ = standardEncode {}
 ---------------------------------------------------- PaymentHistoryScreen ----------------------------------
 
 type PaymentHistoryScreenState = {
@@ -2627,7 +2642,8 @@ type PaymentHistoryScreenProps = {
   autoPaySetup :: Boolean,
   selectedDue :: String,
   offset :: Int,
-  enableLoadMore :: Boolean
+  enableLoadMore :: Boolean,
+  serviceName :: ServiceName
 }
 
 data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails

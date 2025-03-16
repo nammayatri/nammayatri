@@ -1851,6 +1851,20 @@ newtype Keymap = Keymap {
     , meter_running :: String
     , confirm_meter_stop :: String
     , package :: String
+  , dashcam :: String
+  , ride_plans :: String
+  , dashcam_benefits :: String
+  , dashcam_benefits_1 :: String
+  , dashcam_benefits_2 :: String
+  , dashcam_benefits_3 :: String
+  , pay_n_to_join_this_rental_plan :: String -> String
+  , my_safety_plus :: String
+  , _online_ :: String
+  , camera_status :: String
+  , dashcam_registered :: String
+  , installation_pending_para :: String
+  , tncDashcam :: String
+  , terms_and_conditions_full :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7343,3 +7357,45 @@ end_ride_with_stops = a
 
 resume_ride :: Proxy "resume_ride"
 resume_ride = a
+
+dashcam :: Proxy "dashcam"
+dashcam = Proxy
+
+ride_plans :: Proxy "ride_plans"
+ride_plans = Proxy
+
+dashcam_benefits :: Proxy "dashcam_benefits"
+dashcam_benefits = Proxy
+
+dashcam_benefits_1 :: Proxy "dashcam_benefits_1"
+dashcam_benefits_1 = Proxy
+
+dashcam_benefits_2 :: Proxy "dashcam_benefits_2"
+dashcam_benefits_2 = Proxy
+
+dashcam_benefits_3 :: Proxy "dashcam_benefits_3"
+dashcam_benefits_3 = Proxy
+
+pay_n_to_join_this_rental_plan :: Proxy "pay_n_to_join_this_rental_plan"
+pay_n_to_join_this_rental_plan = Proxy
+
+my_safety_plus :: Proxy "my_safety_plus"
+my_safety_plus = Proxy
+
+_online_ :: Proxy "_online_"
+_online_ = Proxy
+
+camera_status :: Proxy "camera_status"
+camera_status = Proxy
+
+dashcam_registered :: Proxy "dashcam_registered"
+dashcam_registered = Proxy
+
+installation_pending_para :: Proxy "installation_pending_para"
+installation_pending_para = Proxy
+
+tncDashcam :: Proxy "tncDashcam"
+tncDashcam = Proxy
+
+terms_and_conditions_full :: Proxy "terms_and_conditions_full"
+terms_and_conditions_full = Proxy

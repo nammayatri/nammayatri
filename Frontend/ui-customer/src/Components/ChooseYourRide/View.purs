@@ -111,10 +111,84 @@ bottomLayoutView push config visibility' id' =
   , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5
   ][
     deliveryPaymentAtReceivingEndLayout push config
+   , preferSafetyPlusView push config
    , addTipView push config
    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm")
    ]
-   
+
+preferSafetyPlusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+preferSafetyPlusView push state =
+  linearLayout[
+    height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+  ]
+  [
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 0 16 0 16
+    , gravity CENTER
+    , afterRender push $ const $ NoAction state
+    , visibility $ boolToVisibility state.addSafetyPlusCheckbox
+    , orientation HORIZONTAL
+    , weight 1.0
+    ]
+    [ 
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity LEFT
+      , margin $  MarginLeft 18
+      ][
+        checkBoxView push state
+        , textView
+          ([ textFromHtml $ getString PREFER_SAFTEY_PLUS_CAUTIO
+            , color Color.black700
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding $  PaddingLeft 18
+          ] <> FontStyle.body1 LanguageStyle)
+    ]
+    ,imageView
+        [  height (V 18)
+          , width (V 18)
+          , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info"
+          , gravity RIGHT
+          , onClick push $ const $ OnClickSafetyInfo
+          , margin $  MarginRight 18
+
+        ]
+    ]
+    
+  ]
+
+
+checkBoxView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+checkBoxView push config  =
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , onClick push $ const $ PreferSafetyPlus (not config.preferSafetyPlus) (config.quoteList)
+    ][ frameLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT      
+        ][ linearLayout
+            [ height (V 18)
+            , width (V 18)
+            , stroke ("1," <> Color.black900)
+            , cornerRadius 2.0
+            ][
+            imageView
+                [ width (V 18)
+                , height (V 18)
+                , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_check_box"
+                , visibility if config.preferSafetyPlus then VISIBLE else GONE
+                ]
+            ]
+        ]
+    ]
+
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state =
   Keyed.linearLayout

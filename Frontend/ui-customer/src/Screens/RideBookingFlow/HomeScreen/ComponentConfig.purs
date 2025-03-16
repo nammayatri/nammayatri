@@ -693,6 +693,7 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
         , height = WRAP_CONTENT
         }
       , cornerRadius = (Corners 15.0 true true false false)
+      , preferSafetyPlus = state.data.preferSafetyPlus
       }
   ST.CancelConfirmingQuotes ->
     let
@@ -1284,6 +1285,7 @@ driverInfoTransformer state =
     , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
     , requestorPartyRoles : state.data.requestorPartyRoles
     , isAirConditioned : cardState.isAirConditioned
+    , isSafetyPlus : state.data.isSafetyPlus
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1644,6 +1646,7 @@ chooseYourRideConfig state =
       , startTimeUTC = startTimeUTC
       , returnTimeUTC =  returnTimeUTC
       , roundTrip = roundTrip
+      , preferSafetyPlus = state.data.preferSafetyPlus
       }
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
@@ -1852,6 +1855,7 @@ chooseVehicleConfig state = let
     , validTill = selectedEstimates.validTill
     , hasTollCharges = selectedEstimates.hasTollCharges
     , hasParkingCharges = selectedEstimates.hasParkingCharges
+    , safetyPlusCharges = 0
     }
   in chooseVehicleConfig'
 
@@ -2182,6 +2186,101 @@ specialZoneInfoPopupConfig infoConfig =
         }
   in
     specialZonePopupConfig
+
+safetyPlusInfoPopupConfig :: ST.SafetyPluInfoPopUp -> PopUpModal.Config
+safetyPlusInfoPopupConfig infoConfig =
+  let
+    config = PopUpModal.config
+    config' = config
+      { 
+        gravity = CENTER,
+        margin = MarginHorizontal 30 30 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        topTitle
+        { text = infoConfig.title
+          , gravity = LEFT
+        , visibility = VISIBLE
+        , width = WRAP_CONTENT
+        , textStyle = SubHeading1
+        }
+      ,primaryText {
+          visibility = GONE
+        }
+      , coverImageConfig
+        { imageUrl = fetchImage FF_ASSET infoConfig.icon
+        , height = V 212
+        , width = V 296
+        , padding = Padding 0 2 2 0
+        , visibility = VISIBLE
+        }
+      , secondaryText {
+        text = (getString DASHCAM_LEARN_MORE_BULLET_1) <> (getString  DASHCAM_LEARN_MORE_BULLET_2)
+        , gravity = LEFT
+        , visibility = VISIBLE
+        , margin = Margin 12 0 12 12
+        , textStyle = Body2
+      }
+      ,option1 {
+          text = getString GOT_IT
+          , width = MATCH_PARENT
+          , gravity = CENTER
+          , background = Color.black900
+          , color = Color.yellow900
+          , strokeColor = Color.black900
+        },
+        cornerRadius = (Corners 15.0 true true true true),
+        option2 { visibility = false}
+      }
+    in config'
+
+safetyPlusInfoIntroPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyPlusInfoIntroPopUpConfig state =
+  let
+    config = PopUpModal.config
+    config' = config
+      {
+        gravity = CENTER,
+        margin = MarginHorizontal 30 30 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        dismissPopup = true,
+        optionButtonOrientation = "VERTICAL",
+        topTitle {
+          text = getString DASHCAM_LEARN_MORE_POP_UP
+        , gravity = LEFT
+        , visibility = VISIBLE
+        , width = WRAP_CONTENT
+        , textStyle = SubHeading1
+        },
+        primaryText {
+          visibility = GONE
+        },
+        secondaryText {
+          text = (getString DASHCAM_INTRO_POP_UP_BULLET_1) <> (getString  DASHCAM_INTRO_POP_UP_BULLET_2)
+          , gravity = LEFT
+          , visibility = VISIBLE
+          , margin = Margin 12 0 12 12
+          , textStyle = Body2
+        },
+        option1 {
+          text = getString GOT_IT
+          , width = MATCH_PARENT
+          , gravity = CENTER
+          , background = Color.black900
+          , color = Color.yellow900
+          , strokeColor = Color.black900
+        },
+        option2 { visibility = false},
+        backgroundClickable = true,
+        cornerRadius = (Corners 15.0 true true true true),
+        coverImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_cautio_learn_more"
+        , visibility = VISIBLE
+        , height = V 212
+        , width = MATCH_PARENT
+        , margin = Margin 12 12 12 12
+        }
+      }
+  in config'
 
 generateReferralLink :: String -> String -> String -> String -> String -> String
 generateReferralLink source medium term content campaign =

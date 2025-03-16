@@ -233,7 +233,9 @@ type SubscriptionConfigVariantLevelEntity = {
    duesConfig :: Maybe RCSubscriptionDues,
    freeTrialPopupDaysList :: Maybe (Array Int),
    freeTrialPopupOnRidesList :: Maybe (Array Int),
-   lottieSubscriptionInfo :: Maybe LottieSubscriptionInfo
+   lottieSubscriptionInfo :: Maybe LottieSubscriptionInfo,
+   cautioPlansPlaylist :: Maybe String,
+   cautioTncUrl :: Maybe String
 }
 
 type LottieSubscriptionInfo = {

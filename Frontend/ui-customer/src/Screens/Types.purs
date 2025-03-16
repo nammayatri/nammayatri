@@ -330,7 +330,9 @@ type TripDetailsScreenProps =
     canConnectWithDriver :: Boolean,
     triggerUIUpdate :: Boolean,
     showIssueOptions :: Boolean,
-    isContactSupportPopUp :: Boolean
+    isContactSupportPopUp :: Boolean,
+    safetyPlusHelp :: Boolean,
+    safetyPlusContact :: Boolean
   }
 
 data TripDetailsGoBackType = Home | MyRides | HelpAndSupport | ReportIssueChat | RideCompletedScreen
@@ -850,6 +852,9 @@ type HomeScreenStateData =
   , requestorPartyRoles :: Maybe (Array String)
   , boostSearchEstimate :: ChooseVehicle.Config
   , cancellationRate :: Maybe Number
+  , isSafetyPlus :: Boolean
+  , preferSafetyPlus :: Boolean
+  , specialZoneQuoteListWithOutConditionalCharges :: Array ChooseVehicle.Config
 }
 
 type UpcomingRideDetails = {
@@ -1162,6 +1167,8 @@ type HomeScreenStateProps =
   , bookAmbulanceModal :: Boolean
   , firstTimeAmbulanceSearch :: Boolean
   , searchType :: Maybe String
+  , showSafetyPlusInfoPopup :: Boolean
+  , showSafetyPlusInfoIntoPopup :: Boolean
   }
 
 type EditedLocation = {
@@ -1583,6 +1590,7 @@ type RatingCard =
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array CTA.FeedbackAnswer
+  , isSafetyPlus :: Boolean
   }
 
 type Address =
@@ -3359,3 +3367,19 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+---------------------------------------------- SAFETY PLUS ------------------------------------
+type SafetyPlusTagConfig = {
+    icon :: String
+  , text :: String
+  , infoPopUpConfig :: Maybe SafetyPluInfoPopUp
+  , backgroundColor :: String
+}
+
+type SafetyPluInfoPopUp = {
+    title :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , primaryButtonText :: String
+  , icon :: String
+}

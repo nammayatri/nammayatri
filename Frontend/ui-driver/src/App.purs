@@ -587,6 +587,7 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | SUBSCRIBE_API SubscriptionScreenState
                                   | REMOVE_REELS_VIEW_MY_PLANS SubscriptionScreenState
                                   | SWITCH_PLAN_ON_CITY_VEHICLE_CHANGE PlanCardState SubscriptionScreenState
+                                  | SWITCH_SERVICE SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory

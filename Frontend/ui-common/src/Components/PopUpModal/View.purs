@@ -326,7 +326,7 @@ view push state =
                , margin state.primaryText.prefixImage.margin
                 ]
             , textView $
-                [ text $ state.primaryText.text
+                [ textFromHtml $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
                 , accessibility ENABLE
                 , color $ state.primaryText.color
@@ -422,6 +422,7 @@ view push state =
             ]
             [ PrimaryEditText.view (push <<< ETextController) (state.eTextConfig) ]
         , tipsView push state
+        , safetyPlusView push state
         , case state.layout of
             Just layout -> layout { visibility : VISIBLE }
             Nothing -> textView [ visibility GONE]
@@ -442,6 +443,7 @@ view push state =
                        else weight 1.0
                     , background state.option1.background
                     , height $ state.option1.height
+                    , width $ state.option1.width
                     , cornerRadius 8.0
                     , visibility $ if state.option1.visibility then VISIBLE else GONE
                     , stroke $ "1," <> state.option1.strokeColor
@@ -619,6 +621,82 @@ tipsView push state =
   , width MATCH_PARENT
   , visibility $ boolToVisibility state.isTipPopup
   ][ TipsView.view (push <<< TipsViewActionController) $ tipsViewConfig state ]
+
+safetyPlusView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+safetyPlusView push state =
+  linearLayout[
+    height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+  ]
+  [
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ boolToVisibility state.addSafetyPlusCheckbox
+    , orientation HORIZONTAL
+    , padding $ Padding 8 13 20 20
+    ]
+    [ checkBoxViewSafetyPlus push state
+      ,textView
+        ([ textFromHtml $ getString ENABLE_CAUTIO
+          , color Color.black700
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , padding $ PaddingLeft 8
+        ] <> FontStyle.body1 LanguageStyle)
+      , imageView
+          [ height (V 18)
+          , width (V 18)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cautio_driver_info_tag"
+        ]
+       ,linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ boolToVisibility state.addSafetyPlusCheckbox
+    , orientation HORIZONTAL
+    , gravity RIGHT
+    ][textView
+        ([ text $ "+₹" <> show state.safetyPlusCharges
+          , color Color.black700
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+        ] <> FontStyle.body1 LanguageStyle)
+    , imageView
+        [  height (V 18)
+          , width (V 18)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+        ]    
+    ]
+    ]
+  ]
+
+
+checkBoxViewSafetyPlus :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+checkBoxViewSafetyPlus push config  =
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , onClick push $ const $ PreferSafetyPlus (not config.preferSafetyPlus)
+    ][ frameLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT      
+        ][ linearLayout
+            [ height (V 18)
+            , width (V 18)
+            , stroke ("1," <> Color.black900)
+            , cornerRadius 2.0
+            ][
+            imageView
+                [ width (V 18)
+                , height (V 18)
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
+                , visibility if config.preferSafetyPlus then VISIBLE else GONE
+                ]
+            ]
+        ]
+    ]
+
 
 listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 listView push state = 

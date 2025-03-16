@@ -1132,7 +1132,8 @@ newtype RideBookingRes = RideBookingRes {
   vehicleServiceTierSeatingCapacity :: Maybe Int,
   vehicleServiceTierAirConditioned :: Maybe Number,
   returnTime :: Maybe String,
-  isAirConditioned :: Maybe Boolean
+  isAirConditioned :: Maybe Boolean,
+  isSafetyPlus :: Maybe Boolean
 }
 
 newtype RideBookingStatusRes = RideBookingStatusRes {
@@ -1359,7 +1360,8 @@ newtype DEstimateSelect = DEstimateSelect
     autoAssignEnabledV2 :: Boolean,
     otherSelectedEstimates :: Array String,
     isAdvancedBookingEnabled :: Boolean,
-    deliveryDetails :: Maybe DeliveryDetails
+    deliveryDetails :: Maybe DeliveryDetails,
+    preferSafetyPlus :: Boolean
   }
 
 data DeliveryDetails = DeliveryDetails

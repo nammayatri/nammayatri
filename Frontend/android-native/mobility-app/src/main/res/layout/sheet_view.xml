@@ -366,6 +366,34 @@
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
+                                <LinearLayout
+                                    android:id="@+id/safetyPlusTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/ic_safety_plus_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="16dp"
+                                        android:layout_height="16dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_safety_plus_tag" />
+
+                                    <TextView
+                                        android:id="@+id/safetyPlusTagText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/safety_plus"
+                                        android:textColor="@color/white"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
 
                                 <LinearLayout
                                     android:id="@+id/gotoTag"

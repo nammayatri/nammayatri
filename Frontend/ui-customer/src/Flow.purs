@@ -1495,7 +1495,7 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindEstimateAndSearch, searchAfterEstimate = false } })
       else do
         void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
+        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo state.data.preferSafetyPlus) (state.props.estimateId)
         case response of
           Right res -> do
             void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
@@ -1876,7 +1876,7 @@ homeScreenFlow = do
             ChooseVehicle.ESTIMATES -> do
               let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
               if valid then do
-                void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) selectedEstimateOrQuote.id
+                void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo state.data.preferSafetyPlus) selectedEstimateOrQuote.id
                 void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
                 setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
                 logStatus "finding_quotes" ("estimateId : " <> selectedEstimateOrQuote.id)
