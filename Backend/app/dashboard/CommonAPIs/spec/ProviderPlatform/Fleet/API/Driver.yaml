@@ -159,6 +159,7 @@ apis:
         - mboffset: Int
         - mbMobileNumberString: Text
         - mbNameString: Text
+        - mbSearchString: Text
       response:
         type: FleetListDriverRes
       migrate:
@@ -174,6 +175,7 @@ apis:
               - offset: Int
               - mobileNumberString: Text
               - nameString: Text
+              - mbSearchString: Text
             response:
               type: FleetListDriverRes
 
@@ -367,6 +369,8 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: DriverMode
+        - name: Text
+        - mbSearchString: Text
       response:
         type: DrivertoVehicleAssociationRes
       migrate:
@@ -387,6 +391,8 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: DriverMode
+              - name: Text
+              - mbSearchString: Text
             response:
               type: DrivertoVehicleAssociationRes
 

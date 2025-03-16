@@ -31,6 +31,7 @@ module Domain.Action.UI.Registration
 where
 
 import Data.OpenApi hiding (email, info, name, url)
+import Data.Text hiding (elem)
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
@@ -403,7 +404,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLon = req.registrationLon,
         useFakeOtp,
         clientId = Nothing,
-        driverTag = Just [safetyCohortNewTag]
+        driverTag = Just [safetyCohortNewTag],
+        maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber
       }
 
 makeSession ::
