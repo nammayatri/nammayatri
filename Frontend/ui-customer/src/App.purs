@@ -56,7 +56,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState,NotificationBody, ParcelDeliveryScreenState, AadhaarVerificationScreenState, MeterRideScreenState) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState,NotificationBody, ParcelDeliveryScreenState, AadhaarVerificationScreenState, MeterRideScreenState, MeterSelectDestinationScreenState)
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Screens.SelectContactsFlow.SelectContactsScreen.ScreenData as SelectContactsScreenData
@@ -101,6 +101,7 @@ import Screens.Types as ST
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
 import Screens.SelectBusRoute.ScreenData as SelectBusRouteScreenData
 import Screens.RideBookingFlow.MeterRideScreen.ScreenData as MeterRideScreenData
+import Screens.RideBookingFlow.MeterSelectDestinationScreen.ScreenData as MeterSelectDestinationScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -159,6 +160,7 @@ newtype GlobalState = GlobalState {
   , aadhaarVerificationScreen :: AadhaarVerificationScreenState
   , selectBusRouteScreen :: SelectBusRouteScreenData.SelectBusRouteScreenState
   , meterRideScreen :: MeterRideScreenState
+  , meterSelectDestinationScreen :: MeterSelectDestinationScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -217,6 +219,7 @@ defaultGlobalState = GlobalState {
   , aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
   , selectBusRouteScreen : SelectBusRouteScreenData.initData
   , meterRideScreen : MeterRideScreenData.initData
+  , meterSelectDestinationScreen : MeterSelectDestinationScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -465,6 +468,8 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
 
 data METER_RIDE_SCREEN_OP = CUSTOMER_OTP_ENTERED String 
 
+data METER_SELECT_DESTINATION_SCREEN_OUTPUT = GO_BACK_TO_METER_RIDE MeterSelectDestinationScreenState | SEARCH_LOCATION_DESTINATION String MeterSelectDestinationScreenState | UPDATE_LOCATION_NAME_DESTINATION MeterSelectDestinationScreenState Number Number | GET_PLACE_NAME_DESTINATION MeterSelectDestinationScreenState String | GO_TO_METER_RIDE MeterSelectDestinationScreenState
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -516,3 +521,4 @@ data ScreenType =
   | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
   | SelectBusRouteScreenType (SelectBusRouteScreenData.SelectBusRouteScreenState -> SelectBusRouteScreenData.SelectBusRouteScreenState)
   | MeterRideScreenType (MeterRideScreenState -> MeterRideScreenState)
+  | MeterSelectDestinationScreenType (MeterSelectDestinationScreenState -> MeterSelectDestinationScreenState)

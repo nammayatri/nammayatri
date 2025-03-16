@@ -3381,3 +3381,34 @@ type MeterRideScreenProps = {
   , isOTPLoading :: Boolean
   , isFocussed :: Boolean
 }
+
+type MeterSelectDestinationScreenState = {
+  data :: MeterSelectDestinationScreenData,
+  props :: MeterSelectDestinationScreenProps
+}
+
+type MeterSelectDestinationScreenData = {
+  searchString :: Maybe String,
+  destination :: String,
+  destinationAddress :: Address,
+  locationList :: Array LocationListItemState,
+  voiceToText :: String
+}
+
+type MeterSelectDestinationSearchLocationModelProps = {
+  isAutoComplete :: Boolean,
+  crossBtnDestVisibility :: Boolean 
+}
+
+type MeterSelectDestinationScreenProps = {
+  searchLocationModelProps :: MeterSelectDestinationSearchLocationModelProps,
+  isSearchLocation :: SearchLocationModelType,
+  destinationLat :: Number,
+  destinationLng :: Number,
+  destinationPlaceId :: Maybe String,
+  currentLocation :: Location,
+  showVoiceToText :: Boolean,
+  voiceToTextSuccess :: Boolean,
+  confirmButtonText :: String,
+  voiceToTextSearchString :: String
+} 

@@ -234,6 +234,7 @@ import Styles.Colors as Color
 import Data.Int (ceil)
 import RemoteConfig as RemoteConfig
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
+import Screens.RideBookingFlow.MeterSelectDestinationScreen.ScreenData as MeterSelectDestinationScreenData
 import Helpers.PrestoUtils
 import Common.RemoteConfig (fetchRemoteConfigString)
 import Engineering.Helpers.Events as EHE
@@ -7985,3 +7986,52 @@ meterRideScreenFlow = do
           meterRideScreenFlow
       meterRideScreenFlow
     _ -> meterRideScreenFlow
+
+meterScreenFlow :: FlowBT String Unit
+meterScreenFlow = do
+  action <- UI.meterSelectDestinationScreen
+  case action of
+    GO_BACK_TO_METER_RIDE state -> do
+          modifyScreenState $ MeterSelectDestinationScreenType $ \_ -> MeterSelectDestinationScreenData.initData
+          meterRideScreenFlow
+    SEARCH_LOCATION_DESTINATION input updatedState -> do
+      currentLocation <- lift $ lift $ doAff do liftEffect getCurrentLatLong
+      config <- getAppConfigFlowBT appConfig
+      let cityConfig = getCityConfig config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input currentLocation.lat currentLocation.lng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig Nothing ""  Nothing)
+      -- (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey)) 
+      let locList = getLocationList searchLocationResp.predictions
+      modifyScreenState $ MeterSelectDestinationScreenType $ \_ -> updatedState{data {locationList = locList}}
+      meterScreenFlow
+    GET_PLACE_NAME_DESTINATION state placeId -> do
+      (GetPlaceNameResp placeNameResp) <- Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey))
+      -- resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
+      case placeNameResp!!0 of
+        Just (API.PlaceName placeName) -> do
+          let (API.LatLong latLong) = placeName.location
+          void $ liftFlowBT $ JB.animateCamera latLong.lat latLong.lon 17.0 "ZOOM"
+          modifyScreenState $ MeterSelectDestinationScreenType $ \_ -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon, isSearchLocation = ST.LocateOnMap}, data {destinationAddress = encodeAddress placeName.formattedAddress placeName.addressComponents (Just placeId) latLong.lat latLong.lon}}
+        Nothing -> modifyScreenState $ MeterSelectDestinationScreenType $ \_ -> state
+      meterScreenFlow
+    GO_TO_METER_RIDE state -> do
+      modifyScreenState $ MeterSelectDestinationScreenType $ \_ -> state { props {isSearchLocation = ST.NoView } }
+      (GlobalState allState) <- getState
+      (GetPlaceNameResp placeNameResp) <- Remote.placeNameBT (Remote.makePlaceNameReq state.props.destinationLat state.props.destinationLng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey))
+      let _ = spy "GOT PLACE NAME RESPONSE /////////////////////////////" placeNameResp
+      case placeNameResp!!0 of
+        Just (API.PlaceName placeName) -> do
+          let (API.LatLong latLong) = placeName.location
+          let dstAddr = encodeAddress placeName.formattedAddress placeName.addressComponents Nothing latLong.lat latLong.lon
+          let _ = spy "GOT ADDRESS /////////////////////////////" placeName
+          meterRideScreenFlow
+        _ -> meterRideScreenFlow
+    UPDATE_LOCATION_NAME_DESTINATION state lat lon -> do
+      (GetPlaceNameResp placeNameResp) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey))
+      case placeNameResp!!0 of
+        Just (API.PlaceName placeName) -> do
+          let (API.LatLong latLong) = placeName.location
+          let encodedAddress = encodeAddress placeName.formattedAddress placeName.addressComponents Nothing latLong.lat latLong.lon
+          let updatedDestination = fromMaybe "" encodedAddress.area
+          modifyScreenState $ MeterSelectDestinationScreenType $ \_ -> state{props {destinationLat = latLong.lat, destinationLng = latLong.lon}, data {destination = placeName.formattedAddress, destinationAddress = encodedAddress}}
+        Nothing -> pure unit
+      meterScreenFlow

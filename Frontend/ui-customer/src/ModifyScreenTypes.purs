@@ -84,7 +84,7 @@ modifyScreenStateFlow st =
     AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
     SelectBusRouteScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { selectBusRouteScreen = a state.selectBusRouteScreen })
     MeterRideScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { meterRideScreen = a state.meterRideScreen })
-
+    MeterSelectDestinationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { meterSelectDestinationScreen = a state.meterSelectDestinationScreen })
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
 updateRepeatRideDetails state = do 
