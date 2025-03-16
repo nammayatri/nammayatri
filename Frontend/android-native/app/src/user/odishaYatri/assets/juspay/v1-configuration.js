@@ -220,6 +220,8 @@ window.getMerchantConfig = function () {
     , "enableContactSupport" : false
     , "enableGeocoder" : true
     , "isAdvancedBookingEnabled" : true
+    , "isSafetyPlusEnabled" : false
+    , "safetyPlusPopUpCounter" : 0.0
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
       , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]

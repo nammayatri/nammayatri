@@ -346,7 +346,9 @@ defaultSubscriptionsConfigVariantLevelEntity =
     duesConfig : Just defSubscriptionDues,
     freeTrialPopupDaysList : Just [3,2,1],
     freeTrialPopupOnRidesList : Just [5,2],
-    lottieSubscriptionInfo : Just defaultLottieSubscriptionInfo
+    lottieSubscriptionInfo : Just defaultLottieSubscriptionInfo,
+    cautioPlansPlaylist : Just "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
+    cautioTncUrl : Just "https://docs.google.com/document/d/1WQDsAMxOjW-V7Hj3IQB4u8yxnnREVt4WSJ7sYaHQ-D4/edit?pli=1&tab=t.0#heading=h.wpfd6vqqqvs6"
   }
 
 subscriptionsConfigVariantLevel :: String -> String -> SubscriptionConfigVariantLevelEntity

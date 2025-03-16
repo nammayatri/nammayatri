@@ -62,6 +62,8 @@ type AppConfigCustomer a =
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   , isAdvancedBookingEnabled :: Boolean
+  , isSafetyPlusEnabled :: Boolean
+  , safetyPlusPopUpCounter :: Number
   , customerTip :: CustomerTip
   , feature :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig

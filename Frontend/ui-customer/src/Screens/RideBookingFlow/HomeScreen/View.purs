@@ -486,6 +486,8 @@ view push state =
     isEditDestination = any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate, EditingDestinationLoc]
     extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else (if os == "IOS" then 50 else 0)
     confirmingLocOrEditPickupStage = any (_ == state.props.currentStage) [ConfirmingLocation, EditPickUpLocation]
+    customerId = getValueToLocalStore CUSTOMER_ID
+    counterIsInRange = (fromMaybe 0.0 $ NUM.fromString (getValueToLocalStore (POP_UP_COUNTER "safetyPlusInfoPopup" customerId) )) <= state.data.config.safetyPlusPopUpCounter
   in
   (if os == "IOS" then emptyScreenAnimation else PrestoAnim.animationSet[])  $
   frameLayout
@@ -651,6 +653,8 @@ view push state =
             , if state.props.referral.referralStatus /= NO_REFERRAL || state.props.referral.showAddReferralPopup then referralPopUp push state else emptyTextView state
             , if state.props.showRentalInfo then rentalInfoPopUp push state else emptyTextView state
             , if state.props.showSpecialZoneInfoPopup then specialZoneInfoPopup push state else emptyTextView state
+            , if state.props.showSafetyPlusInfoPopup && (getAppConfig appConfig).isSafetyPlusEnabled then safetyPlusInfoPopup push state else emptyTextView state
+            , if state.props.showSafetyPlusInfoIntoPopup && (getAppConfig appConfig).isSafetyPlusEnabled && counterIsInRange then showSafetyPlusInfoPopupIntro push state else emptyTextView state
             , if showAcView state then isAcWorkingView push state else emptyTextView state
             , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
             , if state.props.showDeliveryImageAndOtpModal then deliveryParcelImageAndOtpView push state else emptyTextView state
@@ -5079,6 +5083,26 @@ specialZoneInfoPopup push state =
                 , width MATCH_PARENT
                 ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (specialZoneInfoPopupConfig infoPopUpConfig) ]
         Nothing -> emptyTextView state
+
+safetyPlusInfoPopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+safetyPlusInfoPopup push state =
+    let tagConfig = DriverInfoCard.safetyPlusTagConfig
+  in case tagConfig.infoPopUpConfig of
+        Just infoPopUpConfig ->
+          PrestoAnim.animationSet [ Anim.fadeIn true ]
+            $ linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                ][ PopUpModal.view (push <<< PopUpModalSafetyPlusLearnMoreInfo) (safetyPlusInfoPopupConfig infoPopUpConfig) ]
+        Nothing -> emptyTextView state
+
+showSafetyPlusInfoPopupIntro :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+showSafetyPlusInfoPopupIntro push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+   ][PopUpModal.view (push <<< PopUpModalSafetyPlusIntroInfo) (safetyPlusInfoIntroPopUpConfig state)]
 
 newView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 newView push state =

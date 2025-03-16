@@ -175,6 +175,8 @@ config =
     , enableAddressToLL : false 
     }
   , isAdvancedBookingEnabled : false
+  , isSafetyPlusEnabled : false
+  , safetyPlusPopUpCounter : 0.0
   , enableWhatsappOTP : ["BD", "US"]
   , notifyRideConfirmationConfig : 
       { notify : false 

@@ -79,6 +79,7 @@ data Action =
             | PrimaryButtonCarousel PrimaryButton.Action
             | PrimaryBtnRentalTripDetailsAC PrimaryButton.Action
             | KeyboardCallback String
+            | SafetyPlusInfoTag
 
 instance showAction :: Show Action where
     show _ = ""

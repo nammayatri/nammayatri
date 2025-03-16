@@ -83,7 +83,7 @@ eval (LoadPlans plans) state = do
     let (UiPlansResp planResp) = plans
         config = state.data.subscriptionConfig
         cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
-    _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
+    _ <- pure $ setValueToLocalStore (DRIVER_SUBSCRIBED "YATRI_SUBSCRIPTION") "false"
     let planList = planListTransformer plans false config cityConfig
     continue state { data{ plansList = planList , selectedPlanItem = (planList !! 0)}}
 eval (SelectPlan config ) state = continue state {data { selectedPlanItem = Just config }}

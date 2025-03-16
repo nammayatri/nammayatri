@@ -358,6 +358,10 @@ data Action = NoAction
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
   | VOIPCallBack String String String Int Int String String String
+  | SafetyPlusInfoTag
+  | PopUpModalSafetyPlusIntroInfo PopUpModal.Action
+  | PopUpModalSafetyPlusLearnMoreInfo PopUpModal.Action
+
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

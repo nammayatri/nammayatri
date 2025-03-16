@@ -220,6 +220,8 @@ window.getMerchantConfig = function () {
     , "enableContactSupport" : false
     , "enableGeocoder" : true
     , "isAdvancedBookingEnabled" : true
+    , "isSafetyPlusEnabled" : false
+    , "safetyPlusPopUpCounter" : 0.0
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"],["AMBULANCE_VENTILATOR"],["AMBULANCE_AC_OXY"],[ "AMBULANCE_AC"],["AMBULANCE_TAXI_OXY"] ,["AMBULANCE_TAXI"] ]
       , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY", "DELIVERY_BIKE" ,"AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI"]

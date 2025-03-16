@@ -33,6 +33,8 @@ data Action
   | TipBtnClick Int Int (Array Int)
   | AddTip TipViewProps
   | ChangeTip TipViewProps
+  | PreferSafetyPlus Boolean (Array ChooseVehicleController.Config)
+  | OnClickSafetyInfo
 
 
 type Config
@@ -59,6 +61,8 @@ type Config
     , startTimeUTC :: Maybe String
     , returnTimeUTC :: Maybe String
     , roundTrip :: Boolean
+    , addSafetyPlusCheckbox :: Boolean
+    , preferSafetyPlus :: Boolean
     }
 
 type BookAnyProps 
@@ -70,6 +74,9 @@ type BookAnyProps
 
 config :: Config
 config =
+  let configM = getAppConfig appConfig
+      isSafetyPlusEnabled = configM.isSafetyPlusEnabled
+  in
   { rideDistance: ""
   , rideDuration: ""
   , rideTime: ""
@@ -105,6 +112,8 @@ config =
   , startTimeUTC : Nothing
   , returnTimeUTC : Nothing
   , roundTrip : false
+  , addSafetyPlusCheckbox : isSafetyPlusEnabled
+  , preferSafetyPlus : false
   }
 
 bookAnyProps :: BookAnyProps

@@ -213,6 +213,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
                     rideRequestBundle.getBoolean("isFavourite"),
+                    rideRequestBundle.getBoolean("isSafetyPlus", false),
+                    rideRequestBundle.getInt("safetyPlusCharges", 0),
                     rideRequestBundle.getDouble("parkingCharge"),
                     getCurrTime,
                     stops,
@@ -246,6 +248,9 @@ public class RideRequestActivity extends AppCompatActivity {
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || model.isFavourite() || model.getRoundTrip()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
+                System.out.println("ASDF :-" + model.isSafetyPlus().toString() );
+                holder.safetyPlusTag.setVisibility(model.isSafetyPlus() ? View.VISIBLE : View.GONE);
+                holder.safetyPlusTagText.setText(model.isSafetyPlus() ? holder.safetyPlusTagText.getText().toString().replace("{#amount#}", Integer.toString(model.getSafetyPlusCharges())) : "");
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);

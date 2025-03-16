@@ -215,6 +215,22 @@ joinPlanButtonConfig state = let
       }
   in primaryButtonConfig'
 
+joinRentalPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
+joinRentalPlanButtonConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig{ text = (getString $ PAY_TO_JOIN_THIS_RENTAL_PLAN "1")}
+      , isClickable = if (isNothing state.props.joinPlanProps.selectedPlanItem || not state.props.joinPlanProps.tncRentals) then false else true
+      , alpha = if (isNothing state.props.joinPlanProps.selectedPlanItem || not state.props.joinPlanProps.tncRentals) then 0.6 else 1.0
+      , height = (V 48)
+      , cornerRadius = 8.0
+      , visibility = if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
+      , id = "JoinPlanPrimaryButton"
+      , enableLoader = (JB.getBtnLoader "JoinPlanPrimaryButton")
+      , margin = MarginBottom 20
+      }
+  in primaryButtonConfig'
+
 popupModalConfig :: ST.SubscriptionScreenState -> PopUpModalConfig.Config
 popupModalConfig state = let
     config = PopUpModalConfig.config

@@ -132,6 +132,8 @@ window.getMerchantConfig = function () {
     "black800": "#454545",
     "red" : "#E55454",
     "isAdvancedBookingEnabled" : true,
+    "isSafetyPlusEnabled" : false,
+    "safetyPlusPopUpCounter" : 0.0,
     "showCorporateAddress" : false,
     "popupBackground" : "#FFFFFF",
     "profileEditGravity" : "center",

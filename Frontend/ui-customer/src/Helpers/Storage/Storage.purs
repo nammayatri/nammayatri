@@ -126,6 +126,7 @@ data KeyStore
   | RECENT_BUS_ROUTES
   | MapViewLottie
   | LOCATION_MANUALLY_UPDATED
+  | POP_UP_COUNTER String String
 
 derive instance genericKeyStore :: Generic KeyStore _
 

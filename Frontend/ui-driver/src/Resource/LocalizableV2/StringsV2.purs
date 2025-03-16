@@ -1874,8 +1874,21 @@ getProxy str = case str of
   DRIVER_UNSUBSCRIBED -> \a -> a @~ driver_unsubscribed
   OUT_OF_RIDES arg1 arg2 -> \a -> (a @~ out_of_rides)  arg1 arg2
   SUSPENDED_TILL arg1 arg2 -> \a -> (a @~ suspended_till)  arg1 arg2
-
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1
+  RIDE_PLANS -> \a -> a @~ ride_plans
+  DASHCAM -> \a -> a @~ dashcam
+  DASHCAM_BENEFITS -> \a -> a @~ dashcam_benefits
+  DASHCAM_BENEFITS_1 -> \a -> a @~ dashcam_benefits_1
+  DASHCAM_BENEFITS_2 -> \a -> a @~ dashcam_benefits_2
+  DASHCAM_BENEFITS_3 -> \a -> a @~ dashcam_benefits_3
+  PAY_TO_JOIN_THIS_RENTAL_PLAN arg -> \a -> (a @~ pay_n_to_join_this_rental_plan) arg
+  MY_SAFETY_PLUS -> \a -> a @~ my_safety_plus
+  ONLINE_CAPS -> \a -> a @~ _online_
+  CAMERA_STATUS -> \a -> a @~ camera_status
+  DASHCAM_REGISTRATION -> \a -> a @~ dashcam_registered
+  INSTALLATION_PENDING_PARA -> \a -> a @~ installation_pending_para
+  TNCDASHCAM -> \a -> a @~ tncDashcam
+  TERMS_AND_CONDITIONS_FULL -> \a -> a @~ terms_and_conditions_full
 

@@ -278,6 +278,8 @@ window.getMerchantConfig = function () {
     ]
     , "specialLocationView" : true
     , "isAdvancedBookingEnabled" : true
+    , "isSafetyPlusEnabled" : false
+    , "safetyPlusPopUpCounter" : 0.0
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"

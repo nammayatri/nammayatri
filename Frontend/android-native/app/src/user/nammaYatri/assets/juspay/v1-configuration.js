@@ -252,6 +252,8 @@ const nammaYatriConfig = function () {
     , "enableContactSupport": false
     , "enableGeocoder": true
     , "isAdvancedBookingEnabled": true
+    , "isSafetyPlusEnabled" : true
+    , "safetyPlusPopUpCounter" : 0.0
     , "metroTicketingConfig": [
       {
         "cityName": "kochi"
@@ -632,6 +634,8 @@ const odishaYatriConfig = function () {
     , "enableContactSupport" : false
     , "enableGeocoder" : true
     , "isAdvancedBookingEnabled" : true
+    , "isSafetyPlusEnabled" : false
+    , "safetyPlusPopUpCounter" : 0.0
     , "metroTicketingConfig" : [
       { "cityName" : "kochi"
       , "cityCode" : "std:0484"
@@ -1002,6 +1006,8 @@ const manaYatriConfig = function () {
     , "enableContactSupport": false
     , "enableGeocoder": true
     , "isAdvancedBookingEnabled": true
+    , "isSafetyPlusEnabled" : false
+    , "safetyPlusPopUpCounter" : 0.0
     , "metroTicketingConfig": [
       {
         "cityName": "kochi"

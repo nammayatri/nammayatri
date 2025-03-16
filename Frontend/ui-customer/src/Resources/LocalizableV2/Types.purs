@@ -1776,6 +1776,19 @@ newtype Keymap = Keymap {
 , clean_ambulance :: String
 , ambulance_booking_disclaimer :: String
 , no_remaining_tickets :: String
+, dashcam_learn_more_pop_up :: String
+, dashcam_learn_more_bullet_1 :: String
+, dashcam_learn_more_bullet_2 :: String
+, dashcam_intro_pop_up_title :: String
+, dashcam_intro_pop_up_bullet_1 :: String
+, dashcam_intro_pop_up_bullet_2 :: String
+, help_and_support_safety_plus :: String
+, call_cautio_support  :: String
+, secured_with_safety_plus :: String
+, reach_out_to_cautio :: String
+, enable_cautio :: String
+, prefer_saftey_plus_cautio :: String
+, safety_plus_by :: String
 }
 
 
@@ -6982,3 +6995,43 @@ ambulance_booking_disclaimer = a
 
 no_remaining_tickets :: Proxy "no_remaining_tickets"
 no_remaining_tickets = a
+
+dashcam_learn_more_pop_up :: Proxy "dashcam_learn_more_pop_up"
+dashcam_learn_more_pop_up = a
+
+dashcam_learn_more_bullet_1 :: Proxy "dashcam_learn_more_bullet_1"
+dashcam_learn_more_bullet_1 = a
+
+dashcam_learn_more_bullet_2 :: Proxy "dashcam_learn_more_bullet_2"
+dashcam_learn_more_bullet_2 = a
+
+
+dashcam_intro_pop_up_title :: Proxy "dashcam_intro_pop_up_title"
+dashcam_intro_pop_up_title = a
+
+dashcam_intro_pop_up_bullet_1 :: Proxy "dashcam_intro_pop_up_bullet_1"
+dashcam_intro_pop_up_bullet_1 = a
+
+dashcam_intro_pop_up_bullet_2 :: Proxy "dashcam_intro_pop_up_bullet_2"
+dashcam_intro_pop_up_bullet_2 = a
+
+help_and_support_safety_plus :: Proxy "help_and_support_safety_plus"
+help_and_support_safety_plus = a
+
+call_cautio_support :: Proxy "call_cautio_support"
+call_cautio_support =  a
+
+reach_out_to_cautio :: Proxy "reach_out_to_cautio"
+reach_out_to_cautio = a
+
+enable_cautio :: Proxy "enable_cautio"
+enable_cautio = a
+
+secured_with_safety_plus :: Proxy "secured_with_safety_plus"
+secured_with_safety_plus = a
+
+prefer_saftey_plus_cautio:: Proxy "prefer_saftey_plus_cautio"
+prefer_saftey_plus_cautio = a
+
+safety_plus_by :: Proxy "safety_plus_by"
+safety_plus_by = a
