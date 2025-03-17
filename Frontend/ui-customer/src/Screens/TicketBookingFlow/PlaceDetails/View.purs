@@ -1092,6 +1092,7 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
   Cancelled -> "ny_ic_cancelled"
+  RefundInitiated -> "ny_ic_payment_failed"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of
@@ -1099,6 +1100,7 @@ getTicketStatusBackgroundColor status = case status of
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
   Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  RefundInitiated -> { bgColor : Color.red900, statusText : "Refund Initiated" }
 
 getTicketBackgroundColor :: String -> String
 getTicketBackgroundColor ticketServiceName = case ticketServiceName of

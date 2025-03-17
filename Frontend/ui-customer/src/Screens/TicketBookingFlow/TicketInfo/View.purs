@@ -3,13 +3,15 @@ module Screens.TicketInfoScreen.View where
 import Animation as Anim 
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
 import JBridge as JB 
-import Prelude (not, Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-), (*), (/))
+import Prelude ((+), not, Unit, bind, const, pure, unit, ($), (&&), (/=), (>>=), (<<<),(<>), (==), map, show, (||), show, (-), (*), (/), (<$>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick, clickable, id, horizontalScrollView)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketInfoScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
+import Screens.Types (RefundInfo(..))
 import Styles.Colors as Color
 import Common.Types.App
+import PrestoDOM.Properties (alpha, visibility)
 -- import Screens.TicketBookingFlow.TicketBooking.ComponentConfig 
 import Effect (Effect)
 import Components.GenericHeader as GenericHeader
@@ -21,6 +23,8 @@ import Services.API (BookingStatus(..), TicketPlaceResp(..), PlaceType(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array as DA
+import Data.Array ((!!))
+import Data.Foldable (foldl)
 import Data.Maybe (fromMaybe, Maybe(..), maybe)
 import Debug
 import Data.List ((:))
@@ -156,7 +160,7 @@ zooTicketView state push =
   linearLayout
   [ height $ WRAP_CONTENT
   , width $ MATCH_PARENT
-  , background $ getTicketBackgroundColor activeItem.ticketServiceName
+  , background $  getTicketBackgroundColor activeItem.ticketServiceName
   , orientation VERTICAL
   , cornerRadius 8.0
   ][ linearLayout
@@ -287,17 +291,51 @@ ticketImageView state push =
               , visibility $ if state.props.leftButtonDisable then INVISIBLE else VISIBLE
               ]
           ]
-        , linearLayout
+        , relativeLayout
           [ width $ V 194
           , height $ V 194
           , gravity CENTER
-          ][ imageView
+          ][
+            imageView
             [ width $ V 194
             , height $ V 194
             , id $ spy "QRID" (getNewIDWithTag "ticketQRView")
             , background Color.black900
+            , alpha $ if isTicketCanceled activeItem.status then 0.2 else 1.0
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , afterRender push (const (TicketQRRendered (getNewIDWithTag "ticketQRView") activeItem.ticketServiceShortId ))
+            ],
+            relativeLayout
+              [ width MATCH_PARENT
+                , height MATCH_PARENT
+                , gravity CENTER
+                , visibility $ if isTicketCanceled activeItem.status then VISIBLE else GONE
+              ][
+              linearLayout[
+                width MATCH_PARENT
+                , height MATCH_PARENT
+                , background Color.white900
+                , alpha 0.8
+                , cornerRadius 20.0
+            ][],
+            linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity CENTER
+              , background $ Color.whiteSmoke
+              , margin $ MarginTop 80
+              , padding $ PaddingHorizontal 16 16
+              , cornerRadius 20.0
+              ][
+                textView
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text $ activeItem.status
+                , color Color.black700
+                , textSize 18
+                , fontStyle $ FontStyle.bold TypoGraphy
+                ]
+              ]
             ]
           ]
         , linearLayout
@@ -310,7 +348,7 @@ ticketImageView state push =
             [ width $ V 24
             , height $ V 24
             , imageWithFallback $ getRightButtonForSlider state.props.activeListItem.ticketServiceName state.props.rightButtonDisable
-            , visibility $ if state.props.rightButtonDisable then INVISIBLE else VISIBLE
+            , visibility $ if state.props.rightButtonDisable then INVISIBLE else GONE
             ]
           ]
       ]
@@ -319,6 +357,9 @@ ticketImageView state push =
   ]
   where
     getTicketQRName ticket = ticket.ticketServiceName <> (DS.joinWith "" $ (map (\cat ->  if cat.name /= "all" then " ( " <> cat.name <> " ) " else "") ticket.categories))
+    
+    isTicketCanceled status = 
+      status == "Failed" || status == "RefundInitiated" || status == "Cancelled"
 
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of
@@ -428,6 +469,7 @@ bookingInfoView state push =
   let activeItem = state.props.activeListItem
       validityTime = (maybe (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) activeItem.slot )  
                      <> ", " <> (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "Do MMM YYYY")
+      refund = state.data.selectedBookingInfo.refundDetails >>= (\(refundDetails :: Array ST.RefundInfo) -> refundDetails !! 0)
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -436,10 +478,16 @@ bookingInfoView state push =
   ]([  bookingInfoListItemView push state "Service ID" activeItem.ticketServiceShortId
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
     , bookingInfoListItemView push state (getTextForQRType activeItem.ticketServiceName) ("₹" <> show activeItem.amount)
-  ] <> case activeItem.expiryDate of 
+  ] <> (case activeItem.expiryDate of 
           Just expiryDate ->  [ separatorView (getSeparatorColor activeItem.ticketServiceName)
                               , bookingInfoListItemView push state "Valid Until" validityTime]
           _ -> [])
+    <> (case refund of
+          Just (refund :: ST.RefundInfo) -> [ separatorView (getSeparatorColor activeItem.ticketServiceName)
+                            , bookingInfoListItemView push state "Refund Amount" (show refund.refundAmount)
+                            ,separatorView (getSeparatorColor activeItem.ticketServiceName)
+                            , bookingInfoListItemView push state "Refund Status" (show refund.status)]
+          Nothing -> []))
 
 getSeparatorColor :: String -> String
 getSeparatorColor ticketServiceName = case ticketServiceName of
