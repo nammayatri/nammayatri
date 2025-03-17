@@ -305,3 +305,15 @@ findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbT
       case mbStatus of
         Just Approved -> Se.Eq
         _ -> Se.Not . Se.Eq
+
+softDeletePerson :: BeamFlow m r => Id Person -> Maybe Text -> m ()
+softDeletePerson personId mbReason = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.verified $ Just False,
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.rejectionReason mbReason,
+      Se.Set BeamP.rejectedAt $ Just now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]

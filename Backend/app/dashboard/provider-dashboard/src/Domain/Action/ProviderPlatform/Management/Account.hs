@@ -22,7 +22,12 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Person (findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset)
+import "lib-dashboard" Storage.Queries.Person
+  ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
+    findById,
+    softDeletePerson,
+    updatePersonVerifiedStatus,
+  )
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -43,26 +48,30 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromD
   encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset
   traverse convertPersonToPersonAPIEntity encryptPersonLs
   where
-    convertPersonToPersonAPIEntity DP.Person {..} = do
-      role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-      mobileNumber' <- decrypt mobileNumber
-      email' <- traverse decrypt email
-      pure $
-        Common.PersonAPIEntity
-          { id = Kernel.Types.Id.cast id,
-            roleAPIEntity = convertRoleToRoleAPIEntity role,
-            email = email',
-            mobileNumber = mobileNumber',
-            dashboardAccessType = castDashboardAccessType <$> dashboardAccessType,
-            ..
-          }
-    convertRoleToRoleAPIEntity DRole.Role {..} =
-      Common.RoleAPIEntity
-        { id = Kernel.Types.Id.cast id,
-          name = name,
-          dashboardAccessType = castDashboardAccessType dashboardAccessType,
-          description = description
-        }
+
+convertPersonToPersonAPIEntity :: DP.Person -> Common.PersonAPIEntity
+convertPersonToPersonAPIEntity DP.Person {..} = do
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  mobileNumber' <- decrypt mobileNumber
+  email' <- traverse decrypt email
+  pure $
+    Common.PersonAPIEntity
+      { id = Kernel.Types.Id.cast id,
+        roleAPIEntity = convertRoleToRoleAPIEntity role,
+        email = email',
+        mobileNumber = mobileNumber',
+        dashboardAccessType = castDashboardAccessType <$> dashboardAccessType,
+        ..
+      }
+
+convertRoleToRoleAPIEntity :: DRole.Role -> Common.RoleAPIEntity
+convertRoleToRoleAPIEntity DRole.Role {..} =
+  Common.RoleAPIEntity
+    { id = Kernel.Types.Id.cast id,
+      name = name,
+      dashboardAccessType = castDashboardAccessType dashboardAccessType,
+      description = description
+    }
 
 castDashboardAccessType :: DRole.DashboardAccessType -> Common.DashboardAccessType
 castDashboardAccessType = \case
@@ -76,8 +85,26 @@ castDashboardAccessType = \case
   DRole.MERCHANT_SERVER -> Common.MERCHANT_SERVER
   DRole.DASHBOARD_OPERATOR -> Common.DASHBOARD_OPERATOR
 
-postAccountVerifyAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.VerifyAccountReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postAccountVerifyAccount ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Common.VerifyAccountReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.accountDSL.postAccountVerifyAccount) req)
+  let personId = Kernel.Types.Id.cast req.fleetOwnerId
+  case req.status of
+    Common.Rejected ->
+      softDeletePerson personId req.reason
+        >> pure Kernel.Types.APISuccess.Success
+    Common.Approved -> do
+      person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId)
+      case person.verified of
+        Just True -> throwError (InvalidRequest "FleetOwner already exist!")
+        _ -> do
+          updatePersonVerifiedStatus personId True
+          checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+          transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+          SharedLogic.Transaction.withTransactionStoring transaction $
+            API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.accountDSL.postAccountVerifyAccount) $
+              convertPersonToPersonAPIEntity person
