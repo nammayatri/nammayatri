@@ -52,6 +52,9 @@ grey800 = "#F1F1F1"
 grey900 :: Color
 grey900 = "#E5E7EB"
 
+grey600 :: Color
+grey600 = "#E1E3E7"
+
 green400 :: Color
 green400 = "#26A047"
 
@@ -436,3 +439,6 @@ brightRed = "#E64848"
 
 mildYellow :: Color
 mildYellow = "#FFF9EB"
+
+gunMetalBlue :: Color
+gunMetalBlue = "#2C2F3A"

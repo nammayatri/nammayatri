@@ -223,6 +223,12 @@ getProxy str =
     DRIVER_REQUESTED_TO_CANCEL -> \a -> a @~ driver_requested_to_cancel
     DRIVER_WAS_NOT_REACHABLE -> \a -> a @~ driver_was_not_reachable
     DRIVER_WAS_RUDE -> \a -> a @~ driver_was_rude
+    FARE -> \a -> a @~ fare
+    UPDATED_AT -> \a -> a @~ updated_at
+    UPTON2KM -> \a -> a @~ upton2km
+    DIST -> \a -> a @~ dist
+    MAPS -> \a -> a @~ maps
+    CHOOSE_RIDE_DISTANCE -> \a -> a @~ choose_ride_distance
     DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> \a -> a @~ drivers_can_charge_an_additional_fare_upto
     DRIVERS_CAN_CHARGE_BETWEEN_THE_ABOVE_RANGE -> \a -> a @~ drivers_can_charge_between_the_above_range
     DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> \a -> a @~ drivers_may_quote_extra_to_cover_for_traffic
@@ -816,6 +822,7 @@ getProxy str =
     POWERED_BY -> \a -> a @~ powered_by
     BOOK_YOUR_RIDE -> \a -> a @~ book_your_ride
     START_TYPING_TO_SEARCH_PLACES -> \a -> a @~ start_typing_to_search_places
+    CONFIRM_DESTINATION -> \a -> a @~ confirm_destination
     FARE_UPDATED_WITH_CHARGES -> \a -> a @~ fare_updated_with_charges
     FARE_UPDATED_WITH_SHORTER_DIST -> \a -> a @~ fare_updated_with_shorter_dist
     FARE_UPDATED_WITH_LONGER_DIST -> \a -> a @~ fare_updated_with_longer_dist

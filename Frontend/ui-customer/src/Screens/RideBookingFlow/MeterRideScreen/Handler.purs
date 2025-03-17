@@ -17,7 +17,7 @@ meterRideScreen = do
   action <- lift $ lift $ runScreen $ MeterRideScreen.screen allState.meterRideScreen
   case action of
     GoBack state -> do
-      modifyScreenState $ MeterRideScreenType (\_ -> state{props{isFocussed = false, invalidOTP = false, isOTPLoading = false, otp{one="", two="", three="", four=""}}})
+      modifyScreenState $ MeterRideScreenType (\_ -> state{props{isFocussed = false, invalidOTP = false, isOTPLoading = false, otp = ""}})
       App.BackT $ pure App.GoBack
     CustomerOTP otp -> do
       modifyScreenState $ MeterRideScreenType (\state -> state)

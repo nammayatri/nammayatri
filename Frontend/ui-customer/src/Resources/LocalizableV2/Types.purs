@@ -159,6 +159,12 @@ newtype Keymap = Keymap {
 , driver_requested_to_cancel :: String
 , driver_was_not_reachable :: String
 , driver_was_rude :: String
+, fare :: String
+, upton2km :: String
+, updated_at :: String
+, maps :: String
+, choose_ride_distance :: String
+, dist :: String
 , drivers_can_charge_an_additional_fare_upto :: String
 , drivers_can_charge_between_the_above_range :: String
 , drivers_may_quote_extra_to_cover_for_traffic :: String
@@ -763,6 +769,7 @@ newtype Keymap = Keymap {
 , one_click :: String
 , not_serviceable :: String
 , we_are_not_live_in_your_area :: String
+, confirm_destination :: String
 , account_blocked :: String
 , you_can_still_access :: String
 , facing_problem_with_app :: String
@@ -2157,6 +2164,24 @@ driver_was_not_reachable = a
 
 driver_was_rude :: Proxy "driver_was_rude"
 driver_was_rude = a
+
+fare :: Proxy "fare"
+fare = a
+
+upton2km :: Proxy "upton2km"
+upton2km = a
+
+updated_at :: Proxy "updated_at"
+updated_at = a
+
+dist :: Proxy "dist"
+dist = a
+
+maps :: Proxy "maps"
+maps = a
+
+choose_ride_distance :: Proxy "choose_ride_distance"
+choose_ride_distance = a
 
 drivers_can_charge_an_additional_fare_upto :: Proxy "drivers_can_charge_an_additional_fare_upto"
 drivers_can_charge_an_additional_fare_upto = a
@@ -3912,6 +3937,9 @@ book_your_ride = a
 
 start_typing_to_search_places :: Proxy "start_typing_to_search_places"
 start_typing_to_search_places = a
+
+confirm_destination :: Proxy "confirm_destination"
+confirm_destination = a
 
 fare_updated_with_charges :: Proxy "fare_updated_with_charges"
 fare_updated_with_charges = a

@@ -3366,20 +3366,36 @@ type MeterRideScreenState = {
 }
 
 type MeterRideScreenData = {
-
+  isMeterRideSynced :: Boolean,
+  distance :: Number,
+  timeSec :: Int,
+  destinationAddress :: String,
+  destinationLat :: Number,
+  destinationLng :: Number,
+  rateCard :: Maybe CTA.RateCard,
+  lastUpdatedTime :: String
 }
 
 type MeterRideScreenProps = {
   showInfoCard :: Boolean
-  , otp :: {
-    one :: String
-    , two :: String
-    , three :: String
-    , four :: String
-  }
+  , otp :: String
   , invalidOTP :: Boolean
   , isOTPLoading :: Boolean
   , isFocussed :: Boolean
+  , rateCardConfig :: {
+    sliderMaxValue :: Int,
+    sliderMinValue :: Int,
+    sliderDefVal :: Int,
+    incrementUnit :: Int,
+    sliderVal :: Int,
+    ratePerKM :: Number,
+    sliderFare :: Int
+  }
+  , showRateCard :: Boolean
+  , isRateCardLoading :: Boolean
+  , isMeterClockRunning :: Boolean
+  , refreshAnimation :: Boolean
+  , meterFare :: Int
 }
 
 type MeterSelectDestinationScreenState = {

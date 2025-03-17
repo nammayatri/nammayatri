@@ -2705,7 +2705,6 @@ homeScreenFlow = do
     GO_TO_METER_RIDE_FLOW -> do
       meterRideScreenFlow
     GO_TO_RENTALS_FLOW state -> do
-      meterRideScreenFlow
       latestScheduledRides <- FlowCache.fetchAndUpdateScheduledRides true
       modifyScreenState
         $ RentalScreenStateType
@@ -7976,16 +7975,16 @@ meterRideScreenFlow = do
       let deviceId = JB.getDeviceID unit
       let androidId = JB.getAndroidId unit
       res <- lift $ lift $ Remote.meterRideOTP androidId deviceId otp currLat currLon
-      case res of
-        Left err -> do
-          modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false, invalidOTP=true}})
-          meterRideScreenFlow
-        Right (MeterRideOTPRes res) -> do
-          modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false}})
-          let _ = spy "@@@@@@@@@@@@@" res
-          meterRideScreenFlow
+      modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false}, data {isMeterRideSynced = true}})
       meterRideScreenFlow
-    _ -> meterRideScreenFlow
+      -- case res of
+      --   Left err -> do
+      --     modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false, invalidOTP=true}})
+      --     meterRideScreenFlow
+      --   Right (MeterRideOTPRes res) -> do
+      --     modifyScreenState $ MeterRideScreenType (\state -> state{props{isOTPLoading=false}, data {isMeterRideSynced = true}})
+      --     let _ = spy "@@@@@@@@@@@@@" res
+      --     meterRideScreenFlow
 
 meterScreenFlow :: FlowBT String Unit
 meterScreenFlow = do

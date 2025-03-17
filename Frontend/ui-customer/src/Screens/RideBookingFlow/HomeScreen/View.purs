@@ -3742,9 +3742,23 @@ servicesView push state =
       height WRAP_CONTENT
       , margin $ MarginTop $ if itemLen > 2 then 9 else 12
       , width MATCH_PARENT
-    ] ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
+      , orientation if itemLen <= 2 then HORIZONTAL else VERTICAL
+    ] (if itemLen <= 2 then 
+        ( mapWithIndex ( \index item -> horizontalServiceView push index item ) (nammaServices FunctionCall)) 
+      else if itemLen == 4 then 
+        ( mapWithIndex ( \index item -> verticalServiceView push index 0 item ) (nammaServices FunctionCall)) 
+      else 
+        ( mapWithIndex ( \index item -> verticalServiceFlexView push index item ) (chunkArray 3 (nammaServices FunctionCall))) 
+      )
+    
+    -- ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
   ]
 
+
+chunkArray :: Int -> Array RemoteConfig.Service -> Array (Array RemoteConfig.Service)
+chunkArray n arr =
+  if null arr then []
+  else [take n arr] <> chunkArray n (drop n arr)
 
 horizontalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
 horizontalServiceView push index service =
@@ -3800,8 +3814,19 @@ horizontalServiceView push index service =
     ]
   ]
 
-verticalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
-verticalServiceView push index service = 
+verticalServiceFlexView :: forall w. (Action -> Effect Unit) -> Int -> Array RemoteConfig.Service -> PrestoDOM (Effect Unit) w
+verticalServiceFlexView push outerIndex rowWiseServices = 
+  linearLayout
+  [
+    width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ MarginTop $ if outerIndex == 0 then 0 else 5
+    , gravity CENTER
+  ] 
+  ( mapWithIndex ( \index item -> verticalServiceView push index outerIndex item ) rowWiseServices) 
+
+verticalServiceView :: forall w. (Action -> Effect Unit) -> Int -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
+verticalServiceView push index outerIndex service = 
   relativeLayout
   [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
   , weight 1.0
@@ -3811,6 +3836,7 @@ verticalServiceView push index service =
   , accessibility DISABLE_DESCENDANT
   , accessibilityHint $ getEN service.name
   , margin $ MarginLeft $ if index == 0 then 0 else 4
+  , margin $ MarginTop $ if outerIndex == 0 then 0 else 4
   , onClick push $ const $ ServicesOnClick service
   ][linearLayout 
     [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
@@ -3827,13 +3853,13 @@ verticalServiceView push index service =
         ] <> FontStyle.captions TypoGraphy
     ]
   , linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
+    [ height $ V 48 
+    , width $ V 100
     , padding $ Padding 3 3 3 3
     , background service.backgroundColor
     , margin $ MarginVertical 9 16
     , cornerRadius 12.0
-    , gravity CENTER_HORIZONTAL
+    , gravity CENTER
     , orientation VERTICAL
     ] [ imageView 
       [ imageWithFallback $ service.image
