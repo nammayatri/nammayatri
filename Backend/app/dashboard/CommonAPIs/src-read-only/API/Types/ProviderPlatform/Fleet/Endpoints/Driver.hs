@@ -48,7 +48,8 @@ data AddVehicleReq = AddVehicleReq
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Day,
-    vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
