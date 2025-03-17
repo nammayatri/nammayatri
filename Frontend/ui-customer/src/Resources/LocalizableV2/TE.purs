@@ -1272,7 +1272,6 @@ getTe = Keymap {
 , dist : "దూరం"
 , maps : "మ్యాప్స్"
 , choose_ride_distance : "ప్రయాణ దూరాన్ని ఎంచుకోండి"
-, confirm_destination: "గమ్యస్థానాన్ని నిర్ధారించండి"
 , meter_ride : "మీటర్ రైడ్"
 , inter_city_: "ఇంటర్‌సిటీ"
 , a_ride_already_exists: "ఒక రైడ్ ఇప్పుడు ఉంది."

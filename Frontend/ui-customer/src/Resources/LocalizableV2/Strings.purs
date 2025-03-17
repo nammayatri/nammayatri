@@ -822,7 +822,6 @@ getProxy str =
     POWERED_BY -> \a -> a @~ powered_by
     BOOK_YOUR_RIDE -> \a -> a @~ book_your_ride
     START_TYPING_TO_SEARCH_PLACES -> \a -> a @~ start_typing_to_search_places
-    CONFIRM_DESTINATION -> \a -> a @~ confirm_destination
     FARE_UPDATED_WITH_CHARGES -> \a -> a @~ fare_updated_with_charges
     FARE_UPDATED_WITH_SHORTER_DIST -> \a -> a @~ fare_updated_with_shorter_dist
     FARE_UPDATED_WITH_LONGER_DIST -> \a -> a @~ fare_updated_with_longer_dist

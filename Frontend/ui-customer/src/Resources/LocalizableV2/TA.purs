@@ -1271,7 +1271,6 @@ getTa = Keymap {
 , dist : "தொலைவு"
 , maps : "வரைபடங்கள்"
 , choose_ride_distance : "பயண தூரத்தை தேர்வு செய்க"
-, confirm_destination: "இலக்கை உறுதி செய்யவும்"
 , meter_ride : "மீட்டர் ரைடு"
 , inter_city_: "மாநகர"
 , a_ride_already_exists: "ஒரு ரைட் ஏற்கனவே உள்ளது."

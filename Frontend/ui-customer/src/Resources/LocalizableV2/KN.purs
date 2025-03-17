@@ -1272,7 +1272,6 @@ getKn = Keymap {
 , dist : "ಅಂತರ"
 , maps : "ನಕ್ಷೆಗಳು"
 , choose_ride_distance : "ಪ್ರಯಾಣದ ದೂರವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
-, confirm_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ಖಚಿತಪಡಿಸಿ"
 , meter_ride : "ಮೀಟರ್ ರೈಡ್"
 , inter_city_: "ಅಂತರನಗರಿ"
 , a_ride_already_exists: "ಸೈಕಲು ಈಗಾಗಲೇ ಇದೆ."

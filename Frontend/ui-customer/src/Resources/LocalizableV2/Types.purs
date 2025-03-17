@@ -769,7 +769,6 @@ newtype Keymap = Keymap {
 , one_click :: String
 , not_serviceable :: String
 , we_are_not_live_in_your_area :: String
-, confirm_destination :: String
 , account_blocked :: String
 , you_can_still_access :: String
 , facing_problem_with_app :: String
@@ -3937,9 +3936,6 @@ book_your_ride = a
 
 start_typing_to_search_places :: Proxy "start_typing_to_search_places"
 start_typing_to_search_places = a
-
-confirm_destination :: Proxy "confirm_destination"
-confirm_destination = a
 
 fare_updated_with_charges :: Proxy "fare_updated_with_charges"
 fare_updated_with_charges = a

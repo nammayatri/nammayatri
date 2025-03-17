@@ -1273,7 +1273,6 @@ getMl = Keymap {
 , dist : "ദൂരം"
 , maps : "മാപ്പുകൾ"
 , choose_ride_distance : "യാത്രയുടെ ദൂരം തിരഞ്ഞെടുക്കുക"
-, confirm_destination: "Confirm Destination"
 , meter_ride : "മീറ്റർ റൈഡ്"
 , inter_city_: "അന്തർനഗരം"
 , a_ride_already_exists: "ഒരു റൈഡ് ഇതായിരിക്കുന്നു."

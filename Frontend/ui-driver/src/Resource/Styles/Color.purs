@@ -453,6 +453,3 @@ verySoftOrange  = "#feebb9"
 
 seaGreen :: Color
 seaGreen = "#288B43"
-
-gunMetalBlue:: Color
-gunMetalBlue = "#2C2F3A"

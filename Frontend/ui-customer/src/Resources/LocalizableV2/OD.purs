@@ -1274,7 +1274,6 @@ getOd = Keymap {
 , dist : "ଦୂରତା"
 , maps : "ମାନଚିତ୍ର"
 , choose_ride_distance : "ଯାତ୍ରା ଦୂରତା ବାଛନ୍ତୁ"
-, confirm_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ନିଶ୍ଚିତ କରନ୍ତୁ"
 , meter_ride : "ମିଟର୍ ରାଇଡ୍"
 , inter_city_: "ଆନ୍ତରିକ"
 , a_ride_already_exists: "ଏକ ରାଇଡ୍ ପୂର୍ବରୁ ଅଛି"
