@@ -51,6 +51,7 @@ library
       Domain.Action.RiderPlatform.RideBooking.Registration
       Domain.Action.RiderPlatform.RideBooking.Search
       Domain.Action.RiderPlatform.RideBooking.Select
+      Domain.Action.RiderPlatform.RideBooking.Status
       Storage.Beam.CommonInstances
       API.Action.RiderPlatform.AppManagement
       API.Action.RiderPlatform.AppManagement.Tickets
@@ -78,6 +79,7 @@ library
       API.Action.RiderPlatform.RideBooking.Registration
       API.Action.RiderPlatform.RideBooking.Search
       API.Action.RiderPlatform.RideBooking.Select
+      API.Action.RiderPlatform.RideBooking.Status
       API.Client.RiderPlatform.AppManagement
       API.Client.RiderPlatform.IssueManagement
       API.Client.RiderPlatform.Management
