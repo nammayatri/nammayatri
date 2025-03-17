@@ -35,7 +35,7 @@ public class MobilityServiceHolder {
     private static MobilityServiceHolder instance;
     private static JSONObject initiatePayload = new JSONObject();
     private static long initiateTime = 0;
-    private final MobilityServices hyperService;
+    private MobilityServices hyperService;
     private final Queue<Pair<JSONObject, JuspayResponseHandler>> queue = new LinkedList<>();
     private HyperPaymentsCallbackAdapter adapter = null;
 
@@ -161,6 +161,8 @@ public class MobilityServiceHolder {
     public void terminate() {
         adapter = null;
         hyperService.terminate();
+        instance = null;
+        hyperService = null;
     }
 
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
