@@ -39,9 +39,9 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Common.PersonAPIEntity ->
+  Common.VerifyAccountReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postAccountVerifyAccount merchantShortId opCity Common.PersonAPIEntity {..} =
+postAccountVerifyAccount merchantShortId opCity _req =
   fleetOwnerRegisterReq >>= fleetOwnerRegister
     >> pure Kernel.Types.APISuccess.Success
   where
@@ -49,8 +49,13 @@ postAccountVerifyAccount merchantShortId opCity Common.PersonAPIEntity {..} =
       merchant <- findMerchantByShortId merchantShortId
       pure $
         FleetOwnerRegisterReq
-          { merchantId = merchant.id.getId,
+          { firstName = "",
+            lastName = "",
+            mobileNumber = "",
+            mobileCountryCode = "",
+            merchantId = merchant.id.getId,
             city = opCity,
+            email = Nothing,
             fleetType = Nothing,
             panNumber = Nothing,
             gstNumber = Nothing,

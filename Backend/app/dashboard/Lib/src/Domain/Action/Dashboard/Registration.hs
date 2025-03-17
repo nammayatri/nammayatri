@@ -351,7 +351,7 @@ registerFleetOwner req mbPersonId = do
   merchantServerAccessCheck merchant
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  let mbBoolVerified = not <$> merchant.requireAdminApprovalForFleetOnboarding
+  let mbBoolVerified = Just . not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
   QP.create fleetOwner {verified = mbBoolVerified}
   QAccess.create merchantAccess
   return Success
