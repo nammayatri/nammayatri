@@ -57,6 +57,7 @@ import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
+import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
@@ -121,6 +122,7 @@ type API =
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> RentalsIntercityCache.API
        )
 
 handler :: FlowServer API
@@ -174,3 +176,4 @@ handler =
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> RentalsIntercityCache.handler
