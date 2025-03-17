@@ -188,6 +188,7 @@ library
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerReferral
+      Domain.Action.UI.DeletedPerson
       Domain.Action.UI.Disability
       Domain.Action.UI.DriverOffer
       Domain.Action.UI.EditLocation
@@ -524,6 +525,7 @@ library
       API.Action.UI.BBPS
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
+      API.Action.UI.DeletedPerson
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
@@ -602,6 +604,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
+      Domain.Types.DeletedPerson
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
       Domain.Types.DriverOffer
@@ -717,6 +720,7 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.DeletedPerson
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
       Storage.Beam.DriverOffer
@@ -833,6 +837,7 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
+      Storage.Queries.DeletedPerson
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
       Storage.Queries.DriverOffer
