@@ -443,8 +443,6 @@ enterOTPFlow mbEvent = do
       void $ lift $ lift $ loaderText (getString SENDING_OTP) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
       (VerifyTokenResp resp) <- Remote.verifyTokenBT (makeVerifyOTPReq updatedState.data.otp) updatedState.data.tokenId
-      void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_driver_verify_otp"
-      void $ pure $ metaLogEvent "ny_driver_verify_otp"
       let driverId = ((resp.person)^. _id)
       if(driverId == "__failed") then do
         void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
@@ -533,6 +531,8 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                 else do
                   setValueToLocalStore IS_DRIVER_VERIFIED "false"
                   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
+          void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_driver_verify_otp"
+          void $ pure $ metaLogEvent "ny_driver_verify_otp"        
           onBoardingFlow
         Left errorPayload -> do
           if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
