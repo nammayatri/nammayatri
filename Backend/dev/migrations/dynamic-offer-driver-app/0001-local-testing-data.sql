@@ -35,7 +35,7 @@ INSERT INTO atlas_driver_offer_bpp.person (id, first_name, middle_name, last_nam
     ('favorit-admin-0000000000000000000000', '', NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, '0.1.0|1|8hdNzNRjeq0j7QRZoKzT2iMjoKkQJzwLoUeOEF9edh1wmRer7NbUaUT3foUI1wG2gZMjpB8vDuUKUDG+aQ==', '\xba0f72d2d550eb699914591dab2eadeb8fc83dd1eda6bde7cc3f68d7138f14fe', '+91', NULL, false, NULL, NULL, '2022-04-12 15:15:42.223341+00', '2022-04-12 15:15:42.223341+00','', false, 0, 0, '0.1.0|1|8hdNzNRjeq0j7QRZoKzT2iMjoKkQJzwLoUeOEF9edh1wmRer7NbUaUT3foUI1wG2gZMjpB8vDuUKUDG+aQ==', '\xba0f72d2d550eb699914591dab2eadeb8fc83dd1eda6bde7cc3f68d7138f14fe'),
 	('favorit-bike-00000000000000000000000', 'Sherlock', NULL, 'Sagar', 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, NULL, NULL, '+91', NULL, true, 'favorit-bike-00000000000device-token', NULL, '2022-04-12 15:15:42.222142+00', '2022-04-12 15:15:42.222142+00','favorit0-0000-0000-0000-00000favorit', false, 0, 0, NULL, NULL),
 	('favorit-delivery-bike-00000000000000', 'Peter', NULL, 'Parker', 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, '0.1.0|1|Aim5+V17gd82rDoTi6fAn3Tt7Kk8VLwzAJE7bsMx5we1Qb17qrqa98ocO/bIQvPPwjSBWl6ROAGjn+Lm7w==', '\x7087303c7be873b3f7622b091451152fdae649cdb1a7bf6efcb40f29e3f69320', '+91', NULL, true, 'favorit-delivery-bike-00000000000000device-token', NULL, '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00','favorit0-0000-0000-0000-00000favorit', false, 0, 0, NULL, NULL),
-	('second-favorit-delivery-bike-0000000', 'Joli', NULL, 'Momowala', 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, '0.1.0|2|pbGMCg+/xN2eDn4CW0lFSI1rDVDL8v+Ag3JldWEcCAuNQAWnwcJ7cnTIAXRtDtI2bXB4zzT7I3i6K6KHhg==','\x8d6b045bb3a6f4c610800d33f94936ee1e1acb9c32bf84874b656a473a53874d', '+91', NULL, true, 'favorit-delivery-bike-00000000000000device-token', NULL, '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00','favorit0-0000-0000-0000-00000favorit', false, 0, 0, NULL, NULL);
+	('favorit-delivery-truck-medium-000000', 'Joli', NULL, 'Momowala', 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, '0.1.0|2|pbGMCg+/xN2eDn4CW0lFSI1rDVDL8v+Ag3JldWEcCAuNQAWnwcJ7cnTIAXRtDtI2bXB4zzT7I3i6K6KHhg==','\x8d6b045bb3a6f4c610800d33f94936ee1e1acb9c32bf84874b656a473a53874d', '+91', NULL, true, 'favorit-delivery-bike-00000000000000device-token', NULL, '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00','favorit0-0000-0000-0000-00000favorit', false, 0, 0, NULL, NULL);
 
 
 INSERT INTO atlas_driver_offer_bpp.driver_information (driver_id, active, on_ride, created_at, updated_at, enabled) VALUES
@@ -46,7 +46,7 @@ INSERT INTO atlas_driver_offer_bpp.driver_information (driver_id, active, on_rid
   ('favorit-auto2-0000000000000000000000', false, false, '2022-04-12 15:15:42.280941+00', '2022-04-12 15:15:42.280941+00', true),
   ('favorit-bike-00000000000000000000000', false, false, '2022-04-12 15:15:42.280941+00', '2022-04-12 15:15:42.280941+00', true),
   ('favorit-delivery-bike-00000000000000', false, false, '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00', true),
-  ('second-favorit-delivery-bike-0000000', false, false, '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00', true);
+  ('favorit-delivery-truck-medium-000000', false, false, '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00', true);
 
 
 INSERT INTO atlas_driver_offer_bpp.driver_location (driver_id, lat, lon, point, created_at, updated_at) VALUES
@@ -66,7 +66,7 @@ INSERT INTO atlas_driver_offer_bpp.driver_stats (driver_id, idle_since, bonus_ea
 	('favorit-auto2-0000000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0),
 	('favorit-bike-00000000000000000000000', '2022-04-12 15:15:42.283174+00', 0,0,0,0,0,0),
 	('favorit-delivery-bike-00000000000000', '2024-08-25 13:37:08.170179+00', 0,0,0,0,0,0),
-	('second-favorit-delivery-bike-0000000', '2024-08-25 13:37:08.170179+00', 0,0,0,0,0,0);
+	('favorit-delivery-truck-medium-000000', '2024-08-25 13:37:08.170179+00', 0,0,0,0,0,0);
 
 
 INSERT INTO atlas_driver_offer_bpp.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, info, created_at, updated_at, merchant_id) VALUES
@@ -78,7 +78,7 @@ INSERT INTO atlas_driver_offer_bpp.registration_token (id, auth_medium, auth_typ
 	('favorit-auto2-0000000000000000000000', 'SMS', 'OTP', '1234', 'favorit-auto2-0000000000000000-token', true, 3, 365, 3, 'favorit-auto2-0000000000000000000000', 'USER                                ', NULL, now (), now (), 'favorit0-0000-0000-0000-00000favorit'),
 	('favorit-bike-00000000000000000000000', 'SMS', 'OTP', '3249', 'favorit-bike-00000000000000000-token', true, 3, 365, 3, 'favorit-bike-00000000000000000000000', 'USER                                ', NULL, now (), now (), 'favorit0-0000-0000-0000-00000favorit'),
 	('favorit-delivery-bike-00000000000000', 'SMS', 'OTP', '3249', 'favorit-delivery-bike-00000000-token', true, 3, 365, 3, 'favorit-delivery-bike-00000000000000', 'USER                                ', NULL, now (), now (), 'favorit0-0000-0000-0000-00000favorit'),
-	('second-favorit-delivery-bike-0000000', 'SMS', 'OTP', '3249', 'second-favorit-delivery-bike-0-token', true, 3, 365, 3, 'second-favorit-delivery-bike-0000000', 'USER                                ', NULL, now (), now (), 'favorit0-0000-0000-0000-00000favorit');
+	('favorit-delivery-truck-medium-000000', 'SMS', 'OTP', '3249', 'favorit-delivery-truck-medium-0token', true, 3, 365, 3, 'favorit-delivery-truck-medium-000000', 'USER                                ', NULL, now (), now (), 'favorit0-0000-0000-0000-00000favorit');
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy
   (id, organization_id, base_fare, night_shift_start, night_shift_end,
@@ -98,4 +98,4 @@ INSERT INTO atlas_driver_offer_bpp.vehicle (driver_id, capacity, category, make,
 	('favorit-auto2-0000000000000000000000', 3, NULL, NULL, 'Auto2', NULL, 'AUTO_RICKSHAW', 'Yellow', NULL, '4814', NULL, NULL, '3WT', 'favorit0-0000-0000-0000-00000favorit', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
 	('favorit-bike-00000000000000000000000', 5, NULL, NULL, 'Splendor', NULL, 'BIKE', 'Black', NULL, '4815', NULL, NULL, '2WN', 'favorit0-0000-0000-0000-00000favorit', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
 	('favorit-delivery-bike-00000000000000', 5, NULL, NULL, 'Yamaha', NULL, 'BIKE', 'Yellow', NULL, '4815', NULL, NULL, '2WN', 'favorit0-0000-0000-0000-00000favorit', '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00'),
-	('second-favorit-delivery-bike-0000000', 5, NULL, NULL, 'Royal Enfield', NULL, 'BIKE', 'Black', NULL, '4815', NULL, NULL, '2WN', 'favorit0-0000-0000-0000-00000favorit', '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00');
+	('favorit-delivery-truck-medium-000000', 5, NULL, NULL, 'Tata Truck', NULL, 'DELIVERY_TRUCK_MEDIUM', 'White', NULL, '4815', NULL, NULL, '3WT', 'favorit0-0000-0000-0000-00000favorit', '2024-08-25 13:37:08.170179+00', '2024-08-25 13:37:08.170179+00');
