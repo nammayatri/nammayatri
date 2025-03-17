@@ -92,7 +92,7 @@ view push state = do
       , margin $ MarginTop 60
     ][]
     , tabView push state
-    , if state.data.current == "Drivers" then driverView push state else locationView push state
+    , if state.data.current == ST.Drivers then driverView push state else locationView push state
     ]
 
 getFavouriteDriverList :: forall action. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
@@ -183,7 +183,7 @@ driverView push state =
       [
           height WRAP_CONTENT
         , width MATCH_PARENT
-        , visibility if state.data.current == "Drivers" then VISIBLE else GONE
+        , visibility if state.data.current == ST.Drivers then VISIBLE else GONE
       ][
         textView $
           [ height WRAP_CONTENT
@@ -199,7 +199,7 @@ driverView push state =
     , frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility if state.data.current == "Drivers" then VISIBLE else GONE
+    , visibility if state.data.current == ST.Drivers then VISIBLE else GONE
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -427,11 +427,11 @@ tabView push state =
     , gravity CENTER
     , visibility VISIBLE
     ]
-    [ tabItem push state (getString DRIVERS) "DRIVERS"
-    , tabItem push state (getString LOCATIONS) "LOCATIONS"
+    [ tabItem push state (getString LOCATIONS) ST.Locations
+    , tabItem push state (getString DRIVERS) ST.Drivers
     ]
 
-tabItem :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> String -> String -> PrestoDOM (Effect Unit) w
+tabItem :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> String -> ST.Favourites -> PrestoDOM (Effect Unit) w
 tabItem push state text' scr =
   let
     imageHeight = V 16 
@@ -443,15 +443,15 @@ tabItem push state text' scr =
       , width WRAP_CONTENT
       , padding $ PaddingVertical 0 4
       , weight 1.0
-      , background if (state.data.current == "Drivers" && "DRIVERS" == scr) || (state.data.current == "Locations" && "LOCATIONS" == scr) then Color.black900 else Color.blue600 
+      , background if (state.data.current == ST.Drivers && ST.Drivers == scr) || (state.data.current == ST.Locations && ST.Locations == scr) then Color.black900 else Color.blue600 
       , gravity CENTER
       , cornerRadius 24.0
-      , onClick push $ const $ ChangeView if state.data.current == "Drivers" then "Locations" else "Drivers"
+      , onClick push $ const $ ChangeView if state.data.current == ST.Drivers then ST.Locations else ST.Drivers
       ]
       [ textView
           $ [ height WRAP_CONTENT
             , text $ text'
-            , color if (state.data.current == "Drivers" && "DRIVERS" == scr) || (state.data.current == "Locations" && "LOCATIONS" == scr) then Color.white900 else Color.black700 
+            , color if (state.data.current == ST.Drivers && ST.Drivers == scr) || (state.data.current == ST.Locations && ST.Locations == scr) then Color.white900 else Color.black700 
             , padding $ PaddingBottom 3
             , margin $ MarginTop 4 
             ]

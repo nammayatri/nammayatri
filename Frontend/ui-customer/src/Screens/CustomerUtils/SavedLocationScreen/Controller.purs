@@ -19,7 +19,7 @@ module Screens.SavedLocationScreen.Controller where
 import Prelude( class Show, pure, unit, bind, map, discard, show, not, void, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM (Eval, update, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..), FavouriteDriverListItemState(..))
+import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..), FavouriteDriverListItemState(..), Favourites(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.SavedLocationCard as SavedLocationCardController
 import Components.PrimaryButton as PrimaryButtonController
@@ -112,7 +112,7 @@ data Action = BackPressed Boolean
             | ErrorModalAC ErrorModalController.Action
             | PopUpModalAction PopUpModal.Action
             | AfterRender
-            | ChangeView String
+            | ChangeView Favourites
             | ChangeScreen String String (Maybe String)
             | Back
             | GoToDriverProfile String
