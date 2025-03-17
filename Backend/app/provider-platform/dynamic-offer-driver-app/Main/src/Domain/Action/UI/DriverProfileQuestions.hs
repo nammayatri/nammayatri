@@ -5,7 +5,9 @@ import qualified AWS.S3 as S3
 import ChatCompletion.Interface.Types as CIT
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Types.DriverProfileQuestions as DTDPQ
+import qualified Domain.Types.DriverStats as DTS
 import Domain.Types.LlmPrompt as DTL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -27,8 +29,6 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QP
 import Tools.ChatCompletion as TC
 import Tools.Error
-import Data.Time.Format (formatTime, defaultTimeLocale)
-import qualified Domain.Types.DriverStats as DTS
 
 data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
 
@@ -70,7 +70,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     generateAboutMe person driverStats req' = do
       gptGenProfile <- try $ genAboutMeWithAI person driverStats req'
       either
-        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been with Nammayatri since " <> (joinedNY person.createdAt)<> ". " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
+        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been with Nammayatri since " <> (joinedNY person.createdAt) <> ". " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
         pure
         gptGenProfile
 
@@ -112,6 +112,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
 
     buildPrompt person driverStats req' promptTemplate = do
       merchant <- CQM.findById merchantId
+      cancRate <- calculateCancellationRate driverStats
       pure $
         T.replace "{#homeTown#}" (hometownDetails req'.hometown)
           . T.replace "{#rating#}" (show driverStats.rating)
@@ -122,17 +123,19 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
           . T.replace "{#onPlatformSince#}" (show person.createdAt)
           . T.replace "{#merchant#}" (maybe "" (.name) merchant)
           . T.replace "{#driverName#}" ((.firstName) person)
-          . T.replace "{#cancellationRate#}" (calculateCancellationRate driverStats)
+          . T.replace "{#cancellationRate#}" (cancRate)
           $ promptTemplate
 
     buildChatCompletionReq prompt = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
 
-    calculateCancellationRate :: DTS.DriverStats -> Text
-    calculateCancellationRate driverStats =
+    calculateCancellationRate :: DTS.DriverStats -> Flow Text
+    calculateCancellationRate driverStats = do
       let cancelled = fromMaybe 0 driverStats.ridesCancelled
           total = nonZero driverStats.totalRidesAssigned
           cancRate = div (cancelled * 100 :: Int) (total :: Int)
-      in T.pack (show cancRate)
+          result = T.pack (show cancRate)
+      logDebug $ "Cancellation rate: " <> result
+      pure result
 
 getDriverProfileQues ::
   ( ( Maybe (Id SP.Person),
