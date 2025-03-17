@@ -1080,6 +1080,8 @@ library
     , servant
     , servant-client
     , servant-client-core
+    , servant-exceptions
+    , servant-exceptions-server
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
@@ -1214,6 +1216,8 @@ executable rider-app-exe
     , servant
     , servant-client
     , servant-client-core
+    , servant-exceptions
+    , servant-exceptions-server
     , servant-openapi3
     , servant-server
     , singletons
