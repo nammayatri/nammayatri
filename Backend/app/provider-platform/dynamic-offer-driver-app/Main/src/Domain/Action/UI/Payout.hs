@@ -107,7 +107,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
         payoutConfig <- CPC.findByPrimaryKey merchanOperatingCityId vehicleCategory >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchanOperatingCityId.getId)
         when (isSuccessStatus payoutStatus) do
           driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
-          QDriverStats.updateTotalPayoutAmountPaid (driverStats.totalPayoutAmountPaid <&> (+ amount)) (Id payoutOrder.customerId)
+          QDriverStats.updateTotalPayoutAmountPaid (Just (fromMaybe 0 driverStats.totalPayoutAmountPaid + amount)) (Id payoutOrder.customerId)
           updateDFeeStatusForPayoutRegistrationRefund payoutOrder.customerId
         case payoutOrder.entityName of
           Just DPayment.DRIVER_DAILY_STATS -> do
