@@ -1273,6 +1273,7 @@ getMl = Keymap {
 , dist : "ദൂരം"
 , maps : "മാപ്പുകൾ"
 , choose_ride_distance : "യാത്രയുടെ ദൂരം തിരഞ്ഞെടുക്കുക"
+, confirm_destination: "Confirm Destination"
 , meter_ride : "മീറ്റർ റൈഡ്"
 , inter_city_: "അന്തർനഗരം"
 , a_ride_already_exists: "ഒരു റൈഡ് ഇതായിരിക്കുന്നു."
@@ -1746,5 +1747,4 @@ getMl = Keymap {
 ,clean_ambulance : "ശുചിത്വമായ ആംബുലൻസ്"
 ,ambulance_booking_disclaimer : "യാത്രി സഹായി എംബുലൻസ് സേവാ പ്രദാതാക്കളെ ഉപഭോക്താക്കളുമായി ബന്ധിപ്പിക്കുന്ന ഒരു പ്ലാറ്റ്‌ഫോം മാത്രമാണ്. എംബുലൻസ് പാർട്ടി നൽകിയ വിവരങ്ങൾക്ക് ഞങ്ങൾ ഉത്തരവാദികളല്ല."
 , no_remaining_tickets : "ഇനിയൊരു ടിക്കറ്റ് ശേഷിക്കുന്നില്ല"
-, confirm_destination: "Confirm Destination"
 }

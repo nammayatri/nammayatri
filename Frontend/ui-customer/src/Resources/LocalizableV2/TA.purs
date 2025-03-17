@@ -1271,6 +1271,7 @@ getTa = Keymap {
 , dist : "தொலைவு"
 , maps : "வரைபடங்கள்"
 , choose_ride_distance : "பயண தூரத்தை தேர்வு செய்க"
+, confirm_destination: "இலக்கை உறுதி செய்யவும்"
 , meter_ride : "மீட்டர் ரைடு"
 , inter_city_: "மாநகர"
 , a_ride_already_exists: "ஒரு ரைட் ஏற்கனவே உள்ளது."
@@ -1745,5 +1746,4 @@ getTa = Keymap {
 ,clean_ambulance : "சுத்தமான ஆம்புலன்ஸ்"
 ,ambulance_booking_disclaimer : "యాత్రి సాతి అనేది కేవలం ఆంబ్యులెన్స్ సేవా ప్రొవైడర్లను కస్టమర్లతో కలుపుకునే ఒక వేదిక. ఆంబ్యులెన్స్ పార్టీ అందించే సమాచారానికి మేము బాధ్యత వహించము."
 , no_remaining_tickets : "மீதமுள்ள டிக்கெட்கள் இல்லை"
-, confirm_destination: "இலக்கை உறுதி செய்யவும்"
 }

@@ -1274,6 +1274,7 @@ getOd = Keymap {
 , dist : "ଦୂରତା"
 , maps : "ମାନଚିତ୍ର"
 , choose_ride_distance : "ଯାତ୍ରା ଦୂରତା ବାଛନ୍ତୁ"
+, confirm_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ନିଶ୍ଚିତ କରନ୍ତୁ"
 , meter_ride : "ମିଟର୍ ରାଇଡ୍"
 , inter_city_: "ଆନ୍ତରିକ"
 , a_ride_already_exists: "ଏକ ରାଇଡ୍ ପୂର୍ବରୁ ଅଛି"
@@ -1745,5 +1746,4 @@ getOd = Keymap {
 ,clean_ambulance : "ପରିଷ୍କାର ଆମ୍ବୁଲାନ୍ସ"
 ,ambulance_booking_disclaimer : "ଯାତ୍ରୀ ସାଥୀ କେବଳ ଏକ ପ୍ଲାଟଫର୍ମ ଯାହା ଆମ୍ବୁଲେନ୍ସ ସେବା ପ୍ରଦାତାମାନେ ଗ୍ରାହକଙ୍କ ସହିତ ସଂଯୋଗ କରେ। ଆମ୍ବୁଲେନ୍ସ ପକ୍ଷ ଦ୍ୱାରା ଦିଆଯାଇଥିବା ସୂଚନା ପାଇଁ ଆମେ ଦାୟୀ ନୁହେଁ।"
 , no_remaining_tickets : "କୌଣସି ଅବଶିଷ୍ଟ ଟିକେଟ୍ ନାହିଁ" 
-, confirm_destination: "ଗନ୍ତବ୍ୟସ୍ଥଳ ନିଶ୍ଚିତ କରନ୍ତୁ"
 }

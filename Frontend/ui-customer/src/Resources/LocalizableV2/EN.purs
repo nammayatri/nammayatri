@@ -1274,6 +1274,7 @@ getEn = Keymap {
 , dist : "DIST."
 , maps : "Maps"
 , choose_ride_distance  : "Choose ride distance"
+, confirm_destination: "Confirm Destination"
 , a_ride_already_exists: "A ride already exists"
 , you_have_an_ride_from_to_scheduled_from_till: "You have an {} ride from {} to {} which is scheduled from {} till {}. You can take normal rides or schedule another ride unless it does not overlap with the already scheduled ride timelines."
 , you_have_an_ride_from_without_to: "You have an {} ride from {} which is scheduled from {} till {}. You can take normal rides or schedule another ride unless it does not overlap with the already scheduled ride timelines."
@@ -1745,5 +1746,4 @@ getEn = Keymap {
 ,clean_ambulance : "Clean Ambulance"
 ,ambulance_booking_disclaimer : "Yatri Sathi is only a platform connecting the Ambulance Service Providers with Customers. We are not responsible for information provided by the ambulance party"
 , no_remaining_tickets : "No remaining tickets"
-, confirm_destination: "Confirm Destination"
 }

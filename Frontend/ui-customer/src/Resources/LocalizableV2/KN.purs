@@ -1272,6 +1272,7 @@ getKn = Keymap {
 , dist : "ಅಂತರ"
 , maps : "ನಕ್ಷೆಗಳು"
 , choose_ride_distance : "ಪ್ರಯಾಣದ ದೂರವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+, confirm_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ಖಚಿತಪಡಿಸಿ"
 , meter_ride : "ಮೀಟರ್ ರೈಡ್"
 , inter_city_: "ಅಂತರನಗರಿ"
 , a_ride_already_exists: "ಸೈಕಲು ಈಗಾಗಲೇ ಇದೆ."
@@ -1745,5 +1746,4 @@ getKn = Keymap {
 , clean_ambulance : "ಸ್ವಚ್ಛವಾದ ಆಂಬುಲೆನ್ಸ್"
 , ambulance_booking_disclaimer : "ಯಾತ್ರಿ ಸಹಚರಿ ಒಂದು ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಮಾತ್ರ, ಇದು ಆಂಬ್ಯುಲೆನ್ಸ್ ಸೇವಾ ಪೂರೈಕೆದಾರರನ್ನು ಗ್ರಾಹಕರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸುತ್ತದೆ. ನಾವು ಆಂಬ್ಯುಲೆನ್ಸ್ ಪಕ್ಷದಿಂದ ನೀಡಲಾಗುವ ಮಾಹಿತಿಗೆ ಜವಾಬ್ದಾರಿಯಿಲ್ಲ"
 , no_remaining_tickets : "ಯಾವುದೇ ಉಳಿದ ಟಿಕೆಟ್‌ಗಳಿಲ್ಲ"
-, confirm_destination: "ಗಮ್ಯಸ್ಥಾನವನ್ನು ಖಚಿತಪಡಿಸಿ"
 }

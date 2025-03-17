@@ -3760,6 +3760,11 @@ chunkArray n arr =
   if null arr then []
   else [take n arr] <> chunkArray n (drop n arr)
 
+chunkArray :: Int -> Array RemoteConfig.Service -> Array (Array RemoteConfig.Service)
+chunkArray n arr =
+  if null arr then []
+  else [take n arr] <> chunkArray n (drop n arr)
+
 horizontalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
 horizontalServiceView push index service =
   linearLayout
@@ -3841,7 +3846,7 @@ verticalServiceView push index outerIndex service =
   ][linearLayout 
     [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
     , width MATCH_PARENT
-    , gravity CENTER
+    , gravity CENTER_VERTICAL
     , visibility $ boolToVisibility service.hasSecondaryPill
     ][ textView $
         [ text $ getString OFFERS
