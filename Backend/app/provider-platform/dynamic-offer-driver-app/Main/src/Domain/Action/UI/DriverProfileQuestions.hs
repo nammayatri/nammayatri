@@ -165,8 +165,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages =
             }
   where
     getImages imageIds = do
-      mapM (QMF.findById) imageIds <&> catMaybes <&> ((.url) <$>)
-        >>= mapM (S3.get . T.unpack . extractFilePath)
+      mapM (QMF.findById) imageIds <&> catMaybes <&> ((.url) <$>) >>= mapM (S3.get . T.unpack . extractFilePath)
 
     extractFilePath url = case T.splitOn "filePath=" url of
       [_before, after] -> after
