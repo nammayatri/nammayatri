@@ -19,7 +19,7 @@ We use [Nix](https://nixos.asia/en/nix) to build and develop the [Namamayatri][n
 
 ### Building
 
-**🚨 Attention 🚨**: You do not need to run `nix build` if you are developing the project locally (`nix build` is run in CI). Skip to the [Development](#development) section below. You should prefer [cabal] over Nix when building locally because cabal is faster.
+**🚨 Attention 🚨**: You do not need to run `nix build` if you are developing the project locally (`nix build` is run in CI). Skip to the [Development](#development) section below. You should prefer [cabal] over Nix package manager when building locally because cabal is faster.
 
 Once you have installed all the necessary tools and dependencies, we can proceed with building the project for development.
 
