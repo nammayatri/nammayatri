@@ -17,7 +17,7 @@ import Common.Types.App
 import Data.String (length)
 import Data.String as DS
 import Data.String.Unsafe (charAt)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried
 import Data.Int (toNumber, round)
 import Data.Either
 import Effect (Effect)
@@ -65,6 +65,8 @@ import Helpers.API as HelperAPI
 import Data.Function.Uncurried
 import Helpers.Utils
 import Animation.Config as AnimConfig
+import Data.Function.Uncurried
+import Engineering.Helpers.Utils as EHU
 
 screen :: MeterRideScreenState -> Screen Action MeterRideScreenState ScreenOutput
 screen initialState =
@@ -118,6 +120,11 @@ screen initialState =
                 pure $ runEffectFn1 clearTimerWithIdEffect "MeterRideStartedTimer"
               Nothing -> pure $ pure unit
         )
+      , (\push -> do
+          let _ = runFn2 JB.storeOnPauseCallback push OnPauseCallback
+          void $ runEffectFn2 EHU.setPIPModeCallback push OnPipModeChangeCallback
+          pure $ pure unit
+        )
       ]
   , eval:
       ( \action state -> do
@@ -139,21 +146,23 @@ getPrice push rideId = do
 
 view :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation
-    $ relativeLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , onBackPressed push $ const BackPressed
-        ]
-    $ [ Keyed.linearLayout
+    Anim.screenAnimation
+      $ relativeLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          , background Color.white900
+          , onBackPressed push $ const BackPressed
           ]
-          [ if state.props.isMeterRideStarted then Tuple "rideStartedView" $ rideStartedView push state else Tuple "rideInitView" $ rideInitView push state
-          ]
-      , rateCardView push state
-      ]
+      $ [ Keyed.linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , background Color.white900
+            , visibility $ boolToVisibility $ not state.pipMode
+            ]
+            [ if state.props.isMeterRideStarted then Tuple "rideStartedView" $ rideStartedView push state else Tuple "rideInitView" $ rideInitView push state
+            ]
+        , rateCardView push state
+        , pipView push state
+        ]
 
 rateCardView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 rateCardView push state =
@@ -887,23 +896,23 @@ distAndTimeView push state =
             ]
         ]
     ]
-  where
-  getTime :: Int -> String
-  getTime sec =
-    if sec <= 0 then
-      "--:--"
-    else
-      let
-        sstr = if (div (mod sec 60) 10) == 0 then "0" <> (show (mod sec 60)) else show (mod sec 60)
 
-        mstr = if (div (mod (div sec 60) 60) 10) == 0 then "0" <> (show (mod (div sec 60) 60)) else show (mod (div sec 60) 60)
+getTime :: Int -> String
+getTime sec =
+  if sec <= 0 then
+    "--:--"
+  else
+    let
+      sstr = if (div (mod sec 60) 10) == 0 then "0" <> (show (mod sec 60)) else show (mod sec 60)
 
-        hrs = div sec 3600
-      in
-        if hrs == 0 then
-          mstr <> ":" <> sstr
-        else
-          (show hrs) <> ":" <> mstr <> ":" <> sstr
+      mstr = if (div (mod (div sec 60) 60) 10) == 0 then "0" <> (show (mod (div sec 60) 60)) else show (mod (div sec 60) 60)
+
+      hrs = div sec 3600
+    in
+      if hrs == 0 then
+        mstr <> ":" <> sstr
+      else
+        (show hrs) <> ":" <> mstr <> ":" <> sstr
 
 enterDestinationView :: forall w. (Action -> Effect Unit) -> MeterRideScreenState -> PrestoDOM (Effect Unit) w
 enterDestinationView push state =
@@ -1207,3 +1216,192 @@ getActiveRide count duration push state = do
         getActiveRide (count - 1) duration push state
       else
         pure unit
+
+
+pipView :: forall w.(Action -> Effect Unit) -> MeterRideScreenState ->   PrestoDOM (Effect Unit) w
+pipView push state =
+  linearLayout[
+    width $ MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , margin $ Margin 12 12 12 12
+  , visibility $ boolToVisibility state.pipMode
+  ][
+    imageView[
+      height $ V 19
+    , width $ V 60
+    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_namma_meter"
+    ]
+  , linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ MarginTop 12
+    , padding $ Padding 12 8 12 8
+    , background $ "#F4F7FF"
+    , cornerRadius 10.0
+    , orientation VERTICAL
+    , gravity CENTER
+    ][
+      linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      ][
+        textView $ [
+          text "₹"
+        , color Color.black600
+        , gravity TOP_VERTICAL
+        , height MATCH_PARENT
+        , margin $ MarginRight 3
+        ] <> FontStyle.body18 TypoGraphy
+      , sevenSegmentViewV2
+      ]
+    , linearLayout [height $ V 1, width MATCH_PARENT, background Color.white900, margin $ MarginTop 8] []
+    , linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      , margin $ MarginTop 8
+      ][
+        linearLayout[
+          height $ V 5
+        , width $ V 5
+        , background Color.black
+        , cornerRadius 2.5
+        ][
+          PrestoAnim.animationSet [
+            PrestoAnim.Animation [
+              PrestoAnim.duration 600
+              , PrestoAnim.fromAlpha 0.0
+              , PrestoAnim.toAlpha 1.0
+              , PrestoAnim.repeatMode PrestoAnim.Reverse
+              , PrestoAnim.repeatCount PrestoAnim.Infinite
+              , PrestoAnim.interpolator PrestoAnim.EaseOut
+              ]
+            true
+          ] $
+          linearLayout[
+            width $ V 5
+          , height $ V 5
+          , cornerRadius 2.5
+          , background "#FF3232"
+          ][]
+        ]
+      , textView $ [
+         text $ "METER ON"
+        , color Color.black600
+        , margin $ MarginLeft 8
+        , padding $ PaddingBottom 3
+        ] <> FontStyle.body15 TypoGraphy
+      ]
+    ]
+   , linearLayout [
+        gravity CENTER_VERTICAL
+      , margin $ MarginTop 12
+      , width MATCH_PARENT
+      ][
+        distanceView
+      , linearLayout[height WRAP_CONTENT, weight 1.0] []
+      , timeView
+      ]
+  ]
+  where
+    sevenSegmentViewV2 =
+      let
+        digits = getDigits state.props.meterFare
+        len = DA.length digits
+        finalDigits = if state.props.meterFare == 0 then [-1,-1,-1,-1] else if len > 4 then digits else getArray (4 - len) <> digits
+      in
+        linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          ](map (\item -> textView
+              $ [ text $ if item == -1 then "0" else show item
+                , textSize FontSize.a_22
+                , fontWeight $ FontWeight 400
+                , color if item == -1 then Color.black600 else Color.black900
+                , fontStyle "https://assets.moving.tech/beckn/fonts/DigitalNumbers-Regular.ttf"
+                ]) finalDigits)
+
+    distanceView =
+      linearLayout[
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      , orientation VERTICAL
+      ][
+        linearLayout
+            [ gravity CENTER
+            ]
+            [ imageView
+                [ height $ V 8
+                , width $ V 8
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_ny_location_arrow_in"
+                , margin $ MarginRight 4
+                ]
+            , textView
+                $ [ text $ getString DIST
+                  , height WRAP_CONTENT
+                  , letterSpacing $ PX 1.0
+                  , color Color.black500
+                  ]
+                <> FontStyle.body19 TypoGraphy
+            ]
+        , linearLayout
+            [ gravity BOTTOM
+            , margin $ MarginTop 4
+            ]
+            [ textView
+                $ [ text $ show state.data.distance
+                  , height WRAP_CONTENT
+                  , color Color.black900
+                  ]
+                <> FontStyle.body24 TypoGraphy
+            , textView
+                $ [ text $ getString KM
+                  , height WRAP_CONTENT
+                  -- , letterSpacing $ PX 2.0
+                  , margin $ MarginLeft 4
+                  , color Color.black500
+                  ]
+                <> FontStyle.body15 TypoGraphy
+            ]
+      ]
+
+    timeView =
+      linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity RIGHT
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+            [gravity CENTER]
+            [ imageView
+                [ height $ V 8
+                , width $ V 8
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_ny_clock_unfilled"
+                , margin $ MarginRight 4
+                ]
+            , textView
+                $ [ text $ getString TIME
+                  , height WRAP_CONTENT
+                  -- , margin $ MarginRight 4
+                  , letterSpacing $ PX 1.0
+                  , color Color.black500
+                  ]
+                <> FontStyle.body19 TypoGraphy
+            ]
+        , linearLayout
+            [ gravity CENTER
+            , margin $ MarginTop 4
+            ]
+            [ textView
+                $ [ text $ getTime state.data.timeSec
+                  , height WRAP_CONTENT
+                  , color Color.black800
+                  ]
+                <> FontStyle.body24 TypoGraphy
+            ]
+        ]

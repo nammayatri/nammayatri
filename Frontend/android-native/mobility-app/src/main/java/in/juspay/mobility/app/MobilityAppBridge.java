@@ -189,7 +189,7 @@ public class MobilityAppBridge extends HyperBridge {
                 notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
                 notificationManager.deleteNotificationChannel("TRIP_FINISHED");
                 notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
-                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
+                notificationManager.deleteNotificationChannel("SOS_RESOLVED");
             } catch(Exception e) {
                 System.out.println("Notification Channel doesn't exists");
             }
@@ -299,7 +299,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     public void registerCallBacks() {
-       
+
             callBack = new CallBack() {
             @Override
             public void customerCallBack(String notificationType, String notificationData) {
@@ -403,7 +403,7 @@ public class MobilityAppBridge extends HyperBridge {
     public void initSignedCall(String config){
         cleverTapSignedCall.initSignedCall(config);
     }
-    
+
     @JavascriptInterface
     public boolean isSignedCallInitialized(){
         return cleverTapSignedCall.isSignedCallInitialized();
@@ -1021,7 +1021,7 @@ public class MobilityAppBridge extends HyperBridge {
                             public void onCurrentSecond(@NonNull YouTubePlayer youTubePlayer, float second) {
                                 videoDuration = second;
                             }
-                            
+
                             @Override
                             public void onStateChange(@NonNull YouTubePlayer youTubePlayer, PlayerConstants.PlayerState newState){
                                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, newState);
@@ -1061,7 +1061,7 @@ public class MobilityAppBridge extends HyperBridge {
             youtubePlayer.loadVideo(videoId, 0);
     }
 
-                
+
     @JavascriptInterface
     public void pauseYoutubeVideo() {
         if(vpAdapter != null)
@@ -1355,5 +1355,15 @@ public class MobilityAppBridge extends HyperBridge {
             }
         });
 
+    }
+
+    @JavascriptInterface
+    public void enterPipMode(String payload){
+        try {
+            JSONObject jsonObject = new JSONObject(payload);
+            PIPMode.enterPipMode(bridgeComponents.getActivity(), jsonObject);
+        } catch (JSONException e) {
+            System.err.println("Exception while parsing enterPipMode payload " + e);
+        }
     }
 }

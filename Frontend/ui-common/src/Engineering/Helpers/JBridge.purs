@@ -1118,3 +1118,16 @@ foreign import rsEncryption :: String -> String
 
 voiceToText :: forall action. (action -> Effect Unit) -> (Maybe String -> Boolean -> action) -> (String -> Maybe String) -> (Maybe String) -> Effect String
 voiceToText = runEffectFn4 voiceToTextImpl
+
+foreign import enterPipMode :: EffectFn1 EnterPipModeConfig Unit
+
+type EnterPipModeConfig = {
+  numerator :: Int,
+  denominator :: Int,
+  rect :: Maybe {
+    left :: Int,
+    top :: Int,
+    right :: Int,
+    bottom :: Int
+  }
+}

@@ -2,7 +2,7 @@ module Screens.MeterRideScreen.Controller where
 
 import Screens.Types (MeterRideScreenState)
 import Data.Maybe
-import JBridge (updateSliderValue, minimizeApp, openNavigation, differenceBetweenTwoUTC)
+import JBridge
 import Prelude
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable, Eval)
@@ -19,6 +19,7 @@ import Common.Types.App
 import Data.Int (fromNumber, round, toNumber, fromString)
 import Data.Number (fromString) as Number
 import Engineering.Helpers.Commons as EHC
+import Effect.Uncurried
 
 instance showAction :: Show Action where
   show _ = ""
@@ -49,6 +50,8 @@ data Action
   | UpdateFare GetMeterPriceResp
   | RefreshTime
   | StopRotation String
+  | OnPauseCallback
+  | OnPipModeChangeCallback Boolean
 
 data ScreenOutput
   = GoBack MeterRideScreenState
@@ -149,5 +152,14 @@ eval (DebounceCallBack _ _) state = updateAndExit state { props { isRateCardLoad
 eval (UpdateRateCard (RateCardRespItem res)) state = continue state { props { rateCardConfig { sliderFare = (round res.totalFare.amount), ratePerKM = (toNumber (round (res.perKmRate.amount * 10.0))) / 10.0 } } }
 
 eval (UpdateFare (GetMeterPriceResp resp)) state = continue state { data { distance = fromMaybe 0.0 $ Number.fromString $ parseFloat (resp.distance / 1000.0) 2, lastUpdatedTime = getCurrentUTC "" }, props { meterFare = fromMaybe 0 $ fromString $ toInt $ resp.fare, rideStartingLoader = false} }
+
+eval OnPauseCallback state = continueWithCmd state {pipMode = state.props.isMeterRideStarted} [ do
+  if state.props.isMeterRideStarted then do
+    void $ runEffectFn1 enterPipMode {numerator : 3, denominator : 4, rect : Nothing}
+  else pure unit
+  pure NoAction
+]
+
+eval (OnPipModeChangeCallback pipModeState) state = continue state  {pipMode = pipModeState}
 
 eval _ state = continue state

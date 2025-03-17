@@ -224,7 +224,7 @@ window.onMerchantEvent = function (_event, payload) {
     callInitiateResult();
     setTimeout(() => {
       getPureScript()
-    },0) 
+    },0)
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
@@ -277,6 +277,8 @@ window.onMerchantEvent = function (_event, payload) {
       window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.hv_response);
     } else if (parsedPayload.payload.action == "gl_process" && parsedPayload.payload.callback && parsedPayload.payload.value) {
       window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.value);
+    } else if (parsedPayload.payload.action == "pipMode"){
+      window.pipModeCallback && window.pipModeCallback(parsedPayload.payload.onPipMode)
     } else {
       getPureScript().main(makeEvent("", ""))();
     }
@@ -323,8 +325,15 @@ window.callUICallback = function () {
 window.onResumeListeners = [];
 window.onResumeListenersMap = {};
 window.internetListeners = {};
+window.onPauseListeners = [];
 
 window.onPause = function () {
+  console.log("onPauseListeners", Array.isArray(window.onPauseListeners));
+  if (window.onPauseListeners && Array.isArray(window.onPauseListeners)) {
+    for (let i = 0; i < window.onPauseListeners.length;i++) {
+      window.onPauseListeners[i].call();
+    }
+  }
   console.error("onEvent onPause");
   if (JBridge.pauseMediaPlayer) {
     JBridge.pauseMediaPlayer();
