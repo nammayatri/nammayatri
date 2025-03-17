@@ -123,7 +123,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
           . T.replace "{#onPlatformSince#}" (show person.createdAt)
           . T.replace "{#merchant#}" (maybe "" (.name) merchant)
           . T.replace "{#driverName#}" ((.firstName) person)
-          . T.replace "{#cancellationRate#}" (cancRate)
+          . T.replace "{#cancellationRate#}" cancRate
           $ promptTemplate
 
     buildChatCompletionReq prompt = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
