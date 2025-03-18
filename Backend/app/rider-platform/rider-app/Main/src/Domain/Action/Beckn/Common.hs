@@ -1115,7 +1115,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
         Nothing ->
           when isReferredByPerson $ do
-            QPersonStats.updateBacklogPayoutAmountAndActivations (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
+            QPersonStats.updateEarningsAndActivations (referredByPersonStats.referralEarnings + amount) (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
 
     getPersonStats personId = do
       mbPersonStats <- QPersonStats.findByPersonId personId
