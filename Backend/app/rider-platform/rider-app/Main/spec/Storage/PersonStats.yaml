@@ -94,9 +94,9 @@ PersonStats:
       kvFunction: updateOneWithKV
       params: [referredByEarningsPayoutStatus]
       where: personId
-    updateBacklogPayoutAmountAndActivations:
+    updateEarningsAndActivations:
       kvFunction: updateOneWithKV
-      params: [backlogPayoutAmount,validActivations]
+      params: [referralEarnings,backlogPayoutAmount,validActivations]
       where: personId
     updateBacklogPayoutStatus:
       kvFunction: updateOneWithKV
