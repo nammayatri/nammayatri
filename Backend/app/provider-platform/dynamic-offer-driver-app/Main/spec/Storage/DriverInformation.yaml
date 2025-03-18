@@ -64,6 +64,8 @@ DriverInformation:
     preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
     referralCode: Maybe Text
     referredByDriverId: Maybe (Id Person)
+    referredByFleetOwnerId: Maybe Text
+    referredByOperatorId: Maybe Text
     totalReferred: Maybe Int
     lastEnabledOn: Maybe UTCTime
     canDowngradeToSedan: Bool
@@ -357,5 +359,13 @@ DriverInformation:
     updateServicesEnabledForSubscription:
       kvFunction: updateOneWithKV
       params: [servicesEnabledForSubscription]
+      where: driverId
+    updateReferredByOperatorId:
+      kvFunction: updateOneWithKV
+      params: [referredByOperatorId]
+      where: driverId
+    updateReferredByFleetOwnerId:
+      kvFunction: updateOneWithKV
+      params: [referredByFleetOwnerId]
       where: driverId
 

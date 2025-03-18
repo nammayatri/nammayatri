@@ -24,3 +24,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN merchant_id charac
 
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN dynamic_referral_code_valid_till timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN dynamic_referral_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN role text DEFAULT 'DRIVER';
