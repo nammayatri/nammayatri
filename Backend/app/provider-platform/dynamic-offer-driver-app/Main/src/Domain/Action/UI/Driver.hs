@@ -1172,7 +1172,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
   (refCode, dynamicReferralCode) <-
     case referralCode of
       Nothing -> do
-        res <- DUR.generateReferralCode (driverStats.driverId, merchant.id, merchantOpCityId)
+        res <- DUR.generateReferralCode (Just SP.DRIVER) (driverStats.driverId, merchant.id, merchantOpCityId)
         return (Just $ Id res.referralCode, res.dynamicReferralCode)
       Just drc -> do
         transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)

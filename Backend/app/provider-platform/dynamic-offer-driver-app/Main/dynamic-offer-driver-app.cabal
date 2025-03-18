@@ -142,6 +142,7 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.Onboarding
+      Domain.Action.Dashboard.Fleet.Referral
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Booking
@@ -776,6 +777,7 @@ library
       Domain.Types.DriverIntelligentPoolConfig
       Domain.Types.DriverLicense
       Domain.Types.DriverModuleCompletion
+      Domain.Types.DriverOperatorAssociation
       Domain.Types.DriverPanCard
       Domain.Types.DriverPlan
       Domain.Types.DriverPoolConfig
@@ -791,6 +793,7 @@ library
       Domain.Types.Feedback
       Domain.Types.FleetConfig
       Domain.Types.FleetDriverAssociation
+      Domain.Types.FleetOperatorAssociation
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
@@ -913,6 +916,7 @@ library
       Storage.Beam.DriverIntelligentPoolConfig
       Storage.Beam.DriverLicense
       Storage.Beam.DriverModuleCompletion
+      Storage.Beam.DriverOperatorAssociation
       Storage.Beam.DriverPanCard
       Storage.Beam.DriverPlan
       Storage.Beam.DriverPoolConfig
@@ -928,6 +932,7 @@ library
       Storage.Beam.Feedback
       Storage.Beam.FleetConfig
       Storage.Beam.FleetDriverAssociation
+      Storage.Beam.FleetOperatorAssociation
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
@@ -1053,6 +1058,7 @@ library
       Storage.Queries.DriverIntelligentPoolConfig
       Storage.Queries.DriverLicense
       Storage.Queries.DriverModuleCompletion
+      Storage.Queries.DriverOperatorAssociation
       Storage.Queries.DriverPanCard
       Storage.Queries.DriverPlan
       Storage.Queries.DriverPoolConfig
@@ -1068,6 +1074,7 @@ library
       Storage.Queries.Feedback
       Storage.Queries.FleetConfig
       Storage.Queries.FleetDriverAssociation
+      Storage.Queries.FleetOperatorAssociation
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
@@ -1136,6 +1143,7 @@ library
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
       Storage.Queries.OrphanInstances.FleetDriverAssociation
+      Storage.Queries.OrphanInstances.FleetOperatorAssociation
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice

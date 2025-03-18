@@ -59,4 +59,3 @@ SELECT org_id as partner_org_id, WalletClassNameCfg.config_type as config_type, 
 UPDATE atlas_app.partner_org_config
 SET config_json = config_json :: jsonb || jsonb_build_object('shortUrlExpiryInHours', 240)
 WHERE config_type = 'TICKET_SMS';
-

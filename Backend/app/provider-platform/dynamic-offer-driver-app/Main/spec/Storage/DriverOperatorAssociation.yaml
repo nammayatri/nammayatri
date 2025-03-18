@@ -1,0 +1,31 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+DriverOperatorAssociation:
+  tableName: driver_operator_association
+
+  fields:
+    id: Id DriverOperatorAssociation
+    operatorId: Text
+    isActive: Bool
+    driverId: Id Person
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+
+  constraints:
+    id: PrimaryKey
+    operatorId: "!SecondaryKey"
+    driverId: "!SecondaryKey"
+
+  queries:
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, isActive]
+
+  sqlType:
+    id: text
+    operatorId: text
+    driverId: text
