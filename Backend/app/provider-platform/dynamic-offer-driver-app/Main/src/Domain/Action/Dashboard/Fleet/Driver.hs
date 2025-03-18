@@ -1161,12 +1161,12 @@ postDriverDashboardFleetWmbTripEnd ::
 postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  currentDriverLocation <-
+  mbCurrentDriverLocation <-
     try @_ @SomeException (LF.driversLocation [tripTransaction.driverId])
       >>= \case
-        Left _ -> throwError $ InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
-        Right locations -> listToMaybe locations & fromMaybeM (InvalidRequest "Driver is not active since 24 hours, please ask driver to go online and then end the trip.")
-  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (LatLong currentDriverLocation.lat currentDriverLocation.lon) Dashboard
+        Left _ -> return Nothing
+        Right locations -> return $ listToMaybe locations
+  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) Dashboard
   pure Success
 
 ---------------------------------------------------------------------
