@@ -45,6 +45,7 @@ imports:
   LLMChatCompletionService: ChatCompletion.Types
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
+  Role: Domain.Types.Person
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -88,6 +89,8 @@ Merchant:
     registryUrl: BaseUrl
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    generateReferralCodeForFleet: Maybe Bool
+    generateReferralCodeForOperator: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -112,6 +115,8 @@ Merchant:
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: '''{"NY"}'''
+    generateReferralCodeForFleet: "false"
+    generateReferralCodeForOperator: "false"
 
   excludedFields:
     - merchantId
@@ -999,6 +1004,8 @@ TransporterConfig:
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
     requiresOnboardingInspection: Maybe Bool
+    allowedReferralEntities: "[Role]"
+
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer
     meterRideBulkLocUpdateBatchSize: Integer
@@ -1052,6 +1059,7 @@ TransporterConfig:
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
     minThresholdForPassThroughDestination: Maybe Meters
+    allowedReferralEntities: "Maybe [Text]"
     enableOverchargingBlocker: Maybe Bool
     normalRideBulkLocUpdateBatchSize: Maybe Integer
     meterRideBulkLocUpdateBatchSize: Maybe Integer
@@ -1120,6 +1128,7 @@ TransporterConfig:
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1188,6 +1197,7 @@ TransporterConfig:
     recomputeDistanceThresholds: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    allowedReferralEntities:  maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1244,6 +1254,7 @@ TransporterConfig:
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
+    allowedReferralEntities: "text[]"
 
   default:
     mediaFileUrlPattern: |-
@@ -1373,6 +1384,7 @@ TransporterConfig:
     disableListScheduledBookingAPI: "false"
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
+    allowedReferralEntities: "'{DRIVER}'"
     recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
 
     minThreshildForPassThroughDestination: "1000"

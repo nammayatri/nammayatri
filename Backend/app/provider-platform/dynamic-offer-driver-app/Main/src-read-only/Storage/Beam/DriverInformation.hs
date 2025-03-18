@@ -75,6 +75,8 @@ data DriverInformationT f = DriverInformationT
     preferredSecondarySpecialLocIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    referredByFleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     servicesEnabledForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.Plan.ServiceNames]),
     softBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     softBlockReasonFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

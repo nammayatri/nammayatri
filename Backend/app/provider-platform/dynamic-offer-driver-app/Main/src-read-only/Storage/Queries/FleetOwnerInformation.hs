@@ -10,6 +10,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -39,6 +40,11 @@ updateGstImageId gstImageId fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.gstImageId gstImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateReferredByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateReferredByOperatorId referredByOperatorId fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.referredByOperatorId referredByOperatorId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.FleetOwnerInformation.FleetOwnerInformation))
 findByPrimaryKey fleetOwnerPersonId = do findOneWithKV [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
 
@@ -52,6 +58,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
       Se.Set Beam.gstImageId gstImageId,
       Se.Set Beam.gstNumber gstNumber,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.referredByOperatorId referredByOperatorId,
       Se.Set Beam.verified verified,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -70,6 +77,7 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             gstImageId = gstImageId,
             gstNumber = gstNumber,
             merchantId = Kernel.Types.Id.Id merchantId,
+            referredByOperatorId = referredByOperatorId,
             verified = verified,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -85,6 +93,7 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.gstImageId = gstImageId,
         Beam.gstNumber = gstNumber,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.referredByOperatorId = referredByOperatorId,
         Beam.verified = verified,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
