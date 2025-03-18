@@ -76,6 +76,8 @@ data DriverInformation = DriverInformation
     preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    referredByFleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     servicesEnabledForSubscription :: [Domain.Types.Extra.Plan.ServiceNames],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
