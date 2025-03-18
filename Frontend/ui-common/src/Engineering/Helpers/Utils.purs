@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Engineering.Helpers.Utils where
@@ -60,6 +60,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Int as DI
 import Data.Number.Format (fixed, toStringWith)
 import DecodeUtil
+import Effect.Uncurried
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -187,13 +188,13 @@ initializeCalendar :: Boolean -> ModifiedCalendarObject
 initializeCalendar selectTodaysDate =
   let currentDay = getCurrentDay true
       weeks = getWeeksInMonth currentDay.year currentDay.intMonth
-  in if selectTodaysDate 
+  in if selectTodaysDate
        then selectSingleCalendarDate currentDay Nothing Nothing weeks
-       else 
-         { selectedTimeSpan : currentDay, 
-           weeks : weeks, 
+       else
+         { selectedTimeSpan : currentDay,
+           weeks : weeks,
            startDate : Nothing,
-           endDate : Nothing 
+           endDate : Nothing
          }
 
 foreign import getCurrentDay :: Boolean -> CalendarModalDateObject
@@ -320,7 +321,7 @@ selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
         { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
 
 cityCodeMap :: Array (Tuple String String)
-cityCodeMap = 
+cityCodeMap =
   [ Tuple "std:080" "bangalore"
   , Tuple "std:033" "kolkata"
   , Tuple "std:001" "paris"
@@ -360,17 +361,17 @@ cityCodeMap =
   ]
 
 getCityFromCode :: String -> String
-getCityFromCode code = 
-  let 
+getCityFromCode code =
+  let
     cityCodeTuple = DA.find (\ tuple -> (fst tuple) == code) cityCodeMap
   in maybe "" (\tuple -> snd tuple) cityCodeTuple
 
 getCodeFromCity :: String -> String
-getCodeFromCity city = 
-  let 
+getCodeFromCity city =
+  let
     cityCodeTuple = DA.find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
   in maybe "" (\tuple -> fst tuple) cityCodeTuple
-  
+
 capitalizeFirstChar :: String -> String
 capitalizeFirstChar inputStr =
   let splitedArray = split (Pattern " ") (inputStr)
@@ -396,9 +397,9 @@ handleUpdatedTerms message = do
   if isTermsUpdated then do
       void $ pure $ runFn2 setKeyInSharedPref "T_AND_C_VERSION" (show appConfig.termsVersion)
       void $ pure $ toast $ message
-  else pure unit        
-        
-                  
+  else pure unit
+
+
 getReferralCode :: String -> Maybe String
 getReferralCode referralData =
   let tuples = parseKeyValues referralData "&" "="
@@ -408,14 +409,14 @@ parseKeyValues :: String -> String -> String -> Array (Tuple String String)
 parseKeyValues string queryPattern keyValuePattern = DA.catMaybes $ map (\query -> parseKeyValueWithPattern query keyValuePattern) (split (Pattern queryPattern) string)
 
 parseKeyValueWithPattern :: String -> String -> Maybe (Tuple String String)
-parseKeyValueWithPattern string pattern = 
-  let afterSplit = split (Pattern pattern) string 
+parseKeyValueWithPattern string pattern =
+  let afterSplit = split (Pattern pattern) string
   in  if DA.length afterSplit == 2 then
         Just (Tuple (fromMaybe "" (afterSplit DA.!! 0)) (fromMaybe "" (afterSplit DA.!! 1)))
       else Nothing
-      
+
 findValueFromTuples :: Array (Tuple String String) -> String -> Maybe String
-findValueFromTuples tuples key = 
+findValueFromTuples tuples key =
   let tuple = DA.find (\(Tuple a _) -> a == key) tuples
   in case tuple of
         Just (Tuple _ b) -> Just b
@@ -424,10 +425,10 @@ findValueFromTuples tuples key =
 splitIntoEqualParts :: forall a. Int -> Array a -> Array (Array a)
 splitIntoEqualParts _ [] = []
 splitIntoEqualParts n arr =
-  let 
+  let
     part = slice 0 n arr
     rest = slice n (DA.length arr) arr
-  in 
+  in
     cons part (splitIntoEqualParts n rest)
 
 splitArrayByLengths :: forall a. Array a -> Array Int -> Maybe (Array (Array a))
@@ -436,7 +437,7 @@ splitArrayByLengths array lengths = split array lengths []
     split :: Array a -> Array Int -> Array (Array a) -> Maybe (Array (Array a))
     split remaining [] result = Just result
     split remaining lenArray result =
-      case uncons lenArray of 
+      case uncons lenArray of
          Just {head: len, tail: restLenArray} -> if len <= DA.length remaining then
                                                   let part = DA.take len remaining
                                                       rest = DA.drop len remaining
@@ -445,16 +446,16 @@ splitArrayByLengths array lengths = split array lengths []
                                                   Just $ result <> [remaining]
          Nothing -> Just $ result <> [remaining]
 
-getFlexBoxCompatibleVersion :: String -> String  
-getFlexBoxCompatibleVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
+getFlexBoxCompatibleVersion :: String -> String
+getFlexBoxCompatibleVersion _ =
+  if os == "IOS" then
+    case getMerchant FunctionCall of
       NAMMAYATRI -> "1.3.6"
       YATRISATHI -> "1.0.5"
       YATRI -> "2.1.0"
       _ -> "0.0.0"
-    else do 
-      case getMerchant FunctionCall of 
+    else do
+      case getMerchant FunctionCall of
         NAMMAYATRI -> "1.3.10"
         YATRISATHI -> "0.1.7"
         YATRI -> "2.2.2"
@@ -470,17 +471,17 @@ formatNumber amount decimalPlaces = case (DI.fromNumber amount),decimalPlaces  o
                                       (Just value), _ -> show value
                                       Nothing, Just decimalPlace -> toStringWith (fixed decimalPlace) amount
                                       _,_ -> show amount
-                                      
-                                
-        
+
+
+
 formatMinIntoHoursMins :: Int -> String
-formatMinIntoHoursMins mins = 
-  let 
+formatMinIntoHoursMins mins =
+  let
     hours = mins / 60
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
 
-getColorWithOpacity :: Int -> String -> String 
+getColorWithOpacity :: Int -> String -> String
 getColorWithOpacity opacity color =
   let percentToHex = (if opacity `mod` 2 == 1 then DI.ceil else DI.floor) $  (255.0 * (DI.toNumber opacity)) /100.0
       hexString = getHexFromInt percentToHex
@@ -492,7 +493,7 @@ getHexFromInt number = if number == 0 then "0" else toUpper (convertToHex number
 
 convertToHex :: Int -> String
 convertToHex number = do
-  if number == 0 
+  if number == 0
     then ""
     else do
       let quotient = number/16
@@ -507,15 +508,15 @@ intToHexChar n =
     hexChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
 
 checkConditionToShowInternetScreen :: forall a. a -> Boolean
-checkConditionToShowInternetScreen lazy = 
-  let 
+checkConditionToShowInternetScreen lazy =
+  let
     count = (getKeyWithDefaultFromWindow "noInternetCount" 0) + 1
     forced = getKeyWithDefaultFromWindow "forceAppToNoInternetScreen" false
-  in 
+  in
     if count == 3 || forced then
       let _ = setKeyInWindow "noInternetCount" 0
       in true
-    else 
+    else
       let _ = setKeyInWindow "noInternetCount" count
       in false
 
@@ -525,7 +526,7 @@ getCitySpecificMarker :: City -> String -> Maybe String -> String
 getCitySpecificMarker city variant currentStage =
     -- For compatibility with older native apk versions
     let isDeliveryImagePresent = (getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
-        isHeritageCabImagePresent = (getResourceIdentifier "ny_ic_heritage_cab_nav_on_map" "drawable") /= 0 
+        isHeritageCabImagePresent = (getResourceIdentifier "ny_ic_heritage_cab_nav_on_map" "drawable") /= 0
         variantImage = case variant of
             _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> getAutoImage city
             "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
@@ -550,10 +551,10 @@ getAutoImage city = case city of
     _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_black_yellow_auto"
     _         -> "ic_auto_nav_on_map"
 
-isTamilNaduCity :: City -> Boolean 
+isTamilNaduCity :: City -> Boolean
 isTamilNaduCity city = elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy, Pudukkottai]
 
-isKeralaCity :: City -> Boolean 
+isKeralaCity :: City -> Boolean
 isKeralaCity city = elem city [Kochi, Kozhikode, Thrissur, Trivandrum]
 
 getCityFromString :: String -> City
@@ -597,3 +598,6 @@ getCityFromString cityString =
     "Petrapole" -> Petrapole
     "Srinagar" -> Srinagar
     _ -> AnyCity
+
+
+foreign import setPIPModeCallback :: forall action. EffectFn2 (action -> Effect Unit) (Boolean -> action) Unit

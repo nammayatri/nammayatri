@@ -3543,6 +3543,7 @@ instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 type MeterRideScreenState = {
   data :: MeterRideScreenData,
   props :: MeterRideScreenProps
+, pipMode :: Boolean
 }
 
 type MeterRideScreenData = {

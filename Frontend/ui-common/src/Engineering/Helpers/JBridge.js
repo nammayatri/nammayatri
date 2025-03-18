@@ -2406,7 +2406,7 @@ export const voipDialer = function (rideId, isDriver, phoneNum, isMissed, cb, ac
 export const isSignedCallInitialized = function () {
   if (JBridge.isSignedCallInitialized) {
     return JBridge.isSignedCallInitialized();
-  } 
+  }
   return false;
 };
 
@@ -2422,7 +2422,7 @@ export const initSignedCall = function (rideId) {
       cuid: userCuid,
       isDriver: isDriver
     });
-  
+
     if (JBridge.initSignedCall) {
       return JBridge.initSignedCall(config);
     }
@@ -2432,7 +2432,7 @@ export const initSignedCall = function (rideId) {
 export const destroySignedCall = function () {
   if (JBridge.destroySignedCall) {
     return window.JBridge.destroySignedCall();
-  } 
+  }
 };
 
 export const getLocationNameV2 = function (lat, lon) {
@@ -3213,3 +3213,8 @@ export const setupVoiceRecognitionView = function(id) {
     }
   }
 }
+
+export const enterPipMode = (config) => {
+  window.JBridge.enterPipMode && window.JBridge.enterPipMode(JSON.stringify(config));
+}
+

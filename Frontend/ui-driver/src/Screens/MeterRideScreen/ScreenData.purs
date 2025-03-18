@@ -37,4 +37,5 @@ initData = {
         refreshAnimation : false,
         rideStartingLoader : false
     }
+,   pipMode : false
 }

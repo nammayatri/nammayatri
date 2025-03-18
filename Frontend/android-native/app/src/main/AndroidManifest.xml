@@ -102,7 +102,8 @@
             android:exported="true"
             android:largeHeap="true"
             android:launchMode="singleTask"
-            android:resizeableActivity="false"
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

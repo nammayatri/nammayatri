@@ -25,11 +25,13 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
+import android.app.PictureInPictureParams;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -38,6 +40,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Rational;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -114,6 +117,7 @@ import in.juspay.mobility.app.MyFirebaseMessagingService;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
+import in.juspay.mobility.app.PIPMode;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
@@ -450,7 +454,7 @@ public class MainActivity extends AppCompatActivity {
                 Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }
         }
-        
+
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
@@ -531,7 +535,7 @@ public class MainActivity extends AppCompatActivity {
         }catch(Exception e){
             Log.i("PERF", "unable to fetch PERF remote config");
             Exception exception = new Exception("Error in parsing perf config " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);            
+            FirebaseCrashlytics.getInstance().recordException(exception);
         }
         if (!MobilityServiceHolder.getInstance(context).isInitialized()) {
             MobilityServiceHolder.getInstance(context).initiate(context);
@@ -1088,6 +1092,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, @NonNull Configuration newConfig) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        }
+
+        System.out.println("isInPictureInPictureMode "+ isInPictureInPictureMode);
+
+        try {
+            JSONObject processPL = new JSONObject();
+            JSONObject innerPayload = getInnerPayload(new JSONObject(),"pipMode", MainActivity.this);
+            processPL.put(PaymentConstants.PAYLOAD, innerPayload)
+                    .put("requestId", UUID.randomUUID())
+                    .put("service", getService());
+            innerPayload.put("action", "pipMode");
+            innerPayload.put("onPipMode", isInPictureInPictureMode);
+            MobilityServiceHolder.getInstance(context).process(processPL);
+        } catch (JSONException e) {
+            System.err.println("PIP_JSON_EXCEPTION "+ e);
+        }
+    }
+
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         mFirebaseAnalytics.logEvent("ny_hyper_onRequestPermissionsResult",null);
@@ -1218,7 +1245,18 @@ public class MainActivity extends AppCompatActivity {
         oldSharedPref.edit().clear().apply();
         return true;
     }
-    
+
+    @Override
+    public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        // String pipModeStatus = sharedPref.getString("PIP_MODE", "IN_ACTIVE");
+        // if(!pipModeStatus.equals("ACTIVE")){
+        //     PIPMode.enterPipMode(this);
+        // }
+    }
+
+
+
     public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
         if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
                 HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
@@ -1248,5 +1286,4 @@ public class MainActivity extends AppCompatActivity {
 
         }
         }
-
 }

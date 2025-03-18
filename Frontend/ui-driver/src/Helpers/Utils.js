@@ -689,4 +689,3 @@ export function rentalPickupTimeFormat(input) {
   const isToday = today.toDateString() === date.toDateString();
   return `${isToday ? 'Today' : 'Tomorrow'} ${hours}:${minutes.toString().padStart(2, '0')}${ampm} - ${day} ${month}`;
 }
-
