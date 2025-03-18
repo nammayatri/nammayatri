@@ -71,17 +71,17 @@ screen initialState =
     , view: view
     , name: "RiderRideCompletedScreen"
     , globalEvents: [(\push ->  globalEvents' push initialState)]
-    , eval:
-        ( \action state -> do
-            let
-              _ = spy "RiderRideCompletedCard action" action
-              _ = spy "RiderRideCompletedCard state" state
-            void $ case action of 
-              FeedbackChanged _ _ -> pure unit
-              _ -> do 
-                  let _ = JB.hideKeyboardOnNavigation true
-                  pure unit
-            eval action state
+    , eval:( \action state -> do
+          let
+            _ = spy "RiderRideCompletedScreen action" action
+            _ = spy "RiderRideCompletedScreen state" state
+          void $ case action of 
+            FeedbackChanged _ _ -> pure unit
+            KeyboardCallback _ -> pure unit
+            _ -> do 
+                when(state.isKeyBoardOpen) $ void $ pure $ JB.hideKeyboardOnNavigation true
+                pure unit
+          eval action state
         ) 
     }
     where
