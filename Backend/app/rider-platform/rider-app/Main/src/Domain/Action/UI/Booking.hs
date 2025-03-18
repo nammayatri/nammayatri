@@ -30,7 +30,9 @@ import qualified Domain.Types.Booking.API as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
+import Domain.Types.Extra.Booking
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
@@ -40,6 +42,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
+import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (safeHead, safeLast)
 import Environment
 import EulerHS.Prelude hiding (id, pack, safeHead)
@@ -52,20 +55,24 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Common.FRFS (getLegSourceAndDestination)
-import Lib.JourneyModule.Base (getAllLegsInfo, getJourneyFare)
+import Lib.JourneyModule.Base (getJourneyLegs)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 data StopReq = StopReq
@@ -184,6 +191,26 @@ getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusLi
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList
 
+getLegFare :: DJourneyLeg.JourneyLeg -> Flow Price
+getLegFare leg = do
+  let defaultPrice = Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}
+  case leg.legSearchId of
+    Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+    Just legSearchIdText -> do
+      let legSearchId = Id legSearchIdText
+      case leg.mode of
+        DTrip.Walk -> return defaultPrice
+        DTrip.Taxi -> do
+          mbBooking <- QBooking.findByTransactionIdAndStatus legSearchId.getId (activeBookingStatus <> [COMPLETED])
+          case mbBooking of
+            Just booking -> do
+              mRide <- QRide.findByRBId booking.id
+              return $ fromMaybe defaultPrice (mRide >>= \ride -> ride.totalFare)
+            Nothing -> return defaultPrice
+        _ -> do
+          mbBooking <- QTBooking.findBySearchId legSearchId
+          return $ fromMaybe defaultPrice (mbBooking >>= \booking -> booking.finalPrice)
+
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
   (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList
@@ -242,14 +269,17 @@ buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
 
     buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m SRB.JourneyAPIEntity
     buildJourneyApiEntity journey = do
-      legs <- getAllLegsInfo journey.id
-      journeyFare <- getJourneyFare legs
+      allLegsRawData <- getJourneyLegs journey.id
+      allLegsFare <- mapM getLegFare allLegsRawData
+      totalJourneyFare <- foldM addPrice (Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}) allLegsFare
+      legSourceLocation <- getLegSourceAndDestination (safeHead allLegsRawData) True
+      legDestinationLocation <- getLegSourceAndDestination (safeLast allLegsRawData) False
       return $
         SRB.JourneyAPIEntity
           { id = journey.id,
-            fare = journeyFare,
-            fromLocation = getLegSourceAndDestination (safeHead legs) True,
-            toLocation = getLegSourceAndDestination (safeLast legs) False,
+            fare = mkPriceAPIEntity totalJourneyFare,
+            fromLocation = legSourceLocation,
+            toLocation = legDestinationLocation,
             startTime = journey.startTime,
             createdAt = journey.createdAt,
             status = journey.status
