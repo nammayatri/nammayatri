@@ -18,10 +18,12 @@ import Kernel.External.Encryption (decrypt, encrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Error (MerchantError (MerchantDoesNotExist))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import "lib-dashboard" Storage.Queries.Merchant (findByShortId)
 import "lib-dashboard" Storage.Queries.Person
   ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
     findById,
@@ -31,9 +33,11 @@ import "lib-dashboard" Storage.Queries.Person
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
-import "lib-dashboard" Tools.Error (GenericError (InvalidRequest), PersonError (PersonDoesNotExist), RoleError (RoleDoesNotExist))
-
--- import import Kernel.Types.Error (GenericError(InvalidRequest), PersonError(PersonDoesNotExist))
+import "lib-dashboard" Tools.Error
+  ( GenericError (InvalidRequest),
+    PersonError (PersonDoesNotExist),
+    RoleError (RoleDoesNotExist),
+  )
 
 getAccountFetchUnverifiedAccounts ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -101,7 +105,33 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
         Just True -> throwError (InvalidRequest "FleetOwner already exist!")
         _ -> do
           updatePersonVerifiedStatus personId True
+          fleetOwnerRegisterReq <- createFleetOwnerRegisterReq person
           checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
           transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
           SharedLogic.Transaction.withTransactionStoring transaction $
-            API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.accountDSL.postAccountVerifyAccount) req
+            API.Client.ProviderPlatform.Management.callManagementAPI
+              checkedMerchantId
+              opCity
+              (.accountDSL.postAccountVerifyAccount)
+              fleetOwnerRegisterReq
+  where
+    createFleetOwnerRegisterReq DP.Person {..} = do
+      merchant <-
+        findByShortId merchantShortId
+          >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+      mobileNumber' <- decrypt mobileNumber
+      email' <- traverse decrypt email
+      pure $
+        Common.FleetOwnerRegisterReq
+          { mobileNumber = mobileNumber',
+            merchantId = merchant.id.getId,
+            email = email',
+            city = opCity,
+            fleetType = Nothing,
+            panNumber = Nothing,
+            gstNumber = Nothing,
+            panImageId1 = Nothing,
+            panImageId2 = Nothing,
+            gstCertificateImage = Nothing,
+            ..
+          }

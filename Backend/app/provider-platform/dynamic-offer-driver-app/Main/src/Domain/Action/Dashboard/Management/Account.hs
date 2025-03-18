@@ -9,6 +9,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import Data.OpenApi (ToSchema)
 import Domain.Action.Dashboard.Fleet.Registration (FleetOwnerRegisterReq (..), fleetOwnerRegister)
+import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -39,28 +40,20 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Common.VerifyAccountReq ->
+  Common.FleetOwnerRegisterReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postAccountVerifyAccount merchantShortId opCity _req =
-  fleetOwnerRegisterReq >>= fleetOwnerRegister
-    >> pure Kernel.Types.APISuccess.Success
+postAccountVerifyAccount _merchantShortId _opCity req = do
+  _ <- fleetOwnerRegister $ castFleetOwnerRegisterReq req
+  pure Kernel.Types.APISuccess.Success
   where
-    fleetOwnerRegisterReq = do
-      merchant <- findMerchantByShortId merchantShortId
-      pure $
-        FleetOwnerRegisterReq
-          { firstName = "",
-            lastName = "",
-            mobileNumber = "",
-            mobileCountryCode = "",
-            merchantId = merchant.id.getId,
-            city = opCity,
-            email = Nothing,
-            fleetType = Nothing,
-            panNumber = Nothing,
-            gstNumber = Nothing,
-            panImageId1 = Nothing,
-            panImageId2 = Nothing,
-            gstCertificateImage = Nothing,
-            ..
-          }
+    castFleetOwnerRegisterReq :: Common.FleetOwnerRegisterReq -> FleetOwnerRegisterReq
+    castFleetOwnerRegisterReq Common.FleetOwnerRegisterReq {..} =
+      FleetOwnerRegisterReq
+        { fleetType = castFleetType <$> fleetType,
+          ..
+        }
+    castFleetType :: Common.FleetType -> FOI.FleetType
+    castFleetType = \case
+      Common.RENTAL_FLEET -> FOI.RENTAL_FLEET
+      Common.NORMAL_FLEET -> FOI.NORMAL_FLEET
+      Common.BUSINESS_FLEET -> FOI.BUSINESS_FLEET
