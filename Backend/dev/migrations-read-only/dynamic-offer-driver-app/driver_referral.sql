@@ -18,3 +18,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD PRIMARY KEY ( referral_co
 
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN role text DEFAULT 'DRIVER';

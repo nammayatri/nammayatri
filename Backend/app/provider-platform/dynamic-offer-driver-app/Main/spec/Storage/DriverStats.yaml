@@ -14,6 +14,8 @@ DriverStats:
     driverId : Id Driver
     idleSince : UTCTime
     totalRides : Int
+    numDriversOnboarded: Int
+    numFleetsOnboarded: Int
     totalEarnings : HighPrecMoney
     bonusEarned : HighPrecMoney
     lateNightTrips : Int
@@ -59,6 +61,8 @@ DriverStats:
 
   beamType:
     totalDistance: Double
+    numDriversOnboarded: Maybe Int
+    numFleetsOnboarded: Maybe Int
     coinCovertedToCashLeft: Maybe HighPrecMoney
     totalCoinsConvertedCash: Maybe HighPrecMoney
     distanceUnit: Maybe DistanceUnit
@@ -83,6 +87,8 @@ DriverStats:
     totalReferralCounts: Kernel.Prelude.fromMaybe 0|I
     validDriverCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
     validCustomerCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
+    numDriversOnboarded: Kernel.Prelude.fromMaybe 0|I
+    numFleetsOnboarded: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalDistance: getTotalDistance
@@ -102,6 +108,8 @@ DriverStats:
     totalReferralCounts: Kernel.Prelude.Just|I
     validDriverCancellationTagCount: Kernel.Prelude.Just|I
     validCustomerCancellationTagCount: Kernel.Prelude.Just|I
+    numDriversOnboarded: Kernel.Prelude.Just|I
+    numFleetsOnboarded: Kernel.Prelude.Just|I
 
   constraints:
     driverId: PrimaryKey
@@ -143,6 +151,16 @@ DriverStats:
       params: [validCustomerCancellationTagCount]
       where: driverId
 
+    updateNumDriversOnboarded:
+      kvFunction: updateOneWithKV
+      params: [numDriversOnboarded]
+      where: driverId
+
+    updateNumFleetsOnboarded:
+      kvFunction: updateOneWithKV
+      params: [numFleetsOnboarded]
+      where: driverId
+
     # setMissedEarnings: -- beam Field checkUp DSL Fix needed
     #   kvFunction: updateOneWithKV
     #   params: [earningsMissedAmount,earningsMissed]
@@ -156,6 +174,8 @@ DriverStats:
 
   default:
     totalRides: "0"
+    numDriversOnboarded: "0"
+    numFleetsOnboarded: "0"
     totalDistance: "0"
     totalEarnings: "0"
     bonusEarned: "0"

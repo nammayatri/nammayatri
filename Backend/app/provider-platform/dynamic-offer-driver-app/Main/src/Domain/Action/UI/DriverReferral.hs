@@ -22,6 +22,7 @@ import qualified Kernel.Utils.Text as TU
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DriverReferral as CQD
 import qualified Storage.Queries.DriverReferral as QRD
+import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
@@ -44,11 +45,12 @@ createDriverReferral ::
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
+  SP.Role ->
   ReferralLinkReq ->
   m APISuccess
-createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard ReferralLinkReq {..} = do
+createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard role ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
-    throwError $ InvalidRequest "Referral Code must have 6 digits."
+    throwError $ InvalidRequest "Referral Code must have greater than equal to 6 digits."
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
@@ -73,7 +75,8 @@ createDriverReferral (driverId, merchantId, merchantOpCityId) isDashboard Referr
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOpCityId
+            merchantOperatingCityId = Just merchantOpCityId,
+            role
           }
 
 generateReferralCode ::
@@ -85,10 +88,16 @@ generateReferralCode ::
     EsqDBFlow m r,
     MonadTime m
   ) =>
+  Maybe SP.Role ->
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m GenerateReferralCodeRes
-generateReferralCode (driverId, merchantId, merchantOpCityId) = do
+generateReferralCode mbRole (driverId, merchantId, merchantOpCityId) = do
   mbReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
+  role <- case mbRole of
+    Just role -> pure role
+    Nothing -> do
+      person <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      pure person.role
 
   case mbReferralCodeWithDriver of
     Just driverReferral -> pure $ GenerateReferralCodeRes driverReferral.referralCode.getId
@@ -96,11 +105,11 @@ generateReferralCode (driverId, merchantId, merchantOpCityId) = do
       Redis.withLockRedisAndReturnValue makeLastRefferalCodeKey 60 $ do
         refferalCodeNumber <- CQD.getNextRefferalCode
         let referralCode' = T.pack $ formatReferralCode (show refferalCodeNumber)
-        driverRefferalRecord <- mkDriverRefferalType referralCode'
+        driverRefferalRecord <- mkDriverRefferalType referralCode' role
         void (QRD.create driverRefferalRecord)
         pure $ GenerateReferralCodeRes referralCode'
   where
-    mkDriverRefferalType rc = do
+    mkDriverRefferalType rc roleData = do
       now <- getCurrentTime
       pure $
         D.DriverReferral
@@ -110,7 +119,8 @@ generateReferralCode (driverId, merchantId, merchantOpCityId) = do
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOpCityId
+            merchantOperatingCityId = Just merchantOpCityId,
+            role = roleData
           }
     formatReferralCode rc =
       let len = length rc

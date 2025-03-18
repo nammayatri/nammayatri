@@ -266,7 +266,9 @@ createDriverStat currency distanceUnit driverId = do
             validDriverCancellationTagCount = 0,
             validCustomerCancellationTagCount = 0,
             validCancellationTagsStatsStartDate = Just now,
-            updatedAt = now
+            updatedAt = now,
+            numDriversOnboarded = 0,
+            numFleetsOnboarded = 0
           }
   _ <- DSQ.create driverStat
   pure driverStat

@@ -21,6 +21,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     enabled :: Kernel.Prelude.Bool,
     fromTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     gatewayAndRegistryPriorityList :: [Domain.Types.GatewayAndRegistryService],
+    generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     geoHashPrecisionValue :: Kernel.Prelude.Int,
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,
     gstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

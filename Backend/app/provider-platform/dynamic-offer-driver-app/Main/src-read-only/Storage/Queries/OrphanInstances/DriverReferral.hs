@@ -4,9 +4,11 @@
 module Storage.Queries.OrphanInstances.DriverReferral where
 
 import qualified Domain.Types.DriverReferral
+import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,6 +22,7 @@ instance FromTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferr
           { driverId = Kernel.Types.Id.Id driverId,
             linkedAt = linkedAt,
             referralCode = Kernel.Types.Id.Id referralCode,
+            role = Kernel.Prelude.fromMaybe Domain.Types.Person.DRIVER role,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -32,6 +35,7 @@ instance ToTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferral
       { Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.linkedAt = linkedAt,
         Beam.referralCode = Kernel.Types.Id.getId referralCode,
+        Beam.role = Kernel.Prelude.Just role,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

@@ -9,6 +9,7 @@ import qualified Domain.Types.FleetOwnerInformation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
@@ -19,6 +20,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
+    referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

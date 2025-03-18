@@ -59,4 +59,3 @@ DROP TABLE atlas_app.frfs_trip;
 UPDATE atlas_app.partner_org_config
 SET config_json = config_json :: jsonb || jsonb_build_object('shortUrlExpiryInHours', 240)
 WHERE config_type = 'TICKET_SMS';
-
