@@ -31,7 +31,6 @@ import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
-import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -97,12 +96,6 @@ init journeyReq = do
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
-
-getJourneyFare :: [JL.LegInfo] -> Flow Price
-getJourneyFare legs =
-  case catMaybes (map (.totalFare) legs) of
-    [] -> pure $ Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}
-    (firstFare : restFares) -> foldlM KTP.addPrice firstFare restFares
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
