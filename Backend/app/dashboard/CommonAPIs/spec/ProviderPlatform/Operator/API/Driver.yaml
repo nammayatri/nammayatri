@@ -55,7 +55,8 @@ types:
     enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
     derive': "HttpInstance, ToJSON, FromJSON, Generic, ToSchema, Eq"
   OperationHubReqResp:
-    requests: [OperationHubDriverRequest]
+    - recordType: NewType
+    - requests: [OperationHubDriverRequest]
   OperationHubDriverRequest:
     id: Text
     operationHubId: Text
