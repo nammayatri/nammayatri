@@ -66,6 +66,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> CallService Call.Exotel
     Call.TwillioCallConfig _ -> CallService Call.TwillioCall
+    Call.TataClickToCallConfig _ -> CallService Call.TataClickToCall
   NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig _ -> NotificationService Notification.FCM
     Notification.PayTMConfig _ -> NotificationService Notification.PayTM
