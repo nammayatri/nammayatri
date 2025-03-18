@@ -239,8 +239,8 @@ castImageType DVC.VehiclePermit = Verification.VehiclePermit
 castImageType DVC.VehiclePUC = Verification.VehiclePUC
 castImageType DVC.VehicleInsurance = Verification.VehicleInsurance
 castImageType DVC.VehicleFitnessCertificate = Verification.VehicleFitnessCertificate
+castImageType DVC.VehicleNOC = Verification.VehicleNOC
 castImageType _ = Verification.VehicleRegistrationCertificate -- Fix Later
--- castImageType DVC.VehicleNOC = Verification.VehicleNOC
 
 validateImageFile ::
   Bool ->

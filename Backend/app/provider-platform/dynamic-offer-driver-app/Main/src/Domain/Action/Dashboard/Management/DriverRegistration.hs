@@ -532,9 +532,9 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
     Just noc -> do
       let updatednoc =
             noc{DNOC.nocNumber = nocNoEnc,
-                DPUC.nocExpiry = req.nocExpiry,
-                DPUC.rcId = rc.id,
-                DPUC.verificationStatus = VALID
+                DNOC.nocExpiry = req.nocExpiry,
+                DNOC.rcId = rc.id,
+                DNOC.verificationStatus = VALID
                }
       QVNOC.updateByPrimaryKey updatednoc
     Nothing -> do

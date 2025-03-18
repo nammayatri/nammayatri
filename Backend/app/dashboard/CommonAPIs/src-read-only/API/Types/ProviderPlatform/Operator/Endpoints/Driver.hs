@@ -27,7 +27,7 @@ data OperationHubDriverRequest = OperationHubDriverRequest
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data OperationHubReqResp = OperationHubReqResp {requests :: [OperationHubDriverRequest]}
+newtype OperationHubReqResp = OperationHubReqResp {requests :: [OperationHubDriverRequest]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
