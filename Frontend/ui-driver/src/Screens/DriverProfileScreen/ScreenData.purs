@@ -147,6 +147,7 @@ initData =
     showDriverBlockedPopup : false,
     skipGlobalEvents : false
    }
+, showDriverDetails : false
 }
 
 inputTextState' = {

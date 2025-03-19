@@ -1846,6 +1846,19 @@ newtype Keymap
     , meter_running :: String
     , confirm_meter_stop :: String
   , package :: String
+    , cancellation_score :: String
+    , safety_score :: String
+    , overcharging_score :: String
+    , you_have_been_unsafe :: String
+    , you_have_been_watchlisted :: String
+    , you_are_safe :: String
+    , safe :: String
+    , watchlisted :: String
+    , unsafe :: String
+    , good_cancellation_score :: String
+    , poor_cancellation_score :: String
+    , good :: String
+    , poor :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7288,3 +7301,43 @@ fair_price_driver = Proxy
 
 package :: Proxy "package"
 package = Proxy
+
+cancellation_score :: Proxy "cancellation_score"
+cancellation_score = a
+
+safety_score :: Proxy "safety_score"
+safety_score = a
+
+overcharging_score :: Proxy "overcharging_score"
+overcharging_score = a
+
+you_have_been_unsafe :: Proxy "you_have_been_unsafe"
+you_have_been_unsafe = a
+
+you_have_been_watchlisted :: Proxy "you_have_been_watchlisted"
+you_have_been_watchlisted = a
+
+you_are_safe :: Proxy "you_are_safe"
+you_are_safe = a
+
+safe :: Proxy "safe"
+safe = a
+
+watchlisted :: Proxy "watchlisted"
+watchlisted = a
+
+unsafe :: Proxy "unsafe"
+unsafe = a
+
+good_cancellation_score :: Proxy "good_cancellation_score"
+good_cancellation_score = a
+
+poor_cancellation_score :: Proxy "poor_cancellation_score"
+poor_cancellation_score = a
+
+good :: Proxy "good"
+good = a
+
+poor :: Proxy "poor"
+poor = a
+
