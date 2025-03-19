@@ -277,6 +277,7 @@ referralView state push =
         ][  linearLayout
               [ height MATCH_PARENT
               , width MATCH_PARENT
+              , margin $ MarginTop 8
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
               ][
@@ -288,7 +289,9 @@ referralView state push =
                             ST.NotVerified -> getString ENTER_6_DIGIT_REFERRAL_CODE
                             ST.ReferralFailed -> getString REFERRAL_CODE_FAILED
                             ST.Verifying -> getString ENTER_6_DIGIT_REFERRAL_CODE
-                  , color Color.black600
+                  , color case state.data.isReferred of 
+                            ST.Verified -> Color.green900
+                            _ -> Color.black600
                   -- , fontStyle $ FontStyle.bold LanguageStyle
                   , gravity LEFT
                   , margin $ Margin 0 0 0 0
