@@ -19,6 +19,7 @@ instance FromTType' Beam.FleetRCAssociation Domain.Types.FleetRCAssociation.Flee
         Domain.Types.FleetRCAssociation.FleetRCAssociation
           { associatedOn = associatedOn,
             associatedTill = associatedTill,
+            fleetControlGroupId = Kernel.Types.Id.Id <$> fleetControlGroupId,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             id = Kernel.Types.Id.Id id,
             rcId = Kernel.Types.Id.Id rcId,
@@ -33,6 +34,7 @@ instance ToTType' Beam.FleetRCAssociation Domain.Types.FleetRCAssociation.FleetR
     Beam.FleetRCAssociationT
       { Beam.associatedOn = associatedOn,
         Beam.associatedTill = associatedTill,
+        Beam.fleetControlGroupId = Kernel.Types.Id.getId <$> fleetControlGroupId,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.rcId = Kernel.Types.Id.getId rcId,

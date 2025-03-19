@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD PRIMARY KEY ( id
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN onboarding_vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN fleet_control_group_id character varying(36) ;

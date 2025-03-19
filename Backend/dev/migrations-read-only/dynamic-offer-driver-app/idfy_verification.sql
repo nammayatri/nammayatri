@@ -53,3 +53,13 @@ ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN air_conditioned 
 
 ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN ventilator boolean ;
 ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN oxygen boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN fleet_control_group_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN fleet_owner_id text ;

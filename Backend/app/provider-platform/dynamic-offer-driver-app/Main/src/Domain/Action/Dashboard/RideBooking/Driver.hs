@@ -582,7 +582,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
         driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
         QRCAssociation.create driverRCAssoc
 
-      fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
+      fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False Nothing Nothing -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
@@ -619,7 +619,8 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} =
       dateOfRegistration = req.dateOfRegistration,
       vehicleModelYear = req.vehicleModelYear,
       grossVehicleWeight = Nothing,
-      unladdenWeight = Nothing
+      unladdenWeight = Nothing,
+      fleetControlGroupId = Nothing
     }
 
 ---------------------------------------------------------------------

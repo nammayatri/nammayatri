@@ -93,6 +93,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
+      Se.Set Beam.fleetControlGroupId (Kernel.Types.Id.getId <$> fleetControlGroupId),
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.insuranceValidity insuranceValidity,
       Se.Set Beam.luggageCapacity luggageCapacity,

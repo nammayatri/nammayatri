@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 data FleetRCAssociationT f = FleetRCAssociationT
   { associatedOn :: B.C f Kernel.Prelude.UTCTime,
     associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    fleetControlGroupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f Kernel.Prelude.Text,

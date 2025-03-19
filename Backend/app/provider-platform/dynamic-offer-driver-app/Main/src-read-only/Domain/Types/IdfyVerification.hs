@@ -5,6 +5,7 @@ module Domain.Types.IdfyVerification where
 
 import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -23,6 +24,8 @@ data IdfyVerificationE e = IdfyVerification
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
+    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification,
     idfyResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageExtractionValidation :: Domain.Types.IdfyVerification.ImageExtractionValidation,
@@ -59,6 +62,8 @@ instance EncryptedItem IdfyVerification where
           documentNumber = documentNumber_,
           driverDateOfBirth = driverDateOfBirth entity,
           driverId = driverId entity,
+          fleetControlGroupId = fleetControlGroupId entity,
+          fleetOwnerId = fleetOwnerId entity,
           id = id entity,
           idfyResponse = idfyResponse entity,
           imageExtractionValidation = imageExtractionValidation entity,
@@ -87,6 +92,8 @@ instance EncryptedItem IdfyVerification where
             documentNumber = documentNumber_,
             driverDateOfBirth = driverDateOfBirth entity,
             driverId = driverId entity,
+            fleetControlGroupId = fleetControlGroupId entity,
+            fleetOwnerId = fleetOwnerId entity,
             id = id entity,
             idfyResponse = idfyResponse entity,
             imageExtractionValidation = imageExtractionValidation entity,

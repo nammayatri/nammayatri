@@ -5,6 +5,7 @@ imports:
   VehicleCategory: Dashboard.Common
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
+  Person: Dashboard.Common
   TripTransaction: Dashboard.Common
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
@@ -23,6 +24,8 @@ apis:
   - POST: # BulkUploadVehiclesForFleetAPI
       endpoint: /fleet/addVehicles
       auth: ApiAuthV2
+      query:
+        - fleetControlGroupId: Text
       multipart:
         type: CreateVehiclesReq
       response:
@@ -37,6 +40,7 @@ apis:
         mobileNo: Text
       query:
         - countryCode: Text
+        - fleetControlGroupId: Text
       request:
         type: AddVehicleReq
       response:
@@ -53,6 +57,7 @@ apis:
               fleetOwnerId: Text
             query:
               - mobileCountryCode: Text
+              - fleetControlGroupId: Text
             request:
               type: AddVehicleReq
             response:
@@ -68,6 +73,8 @@ apis:
         - mbStatus: RequestStatus
         - mbLimit: Int
         - mbOffset: Int
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: DriverRequestResp
       migrate:
@@ -84,6 +91,8 @@ apis:
               - status: RequestStatus
               - limit: Int
               - offset: Int
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: "[Text]"
             response:
               type: DriverRequestResp
 
@@ -92,6 +101,8 @@ apis:
       auth: ApiAuthV2
       request:
         type: RequestRespondReq
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccess
       migrate:
@@ -102,6 +113,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             request:
               type: RequestRespondReq
             response:
@@ -114,6 +127,8 @@ apis:
         type: RegisterRCReq
       response:
         type: APISuccess
+      query:
+        - fleetControlGroupId: Text
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
       helperApi:
@@ -122,6 +137,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             request:
               type: RegisterRCReq
             response:
@@ -134,6 +151,8 @@ apis:
         - mblimit: Int
         - mboffset: Int
         - mbRegNumberString: Text
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: ListVehicleRes
       migrate:
@@ -148,6 +167,8 @@ apis:
               - limit: Int
               - offset: Int
               - mbRegNumberString: Text
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: ListVehicleRes
 
@@ -160,6 +181,8 @@ apis:
         - mbMobileNumberString: Text
         - mbNameString: Text
         - mbSearchString: Text
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: FleetListDriverRes
       migrate:
@@ -176,6 +199,8 @@ apis:
               - mobileNumberString: Text
               - nameString: Text
               - mbSearchString: Text
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: FleetListDriverRes
 
@@ -185,6 +210,8 @@ apis:
       params:
         driverId: Id Driver
         vehicleNo: Text
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccess
       migrate:
@@ -197,6 +224,8 @@ apis:
               driverId: Id Driver
               vehicleNo: Text
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             response:
               type: APISuccess
 
@@ -205,6 +234,8 @@ apis:
       auth: ApiAuthV2
       params:
         vehicleNo: Text
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccess
       migrate:
@@ -216,6 +247,8 @@ apis:
             params:
               vehicleNo: Text
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             response:
               type: APISuccess
 
@@ -226,6 +259,8 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      query:
+        - fleetControlGroupId: Text
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
       helperApi:
@@ -235,6 +270,8 @@ apis:
             params:
               driverId: Id Driver
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             response:
               type: APISuccess
 
@@ -244,6 +281,8 @@ apis:
       query:
         - from: UTCTime
         - to: UTCTime
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: FleetTotalEarningResponse
       migrate:
@@ -257,6 +296,8 @@ apis:
             query:
               - from: UTCTime
               - to: UTCTime
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: FleetTotalEarningResponse
 
@@ -269,6 +310,8 @@ apis:
         - offset: Int
         - from: UTCTime
         - to: UTCTime
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: FleetEarningListRes
       migrate:
@@ -285,6 +328,8 @@ apis:
               - offset: Int
               - from: UTCTime
               - to: UTCTime
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: FleetEarningListRes
 
@@ -300,6 +345,8 @@ apis:
         - to: UTCTime
         - sortDesc: Bool
         - sortOn: SortOn
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: FleetEarningListRes
       migrate:
@@ -319,6 +366,8 @@ apis:
               - to: UTCTime
               - sortDesc: Bool
               - SortOn: SortOn
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: FleetEarningListRes
 
@@ -334,6 +383,8 @@ apis:
         - includeStats: Bool
         - from: UTCTime
         - to: UTCTime
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: DrivertoVehicleAssociationRes
       migrate:
@@ -353,6 +404,8 @@ apis:
               - includeStats: Bool
               - from: UTCTime
               - to: UTCTime
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -371,6 +424,8 @@ apis:
         - status: DriverMode
         - name: Text
         - mbSearchString: Text
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: DrivertoVehicleAssociationRes
       migrate:
@@ -393,6 +448,8 @@ apis:
               - status: DriverMode
               - name: Text
               - mbSearchString: Text
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -407,6 +464,8 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: FleetVehicleStatus
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: DrivertoVehicleAssociationRes
       migrate:
@@ -425,6 +484,8 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: FleetVehicleStatus
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -434,6 +495,8 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        fleetControlGroupId: Text
       request:
         type: RCStatusReq
       response:
@@ -445,6 +508,8 @@ apis:
             params:
               driverId: Id Driver
               fleetOwnerId: Text
+            query:
+              fleetControlGroupId: Text
             request:
               type: RCStatusReq
             response:
@@ -459,6 +524,8 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        fleetControlGroupId: Text
       request:
         type: UpdateFleetOwnerInfoReq
       response:
@@ -473,6 +540,9 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: FleetOwnerInfoRes
       migrate:
@@ -483,6 +553,8 @@ apis:
       auth: ApiAuthV2
       request:
         type: AuthReq
+      query:
+        - fleetControlGroupId: Text
       response:
         type: AuthRes
       migrate:
@@ -493,6 +565,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             request:
               type: AuthReq
             response:
@@ -503,6 +577,7 @@ apis:
       auth: ApiAuthV2
       query:
         - authId: Text
+        - fleetControlGroupId: Text
       request:
         type: VerifyFleetJoiningOtpReq
       response:
@@ -517,6 +592,7 @@ apis:
               fleetOwnerId: Text
             query:
               - authId: Text
+              - fleetControlGroupId: Text
             request:
               type: VerifyFleetJoiningOtpReq
             response:
@@ -528,6 +604,8 @@ apis:
       query:
         - mbCurrentLocation: LatLong
         - mbSearchString: Text
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       mandatoryQuery:
         - limit: Int
         - offset: Int
@@ -544,6 +622,8 @@ apis:
             query:
               - mbCurrentLocation: LatLong
               - mbSearchString: Text
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             mandatoryQuery:
               - limit: Int
               - offset: Int
@@ -557,6 +637,9 @@ apis:
         startStopCode: Text
       response:
         type: RouteAPIResp
+      query:
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_POSSIBLE_ROUTES_API
       helperApi:
@@ -565,6 +648,9 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             mandatoryQuery:
               startStopCode: Text
             response:
@@ -575,6 +661,8 @@ apis:
       auth: ApiAuthV2
       request:
         type: TripPlannerReq
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccess
       migrate:
@@ -585,6 +673,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             request:
               type: TripPlannerReq
             response:
@@ -602,6 +692,8 @@ apis:
         - mbFrom: UTCTime
         - mbTo: UTCTime
         - mbVehicleNumber: Text
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: TripTransactionResp
       migrate:
@@ -620,6 +712,8 @@ apis:
               - mbFrom: UTCTime
               - mbTo: UTCTime
               - mbVehicleNumber: Text
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: TripTransactionResp
 
@@ -628,6 +722,8 @@ apis:
       auth: ApiAuthV2
       multipart:
         type: CreateDriversReq
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccessWithUnprocessedEntities
       migrate:
@@ -636,6 +732,8 @@ apis:
   - POST: # Add Driver Bus Route Bulk Mapping
       endpoint: /fleet/addDriverBusRouteMapping
       auth: ApiAuthV2
+      query:
+        - fleetControlGroupId: Text
       multipart:
         type: CreateDriverBusRouteMappingReq
       response:
@@ -648,6 +746,8 @@ apis:
       auth: ApiAuthV2
       request:
         type: LinkRCWithDriverForFleetReq
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccess
       migrate:
@@ -658,6 +758,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             request:
               type: LinkRCWithDriverForFleetReq
             response:
@@ -668,6 +770,8 @@ apis:
       auth: ApiAuthV2
       params:
         tripTransactionId: Id TripTransaction
+      query:
+        - fleetControlGroupId: Text
       response:
         type: APISuccess
       helperApi:
@@ -677,6 +781,8 @@ apis:
             params:
               tripTransactionId: Id TripTransaction
               fleetOwnerId: Text
+            query:
+              - fleetControlGroupId: Text
             response:
               type: APISuccess
 
@@ -685,6 +791,9 @@ apis:
       auth: ApiAuthV2
       params:
         routeCode: Text
+      query:
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       response:
         type: RouteDetails
       helperApi:
@@ -694,12 +803,18 @@ apis:
             params:
               fleetOwnerId: Text
               routeCode: Text
+            query:
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             response:
               type: RouteDetails
 
   - POST:
       endpoint: /fleet/getNearbyDrivers
       auth: ApiAuthV2
+      query:
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       request:
         type: NearbyDriverReq
       response:
@@ -710,6 +825,9 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             request:
               type: NearbyDriverReq
             response:
@@ -718,6 +836,9 @@ apis:
   - POST:
       endpoint: /dashboard/fleet/track/driver
       auth: ApiAuthV2
+      query:
+        - fleetMemberId: Id Person
+        - fleetControlGroupList: [Text]
       request:
         type: TrackDriverLocationsReq
       response:
@@ -728,6 +849,9 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - fleetMemberId: Id Person
+              - fleetControlGroupList: [Text]
             request:
               type: TrackDriverLocationsReq
             response:

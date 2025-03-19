@@ -224,6 +224,8 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
         { imageId = cast imageId,
           vehicleCategory = Nothing,
           vehicleDetails = Nothing,
+          fleetOwnerId = Nothing,
+          fleetControlGroupId = Nothing,
           ..
         }
     )

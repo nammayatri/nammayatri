@@ -44,6 +44,7 @@ import Data.Text as T hiding (elem, find, length, map, null, zip)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.FleetControlGroup
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -111,7 +112,9 @@ data DriverRCReq = DriverRCReq
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
     multipleRC :: Maybe Bool,
-    vehicleDetails :: Maybe DriverVehicleDetails -- updatable
+    vehicleDetails :: Maybe DriverVehicleDetails, -- updatable
+    fleetOwnerId :: Maybe Text,
+    fleetControlGroupId :: Maybe (Id FleetControlGroup)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -201,8 +204,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
         vehicleDetails <-
           CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel vehicleModelYear
             |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just DV.HATCHBACK) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.multipleRC req.imageId Nothing Nothing
-      Nothing -> verifyRCFlow person merchantOpCityId req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.multipleRC req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.fleetOwnerId req.fleetControlGroupId req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just DV.HATCHBACK) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.multipleRC req.imageId Nothing Nothing
+      Nothing -> verifyRCFlow person merchantOpCityId req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.multipleRC req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.fleetOwnerId req.fleetControlGroupId
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -238,8 +241,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           unladdenWeight = Nothing
         }
 
-verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
-verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do
+verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Maybe (Id FleetControlGroup) -> Flow ()
+verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation fleetOwnerId fleetControlGroupId = do
   now <- getCurrentTime
   verifyRes <-
     Verification.verifyRC person.merchantId
@@ -249,15 +252,15 @@ verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipl
   case verifyRes.verifyRCResp of
     Verification.AsyncResp res -> do
       case res.requestor of
-        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
-        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
+        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing fleetOwnerId fleetControlGroupId
+        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId fleetOwnerId fleetControlGroupId
         _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
       CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
     Verification.SyncResp res -> do
       void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing Nothing
 
-mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
-mkIdfyVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
+mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe (Id FleetControlGroup) -> m Domain.IdfyVerification
+mkIdfyVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus fleetOwnerId fleetControlGroupId = do
   id <- generateGUID
   return $
     Domain.IdfyVerification
@@ -283,11 +286,12 @@ mkIdfyVerificationEntity person requestId now imageExtractionValidation multiple
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        ..
       }
 
-mkHyperVergeVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe Text -> m Domain.HyperVergeVerification
-mkHyperVergeVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus transactionId = do
+mkHyperVergeVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id FleetControlGroup) -> m Domain.HyperVergeVerification
+mkHyperVergeVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus transactionId fleetOwnerId fleetControlGroupId = do
   id <- generateGUID
   return $
     Domain.HyperVergeVerification
@@ -332,16 +336,18 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
           mbAirConditioned = mbVerificationReq >>= (.airConditioned)
           mbOxygen = mbVerificationReq >>= (.oxygen)
           mbVentilator = mbVerificationReq >>= (.ventilator)
+          mbFleetOwnerId = mbVerificationReq >>= (.fleetOwnerId)
+          fleetControlGroupId = mbVerificationReq >>= (.fleetControlGroupId)
           mbImageExtractionValidation' = mbImageExtractionValidation <|> (mbVerificationReq <&> (.imageExtractionValidation))
           mbEncryptedRC' = mbEncryptedRC <|> (mbVerificationReq <&> (.documentNumber))
-      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' multipleRC imageId mbRetryCnt mbReqStatus
+      void $ onVerifyRCHandler person rcVerificationResponse mbFleetOwnerId fleetControlGroupId mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' multipleRC imageId mbRetryCnt mbReqStatus
       return Ack
 
-onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
-onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
+onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationResponse -> Maybe Text -> Maybe (Id FleetControlGroup) -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
+onVerifyRCHandler person rcVerificationResponse fleetOwnerId fleetControlGroupId mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
   let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
-  mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
+  mbFleetOwnerId <- pure fleetOwnerId |<|>| maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
   let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
   mVehicleRC <- do
@@ -364,20 +370,21 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               case verifyRes.verifyRCResp of
                 Verification.AsyncResp res -> do
                   case res.requestor of
-                    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus
-                    VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus res.transactionId
+                    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus mbFleetOwnerId fleetControlGroupId
+                    VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus res.transactionId mbFleetOwnerId fleetControlGroupId
                     _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
                 Verification.SyncResp resp -> do
-                  onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
+                  onVerifyRCHandler person resp mbFleetOwnerId fleetControlGroupId mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
     else initiateRCCreation mVehicleRC now mbFleetOwnerId
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
-    createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
+    createRCInput vehicleCategory mbFleetOwnerId documentImageId dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
       CreateRCInput
         { registrationNumber = rcVerificationResponse.registrationNumber,
           fitnessUpto = convertTextToUTC rcVerificationResponse.fitnessUpto,
-          fleetOwnerId,
+          fleetOwnerId = mbFleetOwnerId,
+          fleetControlGroupId,
           vehicleCategory,
           airConditioned = mbAirConditioned,
           oxygen = mbOxygen,
@@ -450,7 +457,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             rejectReason = Nothing,
             createdAt = now,
             unencryptedCertificateNumber = input.registrationNumber,
-            updatedAt = now
+            updatedAt = now,
+            fleetControlGroupId = input.fleetControlGroupId
           }
     initiateRCCreation mVehicleRC now mbFleetOwnerId = do
       case mVehicleRC of
@@ -462,14 +470,14 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             Person.FLEET_OWNER -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
               when (isNothing mbFleetAssoc) $ do
-                fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+                fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12")) fleetControlGroupId
                 FRCAssoc.create fleetRCAssoc
             _ -> do
               -- linking to driver
-              whenJust mbFleetOwnerId $ \fleetOwnerId -> do
-                mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId) rc.id now
+              whenJust mbFleetOwnerId $ \val -> do
+                mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId (Id val) rc.id now
                 when (isNothing mbFleetAssoc) $ do
-                  fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId (Id fleetOwnerId :: Id Person.Person) rc.id (convertTextToUTC (Just "2099-12-12"))
+                  fleetRCAssoc <- makeFleetRCAssociation person.merchantId person.merchantOperatingCityId (Id val :: Id Person.Person) rc.id (convertTextToUTC (Just "2099-12-12")) fleetControlGroupId
                   FRCAssoc.create fleetRCAssoc
               mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
               when (isNothing mbAssoc) $ do
@@ -477,6 +485,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                 DAQuery.create driverRCAssoc
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
+              -- let mbVehicle = Nothing
               whenJust mbVehicle $ \vehicle -> do
                 when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant) $ do
                   driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
@@ -504,7 +513,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = run
   if req.isActivate
     then do
       validated <- validateRCActivation driverId merchantOpCityId rc
-      when validated $ activateRC driverInfo merchantId merchantOpCityId now rc
+      when validated $ activateRC driverInfo merchantId merchantOpCityId now rc -- YAAD SE WAPAS AAJAANA
     else do
       deactivateRC rc driverId
   return Success
@@ -588,7 +597,7 @@ activateRC driverInfo merchantId merchantOpCityId now rc = do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now
+      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now -- YAAD SE WAPAS AAJANA
       VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()

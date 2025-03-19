@@ -5,6 +5,7 @@ module Domain.Types.VehicleRouteMapping where
 
 import Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -15,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleRouteMappingE e = VehicleRouteMapping
   { blocked :: Kernel.Prelude.Bool,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -25,9 +27,9 @@ data VehicleRouteMappingE e = VehicleRouteMapping
   }
   deriving (Generic)
 
-type VehicleRouteMapping = VehicleRouteMappingE ('AsEncrypted)
+type VehicleRouteMapping = VehicleRouteMappingE 'AsEncrypted
 
-type DecryptedVehicleRouteMapping = VehicleRouteMappingE ('AsUnencrypted)
+type DecryptedVehicleRouteMapping = VehicleRouteMappingE 'AsUnencrypted
 
 instance EncryptedItem VehicleRouteMapping where
   type Unencrypted VehicleRouteMapping = (DecryptedVehicleRouteMapping, HashSalt)
@@ -36,6 +38,7 @@ instance EncryptedItem VehicleRouteMapping where
     pure
       VehicleRouteMapping
         { blocked = blocked entity,
+          fleetControlGroupId = fleetControlGroupId entity,
           fleetOwnerId = fleetOwnerId entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
@@ -49,6 +52,7 @@ instance EncryptedItem VehicleRouteMapping where
     pure
       ( VehicleRouteMapping
           { blocked = blocked entity,
+            fleetControlGroupId = fleetControlGroupId entity,
             fleetOwnerId = fleetOwnerId entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,

@@ -77,6 +77,7 @@ import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
@@ -145,9 +146,10 @@ postDriverFleetAddVehicle ::
   Text ->
   Text ->
   Maybe Text ->
+  Maybe Text ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId mbMobileCountryCode req = do
+postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId mbMobileCountryCode fleetControlGroupId req = do
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -164,7 +166,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId m
     Just fleetDriver -> do
       unless fleetDriver.isActive $ throwError (DriverNotActiveInFleet driver.id.getId fleetDriver.id.getId)
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-  void $ DCommon.runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
+  void $ DCommon.runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True (Just fleetOwnerId) (Id <$> fleetControlGroupId) -- send the fleet control group id
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
 
@@ -187,8 +189,11 @@ getDriverFleetGetDriverRequests ::
   Maybe Common.RequestStatus ->
   Maybe Int ->
   Maybe Int ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.DriverRequestResp
-getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset = do
+getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let status_ = case mbStatus of
@@ -231,9 +236,10 @@ postDriverFleetRespondDriverRequest ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.RequestRespondReq ->
   Flow APISuccess
-postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
+postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId _fleetControlGroupId req = do
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -271,9 +277,10 @@ postDriverFleetAddRCWithoutDriver ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.RegisterRCReq ->
   Flow APISuccess
-postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
+postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = Id fleetOwnerId :: Id DP.Person
@@ -296,7 +303,9 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             ventilator = req.ventilator,
             multipleRC = req.multipleRC,
             vehicleCategory = req.vehicleCategory,
-            vehicleDetails = Nothing
+            vehicleDetails = Nothing,
+            fleetOwnerId = Just fleetOwnerId,
+            fleetControlGroupId = (Id <$> fleetControlGroupId)
           }
   void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
@@ -310,8 +319,11 @@ getDriverFleetGetAllVehicle ::
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.ListVehicleRes
-getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString = do
+getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRegNumberString fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
@@ -341,8 +353,11 @@ getDriverFleetGetAllDriver ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.FleetListDriverRes
-getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
+getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
@@ -373,8 +388,9 @@ postDriverFleetUnlink ::
   Text ->
   Id Common.Driver ->
   Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo = do
+postDriverFleetUnlink merchantShortId _opCity fleetOwnerId reqDriverId vehicleNo _fleetControlGroupId = do
   merchant <- findMerchantByShortId merchantShortId
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -403,8 +419,9 @@ postDriverFleetRemoveVehicle ::
   Context.City ->
   Text ->
   Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
+postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo _fleetControlGroupId = do
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
@@ -425,9 +442,10 @@ postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
 postDriverFleetAddVehicles ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Common.CreateVehiclesReq ->
   Flow Common.APISuccessWithUnprocessedEntities
-postDriverFleetAddVehicles merchantShortId opCity req = do
+postDriverFleetAddVehicles merchantShortId opCity fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
@@ -469,7 +487,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     foldlM
       ( \unprocessedEntities (registerRcReq, _, _) -> do
           try @_ @SomeException
-            (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq)
+            (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId fleetControlGroupId registerRcReq)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): " <> (T.pack $ displayException err)]
               Right _ -> return unprocessedEntities
@@ -507,6 +525,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
                 routeCode = route.code,
                 createdAt = now,
                 updatedAt = now,
+                fleetControlGroupId = (Id <$> fleetControlGroupId),
                 ..
               }
       VRM.upsert vehicleRouteMapping vehicleNumberHash
@@ -541,8 +560,9 @@ postDriverFleetRemoveDriver ::
   Context.City ->
   Text ->
   Id Common.Driver ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
+postDriverFleetRemoveDriver _merchantShortId _ fleetOwnerId driverId _fleetControlGroupId = do
   let personId = cast @Common.Driver @DP.Person driverId
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
@@ -558,8 +578,11 @@ getDriverFleetTotalEarning ::
   Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.FleetTotalEarningResponse
-getDriverFleetTotalEarning _merchantShortId _ fleetOwnerId mbFrom mbTo = do
+getDriverFleetTotalEarning _merchantShortId _ fleetOwnerId mbFrom mbTo fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId _merchantShortId
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
@@ -582,8 +605,11 @@ getDriverFleetVehicleEarning ::
   Maybe Int ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.FleetEarningListRes
-getDriverFleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOffset mbFrom mbTo = do
+getDriverFleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOffset mbFrom mbTo fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -661,8 +687,11 @@ getDriverFleetDriverEarning ::
   Maybe UTCTime ->
   Maybe Bool ->
   Maybe Common.SortOn ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.FleetEarningListRes
-getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPhNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn = do
+getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPhNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -729,8 +758,11 @@ getDriverFleetDriverVehicleAssociation ::
   Maybe Bool ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
+getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
   listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id
@@ -808,8 +840,11 @@ getDriverFleetDriverAssociation ::
   Maybe Common.DriverMode ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString = do
+getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbDriverPhNo fleetOwnerId merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
@@ -898,8 +933,11 @@ getDriverFleetVehicleAssociation ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Common.FleetVehicleStatus ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus = do
+getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
@@ -972,9 +1010,10 @@ postDriverFleetVehicleDriverRcStatus ::
   Context.City ->
   Id Common.Driver ->
   Text ->
+  Maybe Text ->
   Common.RCStatusReq ->
   Flow APISuccess
-postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId req = do
+postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId fleetOwnerId _fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -996,9 +1035,10 @@ postDriverUpdateFleetOwnerInfo ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
+  Maybe Text ->
   Common.UpdateFleetOwnerInfoReq ->
   Flow APISuccess
-postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
+postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId _fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1029,8 +1069,11 @@ getDriverFleetOwnerInfo ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOwnerInfo _ _ driverId = do
+getDriverFleetOwnerInfo _ _ driverId fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   let personId = cast @Common.Driver @DP.Person driverId
   fleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   fleetConfig <- QFC.findByPrimaryKey personId
@@ -1058,9 +1101,10 @@ postDriverFleetSendJoiningOtp ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.AuthReq ->
   Flow Common.AuthRes
-postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName req = do
+postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName _fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   smsCfg <- asks (.smsCfg)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -1092,9 +1136,10 @@ postDriverFleetVerifyJoiningOtp ::
   Context.City ->
   Text ->
   Maybe Text ->
+  Maybe Text ->
   Common.VerifyFleetJoiningOtpReq ->
   Flow APISuccess
-postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req = do
+postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
@@ -1121,7 +1166,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req
       when (otp /= req.otp) $ throwError InvalidOtp
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (Id <$> fleetControlGroupId) (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
   pure Success
 
@@ -1133,9 +1178,10 @@ postDriverFleetLinkRCWithDriver ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
-postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
+postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId _fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash req.driverMobileNumber
@@ -1164,8 +1210,9 @@ postDriverDashboardFleetWmbTripEnd ::
   Context.City ->
   Id Common.TripTransaction ->
   Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
+postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId _fleetControlGroupId = do
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   mbCurrentDriverLocation <-
@@ -1188,10 +1235,13 @@ getDriverFleetRoutes ::
   Text ->
   Maybe LatLong ->
   Maybe Text ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Int ->
   Int ->
   Flow Common.RouteAPIResp
-getDriverFleetRoutes merchantShortId opCity fleetOwnerId mbCurrentLocation mbSearchString limit offset = do
+getDriverFleetRoutes merchantShortId opCity fleetOwnerId mbCurrentLocation mbSearchString fleetMemberId fleetControlGroupList limit offset = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let vehicleType = DVC.BUS
@@ -1273,9 +1323,12 @@ getDriverFleetPossibleRoutes ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Text ->
   Flow Common.RouteAPIResp
-getDriverFleetPossibleRoutes merchantShortId opCity fleetOwnerId startStopCode = do
+getDriverFleetPossibleRoutes merchantShortId opCity fleetOwnerId fleetMemberId fleetControlGroupList startStopCode = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   now <- getCurrentTime
@@ -1298,9 +1351,10 @@ postDriverFleetTripPlanner ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.TripPlannerReq ->
   Flow APISuccess
-postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
+postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId _fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
@@ -1312,7 +1366,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
   allTransactions <-
     foldM
       ( \accTransactions trip -> do
-          transactions <- makeTripTransactions trip
+          transactions <- makeTripTransactions trip ((.getId) <$> vehicleRC.fleetControlGroupId)
           return $ accTransactions <> transactions
       )
       []
@@ -1327,8 +1381,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
           WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
-    makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
-    makeTripTransactions trip = do
+    makeTripTransactions :: Common.TripDetails -> Maybe Text -> Flow [DTT.TripTransaction]
+    makeTripTransactions trip fleetControlGroupId = do
       route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
       (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
       case (trip.roundTrip, route.roundRouteCode) of
@@ -1340,17 +1394,17 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           foldM
             ( \accTransactions freqIdx -> do
                 let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode
+                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode fleetControlGroupId
                 pure $ accTransactions <> [tripTransaction]
             )
             []
             [0 .. (2 * roundTrip.frequency) -1]
         (_, _) -> do
-          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code
+          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code fleetControlGroupId
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Maybe Text -> Text -> Flow DTT.TripTransaction
-    mkTransaction routeCode roundRouteCode endStopCode = do
+    mkTransaction :: Text -> Maybe Text -> Text -> Maybe Text -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode fleetControlGroupId = do
       transactionId <- generateGUID
       now <- getCurrentTime
       vehicleNumber <- decrypt vehicleRC.certificateNumber
@@ -1379,7 +1433,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             tripTerminationSource = Nothing,
             endRideApprovalRequestId = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            fleetControlGroupId = (Id <$> fleetControlGroupId)
           }
 
 ---------------------------------------------------------------------
@@ -1391,10 +1446,13 @@ getDriverFleetTripTransactions ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe (Id Common.Person) ->
+  Maybe [Text] ->
   Int ->
   Int ->
   Flow Common.TripTransactionResp
-getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbVehicleNumber limit offset = do
+getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbVehicleNumber fleetMemberId fleetControlGroupList limit offset = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Just limit) (Just offset) (cast driverId) mbFrom mbTo mbVehicleNumber
@@ -1444,9 +1502,10 @@ instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
 postDriverFleetAddDriverBusRouteMapping ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Common.CreateDriverBusRouteMappingReq ->
   Flow Common.APISuccessWithUnprocessedEntities
-postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
+postDriverFleetAddDriverBusRouteMapping merchantShortId opCity _fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
@@ -1553,9 +1612,10 @@ instance FromNamedRecord CreateDriversCSVRow where
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Common.CreateDriversReq ->
   Flow Common.APISuccessWithUnprocessedEntities
-postDriverFleetAddDrivers merchantShortId opCity req = do
+postDriverFleetAddDrivers merchantShortId opCity fleetControlGroupId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
@@ -1599,7 +1659,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
             fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-            FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) req_.driverOnboardingVehicleCategory False
+            FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) req_.driverOnboardingVehicleCategory False (Id <$> fleetControlGroupId)
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     readCsv csvFile = do
@@ -1638,8 +1698,9 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
 
 ---------------------------------------------------------------------
-postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
-postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
+postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Maybe (Id Common.Person) -> Maybe [Text] -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
+postDriverDashboardFleetTrackDriver _ _ fleetOwnerId fleetMemberId fleetControlGroupList req = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   void $
     mapM
       ( \driverId ->
@@ -1656,11 +1717,14 @@ postDriverDashboardFleetTrackDriver _ _ fleetOwnerId req = do
           lastUpdatedAt = coordinatesCalculatedAt
         }
 
-getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow Common.RouteDetails
-getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode
+getDriverFleetWmbRouteDetails :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Maybe (Id Common.Person) -> Maybe [Text] -> Flow Common.RouteDetails
+getDriverFleetWmbRouteDetails _ _ _ routeCode fleetMemberId fleetControlGroupList = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
+  WMB.getRouteDetails routeCode
 
-postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
-postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
+postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Maybe (Id Common.Person) -> Maybe [Text] -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
+postDriverFleetGetNearbyDrivers merchantShortId _ _ fleetMemberId fleetControlGroupList req = do
+  let _accessibleFleetControlGroup = WMB.fleetAccessibleControlGroupList ((cast @Common.Person @Person) <$> fleetMemberId) (map Id <$> fleetControlGroupList)
   merchant <- findMerchantByShortId merchantShortId
   nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id
   return $

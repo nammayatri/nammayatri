@@ -156,7 +156,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True vehicleRouteMapping.fleetControlGroupId
   tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo req.location
   pure $
     TripTransactionDetails
@@ -398,6 +398,7 @@ createDriverRequest driverId requesteeId title body requestData tripTransaction 
             updatedAt = now,
             merchantId = tripTransaction.merchantId,
             merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
+            fleetControlGroupId = tripTransaction.fleetControlGroupId,
             ..
           }
   QDR.create driverReq

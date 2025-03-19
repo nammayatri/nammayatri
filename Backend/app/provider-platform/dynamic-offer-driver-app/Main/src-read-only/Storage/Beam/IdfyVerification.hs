@@ -23,6 +23,8 @@ data IdfyVerificationT f = IdfyVerificationT
     documentNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     driverDateOfBirth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
+    fleetControlGroupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     idfyResponse :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     imageExtractionValidation :: B.C f Domain.Types.IdfyVerification.ImageExtractionValidation,

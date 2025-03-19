@@ -39,6 +39,7 @@ updateByPrimaryKey (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
   updateWithKV
     [ Se.Set Beam.body body,
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.fleetControlGroupId (Kernel.Types.Id.getId <$> fleetControlGroupId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.reason reason,

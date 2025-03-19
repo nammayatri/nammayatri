@@ -35,3 +35,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_rc_association DROP COLUMN driver_id;
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_rc_association DROP COLUMN vehicle_registration_no;
 ALTER TABLE atlas_driver_offer_bpp.fleet_rc_association DROP COLUMN rc_verification_status;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_association ADD COLUMN fleet_control_group_id character varying(36) ;

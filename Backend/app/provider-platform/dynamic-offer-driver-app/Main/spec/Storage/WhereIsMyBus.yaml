@@ -15,6 +15,7 @@ VehicleRouteMapping:
   fields:
     fleetOwnerId: Id Person
     vehicleNumber: EncryptedHashedField e Text
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
     routeCode: Text
     blocked: Bool
     merchantId: Id Merchant
@@ -47,6 +48,7 @@ TripTransaction:
   fields:
     id: Id TripTransaction
     fleetOwnerId: Id Person
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
     vehicleNumber: Text
     tripCode: Maybe Text
     driverId: Id Person
@@ -154,6 +156,7 @@ ApprovalRequest:
     requestorId: Id Person
     requesteeId: Id Person
     requestData: ApprovalRequestData
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
     title: Text
     body: Text
     status: RequestStatus
@@ -203,3 +206,33 @@ FleetConfig:
 
   constraints:
     fleetOwnerId: PrimaryKey
+
+FleetControlGroup:
+  tableName: fleet_control_group
+
+  fields:
+    fleetControlGroupId: Id FleetControlGroup
+    fleetControlGroupName: Text
+    fleetOwnerId: Id Person
+
+  constraints:
+    fleetControlGroupId: PrimaryKey
+
+FleetControlGroupMemberAssociation:
+  tableName: fleet_control_group_member_association
+
+  fields:
+    fleetControlGroupId: Id FleetControlGroup
+    fleetMemberId: Id Person
+
+  constraints:
+    fleetControlGroupId: PrimaryKey
+    fleetMemberId: PrimaryKey
+
+  queries:
+    findAllByControlGroupId:
+      kvFunction: findAllWithKV
+      where: fleetControlGroupId
+    findAllControlGroupsByFleetMemberId:
+      kvFunction: findAllWithKV
+      where: fleetMemberId

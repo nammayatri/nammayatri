@@ -17,6 +17,7 @@ imports:
   parseBaseUrl: Kernel.Prelude
   AccountId: Kernel.External.Payment.Stripe.Types
   ImageExtractionValidation: Domain.Types.IdfyVerification
+  FleetControlGroup: Domain.Types.FleetControlGroup
 
 IdfyVerification:
   tableName: idfy_verification
@@ -24,6 +25,8 @@ IdfyVerification:
     id: Id IdfyVerification
     documentImageId1: Id Image
     documentImageId2: Maybe (Id Image)
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
+    fleetOwnerId: Maybe Text
     driverId: Id Person
     requestId: Text
     docType: DocumentType
@@ -169,6 +172,7 @@ VehicleRegistrationCertificate:
   tableName: vehicle_registration_certificate
   fields:
     id: Id VehicleRegistrationCertificate
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
     documentImageId: Id Image
     certificateNumber: EncryptedHashedField e Text
     unencryptedCertificateNumber: Maybe Text
@@ -554,6 +558,7 @@ FleetRCAssociation:
   tableName: fleet_rc_association
   fields:
     id: Id FleetRCAssociation
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
     fleetOwnerId: Id Person
     rcId: Id VehicleRegistrationCertificate
     associatedOn: UTCTime
@@ -822,6 +827,8 @@ HyperVergeVerification:
   fields:
     id: Id HyperVergeVerification
     documentImageId1: Id Image
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
+    fleetOwnerId: Maybe Text
     documentImageId2: Maybe (Id Image)
     driverId: Id Person
     requestId: Text

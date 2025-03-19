@@ -19,6 +19,7 @@ instance FromTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRe
         Domain.Types.ApprovalRequest.ApprovalRequest
           { body = body,
             createdAt = createdAt,
+            fleetControlGroupId = Kernel.Types.Id.Id <$> fleetControlGroupId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -36,6 +37,7 @@ instance ToTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequ
     Beam.ApprovalRequestT
       { Beam.body = body,
         Beam.createdAt = createdAt,
+        Beam.fleetControlGroupId = Kernel.Types.Id.getId <$> fleetControlGroupId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

@@ -4,6 +4,7 @@ import Control.Applicative (liftA2)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
+import Domain.Types.FleetControlGroup
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import Domain.Types.VehicleCategory
@@ -25,8 +26,8 @@ import Storage.Queries.OrphanInstances.Person ()
 
 -- Extra code goes here --
 
-createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> VehicleCategory -> Bool -> m ()
-createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardingVehicleCategory isActive = do
+createFleetDriverAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Person -> VehicleCategory -> Bool -> Maybe (Id FleetControlGroup) -> m ()
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardingVehicleCategory isActive fleetControlGroupId = do
   now <- getCurrentTime
   mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
   case mbFleetDriverAssociation of
@@ -48,6 +49,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardingVehicleC
             onboardingVehicleCategory = Just onboardingVehicleCategory,
             createdAt = now,
             updatedAt = now,
+            fleetControlGroupId,
             ..
           }
 

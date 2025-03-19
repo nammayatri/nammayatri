@@ -232,7 +232,9 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             oxygen = Nothing,
             ventilator = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            fleetOwnerId = Nothing,
+            fleetControlGroupId = Nothing
           }
     mkHyperVergeVerificationEntity requestId now imageExtractionValidation encryptedDL transactionId = do
       id <- generateGUID
@@ -261,6 +263,8 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,
             updatedAt = now,
+            fleetOwnerId = Nothing,
+            fleetControlGroupId = Nothing,
             ..
           }
 

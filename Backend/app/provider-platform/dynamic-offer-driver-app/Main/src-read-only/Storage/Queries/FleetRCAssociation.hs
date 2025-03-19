@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.FleetRCAssociation.FleetRCAssociation {..}) = d
   updateWithKV
     [ Se.Set Beam.associatedOn associatedOn,
       Se.Set Beam.associatedTill associatedTill,
+      Se.Set Beam.fleetControlGroupId (Kernel.Types.Id.getId <$> fleetControlGroupId),
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

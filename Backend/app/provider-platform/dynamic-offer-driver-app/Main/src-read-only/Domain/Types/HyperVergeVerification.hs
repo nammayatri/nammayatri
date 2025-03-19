@@ -5,6 +5,7 @@ module Domain.Types.HyperVergeVerification where
 
 import Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.IdfyVerification
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -24,6 +25,8 @@ data HyperVergeVerificationE e = HyperVergeVerification
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
+    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     hypervergeResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.HyperVergeVerification.HyperVergeVerification,
     imageExtractionValidation :: Domain.Types.IdfyVerification.ImageExtractionValidation,
@@ -61,6 +64,8 @@ instance EncryptedItem HyperVergeVerification where
           documentNumber = documentNumber_,
           driverDateOfBirth = driverDateOfBirth entity,
           driverId = driverId entity,
+          fleetControlGroupId = fleetControlGroupId entity,
+          fleetOwnerId = fleetOwnerId entity,
           hypervergeResponse = hypervergeResponse entity,
           id = id entity,
           imageExtractionValidation = imageExtractionValidation entity,
@@ -90,6 +95,8 @@ instance EncryptedItem HyperVergeVerification where
             documentNumber = documentNumber_,
             driverDateOfBirth = driverDateOfBirth entity,
             driverId = driverId entity,
+            fleetControlGroupId = fleetControlGroupId entity,
+            fleetOwnerId = fleetOwnerId entity,
             hypervergeResponse = hypervergeResponse entity,
             id = id entity,
             imageExtractionValidation = imageExtractionValidation entity,

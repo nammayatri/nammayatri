@@ -13,15 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleRouteMappingT f = VehicleRouteMappingT
-  { blocked :: (B.C f Kernel.Prelude.Bool),
-    fleetOwnerId :: (B.C f Data.Text.Text),
-    merchantId :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    routeCode :: (B.C f Data.Text.Text),
-    vehicleNumberEncrypted :: (B.C f Data.Text.Text),
-    vehicleNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { blocked :: B.C f Kernel.Prelude.Bool,
+    fleetControlGroupId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    fleetOwnerId :: B.C f Data.Text.Text,
+    merchantId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    routeCode :: B.C f Data.Text.Text,
+    vehicleNumberEncrypted :: B.C f Data.Text.Text,
+    vehicleNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +32,6 @@ instance B.Table VehicleRouteMappingT where
 
 type VehicleRouteMapping = VehicleRouteMappingT Identity
 
-$(enableKVPG (''VehicleRouteMappingT) [('routeCode), ('vehicleNumberHash)] [])
+$(enableKVPG ''VehicleRouteMappingT ['routeCode, 'vehicleNumberHash] [])
 
-$(mkTableInstances (''VehicleRouteMappingT) "vehicle_route_mapping")
+$(mkTableInstances ''VehicleRouteMappingT "vehicle_route_mapping")

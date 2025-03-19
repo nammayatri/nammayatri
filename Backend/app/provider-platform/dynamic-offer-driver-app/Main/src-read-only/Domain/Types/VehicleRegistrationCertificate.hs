@@ -5,6 +5,7 @@ module Domain.Types.VehicleRegistrationCertificate where
 
 import Data.Aeson
 import qualified Data.Time.Calendar
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -23,6 +24,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     failedRules :: [Kernel.Prelude.Text],
     fitnessExpiry :: Kernel.Prelude.UTCTime,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
     insuranceValidity :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -73,6 +75,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           documentImageId = documentImageId entity,
           failedRules = failedRules entity,
           fitnessExpiry = fitnessExpiry entity,
+          fleetControlGroupId = fleetControlGroupId entity,
           fleetOwnerId = fleetOwnerId entity,
           id = id entity,
           insuranceValidity = insuranceValidity entity,
@@ -115,6 +118,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             documentImageId = documentImageId entity,
             failedRules = failedRules entity,
             fitnessExpiry = fitnessExpiry entity,
+            fleetControlGroupId = fleetControlGroupId entity,
             fleetOwnerId = fleetOwnerId entity,
             id = id entity,
             insuranceValidity = insuranceValidity entity,

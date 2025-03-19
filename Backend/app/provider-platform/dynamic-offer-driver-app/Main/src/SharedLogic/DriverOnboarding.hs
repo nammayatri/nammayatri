@@ -27,6 +27,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
+import Domain.Types.FleetControlGroup
 import qualified Domain.Types.FleetRCAssociation as FRCA
 import qualified Domain.Types.HyperVergeVerification as DHV
 import qualified Domain.Types.IdfyVerification as DIdfy
@@ -213,8 +214,8 @@ makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
         updatedAt = now
       }
 
-makeFleetRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m FRCA.FleetRCAssociation
-makeFleetRCAssociation merchantId merchantOperatingCityId fleetOwnerId rcId end = do
+makeFleetRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> Maybe (Id FleetControlGroup) -> m FRCA.FleetRCAssociation
+makeFleetRCAssociation merchantId merchantOperatingCityId fleetOwnerId rcId end fleetControlGroupId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -227,7 +228,8 @@ makeFleetRCAssociation merchantId merchantOperatingCityId fleetOwnerId rcId end 
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        fleetControlGroupId
       }
 
 data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
@@ -306,6 +308,7 @@ data CreateRCInput = CreateRCInput
   { registrationNumber :: Maybe Text,
     fitnessUpto :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text,
+    fleetControlGroupId :: Maybe (Id FleetControlGroup),
     vehicleCategory :: Maybe DVC.VehicleCategory,
     documentImageId :: Id Domain.Image,
     vehicleClass :: Maybe Text,
@@ -378,6 +381,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       mYManufacturing = input.mYManufacturing,
       verificationStatus,
       fleetOwnerId = input.fleetOwnerId,
+      fleetControlGroupId = input.fleetControlGroupId,
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOperatingCityId,
       userPassedVehicleCategory = input.vehicleCategory,
@@ -522,6 +526,8 @@ data VerificationReqRecord = VerificationReqRecord
     ventilator :: Maybe Bool,
     merchantId :: Maybe (Id DTM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    fleetOwnerId :: Maybe Text,
+    fleetControlGroupId :: Maybe (Id FleetControlGroup),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

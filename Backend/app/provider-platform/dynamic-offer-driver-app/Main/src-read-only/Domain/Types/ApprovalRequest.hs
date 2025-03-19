@@ -6,6 +6,7 @@ module Domain.Types.ApprovalRequest where
 import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.EmptyDynamicParam
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -18,6 +19,7 @@ import qualified Tools.Beam.UtilsTH
 data ApprovalRequest = ApprovalRequest
   { body :: Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
     id :: Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -47,14 +49,14 @@ data EndRideData = EndRideData
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-data RequestStatus = ACCEPTED | REJECTED | AWAITING_APPROVAL | REVOKED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+data RequestStatus = ACCEPTED | REJECTED | AWAITING_APPROVAL | REVOKED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data RequestType = END_RIDE | CHANGE_ROUTE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ApprovalRequestData))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ApprovalRequestData)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RequestType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RequestType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''RequestStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''RequestStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RequestStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RequestStatus)

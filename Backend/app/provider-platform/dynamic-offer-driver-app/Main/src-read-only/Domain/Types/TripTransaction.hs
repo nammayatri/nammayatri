@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.ApprovalRequest
 import qualified Domain.Types.Common
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -25,6 +26,7 @@ data TripTransaction = TripTransaction
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
     endStopCode :: Data.Text.Text,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
     isCurrentlyDeviated :: Kernel.Prelude.Bool,

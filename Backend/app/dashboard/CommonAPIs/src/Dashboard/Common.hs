@@ -36,9 +36,11 @@ import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Servant (FromHttpApiData, ToHttpApiData)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 data Customer
+
+data Person
 
 data Driver
 
@@ -71,6 +73,32 @@ data Document
 data TripTransaction
 
 data CoinsConfig
+
+data FleetControlGroup
+
+-- instance FromHttpApiData [Id FleetControlGroup] where
+--   parseQueryParam = map parseQueryParam
+
+-- instance ToHttpApiData [Id FleetControlGroup] where
+--   toUrlPiece = map toUrlPiece
+
+-- data FleetControlGroup
+--   deriving newtype (FromHttpApiData)
+
+-- newtype FleetControlGroup = FleetControlGroup Text
+--   deriving stock (Eq, Show, Generic, Read)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- instance FromHttpApiData FleetControlGroup where
+--   parseQueryParam = readEither
+
+instance FromHttpApiData [Text] where
+  parseQueryParam = readEither
+
+instance ToHttpApiData [Text] where
+  toUrlPiece = show
+
+--
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)

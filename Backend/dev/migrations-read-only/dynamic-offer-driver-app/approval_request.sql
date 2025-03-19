@@ -19,3 +19,33 @@ ALTER TABLE atlas_driver_offer_bpp.approval_request ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN fleet_control_group_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

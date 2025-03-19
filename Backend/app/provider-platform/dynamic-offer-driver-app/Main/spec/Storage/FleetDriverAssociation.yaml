@@ -3,12 +3,14 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
   VehicleCategory: Domain.Types.VehicleCategory
+  FleetControlGroup: Domain.Types.FleetControlGroup
 
 FleetDriverAssociation:
   tableName: fleet_driver_association
 
   fields:
     id: Id FleetDriverAssociation
+    fleetControlGroupId: Maybe (Id FleetControlGroup)
     driverId: Id Person
     isActive: Bool
     fleetOwnerId: Text

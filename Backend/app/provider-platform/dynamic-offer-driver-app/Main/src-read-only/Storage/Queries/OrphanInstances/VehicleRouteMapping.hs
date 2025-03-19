@@ -18,6 +18,7 @@ instance FromTType' Beam.VehicleRouteMapping Domain.Types.VehicleRouteMapping.Ve
       Just
         Domain.Types.VehicleRouteMapping.VehicleRouteMapping
           { blocked = blocked,
+            fleetControlGroupId = Kernel.Types.Id.Id <$> fleetControlGroupId,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -31,12 +32,13 @@ instance ToTType' Beam.VehicleRouteMapping Domain.Types.VehicleRouteMapping.Vehi
   toTType' (Domain.Types.VehicleRouteMapping.VehicleRouteMapping {..}) = do
     Beam.VehicleRouteMappingT
       { Beam.blocked = blocked,
+        Beam.fleetControlGroupId = Kernel.Types.Id.getId <$> fleetControlGroupId,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
-        Beam.vehicleNumberEncrypted = ((vehicleNumber & unEncrypted . encrypted)),
-        Beam.vehicleNumberHash = (vehicleNumber & hash),
+        Beam.vehicleNumberEncrypted = vehicleNumber & unEncrypted . encrypted,
+        Beam.vehicleNumberHash = vehicleNumber & hash,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

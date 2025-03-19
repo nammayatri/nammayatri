@@ -23,6 +23,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     documentImageId :: B.C f Kernel.Prelude.Text,
     failedRules :: B.C f [Kernel.Prelude.Text],
     fitnessExpiry :: B.C f Kernel.Prelude.UTCTime,
+    fleetControlGroupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     insuranceValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

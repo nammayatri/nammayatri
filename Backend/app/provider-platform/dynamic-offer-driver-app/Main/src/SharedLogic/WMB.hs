@@ -8,6 +8,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.FleetConfig
+import Domain.Types.FleetControlGroup
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -35,6 +36,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetControlGroupMemberAssociation as FCGQ
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QR
@@ -155,6 +157,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           tripStartTime = Just now,
           tripEndTime = Nothing,
           tripTerminationSource = Nothing,
+          fleetControlGroupId = vehicleRegistrationCertificate.fleetControlGroupId,
           ..
         }
 
@@ -364,3 +367,11 @@ tripTransactionKey driverId = \case
   COMPLETED -> "WMB:TCO:" <> driverId.getId
   CANCELLED -> "WMB:TCA:" <> driverId.getId
   PAUSED -> "WMB:TP:" <> driverId.getId
+
+fleetAccessibleControlGroupList :: Maybe (Id Person) -> Maybe [Id FleetControlGroup] -> Flow [Id FleetControlGroup]
+fleetAccessibleControlGroupList fleetMemberId fleetControlGroupList = do
+  case fleetControlGroupList of
+    Just groupList | not (null groupList) -> return groupList
+    _ -> case fleetMemberId of
+      Just memberId -> pure . fmap (.fleetControlGroupId) =<< FCGQ.findAllControlGroupsByFleetMemberId memberId
+      Nothing -> return [] -- find all fleet control groups by fleet owner id

@@ -37,3 +37,8 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN end_ride_approval
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_termination_source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN fleet_control_group_id character varying(36) ;

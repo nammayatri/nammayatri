@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data ApprovalRequestT f = ApprovalRequestT
   { body :: B.C f Data.Text.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    fleetControlGroupId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     id :: B.C f Data.Text.Text,
     merchantId :: B.C f Data.Text.Text,
     merchantOperatingCityId :: B.C f Data.Text.Text,

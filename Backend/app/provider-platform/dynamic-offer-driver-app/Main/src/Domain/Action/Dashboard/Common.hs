@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.DriverFee as DDF
+import Domain.Types.FleetControlGroup
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -83,8 +84,8 @@ castVehicleVariantDashboard = \case
   Just DV.BUS_AC -> Just Common.BUS_AC
   _ -> Nothing
 
-runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
-runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
+runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Maybe Text -> Maybe (Id FleetControlGroup) -> Flow ()
+runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet fleetOwnerId fleetControlGroupId = do
   let imageId = maybe "" cast req.imageId
   let rcReq =
         DomainRC.DriverRCReq
@@ -97,7 +98,9 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = d
             ventilator = req.ventilator,
             multipleRC = Nothing,
             vehicleDetails = Nothing,
-            vehicleCategory = req.vehicleCategory
+            vehicleCategory = req.vehicleCategory,
+            fleetOwnerId,
+            fleetControlGroupId
           }
   void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 

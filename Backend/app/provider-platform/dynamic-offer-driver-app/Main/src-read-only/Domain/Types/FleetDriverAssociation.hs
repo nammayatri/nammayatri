@@ -4,6 +4,7 @@
 module Domain.Types.FleetDriverAssociation where
 
 import Data.Aeson
+import qualified Domain.Types.FleetControlGroup
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
@@ -15,6 +16,7 @@ data FleetDriverAssociation = FleetDriverAssociation
     associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fleetControlGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetControlGroup.FleetControlGroup),
     fleetOwnerId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation,
     isActive :: Kernel.Prelude.Bool,
