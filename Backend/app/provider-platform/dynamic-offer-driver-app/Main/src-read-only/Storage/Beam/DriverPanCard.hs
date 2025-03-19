@@ -25,6 +25,7 @@ data DriverPanCardT f = DriverPanCardT
     driverNameOnGovtDB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     failedRules :: B.C f [Kernel.Prelude.Text],
     id :: B.C f Kernel.Prelude.Text,
+    isInvalidatedByDashboard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panCardNumberEncrypted :: B.C f Kernel.Prelude.Text,
     panCardNumberHash :: B.C f Kernel.External.Encryption.DbHash,

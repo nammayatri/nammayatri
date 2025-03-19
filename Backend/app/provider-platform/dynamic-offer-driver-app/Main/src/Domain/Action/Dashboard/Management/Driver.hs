@@ -52,6 +52,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    postDriverInvalidatePanCard,
   )
 where
 
@@ -1107,4 +1108,13 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   when (length req.driverIds > 200) $ throwError (InvalidRequest "driver ids limit exceeded")
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
+  return Success
+
+postDriverInvalidatePanCard :: ShortId DM.Merchant -> Context.City -> Common.InvalidatePanCardReq -> Flow APISuccess
+postDriverInvalidatePanCard merchantShortId _ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  _ <- B.runInReplica $ QPanCard.findByDriverId (Id req.personId) >>= fromMaybeM (InvalidRequest "PAN record not found for the driver")
+  QImage.updateStatusReasonToInvalid (Just Documents.INVALID) (Just $ ImageNotValid "All pan details of this driver marked Invalid by dashboard API.") merchant.id (Id req.personId) DomainDVC.PanCard
+  QPanCard.updateVerificationStatusAndIsInvalidatedByDashboard Documents.INVALID (Just True) (Id req.personId)
+  QDriverInfo.updateEnabledVerifiedState (Id req.personId) False (Just False) -- Disabling driver since PAN got Invalidated.
   return Success

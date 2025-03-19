@@ -490,6 +490,15 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_SERVICE_UPDATE
+  - POST:
+      endpoint: /invalidatePanCard
+      auth: ApiAuthV2
+      request:
+        type: InvalidatePanCardReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS INVALIDATE_PAN_CARD
 
 types:
   DriverListRes:
@@ -679,6 +688,10 @@ types:
   BulkServiceUpdateReq:
     - driverIds : [Text]
     - serviceNames : [ServiceNames]
+    - derive: "'HideSecrets"
+  InvalidatePanCardReq:
+    - recordType: NewType
+    - personId: Text
     - derive: "'HideSecrets"
 
 extraOperations:

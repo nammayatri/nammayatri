@@ -343,6 +343,11 @@ Image:
     deleteById:
       kvFunction: deleteWithKV
       where: id
+    updateStatusReasonToInvalid:
+      kvFunction: updateWithKV
+      params: [verificationStatus, failureReason, updatedAt]
+      where:
+        and: [merchantId, personId, imageType]
   extraOperations:
     - EXTRA_QUERY_FILE
   domainInstance:
@@ -670,6 +675,7 @@ DriverPanCard:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
+    isInvalidatedByDashboard: Maybe Bool
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -696,6 +702,10 @@ DriverPanCard:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId1
+    updateVerificationStatusAndIsInvalidatedByDashboard:
+      kvFunction: updateWithKV
+      params: [verificationStatus, isInvalidatedByDashboard, updatedAt]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 

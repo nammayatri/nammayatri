@@ -10,6 +10,7 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -41,6 +42,18 @@ updateVerificationStatus verificationStatus driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateVerificationStatusAndIsInvalidatedByDashboard ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVerificationStatusAndIsInvalidatedByDashboard verificationStatus isInvalidatedByDashboard driverId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.isInvalidatedByDashboard isInvalidatedByDashboard,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusByImageId verificationStatus documentImageId1 = do
   _now <- getCurrentTime
@@ -63,6 +76,7 @@ updateByPrimaryKey (Domain.Types.DriverPanCard.DriverPanCard {..}) = do
       Se.Set Beam.driverName driverName,
       Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB,
       Se.Set Beam.failedRules failedRules,
+      Se.Set Beam.isInvalidatedByDashboard isInvalidatedByDashboard,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
       Se.Set Beam.panCardNumberHash (panCardNumber & hash),
