@@ -102,6 +102,7 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
+import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
@@ -227,6 +228,7 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Pricing
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import SharedLogic.VehicleServiceTier
@@ -1327,7 +1329,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       | otherwise = throwError . InternalError $ show exc
 
     buildDriverQuote ::
-      (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime, HasField "version" r DeploymentVersion) =>
+      (MonadFlow m, CoreMetrics m, CacheFlow m r, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime, HasField "version" r DeploymentVersion) =>
       SP.Person ->
       DStats.DriverStats ->
       DSR.SearchRequest ->
@@ -1344,6 +1346,15 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       guid <- generateGUID
       now <- getCurrentTime
       deploymentVersion <- asks (.version)
+      if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer
+        then do
+          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lat, searchReq.fromLocation.lon, (TE.encodeUtf8 (sd.searchTryId.getId)))]
+          void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 1800
+          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategory now sd.vehicleCategory) [(searchReq.fromLocation.lat, searchReq.fromLocation.lon, (TE.encodeUtf8 (sd.searchTryId.getId)))]
+          void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategory now sd.vehicleCategory) 1800
+          void $ Redis.withCrossAppRedis $ Redis.incr (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId)
+          void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId) 1800
+        else pure ()
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
       let estimatedFare = fareSum fareParams
       pure
