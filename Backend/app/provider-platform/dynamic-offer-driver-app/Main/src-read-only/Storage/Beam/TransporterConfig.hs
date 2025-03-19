@@ -170,6 +170,7 @@ data TransporterConfigT f = TransporterConfigT
     pickupLocThreshold :: B.C f Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    qarCalRadiusInKm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcLimit :: B.C f Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
