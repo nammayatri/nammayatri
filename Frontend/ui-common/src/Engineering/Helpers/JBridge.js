@@ -2133,7 +2133,7 @@ export const shareImageMessage = function (message) {
 }
 
 export const showInAppNotification = function (payload) {
-  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))
+  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))()
 }
 
 export const openWhatsAppSupport = function (contactNumber) {
@@ -2445,7 +2445,6 @@ export const initSignedCall = function (rideId) {
       if (sanitizedCuid.length < 10) {
         return;
       }
-      console.log("signedcall" + exoPhone);
       const userCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
       const config = JSON.stringify({
         rideId: rideId,
@@ -3006,7 +3005,7 @@ export const initHVSdk = function (accessToken, workFLowId, transactionId, useLo
       inputJson: inputJson,
       callback: callback
     };
-    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload));
+    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload))();
   }
   catch (err) {
     console.error(err);
