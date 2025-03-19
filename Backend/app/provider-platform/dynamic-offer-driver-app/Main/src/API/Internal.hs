@@ -16,6 +16,7 @@ import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
+import qualified API.Internal.MeterRideFare as MeterRideFare
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ReportACIssue as ReportACIssue
@@ -46,6 +47,7 @@ type API =
            :<|> StopDetection.API
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
+           :<|> MeterRideFare.API
        )
 
 handler :: FlowServer API
@@ -68,3 +70,4 @@ handler =
     :<|> StopDetection.handler
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
+    :<|> MeterRideFare.handler

@@ -57,6 +57,7 @@ library
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.KnowYourDriver
+      API.Internal.MeterRideFare
       API.Internal.Multimodal
       API.Internal.PopulateTipAmount
       API.Internal.ReportACIssue
@@ -177,6 +178,7 @@ library
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.KnowYourDriver
+      Domain.Action.Internal.MeterRideFare
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
