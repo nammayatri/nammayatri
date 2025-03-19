@@ -2,6 +2,7 @@ module MerchantConfig.Types where
 
 import Common.Types.Config
 import Data.Maybe
+import Foreign.Object
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -11,7 +12,7 @@ type AppConfigDriver a =
     primaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
-    rideCompletedCardConfig :: RideCompletedCardConfig, 
+    rideCompletedCardConfig :: RideCompletedCardConfig,
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
     rideActionModelConfig :: RideActionModelConfig,
@@ -52,7 +53,7 @@ type AppConfigDriver a =
     rentalRideVideoConfig :: RentalRideVideoConfig,
     scheduledRideConfig :: ScheduledRideConfig
     | a
-  } 
+  }
 
 type RentalRideVideoConfig = {
   auto :: String,
@@ -214,7 +215,7 @@ type Features = {
 , enableSpecialPickup :: Boolean
 , enableInterOperability :: Boolean
 }
- 
+
  -- VV - VechileVerfication
 type VVConfig = {
   validationPrefix :: String
@@ -320,7 +321,7 @@ type PurpleRideConfigForVehicle = {
 
 type RideStartAudio = {
   acCab :: StartAudioUrls,
-  nonAcCab :: StartAudioUrls, 
+  nonAcCab :: StartAudioUrls,
   auto :: StartAudioUrls,
   bike :: StartAudioUrls
 }
@@ -340,7 +341,7 @@ type VariantToDisabilityVideo = {
 }
 
 type DisabilityToVideo = {
-  disabilityType :: String, 
+  disabilityType :: String,
   videoUrl :: String
 }
 

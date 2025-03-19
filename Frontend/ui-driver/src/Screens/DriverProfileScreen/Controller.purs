@@ -67,9 +67,11 @@ import Types.App
 import Engineering.Helpers.Commons as EHC
 import Mobility.Prelude(boolToInt)
 import Components.ExtraChargeCard as ExtraChargeCard
+import Components.DriverProfileScoreCard as DriverProfileScoreCard
 
 instance showAction :: Show Action where
   show _ = ""
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_PROFILE_SCREEN)
@@ -273,6 +275,9 @@ data Action = BackPressed
             | ProfileDataAPIResponseAction DriverProfileDataRes
             | ExtraChargeCardAC ExtraChargeCard.Action
             | UpdateGlobalEvent
+            | DriverProfileScoreCardAC DriverProfileScoreCard.Action
+            | OnMoreDetailsClick
+            | OnCloseDriverDetailsClick
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -396,8 +401,8 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       goHomeActive = driverGoHomeInfo.status == Just "ACTIVE",
                                       driverInfoResponse = Just (SA.GetDriverInfoResp driverProfileResp
                                       -- {
-                                        -- @TODO {DANGER} need to remove while merging
-                                      --   overchargingTag = Just SA.VeryLowOverCharging
+                                      --   -- @TODO {DANGER} need to remove while merging
+                                      --   overchargingTag = Just SA.ModerateOverCharging
                                       -- , ridesWithFareIssues = Just 9
                                       -- , totalRidesConsideredForFareIssues = Just 10
                                       -- }
@@ -477,7 +482,7 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   else exit (UpdateGender state{data{driverGender = state.data.genderTypeSelect},props{showGenderView = false}})
 
 eval SelectGender state = do
-  continue state{props{showGenderView = true}, data{genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
+  continue state{showDriverDetails = false, props{showGenderView = true}, data{genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
 
 eval UpdateAlternateNumber state = do
   let curr_time = getCurrentUTC ""
@@ -487,7 +492,7 @@ eval UpdateAlternateNumber state = do
     pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
   else
-    continue state{props{alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false}, data{alterNumberEditableText = isJust state.data.driverAlternateNumber}}
+    continue state{props{alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false}, data{alterNumberEditableText = isJust state.data.driverAlternateNumber}, showDriverDetails = false}
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value))state = do
   if DS.length value <= 10 then (do
@@ -627,9 +632,20 @@ eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = sta
     pure $ DeactivateRc rcType ""
   ]
 
-eval (ExtraChargeCardAC (ExtraChargeCard.LearnMoreExtraChargeBtnAC (PrimaryButton.OnClick))) state = exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
+eval (ExtraChargeCardAC (ExtraChargeCard.LearnMoreExtraChargeBtnAC (PrimaryButton.OnClick ))) state = exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
 
 eval (UpdateGlobalEvent) state = update state {props {skipGlobalEvents = false}}
+
+eval OnMoreDetailsClick state = continue state {showDriverDetails = true}
+
+eval OnCloseDriverDetailsClick state = continue state {showDriverDetails = false}
+
+eval (DriverProfileScoreCardAC (DriverProfileScoreCard.OnPrimaryButtonClick cardType (PrimaryButton.OnClick ))) state = do
+  case cardType of
+    DriverProfileScoreCard.ExtraCharge -> exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
+    DriverProfileScoreCard.Cancellation -> exit $ GoToCancellationRateScreen state {props {skipGlobalEvents = true}}
+    _ -> update state
+    -- DriverProfileScoreCard.Safety -> exit $ GoToSafetyInfoScreen state {props {skipGlobalEvents = true}}
 
 eval _ state = update state
 

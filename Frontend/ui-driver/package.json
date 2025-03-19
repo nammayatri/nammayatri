@@ -1,6 +1,6 @@
 {
   "name": "atlas-ui-driver",
-  "version": "1.0.0",
+  "version": "3.0.118",
   "description": "Atlas Driver",
   "private": true,
   "main": "index.js",
