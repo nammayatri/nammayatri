@@ -161,44 +161,7 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
   mbVehicle <- QVehicle.findById personId
   processedVehicleDocuments <- fetchProcessedVehicleDocuments personId merchantOperatingCity transporterConfig language mbVehicle
 
-  inprogressVehicleDocuments <- do
-    inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
-    inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
-    let mbVerificationReqRecord = getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
-    case mbVerificationReqRecord of
-      Just verificationReqRecord -> do
-        registrationNoEither <- try @_ @SomeException (decrypt verificationReqRecord.documentNumber)
-        case registrationNoEither of
-          Left err -> do
-            logError $ "Error while decrypting document number: " <> (verificationReqRecord.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
-            return []
-          Right registrationNo -> do
-            rcNoEnc <- encrypt registrationNo
-            rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
-            isUnlinked <- case rc of
-              Just rc_ -> DRAQuery.findUnlinkedRC personId rc_.id
-              Nothing -> pure []
-            if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
-              then return []
-              else do
-                documents <-
-                  vehicleDocumentTypes `forM` \docType -> do
-                    (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-                    message <- documentStatusMessage status mbReason docType mbUrl language
-                    return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
-                return
-                  [ VehicleDocumentItem
-                      { registrationNo,
-                        userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory,
-                        verifiedVehicleCategory = Nothing,
-                        isVerified = False,
-                        isActive = False,
-                        vehicleModel = Nothing,
-                        documents,
-                        dateOfUpload = verificationReqRecord.createdAt
-                      }
-                  ]
-      Nothing -> return []
+  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments personId merchantOperatingCity transporterConfig language processedVehicleDocuments
 
   let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
 
@@ -372,6 +335,54 @@ fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig languag
       Nothing -> return []
 
   pure $ processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
+
+fetchInprogressVehicleDocuments ::
+  Id DP.Person ->
+  DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Language ->
+  [VehicleDocumentItem] ->
+  Flow [VehicleDocumentItem]
+fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig language processedVehicleDocuments = do
+  let merchantId = merchantOpCity.merchantId
+      merchantOpCityId = merchantOpCity.id
+  inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
+  inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
+  let mbVerificationReqRecord = getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
+  case mbVerificationReqRecord of
+    Just verificationReqRecord -> do
+      registrationNoEither <- try @_ @SomeException (decrypt verificationReqRecord.documentNumber)
+      case registrationNoEither of
+        Left err -> do
+          logError $ "Error while decrypting document number: " <> (verificationReqRecord.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
+          return []
+        Right registrationNo -> do
+          rcNoEnc <- encrypt registrationNo
+          rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+          isUnlinked <- case rc of
+            Just rc_ -> DRAQuery.findUnlinkedRC personId rc_.id
+            Nothing -> pure []
+          if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
+            then return []
+            else do
+              documents <-
+                vehicleDocumentTypes `forM` \docType -> do
+                  (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
+                  message <- documentStatusMessage status mbReason docType mbUrl language
+                  return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+              return
+                [ VehicleDocumentItem
+                    { registrationNo,
+                      userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory,
+                      verifiedVehicleCategory = Nothing,
+                      isVerified = False,
+                      isActive = False,
+                      vehicleModel = Nothing,
+                      documents,
+                      dateOfUpload = verificationReqRecord.createdAt
+                    }
+                ]
+    Nothing -> return []
 
 checkAllVehicleDocsVerified ::
   Id DMOC.MerchantOperatingCity ->
