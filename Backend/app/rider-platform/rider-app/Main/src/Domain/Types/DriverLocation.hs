@@ -1,0 +1,32 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module Domain.Types.DriverLocation where
+
+import Data.Time
+import qualified Domain.Types.VehicleVariant as VV
+import EulerHS.Prelude hiding (id, state)
+import Kernel.External.Maps.HasCoordinates
+
+data DriverLocation = DriverLocation
+  { driverId :: Text,
+    lat :: Double,
+    lon :: Double,
+    coordinatesCalculatedAt :: UTCTime,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    bear :: Maybe Int,
+    vehicleType :: Maybe VV.VehicleVariant
+  }
+  deriving (Generic, Show, Eq, HasCoordinates, FromJSON, ToJSON)

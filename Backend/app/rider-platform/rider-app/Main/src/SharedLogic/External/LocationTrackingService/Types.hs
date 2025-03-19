@@ -16,6 +16,7 @@ module SharedLogic.External.LocationTrackingService.Types where
 
 import Data.Aeson
 import Data.OpenApi hiding (Example, example, name, tags, url)
+import qualified Domain.Types.VehicleVariant as VV
 import EulerHS.Prelude
 import Kernel.Prelude
 import Kernel.Types.App
@@ -62,3 +63,13 @@ newtype LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
 
 type HasLocationService m r = (HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])
+
+data NearByReq = NearByReq
+  { lat :: Double,
+    lon :: Double,
+    onRide :: Maybe Bool,
+    vehicleType :: Maybe [VV.VehicleVariant],
+    radius :: Int,
+    merchantId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

@@ -14,11 +14,14 @@
 
 module SharedLogic.External.LocationTrackingService.Flow where
 
+import Domain.Types.DriverLocation
+import qualified Domain.Types.VehicleVariant as VV
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.API.NearbyDrivers as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute as VehicleTracking
 import SharedLogic.External.LocationTrackingService.Types
 
@@ -37,3 +40,22 @@ vehicleTrackingOnRoute vehicleTracking = do
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_VEHICLE_TRACKING_API") url)
   logDebug $ "lts vehicle tracking on route: " <> show vehicleTrackingOnRouteResp
   return vehicleTrackingOnRouteResp
+
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Double -> Double -> Maybe Bool -> Maybe [VV.VehicleVariant] -> Int -> Text -> m [DriverLocation]
+nearBy lat lon onRide vt radius merchantId = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  let req =
+        NearByReq
+          { lat,
+            lon,
+            onRide,
+            radius,
+            vehicleType = vt,
+            merchantId = merchantId
+          }
+  nearByRes <-
+    callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
+      >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
+  logDebug $ "lts nearBy: " <> show nearByRes
+  return nearByRes

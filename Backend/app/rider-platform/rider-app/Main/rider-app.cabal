@@ -210,6 +210,7 @@ library
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MeterRideInternal
       Domain.Action.UI.MultimodalConfirm
+      Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -239,6 +240,7 @@ library
       Domain.Types.CacType
       Domain.Types.Common
       Domain.Types.DeliveryDetails
+      Domain.Types.DriverLocation
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
@@ -309,6 +311,7 @@ library
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.External.BbpsService.Flow
+      SharedLogic.External.LocationTrackingService.API.NearbyDrivers
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
@@ -534,6 +537,7 @@ library
       API.Action.UI.Invoice
       API.Action.UI.MeterRideInternal
       API.Action.UI.MultimodalConfirm
+      API.Action.UI.NearbyDrivers
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
@@ -577,6 +581,7 @@ library
       API.Types.UI.Invoice
       API.Types.UI.MeterRideInternal
       API.Types.UI.MultimodalConfirm
+      API.Types.UI.NearbyDrivers
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin

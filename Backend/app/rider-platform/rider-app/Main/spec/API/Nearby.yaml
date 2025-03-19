@@ -1,0 +1,25 @@
+imports:
+  Text: Data.Text
+  VehicleVariant: Domain.Types.VehicleVariant
+  LatLong: Kernel.External.Maps.Types
+
+module: NearbyDrivers
+types:
+  NearbyDriverReq:
+    location: LatLong
+    radius: Int
+  NearbyDriverRes:
+    drivers: "[NearbyDriver]"
+  NearbyDriver:
+    id: Text
+    location: LatLong
+    vehicleType: Maybe VehicleVariant
+    bearing: Maybe Int
+
+apis:
+  - POST:
+      endpoint: /nearbyDrivers
+      request:
+        type: NearbyDriverReq
+      response:
+        type: NearbyDriverRes
