@@ -7,8 +7,13 @@ module Domain.Action.Dashboard.Management.Account
 where
 
 import qualified API.Types.ProviderPlatform.Management.Account as Common
+import Dashboard.Common (Person)
 import Data.OpenApi (ToSchema)
-import Domain.Action.Dashboard.Fleet.Registration (FleetOwnerRegisterReq (..), fleetOwnerRegister)
+import Domain.Action.Dashboard.Fleet.Registration
+  ( FleetOwnerRegisterReq (..),
+    FleetOwnerRegisterWithFlasAndPersonIdReq (..),
+    processFleetOwnerRegister,
+  )
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -40,10 +45,19 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _mbFromDate _mbToDate
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Common.FleetOwnerRegisterReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postAccountVerifyAccount _merchantShortId _opCity req = do
-  _ <- fleetOwnerRegister $ castFleetOwnerRegisterReq req
+postAccountVerifyAccount _merchantShortId _opCity mbPersonId mbRequireApproval req = do
+  let personId = fromMaybe (error "Id Person was not received") mbPersonId
+      requireApproval = fromMaybe (error "Value for requireAdminApprovalForFleetOnboarding was not received") mbRequireApproval
+  _ <-
+    processFleetOwnerRegister $
+      FleetOwnerRegisterWithFlasAndPersonIdReq
+        (castFleetOwnerRegisterReq req)
+        requireApproval
+        (Kernel.Types.Id.cast personId)
   pure Kernel.Types.APISuccess.Success
   where
     castFleetOwnerRegisterReq :: Common.FleetOwnerRegisterReq -> FleetOwnerRegisterReq

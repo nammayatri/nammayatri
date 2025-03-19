@@ -14,7 +14,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt, encrypt)
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -105,7 +105,10 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
         Just True -> throwError (InvalidRequest "FleetOwner already exist!")
         _ -> do
           updatePersonVerifiedStatus personId True
-          fleetOwnerRegisterReq <- createFleetOwnerRegisterReq person
+          merchant <-
+            findByShortId merchantShortId
+              >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+          fleetOwnerRegisterReq <- createFleetOwnerRegisterReq merchant.id person
           checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
           transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
           SharedLogic.Transaction.withTransactionStoring transaction $
@@ -113,18 +116,17 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
               checkedMerchantId
               opCity
               (.accountDSL.postAccountVerifyAccount)
+              (Just $ Kernel.Types.Id.cast personId)
+              (merchant.requireAdminApprovalForFleetOnboarding)
               fleetOwnerRegisterReq
   where
-    createFleetOwnerRegisterReq DP.Person {..} = do
-      merchant <-
-        findByShortId merchantShortId
-          >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+    createFleetOwnerRegisterReq merchantId DP.Person {..} = do
       mobileNumber' <- decrypt mobileNumber
       email' <- traverse decrypt email
       pure $
         Common.FleetOwnerRegisterReq
           { mobileNumber = mobileNumber',
-            merchantId = merchant.id.getId,
+            merchantId = merchantId.getId,
             email = email',
             city = opCity,
             fleetType = Nothing,

@@ -112,11 +112,18 @@ type GetAccountFetchUnverifiedAccounts =
 
 type PostAccountVerifyAccount = ("verifyAccount" :> ReqBody '[JSON] VerifyAccountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostAccountVerifyAccountHelper = ("verifyAccount" :> ReqBody '[JSON] FleetOwnerRegisterReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostAccountVerifyAccountHelper =
+  ( "verifyAccount" :> QueryParam "fleetOwnerId" (Kernel.Types.Id.Id Dashboard.Common.Person)
+      :> QueryParam
+           "requireAdminApprovalForFleetOnboarding"
+           Kernel.Prelude.Bool
+      :> ReqBody '[JSON] FleetOwnerRegisterReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 data AccountAPIs = AccountAPIs
   { getAccountFetchUnverifiedAccounts :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetOwnerStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [PersonAPIEntity],
-    postAccountVerifyAccount :: FleetOwnerRegisterReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postAccountVerifyAccount :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> FleetOwnerRegisterReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkAccountAPIs :: (Client EulerHS.Types.EulerClient API -> AccountAPIs)

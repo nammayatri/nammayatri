@@ -32,6 +32,9 @@ apis:
             auth: ApiAuthV2
             request:
               type: FleetOwnerRegisterReq
+            query:
+              - fleetOwnerId: Id Person
+              - requireAdminApprovalForFleetOnboarding: Bool
             response:
               type: APISuccess
 
