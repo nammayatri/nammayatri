@@ -122,7 +122,7 @@ data CongestionChargeMultiplier
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased
+data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased | NoCharge
   deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable PlatformFeeMethods
 
