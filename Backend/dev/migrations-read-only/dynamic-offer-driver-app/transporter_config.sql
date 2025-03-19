@@ -455,3 +455,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referra
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN qar_cal_radius_in_km double precision ;
+
+
+
+------- SQL updates -------
+

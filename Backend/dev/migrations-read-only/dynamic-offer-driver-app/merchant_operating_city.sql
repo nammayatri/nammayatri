@@ -51,3 +51,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN driver_off
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

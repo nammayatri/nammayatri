@@ -374,6 +374,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
+      SharedLogic.Pricing
       SharedLogic.Ride
       SharedLogic.RiderDetails
       SharedLogic.ScheduledNotifications

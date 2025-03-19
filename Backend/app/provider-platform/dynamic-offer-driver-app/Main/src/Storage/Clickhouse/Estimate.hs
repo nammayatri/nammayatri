@@ -54,7 +54,7 @@ estimateTTable =
       estimatedDistance = "estimated_distance",
       estimatedDuration = "estimated_duration",
       congestionMultiplier = "congestion_multiplier",
-      vehicleServiceTier = "vehicle_service_tier",
+      vehicleServiceTier = "vehicle_variant",
       requestId = "request_id",
       createdAt = "created_at"
     }
