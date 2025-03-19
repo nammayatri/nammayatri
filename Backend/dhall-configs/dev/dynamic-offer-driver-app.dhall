@@ -213,6 +213,7 @@ let AllocatorJobType =
       | OrderAndNotificationStatusUpdate
       | SendOverlay
       | SupplyDemand
+      | CongestionCharge
       | BadDebtCalculation
       | RetryDocumentVerification
       | SendManualPaymentLink
@@ -240,6 +241,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
+      , { mapKey = AllocatorJobType.CongestionCharge, mapValue = True }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
         }
