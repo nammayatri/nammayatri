@@ -21,6 +21,7 @@ where
 import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
+import qualified API.Action.UI.DeletedPerson as DeletedPerson
 import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
@@ -112,6 +113,7 @@ type API =
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
+           :<|> DeletedPerson.API
            :<|> EditLocation.API
            :<|> SocialLogin.API
            :<|> EstimateBP.API
@@ -165,6 +167,7 @@ handler =
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler
+    :<|> DeletedPerson.handler
     :<|> EditLocation.handler
     :<|> SocialLogin.handler
     :<|> EstimateBP.handler
