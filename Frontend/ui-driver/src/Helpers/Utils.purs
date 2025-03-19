@@ -510,6 +510,12 @@ fetchImage fetchImageFrom imageName =
       COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/driver/images/" <> imageName <> ".png"
       GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
 
+forceRemoteImage :: FetchImageFrom -> String -> String
+forceRemoteImage fetchImageFrom imageName =
+  let url = fetchImage fetchImageFrom imageName
+  in "," <> (fromMaybe "" $ DS.split (DS.Pattern ",") url DA.!! 1)
+
+
 fetchAudio :: String -> String -> String
 fetchAudio folder file = "https://" <> assetDomain <> "/beckn/audios/" <> folder <>"/" <> file <> ".mp3"
 

@@ -974,10 +974,10 @@ scoreCardsView state push cancellationThresholdConfig =
           width MATCH_PARENT
         , height WRAP_CONTENT
         ] $
-        map (\driverProfileScoreCardConfig ->
+        mapWithIndex (\index driverProfileScoreCardConfig ->
           case driverProfileScoreCardConfig of
             Just driverProfileScoreCardConfig ->
-              DriverProfileScoreCard.verticalView (push <<< DriverProfileScoreCardAC) driverProfileScoreCardConfig
+              DriverProfileScoreCard.verticalView (index == (length filteredCards - 1)) (push <<< DriverProfileScoreCardAC) driverProfileScoreCardConfig
             Nothing ->
               linearLayout [width $ V 0, height $ V 0][]
         ) $ driverProfileScoreCardConfigs state cancellationThresholdConfig

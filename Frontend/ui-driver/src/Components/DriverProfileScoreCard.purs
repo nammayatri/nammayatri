@@ -51,12 +51,12 @@ type DriverProfileScoreCardType = {
 data Action = OnPrimaryButtonClick ScoreCardType PrimaryButton.Action
 
 
-verticalView :: forall w. (Action -> Effect Unit) -> DriverProfileScoreCardType -> PrestoDOM (Effect Unit) w
-verticalView push config =
+verticalView :: forall w. Boolean -> (Action -> Effect Unit) -> DriverProfileScoreCardType -> PrestoDOM (Effect Unit) w
+verticalView isLast push config =
     linearLayout[
         width $ V $ (screenWidth unit) / 2 - 22
     ,   orientation VERTICAL
-    ,   margin $ Margin 0 16 12 16
+    ,   margin $ Margin 0 16 12 (if isLast then 0 else 16)
     ,   gravity CENTER
     ][
         textView $ [
@@ -124,7 +124,7 @@ getPrimaryButtonConfig text = PrimaryButton.config{
     ,   color = Colors.blue800
     ,   textStyle = FontStyle.Tags
     }
-,   background = "#142194FF"
+,   background = "#E2EFFF"
 ,   width = MATCH_PARENT
 ,   margin = MarginTop 12
 }
@@ -184,7 +184,7 @@ horizontalView push config =
                 ]
             , linearLayout[height WRAP_CONTENT, weight 1.0][]
             , imageView[
-                    width $ V 80
+                    width $ V 100
                 ,   height $ V 68
                 ,   imageWithFallback config.image
                 ,   margin $ MarginLeft 16
