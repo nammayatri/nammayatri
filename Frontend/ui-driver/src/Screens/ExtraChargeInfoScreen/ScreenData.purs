@@ -14,7 +14,7 @@ type ExtraChargeInfoScreenState = {
 
 initData :: ExtraChargeInfoScreenState
 initData = {
-    optionOpened: [true, false],
+    optionOpened: [true, true],
     sheetPositionRef : 1.0,
     driverInfoResp : Nothing
 }

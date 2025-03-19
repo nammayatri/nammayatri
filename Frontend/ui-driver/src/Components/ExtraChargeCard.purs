@@ -171,7 +171,7 @@ view push config =
       , linearLayout[
           cornerRadius 16.0
         , background config.badge.imageBackground
-        , padding $ Padding 15 15 15 15
+        , padding $ PaddingVertical 15 15
         , gravity CENTER
         , width $ V $ (((screenWidth unit) - 64) / 2)
         , margin $ MarginHorizontal 16 16
