@@ -988,6 +988,9 @@ cannotCancelWalkStatus = [Skipped, Finishing, Completed, Cancelled]
 cannotSwitchStatus :: [JourneyLegStatus]
 cannotSwitchStatus = [Skipped, Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
 
+cannotCancelExtendStatus :: [JourneyLegStatus]
+cannotCancelExtendStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled, Arriving]
+
 data ExtendLegStartPoint
   = StartLocation StartLocationType
   | StartLegOrder Int
