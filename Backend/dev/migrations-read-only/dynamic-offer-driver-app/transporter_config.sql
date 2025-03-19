@@ -359,8 +359,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN requires_onboar
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_referral_entities text[]  default '{DRIVER}';

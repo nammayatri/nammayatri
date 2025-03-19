@@ -1,5 +1,6 @@
 imports:
   Person: Domain.Types.Person
+  Role: Domain.Types.Person
   Ride: Domain.Types.Ride
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
@@ -13,7 +14,20 @@ DriverReferral:
   fields:
     referralCode : Id DriverReferral
     driverId : Id Person
+    role : Role
     linkedAt : UTCTime
+
+  default:
+    role: "'DRIVER'"
+
+  beamType:
+    role: Maybe Role
+
+  fromTType:
+    role: Kernel.Prelude.fromMaybe Domain.Types.Person.DRIVER|I
+
+  toTType:
+    role: Kernel.Prelude.Just|I
 
   constraints:
     referralCode: PrimaryKey

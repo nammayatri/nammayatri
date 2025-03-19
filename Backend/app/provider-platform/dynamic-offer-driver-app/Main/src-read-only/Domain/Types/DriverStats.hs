@@ -21,6 +21,8 @@ data DriverStats = DriverStats
     idleSince :: Kernel.Prelude.UTCTime,
     isValidRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lateNightTrips :: Kernel.Prelude.Int,
+    numDriversOnboarded :: Kernel.Prelude.Int,
+    numFleetsOnboarded :: Kernel.Prelude.Int,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     ridesCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,

@@ -82,7 +82,7 @@ postDriverReferralLinkReferral merchantShortId opCity Common.ReferralLinkReq {..
   linkingResult <-
     mapM
       ( \(CSVRow dId refId) -> do
-          linkingRes <- try @_ @SomeException (createDriverReferral (dId, merchant.id, merchantOpCityId) True (mkRefLinkReq refId))
+          linkingRes <- try @_ @SomeException (createDriverReferral (dId, merchant.id, merchantOpCityId) True DP.DRIVER (mkRefLinkReq refId))
           pure (dId, linkingRes)
       )
       dIdRefIdMap

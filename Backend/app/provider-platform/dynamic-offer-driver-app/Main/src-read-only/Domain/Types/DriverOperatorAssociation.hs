@@ -1,7 +1,7 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.DriverReferral where
+module Domain.Types.DriverOperatorAssociation where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
@@ -11,11 +11,13 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data DriverReferral = DriverReferral
-  { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    linkedAt :: Kernel.Prelude.UTCTime,
-    referralCode :: Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral,
-    role :: Domain.Types.Person.Role,
+data DriverOperatorAssociation = DriverOperatorAssociation
+  { associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    id :: Kernel.Types.Id.Id Domain.Types.DriverOperatorAssociation.DriverOperatorAssociation,
+    isActive :: Kernel.Prelude.Bool,
+    operatorId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

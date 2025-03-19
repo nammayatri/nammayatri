@@ -82,7 +82,3 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN client_manufacturer text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN client_id text ;
-
-
-------- SQL updates -------
-

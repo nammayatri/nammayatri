@@ -38,3 +38,11 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN online_payment boolean NO
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN gateway_and_registry_priority_list text[]  default '{"NY"}';
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referral_code_for_operator boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referral_code_for_fleet boolean  default false;
+
+
+------- SQL updates -------

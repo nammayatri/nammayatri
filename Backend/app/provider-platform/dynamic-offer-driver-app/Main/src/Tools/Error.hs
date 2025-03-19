@@ -845,6 +845,7 @@ data FleetErrors
   | VehicleNotPartOfFleet
   | DriverNotPartOfFleet
   | DriverNotActiveWithFleet
+  | UserAlreadyExists Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -856,6 +857,7 @@ instance IsBaseError FleetErrors where
     VehicleNotPartOfFleet -> Just "Vehicle is not part of any fleet"
     DriverNotPartOfFleet -> Just "Driver is not part of the fleet"
     DriverNotActiveWithFleet -> Just "Driver is not active with the fleet"
+    UserAlreadyExists userId -> Just $ "User with id " <> show userId <> " already exists"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
@@ -864,12 +866,14 @@ instance IsHTTPError FleetErrors where
     VehicleNotPartOfFleet -> "VEHICLE_NOT_PART_OF_FLEET"
     DriverNotPartOfFleet -> "DRIVER_NOT_PART_OF_FLEET"
     DriverNotActiveWithFleet -> "DRIVER_NOT_ACTIVE_WITH_FLEET"
+    UserAlreadyExists _ -> "USER_ALREADY_EXISTS"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
     VehicleNotPartOfFleet -> E400
     DriverNotPartOfFleet -> E400
     DriverNotActiveWithFleet -> E400
+    UserAlreadyExists _ -> E400
 
 instance IsAPIError FleetErrors
 

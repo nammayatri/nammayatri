@@ -79,6 +79,10 @@ type API =
     :<|> "driver" :> "referral" :> "getReferredDrivers"
       :> TokenAuth
       :> Get '[JSON] DriverOnboarding.GetReferredDriverRes
+    :<|> "driver" :> "referral" :> "details"
+      :> TokenAuth
+      :> ReqBody '[JSON] DriverOnboarding.ReferralReq
+      :> Post '[JSON] DriverOnboarding.DriverReferralDetailsRes
     :<|> "rc"
       :> ( "setStatus"
              :> TokenAuth
@@ -106,6 +110,7 @@ handler =
   )
     :<|> addReferral
     :<|> getReferredDrivers
+    :<|> getDriverDetailsByReferralCode
     :<|> setRCStatus
     :<|> deleteRC
     :<|> getAllLinkedRCs
@@ -148,3 +153,6 @@ deleteRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Dri
 
 getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler [DriverOnboarding.LinkedRC]
 getAllLinkedRCs (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId, merchantOpCityId)
+
+getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.DriverReferralDetailsRes
+getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) req
