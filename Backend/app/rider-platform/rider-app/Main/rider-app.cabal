@@ -1022,7 +1022,7 @@ library
       UndecidableInstances
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , amazonka
@@ -1048,6 +1048,8 @@ library
     , euler-hs
     , external
     , extra
+    , fdep
+    , fieldInspector
     , filepath
     , geohash ==1.0.1
     , hashable
@@ -1159,7 +1161,7 @@ executable rider-app-exe
       UndecidableInstances
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , amazonka
@@ -1183,6 +1185,8 @@ executable rider-app-exe
     , directory
     , euler-hs
     , extra
+    , fdep
+    , fieldInspector
     , filepath
     , geohash ==1.0.1
     , hashable
