@@ -1843,8 +1843,8 @@ getProxy str = case str of
     SHARE -> \a -> a @~ share 
     YOU_GET -> \a -> a @~ you_get 
     THEY_GET -> \a -> a @~ they_get 
-    CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE -> \a -> a @~ credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride 
-    CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE -> \a -> a @~ credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride
+    CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE arg -> \a -> (a @~ credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride) arg
+    CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE arg -> \a -> (a @~ credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride) arg
     HAVE_QUESTIONS -> \a -> a @~ have_questions 
     VIEW_THE_FAQS -> \a -> a @~ _view_the_faqs 
     REFERRAL_FAQS -> \a -> a @~ referral_faqs 

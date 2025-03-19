@@ -1749,8 +1749,8 @@ getEn = Keymap {
     , share: "Share"
     , you_get: "You Get"
     , they_get: "They Get"
-    , credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride: "credited to the referee's account when the referee  use your referral code for app installation and then takes a valid ride."
-    , credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride: "credited to your account when your referee uses your referral code for app installation and uses the app for taking a valid ride"
+    , credited_to_the_referees_account_when_the_referee__use_your_referral_code_for_app_installation_and_then_takes_a_valid_ride : \a -> a <> " credited to the referee's account when the referee  use your referral code for app installation and then takes a valid ride."
+    , credited_to_your_account_when_your_referee_uses_your_referral_code_for_app_installation_and_uses_the_app_for_taking_a_valid_ride: \a -> a <> " credited to your account when your referee uses your referral code for app installation and uses the app for taking a valid ride"
     , have_questions: "Have questions?"
     , _view_the_faqs: " View the FAQs"
     , referral_faqs: "Referral FAQs"
@@ -1771,7 +1771,7 @@ getEn = Keymap {
     , updated: "Updated!"
     , pendingamount_will_be_credited_soon_to_n_statedatavpa: \ a b -> a  <> "   will be credited soon to \n " <> b
     , amount: "Amount"
-    , downlaod_app: "Downlaod App"
+    , downlaod_app: "Download App"
     , scan_qr_code_to_download_the_app_and_apply_your_invite_code_automatically: "Scan QR code to download the app and apply your invite code automatically"
     , earn_: \a ->  "Earn ₹" <> a
     , collect_: \a -> "Collect ₹" <> a

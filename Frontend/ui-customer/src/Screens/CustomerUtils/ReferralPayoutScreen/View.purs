@@ -530,10 +530,10 @@ descView state =
             ]
       )
       ( [ { title: getString YOU_GET
-          , desc: (if youGet > 0 then "₹" <> show youGet else (getString AMOUNT)) <> " " <> (getString CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE)
+          , desc: (getString $ CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE (if youGet > 0 then "₹" <> show youGet else (getString AMOUNT)))
           }
         , { title: getString THEY_GET
-          , desc: (if theyGet > 0 then "₹" <> show theyGet else (getString AMOUNT)) <> (getString CREDITED_TO_YOUR_ACCOUNT_WHEN_YOUR_REFEREE_USES_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_USES_THE_APP_FOR_TAKING_A_VALID_RIDE)
+          , desc: (getString $ CREDITED_TO_THE_REFEREES_ACCOUNT_WHEN_THE_REFEREE__USE_YOUR_REFERRAL_CODE_FOR_APP_INSTALLATION_AND_THEN_TAKES_A_VALID_RIDE  (if theyGet > 0 then "₹" <> show theyGet else (getString AMOUNT)))
           }
         ]
       )
@@ -778,7 +778,7 @@ referralView push state =
                         ST.UpiVerifying -> "Verifying UPI ID"
                 ]
               <> FontStyle.subHeading1 LanguageStyle
-              <> if state.data.verificationStatus == UpiVerified || isJust state.data.existingVpa then [ text $ fromMaybe "" state.data.existingVpa, setCursorAtEnd true ] else []
+              <> if state.data.verificationStatus == UpiVerified || isJust state.data.existingVpa then [ text $ fromMaybe state.data.vpa state.data.existingVpa, setCursorAtEnd true ] else []
           , linearLayout
               [ height MATCH_PARENT
               , width WRAP_CONTENT

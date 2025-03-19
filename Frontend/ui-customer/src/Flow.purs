@@ -1334,9 +1334,8 @@ accountSetUpScreenFlow = do
         REFERRAL_APPLIED -> do
           void $ pure $ hideKeyboardOnNavigation true
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = Verified, referralTextFocussed = true} })
-        REFERRAL_INVALID -> do
+        _ -> do
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = ReferralFailed, referralTextFocussed = true} })
-        _ -> pure unit
       accountSetUpScreenFlow
 
 updateDisabilityList :: String -> FlowBT String (Array DisabilityT)
@@ -2835,7 +2834,7 @@ homeScreenFlow = do
       case referralAppliedStatus of
         REFERRAL_APPLIED -> do
           void $ pure $ hideKeyboardOnNavigation true
-          _ <- UI.successScreen "" ""
+          _ <- UI.successScreen (getString STR.REFERRAL_CODE_IS_APPLIED) ""
           modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true, referralComponentProps { stage = ST.APPLIED_POPUP } })
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isReferred = true, referralComponentProps { stage = NO_REFERRAL_STAGE }, referral { referralStatus = NO_REFERRAL, showAddReferralPopup = false } } })
         REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { referralComponentProps { isInvalidCode = true } } })

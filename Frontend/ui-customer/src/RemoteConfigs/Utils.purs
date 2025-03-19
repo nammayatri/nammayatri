@@ -559,7 +559,6 @@ getCustomerVoipConfig city = do
 defaultReferralPayout :: ReferralPayoutConfig
 defaultReferralPayout = {
     enable : Just true,
-    cover : Nothing,
     youGet : Nothing,
     theyGet : Nothing,
     coverImage : Nothing,

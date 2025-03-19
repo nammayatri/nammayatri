@@ -151,6 +151,8 @@ eval BackPressed state =
     continue state { props { showShareAppQr = false } }
   else if state.props.showUPIPopUp then
     continue state { props { showUPIPopUp = false } }
+  else if state.props.showReferralFaq then
+    continue state { props { showReferralFaq = false } }
   else if isParentView FunctionCall then do
     void $ pure $ emitTerminateApp Nothing true
     continue state
