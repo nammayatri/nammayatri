@@ -714,7 +714,12 @@ acceptButton state push =
             let
               language = JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"
               audioUrl = getLanguageBasedRentalAudio language
-            pure $ runFn4 JB.startAudioPlayer audioUrl push OnRentalRideAcceptedAudioCompleted  "0"
+              (BookingAPIEntity entity) = state.data.rideDetails
+              (CTA.TripCategory tripCategory) = entity.tripCategory
+            if tripCategory.tag == CTA.Rental then
+              pure $ runFn4 JB.startAudioPlayer audioUrl push OnRentalRideAcceptedAudioCompleted  "0"
+            else
+              pure unit
             push action
           ) $ const AcceptClick
         , rippleColor Color.rippleShade

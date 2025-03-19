@@ -43,7 +43,7 @@ import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude hiding (zero)
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
-import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getPeriod, fetchImage, forceRemoteImage, FetchImageFrom(..))
 import Font.Style (Style(..))
 import ConfigProvider
 import Components.ExtraChargeCard as ExtraChargeCard

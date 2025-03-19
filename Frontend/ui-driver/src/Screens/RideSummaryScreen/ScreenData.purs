@@ -209,7 +209,5 @@ initData = {
     showGoTo : false,
     shimmerVisibility : true,
     errorPopUp : false
-
-
   }
 }

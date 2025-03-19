@@ -56,23 +56,23 @@ main :: Event -> Foreign -> Effect Unit
 main event driverInfoRespFiber = do
   void $ markPerformance "MAIN_START"
   void $ Events.initMeasuringDuration "Flow.mainFlow"
-  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"  
+  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"
   (driverInfoResp :: Maybe (Either ErrorResponse GetDriverInfoResp)) <- case runExcept (decode driverInfoRespFiber) of
     Right (driverInfoRes :: GetDriverInfoResp) -> pure $ Just (Right driverInfoRes)
     Left _ -> case runExcept (decode driverInfoRespFiber) of
       Right (errorRes :: ErrorResponse) ->
-        if (DA.any (\error -> Utils.decodeErrorCode errorRes.response.errorMessage == error) ["VEHICLE_NOT_FOUND", "DRIVER_INFORMATON_NOT_FOUND"]) 
+        if (DA.any (\error -> Utils.decodeErrorCode errorRes.response.errorMessage == error) ["VEHICLE_NOT_FOUND", "DRIVER_INFORMATON_NOT_FOUND"])
           then pure $ Just (Left errorRes)
           else pure Nothing
       Left err -> pure Nothing
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-    liftFlow $ setEventTimestamp "main_purs" 
+    liftFlow $ setEventTimestamp "main_purs"
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing driverInfoResp
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event driverInfoRespFiber
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+  -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   void $ markPerformance "MAIN_END"
   pure unit
 
@@ -103,7 +103,7 @@ mainAllocationPop payload_type entityPayload = do
 onEvent :: String -> Effect Unit
 onEvent event = do
   _ <- pure $ JBridge.toggleBtnLoader "" false
-  case event of 
+  case event of
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
     "onReloadApp" -> main { type: "REFRESH", data : "" } $ unsafeToForeign {}
@@ -124,7 +124,7 @@ onConnectivityEvent triggertype = do
   pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
-onBundleUpdatedEvent description = do 
+onBundleUpdatedEvent description = do
   _ <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ do
       Flow.appUpdatedFlow description ST.NORMAL
@@ -142,11 +142,11 @@ onNewIntent event = do
         setValueToLocalStore REFERRER_URL event.data
         Flow.baseAppFlow true Nothing Nothing
       _ -> Flow.baseAppFlow false Nothing Nothing
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
+  -- _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit
-updateEventData event = do 
+updateEventData event = do
     case event.type of
       "NEW_MESSAGE" -> modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
       "PAYMENT_MODE_MANUAL" -> modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {callScreen = ScreenNames.SUBSCRIPTION_SCREEN})

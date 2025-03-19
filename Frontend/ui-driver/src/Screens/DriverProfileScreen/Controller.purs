@@ -314,6 +314,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
                                 else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
+                                else if state.showDriverDetails then continue state{showDriverDetails = false}
                                 else exit $ GoBack state
 
 
