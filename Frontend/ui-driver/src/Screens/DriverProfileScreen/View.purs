@@ -40,7 +40,7 @@ import Data.Enum (enumFromThenTo)
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber, round)
 import Data.List (elem)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
@@ -144,7 +144,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  frameLayout
+  relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ]
@@ -180,7 +180,7 @@ view push state =
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
     , if state.props.showDriverBlockedPopup then driverBlockedPopupView push state else dummyTextView
-    , if state.showDriverDetails then profileDetailsBottomSheetView state push else dummyTextView
+    , profileDetailsBottomSheetView state push
     ]
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -531,6 +531,7 @@ nameAndMoreDetailsView state push =
   , orientation VERTICAL
   , gravity CENTER
   , visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS
+  , onClick push $ const OnMoreDetailsClick
   ][
     textView $ [
       text state.data.driverName
@@ -539,7 +540,6 @@ nameAndMoreDetailsView state push =
   , textView $ [
       text $ capitalize $ getStringV2 more_details
     , color Color.blue800
-    , onClick push $ const OnMoreDetailsClick
     ] <> (FontStyle.body3 TypoGraphy)
   ]
 
@@ -962,7 +962,7 @@ scoreCardsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Uni
 scoreCardsView state push cancellationThresholdConfig =
   let
     cards = driverProfileScoreCardConfigs state cancellationThresholdConfig
-    filteredCards = filter (\card -> card /= Nothing) cards
+    filteredCards = filter (\card -> isJust card ) cards
   in
     if length filteredCards > 1 then
       horizontalScrollView [
@@ -1495,7 +1495,7 @@ additionalDetails push state =
 -------------------------------------------- DRIVER NUMBER AND GENDER VIEW ----------------------------------------------------------------
 driverNumberGenderView :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 driverNumberGenderView state push =
-  linearLayout
+  Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -1629,43 +1629,43 @@ profileDetailsBottomSheetView state push =
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
   in
-    relativeLayout[
-      width MATCH_PARENT
-    , height MATCH_PARENT
-    ][
-      linearLayout [
-        height MATCH_PARENT
-      , width MATCH_PARENT
-      , background Color.blackLessTrans
-      , onClick push $ const $ OnCloseDriverDetailsClick
-      ][]
-    , linearLayout[
+    linearLayout[
         height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity BOTTOM
+      , background if state.showDriverDetails then Color.blackLessTrans else Color.transparent
+      , clickable state.showDriverDetails
       ][
       coordinatorLayout[
-        height WRAP_CONTENT
+        height MATCH_PARENT
       , width MATCH_PARENT
       ][
         bottomSheetLayout [
           width MATCH_PARENT
-        , peakHeight $ (EHC.screenHeight unit) - 200
-        , sheetState HIDDEN
-        , halfExpandedRatio 0.9
-        , background Color.white900
-        , cornerRadii $ Corners 24.0 true true false false
-        , padding $ Padding 16 24 16 16
+        , height MATCH_PARENT
         , orientation VERTICAL
+        , hideable true
+        , enableShift false
+        , sheetState $ if state.showDriverDetails then EXPANDED else HIDDEN
+        , onStateChanged push $ BottomSheetStageChanged
         -- , onStateChanged push $ BottomSheetStageChanged
         -- , onSlide push $ BottomSheetSlide
         ][
+          linearLayout[
+              height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , gravity BOTTOM
+            ][
             linearLayout[
               height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , gravity CENTER
+            , padding $ Padding 16 24 16 16
+            , cornerRadii $ Corners 24.0 true true false false
+            , background Color.white900
             ][
               frameLayout[
                 width MATCH_PARENT
@@ -1695,6 +1695,7 @@ profileDetailsBottomSheetView state push =
                   , height $ V 88
                   , cornerRadius 44.0
                   , imageWithFallback $ fetchImage FF_COMMON_ASSET driverImage
+                  , onClick push $ const CompleteProfile
                   ]
                 ]
               ]
@@ -1725,8 +1726,8 @@ profileDetailsBottomSheetView state push =
               ]
             , infoView state push
             ]
+            ]
         ]
-      ]
       ]
     ]
 
@@ -2306,7 +2307,7 @@ detailsListViewComponent state push config =
                               , weight 1.0
                               ]
                               []
-                          , textView
+                          , textView $
                               [ text $ fromMaybe (getString ADD) item.value
                               , textSize FontSize.a_14
                               , onClick push $ const item.action
@@ -2324,7 +2325,7 @@ detailsListViewComponent state push config =
                                       isPaymentView = val == (getString VIEW)
                                     if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit || isPaymentView then Color.blue900 else Color.black900
                               , fontStyle $ FontStyle.semiBold LanguageStyle
-                              ]
+                              ] <> if item.isEditable && (isJust item.value) then [onClick push $ const item.action] else []
                           ]
                             <> if item.isEditable && (isJust item.value) then
                                 [ imageView

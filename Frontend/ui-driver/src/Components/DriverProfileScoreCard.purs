@@ -46,6 +46,8 @@ type DriverProfileScoreCardType = {
 ,   description :: String
 ,   primaryButtonText :: String
 ,   type :: ScoreCardType
+,   imageWidth :: Length
+,   imageHeight :: Length
 }
 
 data Action = OnPrimaryButtonClick ScoreCardType PrimaryButton.Action
@@ -83,8 +85,8 @@ verticalView isLast push config =
             ,   gravity CENTER
             ][
                 imageView [
-                    width $ V 61
-                ,   height $ V 67
+                    width config.imageWidth
+                ,   height config.imageHeight
                 ,   imageWithFallback config.image
                 ]
             ,   textView $ [
