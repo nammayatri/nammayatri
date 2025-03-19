@@ -11,9 +11,10 @@ module SharedLogic.DriverOnboarding.Status
     getAadhaarStatus,
     mapStatus,
     fetchDriverDocuments,
-    fetchProcessedVehicleDocuments,
+    fetchVehicleDocuments,
     checkAllVehicleDocsVerified,
     checkAllDriverDocsVerified,
+    activateRCAutomatically,
   )
 where
 
@@ -33,7 +34,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.Vehicle as DVehicle
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.VehicleVariant as DV
@@ -63,7 +63,6 @@ import Storage.Queries.Person as Person
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
-import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
 import qualified Storage.Queries.VehicleInsurance as VIQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
@@ -158,12 +157,7 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
 
   driverDocuments <- fetchDriverDocuments personId merchantOperatingCity transporterConfig language
 
-  mbVehicle <- QVehicle.findById personId
-  processedVehicleDocuments <- fetchProcessedVehicleDocuments personId merchantOperatingCity transporterConfig language mbVehicle
-
-  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments personId merchantOperatingCity transporterConfig language processedVehicleDocuments
-
-  let vehicleDocumentsUnverified = processedVehicleDocuments <> inprogressVehicleDocuments
+  vehicleDocumentsUnverified <- fetchVehicleDocuments personId merchantOperatingCity transporterConfig language
 
   whenJust (onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory))) $ \vehicleCategory -> do
     documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory
@@ -209,7 +203,7 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
         allDriverDocsVerified <- checkAllDriverDocsVerified merchantOpCityId driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
         when (allVehicleDocsVerified && allDriverDocsVerified && requiresOnboardingInspection /= Just True) $ enableDriver merchantOpCityId personId mDL
 
-        mbVehicle <- Vehicle.findById personId -- check everytime
+        mbVehicle <- QVehicle.findById personId -- check everytime
         when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && requiresOnboardingInspection /= Just True) $
           void $ try @_ @SomeException (activateRCAutomatically personId merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
@@ -268,14 +262,24 @@ fetchDriverDocuments personId merchantOpCity transporterConfig language = do
         message <- documentStatusMessage status mbReason docType mbUrl language
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
 
+fetchVehicleDocuments ::
+  Id DP.Person ->
+  DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Language ->
+  Flow [VehicleDocumentItem]
+fetchVehicleDocuments personId merchantOpCity transporterConfig language = do
+  processedVehicleDocuments <- fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig language
+  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig language processedVehicleDocuments
+  pure $ processedVehicleDocuments <> inprogressVehicleDocuments
+
 fetchProcessedVehicleDocuments ::
   Id DP.Person ->
   DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   Language ->
-  Maybe DVehicle.Vehicle ->
   Flow [VehicleDocumentItem]
-fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig language mbVehicle = do
+fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig language = do
   let merchantId = merchantOpCity.merchantId
       merchantOpCityId = merchantOpCity.id
   processedVehicleDocumentsWithRC <- do
@@ -311,7 +315,7 @@ fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig languag
           }
 
   processedVehicleDocumentsWithoutRC <- do
-    -- mbVehicle <- Vehicle.findById personId
+    mbVehicle <- QVehicle.findById personId
     case mbVehicle of
       Just vehicle -> do
         if isJust $ find (\doc -> doc.registrationNo == vehicle.registrationNo) processedVehicleDocumentsWithRC

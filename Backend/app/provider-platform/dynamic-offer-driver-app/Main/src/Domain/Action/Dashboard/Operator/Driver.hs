@@ -51,19 +51,21 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
           merchant <- findMerchantByShortId merchantShortId
           merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
           transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
-          vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
           person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           let language = fromMaybe merchantOpCity.language person.language
           driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language
-          processedVehicleDocuments <- SStatus.fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig language (Just vehicle)
+          vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
           vehicleDoc <-
-            find (\doc -> doc.registrationNo == vehicle.registrationNo) processedVehicleDocuments
-              & fromMaybeM (InternalError $ "Vehicle doc not found for driverId " <> personId.getId) -- TODO remove this InternalError
-          let makeSelfieAadhaarPanMandatory = Nothing -- is it correct?
+            find (\doc -> doc.registrationNo == req.registrationNo) vehicleDocumentsUnverified
+              & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> req.registrationNo)
+          let makeSelfieAadhaarPanMandatory = Nothing
           allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
           allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
           when (allVehicleDocsVerified && allDriverDocsVerified) $
             void $ postDriverEnable merchantShortId opCity (Kernel.Types.Id.Id req.driverId)
+          mbVehicle <- QVehicle.findById personId
+          when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified) $
+            void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
   pure Success
 
 opsHubRequestLockKey :: Text -> Text
