@@ -78,6 +78,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
           fork message action
         else action
 
+-- To prevent race conditions between on_confirm handling and ride start at the BAP side, MeterRide is processed synchronously to ensure on_confirm completes before startRide triggers .
 onConfirmLockKey :: Text -> Text
 onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id
 
