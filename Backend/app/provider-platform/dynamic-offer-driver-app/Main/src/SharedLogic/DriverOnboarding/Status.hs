@@ -164,7 +164,7 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
     let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
     when (null mandatoryVehicleDocumentVerificationConfigs) $ do
       allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
-      when allDriverDocsVerified $ do
+      when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True) $ do
         enableDriver merchantOpCityId personId mDL
         whenJust onboardingVehicleCategory $ \category -> do
           DIIQuery.updateOnboardingVehicleCategory (Just category) personId

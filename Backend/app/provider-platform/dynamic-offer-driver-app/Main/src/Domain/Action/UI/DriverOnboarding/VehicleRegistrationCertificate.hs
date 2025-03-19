@@ -353,14 +353,15 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
     then do
-      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
+      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId transporterConfig.requiresOnboardingInspection)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
           resVerifyRes <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
           case resVerifyRes of
-            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId
+            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId transporterConfig.requiresOnboardingInspection
             Right verifyRes -> do
               case verifyRes.verifyRCResp of
                 Verification.AsyncResp res -> do
@@ -371,7 +372,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
                 Verification.SyncResp resp -> do
                   onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
-    else initiateRCCreation mVehicleRC now mbFleetOwnerId
+    else initiateRCCreation mVehicleRC now mbFleetOwnerId transporterConfig.requiresOnboardingInspection
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> CreateRCInput
     createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear =
@@ -447,7 +448,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             createdAt = now,
             updatedAt = now
           }
-    initiateRCCreation mVehicleRC now mbFleetOwnerId = do
+    initiateRCCreation mVehicleRC now mbFleetOwnerId requiresOnboardingInspection = do
       case mVehicleRC of
         Just vehicleRC -> do
           -- upsert vehicleRC
@@ -473,7 +474,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
               whenJust mbVehicle $ \vehicle -> do
-                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant) $ do
+                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && requiresOnboardingInspection /= Just True) $ do
                   driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                   driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
@@ -579,10 +580,12 @@ checkIfVehicleAlreadyExists driverId rc = do
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId now rc = do
-  deactivateCurrentRC driverInfo.driverId
-  addVehicleToDriver
-  DAQuery.activateRCForDriver driverInfo.driverId rc.id now
-  return ()
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
+    deactivateCurrentRC driverInfo.driverId
+    addVehicleToDriver
+    DAQuery.activateRCForDriver driverInfo.driverId rc.id now
+    return ()
   where
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber

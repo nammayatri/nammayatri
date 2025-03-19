@@ -62,6 +62,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -146,6 +147,10 @@ postDriverEnable merchantShortId opCity reqDriverId = do
 
   when (isNothing mVehicle && null linkedRCs) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
+
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.requiresOnboardingInspection == Just True) $ do
+    throwError (InvalidRequest "Onboarding inspection required")
 
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
   logTagInfo "dashboard -> enableDriver : " (show personId)
@@ -583,12 +588,14 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
         QRCAssociation.create driverRCAssoc
 
       fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-      driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
-      QVehicle.create vehicle
-      when (vehicle.variant == DV.SUV) $
-        QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+      -- is it correct?
+      unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
+        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
+        driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
+        QVehicle.create vehicle
+        when (vehicle.variant == DV.SUV) $
+          QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
