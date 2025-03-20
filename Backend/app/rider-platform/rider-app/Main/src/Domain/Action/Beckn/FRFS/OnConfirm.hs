@@ -251,8 +251,8 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.isTicketFree = Just isTicketFree
       }
 
-mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Flow TC.TransitObject
-mkTransitObjects pOrgId booking ticket person serviceAccount className = do
+mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Int -> Flow TC.TransitObject
+mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex = do
   toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
   fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
   let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
@@ -278,10 +278,12 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
   let fromStationGMMLocationId = maybe (fromStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbFromStationPartnerOrg
   mbToStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId toStation.id pOrgId
   let toStationGMMLocationId = maybe (toStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbToStationPartnerOrg
+  let groupingInfo = TC.GroupingInfo {TC.groupingId = "Group." <> booking.id.getId, TC.sortIndex = sortIndex}
   return
     TC.TransitObject
       { TC.id = serviceAccount.saIssuerId <> "." <> ticket.id.getId,
         TC.classId = serviceAccount.saIssuerId <> "." <> className,
+        TC.tripId = booking.id.getId,
         TC.state = show GWSA.ACTIVE,
         TC.tripType = show tripType',
         TC.passengerType = show GWSA.SINGLE_PASSENGER,
@@ -295,6 +297,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
             },
         TC.barcode = barcode',
         TC.textModulesData = textModules,
+        TC.groupingInfo = groupingInfo,
         TC.validTimeInterval = timeInterval
       }
 
@@ -309,12 +312,12 @@ createTickets booking dTickets discountedTickets = go dTickets discountedTickets
       go ds newFreeTickets (ticket : acc)
 
 createTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
-createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets []
+createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets 1 []
   where
-    go [] acc = return (Prelude.reverse acc)
-    go (x : xs) acc = do
-      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className
-      go xs (transitObject : acc)
+    go [] _ acc = return (Prelude.reverse acc)
+    go (x : xs) sortIndex acc = do
+      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className sortIndex
+      go xs (sortIndex + 1) (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do
