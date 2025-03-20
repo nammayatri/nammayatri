@@ -15,7 +15,7 @@
 
 module Screens.SavedLocationScreen.ScreenData where
 
-import Screens.Types(SavedLocationScreenState)
+import Screens.Types(SavedLocationScreenState , Favourites(..))
 import Data.Maybe(Maybe(..))
 import ConfigProvider
 import Foreign.Object (empty)
@@ -28,7 +28,7 @@ initData = {
   , config : getAppConfig appConfig
   , logField : empty
   , favouriteDriversList : []
-  , current : "Drivers"
+  , current : Locations
   , driverNo : ""
   , driverName : ""
   , driverId : Nothing

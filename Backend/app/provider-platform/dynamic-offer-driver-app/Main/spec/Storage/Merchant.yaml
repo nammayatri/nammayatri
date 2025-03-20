@@ -826,6 +826,7 @@ TransporterConfig:
     thresholdCancellationScore: Maybe Int
     minRidesForCancellationScore: Maybe Int
     thresholdCancellationPercentageToUnlist: Maybe Int
+    qarCalRadiusInKm : Maybe Double
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
@@ -997,6 +998,7 @@ TransporterConfig:
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
+    requiresOnboardingInspection: Maybe Bool
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer
     meterRideBulkLocUpdateBatchSize: Integer

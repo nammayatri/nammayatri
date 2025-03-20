@@ -94,7 +94,7 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState, getCachedEstimates)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState, getCachedEstimates, getExoPhoneNumber)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
@@ -2065,8 +2065,8 @@ homeScreenFlow = do
       else do
         lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
         let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        if (voipConfig.customer.enableVoipFeature) then do
-          void $ pure $ JB.initSignedCall state.data.driverInfoCardState.rideId false
+        if (voipConfig.customer.enableVoipFeature) then do 
+          void $ pure $ JB.initSignedCall state.data.driverInfoCardState.rideId false (getExoPhoneNumber state)
         else pure unit
         homeScreenFlow
     CANCEL_RIDE_REQUEST state cancelType -> do

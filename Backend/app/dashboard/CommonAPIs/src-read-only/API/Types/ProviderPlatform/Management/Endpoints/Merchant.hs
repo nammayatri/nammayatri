@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.Merchant where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import Data.Aeson
@@ -97,7 +98,8 @@ data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
     maxFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     stepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     defaultStepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    documentCategory :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -293,6 +295,7 @@ data JobName
   | SendManualPaymentLinkTrigger
   | ReferralPayoutTrigger
   | SupplyDemandCalculation
+  | CongestionChargeCalculation
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

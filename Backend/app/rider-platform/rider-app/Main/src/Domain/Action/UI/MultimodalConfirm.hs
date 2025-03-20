@@ -231,7 +231,7 @@ postMultimodalJourneyCancel ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyCancel (_, _) journeyId = do
   journey <- JM.getJourney journeyId
-  void $ JM.cancelRemainingLegs journeyId
+  void $ JM.cancelRemainingLegs journeyId False
   JM.updateJourneyStatus journey Domain.Types.Journey.CANCELLED
   pure Kernel.Types.APISuccess.Success
 

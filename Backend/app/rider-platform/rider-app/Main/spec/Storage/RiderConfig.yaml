@@ -9,6 +9,9 @@ imports:
   Seconds: Kernel.Types.Common
   CxAgentDetails: IssueManagement.Common
   GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
+  ServiceTierType : Domain.Types.ServiceTierType
+  RentalsConfig: Domain.Types.RentalsIntercityCache
+  IntercitySearchLocation: Domain.Types.RentalsIntercityCache
 
 RiderConfig:
   tableName: rider_config
@@ -73,6 +76,9 @@ RiderConfig:
     autoSendBookingDetailsViaWhatsapp: Maybe Bool
     multimodalTesting: Bool
     isFirstReferredRideEnabled: Bool
+    excludedVehicleVariants: "Maybe [ServiceTierType]"
+    rentalsConfig: "Maybe [RentalsConfig]"
+    intercitySearchLocations : "Maybe [IntercitySearchLocation]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -203,6 +209,9 @@ RiderConfig:
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
     permissibleModes: text []
+    excludedVehicleVariants: text []
+    rentalsConfig: text []
+    intercitySearchLocations : text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

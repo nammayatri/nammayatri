@@ -1641,7 +1641,7 @@ type SavedLocationScreenData =
   , config :: AppConfig
   , logField :: Object Foreign
   , favouriteDriversList :: Array FavouriteDriverListItemState
-  , current :: String
+  , current :: Favourites 
   , driverNo :: String
   , driverName :: String
   , driverId :: Maybe String
@@ -3359,3 +3359,10 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+data Favourites = Locations | Drivers
+
+derive instance genericFavourites :: Generic Favourites _
+instance eqFavourites :: Eq Favourites where eq = genericEq
+
+

@@ -141,6 +141,7 @@ library
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
+      Domain.Action.Dashboard.Fleet.Onboarding
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Booking
@@ -158,6 +159,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.RideBooking.DriverRegistration
@@ -219,6 +221,7 @@ library
       Domain.Action.UI.Message
       Domain.Action.UI.MeterRide
       Domain.Action.UI.OnMessage
+      Domain.Action.UI.OperationHub
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
@@ -310,6 +313,7 @@ library
       Lib.Schema
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
+      SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
@@ -375,6 +379,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
+      SharedLogic.Pricing
       SharedLogic.Ride
       SharedLogic.RiderDetails
       SharedLogic.ScheduledNotifications
@@ -489,6 +494,7 @@ library
       Storage.Clickhouse.BppTransactionJoin
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
+      Storage.Clickhouse.Estimate
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
@@ -563,6 +569,7 @@ library
       Storage.Queries.MessageExtra
       Storage.Queries.MessageReportExtra
       Storage.Queries.NotificationExtra
+      Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
@@ -658,6 +665,7 @@ library
       API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Fleet.Onboarding
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.Management
@@ -676,6 +684,8 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Operator
+      API.Action.Dashboard.Operator.Driver
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Driver
       API.Action.Dashboard.RideBooking.DriverRegistration
@@ -690,6 +700,7 @@ library
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
       API.Action.UI.MeterRide
+      API.Action.UI.OperationHub
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
@@ -726,6 +737,7 @@ library
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
       API.Types.UI.MeterRide
+      API.Types.UI.OperationHub
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
@@ -748,6 +760,7 @@ library
       Domain.Types.BookingLocation
       Domain.Types.BookingUpdateRequest
       Domain.Types.BusinessEvent
+      Domain.Types.BusinessLicense
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
       Domain.Types.CancellationFarePolicy
@@ -820,6 +833,8 @@ library
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
       Domain.Types.Notification
+      Domain.Types.OperationHub
+      Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -830,6 +845,7 @@ library
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
+      Domain.Types.RCValidationRules
       Domain.Types.ReelsData
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
@@ -858,6 +874,7 @@ library
       Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
       Domain.Types.VehicleInsurance
+      Domain.Types.VehicleNOC
       Domain.Types.VehiclePermit
       Domain.Types.VehiclePUC
       Domain.Types.VehicleRegistrationCertificate
@@ -881,6 +898,7 @@ library
       Storage.Beam.BookingLocation
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BusinessEvent
+      Storage.Beam.BusinessLicense
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
       Storage.Beam.CancellationFarePolicy
@@ -953,6 +971,8 @@ library
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.Notification
+      Storage.Beam.OperationHub
+      Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -963,6 +983,7 @@ library
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
+      Storage.Beam.RCValidationRules
       Storage.Beam.ReelsData
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
@@ -991,6 +1012,7 @@ library
       Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
       Storage.Beam.VehicleInsurance
+      Storage.Beam.VehicleNOC
       Storage.Beam.VehiclePermit
       Storage.Beam.VehiclePUC
       Storage.Beam.VehicleRegistrationCertificate
@@ -1017,6 +1039,7 @@ library
       Storage.Queries.BookingLocation
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BusinessEvent
+      Storage.Queries.BusinessLicense
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
       Storage.Queries.CancellationFarePolicy
@@ -1089,6 +1112,8 @@ library
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
+      Storage.Queries.OperationHub
+      Storage.Queries.OperationHubRequests
       Storage.Queries.OrphanInstances.AadhaarCard
       Storage.Queries.OrphanInstances.ApprovalRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
@@ -1131,6 +1156,7 @@ library
       Storage.Queries.OrphanInstances.Message
       Storage.Queries.OrphanInstances.MessageReport
       Storage.Queries.OrphanInstances.Notification
+      Storage.Queries.OrphanInstances.OperationHubRequests
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
@@ -1167,6 +1193,7 @@ library
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
+      Storage.Queries.RCValidationRules
       Storage.Queries.ReelsData
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback
@@ -1195,6 +1222,7 @@ library
       Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
       Storage.Queries.VehicleInsurance
+      Storage.Queries.VehicleNOC
       Storage.Queries.VehiclePermit
       Storage.Queries.VehiclePUC
       Storage.Queries.VehicleRegistrationCertificate

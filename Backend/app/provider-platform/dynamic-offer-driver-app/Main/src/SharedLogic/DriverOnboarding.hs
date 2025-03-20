@@ -18,15 +18,20 @@ module SharedLogic.DriverOnboarding
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+import qualified API.Types.ProviderPlatform.Fleet.Onboarding
+import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
 import qualified Domain.Types.FleetRCAssociation as FRCA
 import qualified Domain.Types.HyperVergeVerification as DHV
 import qualified Domain.Types.IdfyVerification as DIdfy
@@ -45,7 +50,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (VerificationFlow)
+import Kernel.External.Types (Language, VerificationFlow)
 import Kernel.Prelude
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
@@ -64,6 +69,7 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
@@ -260,17 +266,17 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
-makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now = do
-  let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now
+makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
+makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
+  let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo vehicle vehicleServiceTiers
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
     addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}
 
-makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
-makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now = do
+makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
+makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now vehicleTag = do
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -296,7 +302,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       selectedServiceTiers = [],
       downgradeReason = Nothing,
       createdAt = now,
-      updatedAt = now
+      updatedAt = now,
+      vehicleTags = vehicleTag
     }
 
 makeVehicleAPIEntity :: Maybe DVST.ServiceTierType -> Vehicle -> VehicleAPIEntity
@@ -542,3 +549,101 @@ makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
       verificaitonResponse = hypervergeResponse,
       ..
     }
+
+toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
+toMaybe [] = Kernel.Prelude.Nothing
+toMaybe xs = Kernel.Prelude.Just xs
+
+filterVehicleDocuments :: [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig] -> Maybe Bool -> [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]
+filterVehicleDocuments docs onlyVehicle =
+  if onlyVehicle == Just True
+    then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
+    else docs
+
+filterInCompatibleFlows ::
+  HasField "filterForOldApks" documentVerificationConfigAPIEntity (Maybe Bool) =>
+  Maybe Bool ->
+  [documentVerificationConfigAPIEntity] ->
+  [documentVerificationConfigAPIEntity]
+filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
+
+mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
+mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
+  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
+  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
+  return $
+    API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
+      { title = maybe title (.message) mbTitle,
+        description = maybe description (Just . (.message)) mbDescription,
+        filterForOldApks = Nothing,
+        rcNumberPrefixList = [],
+        documentType = castDocumentType documentType,
+        dependencyDocumentType = map castDocumentType dependencyDocumentType,
+        documentCategory = castDocumentCategory <$> documentCategory,
+        ..
+      }
+
+castDocumentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
+castDocumentCategory = \case
+  Domain.Types.DocumentVerificationConfig.Driver -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Driver
+  Domain.Types.DocumentVerificationConfig.Vehicle -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle
+  Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
+  Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
+
+castDocumentType :: Domain.Types.DocumentVerificationConfig.DocumentType -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType
+castDocumentType = \case
+  Domain.Types.DocumentVerificationConfig.DriverLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverLicense
+  Domain.Types.DocumentVerificationConfig.VehicleRegistrationCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRegistrationCertificate
+  Domain.Types.DocumentVerificationConfig.Permissions -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Permissions
+  Domain.Types.DocumentVerificationConfig.SubscriptionPlan -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SubscriptionPlan
+  Domain.Types.DocumentVerificationConfig.ProfilePhoto -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfilePhotoImage
+  Domain.Types.DocumentVerificationConfig.AadhaarCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.AadhaarCard
+  Domain.Types.DocumentVerificationConfig.PanCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanCard
+  Domain.Types.DocumentVerificationConfig.VehiclePermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePermitImage
+  Domain.Types.DocumentVerificationConfig.VehicleFitnessCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFitnessCertificateImage
+  Domain.Types.DocumentVerificationConfig.VehicleInsurance -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInsuranceImage
+  Domain.Types.DocumentVerificationConfig.VehiclePUC -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePUCImage
+  Domain.Types.DocumentVerificationConfig.ProfileDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfileDetails
+  Domain.Types.DocumentVerificationConfig.SocialSecurityNumber -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SocialSecurityNumber
+  Domain.Types.DocumentVerificationConfig.VehicleInspectionForm -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage
+  Domain.Types.DocumentVerificationConfig.GSTCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.GSTCertificate
+  Domain.Types.DocumentVerificationConfig.BackgroundVerification -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BackgroundVerification
+  Domain.Types.DocumentVerificationConfig.UploadProfile -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UploadProfileImage
+  Domain.Types.DocumentVerificationConfig.VehicleNOC -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleNOC
+  Domain.Types.DocumentVerificationConfig.BusinessLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessLicense
+  Domain.Types.DocumentVerificationConfig.VehicleFront -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFront
+  Domain.Types.DocumentVerificationConfig.VehicleBack -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBack
+  Domain.Types.DocumentVerificationConfig.VehicleRight -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRight
+  Domain.Types.DocumentVerificationConfig.VehicleLeft -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft
+  Domain.Types.DocumentVerificationConfig.VehicleFrontInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior
+  Domain.Types.DocumentVerificationConfig.VehicleBackInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior
+  Domain.Types.DocumentVerificationConfig.Odometer -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Odometer
+
+castDocumentTypeToDomain :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType -> Domain.Types.DocumentVerificationConfig.DocumentType
+castDocumentTypeToDomain = \case
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverLicense -> Domain.Types.DocumentVerificationConfig.DriverLicense
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRegistrationCertificate -> Domain.Types.DocumentVerificationConfig.VehicleRegistrationCertificate
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Permissions -> Domain.Types.DocumentVerificationConfig.Permissions
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SubscriptionPlan -> Domain.Types.DocumentVerificationConfig.SubscriptionPlan
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfilePhotoImage -> Domain.Types.DocumentVerificationConfig.ProfilePhoto
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.AadhaarCard -> Domain.Types.DocumentVerificationConfig.AadhaarCard
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanCard -> Domain.Types.DocumentVerificationConfig.PanCard
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePermitImage -> Domain.Types.DocumentVerificationConfig.VehiclePermit
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFitnessCertificateImage -> Domain.Types.DocumentVerificationConfig.VehicleFitnessCertificate
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInsuranceImage -> Domain.Types.DocumentVerificationConfig.VehicleInsurance
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehiclePUCImage -> Domain.Types.DocumentVerificationConfig.VehiclePUC
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfileDetails -> Domain.Types.DocumentVerificationConfig.ProfileDetails
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SocialSecurityNumber -> Domain.Types.DocumentVerificationConfig.SocialSecurityNumber
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage -> Domain.Types.DocumentVerificationConfig.VehicleInspectionForm
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.GSTCertificate -> Domain.Types.DocumentVerificationConfig.GSTCertificate
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BackgroundVerification -> Domain.Types.DocumentVerificationConfig.BackgroundVerification
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UploadProfileImage -> Domain.Types.DocumentVerificationConfig.UploadProfile
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleNOC -> Domain.Types.DocumentVerificationConfig.VehicleNOC
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessLicense -> Domain.Types.DocumentVerificationConfig.BusinessLicense
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFront -> Domain.Types.DocumentVerificationConfig.VehicleFront
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBack -> Domain.Types.DocumentVerificationConfig.VehicleBack
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleRight -> Domain.Types.DocumentVerificationConfig.VehicleRight
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleLeft -> Domain.Types.DocumentVerificationConfig.VehicleLeft
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFrontInterior -> Domain.Types.DocumentVerificationConfig.VehicleFrontInterior
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior -> Domain.Types.DocumentVerificationConfig.VehicleBackInterior
+  API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Odometer -> Domain.Types.DocumentVerificationConfig.Odometer

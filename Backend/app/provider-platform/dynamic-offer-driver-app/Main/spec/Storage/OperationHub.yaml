@@ -1,0 +1,63 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+OperationHub:
+  tableName: operation_hub
+
+  fields:
+    id : Id OperationHub
+    name : Text
+    address : Text
+    lat: Double
+    lon: Double
+    mobileNumber: Text
+    description: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+OperationHubRequests:
+  tableName: operation_hub_requests
+  types:
+    RequestType:
+      enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
+    RequestStatus:
+      enum: "PENDING, APPROVED, REJECTED"
+
+  fields:
+    id : Id OperationHubRequests
+    operationHubId : Id OperationHub
+    requestType : RequestType
+    driverId: Id Person
+    requestStatus: RequestStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    operatorId: Maybe (Id Person)
+    remarks: Maybe Text
+    fulfilledAt: Maybe UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    updateStatusWithDetails:
+      kvFunction: updateOneWithKV
+      params: [requestStatus, remarks, fulfilledAt, operatorId]
+      where: id
+
+    findByDriverStatusAndType:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, requestStatus, requestType]

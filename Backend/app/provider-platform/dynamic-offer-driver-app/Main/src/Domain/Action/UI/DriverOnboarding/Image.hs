@@ -128,7 +128,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
-  let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate]
+  let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC]
   mbRcId <-
     if imageType `elem` rcDependentDocuments
       then case rcNumber of
@@ -239,6 +239,7 @@ castImageType DVC.VehiclePermit = Verification.VehiclePermit
 castImageType DVC.VehiclePUC = Verification.VehiclePUC
 castImageType DVC.VehicleInsurance = Verification.VehicleInsurance
 castImageType DVC.VehicleFitnessCertificate = Verification.VehicleFitnessCertificate
+castImageType DVC.VehicleNOC = Verification.VehicleNOC
 castImageType _ = Verification.VehicleRegistrationCertificate -- Fix Later
 
 validateImageFile ::

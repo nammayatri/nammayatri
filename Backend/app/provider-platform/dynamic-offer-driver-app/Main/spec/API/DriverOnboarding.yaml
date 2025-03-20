@@ -2,6 +2,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
+  DocumentCategory: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
@@ -17,6 +18,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Minutes: Kernel.Types.Common
   Image: Domain.Types.Image
+  PanType: Domain.Types.DriverPanCard
 
 module: DriverOnboardingV2
 types:
@@ -32,6 +34,7 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
+    documentCategory: Maybe DocumentCategory
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -99,6 +102,7 @@ types:
     verifiedBy: Maybe VerifiedBy
     transactionId: Maybe Text
     nameOnGovtDB: Maybe Text
+    docType: Maybe PanType
   GetLiveSelfieResp:
     recordType: NewType
     image: Text

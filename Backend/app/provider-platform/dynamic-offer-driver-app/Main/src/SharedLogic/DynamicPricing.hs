@@ -18,17 +18,48 @@ import Data.Aeson
 import Data.Default.Class
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.ServiceTierType as DServiceTierType
+import qualified Domain.Types.VehicleCategory as DVC
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 
-mkSupplyDemandRatioKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
-mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier = "S_D_ratio_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
+mkSupplyDemandRatioKeyWithGeohash :: Text -> Maybe DVC.VehicleCategory -> Text
+mkSupplyDemandRatioKeyWithGeohash geohash vehicleCategory = "S_D_ratio_geohash" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
 
-mkActualQARKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
-mkActualQARKeyWithGeohash geohash vehicleServiceTier = "A_QAR_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
+mkActualQARKeyWithGeohash :: Text -> Maybe DVC.VehicleCategory -> Text
+mkActualQARKeyWithGeohash geohash vehicleCategory = "A_QAR_geohash" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
 
-mkActualQARKeyWithCity :: Text -> DServiceTierType.ServiceTierType -> Text
-mkActualQARKeyWithCity city vehicleServiceTier = "A_QAR_city" <> city <> "_serviceTier_" <> show vehicleServiceTier
+mkActualQARKeyWithGeohashAndDistanceBin :: Text -> Text -> Maybe DVC.VehicleCategory -> Text
+mkActualQARKeyWithGeohashAndDistanceBin geohash distanceBin vehicleCategory = "A_QAR_geohash" <> geohash <> "_distanceBin_" <> distanceBin <> "_vehicleCategory_" <> show vehicleCategory
+
+mkActualQARKeyWithCity :: Text -> Maybe DVC.VehicleCategory -> Text
+mkActualQARKeyWithCity city vehicleCategory = "A_QAR_city" <> city <> "_vehicleCategory_" <> show vehicleCategory
+
+mkActualQARKeyWithGeohashPast :: Text -> Maybe DVC.VehicleCategory -> Text
+mkActualQARKeyWithGeohashPast geohash vehicleCategory = "A_QAR_geohash_past" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
+
+mkActualQARKeyWithGeohashAndDistanceBinPast :: Text -> Text -> Maybe DVC.VehicleCategory -> Text
+mkActualQARKeyWithGeohashAndDistanceBinPast geohash distanceBin vehicleCategory = "A_QAR_geohash_past" <> geohash <> "_distanceBin_" <> distanceBin <> "_vehicleCategory_" <> show vehicleCategory
+
+mkActualQARKeyWithCityPast :: Text -> Maybe DVC.VehicleCategory -> Text
+mkActualQARKeyWithCityPast city vehicleCategory = "A_QAR_city_past" <> city <> "_vehicleCategory_" <> show vehicleCategory
+
+mkCongestionKeyWithGeohash :: Text -> Text
+mkCongestionKeyWithGeohash geohash = "Congestion_geohash" <> geohash
+
+mkCongestionKeyWithGeohashAndDistanceBin :: Text -> Text -> Text
+mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin = "Congestion_geohash" <> geohash <> "_distanceBin_" <> distanceBin
+
+mkCongestionKeyWithCity :: Text -> Text
+mkCongestionKeyWithCity city = "Congestion_city" <> city
+
+mkCongestionKeyWithGeohashPast :: Text -> Text
+mkCongestionKeyWithGeohashPast geohash = "Congestion_geohash_past" <> geohash
+
+mkCongestionKeyWithGeohashAndDistanceBinPast :: Text -> Text -> Text
+mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin = "Congestion_geohash_past" <> geohash <> "_distanceBin_" <> distanceBin
+
+mkCongestionKeyWithCityPast :: Text -> Text
+mkCongestionKeyWithCityPast city = "Congestion_city_past" <> city
 
 data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
@@ -42,9 +73,12 @@ data DynamicPricingResult = DynamicPricingResult
 data DynamicPricingData = DynamicPricingData
   { speedKmh :: Double,
     distanceInKm :: Double,
-    actualQAR :: Double,
+    actualQAR :: Maybe Double,
     supplyDemandRatioFromLoc :: Double,
     supplyDemandRatioToLoc :: Double,
+    actualQARPast :: Maybe Double,
+    congestionMultiplier :: Maybe Double,
+    congestionMultiplierPast :: Maybe Double,
     serviceTier :: DServiceTierType.ServiceTierType,
     toss :: Int --,
   }
@@ -59,6 +93,9 @@ instance Default DynamicPricingData where
         supplyDemandRatioFromLoc = 1.1,
         supplyDemandRatioToLoc = 1.1,
         serviceTier = DServiceTierType.TAXI,
-        actualQAR = 0.0,
+        actualQAR = Nothing,
+        actualQARPast = Nothing,
+        congestionMultiplier = Nothing,
+        congestionMultiplierPast = Nothing,
         toss = 1 --,
       }

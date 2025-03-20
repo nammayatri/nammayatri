@@ -358,6 +358,7 @@ data Action = NoAction
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
   | VOIPCallBack String String String Int Int String String String
+  | MicPermissionCallBack Boolean
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

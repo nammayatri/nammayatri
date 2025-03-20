@@ -49,6 +49,7 @@ module Domain.Action.Dashboard.Management.Merchant
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
 import qualified Data.Aeson.Types as DAT
@@ -133,7 +134,7 @@ import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -378,6 +379,16 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
               let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
               createJobIn @_ @'SupplyDemand mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: SupplyDemandRequestJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.CongestionChargeCalculation -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe CongestionChargeCalculationRequestJobData
+          case jobData' of
+            Just jobData -> do
+              mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+              let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
+              createJobIn @_ @'CongestionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CongestionChargeCalculationRequestJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
@@ -735,8 +746,16 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
         updatedAt = now,
         createdAt = now,
+        documentCategory = castDocumentCategory <$> documentCategory,
         ..
       }
+  where
+    castDocumentCategory :: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory -> DVC.DocumentCategory
+    castDocumentCategory = \case
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Driver -> DVC.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle -> DVC.Vehicle
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
 
 ---------------------------------------------------------------------
 postMerchantServiceConfigMapsUpdate ::

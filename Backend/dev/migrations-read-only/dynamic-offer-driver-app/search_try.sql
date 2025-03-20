@@ -40,3 +40,4 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN service_tier_array text
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN prefer_safety_plus boolean ;
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN vehicle_category text ;

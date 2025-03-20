@@ -173,6 +173,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     pickupLocThreshold :: Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcLimit :: Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
@@ -180,6 +181,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
+    requiresOnboardingInspection :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideTimeEstimatedThreshold :: Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: Kernel.Types.Common.Meters,
     schedulePayoutForDay :: Kernel.Prelude.Maybe Kernel.Prelude.Integer,
@@ -217,7 +219,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   }
   deriving (Generic, Show, Eq)
 
-data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -239,7 +241,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     taxi :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,
@@ -260,7 +262,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     taxi :: Kernel.Types.Common.Kilometers,
     taxiplus :: Kernel.Types.Common.Kilometers
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateThresholdDaily :: Kernel.Prelude.Int,
@@ -274,10 +276,10 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
     weeklyMinRidesforNudging :: Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data DemandHotspotsConfig = DemandHotspotsConfig
   { analysisDurationMinutes :: Kernel.Prelude.Int,
@@ -286,12 +288,12 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     precisionOfGeohash :: Kernel.Prelude.Int,
     resultDurationMinutes :: Kernel.Prelude.Int
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-type TransporterConfig = TransporterConfigD ('Safe)
+type TransporterConfig = TransporterConfigD 'Safe
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 

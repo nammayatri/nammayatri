@@ -1873,6 +1873,34 @@ export const storeCallBackOverlayPermission = function (cb) {
   }
 }
 
+export const storeCallBackMicrophonePermission = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (isMicrophonePermission) {
+          cb(action(isMicrophonePermission))();
+        });
+        const micCallBack = function () {
+          const isPermissionEnabled = JBridge.isMicrophonePermissionEnabled()
+          cb(action(isPermissionEnabled))();
+        }
+        if (window.onResumeListeners) {
+          window.onResumeListeners.push(micCallBack);
+        }
+        console.log("In storeCallBackMicrophonePermission ---------- + " + action);
+      } catch (error) {
+        console.log("Error occurred in storeCallBackMicrophonePermission ------", error);
+      }
+    }
+  }
+}
+
+export const checkAndAskMicrophonePermission = function (unit) {
+  if(window.JBridge.checkAndAskMicrophonePermission){
+    return window.JBridge.checkAndAskMicrophonePermission();
+  }
+}
+
 export const storeCallBackNotificationPermission = function (cb) {
   return function (action) {
     return function () {
@@ -2105,7 +2133,7 @@ export const shareImageMessage = function (message) {
 }
 
 export const showInAppNotification = function (payload) {
-  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))
+  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))()
 }
 
 export const openWhatsAppSupport = function (contactNumber) {
@@ -2412,19 +2440,22 @@ export const isSignedCallInitialized = function () {
 
 export const initSignedCall = function (rideId) {
   return function (isDriver) {
-    const sanitizedCuid = rideId.replace("-", "");
-    if (sanitizedCuid.length < 10) {
-      return;
-    }
-    const userCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
-    const config = JSON.stringify({
-      rideId: rideId,
-      cuid: userCuid,
-      isDriver: isDriver
-    });
-  
-    if (JBridge.initSignedCall) {
-      return JBridge.initSignedCall(config);
+    return function (exoPhone) {
+      const sanitizedCuid = rideId.replace("-", "");
+      if (sanitizedCuid.length < 10) {
+        return;
+      }
+      const userCuid = isDriver ? "driver" + sanitizedCuid.substring(0, 10) : "customer" + sanitizedCuid.substring(0, 10);
+      const config = JSON.stringify({
+        rideId: rideId,
+        cuid: userCuid,
+        isDriver: isDriver,
+        exoPhone: exoPhone
+      });
+    
+      if (JBridge.initSignedCall) {
+        return JBridge.initSignedCall(config);
+      }
     }
   }
 };
@@ -2974,7 +3005,7 @@ export const initHVSdk = function (accessToken, workFLowId, transactionId, useLo
       inputJson: inputJson,
       callback: callback
     };
-    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload));
+    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload))();
   }
   catch (err) {
     console.error(err);

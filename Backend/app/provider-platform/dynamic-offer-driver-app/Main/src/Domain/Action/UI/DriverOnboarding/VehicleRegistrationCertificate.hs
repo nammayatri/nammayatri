@@ -50,6 +50,7 @@ import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import Domain.Types.RCValidationRules
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
@@ -83,6 +84,7 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
+import Storage.Queries.RCValidationRules
 import Storage.Queries.Ride as RQuery
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
@@ -343,6 +345,10 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
+  rcValidationRules <- findByCityId person.merchantOperatingCityId
+  case rcValidationRules of
+    Nothing -> pure ()
+    Just rules -> Kernel.Prelude.unlessM (validateRCResponse rcVerificationResponse rules) $ throwError (InvalidRequest "Failed city based RC checks")
   let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
   mVehicleRC <- do
     case mbVehicleVariant of
@@ -483,10 +489,20 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
-                  let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
+                  let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
                   VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
         Nothing -> pure ()
+
+    validateRCResponse :: (MonadFlow m) => Verification.RCVerificationResponse -> RCValidationRules -> m Bool
+    validateRCResponse rc rule = do
+      now <- getCurrentTime
+      let fuelValid = maybe True (\ft -> Kernel.Prelude.any (`isInfixOf` ft) (T.toLower <$> rule.fuelType)) (T.toLower <$> rc.fuelType)
+          vehicleClassValid = maybe True (\vc -> Kernel.Prelude.any (`isInfixOf` vc) (T.toLower <$> rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
+          manufacturerValid = maybe True (\m -> Kernel.Prelude.any (`isInfixOf` m) (T.toLower <$> rule.vehicleOEM)) (T.toLower <$> rc.manufacturer)
+          vehicleAge = getVehicleAge (convertTextToDay (rc.mYManufacturing <> Just "-01")) now
+          vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
+      return (fuelValid && vehicleClassValid && manufacturerValid && vehicleAgeValid)
 
 compareRegistrationDates :: Maybe Text -> Maybe UTCTime -> Bool
 compareRegistrationDates actualDate providedDate =
@@ -588,7 +604,7 @@ activateRC driverInfo merchantId merchantOpCityId now rc = do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now
+      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()

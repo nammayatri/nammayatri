@@ -37,6 +37,7 @@ import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.City as Context
@@ -684,31 +685,35 @@ updateIssueStatus ::
   Identifier ->
   m Common.IssueStatusUpdateRes
 updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLanguage Common.IssueStatusUpdateReq {..} issueHandle identifier = do
-  language <- getLanguage personId mbLanguage issueHandle
-  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
-  mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
-  case status of
-    CLOSED -> do
-      QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-      pure $
-        Common.IssueStatusUpdateRes
-          { messages = []
-          }
-    REOPENED -> do
-      QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
-      QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-      updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
-      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
-      issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
-      let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
-      now <- getCurrentTime
-      let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
-      QIR.updateChats issueReportId updatedChats
-      pure $
-        Common.IssueStatusUpdateRes
-          { messages = issueMessages
-          }
-    _ -> throwError $ InternalError "Cannot Update Issue : Incorrect Status Provided"
+  Redis.withLockRedisAndReturnValue (makeIssueReportKey issueReportId) 60 $ do
+    language <- getLanguage personId mbLanguage issueHandle
+    issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+    mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
+    if issueReport.status `notElem` [CLOSED, REOPENED, NOT_APPLICABLE]
+      then do
+        case status of
+          CLOSED -> do
+            QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
+            pure $
+              Common.IssueStatusUpdateRes
+                { messages = []
+                }
+          REOPENED -> do
+            QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
+            QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
+            updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
+            issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+            issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
+            let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
+            now <- getCurrentTime
+            let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
+            QIR.updateChats issueReportId updatedChats
+            pure $
+              Common.IssueStatusUpdateRes
+                { messages = issueMessages
+                }
+          _ -> throwError $ InternalError "Cannot Update Issue : Incorrect Status Provided"
+      else pure Common.IssueStatusUpdateRes {messages = []}
 
 updateTicketStatus ::
   ( EncFlow m r,
@@ -1005,3 +1010,6 @@ mkMediaFiles =
           _ -> mediaFileList
     )
     []
+
+makeIssueReportKey :: Id D.IssueReport -> Text
+makeIssueReportKey id = "IssueReport:IssueReportId-" <> id.getId
