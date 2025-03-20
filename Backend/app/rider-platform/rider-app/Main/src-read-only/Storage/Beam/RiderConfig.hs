@@ -63,6 +63,8 @@ data RiderConfigT f = RiderConfigT
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutReferralProgram :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     payoutReferralStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    payoutReferralThresholdPerDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    payoutReferralThresholdPerMonth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     permissibleModes :: B.C f (Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType]),
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
