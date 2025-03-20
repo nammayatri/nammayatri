@@ -37,11 +37,10 @@ import Resource.Localizable.TypesV2
 import Storage
 import RemoteConfig as RC
 
-screen :: ExtraChargeInfoScreenState -> ScopedScreen Action ExtraChargeInfoScreenState ScreenOutput
+screen :: ExtraChargeInfoScreenState -> Screen Action ExtraChargeInfoScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , parent : Just "ExtraChargeInfoScreen"
   , name : "ExtraChargeInfoScreen"
   , globalEvents : []
   , eval : (\action state -> do

@@ -641,6 +641,8 @@ cancellationBadgeConfig state cancellationThresholdConfig =
     , primaryButtonText : getStringV2 view_more
     , badgeTitle : getStringV2 cancellation_score
     , type : DriverProfileScoreCard.Cancellation
+    , imageWidth : V 61
+    , imageHeight : V 68
     }
 
     poorCancellationConfig = {
@@ -653,6 +655,8 @@ cancellationBadgeConfig state cancellationThresholdConfig =
     , primaryButtonText : getStringV2 view_more
     , badgeTitle : getStringV2 cancellation_score
     , type : DriverProfileScoreCard.Cancellation
+    , imageWidth : V 61
+    , imageHeight : V 68
     }
 
 safetyBadgeConfig :: ST.DriverProfileScreenState  -> Maybe DriverProfileScoreCard.DriverProfileScoreCardType
@@ -681,6 +685,8 @@ safetyBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 safety_score
     , type : DriverProfileScoreCard.Safety
+    , imageWidth : V 61
+    , imageHeight : V 66
     }
 
     watchlistedCancellationConfig :: Int -> DriverProfileScoreCard.DriverProfileScoreCardType
@@ -694,6 +700,8 @@ safetyBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 safety_score
     , type : DriverProfileScoreCard.Safety
+    , imageWidth : V 61
+    , imageHeight : V 68
     }
 
     unsafeCancellationConfig :: Int -> DriverProfileScoreCard.DriverProfileScoreCardType
@@ -707,6 +715,8 @@ safetyBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 safety_score
     , type : DriverProfileScoreCard.Safety
+    , imageWidth : V 61
+    , imageHeight : V 68
     }
 
 
@@ -741,6 +751,8 @@ overchargingBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 overcharging_score
     , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 130
+    , imageHeight : V 68
     }
 
     lowConfig percentage = {
@@ -753,6 +765,8 @@ overchargingBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 overcharging_score
     , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 100
+    , imageHeight : V 68
     }
 
     highConfig percentage = {
@@ -765,6 +779,8 @@ overchargingBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 overcharging_score
     , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 100
+    , imageHeight : V 68
     }
 
     suspendedConfig percentage = {
@@ -777,6 +793,8 @@ overchargingBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 overcharging_score
     , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 100
+    , imageHeight : V 68
     }
 
     blockedConfig percentage = {
@@ -789,4 +807,6 @@ overchargingBadgeConfig state =
     , primaryButtonText : getStringV2 learn_more
     , badgeTitle : getStringV2 overcharging_score
     , type : DriverProfileScoreCard.ExtraCharge
+    , imageWidth : V 61
+    , imageHeight : V 68
     }
