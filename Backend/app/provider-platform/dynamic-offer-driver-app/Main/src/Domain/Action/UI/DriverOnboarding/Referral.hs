@@ -18,7 +18,7 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
-import Domain.Types.DriverOperatorAssociation
+import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -119,7 +119,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           if hasNoAssociation
             then do
               DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-              driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+              driverOperatorAssData <- DOA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
               void $ QDOA.create driverOperatorAssData
               incrementOnboardedDriverCountByOperator dr.driverId
               return Success
@@ -145,25 +145,6 @@ incrementOnboardedDriverCountByOperator referredOperatorId = do
         let newCount = driverStats.numDriversOnboarded + 1
         QDriverStats.updateNumDriversOnboarded newCount referredOperatorId
         logTagInfo "INCREMENT_DRIVER_COUNT" $ "Successfully incremented driver count for " <> show referredOperatorId <> " to " <> show newCount
-
-makeDriverOperatorAssociation :: (MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Text -> Maybe UTCTime -> m DriverOperatorAssociation
-makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    DriverOperatorAssociation
-      { id = id,
-        operatorId = operatorId,
-        isActive = True,
-        driverId = driverId,
-        associatedOn = Just now,
-        associatedTill = end,
-        onboardingVehicleCategory = Nothing,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
 
 checkDriverHasNoAssociation :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m Bool
 checkDriverHasNoAssociation driverId = do

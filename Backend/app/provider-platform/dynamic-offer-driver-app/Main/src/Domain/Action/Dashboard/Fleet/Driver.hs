@@ -64,6 +64,7 @@ import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
@@ -116,12 +117,12 @@ import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.FleetConfig as QFC
--- import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -1060,33 +1061,48 @@ postDriverFleetSendJoiningOtp ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
-  Common.AuthReq ->
+  Maybe Text ->
+  Maybe Common.Association ->
+  Common.FleetAuthReq ->
   Flow Common.AuthRes
-postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName req = do
+postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName requestorId mbAssociation req = do
+  mbCheckedAssociation <- forM mbAssociation \association -> do
+    checkAssociation AssociationRequest {fleetOwnerId = req.fleetOwnerId, requestorId, association}
+
   merchant <- findMerchantByShortId merchantShortId
   smsCfg <- asks (.smsCfg)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mobileNumberHash <- getDbHash req.mobileNumber
   mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER
   case mbPerson of
-    Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
+    Nothing -> DRBReg.auth merchantShortId opCity $ mkAuthReq req -------------- to onboard a driver that is not the part of the fleet
     Just person -> do
       let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
           phoneNumber = req.mobileCountryCode <> req.mobileNumber
       otpCode <- maybe generateOTPCode return useFakeOtpM
       withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message) <-
-          MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
-            MessageBuilder.BuildFleetJoiningMessageReq
-              { otp = otpCode,
-                fleetOwnerName = fleetOwnerName
-              }
+        (mbSender, message) <- case mbCheckedAssociation of
+          Just (OperatorAssociation operator) -> do
+            let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+            MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
+              MessageBuilder.BuildOperatorJoiningMessageReq
+                { otp = otpCode,
+                  operatorName = operatorName
+                }
+          _ -> do
+            MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
+              MessageBuilder.BuildFleetJoiningMessageReq
+                { otp = otpCode,
+                  fleetOwnerName = fleetOwnerName
+                }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
         let key = makeFleetDriverOtpKey phoneNumber
         Redis.setExp key otpCode 3600
       pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
+  where
+    mkAuthReq Common.FleetAuthReq {..} = Common.AuthReq {..}
 
 ---------------------------------------------------------------------
 postDriverFleetVerifyJoiningOtp ::
@@ -1094,26 +1110,45 @@ postDriverFleetVerifyJoiningOtp ::
   Context.City ->
   Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Common.Association ->
   Common.VerifyFleetJoiningOtpReq ->
   Flow APISuccess
-postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req = do
+postDriverFleetVerifyJoiningOtp merchantShortId opCity oldFleetOwnerId mbAuthId requestorId mbAssociation req = do
+  let fleetOwnerId = fromMaybe oldFleetOwnerId req.fleetOwnerId
+
+  checkedAssociation <- case mbAssociation of
+    Just association -> checkAssociation AssociationRequest {association, fleetOwnerId = Just fleetOwnerId, requestorId}
+    Nothing -> do
+      -- for backward compatibility
+      fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
+      unless (fleetOwner.role == DP.FLEET_OWNER) $
+        throwError (FleetOwnerNotFound fleetOwnerId)
+      pure $ FleetOwnerAssociation fleetOwner
+
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
+  let merchantOpCityId = merchantOpCity.id
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-      fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
-      void $ DRBReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+      void $ DRBReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
       withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message) <-
-          MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
-            MessageBuilder.BuildDownloadAppMessageReq
-              { fleetOwnerName = fleetOwner.firstName
-              }
+        (mbSender, message) <- case checkedAssociation of
+          FleetOwnerAssociation fleetOwner ->
+            MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
+              MessageBuilder.BuildDownloadAppMessageReq
+                { fleetOwnerName = fleetOwner.firstName
+                }
+          OperatorAssociation operator ->
+            MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
+              MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
+                { operatorName = operator.firstName
+                }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
@@ -1121,10 +1156,19 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req
       let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
       otp <- Redis.get key >>= fromMaybeM OtpNotFound
       when (otp /= req.otp) $ throwError InvalidOtp
-      checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
-      when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-      QFDV.create assoc
+      case checkedAssociation of
+        FleetOwnerAssociation _fleetOwner -> do
+          -- TODO should we check all possible associations?
+          checkAssocFleet <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
+          when (isJust checkAssocFleet) $ throwError (InvalidRequest "Driver already associated with fleet")
+          assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+          QFDV.create assoc
+        OperatorAssociation operator -> do
+          -- TODO should we check all possible associations?
+          checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId person.id operator.id True
+          when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
+          assoc <- DOA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+          QDriverOperatorAssociation.create assoc
   pure Success
 
 makeFleetDriverOtpKey :: Text -> Text
@@ -1552,53 +1596,74 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> r .: "driver_phone_number"
       <*> r .: "driver_onboarding_vehicle_category"
 
-data AssociationRequest
-  = FleetOwnerAssociationRequest DP.Person -- driver <-> fleetOwner
-  | OperatorAssociationRequest DP.Person -- driver <-> operator
+data AssociationRequest = AssociationRequest
+  { association :: Common.Association,
+    fleetOwnerId :: Maybe Text,
+    requestorId :: Maybe Text
+  }
 
-postDriverFleetAddDrivers ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Maybe Text ->
-  Common.CreateDriversReq ->
-  Flow Common.APISuccessWithUnprocessedEntities
-postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
-  now <- getCurrentTime
+data CheckedAssociation
+  = FleetOwnerAssociation DP.Person -- driver <-> fleetOwner
+  | OperatorAssociation DP.Person -- driver <-> operator
+
+checkAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => AssociationRequest -> m CheckedAssociation
+checkAssociation req = do
+  -- TODO add enable/verified check for fleet owner in all existing queries (or maybe in apis)
 
   mbFleetOwner <- forM req.fleetOwnerId $ \fleetOwnerId -> do
-    fleetOwner <- QPerson.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+    fleetOwner <- QPerson.findById (Id fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
     unless (fleetOwner.role == DP.FLEET_OWNER) $
-      throwError (InvalidRequest "Invalid fleet owner")
+      throwError (FleetOwnerNotFound fleetOwnerId)
     pure fleetOwner
 
-  associationRequest :: AssociationRequest <- case mbRequestorId of
-    Just requestorId -> do
-      requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
+  requestorId <- req.requestorId & fromMaybeM (InvalidRequest "requestorId required")
+  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
+
+  case req.association of
+    Common.FLEET_ASSOCIATION -> do
       case requestor.role of
         DP.FLEET_OWNER -> do
           whenJust mbFleetOwner $ \fleetOwner -> do
             unless (fleetOwner.id == requestor.id) $
               throwError (InvalidRequest "Invalid fleet owner")
-          pure $ FleetOwnerAssociationRequest requestor
+          pure $ FleetOwnerAssociation requestor
         DP.OPERATOR -> do
-          case mbFleetOwner of
-            Just fleetOwner -> do
-              -- fleetOwner <-> operator
-              association <-
-                QFleetOperatorAssociation.findByOperatorIdAndFleetOwnerId requestor.id.getId fleetOwner.id.getId True
-                  >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
-              whenJust association.associatedTill \associatedTill -> do
-                when (now > associatedTill) $
-                  throwError (InvalidRequest "FleetOperatorAssociation expired")
-              pure $ FleetOwnerAssociationRequest fleetOwner -- (Id requestorId) (Id fleetOwnerId)
-            Nothing -> pure $ OperatorAssociationRequest requestor
+          fleetOwner <- mbFleetOwner & fromMaybeM FleetOwnerIdRequired
+          association <-
+            QFleetOperatorAssociation.findByOperatorIdAndFleetOwnerId requestor.id.getId fleetOwner.id.getId True
+              >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
+          whenJust association.associatedTill \associatedTill -> do
+            now <- getCurrentTime
+            when (now > associatedTill) $
+              throwError (InvalidRequest "FleetOperatorAssociation expired")
+          pure $ FleetOwnerAssociation fleetOwner
         DP.ADMIN -> do
           fleetOwner <- mbFleetOwner & fromMaybeM FleetOwnerIdRequired
-          pure $ FleetOwnerAssociationRequest fleetOwner -- do we need admin functionality now?
+          pure $ FleetOwnerAssociation fleetOwner
         _ -> throwError AccessDenied
+    Common.OPERATOR_ASSOCIATION -> do
+      case requestor.role of
+        DP.OPERATOR -> do
+          pure $ OperatorAssociation requestor
+        _ -> throwError AccessDenied
+
+postDriverFleetAddDrivers ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Common.Association ->
+  Common.CreateDriversReq ->
+  Flow Common.APISuccessWithUnprocessedEntities
+postDriverFleetAddDrivers merchantShortId opCity requestorId mbAssociation req = do
+  checkedAssociation <- case mbAssociation of
+    Just association -> checkAssociation AssociationRequest {fleetOwnerId = req.fleetOwnerId, requestorId, association}
     Nothing -> do
-      fleetOwner <- mbFleetOwner & fromMaybeM FleetOwnerIdRequired
-      pure $ FleetOwnerAssociationRequest fleetOwner
+      -- for backward compatibilty
+      fleetOwnerId <- req.fleetOwnerId & fromMaybeM FleetOwnerIdRequired
+      fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
+      unless (fleetOwner.role == DP.FLEET_OWNER) $
+        throwError (FleetOwnerNotFound fleetOwnerId)
+      pure $ FleetOwnerAssociation fleetOwner
 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -1608,7 +1673,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     foldlM
       ( \unprocessedEntities driverDetail -> do
           try @_ @SomeException
-            (processDriver merchantOpCity associationRequest driverDetail)
+            (processDriver merchantOpCity checkedAssociation driverDetail)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)]
               Right _ -> return unprocessedEntities
@@ -1617,8 +1682,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       driverDetails
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
   where
-    processDriver :: DMOC.MerchantOperatingCity -> AssociationRequest -> DriverDetails -> Flow () -- TODO: create single query to update all later
-    processDriver moc associationRequest req_ = do
+    processDriver :: DMOC.MerchantOperatingCity -> CheckedAssociation -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriver moc checkedAssociation req_ = do
       let driverMobile = req_.driverPhoneNumber
           authData =
             DReg.AuthReq
@@ -1637,22 +1702,17 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
 
-      case associationRequest of
-        FleetOwnerAssociationRequest fleetOwner -> do
-          -- driver <-> fleetOwner
+      case checkedAssociation of
+        FleetOwnerAssociation fleetOwner -> do
           WMB.checkFleetDriverAssociation person.id fleetOwner.id
             >>= \isAssociated -> unless isAssociated $ do
               fork "Sending Fleet Consent SMS to Driver" $ do
                 QFDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
                 sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
-        OperatorAssociationRequest operator -> do
-          -- driver <-> operator
-          -- FIXME checkOperatorDriverAssociation
+        OperatorAssociation operator -> do
           QDriverOperatorAssociation.checkDriverOperatorAssociation person.id operator.id
             >>= \isAssociated -> unless isAssociated $ do
               fork "Sending Operator Consent SMS to Driver" $ do
-                -- TODO check what happens after SMS
-                -- fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
                 QDriverOperatorAssociation.createDriverOperatorAssociationIfNotExists moc person.id operator.id req_.driverOnboardingVehicleCategory False
                 sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id operator
     readCsv csvFile = do

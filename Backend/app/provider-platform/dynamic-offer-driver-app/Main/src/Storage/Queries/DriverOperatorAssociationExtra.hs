@@ -39,7 +39,7 @@ createDriverOperatorAssociationIfNotExists moc driverId operatorId onboardingVeh
       id <- generateGUID
       createWithKV $
         DriverOperatorAssociation
-          { associatedTill = convertTextToUTC (Just "2099-12-12"), -- why it is hardcoded everywhere?
+          { associatedTill = convertTextToUTC (Just "2099-12-12"),
             driverId = driverId,
             operatorId = operatorId.getId,
             associatedOn = Just now,
@@ -50,26 +50,6 @@ createDriverOperatorAssociationIfNotExists moc driverId operatorId onboardingVeh
             merchantOperatingCityId = Just moc.id,
             ..
           }
-
--- TODO check associatedTill manually instead of this query
--- findByDriverId ::
---   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
---   Id DP.Person ->
---   Bool ->
---   m (Maybe DriverOperatorAssociation)
--- findByDriverId driverId isActive = do
---   now <- getCurrentTime
---   listToMaybe
---     <$> findAllWithOptionsKV
---       [ Se.And
---           [ Se.Is BeamDOA.driverId $ Se.Eq (driverId.getId),
---             Se.Is BeamDOA.isActive $ Se.Eq isActive,
---             Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
---           ]
---       ]
---       (Se.Desc BeamDOA.createdAt)
---       (Just 1)
---       Nothing
 
 checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
 checkDriverOperatorAssociation driverId operatorId = do

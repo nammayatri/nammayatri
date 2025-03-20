@@ -151,6 +151,10 @@ data EndRideData = EndRideData
   deriving stock (Generic, Eq, Ord, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetAuthReq = FleetAuthReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FleetConfig = FleetConfig
   { allowAutomaticRoundTripAssignment :: Kernel.Prelude.Bool,
     allowEndingMidRoute :: Kernel.Prelude.Bool,
@@ -436,7 +440,8 @@ data VerificationDocsStatus = VerificationDocsStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
-  { mobileCountryCode :: Kernel.Prelude.Text,
+  { fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
     otp :: Kernel.Prelude.Text,
     deviceToken :: Kernel.Prelude.Maybe Kernel.External.Notification.FCM.Types.FCMRecipientToken
@@ -877,25 +882,30 @@ type PostDriverUpdateFleetOwnerInfo =
 type GetDriverFleetOwnerInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleetOwnerInfo" :> Get '[JSON] FleetOwnerInfoRes)
 
 type PostDriverFleetSendJoiningOtp =
-  ( "fleet" :> "sendJoiningOtp" :> ReqBody '[JSON] Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq
+  ( "fleet" :> "sendJoiningOtp" :> QueryParam "association" Dashboard.Common.Association :> ReqBody '[JSON] FleetAuthReq
       :> Post
            '[JSON]
            Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes
   )
 
 type PostDriverFleetDriverSendJoiningOtpHelper =
-  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "driver" :> "sendJoiningOtp"
-      :> ReqBody
+  ( Capture "fleetOwnerName" Kernel.Prelude.Text :> "fleet" :> "driver" :> "sendJoiningOtp"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> QueryParam "association" Dashboard.Common.Association
+      :> ReqBody '[JSON] FleetAuthReq
+      :> Post
            '[JSON]
-           Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq
-      :> Post '[JSON] Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes
+           Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes
   )
 
 type PostDriverFleetVerifyJoiningOtp =
-  ( "fleet" :> "verifyJoiningOtp" :> QueryParam "authId" Kernel.Prelude.Text :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
-      :> Post
+  ( "fleet" :> "verifyJoiningOtp" :> QueryParam "authId" Kernel.Prelude.Text :> QueryParam "association" Dashboard.Common.Association
+      :> ReqBody
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           VerifyFleetJoiningOtpReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverFleetDriverVerifyJoiningOtpHelper =
@@ -903,8 +913,14 @@ type PostDriverFleetDriverVerifyJoiningOtpHelper =
       :> QueryParam
            "authId"
            Kernel.Prelude.Text
-      :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam "association" Dashboard.Common.Association
+      :> ReqBody
+           '[JSON]
+           VerifyFleetJoiningOtpReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type GetDriverFleetRoutes =
@@ -991,13 +1007,20 @@ type GetDriverFleetTripTransactionsHelper =
            TripTransactionResp
   )
 
-type PostDriverFleetAddDrivers = ("fleet" :> "addDrivers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp CreateDriversReq :> Post '[JSON] APISuccessWithUnprocessedEntities)
-
-type PostDriverFleetAddDriversHelper =
-  ( "fleet" :> "addDrivers" :> QueryParam "requestorId" Kernel.Prelude.Text
+type PostDriverFleetAddDrivers =
+  ( "fleet" :> "addDrivers" :> QueryParam "association" Dashboard.Common.Association
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
            CreateDriversReq
+      :> Post '[JSON] APISuccessWithUnprocessedEntities
+  )
+
+type PostDriverFleetAddDriversHelper =
+  ( "fleet" :> "addDrivers" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam
+           "association"
+           Dashboard.Common.Association
+      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp CreateDriversReq
       :> Post '[JSON] APISuccessWithUnprocessedEntities
   )
 
@@ -1078,13 +1101,19 @@ data DriverAPIs = DriverAPIs
     postDriverFleetVehicleDriverRcStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateFleetOwnerInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient FleetOwnerInfoRes,
-    postDriverFleetSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
-    postDriverFleetVerifyJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> VerifyFleetJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverFleetSendJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.Association -> FleetAuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
+    postDriverFleetVerifyJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.Association -> VerifyFleetJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetRoutes :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient RouteAPIResp,
     getDriverFleetPossibleRoutes :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient RouteAPIResp,
     postDriverFleetTripPlanner :: Kernel.Prelude.Text -> TripPlannerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetTripTransactions :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient TripTransactionResp,
-    postDriverFleetAddDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Data.ByteString.Lazy.ByteString, CreateDriversReq) -> EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
+    postDriverFleetAddDrivers ::
+      Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+      Kernel.Prelude.Maybe Dashboard.Common.Association ->
+      ( Data.ByteString.Lazy.ByteString,
+        CreateDriversReq
+      ) ->
+      EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
     postDriverFleetAddDriverBusRouteMapping :: (Data.ByteString.Lazy.ByteString, CreateDriverBusRouteMappingReq) -> EulerHS.Types.EulerClient APISuccessWithUnprocessedEntities,
     postDriverFleetLinkRCWithDriver :: Kernel.Prelude.Text -> LinkRCWithDriverForFleetReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverDashboardFleetWmbTripEnd :: Kernel.Types.Id.Id Dashboard.Common.TripTransaction -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

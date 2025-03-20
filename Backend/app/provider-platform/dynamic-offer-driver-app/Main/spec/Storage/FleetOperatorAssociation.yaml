@@ -24,7 +24,6 @@ FleetOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [operatorId, fleetOwnerId, isActive]
-          # - gt: [associatedTill] # what if associatedTill is Nothing?
 
   sqlType:
     id: text
