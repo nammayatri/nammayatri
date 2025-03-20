@@ -426,7 +426,7 @@ playRideAssignedAudio tripCategory rideId vehicleVariant push = do
         "RENTALS" -> config.rentals
         "LOCAL" -> config.local
         _ -> Nothing
-        
+
       -- Fall back to trip category if no variant-specific audio
       tripAudioUrl = case tripCategory of
         ST.Rental ->  config.rental
@@ -435,7 +435,7 @@ playRideAssignedAudio tripCategory rideId vehicleVariant push = do
         ST.Delivery -> config.delivery
         ST.OneWay -> config.oneWay
         ST.RideShare -> config.rideShare
-        
+
       -- Use variant audio if available, otherwise use trip-based audio
       audioUrl = if isJust variantAudioUrl then variantAudioUrl else tripAudioUrl
     case audioUrl of

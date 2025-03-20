@@ -2435,6 +2435,7 @@ export const isSignedCallInitialized = function () {
   if (JBridge.isSignedCallInitialized) {
     return JBridge.isSignedCallInitialized();
   }
+  }
   return false;
 };
 
