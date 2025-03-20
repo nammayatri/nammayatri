@@ -461,6 +461,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: FleetVehicleStatus
+        - mbSearchString: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -479,6 +480,7 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: FleetVehicleStatus
+              - mbSearchString: Text
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -899,11 +901,13 @@ types:
     - model: Maybe Text
     - color: Maybe Text
     - registrationNo: Text
+    - isActive: Maybe Bool
   VehicleAPIEntityT:
     - variant: Maybe VehicleVariant
     - model: Maybe Text
     - color: Maybe Text
     - registrationNo: Text
+    - isActive: Maybe Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetBadgeRes:
@@ -924,6 +928,7 @@ types:
     - lastName: Maybe Text
     - mobileNumber: Maybe Text
     - mobileCountryCode: Maybe Text
+    - isActive: Maybe Bool
   FleetDriversAPIEntityT:
     - driverId: Id Driver
     - firstName: Text
@@ -931,6 +936,7 @@ types:
     - lastName: Maybe Text
     - mobileNumber: Maybe Text
     - mobileCountryCode: Maybe Text
+    - isActive: Maybe Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetTotalEarningResponse:
@@ -963,7 +969,7 @@ types:
     - hours: Int
     - minutes: Int
   FleetVehicleStatus:
-    - enum: "Active, InActive, Pending, Invalid"
+    - enum: "Active, InActive, Valid, Invalid, Pending"
     - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text
@@ -993,6 +999,7 @@ types:
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
+    - upcomingRouteCode: Maybe Text
   DriveVehicleAssociationListItemT:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
@@ -1007,6 +1014,7 @@ types:
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
+    - upcomingRouteCode: Maybe Text
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   VerificationDocsStatus:

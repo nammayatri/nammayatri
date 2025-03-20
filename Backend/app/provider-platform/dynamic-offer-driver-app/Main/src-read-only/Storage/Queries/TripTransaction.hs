@@ -84,6 +84,7 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviationCount deviationCount,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+      Se.Set Beam.driverName driverName,
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
       Se.Set Beam.endLocationLon (Kernel.Prelude.fmap (.lon) endLocation),
       Se.Set Beam.endRideApprovalRequestId (Kernel.Types.Id.getId <$> endRideApprovalRequestId),
