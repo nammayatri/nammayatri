@@ -6,6 +6,7 @@ import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -14,11 +15,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import Tools.Error
 
-buildOnSearchReq :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Item] -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> m Domain.Action.Beckn.OnSearch.DOnSearchReq
-buildOnSearchReq req provider items fulfillments validTill = do
+buildOnSearchReq :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Item] -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> DSR.RiderPreferredOption -> m Domain.Action.Beckn.OnSearch.DOnSearchReq
+buildOnSearchReq req provider items fulfillments validTill riderPreferredOption = do
   let paymentMethodsInfo_ = []
   providerInfo_ <- tfProviderInfo req
-  (estimatesInfo_, quotesInfo_) <- partitionEithers <$> traverse (tfQuotesInfo provider fulfillments validTill) items
+  (estimatesInfo_, quotesInfo_) <- partitionEithers <$> traverse (tfQuotesInfo provider fulfillments validTill riderPreferredOption) items
   requestId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId req.onSearchReqContext
   pure $ Domain.Action.Beckn.OnSearch.DOnSearchReq {estimatesInfo = estimatesInfo_, paymentMethodsInfo = paymentMethodsInfo_, providerInfo = providerInfo_, quotesInfo = quotesInfo_, requestId = Id requestId_, ..}
 
@@ -69,8 +70,8 @@ buildInterCityQuoteInfo item quoteId_ currency = do
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
   Just $ Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {perDayMaxAllowanceInMins = Just perDayMaxAllowanceInMins', ..}
 
-tfQuotesInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> BecknV2.OnDemand.Types.Item -> m (Either Domain.Action.Beckn.OnSearch.EstimateInfo Domain.Action.Beckn.OnSearch.QuoteInfo)
-tfQuotesInfo provider fulfillments validTill item = do
+tfQuotesInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> DSR.RiderPreferredOption -> BecknV2.OnDemand.Types.Item -> m (Either Domain.Action.Beckn.OnSearch.EstimateInfo Domain.Action.Beckn.OnSearch.QuoteInfo)
+tfQuotesInfo provider fulfillments validTill riderPreferredOption item = do
   let descriptions_ = []
   let discount_ = Nothing
   currency <- getCurrency item
@@ -97,7 +98,10 @@ tfQuotesInfo provider fulfillments validTill item = do
   case tripCategoryToPricingPolicy tripCategory of
     EstimateBased _ -> do
       let bppEstimateId_ = Id itemId_
-      driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
+      driversLocation_ <- case riderPreferredOption of
+        DSR.Ambulance -> if vehicleVariant_ `elem` Domain.Action.Beckn.OnSearch.ambulanceVariants then Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_ else pure []
+        DSR.Delivery -> if vehicleVariant_ `elem` Domain.Action.Beckn.OnSearch.deliveryVariants then Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_ else pure []
+        _ -> Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item currency
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency

@@ -48,7 +48,7 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
     logInfo $ "OnSearch received:-" <> show reqV2
     searchRequest <- runInReplica $ QSearchReq.findById (cast $ Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
     void $ validateOnSearchContext reqV2.onSearchReqContext searchRequest
-    mbDOnSearchReq <- TaxiACL.buildOnSearchReqV2 reqV2
+    mbDOnSearchReq <- TaxiACL.buildOnSearchReqV2 searchRequest.riderPreferredOption reqV2
     messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
 
     whenJust mbDOnSearchReq $ \request -> do

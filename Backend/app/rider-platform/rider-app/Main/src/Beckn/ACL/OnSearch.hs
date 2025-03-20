@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common
@@ -32,9 +33,10 @@ buildOnSearchReqV2 ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  DSR.RiderPreferredOption ->
   Spec.OnSearchReq ->
   m (Maybe DOnSearch.DOnSearchReq)
-buildOnSearchReqV2 req = do
+buildOnSearchReqV2 riderPreferredOption req = do
   logOnSearchEventV2 req
   (_, validTill) <- Utils.getTimestampAndValidTill req.onSearchReqContext
   case req.onSearchReqError of
@@ -48,7 +50,7 @@ buildOnSearchReqV2 req = do
       fulfillments <- filterM OnSearchUtils.isValidVehVariant _fulfillments
       let items = filter (OnSearchUtils.isValidItem fulfillments) _items
           provider = _provider {Spec.providerFulfillments = Just fulfillments, Spec.providerItems = Just items}
-      Just <$> TOnSearch.buildOnSearchReq req provider items fulfillments validTill
+      Just <$> TOnSearch.buildOnSearchReq req provider items fulfillments validTill riderPreferredOption
     Just err -> do
       logTagError "on_search req" $ "on_search error: " <> show err
       pure Nothing
