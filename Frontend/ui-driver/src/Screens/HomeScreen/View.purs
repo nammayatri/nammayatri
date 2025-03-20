@@ -915,7 +915,7 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][  if fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
+        ][  meterBooking state push -- if fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
           , locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
             then gotoButton push state else linearLayout[][]
@@ -937,7 +937,9 @@ meterBooking state push =
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , cornerRadius 22.0
-    , onClick push $ const GotoMeterRideScreen
+    , onClick (\action -> do
+        _ <- JB.startOpenMeterActivity unit
+        pure unit) $ const GotoMeterRideScreen
     , background Color.white900
     , padding $ Padding 15 11 15 11
     , gravity CENTER
