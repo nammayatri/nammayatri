@@ -1121,3 +1121,25 @@ mkSafetyNotificationKey code =
     Just BecknEnums.DEVIATION -> "SAFETY_ALERT_DEVIATION"
     Just BecknEnums.RIDE_STOPPAGE -> "SAFETY_ALERT_RIDE_STOPPAGE"
     Nothing -> code
+
+sendFeedbackRequest :: (ServiceFlow m r) => SRB.Booking -> m ()
+sendFeedbackRequest booking = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let notificationSound = Just "default"
+      title = "How is your ride going?"
+      body = "Are you feeling safe?"
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.FEEDBACK_REQUEST,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product booking.id.getId (),
+            body,
+            title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData

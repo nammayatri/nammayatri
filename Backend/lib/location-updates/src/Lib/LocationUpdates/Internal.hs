@@ -433,7 +433,7 @@ interpolatePointsAndCalculateDistanceAndTollImplementation isEndRide snapToRoadC
   if isEndRide && isAllPointsEqual wps
     then pure (0, take 1 wps, [], False, Nothing)
     else do
-      (servicesUsed, res) <- snapToRoadCall rectifyDistantPointsFailureUsing $ Maps.SnapToRoadReq {points = wps, distanceUnit = Meter}
+      (servicesUsed, res) <- snapToRoadCall rectifyDistantPointsFailureUsing $ Maps.SnapToRoadReq {points = wps, distanceUnit = Meter, calculateDistanceFrom = Nothing}
       case res of
         Left _ -> pure (0, [], [], True, Nothing)
         Right response -> do

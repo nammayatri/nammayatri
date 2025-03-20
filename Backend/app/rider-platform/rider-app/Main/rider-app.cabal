@@ -327,6 +327,7 @@ library
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
+      SharedLogic.PingNotifications
       SharedLogic.PublicTransport
       SharedLogic.Referral
       SharedLogic.ScheduledNotifications

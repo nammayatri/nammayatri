@@ -77,6 +77,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
+import SharedLogic.PingNotifications as PingNotifications
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -561,6 +562,7 @@ onUpdate = \case
     mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
     Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
+    PingNotifications.pushFeedBackRequestNotification booking
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
   OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..} ->
     when isParcelImageUploaded $ do

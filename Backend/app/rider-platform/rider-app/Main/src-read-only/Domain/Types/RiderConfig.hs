@@ -41,6 +41,7 @@ data RiderConfig = RiderConfig
     executePaymentDelay :: Kernel.Prelude.NominalDiffTime,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
+    feedBackFCMDelayMultipler :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
