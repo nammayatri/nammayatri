@@ -41,6 +41,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderConfig as DRC
@@ -92,6 +93,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Constants
@@ -677,6 +679,23 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
+
+  uuid <- generateGUID
+  let recentLocation =
+        DRL.RecentLocation
+          { createdAt = now,
+            updatedAt = now,
+            routeId = Nothing,
+            entityType = DRL.NAMMA_YATRI,
+            entityId = getId booking.id,
+            id = uuid,
+            riderId = booking.riderId,
+            lat = booking.fromLocation.lat,
+            DRL.lon = booking.fromLocation.lon,
+            merchantOperatingCityId = booking.merchantOperatingCityId
+          }
+  SQRL.create recentLocation
+
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
   --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
