@@ -650,7 +650,10 @@ eval (DriverProfileScoreCardAC (DriverProfileScoreCard.OnPrimaryButtonClick card
     _ -> update state
     -- DriverProfileScoreCard.Safety -> exit $ GoToSafetyInfoScreen state {props {skipGlobalEvents = true}}
 
-eval (BottomSheetStageChanged stage) state =  if stage == "5" then continue state {showDriverDetails = false} else update state {showDriverDetails = true}
+eval (BottomSheetStageChanged stage) state =
+  if state.props.alternateNumberView || state.props.showGenderView then continue state {showDriverDetails = false}
+  else if stage == "5" then continue state {showDriverDetails = false}
+  else update state {showDriverDetails = true}
 
 eval _ state = update state
 

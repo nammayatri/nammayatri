@@ -2546,11 +2546,7 @@ horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight =
 
 -------------------------------------------- DUMMY TEXT VIEW ---------------------------------------------
 dummyTextView :: forall w. PrestoDOM (Effect Unit) w
-dummyTextView =
-  textView
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    ]
+dummyTextView = linearLayout[width $ V 0, height $ V 0] []
 
 rcEditPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 rcEditPopUpView push state =
