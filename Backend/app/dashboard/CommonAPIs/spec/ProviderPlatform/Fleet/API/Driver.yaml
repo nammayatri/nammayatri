@@ -9,7 +9,8 @@ imports:
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
   RegisterRCReq: Dashboard.ProviderPlatform.Management.DriverRegistration
-  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  # AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  Association: Dashboard.Common
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   Day: Data.Time
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
@@ -474,20 +475,25 @@ apis:
   - POST: # SendFleetJoiningOtpAPI
       endpoint: /fleet/sendJoiningOtp
       auth: ApiAuthV2
+      query:
+        - association: Association
       request:
-        type: AuthReq
+        type: FleetAuthReq
       response:
         type: AuthRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
       helperApi:
         - POST:
-            endpoint: /{fleetOwnerId}/fleet/driver/sendJoiningOtp
+            endpoint: /{fleetOwnerName}/fleet/driver/sendJoiningOtp
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              fleetOwnerName: Text
+            query:
+              - requestorId: Text
+              - association: Association
             request:
-              type: AuthReq
+              type: FleetAuthReq
             response:
               type: AuthRes
 
@@ -496,6 +502,7 @@ apis:
       auth: ApiAuthV2
       query:
         - authId: Text
+        - association: Association
       request:
         type: VerifyFleetJoiningOtpReq
       response:
@@ -507,9 +514,11 @@ apis:
             endpoint: /{fleetOwnerId}/fleet/driver/verifyJoiningOtp
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              fleetOwnerId: Text # DEPRECATED should be used fleetOwnerId from request
             query:
               - authId: Text
+              - requestorId: Text
+              - association: Association
             request:
               type: VerifyFleetJoiningOtpReq
             response:
@@ -619,6 +628,8 @@ apis:
   - POST: # BulkUploadDriversForFleetAPI
       endpoint: /fleet/addDrivers
       auth: ApiAuthV2
+      query:
+        - association: Association
       multipart:
         type: CreateDriversReq
       response:
@@ -631,6 +642,7 @@ apis:
           auth: ApiAuthV2
           query:
             - requestorId: Text
+            - association: Association
           multipart:
             type: CreateDriversReq
           response:
@@ -884,6 +896,7 @@ types:
     - rideEndApproval: Bool
     - derive: "'HideSecrets"
   VerifyFleetJoiningOtpReq:
+    - fleetOwnerId: Maybe Text
     - mobileCountryCode: Text
     - mobileNumber: Text
     - otp: Text
@@ -962,6 +975,10 @@ types:
     - waypoints: Maybe [LatLong]
     - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
+  FleetAuthReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - fleetOwnerId: Maybe Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

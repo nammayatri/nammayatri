@@ -72,6 +72,18 @@ data TripTransaction
 
 data CoinsConfig
 
+data Operator
+
+data FleetOwner
+
+data Association
+  = OPERATOR_ASSOCIATION
+  | FLEET_ASSOCIATION
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''Association)
+
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
