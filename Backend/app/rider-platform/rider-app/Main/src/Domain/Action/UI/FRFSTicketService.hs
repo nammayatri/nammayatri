@@ -371,6 +371,56 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
       Just origin -> tryStationsAPIWithOSRMDistances mId merchantOpCity origin stations
       Nothing -> return stations
 
+getFrfsTransitStops ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
+  Environment.Flow FRFSTransitStopsCache
+getFrfsTransitStops (_personId, _mId) platformType = do
+  let vehicleTypes = [Spec.METRO, Spec.SUBWAY, Spec.BUS]
+  personId <- _personId & fromMaybeM (InvalidRequest "Person not found")
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  allStops <-
+    foldM
+      ( \acc vehicleType -> do
+          stops <- getFrfsStationsAsTransitStops platformType vehicleType personCityInfo.merchantOperatingCityId
+          return (acc ++ stops)
+      )
+      []
+      vehicleTypes
+  return $ FRFSTransitStopsCache {stops = allStops}
+
+getFrfsStationsAsTransitStops ::
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
+  Spec.VehicleCategory ->
+  Id MerchantOperatingCity ->
+  Environment.Flow [FRFSTransitStop]
+getFrfsStationsAsTransitStops _platformType vehicleType merchantOperatingCityId = do
+  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
+  integratedBPPConfig <-
+    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+  stations <- B.runInReplica $ QStation.findAllByVehicleType Nothing Nothing vehicleType integratedBPPConfig.id
+  if null stations
+    then return []
+    else do
+      let transitStops = mapMaybe stationToTransitStop stations
+      return transitStops
+  where
+    stationToTransitStop :: Domain.Types.Station.Station -> Maybe FRFSTransitStop
+    stationToTransitStop station =
+      case (station.lat, station.lon) of
+        (Just lat', Just lon') ->
+          Just
+            FRFSTransitStop
+              { stopName = station.name,
+                stopType = Just $ show station.vehicleType,
+                lat = lat',
+                lon = lon'
+              }
+        _ -> Nothing
+
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req = do
   let frfsRouteDetails =
