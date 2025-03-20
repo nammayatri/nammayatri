@@ -19,3 +19,33 @@ ALTER TABLE atlas_driver_offer_bpp.approval_request ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

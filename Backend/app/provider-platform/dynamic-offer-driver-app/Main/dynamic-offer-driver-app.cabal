@@ -492,6 +492,7 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
+      Storage.Clickhouse.TripTransaction
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.ApprovalRequestExtra
       Storage.Queries.BackgroundVerificationExtra
@@ -780,6 +781,7 @@ library
       Domain.Types.FareProduct
       Domain.Types.Feedback
       Domain.Types.FleetConfig
+      Domain.Types.FleetCSV
       Domain.Types.FleetDriverAssociation
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
@@ -912,6 +914,7 @@ library
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
       Storage.Beam.FleetConfig
+      Storage.Beam.FleetCSV
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
@@ -1047,6 +1050,7 @@ library
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
       Storage.Queries.FleetConfig
+      Storage.Queries.FleetCSV
       Storage.Queries.FleetDriverAssociation
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation

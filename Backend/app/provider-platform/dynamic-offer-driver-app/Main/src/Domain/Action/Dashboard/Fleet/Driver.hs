@@ -50,6 +50,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -71,6 +72,7 @@ import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.EmptyDynamicParam
+import Domain.Types.FleetCSV (FleetCSV (..))
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
@@ -113,12 +115,14 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
+import qualified Storage.Clickhouse.TripTransaction as SCT
 import qualified Storage.Queries.ApprovalRequest as QDR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
+import qualified Storage.Queries.FleetCSV as QFCSV
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
@@ -636,11 +640,12 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
       pure $ vehicleInfo
     Nothing -> do
       case mbStatus of
-        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
-        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) Nothing limit offset merchantId
-        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) Nothing limit offset merchantId
-        Just Common.Active -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) (Just True) limit offset merchantId
-        Nothing -> RCQuery.findAllByFleetOwnerId (Just $ fromInteger limit) (Just $ fromInteger offset) (Just fleetOwnerId)
+        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId -- All Unlinked Vehicle RCs
+        Just Common.Active -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) (Just True) limit offset merchantId -- All VALID RCs Associated to Drivers
+        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) Nothing limit offset merchantId -- All VALID RCs irrespective of Driver
+        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) Nothing limit offset merchantId -- All INVALID RCs irrespective of Driver
+        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (castFleetVehicleStatus mbStatus) Nothing limit offset merchantId -- All PENDING RCs irrespective of Driver
+        Nothing -> RCQuery.findAllByFleetOwnerId (Just $ fromInteger limit) (Just $ fromInteger offset) (Just fleetOwnerId) -- All RCs
 
 castFleetVehicleStatus :: Maybe Common.FleetVehicleStatus -> Documents.VerificationStatus
 castFleetVehicleStatus = \case
@@ -1420,7 +1425,7 @@ getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbV
 
 ---------------------------------------------------------------------
 data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
-  { driverId :: Text,
+  { driverPhoneNumber :: Text,
     vehicleNumber :: Text,
     routeCode :: Text,
     roundTripFreq :: Text
@@ -1501,7 +1506,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 
     parseMappingInfo :: Int -> CreateDriverBusRouteMappingCSVRow -> Flow DriverBusRouteDetails
     parseMappingInfo idx row = do
-      driverPhoneNo <- cleanCSVField idx row.driverId "Driver Phone number"
+      driverPhoneNo <- cleanCSVField idx row.driverPhoneNumber "Driver Phone number"
       vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
       routeCode <- cleanCSVField idx row.routeCode "Route code"
       let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
@@ -1688,3 +1693,53 @@ postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
     mkRideStatus = \case
       TR.INPROGRESS -> Common.ON_RIDE
       _ -> Common.ON_PICKUP
+
+-- data TripTransactionT f = TripTransactionT
+--   { id :: C f (Id DTT.TripTransaction),
+--     fleetOwnerId :: C f (Maybe Text),
+--     driverId :: C f (Maybe Text),
+--     vehicleNumber :: C f (Maybe Text),
+--     routeCode :: C f (Maybe CH.DateTime),
+--     tripStartTime :: C f (Maybe CH.DateTime)
+--   }
+--   deriving (Generic)
+
+-- instance ToRecord (TripTransactionT f)
+
+postDriverFleetUploadDriverBusRouteMapping :: ShortId DM.Merchant -> Context.City -> Text -> Flow APISuccess
+postDriverFleetUploadDriverBusRouteMapping _ _ fleetOwnerId = do
+  tripEndTimeFrom <- getCurrentTime -- getUTCAt2_01AMPreviousDay
+  tripEndTimeTo <- getCurrentTime -- getUTCAt2AM
+  transactions <- SCT.findIdsByFleetOwner fleetOwnerId tripEndTimeFrom tripEndTimeTo
+  let transactionsCsvMedia = (decodeUtf8 . encode) <$> transactions
+  csvFilePath <- S3.createFilePath "/wmb-trip-transactions/" ("fleet-owner-" <> fleetOwnerId) S3.CSV ".csv"
+  _ <- fork "S3 put file" $ S3.put (T.unpack csvFilePath) transactionsCsvMedia
+  QFCSV.create $
+    FleetCSV
+      { fleetOwnerId = fleetOwnerId,
+        filePath = csvFilePath,
+        createdAt = tripEndTimeFrom,
+        updatedAt = tripEndTimeTo
+      }
+  pure Success
+
+getUTCAt2AM :: UTCTime
+getUTCAt2AM = do
+  currentTime <- getCurrentTime
+  localTime <- utcToLocalTime <$> getCurrentTimeZone <*> pure currentTime
+  let currentDate = localDay localTime
+  let timeAt2AM = LocalTime currentDate (TimeOfDay 2 0 0)
+  let utcTimeAt2AM = localTimeToUTC utc timeAt2AM
+  return utcTimeAt2AM
+
+getUTCAt2_01AMPreviousDay :: UTCTime
+getUTCAt2_01AMPreviousDay = do
+  currentTime <- getCurrentTime
+  localTime <- utcToLocalTime <$> getCurrentTimeZone <*> pure currentTime
+  let previousDate = addDays (-1) (localDay localTime)
+  let timeAt2_01AM = LocalTime previousDate (TimeOfDay 2 1 0)
+  let utcTimeAt2_01AM = localTimeToUTC utc timeAt2_01AM
+  return utcTimeAt2_01AM
+
+-- getDriverFleetGetDriverBusRouteMapping :: ShortId DM.Merchant -> Context.City -> Text -> Text
+-- getDriverFleetGetDriverBusRouteMapping _ _ fleetOwnerId = Nothing

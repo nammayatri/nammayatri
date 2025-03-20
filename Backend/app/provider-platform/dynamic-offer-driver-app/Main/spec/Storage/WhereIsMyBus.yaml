@@ -203,3 +203,19 @@ FleetConfig:
 
   constraints:
     fleetOwnerId: PrimaryKey
+
+FleetCSV:
+  tableName: fleet_csv
+
+  fields:
+    filePath: Text
+    fleetOwnerId: Id Person
+    day: Day
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    fleetOwnerId: PrimaryKey
+    day: PrimaryKey

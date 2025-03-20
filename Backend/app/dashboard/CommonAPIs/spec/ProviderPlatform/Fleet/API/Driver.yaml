@@ -643,6 +643,47 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
 
+  - POST:
+      # Clickhouse Query on TripTransaction
+      # Group the Data by Driver ID and reduce the round trip entries by finding the round_trip_frequency
+      # Upload the Data as CSV to S3.put
+      # Store the upload time and file path in a new Table
+      endpoint: /fleet/uploadDriverBusRouteMapping
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPLOAD_DRIVER_BUS_ROUTE_MAPPING
+      helperApi:
+        - POST:
+            endpoint: /fleet/uploadDriverBusRouteMapping/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            response:
+              type: APISuccess
+
+  - GET:
+      # Fetch the Driver Bus Route Mapping CSV from S3.get
+      endpoint: /fleet/getDriverBusRouteMapping
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - day: Day
+      response:
+        type: Text
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPLOAD_DRIVER_BUS_ROUTE_MAPPING
+      helperApi:
+        - POST:
+            endpoint: /fleet/getDriverBusRouteMapping/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - day: Day
+            response:
+              type: Text
+
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
       auth: ApiAuthV2
@@ -847,7 +888,7 @@ types:
     - hours: Int
     - minutes: Int
   FleetVehicleStatus:
-    - enum: "Active, InActive, Pending, Invalid"
+    - enum: "Active, InActive, Valid, Invalid, Pending"
     - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text
