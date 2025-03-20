@@ -146,6 +146,7 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
@@ -497,6 +498,7 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Tickets
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
@@ -542,7 +544,9 @@ library
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
       API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Tickets
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Booking
@@ -640,6 +644,9 @@ library
       Domain.Types.Merchant
       Domain.Types.MerchantConfig
       Domain.Types.MerchantMessage
+      Domain.Types.MerchantOnboarding
+      Domain.Types.MerchantOnboardingStep
+      Domain.Types.MerchantOnboardingStepConfig
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantPaymentMethod
       Domain.Types.MerchantPushNotification
@@ -756,6 +763,9 @@ library
       Storage.Beam.Merchant
       Storage.Beam.MerchantConfig
       Storage.Beam.MerchantMessage
+      Storage.Beam.MerchantOnboarding
+      Storage.Beam.MerchantOnboardingStep
+      Storage.Beam.MerchantOnboardingStepConfig
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantPaymentMethod
       Storage.Beam.MerchantPushNotification
@@ -873,6 +883,9 @@ library
       Storage.Queries.Merchant
       Storage.Queries.MerchantConfig
       Storage.Queries.MerchantMessage
+      Storage.Queries.MerchantOnboarding
+      Storage.Queries.MerchantOnboardingStep
+      Storage.Queries.MerchantOnboardingStepConfig
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantPaymentMethod
       Storage.Queries.MerchantPushNotification

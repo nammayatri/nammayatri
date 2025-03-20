@@ -1,0 +1,47 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  MerchantOnboarding: Domain.Types.MerchantOnboarding
+  MerchantOnboardingAPI: Domain.Types.MerchantOnboarding
+  OnboardingType: Domain.Types.MerchantOnboarding
+
+importPackageOverrides:
+  Domain.Types.MerchantOnboarding: "rider-app"
+
+
+
+module: MerchantOnboarding
+apiPrefix: ""
+
+apis:
+  - GET: # OnboardingInfoAPI
+      endpoint:  /onboarding/{onboardingType}/info
+      name: MerchantOnboardingInfo
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+      params:
+        onboardingType: OnboardingType
+      response:
+        type: "MerchantOnboardingAPI"
+  - GET: # TicketMerchantOnboardingStart
+      endpoint: /onboarding/{onboardingType}/start
+      name: MerchantOnboardingStart
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+      params:
+        onboardingType: OnboardingType
+      response:
+        type: "MerchantOnboardingAPI"
+  - GET: # TicketMerchantOnboardingList
+      endpoint: /onboarding/list
+      name: MerchantOnboardingList
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+      response:
+        type: "[MerchantOnboarding]"
+  
+
+
+types: {}

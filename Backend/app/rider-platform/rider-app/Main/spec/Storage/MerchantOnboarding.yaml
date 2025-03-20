@@ -1,0 +1,146 @@
+imports:
+  Value: Data.Aeson
+  OnboardingType: Domain.Types.MerchantOnboarding
+  MerchantOnboardingStep: Domain.Types.MerchantOnboardingStep
+
+MerchantOnboardingStep:
+  tableName: merchant_onboarding_step
+
+  types:
+    StepStatus:
+      enum: "UNAVAILABLE,AVAILABLE,INPROGRESS,SUBMITTED,COMPLETED,REOPENED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id MerchantOnboardingStep
+    merchantOnboardingId: Text
+    stepNameIdentifier: Text
+    stepDescription: Maybe Text
+    payload: Maybe Value
+    status: StepStatus
+    isApprovalRequired: Bool
+    dependency: "[Id MerchantOnboardingStep]"
+    remarks: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  constraints:
+    id: PrimaryKey
+    merchantOnboardingId: "!SecondaryKey"
+
+  queries:
+    findByStepId:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantOnboardingId:
+      kvFunction: findAllWithKV
+      where: merchantOnboardingId
+    updateDependency:
+      kvFunction: updateOneWithKV
+      params: [dependency]
+      where: id
+    updateStepPayload:
+      kvFunction: updateOneWithKV
+      params: [payload]
+      where: id
+    updateStepStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateStepRemarks:
+      kvFunction: updateOneWithKV
+      params: [remarks]
+      where: id
+
+
+MerchantOnboarding:
+  tableName: merchant_onboarding
+
+  types:
+    OnboardingStatus:
+      enum: "INPROGRESS,COMPLETED,REJECTED"
+      derive: "HttpInstance"
+    OnboardingType:
+      enum: "TICKET_MERCHANT_ONBOARDING"
+      derive: "HttpInstance"
+    MerchantOnboardingAPI:
+      id: Id MerchantOnboarding
+      requestorId: Text
+      onboardingType: OnboardingType
+      description: Maybe Text
+      status: OnboardingStatus
+      remarks: Maybe Text
+      steps: "[MerchantOnboardingStep]"
+      createdAt: UTCTime
+      updatedAt: UTCTime
+
+  fields:
+    id : Id MerchantOnboarding
+    requestorId : Text
+    onboardingType: OnboardingType
+    description: Maybe Text
+    status: OnboardingStatus
+    remarks: Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    requestorId: PrimaryKey
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  queries:
+    findAllByRequestorId:
+      kvFunction: findAllWithKV
+      where: requestorId
+    findByRequestorIdAndOnboardingType:
+      kvFunction: findOneWithKV
+      where:
+        and: [requestorId, onboardingType]
+    updateOnboardingStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateOnboardingRemarks:
+      kvFunction: updateOneWithKV
+      params: [remarks]
+      where: id
+    updateOnboardingStatusAndRemarks:
+      kvFunction: updateOneWithKV
+      params: [status, remarks]
+      where: id
+
+
+
+MerchantOnboardingStepConfig:
+  tableName: merchant_onboarding_step_config
+
+  fields:
+    onboardingType: OnboardingType
+    stepNameIdentifier: Text
+    stepDescription: Maybe Text
+    isApprovalRequired: Bool
+    dependency: "[Text]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    onboardingType: PrimaryKey
+    stepNameIdentifier: PrimaryKey
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  queries:
+    findByStepNameIdentifier:
+      kvFunction: findOneWithKV
+      where: stepNameIdentifier
+    findByOnboardingType:
+      kvFunction: findAllWithKV
+      where: onboardingType
+    findByOnboardingTypeAndStepNameIdentifier:
+      kvFunction: findOneWithKV
+      where:
+        and: [onboardingType, stepNameIdentifier]
