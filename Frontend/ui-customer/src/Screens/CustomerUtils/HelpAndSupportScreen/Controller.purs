@@ -317,7 +317,7 @@ eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoH
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList
          updatedResolvedIssueList = getUpdatedIssueList ["CLOSED", "NOT_APPLICABLE"] apiIssueList
-         updatedOngoingIssueList =  getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] apiIssueList
+         updatedOngoingIssueList =  getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED","PENDING_EXTERNAL"] apiIssueList
      continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}, props {needIssueListApiCall = false}}
 eval _ state = update state
 
