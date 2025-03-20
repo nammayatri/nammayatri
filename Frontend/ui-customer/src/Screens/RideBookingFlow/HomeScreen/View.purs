@@ -634,7 +634,7 @@ view push state =
                          || (runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > acPopupConfig.showAfterTime)))
                         && state.props.showAcWorkingPopup
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
-                        && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
+                        && (not $ state.data.driverInfoCardState.serviceTierName `Arr.elem` [Just "Auto", Just "Bike Taxi"])
                         && state.data.currentCityConfig.enableAcViews
 
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
