@@ -212,12 +212,14 @@ library
       Domain.Action.UI.MeterRideInternal
       Domain.Action.UI.Miscellaneous
       Domain.Action.UI.MultimodalConfirm
+      Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
       Domain.Action.UI.PersonStats
+      Domain.Action.UI.Places
       Domain.Action.UI.PriceBreakup
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
@@ -435,8 +437,11 @@ library
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
+      Storage.Queries.PopularLocationExtra
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.QuoteExtra
+      Storage.Queries.RatingExtra
+      Storage.Queries.RecentLocationExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
       Storage.Queries.RouteExtra
@@ -477,8 +482,10 @@ library
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.UiRiderConfigExtra
+      Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
+      Storage.Tabular.RecentLocation
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
@@ -541,6 +548,8 @@ library
       API.Action.UI.MeterRideInternal
       API.Action.UI.Miscellaneous
       API.Action.UI.MultimodalConfirm
+      API.Action.UI.NearbyBuses
+      API.Action.UI.Places
       API.Action.UI.NearbyDrivers
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -587,6 +596,8 @@ library
       API.Types.UI.MeterRideInternal
       API.Types.UI.Miscellaneous
       API.Types.UI.MultimodalConfirm
+      API.Types.UI.NearbyBuses
+      API.Types.UI.Places
       API.Types.UI.NearbyDrivers
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
@@ -674,9 +685,11 @@ library
       Domain.Types.PersonStats
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
+      Domain.Types.PopularLocation
       Domain.Types.Quote
       Domain.Types.QuoteBreakup
       Domain.Types.Rating
+      Domain.Types.RecentLocation
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
       Domain.Types.Ride
@@ -710,6 +723,7 @@ library
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
+      Domain.Types.VehicleRouteMapping
       Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -791,9 +805,11 @@ library
       Storage.Beam.PersonStats
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
+      Storage.Beam.PopularLocation
       Storage.Beam.Quote
       Storage.Beam.QuoteBreakup
       Storage.Beam.Rating
+      Storage.Beam.RecentLocation
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
       Storage.Beam.Ride
@@ -827,6 +843,7 @@ library
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
+      Storage.Beam.VehicleRouteMapping
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
@@ -928,7 +945,10 @@ library
       Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
+      Storage.Queries.OrphanInstances.PopularLocation
       Storage.Queries.OrphanInstances.Quote
+      Storage.Queries.OrphanInstances.Rating
+      Storage.Queries.OrphanInstances.RecentLocation
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.Route
@@ -944,6 +964,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.UiRiderConfig
+      Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
@@ -959,9 +980,11 @@ library
       Storage.Queries.PersonStats
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
+      Storage.Queries.PopularLocation
       Storage.Queries.Quote
       Storage.Queries.QuoteBreakup
       Storage.Queries.Rating
+      Storage.Queries.RecentLocation
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails
       Storage.Queries.Ride
@@ -995,6 +1018,7 @@ library
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
+      Storage.Queries.VehicleRouteMapping
       Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:

@@ -1,0 +1,37 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+RecentLocation:
+  tableName: recent_location
+
+  types:
+    EntityType:
+      enum: "MULTIMODAL, BUS, METRO, NAMMA_YATRI"
+
+
+  fields:
+    id : Id RecentLocation
+    riderId : Id Person
+    entityId: Text
+    entityType: EntityType
+    routeId: Maybe Text
+    lat: Double
+    lon: Double
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+  excludedFields: [ merchantId, merchantOperatingCityId]
+  queries:
+    findAllRecentLocationsForPerson:
+      kvFunction: findAllWithDb
+      where: riderId

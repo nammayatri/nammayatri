@@ -24,6 +24,7 @@ where
 import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as FE
 import qualified Data.Map as Map
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
@@ -34,6 +35,7 @@ import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
+import qualified Domain.Types.RecentLocation as DRL
 import Environment
 import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, whenJust)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -50,14 +52,17 @@ import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
 postMultimodalInitiate ::
@@ -361,6 +366,48 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
             }
     SQJFB.create mkJourneyfeedbackForm
     JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
+    when (journey.status /= Domain.Types.Journey.COMPLETED) $ do
+      allJourneys <- QFRFSSearch.findAllByJourneyId journeyId
+      _ <- forM allJourneys $ \journeySearch -> do
+        when (journeySearch.journeyLegStatus /= Just JL.Cancelled && isJust journeySearch.routeId && journeySearch.vehicleType == FE.BUS) $ do
+          station <- QStation.findById journeySearch.fromStationId >>= fromMaybeM (InvalidRequest "Station not found")
+          uuid <- generateGUID
+          let recentLocation =
+                DRL.RecentLocation
+                  { createdAt = now,
+                    updatedAt = now,
+                    routeId = getId <$> journeySearch.routeId,
+                    entityType = DRL.BUS,
+                    entityId = journeyId.getId,
+                    id = uuid,
+                    riderId = riderId,
+                    lat = fromMaybe 0.0 station.lat,
+                    DRL.lon = fromMaybe 0.0 station.lon,
+                    merchantOperatingCityId = journeySearch.merchantOperatingCityId
+                  }
+          SQRL.create recentLocation
+      searchReq' <- QSearchRequest.findById (journey.searchRequestId)
+      case searchReq' of
+        Just searchReq -> do
+          uuid <- generateGUID
+          let recentLocation =
+                DRL.RecentLocation
+                  { createdAt = now,
+                    updatedAt = now,
+                    routeId = Nothing,
+                    entityType = DRL.MULTIMODAL,
+                    entityId = journeyId.getId,
+                    id = uuid,
+                    riderId = riderId,
+                    lat = searchReq.fromLocation.lat,
+                    DRL.lon = searchReq.fromLocation.lon,
+                    merchantOperatingCityId = searchReq.merchantOperatingCityId
+                  }
+          SQRL.create recentLocation
+        Nothing -> do
+          logError $ "Search request not found for journey id: " <> show journey.id
+          pure ()
+
   let mkJourneyLegsFeedback feedbackEntry =
         JLFB.JourneyLegsFeedbacks
           { isExperienceGood = feedbackEntry.isExperienceGood,
