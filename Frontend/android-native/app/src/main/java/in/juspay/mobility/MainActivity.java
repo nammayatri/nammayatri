@@ -313,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-            if (key != null && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY") || key.equals("TRIP_STATUS"))) {
+            if (key != null && (key.equals("TRIP_STATUS") || key.equals("DRIVER_STATUS")) && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true")) {
                 System.out.println("TRIGGERED UPDATE POLLING");
                 Context context = getApplicationContext();
                 Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);

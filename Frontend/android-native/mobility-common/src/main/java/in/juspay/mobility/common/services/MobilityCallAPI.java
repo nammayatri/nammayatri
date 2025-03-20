@@ -11,6 +11,8 @@ package in.juspay.mobility.common.services;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -31,36 +33,52 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.ConnectionPool;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.MediaType;
 import okhttp3.Response;
-
 
 import in.juspay.mobility.common.R;
 
-
 public class MobilityCallAPI {
 
+    /**
+     * Interface for async API call callbacks
+     */
+    public interface APICallback {
+        void onResponse(MobilityAPIResponse response);
+        void onError(Exception error);
+    }
+
     private static final String DEFAULT_API_METHOD = "POST";
-
-    private static boolean USE_OKHTTP = false;
-
     private static final String LOG_TAG = "MobilityAPI";
-
     private static volatile MobilityCallAPI instance;
-
+    private static boolean USE_OKHTTP = false;
+    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    
+    // Thread pool for async HTTP requests when not using OkHttp
+    private final ExecutorService executorService;
+    private final Handler mainHandler;
+    
     // OkHttpClient with Keep-Alive and Connection Pooling
     private OkHttpClient client;
 
     // Constructor to initialize OkHttpClient with Keep-Alive and Connection Pooling
     private MobilityCallAPI(Context context) {
+        // Initialize thread pool for background operations
+        executorService = Executors.newFixedThreadPool(5);
+        mainHandler = new Handler(Looper.getMainLooper());
+        
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String config = sharedPref.getString("OK_HTTP_CONFIG", "null");
         try {
@@ -74,6 +92,11 @@ public class MobilityCallAPI {
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage() != null ? e.getMessage() : "Unknown error occurred");
             USE_OKHTTP = false; // default to HttpURLConnection in case of any error
+            
+            // Initialize a basic OkHttpClient even if we're not using it by default
+            client = new OkHttpClient.Builder()
+                    .connectionPool(new ConnectionPool(5, 5, TimeUnit.MINUTES))
+                    .build();
         }
     }
 
@@ -88,6 +111,8 @@ public class MobilityCallAPI {
         return instance;
     }
 
+    // Existing synchronous methods (maintained for backward compatibility)
+    
     public MobilityAPIResponse callAPI(String endpoint) {
         return callAPI(endpoint, null, null, DEFAULT_API_METHOD, true);
     }
@@ -109,13 +134,41 @@ public class MobilityCallAPI {
                 ? callAPIWithOkHttp(endpoint, headers, requestBody, apiMethod)
                 : callAPIWithHttpURLConnection(endpoint, headers, requestBody, apiMethod, doOutput);
     }
+    
+    // New Async API methods
+    
+    public void callAPI(String endpoint, APICallback callback) {
+        callAPI(endpoint, null, null, DEFAULT_API_METHOD, true, callback);
+    }
 
+    public void callAPI(String endpoint, Map<String, String> headers, APICallback callback) {
+        callAPI(endpoint, headers, null, DEFAULT_API_METHOD, true, callback);
+    }
+
+    public void callAPI(String endpoint, Map<String, String> headers, String requestBody, APICallback callback) {
+        callAPI(endpoint, headers, requestBody, DEFAULT_API_METHOD, true, callback);
+    }
+
+    public void callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, APICallback callback) {
+        callAPI(endpoint, headers, requestBody, apiMethod, true, callback);
+    }
+
+    public void callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput, APICallback callback) {
+        if (USE_OKHTTP) {
+            callAPIWithOkHttpAsync(endpoint, headers, requestBody, apiMethod, callback);
+        } else {
+            callAPIWithHttpURLConnectionAsync(endpoint, headers, requestBody, apiMethod, doOutput, callback);
+        }
+    }
+
+    // Sync implementations
+    
     private MobilityAPIResponse callAPIWithOkHttp(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
         MobilityAPIResponse response = new MobilityAPIResponse();
         try {
             Request.Builder requestBuilder = new Request.Builder()
                     .url(endpoint)
-                    .method(apiMethod, requestBody != null ? RequestBody.create(requestBody, MediaType.get("application/json; charset=utf-8")) : null);
+                    .method(apiMethod, requestBody != null ? RequestBody.create(requestBody, JSON) : null);
 
             if (headers != null) {
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -152,7 +205,77 @@ public class MobilityCallAPI {
             return defaultResp;
         }
     }
+    
+    // Async implementations
+    
+    private void callAPIWithOkHttpAsync(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, APICallback callback) {
+        try {
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(endpoint)
+                    .method(apiMethod, requestBody != null ? RequestBody.create(requestBody, JSON) : null);
 
+            if (headers != null) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                    requestBuilder.addHeader(entry.getKey(), entry.getValue());
+                }
+            }
+
+            client.newCall(requestBuilder.build()).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    Log.e(LOG_TAG, "API call failed: " + e.getMessage());
+                    // Deliver the callback on the main thread
+                    mainHandler.post(() -> callback.onError(e));
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    try {
+                        MobilityAPIResponse apiResponse = new MobilityAPIResponse();
+                        apiResponse.setStatusCode(response.code());
+                        apiResponse.setResponseBody(response.body() != null ? response.body().string() : "{}");
+                        
+                        // Deliver the callback on the main thread
+                        mainHandler.post(() -> callback.onResponse(apiResponse));
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Error processing response: " + e.getMessage());
+                        mainHandler.post(() -> callback.onError(e));
+                    } finally {
+                        response.close();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error setting up API call: " + e.getMessage());
+            mainHandler.post(() -> callback.onError(e));
+        }
+    }
+
+    private void callAPIWithHttpURLConnectionAsync(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput, APICallback callback) {
+        executorService.execute(() -> {
+            MobilityAPIResponse response = new MobilityAPIResponse();
+            try {
+                HttpURLConnection connection = callAPIConnection(endpoint, headers, requestBody, apiMethod, doOutput);
+                int responseCode = connection.getResponseCode();
+
+                response.setStatusCode(responseCode);
+                response.setResponseBody(apiResponseBuilder(getResponseStream(connection)));
+                
+                // Deliver callback on main thread
+                mainHandler.post(() -> callback.onResponse(response));
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "Error in async HTTP request: " + e.getMessage());
+                response.setStatusCode(-1);
+                response.setResponseBody(e.getMessage() != null ? e.getMessage() : "{}");
+                
+                // Deliver error on main thread
+                mainHandler.post(() -> callback.onError(e));
+            }
+        });
+    }
+    
+    // Static helper methods
+    
     public static InputStream getResponseStream(HttpURLConnection connection) throws IOException {
         int responseCode = connection.getResponseCode();
         InputStream responseStream;
@@ -181,7 +304,6 @@ public class MobilityCallAPI {
         connection.setDoOutput(doOutput);
 
         if (requestBody != null) {
-
             OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
             writer.write(requestBody);
             writer.flush();
@@ -238,10 +360,37 @@ public class MobilityCallAPI {
             throw new RuntimeException(e);
         }
     }
-
+    
+    /**
+     * Async version of multipart API call
+     */
+    public static void callMultipartAPIAsync(
+            Context context,
+            String filePath,
+            String fileField,
+            String uploadUrl,
+            String fileType,
+            Map<String, String> formData,
+            String httpMethod,
+            APICallback callback
+    ) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
+        
+        executor.execute(() -> {
+            try {
+                MobilityAPIResponse response = callMultipartAPI(
+                    context, filePath, fileField, uploadUrl, fileType, formData, httpMethod);
+                
+                handler.post(() -> callback.onResponse(response));
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "Error in async multipart request: " + e.getMessage());
+                handler.post(() -> callback.onError(e));
+            }
+        });
+    }
 
     public static Map<String, String> getBaseHeaders(Context context) {
-
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
@@ -271,9 +420,7 @@ public class MobilityCallAPI {
         } catch (Exception e) {
             return "This happened - " + e;
         }
-
     }
-
 
     private static void addFileField(DataOutputStream outputStream, String fileField, String filePath, String fileType, String boundary) throws IOException {
         File file = new File(filePath);
@@ -321,5 +468,4 @@ public class MobilityCallAPI {
         outputStream.writeBytes("\r\n");
         outputStream.writeBytes(fieldValue + "\r\n");
     }
-
 }

@@ -41,17 +41,17 @@ public class BootUpReceiver extends BroadcastReceiver {
                     } else {
                         context.startService(locationUpdateService);
                     }
-                }
-                if (Settings.canDrawOverlays(context)) {
-                    try {
-                        context.startService(widgetReloadService);
-                        Handler handler = new Handler();
-                        handler.postDelayed(() -> {
-                            context.startActivity(restartIntent);
-                            Utils.minimizeApp(context);
-                        }, 5000);
-                    } catch (Exception e) {
-                        Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                    if (Settings.canDrawOverlays(context)) {
+                        try {
+                            context.startService(widgetReloadService);
+                            Handler handler = new Handler();
+                            handler.postDelayed(() -> {
+                                    context.startActivity(restartIntent);
+                                    Utils.minimizeApp(context);
+                                }, 5000);
+                            } catch (Exception e) {
+                            Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                        }
                     }
                 }
             }

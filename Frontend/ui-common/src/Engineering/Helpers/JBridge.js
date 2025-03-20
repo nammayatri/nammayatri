@@ -2105,7 +2105,7 @@ export const shareImageMessage = function (message) {
 }
 
 export const showInAppNotification = function (payload) {
-  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))
+  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))()
 }
 
 export const openWhatsAppSupport = function (contactNumber) {
@@ -2974,7 +2974,7 @@ export const initHVSdk = function (accessToken, workFLowId, transactionId, useLo
       inputJson: inputJson,
       callback: callback
     };
-    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload));
+    window.JOS.emitEvent("java","onEvent",JSON.stringify(jsonObjectPayload))();
   }
   catch (err) {
     console.error(err);

@@ -334,6 +334,7 @@ checkRideAndInitiate event driverInfoResponse = do
     case driverInfoResponse of
       Just (Right (GetDriverInfoResp driverInfoResp)) -> do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
+        checkStatusAndStartLocationUpdates
         pure (Tuple Nothing driverInfoResp.onRide)
       _ -> do
         GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
