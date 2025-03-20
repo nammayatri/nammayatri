@@ -66,7 +66,6 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 16 16
     , background Color.white900
     , onBackPressed push $ const BackPressed
     ]
@@ -359,6 +358,5 @@ horizontalLine =
     [ height $ V 1
     , width MATCH_PARENT
     , background Color.greyBackDarkColor
-    , margin $ MarginBottom 15
     ]
     []
