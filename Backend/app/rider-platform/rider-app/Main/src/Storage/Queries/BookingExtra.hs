@@ -361,3 +361,17 @@ updateJourneyLegStatus status bookingId = do
     [ Se.Set BeamB.journeyLegStatus status
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findAllByRiderIdAndStatusAndMOCId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> Id DMOC.MerchantOperatingCity -> m [Booking]
+findAllByRiderIdAndStatusAndMOCId (Id personId) status (Id mocId) = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq personId,
+          Se.Is BeamB.status $ Se.Eq status,
+          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just mocId),
+          Se.Is BeamB.journeyId $ Se.Not $ Se.Eq Nothing
+        ]
+    ]
+    (Se.Desc BeamB.createdAt)
+    (Just 10)
+    Nothing
