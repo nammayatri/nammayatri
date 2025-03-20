@@ -62,6 +62,17 @@ findByStopCode ::
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
 findByStopCode stopCode integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.stopCode $ Se.Eq stopCode, Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
+findByStopCodes ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Prelude.Text] -> [Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig] -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByStopCodes stopCode integratedBppConfigId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.stopCode $ Se.In stopCode,
+          Se.Is Beam.integratedBppConfigId $ Se.In (Kernel.Types.Id.getId <$> integratedBppConfigId)
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
 findByPrimaryKey routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
 

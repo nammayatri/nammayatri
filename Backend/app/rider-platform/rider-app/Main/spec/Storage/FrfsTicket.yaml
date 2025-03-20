@@ -796,6 +796,11 @@ RouteStopMapping:
       kvFunction: findAllWithKV
       where:
         and: [stopCode, integratedBppConfigId]
+    findByStopCodes:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [stopCode, integratedBppConfigId]
     findByRouteCodes:
       kvFunction: findAllWithKV
       where:
