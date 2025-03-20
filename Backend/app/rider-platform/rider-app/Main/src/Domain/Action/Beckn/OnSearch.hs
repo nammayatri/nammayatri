@@ -32,6 +32,8 @@ module Domain.Action.Beckn.OnSearch
     WaitingChargesInfo (..),
     onSearch,
     validateRequest,
+    deliveryVariants,
+    ambulanceVariants,
   )
 where
 
@@ -330,8 +332,6 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         Delivery -> filter isDeliveryEstimate _estimateInfo
         _ -> []
 
-    ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
-
     isDeliveryEstimate :: EstimateInfo -> Bool
     isDeliveryEstimate einfo = case einfo.tripCategory of
       DT.Delivery _ -> True
@@ -367,6 +367,12 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
               _ -> OneWay
         when (actualRiderPreferredOption == InterCity && searchRequest.riderPreferredOption /= actualRiderPreferredOption) $ QSearchReq.updateRiderPreferredOption InterCity quote.requestId
       _ -> pure ()
+
+ambulanceVariants :: [VehicleVariant]
+ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
+
+deliveryVariants :: [VehicleVariant]
+deliveryVariants = [DELIVERY_LIGHT_GOODS_VEHICLE, DELIVERY_TRUCK_MINI, DELIVERY_TRUCK_SMALL, DELIVERY_TRUCK_MEDIUM, DELIVERY_TRUCK_LARGE, DELIVERY_TRUCK_ULTRA_LARGE]
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
