@@ -2,6 +2,8 @@ module Domain.Action.UI.PriceBreakup (getPriceBreakup, getMeterRidePrice) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.PriceBreakup
+import qualified Data.List.NonEmpty as NE
+import qualified Domain.Action.Internal.BulkLocUpdate as BLoc
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.FareCalculator as FC
 import Domain.Types
@@ -15,7 +17,6 @@ import qualified EulerHS.Prelude as Prelude
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -59,20 +60,15 @@ getMeterRidePrice ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.PriceBreakup.MeterRidePriceReq ->
     Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes
   )
-getMeterRidePrice (Nothing, _, _) rideId = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
-getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId = do
+getMeterRidePrice (Nothing, _, _) rideId _ = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
+getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  traveledDistance <-
-    if ride.status `elem` [Domain.Types.Ride.COMPLETED, Domain.Types.Ride.CANCELLED]
-      then do
-        pure ride.traveledDistance
-      else do
-        prevSnapToRoadState :: LU.SnapToRoadState <-
-          Redis.safeGet (LU.onRideSnapToRoadStateKey driverId)
-            <&> fromMaybe (LU.SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
-        pure prevSnapToRoadState.distanceTravelled
+  let locUpdates = NE.fromList req.locationUpdates
+  void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
+  traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide)
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
   maybe
