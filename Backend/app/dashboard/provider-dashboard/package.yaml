@@ -68,6 +68,7 @@ dependencies:
   - record-hasfield
   - text
   - time
+  - lens
   - servant-server
   - servant-client
   - persistent
@@ -90,6 +91,7 @@ dependencies:
   - shared-services
   - beam-core
   - sequelize
+  - geohash
 
 ghc-options:
   - -Wall
@@ -131,6 +133,7 @@ library:
     - special-zone-a
     - shared-services
     - special-zone-a
+    - location-updates
 
 executables:
   provider-dashboard-exe:

@@ -21,6 +21,7 @@ where
 import qualified "lib-dashboard" API.Dashboard as Dashboard
 import qualified API.Exotel as Exotel
 import qualified API.Fleet.Registration as FReg
+import qualified API.MeterRide as MeterRide
 import qualified API.ProviderPlatform as BPP
 import qualified API.SpecialZone as SpecialZone
 import qualified Data.ByteString as BS
@@ -42,6 +43,7 @@ type MainAPI =
   Dashboard.API
     :<|> BPP.API
     :<|> Exotel.API
+    :<|> MeterRide.API
     :<|> FReg.API
     :<|> SpecialZone.API
 
@@ -57,6 +59,7 @@ mainServer =
   Dashboard.handler
     :<|> BPP.handler
     :<|> Exotel.handler
+    :<|> MeterRide.handler
     :<|> FReg.handler
     :<|> SpecialZone.handler
 
