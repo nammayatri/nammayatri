@@ -116,6 +116,9 @@ updateIsCancelled (Id searchRequestId) isDeleted = do
     [Se.Set BeamSR.isDeleted isDeleted]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
 
+findAllById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m [SearchRequest]
+findAllById srids = findAllWithKV [Se.Is BeamSR.id $ Se.In srids]
+
 updateStartTime :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> UTCTime -> m ()
 updateStartTime (Id searchRequestId) startTime = do
   updateOneWithKV
