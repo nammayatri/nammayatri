@@ -160,6 +160,7 @@
           jq
           gdal
           postgis
+          zbar
           newman
           config.mission-control.wrapper
           gtfstidy
