@@ -262,7 +262,9 @@ fleetOwnerVerify req = do
               >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
           mobileNumberHash <- getDbHash req.mobileNumber
           person <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR] >>= fromMaybeM (PersonNotFound req.mobileNumber)
-          void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
+          -- currently we don't create fleeetOwnerInfo for operator
+          when (person.role == DP.FLEET_OWNER) $
+            void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
           pure Success
         Nothing -> throwError InvalidAuthData
     _ -> throwError InvalidAuthData
