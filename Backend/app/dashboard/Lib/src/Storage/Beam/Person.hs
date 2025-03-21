@@ -36,7 +36,9 @@ data PersonT f = PersonT
     receiveNotification :: B.C f (Maybe Bool),
     verified :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    rejectionReason :: B.C f (Maybe Text),
+    rejectedAt :: B.C f (Maybe Time.UTCTime)
   }
   deriving (Generic, B.Beamable)
 

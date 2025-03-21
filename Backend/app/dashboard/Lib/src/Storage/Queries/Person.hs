@@ -15,6 +15,7 @@
 
 module Storage.Queries.Person where
 
+import API.Types.ProviderPlatform.Management.Endpoints.Account (FleetOwnerStatus (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Database.Beam as B
@@ -271,3 +272,48 @@ instance ToTType' BeamP.Person Person.Person where
         mobileNumberHash = mobileNumber.hash,
         ..
       }
+
+findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset ::
+  (BeamFlow m r, EncFlow m r) =>
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe FleetOwnerStatus ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Person]
+findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset = do
+  mbMobileNumberDbHash <- traverse getDbHash mbMobileNumber
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Or
+              [ Se.Is BeamP.verified $ Se.Eq (Just False),
+                Se.Is BeamP.verified $ Se.Eq Nothing
+              ]
+          ]
+            <> [Se.Is BeamP.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate]
+            <> [Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate]
+            <> [Se.Is BeamP.mobileNumberHash $ Se.Eq (fromJust mbMobileNumberDbHash) | isJust mbMobileNumber]
+            <> [Se.Is BeamP.rejectedAt $ checkOfNull Nothing | isJust mbStatus]
+        )
+    ]
+    (Se.Asc BeamP.createdAt)
+    (Just $ fromMaybe 100 mbLimit)
+    (Just $ fromMaybe 0 mbOffset)
+  where
+    checkOfNull =
+      case mbStatus of
+        Just Approved -> Se.Eq
+        _ -> Se.Not . Se.Eq
+
+softDeletePerson :: BeamFlow m r => Id Person -> Maybe Text -> m ()
+softDeletePerson personId mbReason = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.verified $ Just False,
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.rejectionReason mbReason,
+      Se.Set BeamP.rejectedAt $ Just now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]

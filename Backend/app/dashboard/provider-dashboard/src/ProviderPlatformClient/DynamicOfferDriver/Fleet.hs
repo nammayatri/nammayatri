@@ -35,15 +35,15 @@ import "lib-dashboard" Tools.Metrics
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
     fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerRegister :: Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
+    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
   }
 
 newtype FleetAPIs = FleetAPIs
   { registration :: FleetRegistrationAPIs
   }
 
-mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
-mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
+mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Bool -> Text -> FleetAPIs
+mkDynamicOfferDriverAppFleetAPIs merchantId city _enabled token = do
   let registration = FleetRegistrationAPIs {..}
 
   -- TODO rename to operations
@@ -65,4 +65,4 @@ callDynamicOfferDriverAppFleetApi ::
   City.City ->
   (FleetAPIs -> b) ->
   c
-callDynamicOfferDriverAppFleetApi merchantId city = callServerAPI @_ @m @r DRIVER_OFFER_BPP_MANAGEMENT (mkDynamicOfferDriverAppFleetAPIs merchantId city) "callDynamicOfferDriverAppFleetApi"
+callDynamicOfferDriverAppFleetApi merchantId city = callServerAPI @_ @m @r DRIVER_OFFER_BPP_MANAGEMENT (mkDynamicOfferDriverAppFleetAPIs merchantId city True) "callDynamicOfferDriverAppFleetApi"
