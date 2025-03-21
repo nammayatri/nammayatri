@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Person: Domain.Types.Person
   FleetType : Domain.Types.FleetType
+  Text: Kernel.Types.Common
 
 FleetOwnerInformation:
   tableName: fleet_owner_information
@@ -14,6 +15,9 @@ FleetOwnerInformation:
     gstNumber: Maybe Text
     fleetType: FleetType
     gstImageId : Maybe Text
+    referredByOperatorId: Maybe Text
+  sqlType:
+    referredByOperatorId: character varying (36)
   excludedFields: [merchantOperatingCityId]
   types:
     FleetType:
@@ -34,4 +38,8 @@ FleetOwnerInformation:
     updateFleetOwnerGstNumberAndEnabledStatus:
       kvFunction: updateWithKV
       params: [gstNumber, enabled, updatedAt]
+      where: fleetOwnerPersonId
+    updateReferredByOperatorId:
+      kvFunction: updateOneWithKV
+      params: [referredByOperatorId]
       where: fleetOwnerPersonId

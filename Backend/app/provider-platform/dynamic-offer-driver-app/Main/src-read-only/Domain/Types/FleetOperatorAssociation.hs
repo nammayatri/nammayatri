@@ -1,24 +1,22 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.DriverReferral where
+module Domain.Types.FleetOperatorAssociation where
 
 import Data.Aeson
-import qualified Data.Text
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data DriverReferral = DriverReferral
-  { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    dynamicReferralCode :: Kernel.Prelude.Maybe Data.Text.Text,
-    dynamicReferralCodeValidTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    linkedAt :: Kernel.Prelude.UTCTime,
-    referralCode :: Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral,
-    role :: Domain.Types.Person.Role,
+data FleetOperatorAssociation = FleetOperatorAssociation
+  { associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    fleetOwnerId :: Kernel.Prelude.Text,
+    id :: Kernel.Types.Id.Id Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation,
+    isActive :: Kernel.Prelude.Bool,
+    operatorId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

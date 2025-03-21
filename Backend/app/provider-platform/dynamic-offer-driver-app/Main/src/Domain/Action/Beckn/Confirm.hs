@@ -139,7 +139,7 @@ handler merchant req validatedQuote = do
       dynamicReferralCode <-
         case driverReferral of
           Nothing -> do
-            res <- DUR.generateReferralCode (driver.id, driver.merchantId, booking.merchantOperatingCityId)
+            res <- DUR.generateReferralCode (Just driver.role) (driver.id, driver.merchantId, booking.merchantOperatingCityId)
             pure res.dynamicReferralCode
           Just dr -> pure dr.dynamicReferralCode
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)

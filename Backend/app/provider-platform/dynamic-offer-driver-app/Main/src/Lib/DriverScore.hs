@@ -267,6 +267,8 @@ createDriverStat currency distanceUnit driverId = do
             validCustomerCancellationTagCount = 0,
             validCancellationTagsStatsStartDate = Just now,
             updatedAt = now,
+            numDriversOnboarded = 0,
+            numFleetsOnboarded = 0,
             safetyPlusEarnings = 0.0,
             safetyPlusRideCount = 0
           }

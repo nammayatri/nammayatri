@@ -16,10 +16,13 @@ module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
+import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.FleetOperatorAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -37,10 +40,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -78,7 +84,8 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     gstNumber :: Maybe Text,
     panImageId1 :: Maybe Text,
     panImageId2 :: Maybe Text,
-    gstCertificateImage :: Maybe Text
+    gstCertificateImage :: Maybe Text,
+    operatorReferralCode :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -102,24 +109,61 @@ fleetOwnerRegister req = do
       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
   let personAuth = buildFleetOwnerAuthReq merchant.id req
-  person <-
-    QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
-      >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber) return
-  fork "Creating Pan Info for Fleet Owner" $ do
-    createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
-  fork "Uploading GST Image" $ do
-    whenJust req.gstCertificateImage $ \gstImage -> do
-      let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
-      image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
-      QFOI.updateGstImageId (Just image.imageId.getId) person.id
-  return $ FleetOwnerRegisterRes {personId = person.id.getId}
+  personOpt <- QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+  case personOpt of
+    Just pData -> throwError $ UserAlreadyExists pData.id.getId
+    Nothing -> do
+      maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferralCodeForFleet
+      fork "Creating Pan Info for Fleet Owner" $ do
+        createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
+      fork "Uploading GST Image" $ do
+        whenJust req.gstCertificateImage $ \gstImage -> do
+          let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
+          image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
+          QFOI.updateGstImageId (Just image.imageId.getId) person.id
+      return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber = do
+getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
+getOperatorIdFromReferralCode Nothing = return Nothing
+getOperatorIdFromReferralCode (Just refCode) = do
+  let referralReq = FleetReferralReq {value = refCode}
+  result <- isValidReferralForRole referralReq DP.OPERATOR
+  case result of
+    SuccessCode val -> return $ Just val
+
+makeFleetOperatorAssociation :: (MonadFlow m) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Maybe UTCTime -> m FleetOperatorAssociation
+makeFleetOperatorAssociation merchantId merchantOpCityId fleetOwnerId operatorId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    FleetOperatorAssociation
+      { id = id,
+        operatorId = operatorId,
+        isActive = True,
+        fleetOwnerId = fleetOwnerId,
+        associatedOn = Just now,
+        associatedTill = end,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOpCityId
+      }
+
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber mbReferredOperatorId mbIsGenerateRefEntry = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
-  createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
+  createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber mbReferredOperatorId
+  whenJust mbReferredOperatorId $ \referredOperatorId -> do
+    fleetOperatorAssData <- makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    QFOA.create fleetOperatorAssData
+    incrementFleetOwnerOnboardedCountByOperator (Id referredOperatorId)
+  when (mbIsGenerateRefEntry == Just True) $ do
+    void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
@@ -130,8 +174,8 @@ createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just pa
   void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Flow ()
-createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber mbReferredByOperatorId = do
   now <- getCurrentTime
   let fleetType = fromMaybe NORMAL_FLEET mbFleetType
       fleetOwnerInfo =
@@ -144,6 +188,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
             verified = False,
             gstNumber = mbGstNumber,
             gstImageId = Nothing,
+            referredByOperatorId = mbReferredByOperatorId,
             createdAt = now,
             updatedAt = now
           }
@@ -216,7 +261,7 @@ fleetOwnerVerify req = do
             QMerchant.findByShortId merchantId
               >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
           mobileNumberHash <- getDbHash req.mobileNumber
-          person <- QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER >>= fromMaybeM (PersonNotFound req.mobileNumber)
+          person <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR] >>= fromMaybeM (PersonNotFound req.mobileNumber)
           void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
           pure Success
         Nothing -> throwError InvalidAuthData
@@ -231,3 +276,17 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+incrementFleetOwnerOnboardedCountByOperator :: Id DP.Person -> Flow ()
+incrementFleetOwnerOnboardedCountByOperator referredOperatorId = do
+  let lockKey = "Fleet:Referral:Increment:" <> getId referredOperatorId
+  Redis.withWaitAndLockRedis lockKey 10 5000 $ do
+    mbDriverStats <- QDriverStats.findByPrimaryKey referredOperatorId
+    case mbDriverStats of
+      Nothing -> do
+        logTagError "INCREMENT_FLEET_COUNT" ("DriverStats not found for operator " <> show referredOperatorId)
+        throwError $ InternalError "DriverStats not found for operator"
+      Just driverStats -> do
+        let newCount = driverStats.numFleetsOnboarded + 1
+        QDriverStats.updateNumFleetsOnboarded newCount referredOperatorId
+        logTagInfo "INCREMENT_FLEET_COUNT" $ "Successfully incremented fleet owner count for " <> show referredOperatorId <> " to " <> show newCount

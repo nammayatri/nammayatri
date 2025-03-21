@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -18,6 +19,7 @@ data FleetOwnerInformation = FleetOwnerInformation
     gstImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gstNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verified :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
