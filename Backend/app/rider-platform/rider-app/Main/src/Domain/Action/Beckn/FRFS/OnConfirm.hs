@@ -18,8 +18,11 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Aeson
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Lazy as BL
 import Data.HashMap.Strict
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
@@ -71,6 +74,7 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
+import qualified Utils.QRCode.Scanner as QRScanner
 import Web.JWT hiding (claims)
 
 validateRequest :: DOrder -> DIBC.PlatformType -> Flow (Merchant, Booking.FRFSTicketBooking)
@@ -230,13 +234,13 @@ mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
   (_, status_) <- Utils.getTicketStatus booking dTicket
-
+  processedQrData <- processQRData dTicket.qrData
   return
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
         Ticket.id = ticketId,
         Ticket.description = dTicket.description,
-        Ticket.qrData = dTicket.qrData,
+        Ticket.qrData = processedQrData,
         Ticket.qrRefreshAt = dTicket.qrRefreshAt,
         Ticket.riderId = booking.riderId,
         Ticket.status = status_,
@@ -250,6 +254,41 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.updatedAt = now,
         Ticket.isTicketFree = Just isTicketFree
       }
+
+processQRData :: Text -> Flow Text
+processQRData qrData = do
+  if isBase64Image qrData
+    then do
+      scanResult <- liftIO $ scanQRFromBase64 qrData
+      case scanResult of
+        Right extractedText -> pure extractedText
+        Left err -> do
+          logError $ "Failed to process QR image: " <> err
+          pure qrData -- fallback to original qrData if processing fails
+    else pure qrData
+
+-- | Check if text likely represents a base64 encoded image
+isBase64Image :: Text -> Bool
+isBase64Image txt =
+  let prefix = T.take 50 txt
+   in (T.isPrefixOf "data:image/" prefix && T.isInfixOf ";base64," prefix)
+        || any -- data URI format
+        -- Check for common image format headers in base64
+          (`T.isPrefixOf` prefix)
+          ["iVBORw0", "/9j/", "R0lGOD", "UklGR", "PD94bW"] -- PNG, JPEG, GIF, WEBP, XML SVG headers
+
+scanQRFromBase64 :: Text -> IO (Either Text Text)
+scanQRFromBase64 txt = do
+  let base64Content = case T.splitOn ";base64," txt of
+        [_, content] -> content
+        _ -> txt -- Not a data URI, use as is
+  case B64.decode (TE.encodeUtf8 base64Content) of
+    Left _ -> pure $ Left "Invalid base64 encoding"
+    Right imgBytes -> do
+      result <- QRScanner.scanQRCode (BL.fromStrict imgBytes)
+      case result of
+        Nothing -> pure $ Left "No QR code found in image"
+        Just text -> pure $ Right text
 
 mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Int -> Flow TC.TransitObject
 mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex = do

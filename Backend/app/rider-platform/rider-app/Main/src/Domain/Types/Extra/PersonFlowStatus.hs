@@ -35,7 +35,7 @@ data FlowStatus
       { list :: [SRB.BookingAPIEntity]
       }
   | ACTIVE_JOURNEYS
-      { journeyIds :: [Id DJ.Journey]
+      { journeys :: [DJ.Journey]
       }
   | FEEDBACK_PENDING SRB.BookingAPIEntity
   deriving (Show, Generic)
