@@ -4081,7 +4081,7 @@ pickupLocationView push state =
                         , padding $ PaddingBottom 5
                         ] <> FontStyle.body1 TypoGraphy
                       , textView $
-                        [ text $ getString $ if showCollect then COLLECT_ (show totalEarningPending) else EARN_ (show youGet)
+                        [ text $ getString $ if showCollect then COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
                         , color if showCollect then Color.white900 else Color.blue900
                         , gravity CENTER
                         ] <> FontStyle.body1 TypoGraphy

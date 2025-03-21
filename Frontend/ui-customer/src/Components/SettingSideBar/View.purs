@@ -51,6 +51,7 @@ import Data.String as DS
 import Mobility.Prelude
 import Debug
 import Engineering.Helpers.Utils (getCityFromString)
+import Data.Int (fromNumber)
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -338,7 +339,7 @@ settingsMenuView item push  =
           , padding $ PaddingBottom 5
           ] <> FontStyle.body1 TypoGraphy
         , textView $
-          [ text $ getString $ STR.EARN_ (show $ fromMaybe 0.0 referralPayoutConfig.youGet)
+          [ text $ getString $ STR.EARN_ (show $ show $ fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.youGet)
           , color Color.blue900
           , gravity CENTER
           -- , padding $ PaddingBottom 3

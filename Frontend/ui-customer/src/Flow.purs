@@ -2654,7 +2654,7 @@ homeScreenFlow = do
       modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode }})
       case gState.globalFlowCache.profileResp of
         Nothing -> pure unit
-        Just (GetProfileRes resp) -> modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, existingVpa = resp.payoutVpa, referreeCode = fromMaybe "" resp.referralCode, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}})
+        Just (GetProfileRes resp) -> modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, existingVpa = resp.payoutVpa, referreeCode = fromMaybe "" resp.referralCode, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}, props{showUPIPopUp = (fromMaybe 0.0 resp.referralAmountPaid) - ((fromMaybe 0.0 resp.referralEarnings) + (fromMaybe 0.0 resp.referredByEarnings)) /= 0.0 && isNothing resp.payoutVpa}})
       referralPayoutScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (APISuccessResp res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
