@@ -1,0 +1,10 @@
+imports:
+module: DeletedPerson
+types: {}
+apis:
+  - POST:
+      endpoint: /deleted/person
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
