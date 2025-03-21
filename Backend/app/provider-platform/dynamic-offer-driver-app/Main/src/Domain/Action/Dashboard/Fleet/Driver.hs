@@ -13,7 +13,9 @@
 -}
 
 module Domain.Action.Dashboard.Fleet.Driver
-  ( postDriverFleetAddVehicle,
+  ( getDriverFleetAccessList,
+    postDriverFleetAccessSelect,
+    postDriverFleetAddVehicle,
     postDriverFleetAddRCWithoutDriver,
     getDriverFleetGetAllVehicle,
     getDriverFleetGetAllDriver,
@@ -120,13 +122,13 @@ import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
+import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
-import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
@@ -1495,7 +1497,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
       ( \unprocessedEntities (driver, driverMobileNumber, vehicleNumber, tripPlannerRequests) -> do
           try @_ @SomeException
             ( WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False -- TODO :: Make this dynamic by adding the force_assign field in CSV.
-              -- void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName -- TODO :: Capture Badge Name from CSV
+            -- void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName -- TODO :: Capture Badge Name from CSV
             )
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to link vehicle to the Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
@@ -1707,3 +1709,9 @@ postDriverFleetGetNearbyDrivers merchantShortId _ _ req = do
     mkRideStatus = \case
       TR.INPROGRESS -> Common.ON_RIDE
       _ -> Common.ON_PICKUP
+
+getDriverFleetAccessList :: ShortId DM.Merchant -> Context.City -> Flow Common.FleetOwnerListRes
+getDriverFleetAccessList _ _ = throwError $ InternalError "Unimplemented!"
+
+postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Bool -> Flow APISuccess
+postDriverFleetAccessSelect _ _ _ _ _ = throwError $ InternalError "Unimplemented!"

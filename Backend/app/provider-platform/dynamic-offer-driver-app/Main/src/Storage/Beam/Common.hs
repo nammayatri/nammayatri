@@ -26,9 +26,9 @@ import Storage.Beam.DriverLicense
 import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
+import Storage.Beam.FleetBadge
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
-import Storage.Beam.FleetBadge
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
 import Storage.Beam.InterCityTravelCities

@@ -3,14 +3,14 @@
 
 module Storage.Queries.FleetBadgeExtra where
 
+import Data.Either
 import qualified Data.Text as T
 import qualified Database.Beam as B
+import Domain.Types.FleetBadge
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Data.Either
-import Domain.Types.FleetBadge
-import Domain.Types.Person
-import Domain.Types.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error

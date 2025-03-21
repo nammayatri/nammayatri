@@ -35,8 +35,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
-import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetBadge as QFB
+import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTS

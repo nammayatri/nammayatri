@@ -18,6 +18,7 @@ module API.ProviderPlatform.DynamicOfferDriver.InternalAuth
 where
 
 import Data.Aeson as DA
+import qualified Domain.Types.FleetMemberAssociation as DFMA
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -25,7 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.CommonInstances ()
-import qualified Storage.CachedQueries.FleetMemberAssociation as FMA
+import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
 import "lib-dashboard" Tools.Error
 
@@ -52,8 +53,11 @@ instance FromJSON InternalAuthResp where
 
 getFleetOwnerId :: Text -> Flow Text
 getFleetOwnerId memberPersonId = do
-  fleetMemberAssociation <- FMA.findByPrimaryKey memberPersonId
-  pure $ maybe memberPersonId (.fleetOwnerId) fleetMemberAssociation
+  FMA.findAllActiveByfleetMemberId memberPersonId True
+    >>= \case
+      [] -> return memberPersonId
+      [DFMA.FleetMemberAssociation {..}] -> return fleetOwnerId
+      _ -> throwError AccessDenied
 
 internalAuthHandler ::
   Maybe Text ->
