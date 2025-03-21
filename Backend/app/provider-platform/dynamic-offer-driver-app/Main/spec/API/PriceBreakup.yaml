@@ -9,6 +9,9 @@ types:
   MeterRidePriceRes:
     fare: HighPrecMoney
     distance: HighPrecMeters
+    tripStartTime: Maybe UTCTime
+    status: Maybe Domain.Types.Ride.RideStatus
+
 apis:
   - GET:
       endpoint: /meterRide/price
