@@ -152,7 +152,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
     Just x | x.driverId /= driverId -> throwError (VehicleLinkedToAnotherDriver vehicleNumber)
     _ -> pure ()
   (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
-  tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus driverId
+  tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus (Just 1) driverId
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")

@@ -22,7 +22,9 @@ import Kernel.Utils.Time
 
 buildSuccessRC :: (MonadIO m) => RCVerificationRequest -> Text -> UTCTime -> m VerificationResponse
 buildSuccessRC IdfyRequest {..} request_id now = do
-  idNumberRnd <- ("KA-" <>) . show <$> getRandomInRange (10000000, 99999999 :: Int)
+  let rcNumber =
+        case _data of
+          RCVerificationData {..} -> rc_number
   let result =
         RCVerificationOutput
           { avg_gross_vehicle_weight = Nothing,
@@ -43,7 +45,7 @@ buildSuccessRC IdfyRequest {..} request_id now = do
             permit_validity_upto = Just "3000-01-01",
             puc_validity_upto = Just "1900-01-01",
             registration_date = Just "2021-12-28",
-            registration_number = Just idNumberRnd,
+            registration_number = Just rcNumber,
             rto_name = Nothing,
             status = Just "id_found",
             vehicle_class = Just "3WT_CAB",

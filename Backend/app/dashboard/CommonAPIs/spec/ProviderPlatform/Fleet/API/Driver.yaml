@@ -769,6 +769,7 @@ types:
   TripPlannerReq:
     - driverId: Id Driver
     - vehicleNumber: Text
+    - isForceAssign: Maybe Bool
     - trips: [TripDetails]
     - derive: "'HideSecrets"
   TripTransactionDetail:
