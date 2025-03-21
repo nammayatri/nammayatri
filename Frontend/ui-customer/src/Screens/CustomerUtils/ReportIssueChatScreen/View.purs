@@ -290,7 +290,7 @@ submitView push state =
                 [ imageView
                     [ width $ V 36
                     , height $ V 36
-                    , margin (MarginRight 8)
+                    , margin $ Margin 40 0 8 0
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_add_image"
                     ]
                 , textView $ 
@@ -323,7 +323,7 @@ submitView push state =
                 [ imageView
                     [ width $ V 36
                     , height $ V 36
-                    , margin $ MarginRight 8
+                    , margin $ Margin 35 0 8 0
                     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
                     ]
                 , textView $ 
@@ -363,7 +363,7 @@ submitView push state =
         , imageView
             [ width $ V 18
             , height $ V 18
-            , margin $ MarginLeft 12
+            , margin $ Margin 12 0 12 0 
             , height WRAP_CONTENT
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_submit_issue_arrow"
             ]
