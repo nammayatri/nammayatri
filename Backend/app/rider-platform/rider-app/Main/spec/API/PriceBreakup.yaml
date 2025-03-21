@@ -1,4 +1,5 @@
 imports:
+  Ride: Domain.Types.Ride
   Text: Data.Text
   Booking: Domain.Types.Booking
   QuoteBreakupAPIEntity: Domain.Action.UI.Quote
@@ -7,7 +8,17 @@ types:
   QuoteBreakupRes:
     recordType: NewType
     quoteBreakup: "[QuoteBreakupAPIEntity]"
+  MeterRidePriceRes:
+    fare: HighPrecMoney
+    distance: HighPrecMeters
 apis:
+  - GET:
+      endpoint: /meterRide/price
+      auth: TokenAuth
+      mandatoryQuery:
+        rideId: Id Ride
+      response:
+        type: MeterRidePriceRes
   - GET:
       endpoint: /priceBreakup
       auth: TokenAuth

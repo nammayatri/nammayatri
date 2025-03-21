@@ -29,6 +29,7 @@ import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
 import Kernel.Utils.Common hiding (Error)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
@@ -43,6 +44,18 @@ data RefereeLinkInfoReq = RefereeLinkInfoReq
     shareReferrerInfo :: Maybe Bool,
     merchantOperatingCityId :: Text,
     refereeLocation :: Maybe LatLong
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data MeterRideFareInfoReq = MeterRideFareInfoReq
+  { bppRideId :: Text,
+    merchantOperatingCityId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data MeterRidePriceRes = MeterRidePriceRes
+  { distance :: Kernel.Types.Common.HighPrecMeters,
+    fare :: Kernel.Types.Common.HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -87,6 +100,41 @@ linkReferee apiKey internalUrl driverMerchantId driverMerchantOperatingCityId re
           customerMobileCountryCode = countryCode,
           merchantOperatingCityId = driverMerchantOperatingCityId,
           refereeLocation = mbCustomerLocation,
+          ..
+        }
+
+type MeterRideFareAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "meterRideFare"
+    :> Header "token" Text
+    :> ReqBody '[JSON] MeterRideFareInfoReq
+    :> Post '[JSON] MeterRidePriceRes
+
+meterRideFareClient :: Text -> Maybe Text -> MeterRideFareInfoReq -> EulerClient MeterRidePriceRes
+meterRideFareClient = client meterRideFareApi
+
+meterRideFareApi :: Proxy MeterRideFareAPI
+meterRideFareApi = Proxy
+
+meterRideFare ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  m MeterRidePriceRes
+meterRideFare apiKey internalUrl driverMerchantId driverMerchantOperatingCityId bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (meterRideFareClient driverMerchantId (Just apiKey) buildMeterRideFareReq) "MeterRideFareAPI" meterRideFareApi
+  where
+    buildMeterRideFareReq = do
+      MeterRideFareInfoReq
+        { merchantOperatingCityId = driverMerchantOperatingCityId,
           ..
         }
 
