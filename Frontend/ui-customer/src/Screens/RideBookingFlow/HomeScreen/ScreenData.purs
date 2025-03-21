@@ -193,6 +193,7 @@ initData = let
     , rideCompletedData : initialRideCompletedData
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
+    , isSafetyPlus : false
     , famousDestinations : []
     , chatPersonId : "Customer"
     , parking : initialParkingData
@@ -682,7 +683,8 @@ dummyRideBooking = RideBookingRes
   rideDuration : Just 0,
   vehicleServiceTierAirConditioned : Nothing,
   vehicleServiceTierSeatingCapacity : Nothing,
-  returnTime : Nothing
+  returnTime : Nothing,
+  isSafetyPlus : Nothing
 }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

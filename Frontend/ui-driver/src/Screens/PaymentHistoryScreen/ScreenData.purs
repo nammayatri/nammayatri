@@ -17,7 +17,7 @@ module Screens.PaymentHistoryScreen.ScreenData where
 
 import Domain.Payments (PaymentStatus(..))
 import Data.Maybe as Mb
-import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
+import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig, ServiceName(..))
 import Services.API (AutopayPaymentStage(..), FeeType(..))
 import Screens.Types as ST
 import ConfigProvider
@@ -52,7 +52,8 @@ initData = {
         autoPaySetup : false,
         selectedDue : "",
         offset : 0,
-        enableLoadMore : true
+        enableLoadMore : true,
+        serviceName : YATRI_SUBSCRIPTION
     }
 }
 

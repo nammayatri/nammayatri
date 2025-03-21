@@ -447,6 +447,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                               , dateDDMMYY =  case currRideListItem.rideStartTime of
                                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                                 Nothing        -> ""
+                              , isSafetyPlus = currRideListItem.isSafetyPlus
                               }
                               , driverInfoCardState {
                                 price = resp.estimatedTotalFare,

@@ -55,6 +55,7 @@ import Services.API as APITypes
 import Screens.Types as ST 
 import Screens.SubscriptionScreen.Transformer as Transformer
 import Common.RemoteConfig.Utils as RC
+import ConfigProvider
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -167,6 +168,8 @@ data Action = BackPressed
             | SelectPlansModalAction SelectPlansModal.Action
             | OnCityOrVehicleChange APITypes.UiPlansResp
             | PaymentUnderMaintenanceModalAC PopUpModal.Action
+            | ChangeService ST.ServiceName
+            | ToggleRentalTnc
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -183,6 +186,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | GoToOpenGoogleMaps SubscriptionScreenState
                     | Refresh
                     | RefreshHelpCentre SubscriptionScreenState
+                    | SwitchService SubscriptionScreenState
                     | RetryPayment SubscriptionScreenState String
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
@@ -329,7 +333,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
               exit $ Contest newState
             _ -> continue state
 
-eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuState = ALL_COLLAPSED}}
+eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuState = ALL_COLLAPSED, serviceName = state.props.serviceName}}
 
 eval ViewHelpCentre state = do
   let prevSubViewState = state.props.subView
@@ -342,7 +346,7 @@ eval RefreshPage state = exit $ Refresh
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
       cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
-  _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
+  _ <- pure $ setValueToLocalStore (DRIVER_SUBSCRIBED $ show state.props.serviceName) "false"
   continue state {
       data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig cityConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
@@ -357,7 +361,7 @@ eval (LoadMyPlans plans) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
   case currentPlanResp.currentPlanDetails of
     Mb.Just (planEntity') -> do
-      _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "true"
+      _ <- pure $ setValueToLocalStore (DRIVER_SUBSCRIBED $ show state.props.serviceName) "true"
       let (PlanEntity planEntity) = planEntity'
           requiredBalance = case (planEntity.bankErrors DA.!! 0) of
                               Mb.Just (BankError error) -> if error.code == "Z9" then Mb.Just error.amount else Mb.Nothing -- Checking for code of low account balance
@@ -382,7 +386,9 @@ eval (LoadMyPlans plans) state = do
                                       lowAccountBalance = requiredBalance,
                                       dueItems = constructDues planEntity.dues state.data.config.subscriptionConfig.showFeeBreakup,
                                       dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges,
-                                      coinEntity = planEntity.coinEntity
+                                      coinEntity = planEntity.coinEntity,
+                                      isEligibleForCharge = currentPlanResp.isEligibleForCharge,
+                                      safetyPlusData = currentPlanResp.safetyPlusData
                                   }}
                          }
                      else state{ 
@@ -392,7 +398,9 @@ eval (LoadMyPlans plans) state = do
                                   myPlanData {
                                       planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
-                                      autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus
+                                      autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus,
+                                      isEligibleForCharge = currentPlanResp.isEligibleForCharge,
+                                      safetyPlusData = currentPlanResp.safetyPlusData
                                   }}
                           }
       _ <- pure $ setCleverTapUserProp [{key : "Plan", value : unsafeToForeign planEntity.name},
@@ -425,7 +433,7 @@ eval (LoadMyPlans plans) state = do
               }
             }
     Mb.Nothing -> do
-      _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
+      _ <- pure $ setValueToLocalStore (DRIVER_SUBSCRIBED $ show state.props.serviceName) "false"
       continue state
 
 eval CheckPaymentStatus state = case state.data.orderId of
@@ -443,7 +451,11 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state =
 
 eval CallSupport state = do
   let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
-  void $ pure $ showDialer cityConfig.supportNumber false
+  let supportNumber' = case state.props.serviceName of
+                              ST.YATRI_SUBSCRIPTION -> cityConfig.supportNumber
+                              ST.DASHCAM_RENTAL_CAUTIO -> (getAppConfig appConfig).subscriptionConfigDashCam.supportNumber
+                              ST.UNKNOWN -> cityConfig.supportNumber
+  void $ pure $ showDialer supportNumber' false
   continue state
 
 eval (CallHelpCenter phone) state = do
@@ -517,6 +529,21 @@ eval (PaymentUnderMaintenanceModalAC popUpModalAC) state = do
   case popUpModalAC of
       PopUpModal.OnButton2Click -> exit $ HomeScreen newState
       _ -> continue state
+
+eval (ChangeService serviceName) state = do
+  let subscriptionConfig' = case serviceName of
+                              ST.YATRI_SUBSCRIPTION -> (getAppConfig appConfig).subscriptionConfig
+                              ST.DASHCAM_RENTAL_CAUTIO -> (getAppConfig appConfig).subscriptionConfigDashCam
+                              ST.UNKNOWN -> (getAppConfig appConfig).subscriptionConfig
+  let config' = state.data.config{subscriptionConfig =  subscriptionConfig'}
+  let newState = state{props {showShimmer = true,serviceName = serviceName}, data{config =  config'}}
+  updateAndExit newState $ SwitchService newState
+
+eval ToggleRentalTnc state = do
+   let tncRental' = not state.props.joinPlanProps.tncRentals
+   let joinPlan' = state.props.joinPlanProps{tncRentals = tncRental', tncRentalsImage = if tncRental' then "ny_ic_check_box" else "ny_ic_checkbox_unselected"}
+   let newState = state{props {joinPlanProps = joinPlan'}}
+   continue newState
 
 eval _ state = update state
 

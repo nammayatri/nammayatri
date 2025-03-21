@@ -271,7 +271,8 @@ dummyRideBooking = RideBookingRes
   vehicleServiceTierAirConditioned : Nothing,
   vehicleServiceTierSeatingCapacity : Nothing,
   returnTime : Nothing,
-  isAirConditioned : Nothing
+  isAirConditioned : Nothing,
+  isSafetyPlus : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

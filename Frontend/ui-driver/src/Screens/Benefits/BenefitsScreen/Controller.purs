@@ -190,7 +190,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications state
     "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      let driverSubscribed = getValueToLocalNativeStore (DRIVER_SUBSCRIBED "YATRI_SUBSCRIPTION") == "true"
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"

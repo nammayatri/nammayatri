@@ -103,7 +103,7 @@ data KeyStore = USER_NAME
                 | NEGOTIATION_UNIT_CABS
                 | DISABLE_WIDGET
                 | SHOW_JOIN_NAMMAYATRI
-                | DRIVER_SUBSCRIBED
+                | DRIVER_SUBSCRIBED String
                 | ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
                 | FREE_TRIAL_DAYS
                 | KIOSK_LOCATIONS
