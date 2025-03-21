@@ -66,8 +66,8 @@ getMeterRidePrice ::
 getMeterRidePrice (Nothing, _, _) rideId _ = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
 getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  let locUpdates = NE.fromList req.locationUpdates
-  void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
+  whenJust (NE.nonEmpty req.locationUpdates) $ \locUpdates -> do
+    void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
   traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide)
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
