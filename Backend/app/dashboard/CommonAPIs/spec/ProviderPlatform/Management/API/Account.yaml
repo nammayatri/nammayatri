@@ -26,17 +26,6 @@ apis:
         type: VerifyAccountReq
       response:
         type: APISuccess
-      # helperApi:
-      #   - POST:
-      #       endpoint: /verifyAccount
-      #       auth: ApiAuthV2
-      #       request:
-      #         type: FleetOwnerRegisterReq
-      #       query:
-      #         - fleetOwnerId: Id Person
-      #         - requireAdminApprovalForFleetOnboarding: Bool
-      #       response:
-      #         type: APISuccess
 
 
 types:
@@ -70,20 +59,4 @@ types:
     - name: Text
     - dashboardAccessType: DashboardAccessType
     - description: Text
-  # FleetOwnerRegisterReq:
-  #   - firstName: Text
-  #   - lastName: Text
-  #   - mobileNumber: Text
-  #   - mobileCountryCode: Text
-  #   - merchantId: Text
-  #   - email: Maybe Text
-  #   - city: City
-  #   - fleetType: Maybe FleetType
-  #   - panNumber: Maybe Text
-  #   - gstNumber: Maybe Text
-  #   - panImageId1: Maybe Text
-  #   - panImageId2: Maybe Text
-  #   - gstCertificateImage: Maybe Text
-  # FleetType:
-  #   - enum: RENTAL_FLEET, NORMAL_FLEET, BUSINESS_FLEET
 

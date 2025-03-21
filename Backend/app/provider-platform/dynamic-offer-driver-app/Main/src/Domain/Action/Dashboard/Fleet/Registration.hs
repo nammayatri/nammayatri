@@ -82,13 +82,6 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
--- data FleetOwnerRegisterWithFlasAndPersonIdReq = FleetOwnerRegisterWithFlasAndPersonIdReq
---   { fleetOwnerRegisterReq :: FleetOwnerRegisterReq,
---     requireAdminApprovalForFleetOnboarding :: Bool,
---     fleetOwnerId :: Id DP.Person
---   }
---   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
 newtype FleetOwnerRegisterRes = FleetOwnerRegisterRes
   { personId :: Text
   }
@@ -99,57 +92,8 @@ newtype FleetOwnerVerifyRes = FleetOwnerVerifyRes
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
--- processFleetOwnerRegister :: FleetOwnerRegisterWithFlasAndPersonIdReq -> Flow ()
--- processFleetOwnerRegister (FleetOwnerRegisterWithFlasAndPersonIdReq req requireApproval personId) = do
---   let merchantId = ShortId req.merchantId
---   mobileNumberHash <- getDbHash req.mobileNumber
---   deploymentVersion <- asks (.version)
---   merchant <-
---     QMerchant.findByShortId merchantId
---       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
---   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
---   let personAuth = buildFleetOwnerAuthReq merchant.id req
---   person <-
---     QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
---       >>= maybe (mkFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber) return
---   fork "Creating Pan Info for Fleet Owner" $ do
---     createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
---   fork "Uploading GST Image" $ do
---     whenJust req.gstCertificateImage $ \gstImage -> do
---       let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
---       image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
---       QFOI.updateGstImageId (Just image.imageId.getId) person.id
---   --return $ FleetOwnerRegisterRes {personId = person.id.getId}
---   pure ()
---   where
---     mkFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Flow DP.Person
---     mkFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber = do
---       transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
---       person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
---       void $ QP.create $ person {id = personId} -- Could not well compiling with it
---       mkFleetOwnerInfo merchantId mbfleetType mbgstNumber
---       pure person
---     mkFleetOwnerInfo :: Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Flow ()
---     mkFleetOwnerInfo merchantId mbFleetType mbGstNumber = do
---       now <- getCurrentTime
---       let fleetType = fromMaybe NORMAL_FLEET mbFleetType
---           fleetOwnerInfo =
---             FOI.FleetOwnerInformation
---               { fleetOwnerPersonId = personId,
---                 merchantId = merchantId,
---                 fleetType = fleetType,
---                 enabled = not requireApproval, ------ currently we are not validating any fleet owner Document there fore marking it as true
---                 blocked = False,
---                 verified = False,
---                 gstNumber = mbGstNumber,
---                 gstImageId = Nothing,
---                 createdAt = now,
---                 updatedAt = now
---               }
---       QFOI.create fleetOwnerInfo
-
-fleetOwnerRegister :: FleetOwnerRegisterReq -> Flow FleetOwnerRegisterRes
-fleetOwnerRegister req = do
+fleetOwnerRegister :: FleetOwnerRegisterReq -> Maybe Bool -> Flow FleetOwnerRegisterRes
+fleetOwnerRegister req mbEnabled = do
   let merchantId = ShortId req.merchantId
   mobileNumberHash <- getDbHash req.mobileNumber
   deploymentVersion <- asks (.version)
@@ -160,7 +104,7 @@ fleetOwnerRegister req = do
   let personAuth = buildFleetOwnerAuthReq merchant.id req
   person <-
     QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
-      >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber) return
+      >>= maybe (createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType mbEnabled req.gstNumber) return
   fork "Creating Pan Info for Fleet Owner" $ do
     createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
   fork "Uploading GST Image" $ do
@@ -170,12 +114,12 @@ fleetOwnerRegister req = do
       QFOI.updateGstImageId (Just image.imageId.getId) person.id
   return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbEnabled mbgstNumber = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
-  createFleetOwnerInfo person.id merchantId mbfleetType mbgstNumber
+  createFleetOwnerInfo person.id merchantId mbfleetType mbEnabled mbgstNumber
   pure person
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
@@ -186,16 +130,17 @@ createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just pa
   void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Flow ()
-createFleetOwnerInfo personId merchantId mbFleetType mbGstNumber = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber = do
   now <- getCurrentTime
   let fleetType = fromMaybe NORMAL_FLEET mbFleetType
+      enabled = fromMaybe True mbEnabled
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
             merchantId = merchantId,
             fleetType = fleetType,
-            enabled = True, ------ currently we are not validating any fleet owner Document there fore marking it as true
+            enabled = enabled, ------ currently we are not validating any fleet owner Document there fore marking it as true
             blocked = False,
             verified = False,
             gstNumber = mbGstNumber,

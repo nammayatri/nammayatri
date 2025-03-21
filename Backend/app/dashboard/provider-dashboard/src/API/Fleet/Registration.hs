@@ -41,7 +41,7 @@ type API =
   "fleet"
     :> ( DReg.FleetOwnerLoginAPI
            :<|> FleetOwnerVerifyAPI
-           :<|> FleetOwnerRegisterHelperAPI
+           :<|> FleetOwnerRegisterAPI
        )
 
 type FleetOwnerRegisterAPI =
@@ -49,11 +49,12 @@ type FleetOwnerRegisterAPI =
     :> ReqBody '[JSON] DP.FleetOwnerRegisterReq
     :> Post '[JSON] APISuccess
 
-type FleetOwnerRegisterHelperAPI =
-  ( "register"
-      :> QueryParam "enabled" Bool
-      :> Post '[JSON] APISuccess
-  )
+-- type FleetOwnerRegisterHelperAPI =
+--   ( "register"
+--       :> QueryParam "enabled" Bool
+--       :> ReqBody '[JSON] DP.FleetOwnerRegisterReq
+--       :> Post '[JSON] APISuccess
+--   )
 
 type FleetOwnerVerifyAPI =
   "verify"
@@ -98,8 +99,11 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
     _ -> do
       let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
           enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
-      res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) enabled req
+      res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) (Just enabled) req
       registerFleetOwner req' $ Just res.personId
+
+-- fleetOwnerRegisterHelper :: Maybe Bool -> DP.FleetOwnerRegisterReq -> FlowHandler APISuccess
+-- fleetOwnerRegisterHelper _enabled req = fleetOwnerRegister req
 
 buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> FleetRegisterReq
 buildFleetOwnerRegisterReq DP.FleetOwnerRegisterReq {..} = do
