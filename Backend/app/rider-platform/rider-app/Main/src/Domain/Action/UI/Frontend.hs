@@ -63,9 +63,9 @@ type NotifyEventResp = APISuccess
 
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
-  activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
-  if not (null activeJourneyIds)
-    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeyIds = activeJourneyIds}) Nothing
+  activeJourneys <- DMultimodal.getActiveJourneyIds personId
+  if not (null activeJourneys)
+    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys}) Nothing
     else do
       personStatus' <- QPFS.getStatus personId
       case personStatus' of
@@ -118,8 +118,8 @@ notifyEvent personId merchantId req = do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
-      activeJourneyIds <- DMultimodal.getActiveJourneyIds personId
-      mapM_ (QJourney.updateStatus DJ.COMPLETED) activeJourneyIds
+      activeJourneys <- DMultimodal.getActiveJourneyIds personId
+      mapM_ (QJourney.updateStatus DJ.COMPLETED) (activeJourneys <&> (.id))
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch

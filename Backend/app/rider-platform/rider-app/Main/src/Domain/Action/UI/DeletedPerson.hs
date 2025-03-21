@@ -22,7 +22,6 @@ import Tools.Error
 
 postDeletedPerson :: ((Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow APISuccess.APISuccess)
 postDeletedPerson (mbPersonId, merchantId) = do
-  -- personId <- fromMaybe (InvalidRequest "Invalid person id") mbPersonId
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime

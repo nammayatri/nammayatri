@@ -10,6 +10,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -91,9 +92,12 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     status :: B.C f Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: B.C f Kernel.Types.Common.Meters,
     totalRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    tripEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    tripEstimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     upgradeCabRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant

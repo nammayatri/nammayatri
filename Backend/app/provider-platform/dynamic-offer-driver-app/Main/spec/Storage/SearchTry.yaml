@@ -5,6 +5,7 @@ imports:
   ServiceTierType: Domain.Types.Common
   TripCategory: Domain.Types.Common
   Money: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
 
 SearchTry:
   tableName: search_try
@@ -19,19 +20,20 @@ SearchTry:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   fields:
-    id: Id SearchTry
-    requestId: Id SearchRequest
-    estimateId: Text
-    estimateIds: "[Text]"
-    merchantId: Maybe (Id Merchant)
-    merchantOperatingCityId: Id MerchantOperatingCity
-    messageId: Text
-    startTime: UTCTime
-    validTill: UTCTime
-    vehicleServiceTier: ServiceTierType|NoRelation
-    vehicleServiceTierName: Text
-    baseFare: HighPrecMoney
-    customerExtraFee: Maybe HighPrecMoney
+    id : Id SearchTry
+    requestId : Id SearchRequest
+    estimateId : Text
+    estimateIds : "[Text]"
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    messageId : Text
+    startTime : UTCTime
+    validTill : UTCTime
+    vehicleServiceTier : ServiceTierType|NoRelation
+    vehicleServiceTierName : Text
+    vehicleCategory: Maybe VehicleCategory
+    baseFare : HighPrecMoney
+    customerExtraFee : Maybe HighPrecMoney
     currency: Currency
     status: SearchTryStatus
     searchRepeatCounter: Int

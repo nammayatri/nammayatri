@@ -78,6 +78,7 @@ library
       API.UI.Quote
       API.UI.Rating
       API.UI.Registration
+      API.UI.RentalsIntercityCache
       API.UI.Ride
       API.UI.Route
       API.UI.SavedReqLocation
@@ -220,6 +221,7 @@ library
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
       Domain.Action.UI.RentalDetails
+      Domain.Action.UI.RentalsIntercityCache
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
       Domain.Action.UI.Route
@@ -259,6 +261,7 @@ library
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
+      Domain.Types.RentalsIntercityCache
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI

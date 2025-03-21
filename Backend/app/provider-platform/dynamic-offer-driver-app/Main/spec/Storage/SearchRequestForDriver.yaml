@@ -11,6 +11,7 @@ imports:
   Device: Kernel.Types.Version
   Person: Domain.Types.Person
   DriverMode: Domain.Types.Common
+  Seconds: Kernel.Types.Common
   SearchRequestForDriverResponse: Domain.Types.Common
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
@@ -18,6 +19,8 @@ imports:
   Value: Data.Aeson
   ParcelType: Domain.Types.DeliveryDetails
   ConditionalChargesCategories: Domain.Types.ConditionalCharges
+  VehicleCategory: Domain.Types.VehicleCategory
+
 
 SearchRequestForDriver:
   tableName: search_request_for_driver
@@ -31,30 +34,31 @@ SearchRequestForDriver:
       enum: "FCM, GRPC"
 
   fields:
-    id: Id SearchRequestForDriver
-    requestId: Id SearchRequest
-    searchTryId: Id SearchTry
-    estimateId: Maybe Text
-    merchantId: Maybe (Id Merchant)
-    merchantOperatingCityId: Id MerchantOperatingCity
-    baseFare: Maybe HighPrecMoney
-    startTime: UTCTime
-    searchRequestValidTill: UTCTime
-    vehicleAge: Maybe Months
-    driverId: Id Person
-    fromLocGeohash: Maybe Text
-    actualDistanceToPickup: Meters
-    straightLineDistanceToPickup: Meters
-    durationToPickup: Seconds
-    vehicleVariant: VehicleVariant|NoRelation
-    vehicleServiceTier: ServiceTierType|NoRelation
-    vehicleServiceTierName: Maybe Text
-    airConditioned: Maybe Bool
-    status: DriverSearchRequestStatus
-    batchNumber: Int
-    lat: Maybe Double
-    lon: Maybe Double
-    createdAt: UTCTime
+    id : Id SearchRequestForDriver
+    requestId : Id SearchRequest
+    searchTryId : Id SearchTry
+    estimateId : Maybe Text
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    baseFare : Maybe HighPrecMoney
+    startTime : UTCTime
+    searchRequestValidTill : UTCTime
+    vehicleAge : Maybe Months
+    vehicleCategory: Maybe VehicleCategory
+    driverId : Id Person
+    fromLocGeohash : Maybe Text
+    actualDistanceToPickup : Meters
+    straightLineDistanceToPickup : Meters
+    durationToPickup : Seconds
+    vehicleVariant : VehicleVariant|NoRelation
+    vehicleServiceTier : ServiceTierType|NoRelation
+    vehicleServiceTierName : Maybe Text
+    airConditioned : Maybe Bool
+    status : DriverSearchRequestStatus
+    batchNumber : Int
+    lat : Maybe Double
+    lon : Maybe Double
+    createdAt : UTCTime
     updatedAt: Maybe UTCTime
     response: Maybe SearchRequestForDriverResponse
     notificationSource: Maybe NotificationSource
@@ -85,6 +89,8 @@ SearchRequestForDriver:
     middleStopCount: Maybe Int
     currency: Currency
     distanceUnit: DistanceUnit
+    tripEstimatedDistance : Maybe Meters
+    tripEstimatedDuration : Maybe Seconds
     totalRides: Int
     driverTags: Maybe Value
     customerTags: Maybe Value

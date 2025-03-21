@@ -247,9 +247,10 @@ instance JT.JourneyLeg TaxiLegRequest m where
     let calculateFareReq =
           CallBPPInternal.CalculateFareReq
             { pickupLatLong = LatLong {lat = taxiGetFareData.startLocation.latitude, lon = taxiGetFareData.startLocation.longitude},
-              dropLatLong = LatLong {lat = taxiGetFareData.endLocation.latitude, lon = taxiGetFareData.endLocation.longitude},
+              dropLatLong = Just $ LatLong {lat = taxiGetFareData.endLocation.latitude, lon = taxiGetFareData.endLocation.longitude},
               mbDistance = Just $ distanceToMeters taxiGetFareData.distance,
-              mbDuration = Just taxiGetFareData.duration
+              mbDuration = Just taxiGetFareData.duration,
+              mbTripCategory = Nothing
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
     let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)

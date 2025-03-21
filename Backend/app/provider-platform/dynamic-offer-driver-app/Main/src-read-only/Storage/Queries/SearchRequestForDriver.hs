@@ -126,9 +126,12 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.status status,
       Se.Set Beam.straightLineDistanceToPickup straightLineDistanceToPickup,
       Se.Set Beam.totalRides (Kernel.Prelude.Just totalRides),
+      Se.Set Beam.tripEstimatedDistance tripEstimatedDistance,
+      Se.Set Beam.tripEstimatedDuration tripEstimatedDuration,
       Se.Set Beam.updatedAt (Just _now),
       Se.Set Beam.upgradeCabRequest upgradeCabRequest,
       Se.Set Beam.vehicleAge vehicleAge,
+      Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.vehicleServiceTier (Kernel.Prelude.Just vehicleServiceTier),
       Se.Set Beam.vehicleServiceTierName vehicleServiceTierName,
       Se.Set Beam.vehicleVariant vehicleVariant
