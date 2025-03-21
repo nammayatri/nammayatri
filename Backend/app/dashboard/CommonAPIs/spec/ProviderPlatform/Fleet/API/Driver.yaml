@@ -179,6 +179,30 @@ apis:
             response:
               type: FleetListDriverRes
 
+  - GET: # GetAllBadgeForFleetAPI
+      endpoint: /fleet/getAllBadge
+      auth: ApiAuthV2
+      query:
+        - mblimit: Int
+        - mboffset: Int        
+        - mbSearchString: Text
+      response:
+        type: FleetBadgeRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_BADGES_FOR_FLEET
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/getAllBadge
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - mbSearchString: Text
+            response:
+              type: FleetBadgeRes
+
   - POST: # FleetUnlinkVehicleAPI
       endpoint: /{driverId}/{vehicleNo}/fleet/unlink
       auth: ApiAuthV2
@@ -768,6 +792,7 @@ types:
     - roundTrip: Maybe RoundTripDetail
   TripPlannerReq:
     - driverId: Id Driver
+    - badgeName: Maybe Text
     - vehicleNumber: Text
     - isForceAssign: Maybe Bool
     - trips: [TripDetails]
@@ -799,6 +824,7 @@ types:
     - dateOfRegistration: Maybe UTCTime
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
+    - vehicleTags: Maybe [Text]
     - derive: "'HideSecrets"
   ListVehicleRes:
     - recordType: NewType
@@ -808,6 +834,12 @@ types:
     - model: Maybe Text
     - color: Maybe Text
     - registrationNo: Text
+  FleetBadgeRes:
+    - recordType: NewType
+    - fleetBadgeInfos: [FleetBadgesAPIEntity]
+  FleetBadgesAPIEntity:
+    - recordType: NewType
+    - badgeName: Text
   FleetListDriverRes:
     - recordType: NewType
     - fleetDriversInfos: [FleetDriversAPIEntity]

@@ -37,6 +37,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetAddVehicles,
     postDriverDashboardFleetWmbTripEnd,
     postDriverFleetAddDrivers,
+    getDriverFleetGetAllBadge,
     getDriverFleetRoutes,
     getDriverFleetPossibleRoutes,
     postDriverFleetTripPlanner,
@@ -125,6 +126,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
+import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
@@ -1182,6 +1184,15 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
   pure Success
 
 ---------------------------------------------------------------------
+
+getDriverFleetGetAllBadge :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Flow Common.FleetBadgeRes
+getDriverFleetGetAllBadge merchantShortId opCity fleetOwnerId limit offset mbSearchString = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (toInteger <$> limit) (toInteger <$> offset) merchantOpCity.id fleetOwnerId
+  return $ Common.FleetBadgeRes $ map (\badge -> Common.FleetBadgesAPIEntity badge.badgeName) fleetBadgesByOwner
+
+---------------------------------------------------------------------
 getDriverFleetRoutes ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -1305,6 +1316,7 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber (fromMaybe False req.isForceAssign)
+  void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName
   createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
   pure Success
 
@@ -1482,7 +1494,9 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     foldlM
       ( \unprocessedEntities (driver, driverMobileNumber, vehicleNumber, tripPlannerRequests) -> do
           try @_ @SomeException
-            (WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False) -- TODO :: Make this dynamic by adding the force_assign field in CSV.
+            ( WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False -- TODO :: Make this dynamic by adding the force_assign field in CSV.
+              -- void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName -- TODO :: Capture Badge Name from CSV
+            )
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to link vehicle to the Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
               Right vehicleRC -> do

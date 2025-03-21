@@ -343,6 +343,15 @@ findByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash (Id merchantI
         ]
     ]
 
+updatePersonName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> m ()
+updatePersonName (Id personId) firstName = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.firstName $ firstName,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime

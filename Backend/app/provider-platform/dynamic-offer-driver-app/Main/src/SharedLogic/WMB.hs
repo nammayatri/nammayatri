@@ -36,6 +36,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
@@ -285,6 +286,12 @@ startTripTransaction tripTransaction route closestStop currentLocation destinati
     >>= \case
       Right tripStartTransaction -> return tripStartTransaction
       Left _ -> throwError (InternalError "Process for Trip Start is Already Ongoing, Please try again!")
+
+-- TODO :: Unlink Fleet Badge Driver to be Figured Out, If Required
+linkFleetBadgeToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow ()
+linkFleetBadgeToDriver driverId _merchantId _merchantOperatingCityId fleetOwnerId badgeName = do
+  void $ QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName >>= fromMaybeM (FleetBadgeNotFound badgeName)
+  QP.updatePersonName driverId badgeName
 
 linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> FleetConfig -> Text -> Text -> Bool -> Flow VehicleRegistrationCertificate
 linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetOwnerId vehicleNumber isForceAssign = do

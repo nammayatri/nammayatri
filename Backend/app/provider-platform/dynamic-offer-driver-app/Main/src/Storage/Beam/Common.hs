@@ -28,6 +28,7 @@ import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
+import Storage.Beam.FleetBadge
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
 import Storage.Beam.InterCityTravelCities
@@ -80,7 +81,8 @@ atlasDB =
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
         route = routeTable,
-        operationHubRequests = operationHubRequestsTable
+        operationHubRequests = operationHubRequestsTable,
+        fleetBadge = fleetBadgeTable
       }
 
 data AtlasDB f = AtlasDB
@@ -113,6 +115,7 @@ data AtlasDB f = AtlasDB
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
     route :: f (B.TableEntity RouteT),
-    operationHubRequests :: f (B.TableEntity OperationHubRequestsT)
+    operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
+    fleetBadge :: f (B.TableEntity FleetBadgeT)
   }
   deriving (Generic, B.Database be)

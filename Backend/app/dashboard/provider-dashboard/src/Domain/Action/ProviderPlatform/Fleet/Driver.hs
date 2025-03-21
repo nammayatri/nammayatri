@@ -307,3 +307,9 @@ postDriverFleetGetNearbyDrivers merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
   T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetGetNearbyDrivers) fleetOwnerId req
+
+getDriverFleetGetAllBadge :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.FleetListDriverRes)
+getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset mbSearchString = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllBadge) fleetOwnerId mbSearchString mblimit mboffset
