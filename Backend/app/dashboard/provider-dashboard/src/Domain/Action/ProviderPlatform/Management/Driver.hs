@@ -52,11 +52,13 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    getDriverStats,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
+import Data.Time.Calendar (Day)
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -332,3 +334,8 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId opCity apiTokenInfo req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverBulkSubscriptionServiceUpdate) req)
+
+getDriverStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Common.DriverStatReq -> Flow Common.DriverStatsRes
+getDriverStats merchantShortId opCity apiTokenInfo entityId fromDate toDate req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverStats) entityId fromDate toDate req{requestedEntityId = apiTokenInfo.personId.getId}

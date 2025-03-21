@@ -52,6 +52,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    getDriverStats,
   )
 where
 
@@ -130,10 +131,15 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
+import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
 import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
@@ -1108,3 +1114,76 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
   return Success
+
+getDriverStats :: ShortId DM.Merchant -> Context.City -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Common.DriverStatReq -> Flow Common.DriverStatsRes
+getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  whenJust mbEntityId $ \e_Id -> do
+    let entityId = cast @Common.Driver @DP.Person e_Id
+    let requestedEntityId = Id req.requestedEntityId
+    entities <- QPerson.findAllByPersonIds [requestedEntityId.getId, entityId.getId]
+    when (null entities || not (length entities == 2)) $ throwError (PersonDoesNotExist (requestedEntityId.getId <> " or " <> entityId.getId))
+    isValid <- validatePersonAccessAndAssociation merchant.id merchantOpCityId entities
+    unless isValid $ throwError (InternalError "Entity does not have access to this entity data")
+
+  let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id req.requestedEntityId) mbEntityId
+  (numDriversOnboarded, numFleetsOnboarded) <- findOnboardedDriversOrFleets personId mbFromDate mbToDate
+  return $ Common.DriverStatsRes {..}
+  where
+    -- TODO: Need to implement clickhouse aggregated query to fetch data for the given date range
+    findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Maybe Day -> Maybe Day -> m (Int, Int)
+    findOnboardedDriversOrFleets personId maybeFrom maybeTo = do
+      case (maybeFrom, maybeTo) of
+        (Nothing, Nothing) -> do
+          stats <-
+            B.runInReplica $
+              QDriverStats.findByPrimaryKey personId
+                >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
+          return (stats.numDriversOnboarded, stats.numFleetsOnboarded)
+        (Just fromDate, Just toDate) | fromDate == toDate -> do
+          stats <-
+            B.runInReplica $
+              QDailyStats.findByDriverIdAndDate personId fromDate
+                >>= fromMaybeM (InternalError $ "Daily Stats data not found for " <> show fromDate <> " for entity " <> show personId.getId)
+          return (stats.numDriversOnboarded, stats.numFleetsOnboarded)
+        _ -> throwError (InvalidRequest "fromDate and toDate must be either both Nothing or the same date")
+
+    isPersonExictInMerchantAndOpCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m Bool
+    isPersonExictInMerchantAndOpCity personDetails merchantId merchantOpCityId = do
+      return (personDetails.merchantId == merchantId && personDetails.merchantOperatingCityId == merchantOpCityId)
+
+    isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+    isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
+      case (requestedPersonDetails.role, personDetails.role) of
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id.getId personDetails.id
+        (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation requestedPersonDetails.id.getId personDetails.id.getId
+        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id.getId personDetails.id
+        _ -> return False
+      where
+        checkFleetDriverAssociation fleetId driverId = do
+          mbAssoc <- QFleetDriver.findByFleetIdAndDriverId fleetId driverId True
+          return $ isJust mbAssoc
+
+        checkFleetOperatorAssociation fleetId operatorId = do
+          mbAssoc <- QFleetOperator.findByFleetIdAndOperatorId fleetId operatorId True
+          return $ isJust mbAssoc
+
+        checkDriverOperatorAssociation operatorId driverId = do
+          mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
+          return $ isJust mbAssoc
+
+    validatePersonAccessAndAssociation ::
+      (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+      Id DM.Merchant ->
+      Id DMOC.MerchantOperatingCity ->
+      [DP.Person] ->
+      m Bool
+    validatePersonAccessAndAssociation merchantId merchantOpCityId [requestedPerson, person] = do
+      isRequestedPersonValid <- isPersonExictInMerchantAndOpCity requestedPerson merchantId merchantOpCityId
+      isPersonValid <- isPersonExictInMerchantAndOpCity person merchantId merchantOpCityId
+      unless isRequestedPersonValid $ throwError (PersonDoesNotExist requestedPerson.id.getId)
+      unless isPersonValid $ throwError (PersonDoesNotExist person.id.getId)
+      isAssociationBetweenTwoPerson requestedPerson person
+    validatePersonAccessAndAssociation _ _ _ = return False

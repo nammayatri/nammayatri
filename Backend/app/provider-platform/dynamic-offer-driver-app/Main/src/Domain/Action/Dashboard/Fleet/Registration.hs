@@ -16,17 +16,20 @@ module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
+import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOperatorAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TransporterConfig
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (getDbHash)
@@ -45,6 +48,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -162,6 +166,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
     fleetOperatorAssData <- makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
     incrementFleetOwnerOnboardedCountByOperator (Id referredOperatorId)
+    incrementDailyStatsOnboardedFleetOwnerCount merchantId merchantOpCityId (Id referredOperatorId) transporterConfig
   when (mbIsGenerateRefEntry == Just True) $ do
     void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
@@ -292,3 +297,49 @@ incrementFleetOwnerOnboardedCountByOperator referredOperatorId = do
         let newCount = driverStats.numFleetsOnboarded + 1
         QDriverStats.updateNumFleetsOnboarded newCount referredOperatorId
         logTagInfo "INCREMENT_FLEET_COUNT" $ "Successfully incremented fleet owner count for " <> show referredOperatorId <> " to " <> show newCount
+
+incrementDailyStatsOnboardedFleetOwnerCount :: Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> TransporterConfig -> Flow ()
+incrementDailyStatsOnboardedFleetOwnerCount merchantId merchantOpCityId referredOperatorId transporterConfig = do
+  let lockKey = "Fleet:DailyStats:Referral:Increment:" <> getId referredOperatorId
+  Redis.withWaitAndLockRedis lockKey 10 5000 $ do
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    mbDailyStats <- QDailyStats.findByDriverIdAndDate referredOperatorId (utctDay localTime)
+    case mbDailyStats of
+      Just stats -> do
+        let newCount = stats.numFleetsOnboarded + 1
+        QDailyStats.updateNumFleetsOnboardedByDriverId newCount referredOperatorId (utctDay localTime)
+        logTagInfo "INCREMENT_DAILY_STATS_FLEET_COUNT" $ "Successfully incremented daily stats fleet count for " <> show referredOperatorId <> " to " <> show newCount
+      Nothing -> do
+        logDebug $ "DailyStats not found for driverId : " <> referredOperatorId.getId
+        id' <- generateGUIDText
+        now <- getCurrentTime
+        let dailyStatsOfDriver' =
+              DDS.DailyStats
+                { id = id',
+                  driverId = referredOperatorId,
+                  totalEarnings = 0.0,
+                  numRides = 0,
+                  totalDistance = 0,
+                  tollCharges = 0.0,
+                  bonusEarnings = 0.0,
+                  merchantLocalDate = utctDay localTime,
+                  currency = INR,
+                  distanceUnit = Meter,
+                  activatedValidRides = 0,
+                  referralEarnings = 0.0,
+                  referralCounts = 0,
+                  payoutStatus = DDS.Initialized,
+                  payoutOrderId = Nothing,
+                  payoutOrderStatus = Nothing,
+                  createdAt = now,
+                  updatedAt = now,
+                  cancellationCharges = 0.0,
+                  tipAmount = 0.0,
+                  totalRideTime = 0,
+                  numDriversOnboarded = 0,
+                  numFleetsOnboarded = 1,
+                  merchantId = Just merchantId,
+                  merchantOperatingCityId = Just merchantOpCityId
+                }
+        QDailyStats.create dailyStatsOfDriver'
+        logTagInfo "CREATE_DAILY_STATS_FLEET_COUNT" $ "Successfully created daily stats with fleet count 1 for " <> show referredOperatorId

@@ -210,6 +210,8 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 cancellationCharges = 0.0,
                 tipAmount = 0.0,
                 totalRideTime = rideDuration,
+                numDriversOnboarded = 0,
+                numFleetsOnboarded = 0,
                 merchantId = DR.merchantId ride,
                 merchantOperatingCityId = Just merchantOpCityId
               }

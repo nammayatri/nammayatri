@@ -18,11 +18,14 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import Data.Time hiding (getCurrentTime)
+import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import Domain.Types.TransporterConfig
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -34,6 +37,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
@@ -83,15 +87,14 @@ validateReferralReq ReferralReq {..} =
     ]
 
 validateReferralCodeAndRole ::
-  Id DMOC.MerchantOperatingCity ->
+  TransporterConfig ->
   Id Person.Person ->
   ReferralReq ->
   Flow DR.DriverReferral
-validateReferralCodeAndRole merchantOpCityId personId req = do
+validateReferralCodeAndRole transporterConfig personId req = do
   dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
   let role = fromMaybe Person.DRIVER req.role
   unless (role == dr.role && personId /= dr.driverId) $ throwError (InvalidRequest "Invalid referral role")
-  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   logTagInfo "validateReferralCodeAndRole" $ "transporterConfig allowedReferralEntities: " <> show transporterConfig.allowedReferralEntities
   unless (role `elem` transporterConfig.allowedReferralEntities) $ throwError (InvalidRequest "Referral not allowed for this merchant")
   return dr
@@ -106,7 +109,8 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
   if isJust di.referralCode || isJust di.referredByDriverId
     then return AlreadyReferred
     else do
-      dr <- validateReferralCodeAndRole merchantOpCityId personId req
+      transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+      dr <- validateReferralCodeAndRole transporterConfig personId req
       case dr.role of
         Person.DRIVER -> do
           DriverInformation.addReferralCode (Just req.value) (Just dr.driverId) personId
@@ -122,6 +126,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
               driverOperatorAssData <- makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
               void $ QDOA.create driverOperatorAssData
               incrementOnboardedDriverCountByOperator dr.driverId
+              incrementDailyStatsOnboardedDriverCount merchantId merchantOpCityId dr.driverId transporterConfig
               return Success
             else return AlreadyReferred
         _ -> throwError (InvalidRequest "Invalid referral role")
@@ -176,7 +181,8 @@ getDriverDetailsByReferralCode ::
   Flow DriverReferralDetailsRes
 getDriverDetailsByReferralCode (personId, _, merchantOpCityId) req = do
   runRequestValidation validateReferralReq req
-  dr <- validateReferralCodeAndRole merchantOpCityId personId req
+  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  dr <- validateReferralCodeAndRole transporterConfig personId req
   person <- B.runInReplica (QPerson.findById dr.driverId) >>= fromMaybeM (PersonNotFound dr.driverId.getId)
   return $
     DriverReferralDetailsRes
@@ -184,3 +190,49 @@ getDriverDetailsByReferralCode (personId, _, merchantOpCityId) req = do
         name = Just (person.firstName <> " " <> (fromMaybe "" person.middleName) <> " " <> (fromMaybe "" person.lastName)),
         role = dr.role
       }
+
+incrementDailyStatsOnboardedDriverCount :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> TransporterConfig -> Flow ()
+incrementDailyStatsOnboardedDriverCount merchantId merchantOpCityId referredOperatorId transporterConfig = do
+  let lockKey = "Driver:DailyStats:Referral:Increment:" <> getId referredOperatorId
+  Redis.withWaitAndLockRedis lockKey 10 5000 $ do
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    mbDailyStats <- QDailyStats.findByDriverIdAndDate referredOperatorId (utctDay localTime)
+    case mbDailyStats of
+      Just stats -> do
+        let newCount = stats.numDriversOnboarded + 1
+        QDailyStats.updateNumDriversOnboardedByDriverId newCount referredOperatorId (utctDay localTime)
+        logTagInfo "INCREMENT_DAILY_STATS_DRIVER_COUNT" $ "Successfully incremented daily stats driver count for " <> show referredOperatorId <> " to " <> show newCount
+      Nothing -> do
+        logDebug $ "DailyStats not found for driverId : " <> referredOperatorId.getId
+        id' <- generateGUIDText
+        now <- getCurrentTime
+        let dailyStatsOfDriver' =
+              DDS.DailyStats
+                { id = id',
+                  driverId = referredOperatorId,
+                  totalEarnings = 0.0,
+                  numRides = 0,
+                  totalDistance = 0,
+                  tollCharges = 0.0,
+                  bonusEarnings = 0.0,
+                  merchantLocalDate = utctDay localTime,
+                  currency = INR,
+                  distanceUnit = Meter,
+                  activatedValidRides = 0,
+                  referralEarnings = 0.0,
+                  referralCounts = 0,
+                  payoutStatus = DDS.Initialized,
+                  payoutOrderId = Nothing,
+                  payoutOrderStatus = Nothing,
+                  createdAt = now,
+                  updatedAt = now,
+                  cancellationCharges = 0.0,
+                  tipAmount = 0.0,
+                  totalRideTime = 0,
+                  numDriversOnboarded = 1,
+                  numFleetsOnboarded = 0,
+                  merchantId = Just merchantId,
+                  merchantOperatingCityId = Just merchantOpCityId
+                }
+        QDailyStats.create dailyStatsOfDriver'
+        logTagInfo "CREATE_DAILY_STATS_DRIVER_COUNT" $ "Successfully created daily stats with driver count 1 for " <> show referredOperatorId
