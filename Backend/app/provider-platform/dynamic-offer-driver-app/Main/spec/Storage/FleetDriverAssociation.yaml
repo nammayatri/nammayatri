@@ -27,6 +27,10 @@ FleetDriverAssociation:
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId
+    findByFleetIdAndDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, driverId, isActive]
 
   sqlType:
     id: text

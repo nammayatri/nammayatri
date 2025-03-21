@@ -23,3 +23,9 @@ FleetOperatorAssociation:
     id: text
     operatorId: text
     fleetOwnerId: text
+
+  queries:
+    findByFleetIdAndOperatorId:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, operatorId, isActive]

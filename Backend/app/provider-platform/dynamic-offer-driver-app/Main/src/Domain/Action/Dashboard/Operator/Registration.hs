@@ -37,17 +37,17 @@ postOperatorRegister merchantShortId opCity req = do
   case personOpt of
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
-      person <- createOperatorDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion merchant.generateReferralCodeForOperator
+      person <- createOperatorDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion
       return $ Common.OperatorRegisterResp {personId = cast @DP.Person @Common.Operator person.id}
 
-createOperatorDetails :: Registration.AuthReq -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Flow DP.Person
-createOperatorDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbIsGenerateRefEntry = do
+createOperatorDetails :: Registration.AuthReq -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Flow DP.Person
+createOperatorDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.OPERATOR)
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  when (mbIsGenerateRefEntry == Just True) $ do
+  when (transporterConfig.generateReferralCodeForOperator == Just True) $ do
     void $ DR.generateReferralCode (Just DP.OPERATOR) (person.id, merchantId, merchantOpCityId)
   pure person
 

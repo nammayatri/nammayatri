@@ -290,6 +290,8 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
                     cancellationCharges = 0.0,
                     tipAmount = 0.0,
                     totalRideTime = 0,
+                    numDriversOnboarded = 0,
+                    numFleetsOnboarded = 0,
                     merchantId = ride.merchantId,
                     merchantOperatingCityId = Just $ ride.merchantOperatingCityId
                   }
