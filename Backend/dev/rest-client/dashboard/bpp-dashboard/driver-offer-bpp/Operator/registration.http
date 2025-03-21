@@ -23,3 +23,30 @@ content-type: application/json
     "mobileCountryCode": "+91",
     "email": "operator@nammayatri.in"
 }
+
+###
+
+# @name operatorLogin
+
+POST {{bpp-dashboard-host}}/fleet/login/otp
+content-type: application/json
+
+  { "mobileNumber": "2212345678",
+    "mobileCountryCode": "+91",
+    "merchantId": "NAMMA_YATRI_PARTNER",
+    "city": "Kochi"
+  }
+
+###
+
+# @name operatorVerify
+
+POST {{bpp-dashboard-host}}/fleet/verify/otp
+content-type: application/json
+
+  { "mobileNumber": "2212345678",
+    "mobileCountryCode": "+91",
+    "merchantId": "NAMMA_YATRI_PARTNER",
+    "city": "Kochi",
+    "otp": "7891"
+  }
