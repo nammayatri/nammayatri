@@ -125,6 +125,8 @@ data TransporterConfigT f = TransporterConfigT
     fcmUrl :: B.C f Kernel.Prelude.Text,
     fleetAlertThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     freeTrialDays :: B.C f Kernel.Prelude.Int,
+    generateReferralCodeForFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    generateReferralCodeForOperator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,

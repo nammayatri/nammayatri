@@ -203,6 +203,8 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                       cancellationCharges = amountPaid,
                       tipAmount = 0.0,
                       totalRideTime = 0,
+                      numDriversOnboarded = 0,
+                      numFleetsOnboarded = 0,
                       merchantId = Just merchantId,
                       merchantOperatingCityId = Just merchantOperatingCity.id
                     }

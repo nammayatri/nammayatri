@@ -5,6 +5,7 @@
 module Storage.Queries.Person (module Storage.Queries.Person, module ReExport) where
 
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -33,6 +34,18 @@ deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 
 findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> [Domain.Types.Person.Role] -> m [Domain.Types.Person.Person])
 findAllByMerchantId merchantId role = do findAllWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.role $ Se.In role]]
+
+findAllByPersonIdsAndMerchant ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Person.Person])
+findAllByPersonIdsAndMerchant id merchantId merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
 
 findByEmailAndMerchant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

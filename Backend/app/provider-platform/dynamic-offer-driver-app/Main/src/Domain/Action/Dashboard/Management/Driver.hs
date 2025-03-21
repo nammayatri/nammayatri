@@ -52,6 +52,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    getDriverStats,
   )
 where
 
@@ -119,7 +120,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.Merchant (findMerchantByShortId, getCurrencyByMerchantOpCity)
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
@@ -130,10 +131,15 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
+import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
 import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
@@ -1108,3 +1114,107 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
   return Success
+
+getDriverStats :: ShortId DM.Merchant -> Context.City -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Text -> Flow Common.DriverStatsRes
+getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestedEntityId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  whenJust mbEntityId $ \e_Id -> do
+    let entityId = cast @Common.Driver @DP.Person e_Id
+    entities <- QPerson.findAllByPersonIdsAndMerchant [Id requestedEntityId, entityId] merchant.id merchantOpCityId
+    when (length entities /= 2) $ throwError (PersonDoesNotExist (requestedEntityId <> " or " <> entityId.getId))
+    isValid <- validatePersonAccessAndAssociation entities
+    unless isValid $ throwError (InternalError "Entity does not have access to this entity data")
+
+  let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestedEntityId) mbEntityId
+  findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
+  where
+    -- TODO: Need to implement clickhouse aggregated query to fetch data for the given date range
+    findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m Common.DriverStatsRes
+    findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
+      currency <- getCurrencyByMerchantOpCity merchantOpCityId
+      case (maybeFrom, maybeTo) of
+        (Nothing, Nothing) -> do
+          stats <- B.runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
+          let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+          return $
+            Common.DriverStatsRes
+              { numDriversOnboarded = stats.numDriversOnboarded,
+                numFleetsOnboarded = stats.numFleetsOnboarded,
+                totalRides = stats.totalRides,
+                totalEarnings = roundToIntegral stats.totalEarnings,
+                totalDistance = stats.totalDistance,
+                bonusEarnings = roundToIntegral stats.bonusEarned,
+                totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency
+              }
+        (Just fromDate, Just toDate) | fromDate == toDate -> do
+          let defaultStats =
+                Common.DriverStatsRes
+                  { numDriversOnboarded = 0,
+                    numFleetsOnboarded = 0,
+                    totalRides = 0,
+                    totalEarnings = Money 0,
+                    totalDistance = Meters 0,
+                    bonusEarnings = Money 0,
+                    totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+                    totalEarningsPerKm = Money 0,
+                    totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
+                    bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
+                  }
+          mbStats <- B.runInReplica $ QDailyStats.findByDriverIdAndDate personId fromDate
+          case mbStats of
+            Nothing -> return defaultStats
+            Just stats -> do
+              let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+              return $
+                Common.DriverStatsRes
+                  { numDriversOnboarded = stats.numDriversOnboarded,
+                    numFleetsOnboarded = stats.numFleetsOnboarded,
+                    totalRides = stats.numRides,
+                    totalEarnings = roundToIntegral stats.totalEarnings,
+                    totalDistance = stats.totalDistance,
+                    bonusEarnings = roundToIntegral stats.bonusEarnings,
+                    totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                    totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                    totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                    bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
+                  }
+        _ -> throwError (InvalidRequest "fromDate and toDate must be either both Nothing or the same date")
+
+    isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+    isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
+      case (requestedPersonDetails.role, personDetails.role) of
+        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation requestedPersonDetails.id.getId personDetails.id
+        (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation requestedPersonDetails.id.getId personDetails.id.getId
+        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id.getId personDetails.id
+        _ -> return False
+      where
+        checkFleetDriverAssociation fleetId driverId = do
+          mbAssoc <- QFleetDriver.findByDriverIdAndFleetOwnerId driverId fleetId True
+          return $ isJust mbAssoc
+
+        checkFleetOperatorAssociation fleetId operatorId = do
+          mbAssoc <- QFleetOperator.findByFleetIdAndOperatorId fleetId operatorId True
+          return $ isJust mbAssoc
+
+        checkDriverOperatorAssociation operatorId driverId = do
+          mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
+          return $ isJust mbAssoc
+
+    validatePersonAccessAndAssociation ::
+      (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+      [DP.Person] ->
+      m Bool
+    validatePersonAccessAndAssociation [requestedPerson, person] = isAssociationBetweenTwoPerson requestedPerson person
+    validatePersonAccessAndAssociation _ = return False
+
+    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
+    calculateEarningsPerKm distance earnings =
+      let distanceInKm = distance `div` 1000
+       in if distanceInKm.getMeters == 0
+            then HighPrecMoney 0.0
+            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters

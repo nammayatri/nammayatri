@@ -16,8 +16,10 @@ module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
@@ -114,7 +116,7 @@ fleetOwnerRegister req = do
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
       maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId merchant.generateReferralCodeForFleet
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.gstNumber maybeOperatorId
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
       fork "Uploading GST Image" $ do
@@ -150,8 +152,8 @@ makeFleetOperatorAssociation merchantId merchantOpCityId fleetOwnerId operatorId
         merchantOperatingCityId = Just merchantOpCityId
       }
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber mbReferredOperatorId mbIsGenerateRefEntry = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Text -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbgstNumber mbReferredOperatorId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
@@ -161,8 +163,8 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
-    incrementFleetOwnerOnboardedCountByOperator (Id referredOperatorId)
-  when (mbIsGenerateRefEntry == Just True) $ do
+    DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
+  when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
     void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
 
@@ -278,17 +280,3 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
-
-incrementFleetOwnerOnboardedCountByOperator :: Id DP.Person -> Flow ()
-incrementFleetOwnerOnboardedCountByOperator referredOperatorId = do
-  let lockKey = "Fleet:Referral:Increment:" <> getId referredOperatorId
-  Redis.withWaitAndLockRedis lockKey 10 5000 $ do
-    mbDriverStats <- QDriverStats.findByPrimaryKey referredOperatorId
-    case mbDriverStats of
-      Nothing -> do
-        logTagError "INCREMENT_FLEET_COUNT" ("DriverStats not found for operator " <> show referredOperatorId)
-        throwError $ InternalError "DriverStats not found for operator"
-      Just driverStats -> do
-        let newCount = driverStats.numFleetsOnboarded + 1
-        QDriverStats.updateNumFleetsOnboarded newCount referredOperatorId
-        logTagInfo "INCREMENT_FLEET_COUNT" $ "Successfully incremented fleet owner count for " <> show referredOperatorId <> " to " <> show newCount
