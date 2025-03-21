@@ -48,10 +48,13 @@ findAllTripTransactionByDriverIdStatus driverId mbLimit mbOffset mbStatus sortTy
 
 findAllTripTransactionByDriverIdActiveStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   m [Domain.Types.TripTransaction.TripTransaction]
-findAllTripTransactionByDriverIdActiveStatus driverId = do
-  let limitVal = 1
+findAllTripTransactionByDriverIdActiveStatus mbLimit driverId = do
+  let limitVal = case mbLimit of
+        Just val -> val
+        Nothing -> 10
   let offsetVal = 0
   let statusFilter = [Se.Is BeamT.status $ Se.Eq TRIP_ASSIGNED, Se.Is BeamT.status $ Se.Eq IN_PROGRESS]
   transactions <-

@@ -1303,7 +1303,8 @@ postDriverFleetTripPlanner ::
 postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
+  fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
+  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber (fromMaybe False req.isForceAssign)
   createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
   pure Success
 
@@ -1431,6 +1432,7 @@ data DriverBusRouteDetails = DriverBusRouteDetails
     vehicleNumber :: Text,
     routeCode :: Text,
     roundTripFreq :: Maybe Int
+    -- forceAssign :: Bool
   }
 
 instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
@@ -1440,6 +1442,8 @@ instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
       <*> r .: "vehicle_number"
       <*> r .: "route_code"
       <*> r .: "round_trip_freq"
+
+-- <*> r .: "force_assign"
 
 postDriverFleetAddDriverBusRouteMapping ::
   ShortId DM.Merchant ->
@@ -1452,6 +1456,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   driverBusRouteDetails <- readCsv req.file
 
   when (length driverBusRouteDetails > 100) $ throwError $ MaxDriversLimitExceeded 100
@@ -1477,7 +1482,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     foldlM
       ( \unprocessedEntities (driver, driverMobileNumber, vehicleNumber, tripPlannerRequests) -> do
           try @_ @SomeException
-            (WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId vehicleNumber)
+            (WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False) -- TODO :: Make this dynamic by adding the force_assign field in CSV.
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to link vehicle to the Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
               Right vehicleRC -> do

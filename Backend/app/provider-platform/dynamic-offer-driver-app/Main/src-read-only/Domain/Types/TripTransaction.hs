@@ -45,14 +45,14 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | ForceDashboard deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ActionSource)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ActionSource))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''ActionSource)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ActionSource))

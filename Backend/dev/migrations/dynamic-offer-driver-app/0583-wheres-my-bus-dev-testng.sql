@@ -178,3 +178,138 @@ INSERT INTO atlas_driver_offer_bpp.fleet_route_association (
   now(),
   now()
 );
+
+INSERT INTO atlas_driver_offer_bpp.fleet_config (
+    allow_ending_mid_route,
+    end_ride_distance_threshold,
+    fleet_owner_id,
+    ride_end_approval,
+    allow_start_ride_from_qr,
+    allow_automatic_round_trip_assignment,
+    merchant_id,
+    merchant_operating_city_id
+)
+SELECT
+    true,
+    500.0,
+    'favorit-fleet-owner-0000000000000000',
+    true,
+    false,
+    false,
+    m.merchant_id,
+    m.id
+FROM atlas_driver_offer_bpp.merchant_operating_city as m WHERE city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    merchant_operating_city_id,
+    rc_number_prefix_list,
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    created_at,
+    updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required
+)
+SELECT
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER') as merchant_operating_city_id,
+    '{WB}',
+    supported_vehicle_classes_json,
+    title,
+    'BUS' AS vehicle_category,
+    vehicle_class_check_type,
+    CURRENT_TIMESTAMP as created_at,
+    CURRENT_TIMESTAMP as updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required
+FROM
+    atlas_driver_offer_bpp.document_verification_config
+WHERE
+    vehicle_category = 'CAR'
+    AND merchant_operating_city_id = (select merchant_operating_city_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER')
+    AND document_type IN ('ProfilePhoto', 'DriverLicense', 'Permissions', 'AadhaarCard')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    merchant_operating_city_id,
+    rc_number_prefix_list,
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    created_at,
+    updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required
+)
+SELECT
+    false as check_expiry,
+    false as check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    true as is_hidden,
+    false as is_mandatory,
+    max_retry_count,
+    (select merchant_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER') as merchant_id,
+    (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER') as merchant_operating_city_id,
+    '{WB}',
+    supported_vehicle_classes_json,
+    title,
+    'BUS' AS vehicle_category,
+    vehicle_class_check_type,
+    CURRENT_TIMESTAMP as created_at,
+    CURRENT_TIMESTAMP as updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required
+FROM
+    atlas_driver_offer_bpp.document_verification_config
+WHERE
+    vehicle_category = 'CAR'
+    AND merchant_operating_city_id = (select merchant_operating_city_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER')
+    AND document_type IN ('VehicleRegistrationCertificate')
+ON CONFLICT DO NOTHING;
+
+UPDATE atlas_driver_offer_bpp.document_verification_config
+SET supported_vehicle_classes_json = '[{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "3wt_cab", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hmv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hpv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "mpv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "htv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "lmv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "trans", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "mgv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hgmv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "lgv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hgv", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hgv-tr", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hgv-trans", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hgvtr", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "hgvtrans", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null},{"bodyType": null, "priority": 1, "manufacturer": null, "vehicleClass": "lmv-tr", "vehicleModel": null, "reviewRequired": false, "vehicleVariant": "BUS_NON_AC", "vehicleCapacity": null, "manufacturerModel": null}]'
+WHERE document_type = 'VehicleRegistrationCertificate' AND vehicle_category = 'BUS' AND merchant_operating_city_id = (select merchant_operating_city_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER');
+
+UPDATE atlas_driver_offer_bpp.document_verification_config
+SET supported_vehicle_classes_json = json_build_array('HMV', 'HPV', 'MPV', 'HTV', 'LMV', 'TRANS', 'MGV', 'HGMV', 'LGV', 'HGV', 'HGV-TR', 'HGV-TRANS', 'HGVTR', 'HGVTRANS', 'LMV-TR', '3WT_CAB')
+WHERE document_type = 'DriverLicense' AND vehicle_category = 'BUS' AND merchant_operating_city_id = (select merchant_operating_city_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER');
