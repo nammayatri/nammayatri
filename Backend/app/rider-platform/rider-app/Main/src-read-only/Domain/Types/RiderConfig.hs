@@ -9,6 +9,8 @@ import Domain.Types.Extra.RiderConfig as ReExport
 import qualified Domain.Types.Extra.RiderConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RentalsIntercityCache
+import qualified Domain.Types.ServiceTierType
 import qualified Email.Types
 import qualified IssueManagement.Common
 import qualified Kernel.External.MultiModal.Interface.Types
@@ -35,12 +37,14 @@ data RiderConfig = RiderConfig
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
+    excludedVehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
     executePaymentDelay :: Kernel.Prelude.NominalDiffTime,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
+    intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     isAvoidToll :: Kernel.Prelude.Bool,
     isFirstReferredRideEnabled :: Kernel.Prelude.Bool,
     ivrTriggerDelay :: Kernel.Prelude.NominalDiffTime,
@@ -64,6 +68,7 @@ data RiderConfig = RiderConfig
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
+    rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
     sensitiveWords :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

@@ -77,7 +77,7 @@ data BookingAPIEntityV2 = Ride BookingAPIEntity | MultiModalRide JourneyAPIEntit
 
 data JourneyAPIEntity = JourneyAPIEntity
   { id :: Id Journey,
-    fare :: Price,
+    fare :: PriceAPIEntity,
     fromLocation :: JourneyLocation,
     toLocation :: JourneyLocation,
     startTime :: Maybe UTCTime,

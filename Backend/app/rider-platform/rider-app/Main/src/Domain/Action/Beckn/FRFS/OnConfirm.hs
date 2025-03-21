@@ -18,8 +18,11 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Aeson
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Lazy as BL
 import Data.HashMap.Strict
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
@@ -71,6 +74,7 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
+import qualified Utils.QRCode.Scanner as QRScanner
 import Web.JWT hiding (claims)
 
 validateRequest :: DOrder -> DIBC.PlatformType -> Flow (Merchant, Booking.FRFSTicketBooking)
@@ -230,13 +234,13 @@ mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
   (_, status_) <- Utils.getTicketStatus booking dTicket
-
+  processedQrData <- processQRData dTicket.qrData
   return
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
         Ticket.id = ticketId,
         Ticket.description = dTicket.description,
-        Ticket.qrData = dTicket.qrData,
+        Ticket.qrData = processedQrData,
         Ticket.qrRefreshAt = dTicket.qrRefreshAt,
         Ticket.riderId = booking.riderId,
         Ticket.status = status_,
@@ -251,8 +255,43 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.isTicketFree = Just isTicketFree
       }
 
-mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Flow TC.TransitObject
-mkTransitObjects pOrgId booking ticket person serviceAccount className = do
+processQRData :: Text -> Flow Text
+processQRData qrData = do
+  if isBase64Image qrData
+    then do
+      scanResult <- liftIO $ scanQRFromBase64 qrData
+      case scanResult of
+        Right extractedText -> pure extractedText
+        Left err -> do
+          logError $ "Failed to process QR image: " <> err
+          pure qrData -- fallback to original qrData if processing fails
+    else pure qrData
+
+-- | Check if text likely represents a base64 encoded image
+isBase64Image :: Text -> Bool
+isBase64Image txt =
+  let prefix = T.take 50 txt
+   in (T.isPrefixOf "data:image/" prefix && T.isInfixOf ";base64," prefix)
+        || any -- data URI format
+        -- Check for common image format headers in base64
+          (`T.isPrefixOf` prefix)
+          ["iVBORw0", "/9j/", "R0lGOD", "UklGR", "PD94bW"] -- PNG, JPEG, GIF, WEBP, XML SVG headers
+
+scanQRFromBase64 :: Text -> IO (Either Text Text)
+scanQRFromBase64 txt = do
+  let base64Content = case T.splitOn ";base64," txt of
+        [_, content] -> content
+        _ -> txt -- Not a data URI, use as is
+  case B64.decode (TE.encodeUtf8 base64Content) of
+    Left _ -> pure $ Left "Invalid base64 encoding"
+    Right imgBytes -> do
+      result <- QRScanner.scanQRCode (BL.fromStrict imgBytes)
+      case result of
+        Nothing -> pure $ Left "No QR code found in image"
+        Just text -> pure $ Right text
+
+mkTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> Ticket.FRFSTicket -> Person.Person -> TC.ServiceAccount -> Text -> Int -> Flow TC.TransitObject
+mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex = do
   toStation <- CQStation.findById booking.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.toStationId ||+ "")
   fromStation <- CQStation.findById booking.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId:" +|| booking.fromStationId ||+ "")
   let tripType' = if booking._type == FQ.ReturnJourney then GWSA.ROUND_TRIP else GWSA.ONE_WAY
@@ -278,10 +317,12 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
   let fromStationGMMLocationId = maybe (fromStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbFromStationPartnerOrg
   mbToStationPartnerOrg <- CQPOS.findByStationIdAndPOrgId toStation.id pOrgId
   let toStationGMMLocationId = maybe (toStation.id.getId) (\pOrgStation -> pOrgStation.partnerOrgStationId.getId) mbToStationPartnerOrg
+  let groupingInfo = TC.GroupingInfo {TC.groupingId = "Group." <> booking.id.getId, TC.sortIndex = sortIndex}
   return
     TC.TransitObject
       { TC.id = serviceAccount.saIssuerId <> "." <> ticket.id.getId,
         TC.classId = serviceAccount.saIssuerId <> "." <> className,
+        TC.tripId = booking.id.getId,
         TC.state = show GWSA.ACTIVE,
         TC.tripType = show tripType',
         TC.passengerType = show GWSA.SINGLE_PASSENGER,
@@ -295,6 +336,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className = do
             },
         TC.barcode = barcode',
         TC.textModulesData = textModules,
+        TC.groupingInfo = groupingInfo,
         TC.validTimeInterval = timeInterval
       }
 
@@ -309,12 +351,12 @@ createTickets booking dTickets discountedTickets = go dTickets discountedTickets
       go ds newFreeTickets (ticket : acc)
 
 createTransitObjects :: Id PartnerOrganization -> Booking.FRFSTicketBooking -> [Ticket.FRFSTicket] -> Person.Person -> TC.ServiceAccount -> Text -> Flow [TC.TransitObject]
-createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets []
+createTransitObjects pOrgId booking tickets person serviceAccount className = go tickets 1 []
   where
-    go [] acc = return (Prelude.reverse acc)
-    go (x : xs) acc = do
-      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className
-      go xs (transitObject : acc)
+    go [] _ acc = return (Prelude.reverse acc)
+    go (x : xs) sortIndex acc = do
+      transitObject <- mkTransitObjects pOrgId booking x person serviceAccount className sortIndex
+      go xs (sortIndex + 1) (transitObject : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do

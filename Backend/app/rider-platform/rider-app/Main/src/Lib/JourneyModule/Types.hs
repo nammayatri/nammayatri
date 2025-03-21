@@ -22,6 +22,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RouteStopMapping as DRouteStopMappping
 import qualified Domain.Types.SearchRequest as DSR
+import Domain.Types.Station as DTS
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
 import EulerHS.Prelude (safeHead)
@@ -227,7 +228,7 @@ data LegInfo = LegInfo
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     personId :: Id DP.Person,
     actualDistance :: Maybe Distance,
-    totalFare :: Maybe Kernel.Types.Common.Price
+    totalFare :: Maybe PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -255,7 +256,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     vehicleIconUrl :: Maybe BaseUrl,
     batchConfig :: Maybe SharedRedisKeys.BatchConfig,
     tollDifference :: Maybe Kernel.Types.Common.Price,
-    chargeableRideDistance :: Maybe HighPrecMeters,
+    chargeableRideDistance :: Maybe Distance,
     waitingCharges :: Maybe Kernel.Types.Common.Price,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
@@ -429,7 +430,6 @@ mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe D
 mkLegInfoFromBookingAndRide booking mRide = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
   let skipBooking = fromMaybe False booking.isSkipped
-      chargeableRideDistance = distanceToHighPrecMeters <$> (mRide >>= (.chargeableDistance))
   (status, _) <- getTaxiLegStatusFromBooking booking mRide
   (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
   tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
@@ -466,7 +466,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 vehicleIconUrl = booking.vehicleIconUrl,
                 batchConfig,
                 tollDifference = Just tollDifference,
-                chargeableRideDistance = chargeableRideDistance,
+                chargeableRideDistance = mRide >>= (.chargeableDistance),
                 waitingCharges = (.amount) <$> find (\item -> item.description == "WAITING_OR_PICKUP_CHARGES") fareBreakups,
                 rideStartTime = (.rideStartTime) =<< mRide,
                 rideEndTime = (.rideEndTime) =<< mRide,
@@ -477,7 +477,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
                 driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide
               },
         actualDistance = mRide >>= (.traveledDistance),
-        totalFare = mRide >>= (.totalFare)
+        totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare))
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -646,7 +646,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         status = legStatus,
         legExtraInfo = legExtraInfo,
         actualDistance = distance,
-        totalFare = booking.finalPrice
+        totalFare = mkPriceAPIEntity <$> booking.finalPrice
       }
   where
     mkLegExtraInfo qrDataList journeyRouteDetails' metroRouteInfo' subwayRouteInfo' = do
@@ -690,69 +690,60 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   providerName = Just booking.providerName
                 }
 
-    getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
-    getMetroLegRouteInfo journeyRouteDetails = do
-      mapM transformJourneyRouteDetails journeyRouteDetails
-      where
-        transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m MetroLegRouteInfo
-        transformJourneyRouteDetails journeyRouteDetail = do
-          fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
-          toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
-          routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
+getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
+getMetroLegRouteInfo journeyRouteDetails = do
+  mapM transformJourneyRouteDetails journeyRouteDetails
+  where
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m MetroLegRouteInfo
+    transformJourneyRouteDetails journeyRouteDetail = do
+      fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
+      toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
+      routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
 
-          fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
-          toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-          route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+      fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
+      toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
+      route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
 
-          return
-            MetroLegRouteInfo
-              { originStop = stationToStationAPI fromStation,
-                destinationStop = stationToStationAPI toStation,
-                routeCode = route.code,
-                subOrder = journeyRouteDetail.subLegOrder,
-                journeyStatus = journeyRouteDetail.journeyStatus,
-                platformNumber = journeyRouteDetail.platformNumber,
-                lineColor = journeyRouteDetail.lineColor,
-                lineColorCode = journeyRouteDetail.lineColorCode,
-                frequency = journeyRouteDetail.frequency
-              }
+      return
+        MetroLegRouteInfo
+          { originStop = stationToStationAPI fromStation,
+            destinationStop = stationToStationAPI toStation,
+            routeCode = route.code,
+            subOrder = journeyRouteDetail.subLegOrder,
+            journeyStatus = journeyRouteDetail.journeyStatus,
+            platformNumber = journeyRouteDetail.platformNumber,
+            lineColor = journeyRouteDetail.lineColor,
+            lineColorCode = journeyRouteDetail.lineColorCode,
+            frequency = journeyRouteDetail.frequency
+          }
 
-    getSubwayLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [SubwayLegRouteInfo]
-    getSubwayLegRouteInfo journeyRouteDetails = do
-      mapM transformJourneyRouteDetails journeyRouteDetails
-      where
-        transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m SubwayLegRouteInfo
-        transformJourneyRouteDetails journeyRouteDetail = do
-          fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
-          toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
-          routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
+getSubwayLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [SubwayLegRouteInfo]
+getSubwayLegRouteInfo journeyRouteDetails = do
+  mapM transformJourneyRouteDetails journeyRouteDetails
+  where
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m SubwayLegRouteInfo
+    transformJourneyRouteDetails journeyRouteDetail = do
+      fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
+      toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
+      routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
 
-          fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
-          toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-          route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+      fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
+      toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
+      route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
 
-          return
-            SubwayLegRouteInfo
-              { originStop = stationToStationAPI fromStation,
-                destinationStop = stationToStationAPI toStation,
-                routeCode = route.code,
-                subOrder = journeyRouteDetail.subLegOrder,
-                platformNumber = journeyRouteDetail.platformNumber,
-                journeyStatus = journeyRouteDetail.journeyStatus,
-                lineColor = journeyRouteDetail.lineColor,
-                lineColorCode = journeyRouteDetail.lineColorCode,
-                trainNumber = Nothing,
-                frequency = journeyRouteDetail.frequency
-              }
-
-    stationToStationAPI station =
-      FRFSStationAPI
-        { name = station.name,
-          code = station.code,
-          lat = station.lat,
-          lon = station.lon,
-          address = station.address
-        }
+      return
+        SubwayLegRouteInfo
+          { originStop = stationToStationAPI fromStation,
+            destinationStop = stationToStationAPI toStation,
+            routeCode = route.code,
+            subOrder = journeyRouteDetail.subLegOrder,
+            platformNumber = journeyRouteDetail.platformNumber,
+            journeyStatus = journeyRouteDetail.journeyStatus,
+            lineColor = journeyRouteDetail.lineColor,
+            lineColorCode = journeyRouteDetail.lineColorCode,
+            trainNumber = Nothing,
+            frequency = journeyRouteDetail.frequency
+          }
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
 castCategoryToMode Spec.METRO = DTrip.Metro
@@ -843,69 +834,15 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   providerName = Nothing
                 }
 
-    getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
-    getMetroLegRouteInfo journeyRouteDetails' = do
-      mapM transformJourneyRouteDetails journeyRouteDetails'
-      where
-        transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m MetroLegRouteInfo
-        transformJourneyRouteDetails journeyRouteDetail = do
-          fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
-          toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
-          routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
-
-          fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
-          toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-          route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
-
-          return
-            MetroLegRouteInfo
-              { originStop = stationToStationAPI fromStation,
-                destinationStop = stationToStationAPI toStation,
-                routeCode = route.code,
-                subOrder = journeyRouteDetail.subLegOrder,
-                platformNumber = journeyRouteDetail.platformNumber,
-                lineColor = journeyRouteDetail.lineColor,
-                journeyStatus = journeyRouteDetail.journeyStatus,
-                lineColorCode = journeyRouteDetail.lineColorCode,
-                frequency = journeyRouteDetail.frequency
-              }
-
-    getSubwayLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [SubwayLegRouteInfo]
-    getSubwayLegRouteInfo journeyRouteDetails' = do
-      mapM transformJourneyRouteDetails journeyRouteDetails'
-      where
-        transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => MultiModalJourneyRouteDetails -> m SubwayLegRouteInfo
-        transformJourneyRouteDetails journeyRouteDetail = do
-          fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
-          toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
-          routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
-
-          fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
-          toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
-          route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
-
-          return
-            SubwayLegRouteInfo
-              { originStop = stationToStationAPI fromStation,
-                destinationStop = stationToStationAPI toStation,
-                routeCode = route.code,
-                subOrder = journeyRouteDetail.subLegOrder,
-                platformNumber = journeyRouteDetail.platformNumber,
-                lineColor = journeyRouteDetail.lineColor,
-                journeyStatus = journeyRouteDetail.journeyStatus,
-                lineColorCode = journeyRouteDetail.lineColorCode,
-                trainNumber = Nothing,
-                frequency = journeyRouteDetail.frequency
-              }
-
-    stationToStationAPI station =
-      FRFSStationAPI
-        { name = station.name,
-          code = station.code,
-          lat = station.lat,
-          lon = station.lon,
-          address = station.address
-        }
+stationToStationAPI :: DTS.Station -> FRFSStationAPI
+stationToStationAPI station =
+  FRFSStationAPI
+    { name = station.name,
+      code = station.code,
+      lat = station.lat,
+      lon = station.lon,
+      address = station.address
+    }
 
 mkSearchReqLocation :: LocationAddress -> Maps.LatLngV2 -> SearchReqLocation
 mkSearchReqLocation address latLng = do
@@ -987,6 +924,9 @@ cannotCancelWalkStatus = [Skipped, Finishing, Completed, Cancelled]
 
 cannotSwitchStatus :: [JourneyLegStatus]
 cannotSwitchStatus = [Skipped, Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
+
+cannotCancelExtendStatus :: [JourneyLegStatus]
+cannotCancelExtendStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled, Arriving]
 
 data ExtendLegStartPoint
   = StartLocation StartLocationType

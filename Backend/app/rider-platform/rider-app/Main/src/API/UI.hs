@@ -21,6 +21,7 @@ where
 import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
+import qualified API.Action.UI.DeletedPerson as DeletedPerson
 import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
@@ -57,6 +58,7 @@ import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
+import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
@@ -112,6 +114,7 @@ type API =
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
+           :<|> DeletedPerson.API
            :<|> EditLocation.API
            :<|> SocialLogin.API
            :<|> EstimateBP.API
@@ -121,6 +124,7 @@ type API =
            :<|> MultimodalConfirm.API
            :<|> TrackRoute.API
            :<|> BBPS.API
+           :<|> RentalsIntercityCache.API
        )
 
 handler :: FlowServer API
@@ -165,6 +169,7 @@ handler =
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler
+    :<|> DeletedPerson.handler
     :<|> EditLocation.handler
     :<|> SocialLogin.handler
     :<|> EstimateBP.handler
@@ -174,3 +179,4 @@ handler =
     :<|> MultimodalConfirm.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
+    :<|> RentalsIntercityCache.handler

@@ -32,6 +32,7 @@ library
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
+      Utils.QRCode.Scanner
   other-modules:
       Paths_utils
   hs-source-dirs:

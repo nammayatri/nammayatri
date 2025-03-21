@@ -169,10 +169,10 @@ getActiveJourneyIds ::
     Monad m
   ) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  m [Kernel.Types.Id.Id Domain.Types.Journey.Journey]
+  m [Domain.Types.Journey.Journey]
 getActiveJourneyIds riderId = do
   activeJourneys <- QJourney.findAllActiveByRiderId riderId
-  return $ activeJourneys <&> (.id)
+  return activeJourneys
 
 generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> m ApiTypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs now = do
@@ -231,7 +231,7 @@ postMultimodalJourneyCancel ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyCancel (_, _) journeyId = do
   journey <- JM.getJourney journeyId
-  void $ JM.cancelRemainingLegs journeyId
+  void $ JM.cancelRemainingLegs journeyId False
   JM.updateJourneyStatus journey Domain.Types.Journey.CANCELLED
   pure Kernel.Types.APISuccess.Success
 

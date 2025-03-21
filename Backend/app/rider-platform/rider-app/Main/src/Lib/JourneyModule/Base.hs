@@ -31,7 +31,6 @@ import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
-import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -97,12 +96,6 @@ init journeyReq = do
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
-
-getJourneyFare :: [JL.LegInfo] -> Flow Price
-getJourneyFare legs =
-  case catMaybes (map (.totalFare) legs) of
-    [] -> pure $ Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}
-    (firstFare : restFares) -> foldlM KTP.addPrice firstFare restFares
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
@@ -364,6 +357,18 @@ getRemainingLegs journeyId = do
   let remainingLegs = filter cancellableStatus journeyLegs -- check if edge case is to be handled [completed , skipped, inplan]
   return remainingLegs
 
+getRemainingLegsForExtend ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DJourney.Journey ->
+  m [JL.LegInfo]
+getRemainingLegsForExtend journeyId = do
+  journeyLegs <- getAllLegsInfo journeyId
+  let remainingLegs = filter cancellableExtendStatus journeyLegs
+  return remainingLegs
+
+cancellableExtendStatus :: JL.LegInfo -> Bool
+cancellableExtendStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelExtendStatus)
+
 cancellableStatus :: JL.LegInfo -> Bool
 cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)
 
@@ -470,9 +475,10 @@ cancelLeg journeyLeg cancellationReasonCode isSkipped = do
 cancelRemainingLegs ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
+  Bool ->
   m ()
-cancelRemainingLegs journeyId = do
-  remainingLegs <- getRemainingLegs journeyId
+cancelRemainingLegs journeyId isExtend = do
+  remainingLegs <- if isExtend then (getRemainingLegsForExtend journeyId) else (getRemainingLegs journeyId)
   -- forM_ remainingLegs $ \leg -> do
   --   isCancellable <- checkIfCancellable leg
   --   unless isCancellable $
@@ -785,7 +791,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
 
     cancelRequiredLegs = do
       case mbEndLegOrder of
-        Nothing -> cancelRemainingLegs journeyId
+        Nothing -> cancelRemainingLegs journeyId False
         Just endLegOrder -> do
           remainingLegs <- getRemainingLegs journeyId
           let legsToCancel = filter (\leg -> leg.order < endLegOrder) remainingLegs

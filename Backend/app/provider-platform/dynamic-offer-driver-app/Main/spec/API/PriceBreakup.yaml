@@ -1,11 +1,14 @@
 imports:
   Ride: Domain.Types.Ride
   RateCardItem: API.Types.UI.DriverOnboardingV2
+  LatLong: Kernel.External.Maps.Types
   HighPrecMoney: Kernel.Types.Common
   HighPrecMeters: Kernel.Types.Common
 
 module: PriceBreakup
 types:
+  MeterRidePriceReq:
+    locationUpdates: "[LatLong]"
   MeterRidePriceRes:
     fare: HighPrecMoney
     distance: HighPrecMeters
@@ -15,6 +18,8 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       mandatoryQuery:
         rideId: Id Ride
+      request:
+        type: MeterRidePriceReq
       response:
         type: MeterRidePriceRes
   - GET:

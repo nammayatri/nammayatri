@@ -375,3 +375,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referra
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dynamic_referral_code_enabled boolean ;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_referral_entities text[]  default '{DRIVER}';
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN qar_cal_radius_in_km double precision ;
