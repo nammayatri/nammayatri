@@ -123,7 +123,8 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         now <- getCurrentTime
         closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (StopNotFound)
         vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber False
-        let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate
+        driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate (Just driver.firstName)
         -- TODO :: Handle Transaction Failure
         QTT.create tripTransaction
         assignTripTransaction tripTransaction route False currentLocation destinationStopInfo.point False
@@ -133,7 +134,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
       Right tripTransaction -> return tripTransaction
       Left _ -> throwError (InternalError "Process for Trip Assignment & Start is Already Ongoing, Please try again!")
   where
-    buildTripTransaction tripTransactionId endStopCode now closestStop vehicleRegistrationCertificate =
+    buildTripTransaction tripTransactionId endStopCode now closestStop vehicleRegistrationCertificate firstName =
       TripTransaction
         { allowEndingMidRoute = fleetConfig.allowEndingMidRoute,
           deviationCount = 0,
@@ -157,6 +158,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           tripStartTime = Just now,
           tripEndTime = Nothing,
           tripTerminationSource = Nothing,
+          driverName = firstName,
           ..
         }
 

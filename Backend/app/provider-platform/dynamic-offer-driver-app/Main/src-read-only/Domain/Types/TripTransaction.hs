@@ -22,6 +22,7 @@ data TripTransaction = TripTransaction
     createdAt :: Kernel.Prelude.UTCTime,
     deviationCount :: Kernel.Prelude.Int,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
     endStopCode :: Data.Text.Text,
