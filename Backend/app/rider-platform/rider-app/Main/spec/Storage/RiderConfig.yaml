@@ -79,6 +79,8 @@ RiderConfig:
     excludedVehicleVariants: "Maybe [ServiceTierType]"
     rentalsConfig: "Maybe [RentalsConfig]"
     intercitySearchLocations : "Maybe [IntercitySearchLocation]"
+    payoutReferralThresholdPerDay: Int
+    payoutReferralThresholdPerMonth: Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -103,6 +105,8 @@ RiderConfig:
     multimodalTesting: Maybe Bool
     payoutReferralStartDate: Maybe UTCTime
     isFirstReferredRideEnabled: Maybe Bool
+    payoutReferralThresholdPerDay: Maybe Int
+    payoutReferralThresholdPerMonth: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -134,6 +138,8 @@ RiderConfig:
     payoutReferralStartDate: payoutReferralStartDate_|E
     multimodalTesting: fromMaybe False multimodalTesting|E
     isFirstReferredRideEnabled: fromMaybe False isFirstReferredRideEnabled|E
+    payoutReferralThresholdPerDay: fromMaybe 5 payoutReferralThresholdPerDay|E
+    payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -158,6 +164,8 @@ RiderConfig:
     payoutReferralStartDate: Just payoutReferralStartDate|E
     multimodalTesting: Just multimodalTesting|E
     isFirstReferredRideEnabled: Just isFirstReferredRideEnabled|E
+    payoutReferralThresholdPerDay: Just payoutReferralThresholdPerDay|E
+    payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
 
   default:
     enableLocalPoliceSupport: "false"

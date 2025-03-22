@@ -208,3 +208,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN is_first_referred_ride_enabled boo
 ALTER TABLE atlas_app.rider_config ADD COLUMN rentals_config text [] ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN intercity_search_locations text [] ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN excluded_vehicle_variants text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_month integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_day integer ;
