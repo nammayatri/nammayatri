@@ -1,0 +1,31 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
+
+FleetBadge:
+  tableName: fleet_badge
+
+  fields:
+    id: Id FleetBadge
+    badgeName: Text
+    fleetOwnerId: Id Person
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    fleetOwnerId: SecondaryKey
+    badgeName: SecondaryKey
+
+  queries:
+    findOneBadgeByNameAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where: 
+        and: [fleetOwnerId, badgeName]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

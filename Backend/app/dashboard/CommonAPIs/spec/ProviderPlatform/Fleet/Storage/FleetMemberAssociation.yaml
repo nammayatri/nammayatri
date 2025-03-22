@@ -13,14 +13,15 @@ FleetMemberAssociation:
     fleetOwnerId: SecondaryKey
 
   queries:
-    findByfleetMemberIdAndFleetOwnerId:
-      kvFunction: findOneWithKV
-      where:
-        and: [fleetMemberId, fleetOwnerId, enabled]
-
-    findAllMemberByFleetOwnerId:
+    findAllByfleetMemberId:
       kvFunction: findAllWithKV
-      where: fleetOwnerId
+      where:
+        and: [fleetMemberId]
+
+    findAllActiveByfleetMemberId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetMemberId, enabled]
 
     updateFleetMemberActiveStatus:
       kvFunction: updateOneWithKV
@@ -28,19 +29,15 @@ FleetMemberAssociation:
       where:
         and: [fleetMemberId, fleetOwnerId]
 
-    deleteByMemberId:
-      kvFunction: deleteWithKV
-      where: fleetMemberId
+    updateFleetMembersActiveStatus:
+      kvFunction: updateOneWithKV
+      params: [enabled]
+      where:
+        and:
+          - eq: [fleetMemberId]
+          - in: [fleetOwnerId]
 
-  cachedQueries:
-    findByPrimaryKey:
-      keyParams: [fleetMemberId]
-      dbQuery: findByPrimaryKey
-      dbQueryParams: [fleetMemberId]
-      queryType: FindAndCache
-
-  # extraOperations:
-  #   - EXTRA_QUERY_FILE
-
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
