@@ -96,6 +96,9 @@ MerchantOnboarding:
     findAllByRequestorId:
       kvFunction: findAllWithKV
       where: requestorId
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
     findByRequestorIdAndOnboardingType:
       kvFunction: findOneWithKV
       where:

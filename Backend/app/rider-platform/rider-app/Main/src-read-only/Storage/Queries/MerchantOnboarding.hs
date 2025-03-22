@@ -24,6 +24,9 @@ createMany = traverse_ create
 findAllByRequestorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
 findAllByRequestorId requestorId = do findAllWithKV [Se.Is Beam.requestorId $ Se.Eq requestorId]
 
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOnboarding.OnboardingStatus -> m [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
+
 findByRequestorIdAndOnboardingType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Domain.Types.MerchantOnboarding.OnboardingType -> m (Maybe Domain.Types.MerchantOnboarding.MerchantOnboarding))

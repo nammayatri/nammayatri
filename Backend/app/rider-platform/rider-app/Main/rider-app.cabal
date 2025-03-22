@@ -55,6 +55,7 @@ library
       API.Internal.FRFS
       API.Internal.Rating
       API.Internal.StopEvents
+      API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
