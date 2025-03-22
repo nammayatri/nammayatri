@@ -1,6 +1,7 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import Control.Applicative (liftA2)
+import Data.Text (toLower)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
@@ -83,8 +84,8 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                         B.&&?. driverInformation.mode B.==?. B.val_ (Just mode)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\val -> fleetDriverAssociation.isActive B.==?. B.val_ val) mbIsActive
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbName
-                        B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbSearchString
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
+                        B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` (B.val_ ("%" <> toLower name <> "%")))) mbSearchString
                                    B.||?. maybe
                                      (B.sqlBool_ $ B.val_ True)
                                      (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> lastDigits <> "%"))))
@@ -117,8 +118,8 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\val -> fleetDriverAssociation.isActive B.==?. B.val_ val) mbIsActive
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbName
-                        B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (driver.firstName `B.like_` B.val_ ("%" <> name <> "%"))) mbSearchString
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
+                        B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbSearchString
                                    B.||?. maybe
                                      (B.sqlBool_ $ B.val_ True)
                                      (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> lastDigits <> "%"))))
