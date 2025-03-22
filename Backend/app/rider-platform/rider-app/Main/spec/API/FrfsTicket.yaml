@@ -145,6 +145,15 @@ types:
     towards: Maybe Text
     derive: "Show"
 
+  FRFSTransitStop:
+    stopName: Text
+    stopType: Maybe Text
+    lat: Double
+    lon: Double
+
+  FRFSTransitStopsCache:
+    stops: [FRFSTransitStop]
+
   FRFSCanCancelStatus:
     cancellationCharges: Maybe HighPrecMoney
     refundAmount: Maybe HighPrecMoney
@@ -221,6 +230,14 @@ apis:
         platformType: PlatformType
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
+
+  - GET:
+      endpoint: /frfs/transitStops
+      auth: TokenAuth
+      query:
+        platformType: PlatformType
+      response:
+        type: "API.Types.UI.FRFSTicketService.FRFSTransitStopsCache"
 
   # GET metro/bus route details for the merchant city
   - GET:
