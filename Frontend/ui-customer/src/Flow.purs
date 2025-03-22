@@ -1330,9 +1330,8 @@ accountSetUpScreenFlow = do
         REFERRAL_APPLIED -> do
           void $ pure $ hideKeyboardOnNavigation true
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = Verified, referralTextFocussed = true} })
-        REFERRAL_INVALID -> do
+        _ -> do
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = ReferralFailed, referralTextFocussed = true} })
-        _ -> pure unit
       accountSetUpScreenFlow
 
 updateDisabilityList :: String -> FlowBT String (Array DisabilityT)
