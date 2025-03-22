@@ -446,6 +446,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         androidId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
+        juspayCustomerPaymentID = Nothing,
         defaultPaymentMethodId = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Just 0,

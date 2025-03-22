@@ -656,6 +656,7 @@ library
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
       Domain.Types.PassengerDetails
+      Domain.Types.PaymentCustomer
       Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
@@ -772,6 +773,7 @@ library
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
       Storage.Beam.PassengerDetails
+      Storage.Beam.PaymentCustomer
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
@@ -938,6 +940,7 @@ library
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
       Storage.Queries.PassengerDetails
+      Storage.Queries.PaymentCustomer
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
