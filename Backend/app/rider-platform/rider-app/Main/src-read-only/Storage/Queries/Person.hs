@@ -105,6 +105,13 @@ updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isValidRating isValidRating, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateJuspayCustomerPaymentId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateJuspayCustomerPaymentId juspayCustomerPaymentID id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -177,6 +184,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,
+      Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID,
       Se.Set Beam.language language,
       Se.Set Beam.lastName lastName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

@@ -20,6 +20,7 @@ module Tools.Payment
     refundOrder,
     PaymentServiceType (..),
     createCustomer,
+    getCustomer,
     createEphemeralKeys,
     getCardList,
     createPaymentIntent,
@@ -60,6 +61,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     createSetupIntent,
     deleteCard,
     getCardList,
+    getCustomer,
     getPaymentIntent,
     isSplitEnabled,
     orderStatus,
@@ -92,6 +94,9 @@ verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
 ---- Ride Payment Related Functions (mostly stripe) ---
 createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateCustomerReq -> m CreateCustomerResp
 createCustomer = runWithServiceConfig1 Payment.createCustomer (.createPaymentCustomer)
+
+getCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CreateCustomerResp
+getCustomer = runWithServiceConfig1 Payment.getCustomer (.createPaymentCustomer)
 
 createEphemeralKeys :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m Text
 createEphemeralKeys = runWithServiceConfig1 Payment.createEphemeralKeys (.createEphemeralKeys)
