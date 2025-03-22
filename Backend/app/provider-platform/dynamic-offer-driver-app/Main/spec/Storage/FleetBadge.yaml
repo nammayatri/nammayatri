@@ -24,7 +24,7 @@ FleetBadge:
   queries:
     findOneBadgeByNameAndFleetOwnerId:
       kvFunction: findOneWithKV
-      where: 
+      where:
         and: [fleetOwnerId, badgeName]
 
   extraOperations:
