@@ -208,7 +208,7 @@ apis:
       auth: ApiAuthV2
       query:
         - mblimit: Int
-        - mboffset: Int        
+        - mboffset: Int
         - mbSearchString: Text
       response:
         type: FleetBadgeRes
@@ -845,7 +845,7 @@ types:
   FleetOwnerListRes:
     - recordType: NewType
     - ownersList: [FleetOwnerListAPIEntity]
-  FleetOwnerListAPIEntity:    
+  FleetOwnerListAPIEntity:
     - fleetOwnerId: Text
     - fleetOwnerName: Text
     - enabled: Bool
@@ -892,7 +892,7 @@ types:
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType
-    - vehicles: [VehicleAPIEntityT]    
+    - vehicles: [VehicleAPIEntityT]
   ListVehicleRes:
     - recordType: NewType
     - vehicles: [VehicleAPIEntity]
@@ -916,8 +916,8 @@ types:
   FleetBadgesAPIEntity:
     - recordType: NewType
     - badgeName: Text
-  FleetListDriverResT:    
-    - fleetDriversInfos: [FleetDriversAPIEntityT]    
+  FleetListDriverResT:
+    - fleetDriversInfos: [FleetDriversAPIEntityT]
   FleetListDriverRes:
     - recordType: NewType
     - fleetDriversInfos: [FleetDriversAPIEntity]
