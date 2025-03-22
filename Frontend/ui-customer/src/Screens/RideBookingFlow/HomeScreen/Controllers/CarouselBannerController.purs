@@ -108,6 +108,7 @@ handleDynamicBannerAC action state =
       CRT.Intercity -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTER_CITY")]
       CRT.SafetyExplaination -> update state
       CRT.SetupSafety -> exit $ GoToNammaSafety state false false
+      CRT.ReferralBanner -> exit $ GoToReferral GIVE_REFERRAL state
       CRT.IntercityBus -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTERCITY_BUS")]
     Nothing -> update state
 

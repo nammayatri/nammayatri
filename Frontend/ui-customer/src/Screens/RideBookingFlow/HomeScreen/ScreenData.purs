@@ -53,6 +53,7 @@ initData = let
     , channelIdFromFCM : ""
     , personIdFromFCM : ""
     , sourceFromFCM : ""
+    , profile : Nothing
     , isBookingUpdated : false
     , source : ""
     , destination : ""

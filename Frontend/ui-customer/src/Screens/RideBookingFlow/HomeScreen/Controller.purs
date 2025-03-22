@@ -3538,6 +3538,8 @@ eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
   continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
 
+eval ReferralPayout state = exit $ GoToReferral GIVE_REFERRAL state
+
 eval _ state = update state
 
 updateBoostSearchConfig :: HomeScreenState -> HomeScreenState

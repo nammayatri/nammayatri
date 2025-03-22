@@ -138,6 +138,7 @@ data ScreenOutput = LogoutUser
 
 data Action = NoAction
   | BackPressed
+  | ReferralPayout
   | CancelSearch
   | RideSearchAction
   | RecenterCurrentLocation
