@@ -1548,6 +1548,7 @@ data WMBErrors
   | VehicleRouteMappingBlocked
   | AlreadyOnActiveTripWithAnotherVehicle Text
   | AlreadyOnActiveTrip
+  | FleetBadgeNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1587,6 +1588,7 @@ instance IsBaseError WMBErrors where
     RouteTripStopMappingNotFound routeCode -> Just $ "Route trip stop mapping not found for route code : " <> routeCode
     VehicleRouteMappingBlocked -> Just "Vehicle Route Mapping is blocked, unblock and try again."
     AlreadyOnActiveTrip -> Just "Driver is already on an Active trip."
+    FleetBadgeNotFound badgeName -> Just $ "Fleet Badge Name Not Found : " <> badgeName
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1623,6 +1625,7 @@ instance IsHTTPError WMBErrors where
     RouteTripStopMappingNotFound _ -> "ROUTE_TRIP_STOP_MAPPING_NOT_FOUND"
     VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
     AlreadyOnActiveTrip -> "ALREADY_ON_ACTIVE_TRIP"
+    FleetBadgeNotFound _ -> "FLEET_BADGE_NOT_FOUND"
 
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
@@ -1658,5 +1661,6 @@ instance IsHTTPError WMBErrors where
     RouteTripStopMappingNotFound _ -> E400
     VehicleRouteMappingBlocked -> E400
     AlreadyOnActiveTrip -> E400
+    FleetBadgeNotFound _ -> E400
 
 instance IsAPIError WMBErrors

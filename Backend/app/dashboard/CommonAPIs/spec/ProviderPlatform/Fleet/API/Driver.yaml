@@ -20,6 +20,28 @@ imports:
 module: Driver
 
 apis:
+  - GET:
+      endpoint: /fleet/access/list
+      auth: ApiAuthV2
+      response:
+        type: FleetOwnerListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_LIST
+
+  - POST:
+      endpoint: /fleet/access/{fleetOwnerId}/select
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      mandatoryQuery:
+        enable: Bool
+      query:
+        onlySingle: Bool
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS
+
   - POST: # BulkUploadVehiclesForFleetAPI
       endpoint: /fleet/addVehicles
       auth: ApiAuthV2
@@ -69,7 +91,7 @@ apis:
         - mbLimit: Int
         - mbOffset: Int
       response:
-        type: DriverRequestResp
+        type: DriverRequestRespT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_REQUESTS
       helperApi:
@@ -90,6 +112,8 @@ apis:
   - POST: # RespondDriverRequestsAPI
       endpoint: /fleet/respond/driverRequest
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       request:
         type: RequestRespondReq
       response:
@@ -135,7 +159,7 @@ apis:
         - mboffset: Int
         - mbRegNumberString: Text
       response:
-        type: ListVehicleRes
+        type: ListVehicleResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_VEHICLE_FOR_FLEET
       helperApi:
@@ -161,7 +185,7 @@ apis:
         - mbNameString: Text
         - mbSearchString: Text
       response:
-        type: FleetListDriverRes
+        type: FleetListDriverResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_DRIVERS_FOR_FLEET
       helperApi:
@@ -179,9 +203,35 @@ apis:
             response:
               type: FleetListDriverRes
 
+  - GET: # GetAllBadgeForFleetAPI
+      endpoint: /fleet/getAllBadge
+      auth: ApiAuthV2
+      query:
+        - mblimit: Int
+        - mboffset: Int        
+        - mbSearchString: Text
+      response:
+        type: FleetBadgeRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_BADGES_FOR_FLEET
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/getAllBadge
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - mbSearchString: Text
+            response:
+              type: FleetBadgeRes
+
   - POST: # FleetUnlinkVehicleAPI
       endpoint: /{driverId}/{vehicleNo}/fleet/unlink
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       params:
         driverId: Id Driver
         vehicleNo: Text
@@ -203,6 +253,8 @@ apis:
   - POST: # FleetRemoveVehicleAPI
       endpoint: /{vehicleNo}/fleet/remove/vehicle
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       params:
         vehicleNo: Text
       response:
@@ -222,6 +274,8 @@ apis:
   - POST: # FleetRemoveDriverAPI
       endpoint: /{driverId}/fleet/remove/driver
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       params:
         driverId: Id Driver
       response:
@@ -372,7 +426,7 @@ apis:
         - name: Text
         - mbSearchString: Text
       response:
-        type: DrivertoVehicleAssociationRes
+        type: DrivertoVehicleAssociationResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
       helperApi:
@@ -408,7 +462,7 @@ apis:
         - to: UTCTime
         - status: FleetVehicleStatus
       response:
-        type: DrivertoVehicleAssociationRes
+        type: DrivertoVehicleAssociationResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
       helperApi:
@@ -603,7 +657,7 @@ apis:
         - mbTo: UTCTime
         - mbVehicleNumber: Text
       response:
-        type: TripTransactionResp
+        type: TripTransactionRespT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
       helperApi:
@@ -666,6 +720,8 @@ apis:
   - POST:
       endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/end
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       params:
         tripTransactionId: Id TripTransaction
       response:
@@ -703,7 +759,7 @@ apis:
       request:
         type: NearbyDriverReq
       response:
-        type: NearbyDriverResp
+        type: NearbyDriverRespT
       helperApi:
         - POST:
             endpoint: /fleet/getNearbyDrivers/{fleetOwnerId}
@@ -739,6 +795,8 @@ types:
     - derive: "'HideSecrets"
   NearbyDriverResp:
     - drivers: [DriverInfo]
+  NearbyDriverRespT:
+    - drivers: [DriverInfoT]
   DriverInfo:
     - routeCode: Text
     - driverName: Text
@@ -746,6 +804,15 @@ types:
     - rideStatus: RideStatus
     - routeLongName: Maybe Text
     - point: LatLong
+  DriverInfoT:
+    - routeCode: Text
+    - driverName: Text
+    - vehicleNumber: Text
+    - rideStatus: RideStatus
+    - routeLongName: Maybe Text
+    - point: LatLong
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   RideStatus:
     enum: ON_PICKUP | ON_RIDE
   TrackDriverLocationsReq:
@@ -768,17 +835,37 @@ types:
     - roundTrip: Maybe RoundTripDetail
   TripPlannerReq:
     - driverId: Id Driver
+    - badgeName: Maybe Text
     - vehicleNumber: Text
     - trips: [TripDetails]
     - derive: "'HideSecrets"
+  FleetOwnerListRes:
+    - recordType: NewType
+    - ownersList: [FleetOwnerListAPIEntity]
+  FleetOwnerListAPIEntity:    
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
+    - enabled: Bool
   TripTransactionDetail:
     - tripTransactionId: Id TripTransaction
     - routeCode: Text
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - tripStatus: TripStatus
+  TripTransactionDetailT:
+    - tripTransactionId: Id TripTransaction
+    - routeCode: Text
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
+    - tripStatus: TripStatus
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   TripTransactionResp:
     - trips: [TripTransactionDetail]
+    - totalTrips: Int
+    - summary: Summary
+  TripTransactionRespT:
+    - trips: [TripTransactionDetailT]
     - totalTrips: Int
     - summary: Summary
   AddVehicleReq:
@@ -798,7 +885,11 @@ types:
     - dateOfRegistration: Maybe UTCTime
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
+    - vehicleTags: Maybe [Text]
     - derive: "'HideSecrets"
+  ListVehicleResT:
+    - recordType: NewType
+    - vehicles: [VehicleAPIEntityT]    
   ListVehicleRes:
     - recordType: NewType
     - vehicles: [VehicleAPIEntity]
@@ -807,6 +898,21 @@ types:
     - model: Maybe Text
     - color: Maybe Text
     - registrationNo: Text
+  VehicleAPIEntityT:
+    - variant: Maybe VehicleVariant
+    - model: Maybe Text
+    - color: Maybe Text
+    - registrationNo: Text
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
+  FleetBadgeRes:
+    - recordType: NewType
+    - fleetBadgeInfos: [FleetBadgesAPIEntity]
+  FleetBadgesAPIEntity:
+    - recordType: NewType
+    - badgeName: Text
+  FleetListDriverResT:    
+    - fleetDriversInfos: [FleetDriversAPIEntityT]    
   FleetListDriverRes:
     - recordType: NewType
     - fleetDriversInfos: [FleetDriversAPIEntity]
@@ -817,6 +923,15 @@ types:
     - lastName: Maybe Text
     - mobileNumber: Maybe Text
     - mobileCountryCode: Maybe Text
+  FleetDriversAPIEntityT:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - mobileNumber: Maybe Text
+    - mobileCountryCode: Maybe Text
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   FleetTotalEarningResponse:
     - totalRides: Int
     - totalEarning: Int
@@ -853,6 +968,10 @@ types:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItem]
     - summary: Summary
+  DrivertoVehicleAssociationResT:
+    - fleetOwnerId: Text
+    - listItem: [DriveVehicleAssociationListItemT]
+    - summary: Summary
   RCStatusReq:
     - rcNo: Text
     - isActivate: Bool
@@ -873,6 +992,22 @@ types:
     - isDriverActive: Bool
     - isRcAssociated: Bool
     - verificationDocsStatus: Maybe VerificationDocsStatus
+  DriveVehicleAssociationListItemT:
+    - driverId: Maybe Text
+    - vehicleNo: Maybe Text
+    - driverName: Maybe Text
+    - status: Maybe DriverMode
+    - driverPhoneNo: Maybe Text
+    - completedRides: Int # will remove this
+    - vehicleType: Maybe VehicleVariant
+    - earning: Int # this also
+    - isDriverOnRide: Maybe Bool
+    - isDriverOnPickup: Maybe Bool
+    - isDriverActive: Bool
+    - isRcAssociated: Bool
+    - verificationDocsStatus: Maybe VerificationDocsStatus
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus
     - vehiclePermit: Maybe VerificationStatus
@@ -948,6 +1083,15 @@ types:
     - raisedAt: UTCTime
     - status: Maybe RequestStatus
     - approvalRequestId: Text
+  DriverRequestDetailsT:
+    - requestData: ApprovalRequestData
+    - title: Text
+    - body: Text
+    - raisedAt: UTCTime
+    - status: Maybe RequestStatus
+    - approvalRequestId: Text
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   RequestRespondReq:
     - status: RequestStatus
     - approvalRequestId: Text
@@ -956,6 +1100,9 @@ types:
   DriverRequestResp:
     - recordType: NewType
     - requests: [DriverRequestDetails]
+  DriverRequestRespT:
+    - recordType: NewType
+    - requests: [DriverRequestDetailsT]
   RouteAPIResp:
     - listItem: [RouteRespItem]
     - summary: Summary

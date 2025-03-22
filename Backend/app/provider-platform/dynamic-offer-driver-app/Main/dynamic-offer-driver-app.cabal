@@ -544,6 +544,7 @@ library
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.FeedbackExtra
+      Storage.Queries.FleetBadgeExtra
       Storage.Queries.FleetDriverAssociationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
@@ -771,6 +772,7 @@ library
       Domain.Types.Exophone
       Domain.Types.FareProduct
       Domain.Types.Feedback
+      Domain.Types.FleetBadge
       Domain.Types.FleetConfig
       Domain.Types.FleetDriverAssociation
       Domain.Types.FleetOwnerDocumentVerificationConfig
@@ -900,6 +902,7 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
+      Storage.Beam.FleetBadge
       Storage.Beam.FleetConfig
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.FleetOwnerDocumentVerificationConfig
@@ -1032,6 +1035,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
+      Storage.Queries.FleetBadge
       Storage.Queries.FleetConfig
       Storage.Queries.FleetDriverAssociation
       Storage.Queries.FleetOwnerDocumentVerificationConfig
@@ -1098,6 +1102,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
+      Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetDriverAssociation
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.Image
