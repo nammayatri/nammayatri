@@ -161,6 +161,7 @@ library
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Operator.Driver
+      Domain.Action.Dashboard.Operator.Registration
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.RideBooking.DriverRegistration
@@ -688,6 +689,7 @@ library
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.Operator
       API.Action.Dashboard.Operator.Driver
+      API.Action.Dashboard.Operator.Registration
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Driver
       API.Action.Dashboard.RideBooking.DriverRegistration
