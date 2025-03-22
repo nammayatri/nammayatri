@@ -50,6 +50,7 @@ TripTransaction:
     vehicleNumber: Text
     tripCode: Maybe Text
     driverId: Id Person
+    driverName: Maybe Text
     routeCode: Text
     roundRouteCode: Maybe Text
     status: TripStatus

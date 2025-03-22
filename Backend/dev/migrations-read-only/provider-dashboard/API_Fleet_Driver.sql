@@ -123,6 +123,7 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 ------- SQL updates -------
 
+<<<<<<< HEAD
 -- {"api":"GetDriverFleetGetAllBadge","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_BADGES_FOR_FLEET","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_GET_ALL_BADGE' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'GET_ALL_BADGES_FOR_FLEET' ) ON CONFLICT DO NOTHING;
 
@@ -143,3 +144,7 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostDriverFleetAccessSelect","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ACCESS_SELECT' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'FLEET_OWNER_ACCESS' ) ON CONFLICT DO NOTHING;
+=======
+-- {"api":"GetDriverFleetDriverVehicleAssociationV2","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_VEHICLE_ASSOCIATION_V2","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_VEHICLE_ASSOCIATION_V2' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'GET_DRIVER_VEHICLE_ASSOCIATION_V2' ) ON CONFLICT DO NOTHING;
+>>>>>>> 87fab90b80 (wmb minor enhancement)
