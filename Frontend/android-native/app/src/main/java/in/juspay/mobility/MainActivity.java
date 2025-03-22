@@ -445,7 +445,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if (sharedPref != null) {
                 Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }

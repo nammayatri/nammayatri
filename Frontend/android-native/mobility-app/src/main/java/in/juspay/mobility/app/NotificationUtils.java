@@ -876,6 +876,7 @@ public class NotificationUtils {
         return isLowRamDevice || modelNotSupported;
     }
 
+    @Deprecated
     public static void updateLocationUpdateDisAndFreq(String fcmType, SharedPreferences sharedPref) {
         if (remoteConfigs.hasKey("loc_pings_config")){
             String locationPingsConfig = remoteConfigs.getString("loc_pings_config");
@@ -1021,7 +1022,7 @@ public class NotificationUtils {
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
                     startMainActivity(context);
                     if (merchantType.equals("DRIVER")){
-                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
                     break;
                 case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
@@ -1029,7 +1030,7 @@ public class NotificationUtils {
                         NotificationUtils.showNotification(context, title, body, payload, imageUrl);
                     }
                     if (merchantType.equals("DRIVER")){
-                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
                     break;
             }

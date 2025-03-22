@@ -179,18 +179,18 @@ public class LocationUpdateWorker extends Worker {
                     Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
                     restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                     String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-                    if (Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")) {
-                        try {
-                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                context.startActivity(restartIntent);
-                                Utils.minimizeApp(context);
-                            }, 5000);
-                        } catch (Exception e) {
-                            Log.e(TAG, "Unable to Start Widget Service");
-                            Exception exception = new Exception("Exception in LocationUpdateWorker$minimizeApp for ID : " + driverId + " $ Error : " + e);
-                            FirebaseCrashlytics.getInstance().recordException(exception);
-                        }
-                    }
+                    // if (Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")) {
+                    //     try {
+                    //         new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    //             context.startActivity(restartIntent);
+                    //             Utils.minimizeApp(context);
+                    //         }, 5000);
+                    //     } catch (Exception e) {
+                    //         Log.e(TAG, "Unable to Start Widget Service");
+                    //         Exception exception = new Exception("Exception in LocationUpdateWorker$minimizeApp for ID : " + driverId + " $ Error : " + e);
+                    //         FirebaseCrashlytics.getInstance().recordException(exception);
+                    //     }
+                    // }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error in LocationUpdateWorker " + e);
