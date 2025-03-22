@@ -164,7 +164,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     driversPreviousRideDropLocLat :: Maybe Double,
     driversPreviousRideDropLocLon :: Maybe Double,
     stopInfo :: [DSI.StopInformation],
-    batchConfig :: Maybe SharedRedisKeys.BatchConfig,
+    batchConfig :: Maybe BatchConfig,
     isSafetyPlus :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

@@ -112,6 +112,11 @@ updateJuspayCustomerPaymentId juspayCustomerPaymentID id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateLiveActivityToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLiveActivityToken liveActivityToken id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.liveActivityToken liveActivityToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -187,6 +192,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID,
       Se.Set Beam.language language,
       Se.Set Beam.lastName lastName,
+      Se.Set Beam.liveActivityToken liveActivityToken,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId ((Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId),
       Se.Set Beam.middleName middleName,

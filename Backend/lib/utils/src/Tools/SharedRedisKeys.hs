@@ -1,16 +1,13 @@
-module Tools.SharedRedisKeys where
+module Tools.SharedRedisKeys
+  ( module Tools.SharedRedisKeys,
+    module Reexport,
+  )
+where
 
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.SharedRedisKeys as Reexport
 import Kernel.Utils.Common
-
-data BatchConfig = BatchConfig
-  { totalBatches :: Int,
-    batchTime :: Seconds,
-    batchingStartedAt :: UTCTime,
-    batchingExpireAt :: UTCTime
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 batchConfigKey :: Text -> Text
 batchConfigKey srId = "batchConfig:" <> srId

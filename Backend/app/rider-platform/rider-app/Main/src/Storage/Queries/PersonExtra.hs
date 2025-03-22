@@ -106,8 +106,9 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Person ->
+  Maybe Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel person mbLiveActivityToken = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -137,6 +138,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.dateOfBirth mbDateOfBirth | isJust mbDateOfBirth]
         <> [Se.Set BeamP.profilePicture mbProfilePicture | isJust mbProfilePicture]
         <> [Se.Set BeamP.verificationChannel mbVerificationChannel | isJust mbVerificationChannel]
+        <> [Se.Set BeamP.liveActivityToken mbLiveActivityToken | isJust mbLiveActivityToken]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
