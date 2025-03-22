@@ -150,6 +150,7 @@ data UpdateProfileReq = UpdateProfileReq
     enableOtpLessRide :: Maybe Bool,
     deviceId :: Maybe Text,
     androidId :: Maybe Text,
+    liveActivityToken :: Maybe Text,
     dateOfBirth :: Maybe UTCTime,
     profilePicture :: Maybe Text,
     verificationChannel :: Maybe Text
@@ -324,6 +325,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.profilePicture
       req.verificationChannel
       person
+      req.liveActivityToken
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

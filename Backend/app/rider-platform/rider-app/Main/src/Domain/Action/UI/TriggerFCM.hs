@@ -31,7 +31,7 @@ postTriggerFCMMessage (mbPersonId, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..
   case person.deviceToken of
     Nothing -> throwError DeviceTokenNotFound
     Just _ -> do
-      notifyPerson person.merchantId person.merchantOperatingCityId person.id (buildNotificationData person senderId)
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id (buildNotificationData person senderId) Nothing
   return APISuccess.Success
   where
     buildNotificationData person senderId =

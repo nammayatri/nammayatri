@@ -1207,7 +1207,7 @@ notifyOnDriverArrived :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m
 notifyOnDriverArrived booking ride = do
   mbHasReachedNotified <- Redis.safeGet @() driverHasReached
   when (isNothing mbHasReachedNotified) $ do
-    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
+    Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
     Redis.setExp driverHasReached () 1500
   where
     driverHasReached = driverHasReachedCacheKey ride.id.getId
