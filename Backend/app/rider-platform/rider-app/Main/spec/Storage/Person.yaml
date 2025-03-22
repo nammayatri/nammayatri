@@ -97,6 +97,7 @@ Person:
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
+    juspayCustomerPaymentID: Maybe CustomerId
     defaultPaymentMethodId: Maybe PaymentMethodId
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
@@ -309,6 +310,11 @@ Person:
     updateCustomerPaymentId:
       kvFunction: updateWithKV
       params: [customerPaymentId]
+      where: id
+
+    updateJuspayCustomerPaymentId:
+      kvFunction: updateWithKV
+      params: [juspayCustomerPaymentID]
       where: id
 
     updateDefaultPaymentMethodId:

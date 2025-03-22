@@ -82,10 +82,16 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "payment"
+      :> "customer"
+      :> Get
+           '[JSON]
+           Kernel.External.Payment.Interface.Types.CreateCustomerResp
   )
 
 handler :: Environment.FlowServer API
-handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip
+handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer
 
 getPaymentMethods :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.PaymentMethodsResponse)
 getPaymentMethods a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentMethods (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -138,3 +144,11 @@ postPaymentAddTip ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postPaymentAddTip a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentAddTip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getPaymentCustomer ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.FlowHandler Kernel.External.Payment.Interface.Types.CreateCustomerResp
+  )
+getPaymentCustomer a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentCustomer (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
