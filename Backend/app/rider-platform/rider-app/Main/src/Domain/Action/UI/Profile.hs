@@ -129,7 +129,8 @@ data ProfileRes = ProfileRes
     referredByEarnings :: Maybe HighPrecMoney,
     referralAmountPaid :: Maybe HighPrecMoney,
     cancellationRate :: Maybe Int,
-    isPayoutEnabled :: Maybe Bool
+    isPayoutEnabled :: Maybe Bool,
+    completedRidesCount :: Maybe Int 
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -280,6 +281,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           referralEarnings = Just personStats.referralEarnings,
           referredByEarnings = Just personStats.referredByEarnings,
           referralAmountPaid = Just personStats.referralAmountPaid,
+          completedRidesCount = Just personStats.completedRides
           isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           cancellationRate = cancellationPerc,
           ..
