@@ -145,6 +145,38 @@ type RideAssignedAudioConfig = {
 , oneWay :: Maybe String
 , delivery :: Maybe String
 , rental :: Maybe String
+, sedan :: Maybe String
+, suv :: Maybe String
+, hatchback :: Maybe String
+, autoRickshaw :: Maybe String
+, taxi :: Maybe String
+, taxiPlus :: Maybe String
+, bike :: Maybe String
+, premiumSedan :: Maybe String
+, black :: Maybe String
+, blackXl :: Maybe String
+, ambulanceTaxi :: Maybe String
+, ambulanceTaxiOxy :: Maybe String
+, ambulanceAc :: Maybe String
+, ambulanceAcOxy :: Maybe String
+, ambulanceVentilator :: Maybe String
+, suvPlus :: Maybe String
+, deliveryLightGoodsVehicle :: Maybe String
+, busNonAc :: Maybe String
+, busAc :: Maybe String
+, heritageCab :: Maybe String
+, evAutoRickshaw :: Maybe String
+, deliveryTruckMini :: Maybe String
+, deliveryTruckSmall :: Maybe String
+, deliveryTruckMedium :: Maybe String
+, deliveryTruckLarge :: Maybe String
+, deliveryTruckUltraLarge :: Maybe String
+, comfy :: Maybe String
+, eco :: Maybe String
+, premium :: Maybe String
+, deliveryBike :: Maybe String
+, rentals :: Maybe String
+, local :: Maybe String
 }
 
 type ParcelConfig = {
