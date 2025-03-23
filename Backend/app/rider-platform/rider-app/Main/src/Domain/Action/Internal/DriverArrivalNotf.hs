@@ -31,8 +31,8 @@ data DANTypeValidationReq = DANTypeValidationReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 driverArrivalNotfHandler :: DANTypeValidationReq -> Flow APISuccess
-driverArrivalNotfHandler (DANTypeValidationReq rideId _ status) = do
-  ride <- B.runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
+driverArrivalNotfHandler (DANTypeValidationReq bppRideId _ status) = do
+  ride <- B.runInReplica $ QRide.findByBPPRideId (Id bppRideId) >>= fromMaybeM (RideDoesNotExist bppRideId)
   when (ride.status == COMPLETED || ride.status == CANCELLED) $
     throwError $ RideInvalidStatus ("Cannot track this ride: " <> pack (show ride.status))
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
