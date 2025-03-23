@@ -87,7 +87,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/bus_type"
+                            android:text="@string/route_number"
                             android:textColor="#454545"
                             android:layout_marginTop="16dp"
                             android:fontFamily="@font/plus_jakartasans_regular"
@@ -117,7 +117,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/route_number"
+                            android:text="@string/bus_type"
                             android:textColor="#454545"
                             android:layout_marginTop="16dp"
                             android:fontFamily="@font/plus_jakartasans_regular"
