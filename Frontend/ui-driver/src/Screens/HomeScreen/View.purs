@@ -218,7 +218,7 @@ screen initialState (GlobalState globalState) =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
-                                void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id push
+                                void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id (fromMaybe "" initialState.data.activeRide.requestedVehicleVariant) push
                                 void $ pure $ setValueToLocalStore RIDE_END_ODOMETER ""
                                 void $ pure $ setValueToLocalStore RIDE_START_ODOMETER ""
                                 void $ pure $ setValueToLocalStore DRIVER_RIDE_STATUS "ON_PICKUP"
@@ -383,21 +383,61 @@ getActiveRideDetails push delayTime retryCount = do
     pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
 
 
-playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Effect Unit
-playRideAssignedAudio tripCategory rideId push = do
+playRideAssignedAudio :: ST.TripType -> String -> String -> (Action -> Effect Unit) -> Effect Unit
+playRideAssignedAudio tripCategory rideId vehicleVariant push = do
   let lastPlayedRideId = getValueToLocalStore LAST_PLAYED_RIDE_ID
   if(lastPlayedRideId /= rideId) && rideId /= "" then do
     void $ pure $ setValueToLocalStore LAST_PLAYED_RIDE_ID rideId
     let
       city = getValueToLocalStore DRIVER_LOCATION
       config = RC.fetchRideAssignedAudioConfig city
-      audioUrl = case tripCategory of
+      -- First try to get vehicle variant-specific audio
+      variantAudioUrl = case vehicleVariant of
+        "SEDAN" -> config.sedan
+        "SUV" -> config.suv
+        "HATCHBACK" -> config.hatchback
+        "AUTO_RICKSHAW" -> config.autoRickshaw
+        "TAXI" -> config.taxi
+        "TAXI_PLUS" -> config.taxiPlus
+        "BIKE" -> config.bike
+        "PREMIUM_SEDAN" -> config.premiumSedan
+        "BLACK" -> config.black
+        "BLACK_XL" -> config.blackXl
+        "AMBULANCE_TAXI" -> config.ambulanceTaxi
+        "AMBULANCE_TAXI_OXY" -> config.ambulanceTaxiOxy
+        "AMBULANCE_AC" -> config.ambulanceAc
+        "AMBULANCE_AC_OXY" -> config.ambulanceAcOxy
+        "AMBULANCE_VENTILATOR" -> config.ambulanceVentilator
+        "SUV_PLUS" -> config.suvPlus
+        "DELIVERY_LIGHT_GOODS_VEHICLE" -> config.deliveryLightGoodsVehicle
+        "BUS_NON_AC" -> config.busNonAc
+        "BUS_AC" -> config.busAc
+        "HERITAGE_CAB" -> config.heritageCab
+        "EV_AUTO_RICKSHAW" -> config.evAutoRickshaw
+        "DELIVERY_TRUCK_MINI" -> config.deliveryTruckMini
+        "DELIVERY_TRUCK_SMALL" -> config.deliveryTruckSmall
+        "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
+        "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
+        "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
+        "COMFY" -> config.comfy
+        "ECO" -> config.eco
+        "PREMIUM" -> config.premium
+        "DELIVERY_BIKE" -> config.deliveryBike
+        "RENTALS" -> config.rentals
+        "LOCAL" -> config.local
+        _ -> Nothing
+        
+      -- Fall back to trip category if no variant-specific audio
+      tripAudioUrl = case tripCategory of
         ST.Rental ->  config.rental
         ST.Intercity -> config.intercity
         ST.RoundTrip -> config.roundTrip
         ST.Delivery -> config.delivery
         ST.OneWay -> config.oneWay
         ST.RideShare -> config.rideShare
+        
+      -- Use variant audio if available, otherwise use trip-based audio
+      audioUrl = if isJust variantAudioUrl then variantAudioUrl else tripAudioUrl
     case audioUrl of
       Just url -> do
         pure $ runFn4 JB.startAudioPlayer url push OnRideAssignedAudioCompleted  "0"
