@@ -296,6 +296,40 @@ fetchRideAssignedAudioConfig city =
     , oneWay : Nothing
     , delivery : Nothing
     , rental : Nothing
+    -- Vehicle variant specific audio files
+    , sedan : Nothing
+    , suv : Nothing
+    , hatchback : Nothing
+    , autoRickshaw : Nothing
+    , taxi : Nothing
+    , taxiPlus : Nothing
+    , bike : Nothing
+    , premiumSedan : Nothing
+    , black : Nothing
+    , blackXl : Nothing
+    , ambulanceTaxi : Nothing
+    , ambulanceTaxiOxy : Nothing
+    , ambulanceAc : Nothing
+    , ambulanceAcOxy : Nothing
+    , ambulanceVentilator : Nothing
+    , suvPlus : Nothing
+    , deliveryLightGoodsVehicle : Nothing
+    , busNonAc : Nothing
+    , busAc : Nothing
+    , heritageCab : Nothing
+    , evAutoRickshaw : Nothing
+    , deliveryTruckMini : Nothing
+    , deliveryTruckSmall : Nothing
+    , deliveryTruckMedium : Nothing
+    , deliveryTruckLarge : Nothing
+    , deliveryTruckUltraLarge : Nothing
+    -- Additional service tier types
+    , comfy : Nothing
+    , eco : Nothing
+    , premium : Nothing
+    , deliveryBike : Nothing
+    , rentals : Nothing
+    , local : Nothing
     }
 
     
