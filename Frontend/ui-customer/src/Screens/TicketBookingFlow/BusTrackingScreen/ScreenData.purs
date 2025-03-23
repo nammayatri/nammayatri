@@ -143,10 +143,6 @@ mockDriverInfo =
   , receiverDetails : Nothing
   , estimatedTimeToReachDestination : Nothing
   , isAirConditioned : Nothing
-  , parcelType : Nothing
-  , parcelQuantity : Nothing
-  , destinationWaitingTime : Nothing
-  , rideStartTime : ""
   }
 
 mockRoute :: API.Route

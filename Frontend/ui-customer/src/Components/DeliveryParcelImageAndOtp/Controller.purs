@@ -4,7 +4,6 @@ import Prelude
 import Font.Style (Style(..))
 import Language.Types (STR(..))
 import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), PrestoDOM)
-import Data.Maybe 
 import Font.Size as FontSize
 import Language.Strings (getString)
 import Common.Types.App as Common
@@ -22,9 +21,7 @@ type Config = {
     imageVisibility :: Boolean,
     otp :: String,
     rideStarted :: Boolean,
-    refreshAnimation :: Boolean,
-    parcelType :: Maybe String,
-    parcelQuantity :: Maybe Int
+    refreshAnimation :: Boolean
 }
 
 config :: Config
@@ -33,9 +30,7 @@ config = {
     imageVisibility: false,
     otp: "",
     rideStarted : false,
-    refreshAnimation : false,
-    parcelType : Nothing,
-    parcelQuantity : Nothing
+    refreshAnimation : false
 }
 
 checkImageUploadStatusButtonConfig :: Config -> PrimaryButton.Config

@@ -356,7 +356,6 @@ data Action = NoAction
   | ConfirmDeliveryRide
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
-  | DestinationWaitingTimeAction String String Int
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

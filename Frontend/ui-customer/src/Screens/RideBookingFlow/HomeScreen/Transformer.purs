@@ -25,7 +25,7 @@ import Helpers.TipConfig
 import Locale.Utils
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _fareProductType, _stopLocation, _amount, _nightShiftCharge, _types, _senderDetails, _receiverDetails, _requestorPartyRoles, _parcelQuantity, _parcelType, _tag, _contents)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _fareProductType, _stopLocation, _amount, _nightShiftCharge, _types, _senderDetails, _receiverDetails, _requestorPartyRoles)
 import Common.Types.App (LazyCheck(..), Paths, FareList, TicketType(..))
 import Common.Types.App as CT
 import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProductType(..)) as ChooseVehicle
@@ -51,7 +51,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices,fetchImage, FetchImageFrom(..), getCityFromString, intersection ,isAmbulance, isDeliveryTruckVariant)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices,fetchImage, FetchImageFrom(..), getCityFromString, intersection ,isAmbulance)
 import JBridge (fromMetersToKm, getLatLonFromAddress)
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
@@ -185,7 +185,6 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
         Just (API.PersonDetails details) -> Just ({name : details.name, phone : details.phoneNumber, extras : fromMaybe "" bookingLocationAPIEntity.extras, instructions : bookingLocationAPIEntity.instructions }::PersonDeliveryDetails)
         Nothing -> Nothing
       receiverDetails = (\(API.PersonDetails details) -> ({name : details.name, phone : details.phoneNumber, extras : fromMaybe "" toLocation.extras, instructions : toLocation.instructions }::PersonDeliveryDetails)) <$>  (resp.bookingDetails ^._contents ^. _receiverDetails)
-      
       currentRecipient = prevState.currentChatRecipient.recipient
   in  {
         otp : if isQuote && (not $ isLocalStageOn RideStarted) then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY, FPT.DELIVERY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
@@ -262,11 +261,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , rideDuration : resp.duration
       , senderDetails : senderDetails
       , receiverDetails : receiverDetails
-      , parcelType : (\(parcelType :: API.ParcelType) ->  parcelType ^._tag <> " " <> (maybe "" (\a -> " - " <> a) (parcelType ^._contents))) <$> resp.bookingDetails ^._contents ^._parcelType
-      , parcelQuantity : resp.bookingDetails ^._contents ^._parcelQuantity
       , estimatedTimeToReachDestination : prevState.estimatedTimeToReachDestination
-      , destinationWaitingTime : prevState.destinationWaitingTime
-      , rideStartTime : fromMaybe "" resp.rideStartTime
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -789,7 +784,6 @@ getTripDetailsState (RideBookingRes ride) state = do
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
       ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
-      deliveryTruckWaitingCharges = cityConfig.waitingChargeConfig.deliveryTruck
       waitingCharges = 
         if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
             autoWaitingCharges
@@ -797,8 +791,6 @@ getTripDetailsState (RideBookingRes ride) state = do
             bikeWaitingCharges
         else if isAmbulance rideDetails.vehicleVariant then
             ambulanceWaitingCharges
-        else if isDeliveryTruckVariant rideDetails.vehicleVariant then
-          deliveryTruckWaitingCharges
         else 
             cabsWaitingCharges
       nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
@@ -855,8 +847,7 @@ getTripDetailsState (RideBookingRes ride) state = do
         rideStatus = rideStatus,
         rideCreatedAt = ride.createdAt
       },
-      vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant,
-      rideType =  getFareProductType ((ride.bookingDetails) ^. _fareProductType)
+      vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
     }
   }
 

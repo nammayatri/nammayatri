@@ -122,8 +122,6 @@ public class RideRequestActivity extends AppCompatActivity {
             String notificationSource= rideRequestBundle.getString("notificationSource");
             int stops = rideRequestBundle.getInt("middleStopCount", 0);
             boolean roundTrip = rideRequestBundle.getBoolean("roundTrip");
-            String parcelType = rideRequestBundle.getString("parcelType");
-            int parcelQuantity = rideRequestBundle.getInt("parcelQuantity");
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
                     tollCharges,
@@ -171,9 +169,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getDouble("parkingCharge"),
                     getCurrTime,
                     stops,
-                    roundTrip,
-                    parcelType,
-                    parcelQuantity
+                    roundTrip
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -305,9 +301,7 @@ public class RideRequestActivity extends AppCompatActivity {
             RideRequestUtils.updateStepFeeAndButtonAlpha(holder, model, mainLooper);
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
-            RideRequestUtils.updateTripCategory(holder,model,RideRequestActivity.this);
             RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);
-            RideRequestUtils.updateDeliveryInfo(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);

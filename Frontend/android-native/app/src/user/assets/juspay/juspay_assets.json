@@ -667,9 +667,6 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true,
-      "ny_ic_delivery_truck_nav_on_map" : true,
-      "ic_fluent_box_filled" : true,
-      "ny_ic_clock_filled_dark.png" : true
+      "zone_curve" : true
    }
 }

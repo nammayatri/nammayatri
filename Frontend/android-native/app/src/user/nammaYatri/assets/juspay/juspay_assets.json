@@ -829,7 +829,6 @@
       "ny_ic_earn_through_parcel" : true,
       "ny_ic_bike_delivery_nav_on_map": true,
       "ny_ic_qr_code_expired" : true,
-      "zone_curve" : true,
-      "ny_ic_delivery_truck_nav_on_map": true
+      "zone_curve" : true
    }
 }

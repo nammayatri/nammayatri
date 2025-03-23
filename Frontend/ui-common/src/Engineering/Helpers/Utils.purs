@@ -528,13 +528,3 @@ whenJust (Just a) f = void $ f a
 whenRight :: forall m a b c. Monad m => Either a b -> (b -> m c) -> m Unit
 whenRight (Left _) _ = pure unit
 whenRight (Right b) f = void $ f b
-
-
-
-isDeliveryTruckVariant :: String -> Boolean
-isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
-  "DELIVERY_TRUCK_MINI",
-  "DELIVERY_TRUCK_SMALL",
-  "DELIVERY_TRUCK_MEDIUM",
-  "DELIVERY_TRUCK_LARGE",
-  "DELIVERY_TRUCK_ULTRA_LARGE"]

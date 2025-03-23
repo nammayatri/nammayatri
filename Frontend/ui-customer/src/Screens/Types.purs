@@ -309,8 +309,7 @@ type TripDetailsScreenData =
     tripId :: String,
     config :: AppConfig,
     vehicleVariant :: Maybe VehicleVariant,
-    categories :: Array CTA.CategoryListType,
-    rideType :: FareProductType
+    categories :: Array CTA.CategoryListType
     -- bookingId :: String
   }
 
@@ -502,11 +501,7 @@ type IndividualRideCardState =
   , isAirConditioned :: Maybe Boolean
   }
 
-<<<<<<< HEAD
 data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE | HERITAGE_CAB
-=======
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE | EV_AUTO_RICKSHAW | DELIVERY_TRUCK_MINI | DELIVERY_TRUCK_SMALL | DELIVERY_TRUCK_MEDIUM | DELIVERY_TRUCK_LARGE | DELIVERY_TRUCK_ULTRA_LARGE
->>>>>>> 3ccff6e062 (frontend/feat: Truck delivery feature)
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -846,8 +841,6 @@ type HomeScreenStateData =
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)
   , boostSearchEstimate :: ChooseVehicle.Config
-  , driverArrivalTimeUTC :: Maybe String
-  , destinationReachedAtUTC :: Maybe String
 }
 
 type UpcomingRideDetails = {
@@ -1566,7 +1559,6 @@ type DriverInfoCard =
   , driverArrivalTime :: Int
   , destinationReached :: Boolean
   , destinationReachedAt :: Int
-  , rideStartTime :: String
   , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
@@ -1598,10 +1590,7 @@ type DriverInfoCard =
   , rideScheduledAtUTC :: Maybe String
   , senderDetails :: Maybe PersonDeliveryDetails
   , receiverDetails :: Maybe PersonDeliveryDetails
-  , parcelType :: Maybe String
-  , parcelQuantity :: Maybe Int
   , estimatedTimeToReachDestination :: Maybe String 
-  , destinationWaitingTime :: Maybe String
   }
 
 type RatingCard =
@@ -3211,7 +3200,7 @@ type FaqScreenProps =
 
 -- ######################################### ParcelDeliveryFlow ####################################################
 
-data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | PARCEL_DETAILS | FINAL_DETAILS
+data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | FINAL_DETAILS
 
 derive instance genericParcelDeliveryScreenStage :: Generic ParcelDeliveryScreenStage _
 instance showParcelDeliveryScreenStage :: Show ParcelDeliveryScreenStage where show = genericShow
@@ -3239,34 +3228,15 @@ type ParcelDeliveryScreenData = {
   , rateCard :: CTA.RateCard
   , config :: AppConfig
   , tipForDriver :: Maybe Int
-  , parcelQuantity :: Maybe DropdownItem
-  , parcelType :: Maybe DropdownItem
-  , parcelOthersType :: Maybe String
-  , editParcelType :: Maybe DropdownItem
-  , editParcelOthersType :: Maybe String
-  , editParcelQuantity :: Maybe DropdownItem
 }
-
-type DropdownItem = 
-  { id :: String
-  , title :: String
-  , subtitle :: String
-  }
 
 type ParcelDeliveryScreenProps = {
   editDetails :: PersonDeliveryDetails,
-  dropdownStatus :: DropdownStatus,
   showRateCard :: Boolean,
   isEditModal :: Boolean,
   focusField :: String,
   isValidInputs :: Boolean
 }
-
-data DropdownStatus = CLOSE | DROP_DOWN_1 | DROP_DOWN_2
-
-derive instance genericDropdownStatus :: Generic DropdownStatus _
-instance showDropdownStatus :: Show DropdownStatus where show = genericShow
-instance eqDropdownStatus :: Eq DropdownStatus where eq = genericEq
 
 type PersonDeliveryDetails = {
   name :: String,
@@ -3275,7 +3245,6 @@ type PersonDeliveryDetails = {
   instructions :: Maybe String
 }
 
-type ParcelType = { tag :: String, contents :: Maybe String}
 
 newtype BookingAPIEntity = BookingAPIEntity {
   currency :: Currency,

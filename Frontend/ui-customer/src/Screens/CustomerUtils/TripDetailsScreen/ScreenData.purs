@@ -16,7 +16,7 @@
 module Screens.TripDetailsScreen.ScreenData where
 
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Screens.Types (TripDetailsScreenState, PaymentMode(..), TripDetailsGoBackType(..), FareProductType(..))
+import Screens.Types (TripDetailsScreenState, PaymentMode(..), TripDetailsGoBackType(..))
 import ConfigProvider
 import Data.Maybe(Maybe(..))
 
@@ -36,8 +36,7 @@ initData = {
       selectedItem : dummyIndividualCard,
       vehicleVariant : Nothing,
       config : getAppConfig appConfig,
-      categories : [],
-      rideType : ONE_WAY
+      categories : []
   },
   props: {
     reportIssue : true,

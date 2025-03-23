@@ -101,7 +101,7 @@ window.isObject = function (object) {
   return (typeof object == "object");
 }
 window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen", "RestartAutoScroll"];
-window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE", "SAFETY_ALERT_DEVIATION", "SOS_MOCK_DRILL_NOTIFY", "STOP_REACHED", "FILE_UPLOADED", "DRIVER_HAS_REACHED_DESTINATION"]);
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE", "SAFETY_ALERT_DEVIATION", "SOS_MOCK_DRILL_NOTIFY", "STOP_REACHED"]);
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
 const isUndefined = function (val) {

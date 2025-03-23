@@ -12,7 +12,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -68,14 +67,13 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText, tripCategory, parcelType, parcelQuantity;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
         MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
         LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag;
         CardView locationDestinationPinTag;
-        FrameLayout parcelDetailView;
         
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -117,13 +115,9 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             specialLocTag = itemView.findViewById(R.id.spZoneTag);
             specialLocExtraTip = itemView.findViewById(R.id.spZoneExtraTip);
             rateText = itemView.findViewById(R.id.rateText);
-            tripCategory = itemView.findViewById(R.id.tripCategory);
-            parcelType = itemView.findViewById(R.id.parcelType);
-            parcelQuantity = itemView.findViewById(R.id.parcelQuantity);
             vehicleServiceTier = itemView.findViewById(R.id.vehicleServiceTier);
             acNonAcView = itemView.findViewById(R.id.acNonAcView);
             vcTierAndACView = itemView.findViewById(R.id.vcTierAndACView);
-            parcelDetailView = itemView.findViewById(R.id.parcelDetailView);
             rentalDurationDistanceTag = itemView.findViewById(R.id.rentalDurationDistanceTag);
             rideDuration = itemView.findViewById(R.id.rideDuration);
             rideDistance = itemView.findViewById(R.id.rideDistance);

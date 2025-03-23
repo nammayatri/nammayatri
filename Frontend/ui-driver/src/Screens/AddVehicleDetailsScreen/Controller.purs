@@ -339,12 +339,7 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
                         Ambulance_Ventilator -> "Ambulance_Ventilator"
                         Suv_Plus  -> "SUV_PLUS"
-                        HERITAGE_CAB -> "Heritage Cab"
-                        Delivery_Truck_Mini -> "Delivery_Truck_Mini" 
-                        Delivery_Truck_Small -> "Delivery_Truck_Small"
-                        Delivery_Truck_Medium -> "Delivery_Truck_Medium"
-                        Delivery_Truck_Large -> "Delivery_Truck_Large"
-                        Delivery_Truck_Ultra_Large -> "Delivery_Truck_Ultra_Large")
+                        HERITAGE_CAB -> "Heritage Cab")
       }
     }
 

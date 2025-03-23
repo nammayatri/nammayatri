@@ -39,7 +39,6 @@ updateFlowStatusStorage response = do
   -- (PersonStatsRes resp) <- Remote.getPersonStatsBT "" -- TODO:: Make this function async in non critical flow @ashkriti
   
   setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL" --TODO:: How is this being used @rohit??
-  setValueToLocalStore DRIVER_REACHED_DESTINATION_ACTION "TRIGGER_DRIVER_REACHED_DESTINATION"
   setValueToLocalStore DISABILITY_UPDATED $ show $ isJust $ response ^. _hasDisability
   setValueToLocalStore REFERRAL_STATUS userRideStatus
   setValueToLocalStore HAS_TAKEN_FIRST_RIDE "true"

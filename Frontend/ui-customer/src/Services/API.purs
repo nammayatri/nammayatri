@@ -1137,7 +1137,6 @@ newtype RideBookingStatusRes = RideBookingStatusRes {
   bookingStatus :: String,
   rideStatus :: Maybe String,
   driverArrivalTime :: Maybe String,
-  destinationReachedAt :: Maybe String,
   sosStatus :: Maybe CTA.SosStatus,
   driversPreviousRideDropLocLat :: Maybe Number,
   driversPreviousRideDropLocLon :: Maybe Number,
@@ -1211,9 +1210,7 @@ newtype RideBookingDetails = RideBookingDetails {
   stopLocation :: Maybe BookingLocationAPIEntity,
   senderDetails :: Maybe PersonDetails,
   requestorPartyRoles :: Maybe (Array String),
-  receiverDetails :: Maybe PersonDetails,
-  parcelType :: Maybe ParcelType,
-  parcelQuantity :: Maybe Int
+  receiverDetails :: Maybe PersonDetails
 }
 
 newtype PersonDetails = PersonDetails {
@@ -1363,24 +1360,10 @@ newtype DEstimateSelect = DEstimateSelect
 
 data DeliveryDetails = DeliveryDetails
   {
-    parcelType :: Maybe ParcelType,
-    parcelQuantity :: Maybe Int, 
     senderDetails :: PersonLocationAndInstruction,
     receiverDetails :: PersonLocationAndInstruction,
     initiatedAs :: InitiatedAs
   }
-
-newtype ParcelType = ParcelType {
-  tag :: String,
-  contents :: Maybe String
-}
-
-derive instance genericParcelType :: Generic ParcelType _
-derive instance newtypeParcelType :: Newtype ParcelType _
-instance standardEncodeParcelType :: StandardEncode ParcelType where standardEncode (ParcelType body) = standardEncode body
-instance showParcelType :: Show ParcelType where show = genericShow 
-instance decodeParcelType :: Decode ParcelType where decode = defaultDecode
-instance encodeParcelType :: Encode ParcelType where encode = defaultEncode
 
 derive instance genericDeliveryDetails :: Generic DeliveryDetails _
 instance standardEncodeDeliveryDetails :: StandardEncode DeliveryDetails where standardEncode (DeliveryDetails body) = standardEncode body 

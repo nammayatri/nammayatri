@@ -135,8 +135,6 @@ getTripDetails state color =
     , isEditPickupEnabled : false
     , senderDetails : Nothing
     , receiverDetails : Nothing
-    , parcelType : ""
-    , parcelQuantity : Nothing
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

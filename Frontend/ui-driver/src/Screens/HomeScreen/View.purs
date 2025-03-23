@@ -201,7 +201,7 @@ screen initialState (GlobalState globalState) =
                   Left _ -> void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
              else pure unit
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
-          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "" && (not $ DA.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [show ST.DestinationReachedTriggered, show ST.DestinationWaitingTimeTriggered]))
+          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "")
             then do
               void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
               push $ UpdateWaitTime ST.NoStatus
@@ -284,23 +284,6 @@ screen initialState (GlobalState globalState) =
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
-                                
-                                let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore DESTINATION_WAITING_TIME_VAL)
-                                    id = fromMaybe "" (waitTime DA.!! 0)
-                                    isTimerValid = id == initialState.data.activeRide.id
-                                    destinationReachedTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1))) + initialState.data.activeRide.waitTimeSeconds
-
-                                if (getValueToLocalStore WAITING_TIME_STATUS == show ST.DestinationReachedTriggered) then do
-                                  void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.DestinationWaitingTimeTriggered)
-                                  void $ waitingCountdownTimerV2 destinationReachedTime "1" "countUpTimerId" push DestinationWaitTimerCallback
-                                  push $ UpdateWaitTime ST.DestinationWaitingTimeTriggered
-                                  pure unit
-                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.DestinationWaitingTimeTriggered) && isNothing initialState.data.activeRide.destinationWaitingTime ) then do
-                                  if isTimerValid then
-                                    void $ waitingCountdownTimerV2 destinationReachedTime "1" "countUpTimerId" push DestinationWaitTimerCallback
-                                  else push $ UpdateWaitTime ST.NoStatus
-                                  pure unit
-                                else pure unit
 
                                 let advancedRideId = case initialState.data.advancedRideData of
                                                         Just advancedRideData -> Just advancedRideData.id

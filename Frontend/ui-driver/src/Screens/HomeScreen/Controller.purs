@@ -517,7 +517,6 @@ data Action = NoAction
             | WMBEndTripModalAC PopUpModal.Action
             | WMBEndTripAC String
             | UpdateSuggestedRoute API.AvailableRoutesList JB.RecentBusTrip
-            | DestinationWaitTimerCallback String String Int
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1281,9 +1280,6 @@ eval (UpdateWaitTime status) state = do
 eval (WaitTimerCallback timerID _ seconds) state = 
   continue state { data {activeRide {waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
-eval (DestinationWaitTimerCallback timerID _ seconds) state = 
-  continue state { data {activeRide {destinationWaitTimerId = timerID, destinationWaitingTime = Just seconds}}}
-
 eval (RideStartRemainingTime seconds status timerId) state = do
   let id = "rideStartRemainingTimeId_" <> state.data.activeRide.id
   if status == "EXPIRED" || id /= timerId then do
@@ -1434,7 +1430,7 @@ eval (TimeUpdate time lat lng errorCode) state = do
         _, ST.RideStarted, _, _, _, ST.Delivery -> do
           let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.dest_lat state.data.activeRide.dest_lon
               insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-          pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus || getValueToLocalStore WAITING_TIME_STATUS == show ST.PostTriggered) then UpdateAndNotify false else (UpdateLastLoc driverLat driverLong insideThreshold)
+          pure $ if insideThreshold then UpdateAndNotify false else (UpdateLastLoc driverLat driverLong insideThreshold)
         _, _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
       ]
 
@@ -1982,6 +1978,7 @@ activeRideDetail state (RidesInfo ride) =
       destinationCity = fromMaybe "" destinationAddress.city
       roundTrip = ride.roundTrip
       returnTime  = fromMaybe ""  ride.returnTime
+
       -- _ = setValueToLocalStore HAS
   in 
   {
@@ -2009,7 +2006,6 @@ activeRideDetail state (RidesInfo ride) =
   riderName : fromMaybe "" ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled), (show ST.NotTriggered)],
-  
   exoPhone : ride.exoPhone,
   waitTimeSeconds :if ride.status == "INPROGRESS" && isTimerValid then waitTime else -1,
   rideCreatedAt : ride.createdAt,
@@ -2064,13 +2060,9 @@ activeRideDetail state (RidesInfo ride) =
   extraToLocationInfo : ride.toLocation >>= (\toLocation -> (toLocation ^. _extras)),
   senderInstructions : (ride.fromLocation) ^. _instructions,
   receiverInstructions : ride.toLocation >>= (\toLocation -> toLocation ^. _instructions),
-  notifiedReachedDestination : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.DestinationReachedTriggered), (show ST.DestinationWaitingTimeTriggered)],
+  notifiedReachedDestination : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.DestinationReachedTriggered)],
   senderPersonDetails : ride.senderDetails,
-  receiverPersonDetails : ride.receiverDetails,
-  parcelType : ride.parcelType,
-  parcelQuantity : ride.parcelQuantity,
-  destinationWaitingTime : Nothing,
-  destinationWaitTimerId : ""
+  receiverPersonDetails : ride.receiverDetails
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

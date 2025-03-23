@@ -266,7 +266,6 @@ type CityConfig = {
   waitingCharges :: Number,
   waitingChargesConfig :: WaitingChargesConfig,
   rentalWaitingChargesConfig :: WaitingChargesConfig,
-  vehicleVariantWaitingChargeConfig :: VehicleVariantWaitingCharge,
   rateCardConfig :: RateCardConfig,
   gstPercentage :: String,
   assets :: Assets,
@@ -366,8 +365,7 @@ type WaitingChargesConfig = {
   cab :: ChargesEntity,
   auto :: ChargesEntity,
   bike :: ChargesEntity,
-  ambulance :: ChargesEntity,
-  truck :: ChargesEntity
+  ambulance :: ChargesEntity
 }
 
 type HotspotConfig = {

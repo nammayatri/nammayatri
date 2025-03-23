@@ -773,7 +773,6 @@
       "ny_ic_earn_through_parcel" : true,
       "ny_ic_bike_delivery_nav_on_map": true,
       "ny_ic_refresh" : true,
-      "ny_ic_ticket_clip_background" : true,
-      "ny_ic_delivery_truck_nav_on_map": true
+      "ny_ic_ticket_clip_background" : true
    }
 }

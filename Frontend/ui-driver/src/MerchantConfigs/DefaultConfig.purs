@@ -6,7 +6,6 @@ import Engineering.Helpers.Commons as EHC
 import MerchantConfig.Utils as MU
 import Common.Types.App as CTA
 import Data.Maybe
-import Common.Types.Config (VehicleVariantWaitingCharge(..))
 
 config :: AppConfig
 config =
@@ -184,7 +183,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
@@ -266,7 +264,6 @@ config =
               waitingCharges : 2.00,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -343,7 +340,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
@@ -415,7 +411,6 @@ config =
               waitingCharges : 0.75,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -487,7 +482,6 @@ config =
               waitingCharges : 1.00,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -559,7 +553,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -631,7 +624,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -703,7 +695,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -775,7 +766,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -847,7 +837,6 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -932,7 +921,6 @@ config =
                   perMinCharges = 1.0
                 }
               },
-              vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -1008,7 +996,6 @@ config =
             waitingCharges : 1.00,
             waitingChargesConfig : defWaitingChargesConfig,
             rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
-            vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
             gstPercentage : "18",
             rateCardConfig : defRateCardConfig,
             assets :{
@@ -1178,10 +1165,6 @@ defWaitingChargesConfig = {
   ambulance : {
     freeSeconds : 480,
     perMinCharges : 2.0
-  },
-  truck : {
-    freeSeconds : 3600,
-    perMinCharges : 5.0
 }
 }
 
@@ -1202,10 +1185,6 @@ defRentalWaitingChargesConfig = {
   ambulance: {
     freeSeconds : 480,
     perMinCharges : 1.5
-  },
-  truck : {
-    freeSeconds : 3600,
-    perMinCharges : 5.0
   }
 }
 
@@ -1275,10 +1254,6 @@ allCitiesDefaultCityConfig = {
     ambulance: {
       freeSeconds : 480,
       perMinCharges : 2.0
-    },
-    truck: {
-      freeSeconds : 3600,
-      perMinCharges : 2.0
     }
   },
   rentalWaitingChargesConfig : {
@@ -1297,13 +1272,8 @@ allCitiesDefaultCityConfig = {
     ambulance: {
       freeSeconds : 480,
       perMinCharges : 2.0
-    },
-    truck: {
-      freeSeconds : 3600,
-      perMinCharges : 2.0
     }
   },
-  vehicleVariantWaitingChargeConfig : vehicleVariantWaitingCharge,
   rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
   assets :{
     auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -1408,15 +1378,11 @@ ysDefaultCityConfig =
       , bike {
           freeSeconds = 180
         , perMinCharges = 2.0
-        }
-      , ambulance {
-        freeSeconds = 480,
-        perMinCharges = 2.0
-      },
-      truck {
-        freeSeconds = 3600,
-        perMinCharges = 2.0
-      }
+        },
+    ambulance {
+      freeSeconds = 480,
+      perMinCharges = 2.0
+    }
       }
     , enableHvSdk = true -- Hyperverge Integration Activation at launch
     , enableGullak = false
@@ -1447,28 +1413,3 @@ ysDefaultCityConfig =
               bike : defaultStartAudioUrls
             } 
   }
-
-
-vehicleVariantWaitingCharge :: VehicleVariantWaitingCharge 
-vehicleVariantWaitingCharge = {
-    deliveryTruckMini : {
-          freeSeconds : 3600
-        , perMinCharges : 5.0
-        }
-  , deliveryTruckSmall : {
-          freeSeconds : 3600
-        , perMinCharges : 5.0
-        }
-  , deliveryTruckMedium : {
-          freeSeconds : 3600
-        , perMinCharges : 5.0
-        }
-  , deliveryTruckLarge : {
-          freeSeconds : 3600
-        , perMinCharges : 5.0
-        }
-  , deliveryTruckUltraLarge : {
-          freeSeconds : 3600
-        , perMinCharges : 5.0
-        }
-}

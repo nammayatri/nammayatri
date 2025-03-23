@@ -200,7 +200,7 @@ cancelAppConfig state =
         , cornerRadius = Corners 15.0 true true false false
         , coverImageConfig
           { imageUrl = fetchImage FF_ASSET $ HU.getCancellationImage state.data.driverInfoCardState.vehicleVariant state.data.driverInfoCardState.distance
-          , visibility = boolToVisibility $ HU.getCancellationImage state.data.driverInfoCardState.vehicleVariant state.data.driverInfoCardState.distance /= ""
+          , visibility = VISIBLE
           , margin = Margin 16 20 16 24
           , width = MATCH_PARENT
           , height = V 200
@@ -1283,9 +1283,6 @@ driverInfoTransformer state =
     , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
     , requestorPartyRoles : state.data.requestorPartyRoles
     , isAirConditioned : cardState.isAirConditioned
-    , parcelType : cardState.parcelType
-    , parcelQuantity : cardState.parcelQuantity
-    , destinationWaitingTime : cardState.destinationWaitingTime
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -2719,8 +2716,6 @@ deliveryParcelImageAndOtpConfig state =
         , otp = state.data.driverInfoCardState.otp
         , rideStarted = state.props.currentStage == ST.RideStarted
         , refreshAnimation = state.props.loadingDeliveryImage
-        , parcelType = state.data.driverInfoCardState.parcelType
-        , parcelQuantity = state.data.driverInfoCardState.parcelQuantity
         }
   in
     deliveryParcelImageAndOtpConfig'

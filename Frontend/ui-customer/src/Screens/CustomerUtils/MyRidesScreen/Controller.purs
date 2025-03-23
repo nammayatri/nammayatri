@@ -286,7 +286,6 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
     bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
     ambulanceWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.ambulance else cityConfig.waitingChargeConfig.ambulance
-    deliveryTruckWaitingCharges = cityConfig.waitingChargeConfig.deliveryTruck
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
@@ -294,8 +293,6 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
           bikeWaitingCharges
       else if HU.isAmbulance rideDetails.vehicleVariant  then
           ambulanceWaitingCharges
-      else if HU.isDeliveryTruckVariant rideDetails.vehicleVariant then
-          deliveryTruckWaitingCharges
       else 
          cabsWaitingCharges
      in {

@@ -34,12 +34,10 @@ import Helpers.CommonView (dummyView)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError, storeCallBackCustomer)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
-import Resources.LocalizableV2.Strings (getStringV2)
-import Resources.LocalizableV2.Types
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, frameLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, scrollBarY, fillViewport)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd, scrollBarY, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii)
@@ -91,7 +89,6 @@ view push state =
       , orientation VERTICAL
       ][
         GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-        , headerBannerView push state ("Free combined loading/unloading time of " <> state.data.parcelQuoteList.waitingTimeInfo.freeMinutes <> " min is provided. Any extra time will be charged at a rate of " <> state.data.parcelQuoteList.waitingTimeInfo.charge)
         , linearLayout
           [ height $ V 1 
           , width MATCH_PARENT
@@ -109,7 +106,6 @@ view push state =
     , (case state.data.currentStage of
         ST.SENDER_DETAILS -> deliveryDetailPopupView push state 
         ST.RECEIVER_DETAILS -> deliveryDetailPopupView push state 
-        ST.PARCEL_DETAILS -> deliveryDetailPopupView push state
         _ -> emptyTextView),
       (if state.props.showRateCard then (rateCardView push state) else emptyTextView)
     ]
@@ -149,7 +145,7 @@ pickupView push state =
     [ text $ getString PICKUP
     , color Color.black900
     ] <> FontStyle.subHeading1 TypoGraphy
-  , pickupDropItemView push state ST.SENDER_DETAILS
+  , pickupDropItemView push state true
   ]
 
 dropView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
@@ -164,13 +160,13 @@ dropView push state =
     [ text $ getString DROP
     , color Color.black900
     ] <> FontStyle.subHeading1 TypoGraphy
-  , pickupDropItemView push state ST.RECEIVER_DETAILS
+  , pickupDropItemView push state false
   ]
 
-pickupDropItemView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> ST.ParcelDeliveryScreenStage -> PrestoDOM (Effect Unit) w
-pickupDropItemView push state stage =
+pickupDropItemView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+pickupDropItemView push state isSource =
   let 
-    personDetails = if stage == ST.SENDER_DETAILS then state.data.senderDetails else state.data.receiverDetails
+    personDetails = if isSource then state.data.senderDetails else state.data.receiverDetails
   in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -201,15 +197,14 @@ pickupDropItemView push state stage =
           , color Color.black800
           ] <> FontStyle.body1 TypoGraphy
         ]
-      , editButtonView push state stage
+      , editButtonView push state isSource
       ]
-    , sourceDestinationAddressView push state stage
+    , sourceDestinationAddressView push state isSource
     ]
 
-sourceDestinationAddressView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> ST.ParcelDeliveryScreenStage -> PrestoDOM (Effect Unit) w
-sourceDestinationAddressView push state stage =
+sourceDestinationAddressView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+sourceDestinationAddressView push state isSource =
   let
-    isSource = stage == ST.SENDER_DETAILS
     personDetails = if isSource then state.data.senderDetails else  state.data.receiverDetails
   in 
     linearLayout
@@ -305,7 +300,7 @@ deliveryGuidelinesView push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       ]
-      ( map (\item -> instructionItem item) (instructionData state.data.parcelQuoteList.vehicleVariant state.data.parcelQuoteList.serviceTierShortDesc state.data.parcelQuoteList.waitingTimeInfo))
+      ( map (\item -> instructionItem item) instructionData)
     , textView $ 
       [ text $ getString VIEW_ALL_GUIDELINES
       , color Color.blue800
@@ -374,8 +369,8 @@ instructionItem item =
     <> FontStyle.body20 TypoGraphy
   ]
   
-editButtonView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> ST.ParcelDeliveryScreenStage -> PrestoDOM (Effect Unit) w
-editButtonView push state stage =
+editButtonView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+editButtonView push state isSource =
   textView $ 
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -383,7 +378,7 @@ editButtonView push state stage =
   , cornerRadius if EHC.os == "IOS" then 20.0 else 32.0
   , stroke $ "1," <> Color.grey900
   , padding $ Padding 16 8 16 8
-  , onClick push $ const $ EditInfo stage
+  , onClick push $ const $ EditAddress isSource
   , rippleColor Color.rippleShade
   , layoutGravity "right"
   , gravity CENTER_VERTICAL
@@ -412,23 +407,13 @@ separatorView push state =
   ]
   []
 
-instructionData :: String -> Maybe String -> CT.WaitingTimeInfo -> Array { title :: String, image :: String }
-instructionData vehicleVariant serviceTierShortDesc waitingTimeInfo = 
-  let commonInstructions = [
-          { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
-        , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
-        , { title: getString $ FREE_LOADING_UNLOADING_TIME waitingTimeInfo.freeMinutes waitingTimeInfo.charge, image : "ic_clock_filled"}
-        , { title: getStringV2 max_capacity_warning <> "(" <> fromMaybe "--kg" serviceTierShortDesc <> ")", image : "ic_fluent_box_filled" }
-        ]
-      instruction =
-        case vehicleVariant of
-          "DELIVERY_BIKE" ->
-            [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "15", image: "ny_ic_backpack" }
-            , { title: getString $ MAX_PARCEL_SIZE "40" "40" "40", image: "ny_ic_backpack" }
-            ]
-          _ -> []
-  in commonInstructions <> instruction
-  
+instructionData :: Array { title :: String, image :: String }
+instructionData = 
+  [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "15", image: "ny_ic_backpack" }
+  , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
+  , { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
+  , { title: getString $ MAX_PARCEL_SIZE "40" "40" "40", image: "ny_ic_backpack" }
+  ]
 
 
 deliveryDetailPopupView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
@@ -495,192 +480,9 @@ deliveryDetailsView push state = do
       [ mapViewLayout push state
       , pickupView push state
       , dropView push state
-      , parcelDetailsView push state
       , deliveryGuidelinesView push state
       ]
     ]
-
-parcelDetailsView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-parcelDetailsView push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  -- , padding $ Padding 16 16 16 16
-  , margin $ MarginTop 20
-  , background Color.white900
-  ]
-  [ headerSection
-  , parcelInfoCard push state
-  , insuranceCard push state
-  ]
-
-headerSection :: forall w. PrestoDOM (Effect Unit) w
-headerSection =
-  textView $
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , text $ getStringV2 parcel_details
-  , color Color.black900
-  , margin $ MarginBottom 16
-  ] <> FontStyle.subHeading1 TypoGraphy
-
-parcelInfoCard :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-parcelInfoCard push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , padding $ Padding 16 16 16 16
-  , background Color.white900
-  , cornerRadius 12.0
-  , stroke $ "1," <> Color.grey900
-  , margin $ MarginBottom 16
-  ]
-  [ parcelTypeSection push state
-  , parcelQuantitySection push state
-  ]
-
-parcelTypeSection :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-parcelTypeSection push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation HORIZONTAL
-  , gravity CENTER
-  ][
-    linearLayout
-    [ width WRAP_CONTENT
-    , orientation VERTICAL
-    , gravity LEFT
-    , weight 1.0
-    , margin $ MarginVertical 2 16
-    ]
-    [ textView $
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text $ getStringV2 parcel_type
-      , color Color.black800
-      , margin $ MarginBottom 4
-      ] <> (FontStyle.body3 TypoGraphy)
-    , textView $
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , weight 1.0
-        , text $ maybe "" (\parcelType -> parcelType.title <> if parcelType.title == "Other" then " - " <> fromMaybe "" state.data.parcelOthersType else "") state.data.parcelType
-        , color Color.black900
-        , ellipsize true
-        , singleLine true
-        ] <> (FontStyle.subHeading1 TypoGraphy)
-    ],
-    editButtonView push state ST.PARCEL_DETAILS
-  ]
-
-parcelQuantitySection :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-parcelQuantitySection push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  ]
-  [ textView $
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , text $ getStringV2 parcel_quantity
-    , color Color.black800
-    , margin $ MarginBottom 4
-    ] <> (FontStyle.body2 TypoGraphy)
-  , textView $
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , text $ maybe "" (\parcelType -> parcelType.title) state.data.parcelQuantity
-    , color Color.black900
-    ] <> (FontStyle.subHeading1 TypoGraphy)
-  ]
-
-insuranceCard :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-insuranceCard push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , padding $ Padding 12 12 12 12
-  , background Color.white900
-  , cornerRadius 12.0
-  , stroke $ "1," <> Color.grey900
-  , visibility GONE
-  ]
-  [ linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , gravity CENTER_VERTICAL
-    ]
-    [ 
-    checkBoxView push true, 
-    textView $
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text "Include Insurance"
-      , color Color.black900
-      , weight 1.0
-      , gravity CENTER_VERTICAL
-      , margin $ MarginLeft 6
-      ] <> FontStyle.body1 TypoGraphy
-    , textView $
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text "+₹20"
-      , gravity CENTER_VERTICAL
-      , color Color.black900
-      ] <> FontStyle.body1 TypoGraphy
-    , imageView
-      [ width $ V 16
-      , height $ V 16
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue_lg"
-      , margin $ MarginLeft 4
-      ]
-    ]
-  , linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , background Color.blue600
-    , cornerRadius 8.0
-    , padding $ Padding 12 8 12 8
-    , margin $ MarginTop 12
-    ]
-    [ textView $
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , text "Insures your parcel for upto ₹5000 in case of loss or damage"
-      , color Color.black700
-      ] <> FontStyle.body3 TypoGraphy
-    ]
-  ]
-
-checkBoxView :: forall w. (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
-checkBoxView push isSelected =
-    linearLayout
-    [  
-      height (V 16)
-    , width (V 16)
-    ][ linearLayout
-        [
-          height MATCH_PARENT
-        , width MATCH_PARENT
-        , stroke ("1," <> Color.black900)
-        , cornerRadius 2.0
-        , onClick push $ const InsuranceToggle
-        ][
-        imageView
-            [ width MATCH_PARENT
-            , height MATCH_PARENT
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
-            , visibility if isSelected then VISIBLE else GONE
-            ]
-        ]
-    ]
-
 
 deliveryInstructionView :: forall w . (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 deliveryInstructionView push state = 
@@ -695,7 +497,7 @@ deliveryInstructionView push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , margin $ Margin 16 16 16 200
+      , margin $ Margin 16 16 16 100
       ]
       [
         linearLayout
@@ -728,7 +530,7 @@ deliveryInstructionView push state =
           , width MATCH_PARENT
           , orientation VERTICAL
           ]
-          ( map (\item -> instructionItem item) (instructionData state.data.parcelQuoteList.vehicleVariant  state.data.parcelQuoteList.serviceTierShortDesc state.data.parcelQuoteList.waitingTimeInfo))
+          ( map (\item -> instructionItem item) instructionData)
         , textView
           $ [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -742,19 +544,3 @@ deliveryInstructionView push state =
         ]
     ]
     ]
-
-headerBannerView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> String -> PrestoDOM (Effect Unit) w
-headerBannerView push state message =
-  linearLayout
-  [ width $ MATCH_PARENT
-  , height $ WRAP_CONTENT
-  , background Color.yellow800
-  , visibility $ boolToVisibility $ state.data.currentStage /= ST.DELIVERY_INSTRUCTIONS
-  ][ textView $
-     [ width WRAP_CONTENT
-     , height WRAP_CONTENT
-     , text message
-     , color Color.black900
-     , padding $ Padding 16 10 16 12
-     ] <> FontStyle.subHeading1 TypoGraphy
-  ]

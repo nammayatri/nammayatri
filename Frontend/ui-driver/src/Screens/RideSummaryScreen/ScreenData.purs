@@ -179,11 +179,7 @@ dummyActiveRideData = {
   receiverInstructions : Nothing,
   senderPersonDetails : Nothing,
   receiverPersonDetails : Nothing,
-  notifiedReachedDestination : false,
-  parcelType : Nothing,
-  parcelQuantity : Nothing,
-  destinationWaitingTime : Nothing,
-  destinationWaitTimerId : ""
+  notifiedReachedDestination : false
 }
 
 

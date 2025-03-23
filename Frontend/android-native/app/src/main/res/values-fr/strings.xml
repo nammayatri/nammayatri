@@ -56,5 +56,4 @@
     <string name="zxing_msg_qrcode_status" tools:override="true">""</string>
     <string name="message_from_customer">Message from Customer</string>
     <string name="round_trip">Aller-retour</string>
-    <string name="delivery"></string>
 </resources>

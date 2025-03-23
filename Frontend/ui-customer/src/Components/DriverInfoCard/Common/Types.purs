@@ -43,6 +43,4 @@ type TripDetails a
   , isEditPickupEnabled :: Boolean
   , senderDetails :: Maybe PersonDeliveryDetails
   , receiverDetails :: Maybe PersonDeliveryDetails
-  , parcelType :: String
-  , parcelQuantity :: Maybe Int
     }

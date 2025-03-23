@@ -35,8 +35,6 @@ public class SheetModel {
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking , roundTrip;
     private double srcLat, srcLng, destLat, destLng;
-    private int parcelQuantity;
-    private String parcelType;
 
     public SheetModel(String pickUpDistance,
                       float distanceToBeCovered,
@@ -85,9 +83,7 @@ public class SheetModel {
                       double parkingCharge,
                       String renderedAt,
                       int stops,
-                      boolean roundTrip,
-                      String parcelType,
-                      int parcelQuantity
+                      boolean roundTrip
                       ){
 
         this.srcLat = srcLat;
@@ -144,8 +140,6 @@ public class SheetModel {
         this.renderedAt = renderedAt;
         this.stops = stops;
         this.roundTrip = roundTrip;
-        this.parcelType = parcelType;
-        this.parcelQuantity = parcelQuantity;
     }
 
     public String getRenderedAt(){
@@ -411,13 +405,5 @@ public class SheetModel {
         }else {
             return true;
         }
-    }
-
-    public String getParcelType(){
-        return parcelType;
-    }
-
-    public int getParcelQuantity(){
-        return parcelQuantity;
     }
 }

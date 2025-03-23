@@ -262,8 +262,6 @@ checkRideStatus rideAssigned prioritizeRating = do
                     , fareProductType = fareProductType
                     , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
                     , startedAtUTC = fromMaybe "" resp.rideStartTime
-                    , driverArrivalTimeUTC = (head resp.rideList) >>= \(rideList::RideAPIEntity) -> rideList ^._driverArrivalTime
-                    , destinationReachedAtUTC = (head resp.rideList) >>= \(rideList::RideAPIEntity) -> rideList ^._destinationReachedAt
                     , sourceFromFCM = ""
                     , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt

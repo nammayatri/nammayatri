@@ -4,7 +4,7 @@ import Screens.Types as ST
 import Prelude
 import PrestoDOM
 import Data.Maybe
-import Services.API (RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), ParcelType(..))
+import Services.API (RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import ConfigProvider
 import Common.Types.App as CT
@@ -192,12 +192,8 @@ dummyDriverInfo =
   , destinationReachedAt : 0
   , senderDetails : Nothing
   , receiverDetails : Nothing
-  , parcelType : Nothing
-  , parcelQuantity : Nothing
   , estimatedTimeToReachDestination : Nothing
   , isAirConditioned : Nothing
-  , destinationWaitingTime : Nothing
-  , rideStartTime : ""
   }
 
 dummyRentalBookingConfig :: CT.RentalBookingConfig
@@ -292,9 +288,7 @@ dummyRideBookingDetails = RideBookingDetails {
   stopLocation : Nothing,
   senderDetails : Nothing,
   receiverDetails : Nothing,
-  requestorPartyRoles : Nothing,
-  parcelType : Nothing,
-  parcelQuantity : Nothing
+  requestorPartyRoles : Nothing
 }
 
 fareUpdatePill :: ST.FareUpdatePill

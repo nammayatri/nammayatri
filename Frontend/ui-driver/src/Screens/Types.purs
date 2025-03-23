@@ -229,7 +229,7 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus | HERITAGE_CAB | Delivery_Truck_Mini | Delivery_Truck_Small | Delivery_Truck_Medium | Delivery_Truck_Large | Delivery_Truck_Ultra_Large
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Taxi_Oxy | Ambulance_Ventilator | Suv_Plus | HERITAGE_CAB
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -1338,11 +1338,7 @@ type ActiveRide = {
   receiverInstructions :: Maybe String,
   senderPersonDetails :: Maybe API.PersonDetails,
   receiverPersonDetails :: Maybe API.PersonDetails,
-  parcelType :: Maybe API.ParcelType,
-  parcelQuantity :: Maybe Int,
-  notifiedReachedDestination :: Boolean,
-  destinationWaitingTime :: Maybe Int,
-  destinationWaitTimerId :: String
+  notifiedReachedDestination :: Boolean
 }
 
 type HomeScreenProps =  {
@@ -1508,7 +1504,7 @@ instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 
-data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus | NotTriggered | DestinationReachedTriggered | DestinationWaitingTimeTriggered
+data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus | NotTriggered | DestinationReachedTriggered
 
 derive instance genericTimerStatus :: Generic TimerStatus _
 instance eqTimerStatus :: Eq TimerStatus where eq = genericEq

@@ -402,31 +402,6 @@ window.getMerchantConfig = function () {
             "name" : "Heritage Cab",
             "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_heritage_cab_side.png",
             "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_heritage_cab_left_side.png"
-          },
-          "deliveryTruckMini" : {
-            "name" : "Delivery Truck",
-            "image" : "ny_ic_mini_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_mini_truck.png",
-            "leftViewImage" : "ny_ic_mini_truck_left_side.png,"
-          }, 
-          "deliveryTruckSmall" : {
-            "name" : "Delivery Truck",
-            "image" : "ny_ic_small_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_small_truck.png",
-            "leftViewImage" : "ny_ic_small_truck_left_side.png,"
-          }, 
-          "deliveryTruckMedium" : {
-            "name" : "Delivery Truck",
-            "image" : "ny_ic_medium_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_medium_truck.png",
-            "leftViewImage" : "ny_ic_medium_truck_left_side.png,"
-          }, 
-          "deliveryTruckLarge" : {
-            "name" : "Delivery Truck",
-            "image" : "ny_ic_large_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_large_truck.png",
-            "leftViewImage" : "ny_ic_large_truck_left_side.png,"
-          }, 
-          "deliveryTruckUltraLarge" : {
-            "name" : "Delivery Truck",
-            "image" : "ny_ic_ultra_large_truck,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ultra_large_truck.png",
-            "leftViewImage" : "ny_ic_ultra_large_truck_left_side.png,"
           }
         }
       }
@@ -452,57 +427,5 @@ window.getMerchantConfig = function () {
       "minTripsToBeShown" : 1,
     }
     , "enableDeliveryService" : true
-    , "parcelQuantityConfig" : [ 
-      { "id": "loose"
-        , "title": "Loose"
-        , "subtitle": "Items are not distinct packages / cannot be counted"
-        },
-      { "id": "1", "title": "1", "subtitle": "" },
-      { "id": "2", "title": "2", "subtitle": "" },
-      { "id": "3", "title": "3", "subtitle": "" },
-      { "id": "4", "title": "4", "subtitle": "" },
-      { "id": "5", "title": "5", "subtitle": "" },
-      { "id": "6", "title": "6", "subtitle": "" },
-      { "id": "7", "title": "7", "subtitle": "" },
-      { "id": "8", "title": "8", "subtitle": "" },
-      { "id": "9", "title": "9", "subtitle": "" },
-      { "id": "10", "title": "10", "subtitle": "" },
-      { "id": "11", "title": "11", "subtitle": "" },
-      { "id": "12", "title": "12", "subtitle": "" },
-      { "id": "13", "title": "13", "subtitle": "" },
-      { "id": "14", "title": "14", "subtitle": "" },
-      { "id": "15", "title": "15", "subtitle": "" },
-      { "id": "16", "title": "16", "subtitle": "" },
-      { "id": "17", "title": "17", "subtitle": "" },
-      { "id": "18", "title": "18", "subtitle": "" },
-      { "id": "19", "title": "19", "subtitle": "" },
-      { "id": "20", "title": "20", "subtitle": "" }
-    ]
-    , "parcelTypeConfig" : [ 
-      { "id": "Household"
-      , "title": "Household Items"
-      , "subtitle": "Furniture, appliances, etc."
-      }
-    , { "id": "Electronics"
-      , "title": "Electronics"
-      , "subtitle": ""
-      }
-    , { "id": "Perishables"
-      , "title": "Perishables"
-      , "subtitle": "Foodstuff, Vegetables, etc."
-      }
-    , { "id": "Fragile"
-      , "title": "Fragile Goods"
-      , "subtitle": "Glasswares, Ceramics, etc."
-      }
-    , { "id": "ConstructionMaterials"
-      , "title": "Construction Materials"
-      , "subtitle": "Cement Bags, Pipes, Wood, etc."
-      }
-    , { "id": "Others"
-      , "title": "Other"
-      , "subtitle": "number of distinct items to be sent"
-    }
-    ]
   })
 }
