@@ -24,40 +24,19 @@ import Kernel.Utils.Common
 import Tools.Maps
 
 getDistanceBin :: Int -> Text
-getDistanceBin distance =
-  if distance >= 0 && distance < 2000
-    then "0-2"
-    else
-      if distance >= 2000 && distance < 4000
-        then "2-4"
-        else
-          if distance >= 4000 && distance < 6000
-            then "4-6"
-            else
-              if distance >= 6000 && distance < 8000
-                then "6-8"
-                else
-                  if distance >= 8000 && distance < 10000
-                    then "8-10"
-                    else
-                      if distance >= 10000 && distance < 12000
-                        then "10-12"
-                        else
-                          if distance >= 12000 && distance < 14000
-                            then "12-14"
-                            else
-                              if distance >= 14000 && distance < 16000
-                                then "14-16"
-                                else
-                                  if distance >= 16000 && distance < 18000
-                                    then "16-18"
-                                    else
-                                      if distance >= 18000 && distance < 20000
-                                        then "18-20"
-                                        else
-                                          if distance >= 20000
-                                            then "more_than_20"
-                                            else "unknown"
+getDistanceBin distance
+  | distance < 0 = "unknown"
+  | distance < 2000 = "0-2"
+  | distance < 4000 = "2-4"
+  | distance < 6000 = "4-6"
+  | distance < 8000 = "6-8"
+  | distance < 10000 = "8-10"
+  | distance < 12000 = "10-12"
+  | distance < 14000 = "12-14"
+  | distance < 16000 = "14-16"
+  | distance < 18000 = "16-18"
+  | distance < 20000 = "18-20"
+  | otherwise = "more_than_20"
 
 -- Function to get the start of the 15-minute interval for a given time
 getBucketStart :: UTCTime -> UTCTime
