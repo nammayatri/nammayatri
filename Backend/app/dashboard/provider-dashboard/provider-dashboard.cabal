@@ -42,6 +42,7 @@ library
       Domain.Action.ProviderPlatform.Fleet.Driver
       Domain.Action.ProviderPlatform.Fleet.Onboarding
       Domain.Action.ProviderPlatform.IssueManagement.Issue
+      Domain.Action.ProviderPlatform.Management.Account
       Domain.Action.ProviderPlatform.Management.Booking
       Domain.Action.ProviderPlatform.Management.CoinsConfig
       Domain.Action.ProviderPlatform.Management.Driver
@@ -82,6 +83,7 @@ library
       API.Action.ProviderPlatform.IssueManagement
       API.Action.ProviderPlatform.IssueManagement.Issue
       API.Action.ProviderPlatform.Management
+      API.Action.ProviderPlatform.Management.Account
       API.Action.ProviderPlatform.Management.Booking
       API.Action.ProviderPlatform.Management.CoinsConfig
       API.Action.ProviderPlatform.Management.Driver

@@ -33,7 +33,9 @@ data PersonE e = Person
     createdAt :: UTCTime,
     receiveNotification :: Maybe Bool,
     updatedAt :: UTCTime,
-    verified :: Maybe Bool
+    verified :: Maybe Bool,
+    rejectionReason :: Maybe Text,
+    rejectedAt :: Maybe UTCTime
   }
   deriving (Generic)
 

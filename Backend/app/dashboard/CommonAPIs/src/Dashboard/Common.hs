@@ -72,6 +72,10 @@ data TripTransaction
 
 data CoinsConfig
 
+data Person
+
+data Role
+
 data Operator
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
