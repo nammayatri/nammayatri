@@ -1614,6 +1614,11 @@ newtype GetProfileRes = GetProfileRes
   , androidId :: Maybe String
   , aadhaarVerified :: Maybe Boolean
   , cancellationRate :: Maybe Number
+  , payoutVpa :: Maybe String
+  , referralEarnings :: Maybe Number
+  , referredByEarnings :: Maybe Number
+  , referralAmountPaid :: Maybe Number
+  , isPayoutEnabled :: Maybe Boolean
   }
 
 
@@ -4571,3 +4576,105 @@ instance standardDiscountItem :: StandardEncode FRFSDiscountReq where
 instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
 instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
 instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
+
+
+----------------------------------------------- Verify VPA  --------------------------------------------
+
+newtype VerifyVPAReq = VerifyVPAReq String
+
+newtype VerifyVPAResp = VerifyVPAResp {
+  isValid :: Maybe Boolean,
+  vpa :: Maybe String
+}
+
+instance makeVerifyVPAReq :: RestEndpoint VerifyVPAReq where
+    makeRequest reqBody@(VerifyVPAReq vpa) headers = defaultMakeRequestWithoutLogs GET (EP.verifyVpa vpa) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericVerifyVPAReq :: Generic VerifyVPAReq _
+derive instance newtypeVerifyVPAReq :: Newtype VerifyVPAReq _
+instance standardEncodeVerifyVPAReq :: StandardEncode VerifyVPAReq where standardEncode (VerifyVPAReq body) = standardEncode body
+instance showVerifyVPAReq :: Show VerifyVPAReq where show = genericShow
+instance decodeVerifyVPAReq :: Decode VerifyVPAReq  where decode = defaultDecode
+instance encodeVerifyVPAReq :: Encode VerifyVPAReq where encode = defaultEncode
+
+derive instance genericVerifyVPAResp :: Generic VerifyVPAResp _
+derive instance newtypeVerifyVPAResp :: Newtype VerifyVPAResp _
+instance standardEncodeVerifyVPAResp :: StandardEncode VerifyVPAResp where standardEncode (VerifyVPAResp body) = standardEncode body
+instance showVerifyVPAResp :: Show VerifyVPAResp where show = genericShow
+instance decodeVerifyVPAResp :: Decode VerifyVPAResp  where decode = defaultDecode
+instance encodeVerifyVPAResp :: Encode VerifyVPAResp where encode = defaultEncode
+
+----------------------------------------------- Update / Upsert VPA  --------------------------------------------
+
+newtype UpdateVpaReq = UpdateVpaReq {
+  vpa :: String
+}
+
+instance makeUpdateVpaReq :: RestEndpoint UpdateVpaReq where
+    makeRequest reqBody@(UpdateVpaReq vpa) headers = defaultMakeRequestWithoutLogs POST (EP.updateVpa "vpa") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericUpdateVpaReq :: Generic UpdateVpaReq _
+derive instance newtypeUpdateVpaReq :: Newtype UpdateVpaReq _
+instance standardEncodeUpdateVpaReq :: StandardEncode UpdateVpaReq where standardEncode (UpdateVpaReq body) = standardEncode body
+instance showUpdateVpaReq :: Show UpdateVpaReq where show = genericShow
+instance decodeUpdateVpaReq :: Decode UpdateVpaReq  where decode = defaultDecode
+instance encodeUpdateVpaReq :: Encode UpdateVpaReq where encode = defaultEncode
+
+
+----------------------------------------------- Payout History  --------------------------------------------
+
+data PayoutHistoryReq = PayoutHistoryReq String
+
+newtype PayoutHistoryResp = PayoutHistoryResp {
+  history :: Array PayoutItem
+}
+
+data PayoutStatus = Processing | PayoutSuccess | PayoutFailed | ManualReview
+
+newtype PayoutItem = PayoutItem {
+    amount :: Number,
+    orderId :: String,
+    payoutAt :: String,
+    payoutStatus :: PayoutStatus,
+    vpa :: String
+}
+
+instance makePayoutHistoryReq :: RestEndpoint PayoutHistoryReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.payoutHistory "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericPayoutHistoryReq :: Generic PayoutHistoryReq _
+instance standardEncodePayoutHistoryReq :: StandardEncode PayoutHistoryReq where standardEncode (PayoutHistoryReq body) = standardEncode body
+instance showPayoutHistoryReq :: Show PayoutHistoryReq where show = genericShow
+instance decodePayoutHistoryReq :: Decode PayoutHistoryReq  where decode = defaultDecode
+instance encodePayoutHistoryReq :: Encode PayoutHistoryReq where encode = defaultEncode
+
+derive instance genericPayoutHistoryResp :: Generic PayoutHistoryResp _
+derive instance newtypePayoutHistoryResp :: Newtype PayoutHistoryResp _
+instance standardEncodePayoutHistoryResp :: StandardEncode PayoutHistoryResp where standardEncode (PayoutHistoryResp body) = standardEncode body
+instance showPayoutHistoryResp :: Show PayoutHistoryResp where show = genericShow
+instance decodePayoutHistoryResp :: Decode PayoutHistoryResp  where decode = defaultDecode
+instance encodePayoutHistoryResp :: Encode PayoutHistoryResp where encode = defaultEncode
+
+derive instance genericPayoutItem :: Generic PayoutItem _
+derive instance newtypePayoutItem :: Newtype PayoutItem _
+instance standardEncodePayoutItem :: StandardEncode PayoutItem where standardEncode (PayoutItem body) = standardEncode body
+instance showPayoutItem :: Show PayoutItem where show = genericShow
+instance decodePayoutItem :: Decode PayoutItem  where decode = defaultDecode
+instance encodePayoutItem :: Encode PayoutItem where encode = defaultEncode
+
+derive instance genericPayoutStatus :: Generic PayoutStatus _
+instance standardEncodePayoutStatus :: StandardEncode PayoutStatus where standardEncode = defaultEnumEncode
+instance showPayoutStatus :: Show PayoutStatus where show = genericShow
+instance decodePayoutStatus :: Decode PayoutStatus 
+  where 
+    decode body = 
+      case unsafeFromForeign body of
+              "Processing" -> except $ Right Processing
+              "Success"    -> except $ Right PayoutSuccess
+              "Failed"       -> except $ Right PayoutFailed
+              "ManualReview" -> except $ Right ManualReview
+              _              -> fail $ ForeignError "Unknown response"
+instance encodePayoutStatus :: Encode PayoutStatus where encode = defaultEncode

@@ -236,7 +236,7 @@ type RCSubscriptionDues = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety | IntercityBus | AmbulanceBooking | ReferralBanner
 
 instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
 instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson
