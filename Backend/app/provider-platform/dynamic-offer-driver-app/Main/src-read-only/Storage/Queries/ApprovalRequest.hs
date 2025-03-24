@@ -39,12 +39,17 @@ updateByPrimaryKey (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
   updateWithKV
     [ Se.Set Beam.body body,
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.entityId (Kernel.Prelude.Just entityId),
+      Se.Set Beam.entityType (Kernel.Prelude.Just entityType),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.reason reason,
       Se.Set Beam.requestData requestData,
+      Se.Set Beam.requestType (Kernel.Prelude.Just requestType),
       Se.Set Beam.requesteeId (Kernel.Types.Id.getId requesteeId),
+      Se.Set Beam.requesteeType (Kernel.Prelude.Just requesteeType),
       Se.Set Beam.requestorId (Kernel.Types.Id.getId requestorId),
+      Se.Set Beam.requestorType (Kernel.Prelude.Just requestorType),
       Se.Set Beam.status status,
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now

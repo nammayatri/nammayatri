@@ -72,7 +72,6 @@ import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types.ApprovalRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverLocation as DDL
-import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
@@ -212,7 +211,7 @@ getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo 
 
 castCommonReqData :: DTR.ApprovalRequestData -> Common.ApprovalRequestData
 castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = Id tripTransactionId, ..}
-castCommonReqData (DTR.ChangeRoute EmptyDynamicParam) = Common.ChangeRoute EmptyDynamicParam
+castCommonReqData (DTR.OverSpeeding DTR.OverSpeedingData {..}) = Common.OverSpeeding $ Common.OverSpeedingData {..}
 
 castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
 castReqStatus = \case
@@ -266,8 +265,8 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
             "Check the app for more details."
           ]
     getRequestType = \case
-      DTR.EndRide _ -> DTR.END_RIDE
-      DTR.ChangeRoute _ -> DTR.CHANGE_ROUTE
+      DTR.EndRide _ -> DTR.EndRideApproval
+      DTR.OverSpeeding _ -> DTR.OverSpeedingAlert
 
 ---------------------------------------------------------------------
 postDriverFleetAddRCWithoutDriver ::
