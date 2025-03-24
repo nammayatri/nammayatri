@@ -1732,3 +1732,4 @@ getTE stringKey =
     YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a -> "మీ మొదటి రైడ్ తీసుకున్నందుకు ₹" <> a <> " సంపాదించారు!"
     GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a ->"మీ మొదటి రైడ్ కోసం ₹" <> a <> " రిఫరల్ ప్రయోజనం పొందండి!"
     TAKE_A_RIDE_NOW ->"ఇప్పుడే ఒక ప్రయాణం చేయండి"
+    TAKE_A_RIDE_AND_CLAIM a -> "ଏକ ଯାତ୍ରା କରନ୍ତୁ ଏବଂ ₹" <> a <> " ପାଆନ୍ତୁ"

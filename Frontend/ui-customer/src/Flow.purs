@@ -1094,6 +1094,12 @@ accountSetUpScreenFlow = do
         REFERRAL_APPLIED -> do
           void $ pure $ hideKeyboardOnNavigation true
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = Verified, referralTextFocussed = true} })
+          void $ lift $ lift $ fork $ do
+            resp <- Remote.getProfile ""
+            case resp of
+              Right respData -> void $ PrestoFlow.modifyState $ \(GlobalState state) -> GlobalState $ state{globalFlowCache{profileResp = Just respData} }
+              Left _ -> pure unit
+            pure unit
         _ -> do
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = ReferralFailed, referralTextFocussed = true} })
       accountSetUpScreenFlow
@@ -1857,6 +1863,8 @@ homeScreenFlow = do
       void $ pure $ deleteValueFromLocalStore CUSTOMER_FIRST_RIDE
       void $ pure $ deleteValueFromLocalStore BOOKING_TIME_LIST
       void $ pure $ deleteValueFromLocalStore DISABILITY_NAME
+      let _ = JB.removeKeysInSharedPrefs "TAKE_FIRST_REFERRAL_RIDE"
+      let _ = JB.removeKeysInSharedPrefs "COLLECT_EARNINGS"
       deleteValueFromLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION
       void $ pure $ factoryResetApp ""
       void $ pure $ clearCache ""

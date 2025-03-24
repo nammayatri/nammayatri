@@ -1719,3 +1719,4 @@ getHI stringKey =
         YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a ->"आपने अपनी पहली सवारी लेने के लिए ₹" <> a <> " कमा लिए हैं!"
         GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a ->"अपनी पहली सवारी के लिए ₹" <> a <> " रेफरल लाभ प्राप्त करें!"
         TAKE_A_RIDE_NOW -> "अभी यात्रा करें"
+        TAKE_A_RIDE_AND_CLAIM a -> "एक सवारी करें और ₹" <> a <> " प्राप्त करें"

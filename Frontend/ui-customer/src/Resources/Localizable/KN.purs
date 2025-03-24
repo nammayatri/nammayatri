@@ -1721,3 +1721,4 @@ getKN stringKey =
         YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a ->"ನೀವು ನಿಮ್ಮ ಮೊದಲ ಪ್ರಯಾಣಕ್ಕಾಗಿ ₹" <> a <> " ಗಳಿಸಿದ್ದೀರಿ!"
         GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a ->"ನಿಮ್ಮ ಮೊದಲ ಪ್ರಯಾಣಕ್ಕಾಗಿ ₹" <> a <> " ರೆಫರಲ್ ಪ್ರಯೋಜನವನ್ನು ಪಡೆಯಿರಿ!"
         TAKE_A_RIDE_NOW -> "ಈಗಲೇ ಪ್ರಯಾಣ ಮಾಡಿ"
+        TAKE_A_RIDE_AND_CLAIM a -> "ಒಂದು ಪ್ರಯಾಣ ಮಾಡಿ ₹" <> a <> " ಪಡೆಯಿರಿ"

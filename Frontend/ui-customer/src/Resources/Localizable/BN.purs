@@ -1717,3 +1717,5 @@ getBN stringKey =
         YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a ->"আপনি আপনার প্রথম রাইড নেওয়ার জন্য ₹" <> a <> " উপার্জন করেছেন!"
         GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a ->"আপনার প্রথম রাইডের জন্য " <> a <> " রেফারেল বেনিফিট পান!"
         TAKE_A_RIDE_NOW ->"এখনই একটি যাত্রা করুন"
+        TAKE_A_RIDE_AND_CLAIM a -> "একটি যাত্রা করুন এবং ₹" <> a <> " দাবি করুন"
+        

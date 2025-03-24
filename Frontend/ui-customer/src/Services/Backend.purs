@@ -134,6 +134,8 @@ withAPIResult url f flow = do
             else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
+                let _ = JB.removeKeysInSharedPrefs "TAKE_FIRST_REFERRAL_RIDE"
+                let _ = JB.removeKeysInSharedPrefs "COLLECT_EARNINGS"
                 _ <- liftFlow $ stopChatListenerService
                 _ <- pure $ factoryResetApp ""
                 pure unit -- default if it fails
@@ -161,6 +163,8 @@ withAPIResultBT url f errorHandler flow = do
             else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
                 deleteValueFromLocalStore REGISTRATION_APPROVED
+                let _ = JB.removeKeysInSharedPrefs "TAKE_FIRST_REFERRAL_RIDE"
+                let _ = JB.removeKeysInSharedPrefs "COLLECT_EARNINGS"
                 lift $ lift $ liftFlow $ stopChatListenerService
                 pure $ factoryResetApp ""
                 else pure unit

@@ -871,6 +871,7 @@ eval BackPressed state = do
                   isBanner = state.props.isBanner
                 , showShimmer = false
                 , city = state.props.city
+                , isReferred = state.props.isReferred
                 , currentLocation = state.props.currentLocation
                 , sosBannerType = state.props.sosBannerType
                 , followsRide = state.props.followsRide
