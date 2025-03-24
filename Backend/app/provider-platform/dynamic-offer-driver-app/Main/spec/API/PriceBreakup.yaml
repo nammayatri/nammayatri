@@ -13,7 +13,7 @@ types:
     fare: HighPrecMoney
     distance: HighPrecMeters
 apis:
-  - GET:
+  - POST:
       endpoint: /meterRide/price
       auth: TokenAuth PROVIDER_TYPE
       mandatoryQuery:

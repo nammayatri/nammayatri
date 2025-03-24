@@ -29,7 +29,7 @@ type API =
       :> ReqBody
            '[JSON]
            API.Types.UI.PriceBreakup.MeterRidePriceReq
-      :> Get
+      :> Post
            '[JSON]
            API.Types.UI.PriceBreakup.MeterRidePriceRes
       :<|> TokenAuth
@@ -43,9 +43,9 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getMeterRidePrice :<|> getPriceBreakup
+handler = postMeterRidePrice :<|> getPriceBreakup
 
-getMeterRidePrice ::
+postMeterRidePrice ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -54,7 +54,7 @@ getMeterRidePrice ::
     API.Types.UI.PriceBreakup.MeterRidePriceReq ->
     Environment.FlowHandler API.Types.UI.PriceBreakup.MeterRidePriceRes
   )
-getMeterRidePrice a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PriceBreakup.getMeterRidePrice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMeterRidePrice a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PriceBreakup.postMeterRidePrice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getPriceBreakup ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
