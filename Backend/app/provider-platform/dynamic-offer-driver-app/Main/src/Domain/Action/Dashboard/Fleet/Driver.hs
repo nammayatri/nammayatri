@@ -358,8 +358,10 @@ getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffse
   return $ Common.FleetListDriverRes fleetDriversInfos
 
 convertToDriverAPIEntity :: (FleetDriverAssociation, DP.Person) -> Flow Common.FleetDriversAPIEntity
-convertToDriverAPIEntity (fleetDriver, person) = do
+convertToDriverAPIEntity (_, person) = do
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  vehicle <- QVehicle.findById person.id
+  let isActive = isJust vehicle
   pure $
     Common.FleetDriversAPIEntity
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -368,7 +370,7 @@ convertToDriverAPIEntity (fleetDriver, person) = do
         lastName = person.lastName,
         mobileNumber = unencryptedMobileNumber,
         mobileCountryCode = person.mobileCountryCode,
-        isActive = Just fleetDriver.isActive
+        isActive = Just isActive
       }
 
 ---------------------------------------------------------------------
