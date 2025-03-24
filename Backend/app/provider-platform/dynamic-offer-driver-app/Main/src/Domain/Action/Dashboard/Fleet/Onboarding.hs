@@ -4,7 +4,6 @@ import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
-import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -18,6 +17,7 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
@@ -83,10 +83,10 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   mDL <- DLQuery.findByDriverId (Id personId)
   let multipleRC = Nothing
-  castStatusRes <$> DStatus.statusHandler' (Id personId) merchantOpCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL
+  castStatusRes <$> SStatus.statusHandler' (Id personId) merchantOpCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL
 
-castStatusRes :: DStatus.StatusRes' -> CommonOnboarding.StatusRes
-castStatusRes DStatus.StatusRes' {..} =
+castStatusRes :: SStatus.StatusRes' -> CommonOnboarding.StatusRes
+castStatusRes SStatus.StatusRes' {..} =
   CommonOnboarding.StatusRes
     { driverDocuments = castDocumentStatusItem <$> driverDocuments,
       driverLicenseDetails = fmap (castDLDetails <$>) driverLicenseDetails,
@@ -95,37 +95,37 @@ castStatusRes DStatus.StatusRes' {..} =
       ..
     }
 
-castDocumentStatusItem :: DStatus.DocumentStatusItem -> CommonOnboarding.DocumentStatusItem
-castDocumentStatusItem DStatus.DocumentStatusItem {..} =
+castDocumentStatusItem :: SStatus.DocumentStatusItem -> CommonOnboarding.DocumentStatusItem
+castDocumentStatusItem SStatus.DocumentStatusItem {..} =
   CommonOnboarding.DocumentStatusItem
     { documentType = SDO.castDocumentType documentType,
       verificationStatus = castResponseStatus verificationStatus,
       ..
     }
 
-castDLDetails :: DStatus.DLDetails -> CommonDriverRegistration.DLDetails
-castDLDetails DStatus.DLDetails {..} = CommonDriverRegistration.DLDetails {..}
+castDLDetails :: SStatus.DLDetails -> CommonDriverRegistration.DLDetails
+castDLDetails SStatus.DLDetails {..} = CommonDriverRegistration.DLDetails {..}
 
-castRCDetails :: DStatus.RCDetails -> CommonDriverRegistration.RCDetails
-castRCDetails DStatus.RCDetails {..} =
+castRCDetails :: SStatus.RCDetails -> CommonDriverRegistration.RCDetails
+castRCDetails SStatus.RCDetails {..} =
   CommonDriverRegistration.RCDetails
     { ..
     }
 
-castVehicleDocumentItem :: DStatus.VehicleDocumentItem -> CommonOnboarding.VehicleDocumentItem
-castVehicleDocumentItem DStatus.VehicleDocumentItem {..} =
+castVehicleDocumentItem :: SStatus.VehicleDocumentItem -> CommonOnboarding.VehicleDocumentItem
+castVehicleDocumentItem SStatus.VehicleDocumentItem {..} =
   CommonOnboarding.VehicleDocumentItem
     { documents = castDocumentStatusItem <$> documents,
       ..
     }
 
-castResponseStatus :: DStatus.ResponseStatus -> CommonOnboarding.ResponseStatus
+castResponseStatus :: SStatus.ResponseStatus -> CommonOnboarding.ResponseStatus
 castResponseStatus = \case
-  DStatus.NO_DOC_AVAILABLE -> CommonOnboarding.NO_DOC_AVAILABLE
-  DStatus.PENDING -> CommonOnboarding.PENDING
-  DStatus.VALID -> CommonOnboarding.VALID
-  DStatus.FAILED -> CommonOnboarding.FAILED
-  DStatus.INVALID -> CommonOnboarding.INVALID
-  DStatus.LIMIT_EXCEED -> CommonOnboarding.LIMIT_EXCEED
-  DStatus.MANUAL_VERIFICATION_REQUIRED -> CommonOnboarding.MANUAL_VERIFICATION_REQUIRED
-  DStatus.UNAUTHORIZED -> CommonOnboarding.UNAUTHORIZED
+  SStatus.NO_DOC_AVAILABLE -> CommonOnboarding.NO_DOC_AVAILABLE
+  SStatus.PENDING -> CommonOnboarding.PENDING
+  SStatus.VALID -> CommonOnboarding.VALID
+  SStatus.FAILED -> CommonOnboarding.FAILED
+  SStatus.INVALID -> CommonOnboarding.INVALID
+  SStatus.LIMIT_EXCEED -> CommonOnboarding.LIMIT_EXCEED
+  SStatus.MANUAL_VERIFICATION_REQUIRED -> CommonOnboarding.MANUAL_VERIFICATION_REQUIRED
+  SStatus.UNAUTHORIZED -> CommonOnboarding.UNAUTHORIZED

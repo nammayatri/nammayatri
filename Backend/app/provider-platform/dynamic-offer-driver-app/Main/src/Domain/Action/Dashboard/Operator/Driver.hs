@@ -7,6 +7,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.OperationHubRequests
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -15,8 +16,14 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVehicle
 
 getDriverOperatorFetchHubRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.RequestStatus -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp)
 getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber = do
@@ -31,7 +38,7 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
   pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {requests = map castHubRequests reqList}
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
-postDriverOperatorRespondHubRequest _merchantShortId _opCity req = do
+postDriverOperatorRespondHubRequest merchantShortId opCity req = do
   now <- getCurrentTime
   Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
     opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InternalError "Invalid operation hub request id")
@@ -39,8 +46,26 @@ postDriverOperatorRespondHubRequest _merchantShortId _opCity req = do
     unless (opHubReq.driverId.getId == req.driverId) $ Kernel.Utils.Common.throwError (InvalidRequest "You are not the requestor")
     void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
-      fork "enable driver after inspection" $
-        void $ postDriverEnable _merchantShortId _opCity (Kernel.Types.Id.Id req.driverId)
+      fork "enable driver after inspection" $ do
+        let personId = Kernel.Types.Id.Id req.driverId
+        merchant <- findMerchantByShortId merchantShortId
+        merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+        transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
+        person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        let language = fromMaybe merchantOpCity.language person.language
+        driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language
+        vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
+        vehicleDoc <-
+          find (\doc -> doc.registrationNo == req.registrationNo) vehicleDocumentsUnverified
+            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> req.registrationNo)
+        let makeSelfieAadhaarPanMandatory = Nothing
+        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
+        allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
+        when (allVehicleDocsVerified && allDriverDocsVerified) $
+          void $ postDriverEnable merchantShortId opCity (Kernel.Types.Id.Id req.driverId)
+        mbVehicle <- QVehicle.findById personId
+        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified) $
+          void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
   pure Success
 
 opsHubRequestLockKey :: Text -> Text
