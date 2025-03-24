@@ -330,3 +330,39 @@ getFavouriteDriverTrips limit offset isActive status clientId =
 
 removeFavouriteDriver :: String -> String
 removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove") 
+
+getDeliveryImage :: String -> String
+getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
+
+busAutoComplete :: String -> String -> String -> Maybe String -> String -> Maybe String -> String
+busAutoComplete vehicleType city location input limit offset = 
+  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <> 
+  "&limit=" <> limit <> "&offset=" <> (fromMaybe "0" offset) <>
+  maybe "" (\i -> "&input=" <> i) input
+
+trackRouteBus :: String -> String 
+trackRouteBus route = (getBaseUrl "61") <> "/track/"<>route <> "/vehicles"
+
+triggerAadhaarOTP :: String -> String
+triggerAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/generateOtp"
+
+verifyAadhaarOTP :: String -> String
+verifyAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/verifyOtp"
+
+-- unVerifiedAadhaarData :: String -> String
+-- unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
+
+frfsRoute :: String -> String -> String -> String
+frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> routeCode <> "?vehicleType=" <> show vehicleType <> "&city=" <> city
+
+confirmMetroQuoteV2 :: String -> String
+confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId <> "/confirm"
+
+verifyVpa :: String -> String
+verifyVpa vpa = (getBaseUrl "50") <> "/referral/verifyVpa?vpa=" <> vpa
+
+updateVpa :: String -> String
+updateVpa dummy = (getBaseUrl "50") <> "/payoutVpa/upsert"
+
+payoutHistory :: String -> String
+payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"

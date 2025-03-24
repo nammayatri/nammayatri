@@ -1671,3 +1671,4 @@ getFR stringKey =
         OPTIONAL_BRACKETTED -> "Verify"
         VERIFY -> "Referral Code"
         VERIFIED -> ""
+        _ -> ""

@@ -653,6 +653,13 @@ getProfileBT _  = do
     errorHandler (errorPayload) =  do
         BackT $ pure GoBack
 
+getProfile :: String -> Flow GlobalState (Either ErrorResponse GetProfileRes)
+getProfile _  = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.profile "") unwrapResponse (callAPI headers (GetProfileReq))
+    where
+        unwrapResponse (x) = x
+
 -- updateProfileBT :: UpdateProfileReq -> FlowBT String UpdateProfileRes
 updateProfile :: UpdateProfileReq -> Flow GlobalState (Either ErrorResponse APISuccessResp)
 updateProfile (UpdateProfileReq payload) = do
@@ -1555,4 +1562,25 @@ makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundT
                                             "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
                                             }),
                     "fareProductType" : "INTER_CITY"
-                   }
+                   }----------------------------------------------------------------------------- MultiChat ----------------------------------------------------------------------------------------
+
+verifyVpa :: String -> Flow GlobalState (Either ErrorResponse VerifyVPAResp)
+verifyVpa vpa = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.verifyVpa vpa) unwrapResponse $ callAPI headers (VerifyVPAReq vpa)
+  where
+    unwrapResponse x = x
+
+updateVpa :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+updateVpa vpa = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.updateVpa "") unwrapResponse $ callAPI headers (UpdateVpaReq {vpa})
+  where
+    unwrapResponse x = x
+
+getPayoutHistory :: String -> Flow GlobalState (Either ErrorResponse PayoutHistoryResp)
+getPayoutHistory vpa = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.payoutHistory "") unwrapResponse $ callAPI headers (PayoutHistoryReq "")
+  where
+    unwrapResponse x = x

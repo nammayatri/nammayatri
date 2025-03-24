@@ -179,3 +179,10 @@ type EnquiryBannerButtonConfig = {
 , background :: String
 , color :: String
 }
+type ReferralPayoutConfig = {
+  youGet :: Maybe Number,
+  theyGet :: Maybe Number,
+  enable :: Maybe Boolean,
+  coverImage :: Maybe String,
+  termsLink :: String
+}

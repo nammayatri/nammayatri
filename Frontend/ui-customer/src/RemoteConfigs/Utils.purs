@@ -340,3 +340,17 @@ getEnquiryBannerConfig city mbVehicleCat =
 
 
 
+defaultReferralPayout :: ReferralPayoutConfig
+defaultReferralPayout = {
+    enable : Just true,
+    youGet : Nothing,
+    theyGet : Nothing,
+    coverImage : Nothing,
+    termsLink : "https://docs.google.com/document/d/1ZkgiluudQnYiFWlMNEZ18owFdkz_LqDr"
+}
+
+getReferralPayoutConfig :: String -> ReferralPayoutConfig
+getReferralPayoutConfig city = do
+    let config = fetchRemoteConfigString "referral_payout_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultReferralPayout
+    getCityBasedConfig value $ DS.toLower city

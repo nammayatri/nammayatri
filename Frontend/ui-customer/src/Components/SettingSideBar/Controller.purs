@@ -67,4 +67,5 @@ type Item =
   , iconUrl :: String
   , accessibilityHint :: String
   , showNewTag :: Boolean
+  , showReferralTag :: Boolean
   }

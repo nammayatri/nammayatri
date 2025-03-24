@@ -113,12 +113,12 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, itsBeenOneDay, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList)
 import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache
 import Log (printLog, logStatus)
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -449,8 +449,20 @@ screen initialState =
               runEffectFn3 JB.initialiseShakeListener push ShakeActionCallback JB.defaultShakeListenerConfig
               pure unit
             when (Arr.elem initialState.props.currentStage [RideAccepted, RideCompleted]) $ void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push initialState
-            pure (pure unit))
-          
+            pure (pure unit)),
+        (\push -> do 
+            case initialState.data.profile of
+              Just (GetProfileRes profile) -> do
+                let totalEarningPending = fromMaybe 0 $ fromNumber ((fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid))
+                if ((fromMaybe 0.0 profile.referredByEarnings) > 0.0) && (fromMaybe false profile.hasTakenValidRide) && totalEarningPending > 0 && isNothing profile.payoutVpa && itsBeenOneDay "COLLECT_EARNINGS" then
+                  push $ AddVPA $ totalEarningPending
+                else do
+                  let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
+                  if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
+                    then push $ TakeFirstRide
+                    else pure unit
+              Nothing -> pure unit
+            pure $ pure unit)
       ]
   , eval:
       \action state -> do
@@ -657,7 +669,7 @@ view push state =
                     , clickable $ not DS.null state.props.repeatRideTimerId 
                     ][]
               else emptyTextView state
-            ]  <> if state.props.showEducationalCarousel then 
+            ] <> if state.props.showEducationalCarousel then 
                     [ linearLayout
                       [ height MATCH_PARENT
                       , width MATCH_PARENT
@@ -665,7 +677,8 @@ view push state =
                       , onClick push $ const NoAction
                       , background Color.black9000
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
-                    else [])
+                    else []
+              <> if state.showTakeFirstRidePopup then [PopUpModal.view (push <<< GetReferralPopup) (referralDonePopUp state)] else [])
         ]
   ]
   where
@@ -3908,8 +3921,18 @@ getHeaderLogo state =
   else state.data.config.appData.logoLight 
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-pickupLocationView push state = 
-  linearLayout
+pickupLocationView push state =
+  let applyReferral = not $ state.props.isReferred
+      referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      youGet = fromMaybe 0.0 referralPayoutConfig.youGet
+      {isPayoutEnabled, totalEarningPending} = 
+          case state.data.profile of 
+            Nothing -> {isPayoutEnabled : false, totalEarningPending: 0.0 }
+            Just (GetProfileRes profile) -> {isPayoutEnabled : fromMaybe false profile.isPayoutEnabled, totalEarningPending: (fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid)}
+      showEarnNow = if isPayoutEnabled then youGet > 0.0 && totalEarningPending == 0.0 else false 
+      showCollect = if isPayoutEnabled then totalEarningPending > 0.0 else false
+  in 
+    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -3991,21 +4014,42 @@ pickupLocationView push state =
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity RIGHT
+              , visibility $ boolToVisibility state.data.config.feature.enableReferral
               ][ linearLayout
                  [ width WRAP_CONTENT
                  , height WRAP_CONTENT
-                 , cornerRadius 8.0
+                 , cornerRadius 24.0
                  , background Color.blue600
                  , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-                 , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide)
-                 ][ textView
-                    [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
-                    , color Color.blue800
+                 , visibility $ boolToVisibility $ applyReferral || not isPayoutEnabled
+                 ][ textView $
+                    [ text $ if applyReferral then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
+                    , color Color.blue900
                     , gravity CENTER_HORIZONTAL
-                    , textSize FontSize.a_14  
-                    , padding $ Padding 12 8 12 8
-                    ]
+                    , padding $ Padding 10 8 10 8
+                    ] <> FontStyle.body4 TypoGraphy
                  ]
+                  , linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , cornerRadius 24.0
+                    , background if showCollect then Color.blue900 else Color.blue600
+                    , onClick push $ const ReferralPayout
+                    , visibility $ boolToVisibility $ (not applyReferral) && (showEarnNow ||  showCollect)
+                    , padding $ Padding 10 8 10 8
+                    , gravity CENTER
+                    ][ imageView
+                        [ imageWithFallback $ fetchImage COMMON_ASSET $ if showCollect then "ny_ic_invite_and_earn_white" else "ny_ic_invite_earn"
+                        , height $ V 20
+                        , width $ V 38
+                        , padding $ PaddingRight 4
+                        ]
+                      , textView $
+                        [ text $ getString $ if showCollect then COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
+                        , color if showCollect then Color.white900 else Color.blue900
+                        , gravity CENTER
+                        ] <> FontStyle.body4 TypoGraphy
+                    ]
               ]
             ]
         ]
