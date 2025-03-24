@@ -621,4 +621,127 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         AccessibilityManager accessibilityManager = (AccessibilityManager) bridgeComponents.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
         return accessibilityManager.isEnabled();
     }
+
+    @JavascriptInterface
+    public void updateMarkersOnRoute(String _payload) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject payload = new JSONObject(_payload);
+                String pureScriptID = payload.optString("pureScriptID", "");
+                GoogleMap gMap = pureScriptID.isEmpty() ? googleMap : googleMapInstance.get(pureScriptID);
+                String json = payload.optString("currentVehicleLocation");
+                JSONObject currentVehicleLocation = payload.getJSONObject("currentVehicleLocation");
+                double currentLng = currentVehicleLocation.getDouble("lng");
+                double currentLat = currentVehicleLocation.getDouble("lat");
+                LatLng currentLatLng = new LatLng(currentLat, currentLng);
+
+                String eta = payload.optString("eta", "");
+                JSONObject srcMarker = payload.getJSONObject("srcMarker");
+                String vehicleMarkerId = srcMarker.optString("markerId", "");
+                Marker marker = (Marker) markers.get(vehicleMarkerId);
+//                boolean autoZoom = payload.optBoolean("autoZoom", true);
+    //            String json = payload.optString("json", "");
+    //            JSONObject jsonObject = new JSONObject(json);
+    //            JSONArray coordinates = jsonObject.getJSONArray("points");
+
+                if (marker != null) {
+                    String srcMarkerPointerIcon = srcMarker.optString("pointerIcon", "");
+//                    animateMarkerNew(srcMarkerPointerIcon, currentLatLng, marker, eta);
+
+                    LatLng startPosition = marker.getPosition();
+                    ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
+                    valueAnimator.setDuration(2000); // TODO :: get this value from Loacl Storage to maintain sync with PS
+                    valueAnimator.setInterpolator(new LinearInterpolator());
+                    valueAnimator.addUpdateListener(animation -> {
+                        try {
+                            float v = animation.getAnimatedFraction();
+                            LatLng newPosition = SphericalUtil.interpolate(startPosition, currentLatLng, v);
+//                            float rotation = bearingBetweenLocations(startPosition, currentLatLng);
+//                            if (rotation > 1.0){
+//                                MarkerConfig markerConfig = new MarkerConfig();
+////                                markerConfig.locationName(infoLabelText);
+//                                markerConfig.setRotation(rotation);
+////                                markerConfig.setMarkerIconSize(160);
+//                                marker.setRotation(0.0f);
+////                                double previousWaypointObj = payload.optDouble("vehicleRotationFromPrevLatLon", 0.0);
+////                                marker.setRotation((float) previousWaypointObj);
+//                                marker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(srcMarkerPointerIcon, false, MarkerType.NORMAL_MARKER_V2, markerConfig)));
+//                            }
+                            marker.setPosition(newPosition);
+                            marker.setAnchor(0.5f, 0.5f);
+//                            Bitmap smallMarker = constructBitmap(markerSize, title);
+//                            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(smallMarker));
+                            markers.put(srcMarkerPointerIcon, marker);
+//                            if (marker.getRotation() == 0.0f) {
+////                                double previousWaypointObj = payload.optDouble("vehicleRotationFromPrevLatLon", 0.0);
+//                                marker.setRotation(rotation);
+//                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+                    valueAnimator.addListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            super.onAnimationEnd(animation);
+                        }
+                    });
+                    valueAnimator.start();
+
+                    // Ensure smooth animation by interpolating between previous and current positions
+                    // ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
+                    // animator.setDuration(2000); // Adjust duration as needed
+                    // animator.setInterpolator(new LinearInterpolator());
+                    // animator.addUpdateListener(animation -> {
+                    //     float fraction = animation.getAnimatedFraction();
+                    //     LatLng interpolatedPosition = SphericalUtil.interpolate(previousLatLng, currentLatLng, fraction);
+                    //     marker.setPosition(interpolatedPosition);
+                    // });
+                    // animator.start();
+
+//                    MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+//                    if(debounceAnimateCameraCounter == null) debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+//                    if (autoZoom && mapUpdate.isMapIdle && (debounceAnimateCameraCounter <= 0 || mapUpdate.isMapMoved)) {
+//                        moveCamera(previousLatLng.latitude, previousLatLng.longitude, currentLat, currentLng, coordinates);
+//                        mapUpdate.isMapMoved = false;
+//                        mapUpdate.isMapIdle = true;
+//                        debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+//                    } else {
+//                        debounceAnimateCameraCounter--;
+//                    }
+                }
+                else {
+                    String srcMarkerStr = payload.optString("srcMarker","");
+                    showMarker(srcMarkerStr);
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public boolean checkMarkerAvailable (String _payload) {
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String markerId = payload.optString("markerId", "");
+            return ((Marker) markers.get(markerId) != null);
+        } catch (JSONException e) {
+            return false;
+        }
+    }
+
+    public String getMarkerPosition (String _payload) {
+        try {
+            JSONObject payload = new JSONObject(_payload);
+            String markerId = payload.optString("markerId", "");
+            Marker marker = (Marker) markers.get(markerId);
+            if(marker != null) {
+                return (marker.getPosition().toString());
+            }
+            return "";
+        } catch (JSONException e) {
+            return "";
+        }
+    }
 }

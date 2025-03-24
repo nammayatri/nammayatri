@@ -16,7 +16,7 @@ module Screens.TicketBookingFlow.BusTrackingScreen.Controller where
 
 import PrestoDOM.Core (getPushFn)
 import Engineering.Helpers.Commons as EHC
-import Data.Traversable (traverse, for_)
+import Data.Traversable (traverse, for_, for)
 import JBridge as JB
 import Data.Time.Duration (Milliseconds(..))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
@@ -54,11 +54,10 @@ import Presto.Core.Types.Language.Flow (Flow)
 import Types.App (GlobalState(..), defaultGlobalState)
 import Common.Types.App as CTA
 import Data.Lens ((^.))
-import Accessor (_lat, _lon)
+import Accessor (_lat, _lon, _stopPoint)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
-import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
 import Constants.Configs (getPolylineAnimationConfig)
 import Screens.TicketBookingFlow.BusTrackingScreen.Transformer
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -77,6 +76,12 @@ import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Control.Alt ((<|>))
 import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
+import MapUtils (calculateNearestWaypoint, rotationBetweenLatLons, haversineDistance)
+import Data.Tuple (Tuple(..))
+import Common.Resources.Constants (zoomLevel, chatService)
+import Data.Set as DSet
+import Language.Strings (getString, getVarString)
+import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,7 +99,7 @@ data Action
   = AfterRender
   | BackPressed
   | CurrentLocationCallBack String String String
-  | UpdateTracking (Array ST.VehicleData)
+  | UpdateTracking (API.BusTrackingRouteResp)
   | MapReady String String String
   | NoAction
   | BookTicketButtonAction PrimaryButton.Action
@@ -156,28 +161,29 @@ eval BackPressed state = exit $ GoToBusTicketBooking state
 
 eval ViewTicket state = exit $ GoToViewTicket state
 
-eval (UpdateTracking trackingData) state = do
-  case state.props.vehicleTrackingId of
-    Mb.Just id -> do
-      let vehicleDetails = DA.find (\item -> item.vehicleId == id) trackingData
-      case vehicleDetails of 
-        Mb.Just details -> do
-          continueWithCmd state [do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state trackingData details
-            pure NoAction
-          ]
-        Mb.Nothing -> processTrackingData
-    Mb.Nothing -> processTrackingData
+eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
+  let trackingData = DA.concatMap extractTrackingInfo resp.vehicleTrackingInfo
+  in 
+    case state.props.vehicleTrackingId of
+      Mb.Just id -> do
+        let vehicleDetails = DA.find (\item -> item.vehicleId == id) trackingData
+        case vehicleDetails of 
+          Mb.Just details -> do
+            continueWithCmd state [do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state trackingData details
+              pure NoAction
+            ]
+          Mb.Nothing -> processTrackingData trackingData
+      Mb.Nothing -> processTrackingData trackingData
   where
-    processTrackingData = do
+    processTrackingData trackingData = do
       let
         alreadyOnboardedThisBus = DA.find (\busInfo -> busInfo.bookingId == state.data.bookingId) extractBusOnboardingInfo
         finalMap =
           DA.foldl
             ( \acc item -> do
                 let alreadyOnboardedThisVehicleInRouteOrPreTracking = Mb.isNothing alreadyOnboardedThisBus || (alreadyOnboardedThisBus <#> _.vehicleId) == Mb.Just item.vehicleId
-                    -- _ = spy "codex-coming-here" $ show $ filterVehicleInfoLogic item
-                if ((Mb.maybe false (_ < item.nextStopSequence) state.props.destinationSequenceNumber && DS.null state.data.bookingId) || (filterVehicleInfoLogic item.timestamp))
+                if ((Mb.maybe false (_ < item.nextStopSequence) state.props.destinationSequenceNumber && DS.null state.data.bookingId) || item.vehicleId == "")
                   then acc
                 else do
                   let
@@ -210,18 +216,82 @@ eval (UpdateTracking trackingData) state = do
             [ pure UserBoarded ]
         Mb.Nothing -> 
           continueWithCmd state
-            { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData }
+            { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData, previousLatLonsOfVehicle = storePrevLatLonsOfVehicle trackingData}
             , props
               { busNearSourceData = DT.snd finalMap
               }
             }
           [ do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState
+                $ do
+                    when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
               case DT.snd finalMap of
                 Mb.Just pt -> do
                   void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
                 Mb.Nothing -> pure unit
               pure NoAction
           ]
+    
+    storePrevLatLonsOfVehicle trackingData =
+      DA.foldl
+        (\acc item ->
+          DM.insert item.vehicleId { position : API.LatLong {lat : item.vehicleLat, lon: item.vehicleLon}, index : item.nearestWaypointConfig.index } acc
+        )
+        DM.empty
+        trackingData
+    
+    extractTrackingInfo (API.VehicleInfo item) = do
+      let
+        (API.VehicleInfoForRoute m) = item.vehicleInfo
+        (API.RouteStopMapping nextStop) = item.nextStop
+        lat = Mb.fromMaybe 0.0 m.latitude
+        lon = Mb.fromMaybe 0.0 m.longitude
+        (API.LatLong nextStopPosition) = nextStop.stopPoint
+        currentWaypoint = API.LatLong { lat: lat, lon: lon }
+        wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+        nearestWaypointConfig = calculateNearestWaypoint currentWaypoint state.data.routePts.points wmbFlowConfig.maxSnappingOnRouteDistance
+
+      case filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig, (filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item)) of
+        false, _ -> []
+        _, false -> []
+        true, true ->
+
+          [ { vehicleId: item.vehicleId
+            , updatedAt: nextStop.updatedAt
+            , createdAt: nextStop.createdAt
+            , timestamp: m.timestamp
+            , nextStop: nextStop.stopCode
+            , nextStopDistance: haversineDistance nearestWaypointConfig.vehicleLocationOnRoute nextStop.stopPoint
+            , vehicleLat: nearestWaypointConfig.vehicleLocationOnRoute ^._lat
+            , vehicleLon: nearestWaypointConfig.vehicleLocationOnRoute ^._lon
+            , nextStopLat: nextStopPosition.lat
+            , nextStopLon: nextStopPosition.lon
+            , nextStopTravelTime: item.nextStopTravelTime
+            , nextStopSequence: nextStop.sequenceNum
+            , nextStopTravelDistance: item.nextStopTravelDistance
+            , nearestWaypointConfig: nearestWaypointConfig
+            } ]
+    
+    filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig =
+      let (API.VehicleInfoForRoute m) = item.vehicleInfo
+          -- Show Bus numbers whose rides haven't been ended even though last LTS update is > 30 mins ago
+          -- _ = spy "Vehicle Time Diff" $ Tuple item.vehicleId timeDiff 
+          timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
+      in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec) && checkCurrentBusIsOnboarded state item.vehicleId
+
+    checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
+
+    filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) =
+      -- Deviation Filter Logic for Bus Vehicles
+      ((nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters) || wmbFlowConfig.showAllDeviatedBus)
+      && 
+      ( case (DM.lookup item.vehicleId state.data.previousLatLonsOfVehicle) of -- Proper Checking with too close and erroneous data pointing towards the back of the route
+          Mb.Just previousVehicleData ->
+            let distanceBtwnCurrentAndPrevLocations = haversineDistance previousVehicleData.position nearestWaypointConfig.vehicleLocationOnRoute
+                currentLatLonBeforePrevIndex = nearestWaypointConfig.index > previousVehicleData.index
+            in not $ currentLatLonBeforePrevIndex && distanceBtwnCurrentAndPrevLocations < wmbFlowConfig.maxDeviatedDistanceInMeters
+          Mb.Nothing -> true
+      )
     
 
 eval (CurrentLocationCallBack lat lon _) state = case state.props.busNearSourceData of
@@ -268,22 +338,6 @@ eval (SaveRoute route) state = continue state {data{routePts = route}}
 
 eval _ state = update state
 
-userBoardedActions :: ST.BusTrackingScreenState -> Array ST.VehicleData -> ST.VehicleData -> Flow GlobalState Unit 
-userBoardedActions state vehicles vehicle = do
-  for_ vehicles
-    $ \(item) -> do
-        if item.vehicleId /= vehicle.vehicleId then do
-          let _ = JB.removeMarker item.vehicleId
-          pure unit
-        else pure unit
-  locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (vehicle.vehicleLat) (vehicle.vehicleLon) 1
-  let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
-  EHC.liftFlow $ JB.drawRoute [ routeConfig{routeColor = Color.black800} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
-
-  -- let markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker" }
-  -- void $ EHC.liftFlow $ JB.showMarker markerConfig vehicle.vehicleLat vehicle.vehicleLon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  pure unit
-
 drawDriverRoute :: Array API.FRFSStationAPI -> ST.BusTrackingScreenState -> Flow GlobalState Unit
 drawDriverRoute resp state = do
   let
@@ -295,10 +349,8 @@ drawDriverRoute resp state = do
     route =
       Remote.walkCoordinates $ API.Snapped
         $ case response of
-            Right (API.FRFSRouteAPI routeResp) -> DA.reverse $ Mb.fromMaybe [] routeResp.waypoints
+            Right (API.FRFSRouteAPI routeResp) -> Mb.fromMaybe [] routeResp.waypoints
             Left err -> []
-    _ = spy "codex-response" response
-    _ = spy "codex-route" route
 
     destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) resp
   filteredRoute <- case destinationStation, DS.null state.data.bookingId of
@@ -312,7 +364,7 @@ drawDriverRoute resp state = do
     routeConfig = transformStationsForMap resp filteredRoute srcCode destinationCode
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
-  EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig {routeColor = Color.black700} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
   void $ foldM processStop 0 state.data.stopsList
   where
@@ -347,11 +399,91 @@ extractBusOnboardingInfo =
       let cachedOnboardedBusInfo = JB.getKeyInSharedPrefKeys $ show ONBOARDED_VEHICLE_INFO
       in DU.decodeForeignAny (DU.parseJSON cachedOnboardedBusInfo) Mb.Nothing
 
--- Filtering Vehicle Info based on external logic based on remote config
-filterVehicleInfoLogic :: String -> Boolean
-filterVehicleInfoLogic timestamp =
-  let timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") timestamp 
-      wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
-  in (timeDiff > wmbFlowConfig.maxAllowedTimeDiffInLTSinSec)
-      -- && (item.nextStopDistance > wmbFlowConfig.maxDeviatedDistanceInMeters) -- Todo - check via haversine polyline distance calculation
+updateBusLocationOnRoute :: ST.BusTrackingScreenState -> Array ST.VehicleData -> API.BusTrackingRouteResp -> Flow GlobalState Unit
+updateBusLocationOnRoute state vehicles (API.BusTrackingRouteResp resp)= do
+  for_ vehicles
+    $ \(item) -> do
+        let pointerIcon = "ny_ic_bus_nav_on_map"
+            markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = pointerIcon , markerSize = 160.0}
+            -- vehicleRotationFromPrevLatLon = vehicleRotationCalculation item state
+        locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts item.vehicleLat item.vehicleLon 1
+        markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable item.vehicleId
+        if (markerAvailable)
+          then 
+            EHC.liftFlow $ runEffectFn1 JB.updateMarkersOnRoute
+              JB.updateMarkerOnRouteConfig
+                { currentVehicleLocation = { lat: item.vehicleLat, lng: item.vehicleLon }
+                , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap")
+                , srcMarker = markerConfig {position = { lat: item.vehicleLat, lng: item.vehicleLon}}
+                -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
+                }
+          else 
+            void $ EHC.liftFlow $ JB.showMarker markerConfig item.vehicleLat item.vehicleLon 160 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  pure unit
 
+vehicleRotationCalculation :: ST.VehicleData -> ST.BusTrackingScreenState -> Number
+vehicleRotationCalculation item state =
+  let routePts = DA.reverse state.data.routePts.points
+  in case DA.index routePts (item.nearestWaypointConfig.index - 1), DA.index routePts (item.nearestWaypointConfig.index + 1) of
+    Mb.Just nextLatLong, _ -> rotationBetweenLatLons (API.LatLong { lat: item.vehicleLat, lon: item.vehicleLon }) (API.LatLong { lat: nextLatLong.lat, lon: nextLatLong.lng })
+    _, Mb.Just prevLatLong  -> rotationBetweenLatLons (API.LatLong { lat: prevLatLong.lat, lon: prevLatLong.lng }) (API.LatLong { lat: item.vehicleLat, lon: item.vehicleLon })
+    _, _ ->
+      rotationBetweenLatLons (API.LatLong { lat: item.vehicleLat, lon: item.vehicleLon }) $ (API.LatLong {lat: item.nextStopLat, lon: item.nextStopLon})
+          -- let mbNextStopData= DA.find (\(API.VehicleInfo vehicleInfo) ->
+          --           let (API.RouteStopMapping nextStop) = vehicleInfo.nextStop
+          --           in nextStop.stopCode == item.nextStop
+          --         ) resp.vehicleTrackingInfo
+          -- case mbNextStopData of
+            -- Mb.Just (API.VehicleInfo nextStopData) -> 
+              -- let (API.RouteStopMapping mbNextStop) = nextStopData.nextStop 
+            -- Mb.Nothing -> 0.0
+
+userBoardedActions :: ST.BusTrackingScreenState -> Array ST.VehicleData -> ST.VehicleData -> Flow GlobalState Unit 
+userBoardedActions state vehicles vehicle = do
+  for_ vehicles
+    $ \(item) -> do
+        if item.vehicleId /= vehicle.vehicleId then do
+          let _ = JB.removeMarker item.vehicleId
+          pure unit
+        else pure unit
+  locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points : state.data.routePts.points}) (vehicle.vehicleLat) (vehicle.vehicleLon) 1
+  -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (vehicle.vehicleLat) (vehicle.vehicleLon) 1
+  let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
+  let srcMarkerConfig = JB.defaultMarkerConfig { markerId = vehicle.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" , markerSize = 160.0}
+      -- vehicleRotationFromPrevLatLon = vehicleRotationCalculation vehicle state
+      srcCode = Mb.maybe "" (_.stationCode) state.data.sourceStation
+      destinationCode = Mb.maybe "" (_.stationCode) state.data.destinationStation
+      destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) state.data.stopsList
+      _ = spy "codex-locationResp" locationResp
+  -- filteredRoute <- case destinationStation, DS.null state.data.bookingId of
+  --   Mb.Just (API.FRFSStationAPI dest), false -> do
+  --     -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (Mb.fromMaybe 0.0 vehicle.vehicleLat) (Mb.fromMaybe 0.0 vehicle.vehicleLon) 1
+  --     locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points : DA.reverse state.data.routePts.points}) (vehicle.vehicleLat) (vehicle.vehicleLon) 1
+  --     pure $ if locationResp.isInPath then { points: DA.reverse locationResp.points } else state.data.routePts
+  --   _, _ -> pure state.data.routePts
+  markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable vehicle.vehicleId
+  EHC.liftFlow $ JB.drawRoute [ routeConfig{routeColor = Color.black700} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  if (markerAvailable)
+    -- then EHC.liftFlow $ runEffectFn1 JB.updateRoute JB.updateRouteConfig { json = {points: DA.reverse locationResp.points}, eta = JB.fromMetersToKm locationResp.distance, srcMarker = vehicle.vehicleId , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap"),  polylineKey = "DEFAULT"}
+    then 
+      EHC.liftFlow $ runEffectFn1 JB.updateMarkersOnRoute
+        JB.updateMarkerOnRouteConfig
+          { currentVehicleLocation = { lat: vehicle.vehicleLat, lng: vehicle.vehicleLon }
+          , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap")
+          , srcMarker = srcMarkerConfig {position = { lat: vehicle.vehicleLat, lng: vehicle.vehicleLon} }--, eta = metersToKm locationResp.distance false}
+          -- , vehicleRotationFromPrevLatLon = vehicleRotationFromPrevLatLon
+          }
+    else void $ EHC.liftFlow $ JB.showMarker srcMarkerConfig vehicle.vehicleLat vehicle.vehicleLon 160 0.5 0.5 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.animateCamera vehicle.vehicleLat vehicle.vehicleLon 17.0 "ZOOM"
+  
+  
+
+  -- let markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_nav_on_map" }
+  -- void $ EHC.liftFlow $ JB.showMarker markerConfig vehicle.vehicleLat vehicle.vehicleLon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  pure unit
+
+-- metersToKm :: Int -> Boolean -> String
+-- metersToKm distance towardsDrop =
+--   if (distance <= 10) then
+--     (if towardsDrop then (getString AT_DROP) else (getString AT_PICKUP))
+--   else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((DI.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)

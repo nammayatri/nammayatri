@@ -56,6 +56,7 @@ initData =
         , stationResponse : Mb.Nothing
         , routeShortName : ""
         , routePts : {points : []}
+        , previousLatLonsOfVehicle: DM.empty
         }
     , props:
         { showRouteDetailsTab: true

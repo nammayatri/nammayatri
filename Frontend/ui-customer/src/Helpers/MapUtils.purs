@@ -2,12 +2,68 @@ module MapUtils where
 
 import Prelude
 
-import Data.Array (head, filter)
+import Common.Types.App as CTA
+import Data.Array (length, index)
 import Data.Foldable (minimum)
-import Data.Maybe (Maybe(..), maybe)
-import Data.Number (pi, sin, cos, sqrt, asin, abs, atan2)
-import Screens.Types as ST
+import Data.Maybe (Maybe(..))
+import Data.Number (sqrt, max, min, pi, sin, cos, atan2)
+import Data.Number as DN
+-- import Data.Number (sqrt, pi, sin, cos, asin)
+import Data.Int (floor, toNumber)
+import Data.Tuple (Tuple(..), fst)
+import Effect (Effect)
+import JBridge as JB
+import Screens.Types (NearestWaypointConfig)
 import Services.API as API
+import Debug (spy)
+
+dummyWaypointConfig :: NearestWaypointConfig
+dummyWaypointConfig = 
+  { index: 0
+  , deviationDistance: 0.0
+  , vehicleLocationOnRoute: API.LatLong { lat: 0.0, lon: 0.0 }
+  }
+
+-- Vector Dot Product and Distance Ratio Projection Calculation
+computeClosestPointOnEdgeOrPath :: API.LatLong -> API.LatLong -> API.LatLong -> Tuple Number API.LatLong
+computeClosestPointOnEdgeOrPath (API.LatLong currentLatLon) (API.LatLong edge1) (API.LatLong edge2) =
+  let
+    -- Scaling longitude difference by cos(latitude) to get more accurate distance
+    dLon = (edge2.lon - edge1.lon) * cos (toRadians ((edge1.lat + edge2.lat) / 2.0))
+    dLat = edge2.lat - edge1.lat
+    dLonC = (currentLatLon.lon - edge1.lon) * cos (toRadians ((edge1.lat + currentLatLon.lat) / 2.0))
+    dLatC = currentLatLon.lat - edge1.lat
+    
+    dotProduct = dLonC * dLon + dLatC * dLat
+    abSquared = dLon * dLon + dLat * dLat
+    t = max 0.0 (min 1.0 (dotProduct / abSquared))
+
+    -- Interpolating the closest point on the segment
+    closestLat = edge1.lat + t * dLat
+    closestLon = edge1.lon + t * (edge2.lon - edge1.lon)
+
+    -- Computing distance using haversine formula
+    closestPoint = API.LatLong { lat: closestLat, lon: closestLon }
+    distance = haversineDistance (API.LatLong currentLatLon) closestPoint
+  in Tuple distance closestPoint
+
+
+calculateNearestWaypoint :: API.LatLong -> JB.Coordinates -> Number -> NearestWaypointConfig
+calculateNearestWaypoint currentLatLon waypoints maxSnappingOnRouteDistance =
+  go 0 1.0e9 currentLatLon (-1)
+  where
+    go :: Int -> Number -> API.LatLong -> Int -> NearestWaypointConfig
+    go i minDist closest closestIndex =
+      if i >= (length waypoints) - 1 then
+        dummyWaypointConfig { index = closestIndex, deviationDistance = minDist, vehicleLocationOnRoute = if minDist < maxSnappingOnRouteDistance then closest else currentLatLon } 
+      else
+        case (index waypoints i), (index waypoints (i + 1)) of
+          Just edge1, Just edge2 ->
+            let Tuple distance closestPoint = computeClosestPointOnEdgeOrPath currentLatLon (convertPathToLatLong edge1) (convertPathToLatLong edge2)
+            in if distance < minDist
+                 then go (i + 1) distance closestPoint i
+                 else go (i + 1) minDist closest closestIndex
+          _, _ -> dummyWaypointConfig { index = closestIndex, deviationDistance = minDist, vehicleLocationOnRoute = closest } 
 
 -- Haversine Distance Calculation
 haversineDistance :: API.LatLong -> API.LatLong -> Number
@@ -17,29 +73,54 @@ haversineDistance (API.LatLong point1) (API.LatLong point2) =
     lon1 = toRadians point1.lon
     lat2 = toRadians point2.lat
     lon2 = toRadians point2.lon
-    dLat = toRadians (lat2 - lat1)
-    dLon = toRadians (lon2 - lon1)
-    absDistance = sin (dLat / 2.0) * sin (dLat / 2.0) + (cos lat1) * (cos lat2) * sin (dLon / 2.0) * sin (dLon / 2.0)
-    finalDistance = 2.0 * atan2 (sqrt absDistance) (sqrt (1.0 - absDistance))
+    dLat = toRadians (point2.lat - point1.lat)
+    dLon = toRadians (point2.lon - point1.lon)
+    a = sin (dLat / 2.0) * sin (dLat / 2.0) + cos lat1 * cos lat2 * sin (dLon / 2.0) * sin (dLon / 2.0)
+    c = 2.0 * atan2 (sqrt a) (sqrt (1.0 - a))
   in
-    earthRadiusKm * finalDistance
+    earthRadiusKm * c
   where 
     toRadians :: Number -> Number
     toRadians degrees = degrees * pi / 180.0
 
     earthRadiusKm :: Number
-    earthRadiusKm = 6371.0
+    earthRadiusKm = 6371000.0  -- Convert to meters instead of km
 
--- Snapping the Lat Long on the nearest waypoints
-calculateNearestWaypoint :: API.LatLong -> Array API.LatLong -> Number -> Maybe API.LatLong
-calculateNearestWaypoint currentWaypoint waypoints maxAllowedDeviationInMeters = 
-  maybe Nothing
-    (\minimumDistance -> 
-      let nearestWaypoint = head (filter (\waypoint -> haversineDistance currentWaypoint waypoint == minimumDistance) waypoints)
-      in if (minimumDistance > maxAllowedDeviationInMeters) 
-            then Nothing
-            else nearestWaypoint)
-    (minimum distances)
-  where
-    distances :: Array Number
-    distances = map (\waypoint -> haversineDistance currentWaypoint waypoint) waypoints
+convertPathToLatLong :: CTA.Paths -> API.LatLong
+convertPathToLatLong path = API.LatLong { lat: path.lat, lon: path.lng }
+
+toRadians :: Number -> Number
+toRadians degrees = degrees * pi / 180.0
+
+toDegrees :: Number -> Number
+toDegrees rad = rad * 180.0 / pi
+
+modulo :: Number -> Number -> Number
+modulo x y = x - y * DN.floor (x / y)
+
+rotationBetweenLatLons :: API.LatLong -> API.LatLong -> Number
+rotationBetweenLatLons (API.LatLong latLng1) (API.LatLong latLng2) =
+  let lat1 = latLng1.lat * pi / 180.0
+      long1 = latLng1.lon * pi / 180.0
+      lat2 = latLng2.lat * pi / 180.0
+      long2 = latLng2.lon * pi / 180.0
+      dLon = long2 - long1
+      y = sin dLon * cos lat2
+      x = cos lat1 * sin lat2 - sin lat1 * cos lat2 * cos dLon
+      brng = toDegrees (atan2 y x)
+  in modulo (brng + 360.0) 360.0
+
+
+-- Deprecated this logic of calculating nearest waypoint using only haversine distance, can be used in some other cases
+-- calculateNearestWaypoint :: API.LatLong -> JB.Coordinates -> Number -> Maybe API.LatLong
+-- calculateNearestWaypoint currentWaypoint waypoints maxAllowedDeviationInMeters = 
+--   maybe Nothing
+--     (\minimumDistance -> do
+--       let mbNearestWaypoint = head (filter (\waypoint -> haversineDistance currentWaypoint waypoint == minimumDistance) waypoints)
+--       case mbNearestWaypoint, (minimumDistance < maxAllowedDeviationInMeters) of
+--         Just nearestWaypoint, true -> Just $ API.LatLong {lat : nearestWaypoint.lat, lon : nearestWaypoint.lng}
+--         _, _ -> Nothing)
+--     (minimum distances)
+--   where
+--     distances :: Array Number
+--     distances = map (\waypoint -> haversineDistance currentWaypoint waypoint) waypoints

@@ -219,7 +219,7 @@ checkRideStatus :: Boolean -> Boolean -> FlowBT String Unit --TODO:: Need to ref
 checkRideStatus rideAssigned prioritizeRating = do
   logField_ <- lift $ lift $ getLogFields
 
-  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "2" "0" "true"
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "10" "0" "true"
   (GlobalState state') <- getState
   let state = state'.homeScreen
   case rideBookingListResponse of

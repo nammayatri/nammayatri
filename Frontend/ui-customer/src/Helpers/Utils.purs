@@ -1113,7 +1113,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
                 ( if vehicleType == "BUS" 
                   then 
                     [ "Cancellation of tickets is not applicable" 
-                    , "The ticket is valid for only 30 minutes from the time of booking"
+                    , "The ticket is valid for only 12 hours from the time of booking"
                     , "Fare is commission-free and determined by the WBTC" 
                     ] 
                   else
@@ -1148,7 +1148,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
             "" 
             "" 
             "" 
-            [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC] 
+            [getString CHENNAI_METRO_TERM_1 , "The ticket is valid for only 12 hours from the time of booking", getString FARE_COMMISSION_FREE_WBTC] 
             "" 
             false 
             config

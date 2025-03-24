@@ -322,6 +322,7 @@ type BundleLottieConfig = {
 
 type WmbFlowConfig = {
   maxDeviatedDistanceInMeters :: Number,
-  showDeviatedBus :: Boolean,
-  maxAllowedTimeDiffInLTSinSec :: Int
+  showAllDeviatedBus :: Boolean,
+  maxAllowedTimeDiffInLTSinSec :: Int,
+  maxSnappingOnRouteDistance :: Number
 }

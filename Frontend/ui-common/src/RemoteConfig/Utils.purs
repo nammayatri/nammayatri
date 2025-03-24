@@ -423,7 +423,8 @@ fetchWmbFlowConfig _ =
 
 defaultWmbFlowConfig :: WmbFlowConfig
 defaultWmbFlowConfig =
-  { maxDeviatedDistanceInMeters: 2500.0
-  , showDeviatedBus: false
+  { maxDeviatedDistanceInMeters: 1000.0
+  , showAllDeviatedBus: false
   , maxAllowedTimeDiffInLTSinSec: 1800 
+  , maxSnappingOnRouteDistance: 1000.0
   }

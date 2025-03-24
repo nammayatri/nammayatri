@@ -3083,3 +3083,23 @@ export const executeJS = (params, codeString) => {
   }
   
 }
+
+export const updateMarkersOnRoute = (configObj) => {
+  if (window.JBridge.updateMarkersOnRoute) {
+    return window.JBridge.updateMarkersOnRoute(
+      JSON.stringify(configObj)
+    );
+  }
+};
+
+export const checkMarkerAvailable = (markerId) => {
+  if (window.JBridge.checkMarkerAvailable) {
+    return window.JBridge.checkMarkerAvailable(JSON.stringify({markerId : markerId}));
+  }
+}
+
+export const getMarkerPosition = (markerId) => {
+  if (window.JBridge.getMarkerPosition) {
+    return JSON.parse(window.JBridge.getMarkerPosition(JSON.stringify({markerId : markerId})));
+  }
+}

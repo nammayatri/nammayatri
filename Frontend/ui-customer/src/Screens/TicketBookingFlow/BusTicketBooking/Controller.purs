@@ -27,7 +27,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Constants.Configs (getPolylineAnimationConfig)
 import Data.Array as DA
-import Data.Maybe( Maybe(..), fromMaybe, maybe)
+import Data.Maybe( Maybe(..), fromMaybe, maybe, isJust)
 import Data.Tuple
 import Debug (spy)
 import Effect.Aff (launchAff)
@@ -40,6 +40,7 @@ import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd,
 import Services.API as API
 import Screens.Types as ST
 import Services.Backend as Remote
+import Storage (KeyStore(..), deleteValueFromLocalStore)
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 
 instance showAction :: Show Action where
@@ -78,8 +79,22 @@ eval GoBack state = exit $ GoToHomeScreen state
 
 eval SearchButtonClick state = updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 
-eval (BusTicketBookingListRespAC bookingList) state = 
-  continue $ state {data {ticketDetailsState = Just $ metroTicketListApiToMyTicketsTransformer bookingList $ fromMaybe MetroMyTicketsScreenData.initData state.data.ticketDetailsState}}
+eval (BusTicketBookingListRespAC bookingList) state =
+  let newState = state {data {ticketDetailsState = Just $ metroTicketListApiToMyTicketsTransformer bookingList $ fromMaybe MetroMyTicketsScreenData.initData state.data.ticketDetailsState}}
+      isActiveTicket = DA.find (\(API.FRFSTicketBookingStatusAPIRes list) -> list.status == "ACTIVE") bookingList
+  -- in continue newState
+  in if isJust isActiveTicket then do
+      void $ pure $ deleteValueFromLocalStore ONBOARDED_VEHICLE_INFO
+      void $ pure $ deleteValueFromLocalStore CAN_HAVE_ACTIVE_TICKETS
+      continue newState
+    else continue newState
+    -- continue newState
+    -- case (DA.find (\(API.FRFSTicketBookingStatusAPIRes list) -> list.status == "ACTIVE") bookingList) of
+    -- Just _ -> continue newState
+    -- Nothing -> do
+    --   void $ pure $ deleteValueFromLocalStore ONBOARDED_VEHICLE_INFO
+    --   void $ pure $ deleteValueFromLocalStore CAN_HAVE_ACTIVE_TICKETS
+    -- continue newState
 
 eval TicketIconClicked state = updateAndExit state $ GoToMyTicketsScreen state
 
