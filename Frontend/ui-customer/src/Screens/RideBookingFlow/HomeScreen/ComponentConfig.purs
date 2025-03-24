@@ -2564,6 +2564,60 @@ editPickupPopupOnCancel state = do
   popUpConfig'
 
 
+referralDonePopUp :: ST.HomeScreenState -> PopUpModal.Config
+referralDonePopUp state =
+  let
+    referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+
+    theyGet = fromMaybe 0 $ fromNumber $ fromMaybe 0.0 referralPayoutConfig.theyGet
+
+    config = PopUpModal.config
+
+    popUpConfig' =
+      config
+        { gravity = CENTER
+        , enableAnim = true
+        , cornerRadius = Corners 20.0 true true true true
+        , backgroundColor = Color.blackLessTrans
+        , backgroundClickable = true
+        , dismissPopup = true
+        , padding = Padding 16 16 16 0
+        , margin = Margin 16 16 16 0
+        , optionButtonOrientation = "VERTICAL"
+        , primaryText
+          { text = getString $ GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE (show theyGet)
+          , margin = (Margin 10 20 10 10)
+          , gravity = CENTER
+          }
+        , secondaryText { visibility = GONE }
+        , option1
+          { text = getString TAKE_A_RIDE_NOW
+          , color = Color.yellow900
+          , background = Color.black900
+          , enableRipple = true
+          , rippleColor = Color.rippleShade
+          , width = MATCH_PARENT
+          }
+        , option2
+          { text = getString MAYBE_LATER
+          , color = Color.black700
+          , background = Color.white900
+          , enableRipple = true
+          , strokeColor = Color.white900
+          , rippleColor = Color.rippleShade
+          , width = MATCH_PARENT
+          , margin = (MarginTop 12)
+          }
+        , coverImageConfig
+          { imageUrl = fetchImage COMMON_ASSET "ny_ic_referral_r2r_success_cover_1"
+          , visibility = VISIBLE
+          , height = V 250
+          , width = MATCH_PARENT
+          }
+        }
+  in
+    popUpConfig'
+
 pickupConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
 pickupConfig state = 
   let pickupConfig' =  {

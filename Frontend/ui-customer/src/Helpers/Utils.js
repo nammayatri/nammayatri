@@ -635,3 +635,10 @@ export const releaseBackpress = function (unit) {
   }
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 }
+
+export const isItSameDay = (date) => {
+  if (date == "__failed" || date == "(null)") return false;
+  const dateObj = new Date(parseInt(date));
+  const today = new Date();
+  return today.getDate() == dateObj.getDate() && (today.getMonth() == dateObj.getMonth()) && (today.getFullYear() == dateObj.getFullYear())
+}

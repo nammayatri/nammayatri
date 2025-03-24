@@ -152,8 +152,8 @@ bold style = do
     "HI_IN" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
     _ -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
 
-boldItalic :: FontStyle
-boldItalic = do
+boldItalic :: LazyCheck -> FontStyle
+boldItalic _ = do
   let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-BoldItalic") (font <> "-BoldItalic") "Arial"
 
@@ -512,6 +512,12 @@ title6 typography = [
   textSize FontSize.a_16
 , lineHeight "20"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
+title2Italic :: LazyCheck -> forall properties. (Array (Prop properties))
+title2Italic typography = [
+  textSize FontSize.a_32
+, lineHeight "40"
+] <> if (getFontType "") == Assets then [fontStyle $ boldItalic LanguageStyle] else [fontWeight $ FontWeight 800]
 
 title7 :: LazyCheck -> forall properties. (Array (Prop properties))
 title7 typography = [
