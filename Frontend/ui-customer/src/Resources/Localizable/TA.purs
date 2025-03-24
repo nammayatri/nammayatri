@@ -1738,3 +1738,4 @@ getTA stringKey =
     YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a -> "உங்கள் முதல் பயணத்திற்கு ₹" <> a <> " பெற்றுவிட்டீர்கள்!"
     GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a -> "உங்கள் முதல் பயணத்திற்கு ₹" <> a <> " பரிந்துரை நன்மையைப் பெறுங்கள்!"
     TAKE_A_RIDE_NOW -> "உடனே ஒரு பயணம் செய்யுங்கள்"
+    TAKE_A_RIDE_AND_CLAIM a -> "ஒரு சவாரி எடுத்து ₹" <> a <> " பெறுங்கள்"

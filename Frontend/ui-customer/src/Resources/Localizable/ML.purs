@@ -1717,3 +1717,4 @@ getML stringKey =
         YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി ₹" <> a <> " നേടിയിട്ടുണ്ട്!"
         GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a ->"നിങ്ങളുടെ ആദ്യ യാത്രയ്ക്കായി ₹" <> a <> " റഫറൽ പ്രയോജനം നേടുക!"
         TAKE_A_RIDE_NOW -> "ഇപ്പോഴെന്തെങ്കിലും യാത്ര ചെയ്യൂ"
+        TAKE_A_RIDE_AND_CLAIM a -> "ഒരു യാത്ര എടുക്കൂ & ₹" <> a <> " വാങ്ങൂ"

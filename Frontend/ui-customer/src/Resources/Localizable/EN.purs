@@ -1724,3 +1724,4 @@ getEN stringKey =
         YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE a ->"You’ve earned ₹" <> a <> " for taking your first ride!"
         GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE a ->"Get ₹" <> a <> " Referral Benefit for your first ride!"
         TAKE_A_RIDE_NOW -> "Take a ride now"
+        TAKE_A_RIDE_AND_CLAIM a -> "Take a Ride & claim ₹" <> a
