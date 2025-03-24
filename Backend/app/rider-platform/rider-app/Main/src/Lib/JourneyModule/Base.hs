@@ -16,12 +16,16 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.LocationAddress as LA
+import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
@@ -64,10 +68,12 @@ import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.Maps as Maps
+import qualified Tools.MultiModal as TMultiModal
 
 init ::
   JL.GetFareFlow m r =>
@@ -173,6 +179,97 @@ getAllLegsStatus journey = do
               legsState <> [legState]
             )
         Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+
+getMultiModalTransitOptions ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  APITypes.MultimodalUserPreferences ->
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  APITypes.MultimodalTransitOptionsReq ->
+  m APITypes.MultimodalTransitOptionsResp
+getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId req = do
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  -- let permissibleModesToUse = fromMaybe [] riderConfig.permissibleModes
+  let permissibleModesToUse =
+        if null userPreferences.allowedTransitModes
+          then fromMaybe [] riderConfig.permissibleModes
+          else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
+  now <- getCurrentTime
+  let transitRoutesReq =
+        GetTransitRoutesReq
+          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = req.sourceLatLong.lat, longitude = req.sourceLatLong.lon}}},
+            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = req.destLatLong.lat, longitude = req.destLatLong.lon}}},
+            arrivalTime = Nothing,
+            departureTime = Just now,
+            mode = Nothing,
+            transitPreferences = Nothing,
+            transportModes = Nothing,
+            minimumWalkDistance = riderConfig.minimumWalkDistance,
+            permissibleModes = permissibleModesToUse,
+            maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+            sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
+          }
+  transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
+  otpResponse <- KMultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  logDebug $ "[getMultiModalTransitOptions - OTP Response]" <> show otpResponse
+
+  let processedRoutes = map (processRoute riderConfig.maximumWalkDistance) otpResponse.routes
+  let transitOptions = map extractOptionFromRoute processedRoutes
+
+  return $
+    APITypes.MultimodalTransitOptionsResp
+      { options = transitOptions
+      }
+  where
+    convertSortingType :: DMP.JourneyOptionsSortingType -> SortingType
+    convertSortingType sortType = case sortType of
+      DMP.FASTEST -> Fastest
+      DMP.MINIMUM_TRANSITS -> Minimum_Transits
+      _ -> Fastest -- Default case for any other values
+
+    -- Process a route to convert walk legs that exceed maximum distance to taxi
+    processRoute :: Meters -> MultiModalRoute -> MultiModalRoute
+    processRoute maxWalkDistance route =
+      route {legs = map (processLeg maxWalkDistance) route.legs}
+
+    -- Process a leg to check if walk mode needs to be converted to taxi
+    processLeg :: Meters -> MultiModalLeg -> MultiModalLeg
+    processLeg maxWalkDistance leg =
+      if leg.mode == MultiModalTypes.Walk && distanceToMeters leg.distance > maxWalkDistance
+        then leg {mode = MultiModalTypes.Unspecified} -- Use Unspecified to represent Taxi (similar to init function)
+        else leg
+
+    extractOptionFromRoute :: MultiModalRoute -> APITypes.MultimodalTransitOptionData
+    extractOptionFromRoute route =
+      APITypes.MultimodalTransitOptionData
+        { duration = Just route.duration,
+          travelModes = concatMap legToAllowedTransitModes route.legs
+        }
+
+    legToAllowedTransitModes :: MultiModalLeg -> [DTrip.MultimodalTravelMode]
+    legToAllowedTransitModes leg =
+      case generalVehicleTypeToAllowedTransitMode leg.mode of
+        Just mode -> [mode]
+        Nothing -> []
+
+    generalVehicleTypeToAllowedTransitMode :: GeneralVehicleType -> Maybe DTrip.MultimodalTravelMode
+    generalVehicleTypeToAllowedTransitMode vehicleType = case vehicleType of
+      MultiModalTypes.Bus -> Just DTrip.Bus
+      MultiModalTypes.MetroRail -> Just DTrip.Metro
+      MultiModalTypes.Subway -> Just DTrip.Subway
+      MultiModalTypes.Walk -> Just DTrip.Walk
+      _ -> Nothing
+
+    userPreferencesToGeneralVehicleTypes :: [DTrip.MultimodalTravelMode] -> [GeneralVehicleType]
+    userPreferencesToGeneralVehicleTypes = mapMaybe allowedTransitModeToGeneralVehicleType
+
+    allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> Maybe GeneralVehicleType
+    allowedTransitModeToGeneralVehicleType mode = case mode of
+      DTrip.Bus -> Just MultiModalTypes.Bus
+      DTrip.Metro -> Just MultiModalTypes.MetroRail
+      DTrip.Subway -> Just MultiModalTypes.Subway
+      DTrip.Walk -> Just MultiModalTypes.Walk
+      _ -> Nothing
 
 startJourney ::
   (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>

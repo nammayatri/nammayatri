@@ -215,6 +215,36 @@ WalkLegMultimodal:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+MultimodalPreferences:
+  tableName: multimodal_preferences
+
+  derives: "Generic, Show"
+
+  types:
+    JourneyOptionsSortingType:
+      enum: "FASTEST, CHEAPEST, MINIMUM_TRANSITS"
+
+  fields:
+    personId: Id Person
+    allowedTransitModes: "[MultimodalTravelMode]"
+    journeyOptionsSortingType: JourneyOptionsSortingType
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+    updateAllowedTransitModesAndJourneyOptionsSortingType:
+      kvFunction: updateWithKV
+      params: [allowedTransitModes, journeyOptionsSortingType]
+      where: personId
+
+  sqlType:
+    allowedTransitModes: text
+    journeyOptionsSortingType: text
+
+  constraints:
+    personId: PrimaryKey
+
 JourneyLeg:
   fields:
     id: Id JourneyLeg
