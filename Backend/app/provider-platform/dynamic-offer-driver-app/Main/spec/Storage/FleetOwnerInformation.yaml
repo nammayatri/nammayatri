@@ -39,6 +39,10 @@ FleetOwnerInformation:
       kvFunction: updateWithKV
       params: [gstNumber, enabled, updatedAt]
       where: fleetOwnerPersonId
+    updateFleetOwnerEnabledStatus:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where: fleetOwnerPersonId
     updateReferredByOperatorId:
       kvFunction: updateOneWithKV
       params: [referredByOperatorId]

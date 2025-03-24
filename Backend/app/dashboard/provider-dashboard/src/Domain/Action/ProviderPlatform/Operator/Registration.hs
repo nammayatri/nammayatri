@@ -81,7 +81,9 @@ buildOperator req operatorId role = do
         receiveNotification = Nothing,
         createdAt = now,
         updatedAt = now,
-        verified = Just True
+        verified = Just True,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }
 
 validateOperator :: Validate Common.OperatorRegisterReq
