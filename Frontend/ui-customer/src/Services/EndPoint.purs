@@ -368,3 +368,11 @@ confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId 
 
 deletePerson :: String -> String
 deletePerson _ = (getBaseUrl "62") <> "/deleted/person"
+verifyVpa :: String -> String
+verifyVpa vpa = (getBaseUrl "50") <> "/referral/verifyVpa?vpa=" <> vpa
+
+updateVpa :: String -> String
+updateVpa dummy = (getBaseUrl "50") <> "/payoutVpa/upsert"
+
+payoutHistory :: String -> String
+payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"

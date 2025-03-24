@@ -73,6 +73,9 @@ import Locale.Utils (getLanguageLocale)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
+  PrestoAnim.animationSet
+  [ Anim.fadeIn state.enableAnim
+  ] $
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT

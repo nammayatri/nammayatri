@@ -78,6 +78,7 @@ import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, vo
 import Mobility.Prelude (capitalize, boolToInt, startsWith)
 import ModifyScreenState (modifyScreenState, updateSafetyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
+import Presto.Core.Types.Language.Flow (getState, modifyState) as PrestoFlow
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, markerArrowSize, estimateLabelMaxWidth, markerArrowSize)
@@ -193,7 +194,7 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue, initData) as SafetyScreenData
 import Services.Config (getNumbersToWhiteList)
 import SessionCache (getValueFromWindow, setValueInWindow)
-import LocalStorage.Cache (clearCache, setInCache)
+import LocalStorage.Cache (clearCache, setInCache, setValueToCache)
 import DecodeUtil (getAnyFromWindow)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
@@ -244,6 +245,10 @@ import Screens.AadhaarVerificationScreen.ScreenData as AadhaarVerificationScreen
 import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData as BusTrackingScreenData
 import Helpers.FrfsUtils (getFirstRoute, getAllFirstRoutes, getSortedStops)
 import DecodeUtil (decodeForeignAny,parseJSON)
+import Screens.ReferralPayoutScreen.Controller as ReferralPayoutScreen
+import Screens.ReferralPayoutScreen.ScreenData as ST
+import ScopedScreen.UpiVerificationScreen as UpiScreenData
+
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -906,6 +911,7 @@ currentFlowStatus prioritizeRating = do
   verifyProfile dummy = do
     liftFlowBT $ markPerformance "VERIFY_PROFILE"
     response <- Remote.getProfileBT ""
+    modifyScreenState $ GlobalFlowCacheType (\globaFlowCache -> globaFlowCache{profileResp = Just response})
     config <- getAppConfigFlowBT appConfig
     updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
     updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
@@ -1256,9 +1262,8 @@ accountSetUpScreenFlow = do
         REFERRAL_APPLIED -> do
           void $ pure $ hideKeyboardOnNavigation true
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = Verified, referralTextFocussed = true} })
-        REFERRAL_INVALID -> do
+        _ -> do
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen { data {isReferred = ReferralFailed, referralTextFocussed = true} })
-        _ -> pure unit
       accountSetUpScreenFlow
 
 updateDisabilityList :: String -> FlowBT String (Array DisabilityT)
@@ -1273,6 +1278,7 @@ homeScreenFlow = do
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState
+  modifyScreenState $ HomeScreenStateType (\homescreen -> homescreen{data{profile = currentState.globalFlowCache.profileResp}})
   void $ checkAndUpdateSavedLocations currentState.homeScreen
   let
     isRideCompleted = getAndRemoveLatestNotificationType unit == "TRIP_FINISHED"
@@ -1306,7 +1312,7 @@ homeScreenFlow = do
     $ HomeScreenStateType
         ( \homeScreen ->
             homeScreen
-              { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE"), city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION }
+              { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = elem (getValueToLocalStore REFERRAL_STATUS) [ "REFERRED_NOT_TAKEN_RIDE", "HAS_TAKEN_RIDE" ] , city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION }
               , data { currentCityConfig = currentCityConfig, famousDestinations = famousDestinations , latestScheduledRides = resp }
               }
         )
@@ -2565,8 +2571,12 @@ homeScreenFlow = do
     GO_TO_REFERRAL referralType -> do
       let
         referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode })
-      referralScreenFlow
+      (GlobalState gState) <- getState
+      modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode }})
+      case gState.globalFlowCache.profileResp of
+        Nothing -> pure unit
+        Just (GetProfileRes resp) -> modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, existingVpa = resp.payoutVpa, referreeCode = fromMaybe "" resp.referralCode, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}, props{showUPIPopUp = (fromMaybe 0.0 resp.referralAmountPaid) - ((fromMaybe 0.0 resp.referralEarnings) + (fromMaybe 0.0 resp.referredByEarnings)) /= 0.0 && isNothing resp.payoutVpa}})
+      referralPayoutScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (APISuccessResp res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
@@ -2745,9 +2755,9 @@ homeScreenFlow = do
       case referralAppliedStatus of
         REFERRAL_APPLIED -> do
           void $ pure $ hideKeyboardOnNavigation true
-          _ <- UI.successScreen "" ""
+          _ <- UI.successScreen (getString STR.REFERRAL_CODE_IS_APPLIED) ""
           modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { showThanks = true, referralComponentProps { stage = ST.APPLIED_POPUP } })
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isReferred = true, referralComponentProps { stage = NO_REFERRAL_STAGE }, referral { referralStatus = NO_REFERRAL, showAddReferralPopup = false } } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { showTakeFirstRidePopup = true, props { isReferred = true, referralComponentProps { stage = NO_REFERRAL_STAGE }, referral { referralStatus = NO_REFERRAL, showAddReferralPopup = false } } })
         REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { referralComponentProps { isInvalidCode = true } } })
         _ -> pure unit
       homeScreenFlow
@@ -2823,7 +2833,42 @@ homeScreenFlow = do
     GO_TO_BUS_TICKET_BOOKING_SCREEN state -> do
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { props {srcLat =  state.props.sourceLat , srcLong = state.props.sourceLong}, data {ticketServiceType = BUS}})
       busTicketBookingFlow
+    ADD_VPA_OUT earnings state -> do 
+      out <- UI.upiNotVerificationScreen UpiScreenData.initialState{isSkipable = true, title = getString $ STR.YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE (show earnings), subTitle = getString STR.VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS, coverImage  = fetchImage GLOBAL_COMMON_ASSET "ny_ic_green_tick"}
+      case out of
+        Nothing -> do
+          let _ = setValueToCache "COLLECT_EARNINGS" (show $ HU.getTime unit) identity
+          modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false}})
+        Just vpa -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false, showUpiSuccess = true}, data {existingVpa = Just vpa}})
+      homeScreenFlow
     _ -> homeScreenFlow
+  
+referralPayoutScreenFlow :: FlowBT String Unit
+referralPayoutScreenFlow = do 
+  act <- UI.referralPayoutScreen
+  case act of
+    ReferralPayoutScreen.GoToHomeScreen state -> homeScreenFlow
+    ReferralPayoutScreen.ShowEarningsOut _ -> referralPayoutScreenFlow
+    ReferralPayoutScreen.VerifyVPAOut state -> do
+      resp <- lift $ lift $ Remote.verifyVpa state.data.vpa
+      case resp of
+        Right (VerifyVPAResp respData) -> do 
+          modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{data{verificationStatus = if fromMaybe false respData.isValid then ST.UpiVerified else ST.UpiFailed, vpa = fromMaybe referralPayoutScreen.data.vpa respData.vpa}})
+        Left resp -> do
+          modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{data{verificationStatus = ST.UpiFailed}})
+      referralPayoutScreenFlow
+    ReferralPayoutScreen.AddVPAOut state -> do
+      out <- UI.upiNotVerificationScreen UpiScreenData.initialState{existingVpa = state.data.existingVpa}
+      case out of
+        Nothing -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false}})
+        Just vpa -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false, showUpiSuccess = true}, data {existingVpa = Just vpa}})
+      referralPayoutScreenFlow
+    ReferralPayoutScreen.EditVPAOut state -> do
+      out <- UI.upiNotVerificationScreen UpiScreenData.initialState{existingVpa = state.data.existingVpa, isEdit = true, title = getString STR.UPDATE_UPI_ID , subTitle = ""}
+      case out of
+        Nothing -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false}})
+        Just vpa -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false, showUpiSuccess = true, isUpiUpdated = true}, data {existingVpa = Just vpa}})
+      referralPayoutScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
 findEstimates updatedState = do

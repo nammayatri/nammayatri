@@ -23,7 +23,7 @@ import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..) , TripTypeData,NotificationBody)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..), TicketServiceType)
 import Prelude (($) ,negate)
-import Data.Array (head)
+import Data.Array (head, elem)
 import Prelude(negate)
 import Services.API as API
 import Foreign.Object (empty)
@@ -31,7 +31,7 @@ import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map
-import JBridge (Location)
+import JBridge (Location, getKeyInSharedPrefKeys)
 import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
@@ -43,16 +43,19 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (convertUTCtoISC,getCurrentUTC)
 
+
 initData :: HomeScreenState
 initData = let
   config = getAppConfig appConfig
   in
   {
+    showTakeFirstRidePopup : false,
     data: {
       suggestedAmount : 0
     , channelIdFromFCM : ""
     , personIdFromFCM : ""
     , sourceFromFCM : ""
+    , profile : Nothing
     , isBookingUpdated : false
     , source : ""
     , destination : ""
@@ -278,7 +281,7 @@ initData = let
     , showShareAppPopUp : false
     , showMultipleRideInfo : false
     , hasTakenRide : true
-    , isReferred : false
+    , isReferred : (elem (getKeyInSharedPrefKeys "REFERRAL_STATUS") [ "REFERRED_NOT_TAKEN_RIDE", "HAS_TAKEN_RIDE" ])
     , storeCurrentLocs : false
     , unReadMessages : false
     , openChatScreen : false
@@ -396,6 +399,7 @@ initData = let
                                , showReferredUserInfoPopup : false
                                , showReferralProgramInfoPopup : false
                                , isInvalidCode : false
+                               , isFocused : false
                                }
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false

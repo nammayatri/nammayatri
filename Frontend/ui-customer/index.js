@@ -238,6 +238,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
+    JBridge.initiateLocationServiceClient()
     console.warn("Process called");
     try {
       const clientPaylod = window.__payload.payload;
@@ -288,7 +289,9 @@ window.callUICallback = function () {
   const functionArgs = args.slice(1)
 
   try {
-    window.__PROXY_FN[fName].call(null, ...functionArgs);
+    if (fName && functionArgs[0] !== "TIMEOUT") {
+      window.__PROXY_FN[fName].call(null, ...functionArgs);
+    }
   } catch (err) {
     console.error(err)
   }

@@ -38,6 +38,7 @@ data Action = NoAction
             | ReferredUserInfo PopUpModal.Action
             | ReferralProgramInfo PopUpModal.Action
             | OpenReferralProgramInfo
+            | ReferralTextFocused Boolean
 
 config :: ReferralComponentState
 config =
@@ -47,6 +48,7 @@ config =
   , showReferredUserInfoPopup : false
   , showReferralProgramInfoPopup : false
   , isInvalidCode : false
+  , isFocused : false
   }
 
 referralPopUpConfig :: ReferralComponentState -> PopUpModal.Config 

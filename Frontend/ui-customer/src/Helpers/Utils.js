@@ -637,3 +637,19 @@ export const decodeErrorMessage = function (a) {
     return " ";
   }
 };
+
+
+export const releaseBackpress = function (unit) {
+  const jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: false }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}
+
+export const isItSameDay = (date) => {
+  if (date == "__failed" || date == "(null)") return false;
+  const dateObj = new Date(parseInt(date));
+  const today = new Date();
+  return today.getDate() == dateObj.getDate() && (today.getMonth() == dateObj.getMonth()) && (today.getFullYear() == dateObj.getFullYear())
+}
