@@ -982,7 +982,7 @@ types:
   FleetBadgesAPIEntity:
     - recordType: NewType
     - badgeName: Text
-  FleetBadgesAPIEntityT:    
+  FleetBadgesAPIEntityT:
     - badgeName: Text
     - fleetOwnerId: Text
     - fleetOwnerName: Text
