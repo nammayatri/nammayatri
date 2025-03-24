@@ -442,7 +442,7 @@ mkLegInfoFromBookingAndRide booking mRide = do
         pricingId = Just booking.id.getId,
         travelMode = DTrip.Taxi,
         startTime = booking.startTime,
-        order = 0, -- booking.journeyLegOrder, FIX THIS @hkmangla
+        order = fromMaybe 0 booking.journeyLegOrder,
         estimatedDuration = booking.estimatedDuration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedFare,
         estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedFare,
@@ -926,7 +926,7 @@ cannotSwitchStatus :: [JourneyLegStatus]
 cannotSwitchStatus = [Skipped, Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
 
 cannotCancelExtendStatus :: [JourneyLegStatus]
-cannotCancelExtendStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled, Arriving]
+cannotCancelExtendStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
 
 data ExtendLegStartPoint
   = StartLocation StartLocationType
