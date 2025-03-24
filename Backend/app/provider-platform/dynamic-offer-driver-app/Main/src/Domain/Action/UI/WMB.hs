@@ -384,7 +384,6 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
     TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
   pure Success
 
--- TODO should we also check onboarding docs ?
 postOperatorConsent ::
   ( ( Maybe (Id Person),
       Id Merchant,

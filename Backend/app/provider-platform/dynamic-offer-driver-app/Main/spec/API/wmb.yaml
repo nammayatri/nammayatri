@@ -194,7 +194,6 @@ apis:
       response:
         type: APISuccess
 
-  # TODO the same for operator?
   - GET: # Retrieve the fleet config information
       endpoint: /fleet/config
       auth: TokenAuth PROVIDER_TYPE

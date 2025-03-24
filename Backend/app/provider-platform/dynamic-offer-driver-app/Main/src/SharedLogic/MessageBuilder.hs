@@ -270,7 +270,6 @@ data BuildOperatorJoiningMessageReq = BuildOperatorJoiningMessageReq
     otp :: Text
   }
 
--- FIXME add template in migrations
 buildOperatorJoiningMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorJoiningMessageReq -> m (Maybe Text, Text)
 buildOperatorJoiningMessage merchantOperatingCityId req = do
   merchantMessage <-
@@ -302,7 +301,6 @@ newtype BuildOperatorJoinAndDownloadAppMessageReq = BuildOperatorJoinAndDownload
   { operatorName :: Text
   }
 
--- TODO migration template
 buildOperatorJoinAndDownloadAppMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorJoinAndDownloadAppMessageReq -> m (Maybe Text, Text)
 buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId req = do
   merchantMessage <-
@@ -330,7 +328,6 @@ newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage
   { operatorName :: Text
   }
 
--- TODO add template
 buildOperatorDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOperatorDeepLinkAuthMessage -> m (Maybe Text, Text)
 buildOperatorDeepLinkAuthMessage merchantOperatingCityId req = do
   (senderHeader, staticMsg) <- buildGenericMessage merchantOperatingCityId DMM.OPERATOR_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})

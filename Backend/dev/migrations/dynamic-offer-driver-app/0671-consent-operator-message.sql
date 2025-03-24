@@ -24,3 +24,19 @@ SELECT
     CURRENT_TIMESTAMP
 FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
+
+WITH MerchantMessages AS (
+  SELECT T1.merchant_id, 'OPERATOR_JOINING_MESSAGE', 'You have been invited to join the operator {#operatorName#}. {#otp#} is your OTP.', T1.id
+  FROM atlas_driver_offer_bpp.merchant_operating_city AS T1
+)
+INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, message, merchant_operating_city_id)
+  (SELECT * FROM MerchantMessages);
+
+WITH MerchantMessages AS (
+  SELECT T1.merchant_id, 'OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE' AS message_key,
+         'You have been invited to join the operator {#fleetOwnerName#}. Download the application to start using it: {# https://nammayatri.in/p/ #}' AS message,
+         T1.id AS merchant_operating_city_id
+  FROM atlas_driver_offer_bpp.merchant_operating_city AS T1
+)
+INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, message, merchant_operating_city_id)
+  (SELECT * FROM MerchantMessages);
