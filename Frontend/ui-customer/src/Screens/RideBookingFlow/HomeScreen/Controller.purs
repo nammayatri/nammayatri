@@ -89,7 +89,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not , mod, div, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, identity, compare, discard, map, negate, pure, show, unit, not , mod, div, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -885,6 +885,7 @@ eval BackPressed state = do
                 , currentCityConfig = state.data.currentCityConfig
                 , famousDestinations = state.data.famousDestinations
                 , fareProductType = FPT.ONE_WAY
+                , profile = state.data.profile
                 }
               , props {
                   isBanner = state.props.isBanner
@@ -2367,6 +2368,10 @@ eval (NotificationListener notificationType notificationBody) state = do
 eval RecenterCurrentLocation state = do
   recenterCurrentLocation state
 
+eval (AddVPA earnings) state = exit $ AddVPAOut earnings state
+
+eval TakeFirstRide state = continue state{showTakeFirstRidePopup = true}
+
 eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = do
@@ -3206,7 +3211,19 @@ eval (ReferralComponentAction componentAction) state =
 
     ReferralComponent.ReferralProgramInfo PopUpModal.OnButton2Click ->
       continue state{ props{ referralComponentProps{ showReferralProgramInfoPopup = false } } }
+    ReferralComponent.ReferralTextFocused isFocused ->
+      continue state{ props{ referralComponentProps{ isFocused = isTrue isFocused } } }
 
+    _ -> update state
+
+eval (GetReferralPopup popUpAction) state = do
+  case popUpAction of
+    PopUpModal.OnButton2Click -> do
+      let _ = setValueToCache "TAKE_FIRST_REFERRAL_RIDE" (show $ HU.getTime unit) identity
+      continue state{showTakeFirstRidePopup = false} 
+    PopUpModal.OnButton1Click -> do
+      let _ = setValueToCache "TAKE_FIRST_REFERRAL_RIDE" (show $ HU.getTime unit) identity 
+      continueWithCmd state{showTakeFirstRidePopup = false} [pure $ WhereToClick]
     _ -> update state
 
 eval GoToHomeScreen state = do
@@ -3537,6 +3554,8 @@ eval (IntercityBusPermissionAction (PopUpModal.OnButton2Click)) state = do
 eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
   continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
+
+eval ReferralPayout state = exit $ GoToReferral GIVE_REFERRAL state
 
 eval _ state = update state
 
