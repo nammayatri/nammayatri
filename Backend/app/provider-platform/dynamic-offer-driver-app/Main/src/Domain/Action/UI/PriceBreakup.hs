@@ -1,4 +1,4 @@
-module Domain.Action.UI.PriceBreakup (getPriceBreakup, getMeterRidePrice) where
+module Domain.Action.UI.PriceBreakup (getPriceBreakup, postMeterRidePrice) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.PriceBreakup
@@ -54,7 +54,7 @@ getPriceBreakup (_, _, _) rideId = do
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
 
-getMeterRidePrice ::
+postMeterRidePrice ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -63,8 +63,8 @@ getMeterRidePrice ::
     API.Types.UI.PriceBreakup.MeterRidePriceReq ->
     Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes
   )
-getMeterRidePrice (Nothing, _, _) rideId _ = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
-getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
+postMeterRidePrice (Nothing, _, _) rideId _ = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
+postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   whenJust (NE.nonEmpty req.locationUpdates) $ \locUpdates -> do
     void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
