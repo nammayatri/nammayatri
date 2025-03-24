@@ -9,6 +9,7 @@ import qualified Domain.Types.Estimate
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
+import qualified Domain.Types.MultimodalPreferences
 import qualified Domain.Types.RouteStopMapping
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
@@ -84,14 +85,33 @@ data JourneyStatusResp = JourneyStatusResp {journeyPaymentStatus :: Kernel.Prelu
 
 data LegStatus = LegStatus
   { legOrder :: Kernel.Prelude.Int,
+    mode :: Domain.Types.Trip.MultimodalTravelMode,
     nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
     nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalTransitOptionData = MultimodalTransitOptionData {duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds, travelModes :: [Domain.Types.Trip.MultimodalTravelMode]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalTransitOptionsReq = MultimodalTransitOptionsReq {destLatLong :: Kernel.External.Maps.Types.LatLong, sourceLatLong :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalTransitOptionsResp = MultimodalTransitOptionsResp {options :: [MultimodalTransitOptionData]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalUserPreferences = MultimodalUserPreferences
+  { allowedTransitModes :: [Domain.Types.Trip.MultimodalTravelMode],
+    journeyOptionsSortingType :: Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -15,6 +15,9 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalJourneyFeedback,
     getActiveJourneyIds,
     getMultimodalFeedback,
+    getMultimodalUserPreferences,
+    postMultimodalUserPreferences,
+    getMultimodalTransitOptionsLite,
   )
 where
 
@@ -28,9 +31,11 @@ import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
 import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
+import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
@@ -48,6 +53,9 @@ import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
+import Storage.Queries.MultimodalPreferences as QMP
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
@@ -397,3 +405,84 @@ getMultimodalFeedback (mbPersonId, _) journeyId = do
           legOrder = ratingForLeg.legOrder,
           travelMode = ratingForLeg.travelMode
         }
+
+getMultimodalUserPreferences ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalUserPreferences
+  )
+getMultimodalUserPreferences (mbPersonId, _merchantId) = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  multimodalUserPreferences <- QMP.findByPersonId personId
+  --TODO: handle case when post updates this to almost blank case
+  case multimodalUserPreferences of
+    Just multimodalUserPreferences' ->
+      return $
+        ApiTypes.MultimodalUserPreferences
+          { allowedTransitModes = multimodalUserPreferences'.allowedTransitModes,
+            journeyOptionsSortingType = Just multimodalUserPreferences'.journeyOptionsSortingType
+          }
+    Nothing -> do
+      personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+      let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] riderConfig.permissibleModes)
+      return $
+        ApiTypes.MultimodalUserPreferences
+          { allowedTransitModes = convertedModes,
+            journeyOptionsSortingType = Just DMP.FASTEST
+          }
+  where
+    generalVehicleTypeToAllowedTransitMode :: GeneralVehicleType -> Maybe DTrip.MultimodalTravelMode
+    generalVehicleTypeToAllowedTransitMode vehicleType = case vehicleType of
+      MultiModalTypes.Bus -> Just DTrip.Bus
+      MultiModalTypes.MetroRail -> Just DTrip.Metro
+      MultiModalTypes.Subway -> Just DTrip.Subway
+      MultiModalTypes.Walk -> Just DTrip.Walk
+      _ -> Nothing
+
+postMultimodalUserPreferences ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.MultimodalUserPreferences ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalUserPreferences (mbPersonId, merchantId) multimodalUserPreferences = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  existingPreferences <- QMP.findByPersonId personId
+  let updatedAllowedModes =
+        if DTrip.Walk `elem` multimodalUserPreferences.allowedTransitModes
+          then multimodalUserPreferences.allowedTransitModes
+          else DTrip.Walk : multimodalUserPreferences.allowedTransitModes
+  case existingPreferences of
+    Just _ ->
+      QMP.updateAllowedTransitModesAndJourneyOptionsSortingType updatedAllowedModes (fromMaybe DMP.FASTEST multimodalUserPreferences.journeyOptionsSortingType) personId
+    Nothing -> do
+      now <- getCurrentTime
+      let newPreferences =
+            MultimodalPreferences
+              { allowedTransitModes = updatedAllowedModes,
+                journeyOptionsSortingType = fromMaybe DMP.FASTEST multimodalUserPreferences.journeyOptionsSortingType,
+                personId = personId,
+                merchantId = Just merchantId,
+                merchantOperatingCityId = Just personCityInfo.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QMP.create newPreferences
+  pure Kernel.Types.APISuccess.Success
+
+getMultimodalTransitOptionsLite ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
+  )
+getMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  userPreferences <- getMultimodalUserPreferences (mbPersonId, merchantId)
+  JM.getMultiModalTransitOptions userPreferences merchantId personCityInfo.merchantOperatingCityId req
