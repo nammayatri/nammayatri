@@ -1499,6 +1499,11 @@ newtype GetProfileRes = GetProfileRes
   , deviceId :: Maybe String
   , androidId :: Maybe String
   , cancellationRate :: Maybe Number
+  , payoutVpa :: Maybe String
+  , referralEarnings :: Maybe Number
+  , referredByEarnings :: Maybe Number
+  , referralAmountPaid :: Maybe Number
+  , isPayoutEnabled :: Maybe Boolean
   }
 
 
@@ -4148,3 +4153,411 @@ instance standardEncodeLocationAPIEntity :: StandardEncode LocationAPIEntity whe
 instance showLocationAPIEntity :: Show LocationAPIEntity where show = genericShow
 instance decodeLocationAPIEntity :: Decode LocationAPIEntity where decode = defaultDecode
 instance encodeLocationAPIEntity :: Encode LocationAPIEntity where encode = defaultEncode
+
+----------------------------- DELIVERY -----------------------------------------------------
+
+data GetDeliveryImageReq = GetDeliveryImageReq String
+
+newtype GetDeliveryImageResponse = GetDeliveryImageResponse String
+
+instance makeGetDeliveryImageReq :: RestEndpoint GetDeliveryImageReq where
+ makeRequest reqBody@(GetDeliveryImageReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.getDeliveryImage bookingId) headers reqBody Nothing
+ encodeRequest req = defaultEncode req
+ 
+derive instance genericGetDeliveryImageReq :: Generic GetDeliveryImageReq _
+instance standardEncodeGetDeliveryImageReq :: StandardEncode GetDeliveryImageReq where standardEncode (GetDeliveryImageReq resp) = standardEncode resp
+instance showGetDeliveryImageReq :: Show GetDeliveryImageReq where show = genericShow
+instance decodeGetDeliveryImageReq :: Decode GetDeliveryImageReq where decode = defaultDecode
+instance encodeGetDeliveryImageReq :: Encode GetDeliveryImageReq where encode = defaultEncode
+
+derive instance genericGetDeliveryImageResponse :: Generic GetDeliveryImageResponse _
+derive instance newtypeGetDeliveryImageResponse :: Newtype GetDeliveryImageResponse _
+instance standardEncodeGetDeliveryImageResponse :: StandardEncode GetDeliveryImageResponse where standardEncode (GetDeliveryImageResponse resp) = standardEncode resp
+instance showGetDeliveryImageResponse :: Show GetDeliveryImageResponse where show = genericShow
+instance decodeGetDeliveryImageResponse :: Decode GetDeliveryImageResponse where decode = defaultDecode
+instance encodeGetDeliveryImageResponse :: Encode GetDeliveryImageResponse where encode = defaultEncode
+
+
+data SearchRideType = BUS_ROUTE | BUS_SOURCE | BUS_DESTINATION
+
+derive instance genericSearchRideType :: Generic SearchRideType _
+
+instance eqSearchRideType :: Eq SearchRideType where eq = genericEq
+
+instance showSearchRideType :: Show SearchRideType where show = genericShow
+
+
+
+------------------------------------------------- AutoComplete API Types --------------------------------------------
+
+data BusAutoCompleteReq = BusAutoCompleteReq String String String (Maybe String) String (Maybe String)
+
+newtype AutoCompleteResp = AutoCompleteResp {
+    routes :: Array FRFSRouteAPI,
+    stops :: Array FRFSStationAPI
+}
+
+derive instance genericBusAutoCompleteReq :: Generic BusAutoCompleteReq _
+instance showBusAutoCompleteReq    :: Show BusAutoCompleteReq where show     = genericShow
+instance standardBusAutoCompleteReq :: StandardEncode BusAutoCompleteReq where standardEncode (BusAutoCompleteReq _ _ _ _ _ _) = standardEncode {}
+instance decodeBusAutoCompleteReq   :: Decode BusAutoCompleteReq where decode = defaultDecode
+instance encodeBusAutoCompleteReq  :: Encode BusAutoCompleteReq where encode = defaultEncode
+
+derive instance genericAutoCompleteResp :: Generic AutoCompleteResp _
+instance standardAutoCompleteResp :: StandardEncode AutoCompleteResp where
+    standardEncode (AutoCompleteResp body) = standardEncode body
+instance showAutoCompleteResp :: Show AutoCompleteResp where show = genericShow
+instance decodeAutoCompleteResp :: Decode AutoCompleteResp where decode = defaultDecode
+instance encodeAutoCompleteResp :: Encode AutoCompleteResp where encode = defaultEncode
+
+instance makeAutoCompleteReq :: RestEndpoint BusAutoCompleteReq where
+    makeRequest reqBody@(BusAutoCompleteReq vehicleType city location input limit offset) headers = defaultMakeRequestWithoutLogs GET (EP.busAutoComplete vehicleType city location input limit offset) headers reqBody Nothing
+    encodeRequest = standardEncode
+
+
+data BusTrackingRouteReq = BusTrackingRouteReq String 
+
+newtype BusTrackingRouteResp = BusTrackingRouteResp {
+    vehicleTrackingInfo :: Array VehicleInfo
+}
+
+newtype VehicleInfo = VehicleInfo {
+  -- location:: LatLong,
+  nextStop:: RouteStopMapping,
+  vehicleId:: String,
+  vehicleInfo:: VehicleInfoForRoute,
+  nextStopTravelTime :: Maybe Int
+}
+
+newtype VehicleInfoForRoute = VehicleInfoForRoute {
+    startTime :: Maybe String,
+    startDate :: Maybe String,
+    scheduleRelationship :: Maybe String,
+    tripId :: Maybe String,
+    latitude :: Maybe Number,
+    longitude :: Maybe Number,
+    speed :: Maybe Number,
+    timestamp :: Maybe String
+}
+
+newtype RouteStopMapping = RouteStopMapping { 
+    routeCode :: String,
+    sequenceNum :: Int,
+    stopCode :: String,
+    stopPoint :: LatLong,
+    stopName :: String,
+    -- timeBounds :: Kernel.Types.TimeBound.TimeBound,
+    vehicleType :: String--,
+    -- merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    -- merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    -- createdAt :: Kernel.Prelude.UTCTime,
+    -- updatedAt :: Kernel.Prelude.UTCTime
+  }
+
+derive instance genericBusTrackingRouteReq :: Generic BusTrackingRouteReq _
+instance showBusTrackingRouteReq    :: Show BusTrackingRouteReq where show     = genericShow
+instance standardBusTrackingRouteReq :: StandardEncode BusTrackingRouteReq where standardEncode (BusTrackingRouteReq _) = standardEncode {}
+instance decodeBusTrackingRouteReq   :: Decode BusTrackingRouteReq where decode = defaultDecode
+instance encodeBusTrackingRouteReq  :: Encode BusTrackingRouteReq where encode = defaultEncode
+
+derive instance genericBusTrackingRouteResp :: Generic BusTrackingRouteResp _
+instance standardBusTrackingRouteResp :: StandardEncode BusTrackingRouteResp where
+    standardEncode (BusTrackingRouteResp body) = standardEncode body
+instance showBusTrackingRouteResp :: Show BusTrackingRouteResp where show = genericShow
+instance decodeBusTrackingRouteResp :: Decode BusTrackingRouteResp where decode = defaultDecode
+instance encodeBusTrackingRouteResp :: Encode BusTrackingRouteResp where encode = defaultEncode
+
+derive instance genericVehicleInfo :: Generic VehicleInfo _
+instance standardVehicleInfo :: StandardEncode VehicleInfo where
+    standardEncode (VehicleInfo body) = standardEncode body
+instance showVehicleInfo :: Show VehicleInfo where show = genericShow
+instance decodeVehicleInfo :: Decode VehicleInfo where decode = defaultDecode
+instance encodeVehicleInfo :: Encode VehicleInfo where encode = defaultEncode
+
+derive instance genericRouteStopMapping :: Generic RouteStopMapping _
+instance standardRouteStopMapping :: StandardEncode RouteStopMapping where
+    standardEncode (RouteStopMapping body) = standardEncode body
+instance showRouteStopMapping :: Show RouteStopMapping where show = genericShow
+instance decodeRouteStopMapping :: Decode RouteStopMapping where decode = defaultDecode
+instance encodeRouteStopMapping :: Encode RouteStopMapping where encode = defaultEncode
+
+instance makeBusTrackingRouteReq :: RestEndpoint BusTrackingRouteReq where
+    makeRequest reqBody@(BusTrackingRouteReq code) headers = defaultMakeRequestWithoutLogs GET (EP.trackRouteBus code) headers reqBody Nothing
+    encodeRequest = standardEncode
+    
+------------------------------------------------- Aadhaar Verification API Types --------------------------------------------
+
+newtype GenerateAadhaarOTPReq = GenerateAadhaarOTPReq {
+  aadhaarNumber :: String,
+  consent :: String
+}
+
+newtype GenerateAadhaarOTPResp = GenerateAadhaarOTPResp {
+  message :: String,
+  requestId :: String,
+  transactionId :: String,
+  statusCode :: String
+}
+
+instance makeGenerateAadhaarOTPReq :: RestEndpoint GenerateAadhaarOTPReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.triggerAadhaarOTP "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericGenerateAadhaarOTPReq :: Generic GenerateAadhaarOTPReq _
+derive instance newtypeGenerateAadhaarOTPReq :: Newtype GenerateAadhaarOTPReq _
+instance standardEncodeGenerateAadhaarOTPReq :: StandardEncode GenerateAadhaarOTPReq where standardEncode (GenerateAadhaarOTPReq body) = standardEncode body
+instance showGenerateAadhaarOTPReq :: Show GenerateAadhaarOTPReq where show = genericShow
+instance decodeGenerateAadhaarOTPReq :: Decode GenerateAadhaarOTPReq  where decode = defaultDecode
+instance encodeGenerateAadhaarOTPReq :: Encode GenerateAadhaarOTPReq where encode = defaultEncode
+
+derive instance genericGenerateAadhaarOTPResp :: Generic GenerateAadhaarOTPResp _
+derive instance newtypeGenerateAadhaarOTPResp :: Newtype GenerateAadhaarOTPResp _
+instance standardEncodeGenerateAadhaarOTPResp :: StandardEncode GenerateAadhaarOTPResp where standardEncode (GenerateAadhaarOTPResp body) = standardEncode body
+instance showGenerateAadhaarOTPResp :: Show GenerateAadhaarOTPResp where show = genericShow
+instance decodeGenerateAadhaarOTPResp :: Decode GenerateAadhaarOTPResp  where decode = defaultDecode
+instance encodeGenerateAadhaarOTPResp :: Encode GenerateAadhaarOTPResp where encode = defaultEncode
+
+newtype VerifyAadhaarOTPReq = VerifyAadhaarOTPReq {
+  otp :: Int,
+  shareCode :: String
+}
+
+newtype VerifyAadhaarOTPResp = VerifyAadhaarOTPResp {
+    message :: String
+  , date_of_birth :: String
+  , name :: String
+  , share_code :: String
+  , gender :: String
+  , request_id :: String
+  , transactionId :: String
+  , image :: String
+  , code :: String
+}
+
+instance makeVerifyAadhaarOTPReq :: RestEndpoint VerifyAadhaarOTPReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.verifyAadhaarOTP "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericVerifyAadhaarOTPReq :: Generic VerifyAadhaarOTPReq _
+derive instance newtypeVerifyAadhaarOTPReq :: Newtype VerifyAadhaarOTPReq _
+instance standardEncodeVerifyAadhaarOTPReq :: StandardEncode VerifyAadhaarOTPReq where standardEncode (VerifyAadhaarOTPReq body) = standardEncode body
+instance showVerifyAadhaarOTPReq :: Show VerifyAadhaarOTPReq where show = genericShow
+instance decodeVerifyAadhaarOTPReq :: Decode VerifyAadhaarOTPReq  where decode = defaultDecode
+instance encodeVerifyAadhaarOTPReq :: Encode VerifyAadhaarOTPReq where encode = defaultEncode
+
+derive instance genericVerifyAadhaarOTPResp :: Generic VerifyAadhaarOTPResp _
+derive instance newtypeVerifyAadhaarOTPResp :: Newtype VerifyAadhaarOTPResp _
+instance standardEncodeVerifyAadhaarOTPResp :: StandardEncode VerifyAadhaarOTPResp where standardEncode (VerifyAadhaarOTPResp body) = standardEncode body
+instance showVerifyAadhaarOTPResp :: Show VerifyAadhaarOTPResp where show = genericShow
+instance decodeVerifyAadhaarOTPResp :: Decode VerifyAadhaarOTPResp  where decode = defaultDecode
+instance encodeVerifyAadhaarOTPResp :: Encode VerifyAadhaarOTPResp where encode = defaultEncode
+
+type PriceObj = 
+  { amount :: Number
+  , currency :: String
+  }
+
+type FRFSDiscountRes = 
+  { code :: String
+  , description :: String
+  , eligibility :: Boolean
+  , price :: PriceObj
+  , title :: String
+  , tnc :: String
+  }
+
+derive instance genericVehicleInfoForRoute :: Generic VehicleInfoForRoute _
+instance showVehicleInfoForRoute    :: Show VehicleInfoForRoute where show     = genericShow
+instance standardVehicleInfoForRoute :: StandardEncode VehicleInfoForRoute where standardEncode (VehicleInfoForRoute _) = standardEncode {}
+instance decodeVehicleInfoForRoute   :: Decode VehicleInfoForRoute where decode = defaultDecode
+instance encodeVehicleInfoForRoute  :: Encode VehicleInfoForRoute where encode = defaultEncode
+
+
+data FrfsGetRouteReq = FrfsGetRouteReq String String String
+
+newtype FRFSRouteAPI = FRFSRouteAPI {
+  code :: String,
+  endPoint :: LatLong,
+  longName :: String,
+  shortName :: String,
+  startPoint :: LatLong,
+  totalStops :: Maybe Int,
+  waypoints :: Maybe (Array LatLong),
+  stations :: Maybe (Array FRFSStationAPI),
+  travelTime :: Maybe Int,
+  vehicleServiceTier :: Maybe FRFSVehicleServiceTierAPI
+  -- priceWithCurrency :: Maybe PriceAPIEntity
+}
+
+derive instance genericFrfsGetRouteReq :: Generic FrfsGetRouteReq _
+instance showFrfsGetRouteReq    :: Show FrfsGetRouteReq where show     = genericShow
+instance standardFrfsGetRouteReq :: StandardEncode FrfsGetRouteReq where standardEncode (FrfsGetRouteReq _ _ _) = standardEncode {}
+instance decodeFrfsGetRouteReq   :: Decode FrfsGetRouteReq where decode = defaultDecode
+instance encodeFrfsGetRouteReq  :: Encode FrfsGetRouteReq where encode = defaultEncode
+
+derive instance genericFrfsGetRouteResp :: Generic FRFSRouteAPI _
+instance standardFrfsGetRouteResp :: StandardEncode FRFSRouteAPI where
+    standardEncode (FRFSRouteAPI body) = standardEncode body
+instance showFrfsGetRouteResp :: Show FRFSRouteAPI where show = genericShow
+instance decodeFrfsGetRouteResp :: Decode FRFSRouteAPI where decode = defaultDecode
+instance encodeFrfsGetRouteResp :: Encode FRFSRouteAPI where encode = defaultEncode
+
+instance makeFrfsGetRouteReq :: RestEndpoint FrfsGetRouteReq where
+    makeRequest reqBody@(FrfsGetRouteReq routeCode city vehicleType) headers = defaultMakeRequestWithoutLogs GET (EP.frfsRoute routeCode city vehicleType) headers reqBody Nothing
+    encodeRequest = standardEncode
+
+newtype FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
+  { _type :: String
+  , shortName :: String
+  , longName :: String
+  , description :: String
+  }
+
+derive instance genericFRFSVehicleServiceTierAPI :: Generic FRFSVehicleServiceTierAPI _
+-- derive instance newtypeFRFSVehicleServiceTierAPI :: Newtype FRFSVehicleServiceTierAPI _
+instance standardFRFSVehicleServiceTierAPI :: StandardEncode FRFSVehicleServiceTierAPI where 
+  standardEncode (FRFSVehicleServiceTierAPI body) = standardEncode body
+instance showFRFSVehicleServiceTierAPI :: Show FRFSVehicleServiceTierAPI where show = genericShow
+instance encodeFRFSVehicleServiceTierAPI :: Encode FRFSVehicleServiceTierAPI where encode = defaultEncode
+instance decodeFRFSVehicleServiceTierAPI :: Decode FRFSVehicleServiceTierAPI where decode = defaultDecode
+instance eqFRFSVehicleServiceTierAPI :: Eq FRFSVehicleServiceTierAPI where eq = genericEq
+
+
+ --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
+
+data ConfirmFRFSQuoteReqV2 = ConfirmFRFSQuoteReqV2 String FRFSQuoteConfirmReq
+
+newtype FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {
+  discounts :: Array FRFSDiscountReq
+}
+
+newtype FRFSDiscountReq = FRFSDiscountReq { 
+    code :: String
+  , quantity :: Int
+  }
+
+instance makeConfirmMetroQuoteReqV2 :: RestEndpoint ConfirmFRFSQuoteReqV2  where
+ makeRequest reqBody@(ConfirmFRFSQuoteReqV2 quoteId (FRFSQuoteConfirmReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.confirmMetroQuoteV2 quoteId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericConfirmMetroQuoteReqV2 :: Generic ConfirmFRFSQuoteReqV2 _
+-- derive instance genericConfirmMetroQuoteReqV2 :: Newtype ConfirmFRFSQuoteReqV2 _
+instance standardEncodeConfirmMetroQuoteReqV2 :: StandardEncode ConfirmFRFSQuoteReqV2 where standardEncode (ConfirmFRFSQuoteReqV2 token reqBody) = standardEncode reqBody
+instance decodeConfirmMetroQuoteReqV2 :: Decode ConfirmFRFSQuoteReqV2 where decode = defaultDecode
+instance encodeConfirmMetroQuoteReqV2 :: Encode ConfirmFRFSQuoteReqV2 where encode = defaultEncode
+
+derive instance genericConfirmMetroQuoteReqV2Body :: Generic FRFSQuoteConfirmReq _
+instance standardConfirmMetroQuoteReqV2Body :: StandardEncode FRFSQuoteConfirmReq where
+    standardEncode (FRFSQuoteConfirmReq body) = standardEncode body
+instance showConfirmMetroQuoteReqV2Body :: Show FRFSQuoteConfirmReq where show = genericShow
+instance decodeConfirmMetroQuoteReqV2Body :: Decode FRFSQuoteConfirmReq where decode = defaultDecode
+instance encodeConfirmMetroQuoteReqV2Body :: Encode FRFSQuoteConfirmReq where encode = defaultEncode
+
+derive instance genericDiscountItem :: Generic FRFSDiscountReq _
+instance standardDiscountItem :: StandardEncode FRFSDiscountReq where
+    standardEncode (FRFSDiscountReq body) = standardEncode body
+instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
+instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
+instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
+
+
+----------------------------------------------- Verify VPA  --------------------------------------------
+
+newtype VerifyVPAReq = VerifyVPAReq String
+
+newtype VerifyVPAResp = VerifyVPAResp {
+  isValid :: Maybe Boolean,
+  vpa :: Maybe String
+}
+
+instance makeVerifyVPAReq :: RestEndpoint VerifyVPAReq where
+    makeRequest reqBody@(VerifyVPAReq vpa) headers = defaultMakeRequestWithoutLogs GET (EP.verifyVpa vpa) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericVerifyVPAReq :: Generic VerifyVPAReq _
+derive instance newtypeVerifyVPAReq :: Newtype VerifyVPAReq _
+instance standardEncodeVerifyVPAReq :: StandardEncode VerifyVPAReq where standardEncode (VerifyVPAReq body) = standardEncode body
+instance showVerifyVPAReq :: Show VerifyVPAReq where show = genericShow
+instance decodeVerifyVPAReq :: Decode VerifyVPAReq  where decode = defaultDecode
+instance encodeVerifyVPAReq :: Encode VerifyVPAReq where encode = defaultEncode
+
+derive instance genericVerifyVPAResp :: Generic VerifyVPAResp _
+derive instance newtypeVerifyVPAResp :: Newtype VerifyVPAResp _
+instance standardEncodeVerifyVPAResp :: StandardEncode VerifyVPAResp where standardEncode (VerifyVPAResp body) = standardEncode body
+instance showVerifyVPAResp :: Show VerifyVPAResp where show = genericShow
+instance decodeVerifyVPAResp :: Decode VerifyVPAResp  where decode = defaultDecode
+instance encodeVerifyVPAResp :: Encode VerifyVPAResp where encode = defaultEncode
+
+----------------------------------------------- Update / Upsert VPA  --------------------------------------------
+
+newtype UpdateVpaReq = UpdateVpaReq {
+  vpa :: String
+}
+
+instance makeUpdateVpaReq :: RestEndpoint UpdateVpaReq where
+    makeRequest reqBody@(UpdateVpaReq vpa) headers = defaultMakeRequestWithoutLogs POST (EP.updateVpa "vpa") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericUpdateVpaReq :: Generic UpdateVpaReq _
+derive instance newtypeUpdateVpaReq :: Newtype UpdateVpaReq _
+instance standardEncodeUpdateVpaReq :: StandardEncode UpdateVpaReq where standardEncode (UpdateVpaReq body) = standardEncode body
+instance showUpdateVpaReq :: Show UpdateVpaReq where show = genericShow
+instance decodeUpdateVpaReq :: Decode UpdateVpaReq  where decode = defaultDecode
+instance encodeUpdateVpaReq :: Encode UpdateVpaReq where encode = defaultEncode
+
+
+----------------------------------------------- Payout History  --------------------------------------------
+
+data PayoutHistoryReq = PayoutHistoryReq String
+
+newtype PayoutHistoryResp = PayoutHistoryResp {
+  history :: Array PayoutItem
+}
+
+data PayoutStatus = Processing | PayoutSuccess | PayoutFailed | ManualReview
+
+newtype PayoutItem = PayoutItem {
+    amount :: Number,
+    orderId :: String,
+    payoutAt :: String,
+    payoutStatus :: PayoutStatus,
+    vpa :: String
+}
+
+instance makePayoutHistoryReq :: RestEndpoint PayoutHistoryReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.payoutHistory "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericPayoutHistoryReq :: Generic PayoutHistoryReq _
+instance standardEncodePayoutHistoryReq :: StandardEncode PayoutHistoryReq where standardEncode (PayoutHistoryReq body) = standardEncode body
+instance showPayoutHistoryReq :: Show PayoutHistoryReq where show = genericShow
+instance decodePayoutHistoryReq :: Decode PayoutHistoryReq  where decode = defaultDecode
+instance encodePayoutHistoryReq :: Encode PayoutHistoryReq where encode = defaultEncode
+
+derive instance genericPayoutHistoryResp :: Generic PayoutHistoryResp _
+derive instance newtypePayoutHistoryResp :: Newtype PayoutHistoryResp _
+instance standardEncodePayoutHistoryResp :: StandardEncode PayoutHistoryResp where standardEncode (PayoutHistoryResp body) = standardEncode body
+instance showPayoutHistoryResp :: Show PayoutHistoryResp where show = genericShow
+instance decodePayoutHistoryResp :: Decode PayoutHistoryResp  where decode = defaultDecode
+instance encodePayoutHistoryResp :: Encode PayoutHistoryResp where encode = defaultEncode
+
+derive instance genericPayoutItem :: Generic PayoutItem _
+derive instance newtypePayoutItem :: Newtype PayoutItem _
+instance standardEncodePayoutItem :: StandardEncode PayoutItem where standardEncode (PayoutItem body) = standardEncode body
+instance showPayoutItem :: Show PayoutItem where show = genericShow
+instance decodePayoutItem :: Decode PayoutItem  where decode = defaultDecode
+instance encodePayoutItem :: Encode PayoutItem where encode = defaultEncode
+
+derive instance genericPayoutStatus :: Generic PayoutStatus _
+instance standardEncodePayoutStatus :: StandardEncode PayoutStatus where standardEncode = defaultEnumEncode
+instance showPayoutStatus :: Show PayoutStatus where show = genericShow
+instance decodePayoutStatus :: Decode PayoutStatus 
+  where 
+    decode body = 
+      case unsafeFromForeign body of
+              "Processing" -> except $ Right Processing
+              "Success"    -> except $ Right PayoutSuccess
+              "Failed"       -> except $ Right PayoutFailed
+              "ManualReview" -> except $ Right ManualReview
+              _              -> fail $ ForeignError "Unknown response"
+instance encodePayoutStatus :: Encode PayoutStatus where encode = defaultEncode

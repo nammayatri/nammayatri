@@ -70,3 +70,6 @@ import Screens.RideBookingFlow.RiderRideCompletedCard.Handler (riderRideComplete
 import Screens.CustomerUtils.FavouriteDriverTrips.Handler (favouriteDriverTrips) as UI
 import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.View (parcelDeliveryScreen) as UI
+import Screens.ReferralPayoutScreen.Handler (referralPayoutScreen) as UI
+import ScopedScreen.UpiVerificationScreen (upiNotVerificationScreen) as UI
+

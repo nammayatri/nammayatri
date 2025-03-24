@@ -205,6 +205,7 @@ data RemoteAC
   | SafetyExplaination
   | SetupSafety
   | IntercityBus
+  | ReferralBanner
 
 instance eqRemoteAC :: Eq RemoteAC where
   eq = genericEq

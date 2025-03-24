@@ -63,7 +63,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
-import JBridge (emitJOSEvent, Location, defaultCircleConfig, CircleConfig(..))
+import JBridge (emitJOSEvent, Location, defaultCircleConfig, CircleConfig(..), getKeyInSharedPrefKeys)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -113,6 +113,10 @@ import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Debug
 import RemoteConfig as RC
+import Services.API as API
+import Data.Bounded (top)
+import Screens.Types as ST
+import LocalStorage.Cache
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -138,6 +142,8 @@ foreign import parseSourceHashArray :: String -> Array SourceGeoHash
 foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
+
+foreign import isItSameDay :: String -> Boolean
 
 foreign import drawPolygon :: String -> String -> Effect Unit
 
@@ -1162,6 +1168,13 @@ invalidBookingTime rideStartTime maybeEstimatedDuration =
 
     bookingTimeList :: Array BookingTime
     bookingTimeList = decodeBookingTimeList FunctionCall
+
+itsBeenOneDay :: String -> Boolean
+itsBeenOneDay key = 
+  let lastShownValue = getValueFromCache key (getKeyInSharedPrefKeys)
+  in not $ isItSameDay lastShownValue
+
+  
 
 rideStartingInBetweenPrevRide :: Int -> BookingTime -> Int -> Boolean
 rideStartingInBetweenPrevRide diffInMins bookingDetails estimatedDuration =

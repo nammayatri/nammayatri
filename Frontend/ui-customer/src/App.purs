@@ -93,6 +93,9 @@ import Services.API (BookingStatus(..))
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Screens.CustomerUtils.FavouriteDriverTrips.ScreenData as FavouriteDriverTripsData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
+import Screens.ReferralPayoutScreen.ScreenData as ReferralPayoutScreenData
+import Screens.Types as ST
+
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -144,6 +147,7 @@ newtype GlobalState = GlobalState {
   , favouriteDriverListScreen :: FavouriteDriverTripsState
   , parcelDeliveryScreen :: ParcelDeliveryScreenState
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
+  , referralPayoutScreen :: ReferralPayoutScreenData.ReferralPayoutScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -195,6 +199,7 @@ defaultGlobalState = GlobalState {
   , favouriteDriverListScreen : FavouriteDriverTripsData.initData
   , parcelDeliveryScreen : ParcelDeliveryScreenData.initData
   , rideSummaryScreen : RideSummaryScreenData.initData
+  , referralPayoutScreen : ReferralPayoutScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -208,6 +213,7 @@ defaultGlobalFlowCache :: GlobalFlowCache
 defaultGlobalFlowCache = {
     savedLocations : Nothing
   , savedScheduledRides : Nothing
+  , profileResp : Nothing
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK | APPLY_REFERRAL String
@@ -221,6 +227,9 @@ data MY_RIDES_SCREEN_OUTPUT = REFRESH MyRidesScreenState | TRIP_DETAILS MyRidesS
 
 
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_ABOUT
+
+data REFFERAL_PAYOUT_SCREEN_OUTPUT = GO_TO_HOME_FROM_REFFERAL_PAYOUT
+
 
 data EMERGECY_CONTACTS_SCREEN_OUTPUT = POST_CONTACTS EmergencyContactsScreenState Boolean
                                       | GET_CONTACTS EmergencyContactsScreenState
@@ -317,6 +326,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | UPDATE_CHAT
                         | GO_TO_TRIP_TYPE_SELECTION HomeScreenState
                         | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
+                        | ADD_VPA_OUT Int HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -454,3 +464,4 @@ data ScreenType =
   | FavouriteDriverTripsStateType (FavouriteDriverTripsState -> FavouriteDriverTripsState)
   | ParcelDeliveryScreenStateType (ParcelDeliveryScreenState -> ParcelDeliveryScreenState)
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
+  | ReferralPayoutScreenStateType (ReferralPayoutScreenData.ReferralPayoutScreenState -> ReferralPayoutScreenData.ReferralPayoutScreenState)

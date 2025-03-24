@@ -44,6 +44,7 @@ data Action = OnButton1Click
 
 type Config = {
     primaryText :: TextConfig,
+    enableAnim :: Boolean,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
@@ -253,6 +254,7 @@ config = {
   optionButtonOrientation: "HORIZONTAL"
   , showRetry : true
   , activeIndex : 1
+  , enableAnim : false
   , customerTipAvailable : false
   , backgroundClickable : true
   , customerTipArray : []

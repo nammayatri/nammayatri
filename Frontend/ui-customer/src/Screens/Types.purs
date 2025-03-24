@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes,GetProfileRes)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -732,7 +732,8 @@ instance eqSearchLocationModelType :: Eq SearchLocationModelType where eq = gene
 type HomeScreenState =
   {
     data :: HomeScreenStateData,
-    props :: HomeScreenStateProps
+    props :: HomeScreenStateProps,
+    showTakeFirstRidePopup :: Boolean
   }
 
 type HomeScreenStateData =
@@ -839,6 +840,7 @@ type HomeScreenStateData =
   , boostSearchEstimate :: ChooseVehicle.Config
   , cancellationRate :: Maybe Number
   , enquiryBannerStage :: Maybe EnquiryBannerStage
+  , profile :: Maybe GetProfileRes
 }
 
 data EnquiryBannerStage = QuestionStage | FirstBtnClickStage | SecondBtnClickStage
@@ -2881,6 +2883,7 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 type GlobalFlowCache = {
     savedLocations :: Maybe SavedLocationsListRes
   , savedScheduledRides :: Maybe RideBookingListRes
+  , profileResp :: Maybe GetProfileRes
 }
 
 type LocateOnMapProps = {
@@ -2918,6 +2921,7 @@ type ReferralComponentState =
   , showReferredUserInfoPopup :: Boolean
   , showReferralProgramInfoPopup :: Boolean
   , isInvalidCode :: Boolean
+  , isFocused :: Boolean
   }
 
 data ReferralStage = ENTER_REFERRAL_CODE
