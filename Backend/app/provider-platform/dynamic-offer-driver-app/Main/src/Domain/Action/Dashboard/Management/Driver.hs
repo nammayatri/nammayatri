@@ -73,8 +73,6 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
-import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
-import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
@@ -116,6 +114,8 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -201,19 +201,19 @@ incrDocs lic vehReg old =
 getRcExpiration :: VehicleRegistrationCertificate -> UTCTime
 getRcExpiration = (.fitnessExpiry)
 
-getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerification -> St.ResponseStatus
+getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerification -> SStatus.ResponseStatus
 getLicenseStatus onboardingTryLimit currentTries mbLicense mbLicReq =
   case mbLicense of
-    Just driverLicense -> St.mapStatus driverLicense.verificationStatus
+    Just driverLicense -> SStatus.mapStatus driverLicense.verificationStatus
     Nothing -> verificationState onboardingTryLimit currentTries mbLicReq
 
-getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> St.ResponseStatus
+getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> SStatus.ResponseStatus
 getRegCertStatus onboardingTryLimit currentTries mbRegCert mbVehRegReq =
   case mbRegCert of
-    Just (_assoc, vehicleRC) -> St.mapStatus vehicleRC.verificationStatus
+    Just (_assoc, vehicleRC) -> SStatus.mapStatus vehicleRC.verificationStatus
     Nothing -> verificationState onboardingTryLimit currentTries mbVehRegReq
 
-verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
+verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> SStatus.ResponseStatus
 verificationState onboardingTryLimit imagesNum verificationReq =
   case verificationReq of
     Just req -> do

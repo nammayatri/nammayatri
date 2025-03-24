@@ -67,6 +67,7 @@ types:
   RespondHubRequest:
     status: RequestStatus
     driverId: Text
+    registrationNo: Text
     operationHubRequestId: Text
     operatorId: Text
     remarks: Text
