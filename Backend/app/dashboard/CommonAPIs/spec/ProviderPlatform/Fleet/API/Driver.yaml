@@ -47,8 +47,18 @@ apis:
       auth: ApiAuthV2
       multipart:
         type: CreateVehiclesReq
+      query:
+        - fleetOwnerId: Text
       response:
         type: APISuccessWithUnprocessedEntities
+      helperApi:
+        - POST:
+            endpoint: /fleet/addVehicles
+            auth: ApiAuthV2
+            multipart:
+              type: CreateVehiclesReq
+            response:
+              type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
 
@@ -59,6 +69,7 @@ apis:
         mobileNo: Text
       query:
         - countryCode: Text
+        - fleetOwnerId: Text
       request:
         type: AddVehicleReq
       response:
@@ -134,6 +145,8 @@ apis:
   - POST: # RegisterRCForFleetWithoutDriverAPI
       endpoint: /fleet/addRC/withoutDriver
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       request:
         type: RegisterRCReq
       response:
@@ -211,7 +224,7 @@ apis:
         - mboffset: Int
         - mbSearchString: Text
       response:
-        type: FleetBadgeRes
+        type: FleetBadgeResT
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_BADGES_FOR_FLEET
       helperApi:
@@ -488,6 +501,8 @@ apis:
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
       name: PostDriverFleetVehicleDriverRcStatus
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       params:
         driverId: Id Driver
       request:
@@ -513,12 +528,24 @@ apis:
   - POST: # UpdateFleetOwnerInfoAPI
       endpoint: /{driverId}/updateFleetOwnerInfo
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       params:
         driverId: Id Driver
       request:
         type: UpdateFleetOwnerInfoReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/updateFleetOwnerInfo
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            request:
+              type: UpdateFleetOwnerInfoReq
+            response:
+              type: APISuccess
       migrate:
         endpoint: DriverAPI UpdateFleetOwnerEndPoint
         endpointV2:
@@ -537,6 +564,8 @@ apis:
   - POST: # SendFleetJoiningOtpAPI
       endpoint: /fleet/sendJoiningOtp
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       request:
         type: AuthReq
       response:
@@ -559,6 +588,7 @@ apis:
       auth: ApiAuthV2
       query:
         - authId: Text
+        - fleetOwnerId: Text
       request:
         type: VerifyFleetJoiningOtpReq
       response:
@@ -631,6 +661,8 @@ apis:
       auth: ApiAuthV2
       request:
         type: TripPlannerReq
+      query:
+        - fleetOwnerId: Text
       response:
         type: APISuccess
       migrate:
@@ -682,26 +714,48 @@ apis:
   - POST: # BulkUploadDriversForFleetAPI
       endpoint: /fleet/addDrivers
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       multipart:
         type: CreateDriversReq
       response:
         type: APISuccessWithUnprocessedEntities
+      helperApi:
+        - POST:
+            endpoint: /fleet/addDrivers
+            auth: ApiAuthV2
+            multipart:
+              type: CreateDriversReq
+            response:
+              type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
 
   - POST: # Add Driver Bus Route Bulk Mapping
       endpoint: /fleet/addDriverBusRouteMapping
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       multipart:
         type: CreateDriverBusRouteMappingReq
       response:
         type: APISuccessWithUnprocessedEntities
+      helperApi:
+        - POST:
+            endpoint: /fleet/addDriverBusRouteMapping
+            auth: ApiAuthV2
+            multipart:
+              type: CreateDriverBusRouteMappingReq
+            response:
+              type: APISuccessWithUnprocessedEntities
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
 
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       request:
         type: LinkRCWithDriverForFleetReq
       response:
@@ -779,7 +833,7 @@ apis:
       request:
         type: TrackDriverLocationsReq
       response:
-        type: TrackDriverLocationsRes
+        type: TrackDriverLocationsResT
       helperApi:
         - POST:
             endpoint: /dashboard/fleet/track/driver/{fleetOwnerId}
@@ -824,9 +878,18 @@ types:
     - driverId: Id Driver
     - point: LatLong
     - lastUpdatedAt: UTCTime
+  TrackDriverLocationT:
+    - driverId: Id Driver
+    - point: LatLong
+    - lastUpdatedAt: UTCTime
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   TrackDriverLocationsRes:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
+  TrackDriverLocationsResT:
+    - recordType: NewType
+    - driverLocations: [TrackDriverLocationT]
   TripStatus:
     - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
@@ -913,9 +976,16 @@ types:
   FleetBadgeRes:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntity]
+  FleetBadgeResT:
+    - recordType: NewType
+    - fleetBadgeInfos: [FleetBadgesAPIEntityT]
   FleetBadgesAPIEntity:
     - recordType: NewType
     - badgeName: Text
+  FleetBadgesAPIEntityT:    
+    - badgeName: Text
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   FleetListDriverResT:
     - fleetDriversInfos: [FleetDriversAPIEntityT]
   FleetListDriverRes:
@@ -1073,9 +1143,9 @@ types:
     - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
   RequestType:
-    - enum: "END_RIDE, CHANGE_ROUTE"
+    - enum: "END_RIDE, OVERSPEEDING"
   ApprovalRequestData:
-    - enum: "EndRide EndRideData, ChangeRoute EmptyDynamicParam"
+    - enum: "EndRide EndRideData, OverSpeeding OverSpeedingData"
   EndRideData:
     - lat: Double
     - lon: Double
@@ -1084,6 +1154,10 @@ types:
     - driverName: Text
     - driverMobileNumber: Maybe Text
     - vehicleRegistrationNumber: Text
+    - derive: "Eq,Ord,Read"
+  OverSpeedingData:
+    - speed: Double
+    - location: LatLong
     - derive: "Eq,Ord,Read"
   DriverRequestDetails:
     - requestData: ApprovalRequestData
