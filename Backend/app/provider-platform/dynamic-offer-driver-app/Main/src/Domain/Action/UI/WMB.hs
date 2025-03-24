@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.WMB
   ( postWmbTripRequest,
     getWmbRequestsStatus,
@@ -12,7 +10,6 @@ module Domain.Action.UI.WMB
     postWmbTripEnd,
     getWmbTripList,
     postFleetConsent,
-    postOperatorConsent,
     getFleetConfig,
     getWmbRouteDetails,
   )
@@ -22,34 +19,22 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
-import Data.List (minimumBy, sortBy)
 import Data.Maybe
 import qualified Data.Text as T
-import Data.Time.Clock hiding (getCurrentTime, secondsToNominalDiffTime)
-import qualified Domain.Action.UI.Call as Call
 import Domain.Types.ApprovalRequest
-import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
-import Domain.Types.DriverOperatorAssociation
-import Domain.Types.EmptyDynamicParam
 import Domain.Types.Extra.TransporterConfig
 import Domain.Types.FleetConfig
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
-import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
-import Domain.Types.RouteTripStopMapping
 import Domain.Types.TripTransaction
-import Domain.Types.Vehicle
 import qualified Domain.Types.VehicleCategory as DVehCategory
 import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
-import qualified EulerHS.Prelude as EHS
-import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types hiding (fromList)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
@@ -59,31 +44,25 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.ApprovalRequest as QDR
-import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
-import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QR
-import qualified Storage.Queries.RouteTripStopMapping as QRTSM
-import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
-import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as TN
 
@@ -381,29 +360,6 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
     let body = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.body
-    TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
-  pure Success
-
-postOperatorConsent ::
-  ( ( Maybe (Id Person),
-      Id Merchant,
-      Id MerchantOperatingCity
-    ) ->
-    Flow APISuccess
-  )
-postOperatorConsent (mbDriverId, _, merchantOperatingCityId) = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
-  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverOperatorAssociation <- QDriverOperatorAssociation.findByDriverId driverId False >>= fromMaybeM (InactiveOperatorDriverAssociationNotFound driverId.getId)
-  onboardingVehicleCategory <- driverOperatorAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
-  operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
-  QDriverOperatorAssociation.updateByPrimaryKey (driverOperatorAssociation {isActive = True})
-  QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
-  QDI.updateEnabledVerifiedState driverId True (Just True)
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
-  whenJust mbMerchantPN $ \merchantPN -> do
-    let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title
-    let body = T.replace "{#operatorName#}" operator.firstName merchantPN.body
     TN.notifyDriver merchantOperatingCityId merchantPN.fcmNotificationType title body driver driver.deviceToken
   pure Success
 

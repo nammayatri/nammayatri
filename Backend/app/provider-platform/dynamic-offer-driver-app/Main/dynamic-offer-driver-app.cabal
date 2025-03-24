@@ -224,6 +224,7 @@ library
       Domain.Action.UI.MeterRide
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OperationHub
+      Domain.Action.UI.Operator
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
@@ -703,6 +704,7 @@ library
       API.Action.UI.LmsModule
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
+      API.Action.UI.Operator
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout

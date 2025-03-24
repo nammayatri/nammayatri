@@ -187,13 +187,6 @@ apis:
       response:
         type: APISuccess
 
-  # TODO move to another module
-  - POST: # Provide consent for operator-related actions (Driver Cum Owner)
-      endpoint: /operator/consent
-      auth: TokenAuth PROVIDER_TYPE
-      response:
-        type: APISuccess
-
   - GET: # Retrieve the fleet config information
       endpoint: /fleet/config
       auth: TokenAuth PROVIDER_TYPE
