@@ -19,3 +19,14 @@ ALTER TABLE atlas_driver_offer_bpp.approval_request ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN requestor_type text ;
+ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN requestee_type text ;
+ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN request_type text ;
+ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN entity_type text ;
+ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN entity_id text ;
+
+
+
+
+------- SQL updates -------
+

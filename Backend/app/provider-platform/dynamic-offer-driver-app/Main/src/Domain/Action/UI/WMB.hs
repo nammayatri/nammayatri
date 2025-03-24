@@ -390,8 +390,13 @@ createDriverRequest driverId requesteeId title body requestData tripTransaction 
   now <- getCurrentTime
   let driverReq =
         ApprovalRequest
-          { requestorId = driverId,
+          { entityId = tripTransaction.id.getId,
+            entityType = TRIP,
+            requestorId = driverId,
+            requestorType = DriverGenerated,
             requesteeId = Id requesteeId,
+            requesteeType = FleetOwner,
+            requestType = EndRideApproval,
             reason = Nothing,
             status = AWAITING_APPROVAL,
             createdAt = now,
