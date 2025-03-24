@@ -128,6 +128,7 @@ data TransporterConfigT f = TransporterConfigT
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDynamicPricingQARCalEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
     issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     kaptureDisposition :: B.C f Kernel.Prelude.Text,

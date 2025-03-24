@@ -53,6 +53,6 @@ instance B.Table MerchantT where
 
 type Merchant = MerchantT Identity
 
-$(enableKVPG (''MerchantT) [('id)] [[('shortId)], [('subscriberId)]])
+$(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])
 
-$(mkTableInstances (''MerchantT) "merchant")
+$(mkTableInstances ''MerchantT "merchant")

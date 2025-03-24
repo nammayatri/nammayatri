@@ -45,6 +45,7 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Pricing
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.Cac.GoHomeConfig as CGHC
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
@@ -229,14 +230,15 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier searchReq.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
-  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer
+  transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then do
       void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lat, searchReq.fromLocation.lon, (TE.encodeUtf8 (id_.getId)))]
-      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 1800
+      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryWithDistanceBin now vehicleServiceTierItem.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 3600
       void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) [(searchReq.fromLocation.lat, searchReq.fromLocation.lon, (TE.encodeUtf8 (id_.getId)))]
-      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) 1800
+      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategory now vehicleServiceTierItem.vehicleCategory) 3600
       void $ Redis.withCrossAppRedis $ Redis.incr (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId)
-      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId) 1800
+      void $ Redis.withCrossAppRedis $ Redis.expire (mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
     else pure ()
   pure $
     DST.SearchTry
