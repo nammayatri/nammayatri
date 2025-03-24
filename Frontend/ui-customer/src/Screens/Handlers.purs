@@ -75,3 +75,6 @@ import Screens.TicketBookingFlow.BusTicketBooking.View (busTicketBookingScreen) 
 import Screens.TicketBookingFlow.BusTrackingScreen.Handler (busTrackingScreen) as UI
 import Screens.AadhaarVerificationScreen.Handler (aadhaarVerificationScreen) as UI
 import Screens.SelectBusRoute.Handler (selectBusRouteScreen) as UI
+import Screens.ReferralPayoutScreen.Handler (referralPayoutScreen) as UI
+import ScopedScreen.UpiVerificationScreen (upiNotVerificationScreen) as UI
+

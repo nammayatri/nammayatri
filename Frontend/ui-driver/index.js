@@ -294,7 +294,7 @@ window.callUICallback = function () {
   const functionArgs = args.slice(1)
   let currTime;
   let timeDiff;
-  if (fName) {
+  if (fName && functionArgs[0] !== "TIMEOUT")  {
     if (window.__THROTTELED_ACTIONS && window.__THROTTELED_ACTIONS.indexOf(fName) == -1) {
       window.__PROXY_FN[fName].apply(null, functionArgs);
     } else if (window.__LAST_FN_CALLED && (fName == window.__LAST_FN_CALLED.fName)) {

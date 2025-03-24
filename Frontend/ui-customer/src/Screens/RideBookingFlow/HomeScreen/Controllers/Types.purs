@@ -135,9 +135,11 @@ data ScreenOutput = LogoutUser
   | GoToDeliveryDetails HomeScreenState
   | GoToSearchLocationScreenForRoutes HomeScreenState LocationActionId
   | GoToBusTicketBookingFlow HomeScreenState
+  | AddVPAOut Int HomeScreenState
 
 data Action = NoAction
   | BackPressed
+  | ReferralPayout
   | CancelSearch
   | RideSearchAction
   | RecenterCurrentLocation
@@ -346,6 +348,9 @@ data Action = NoAction
   | ServicesOnClick RemoteConfig.Service
   | EnableShareRideForContact String 
   | EditPickupPopupOnCancelAC PopUpModal.Action
+  | GetReferralPopup PopUpModal.Action
+  | AddVPA Int
+  | TakeFirstRide
   | DateSelectAction String String Int Int Int String Int Int
   | IntercityBusPermissionAction PopUpModal.Action
   | IntercityBusAC
