@@ -18,7 +18,7 @@ module API.ProviderPlatform.DynamicOfferDriver.InternalAuth
 where
 
 import Data.Aeson as DA
-import qualified Domain.Types.FleetMemberAssociation as DFMA
+import Domain.Action.ProviderPlatform.Fleet.Driver
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -26,7 +26,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.CommonInstances ()
-import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
 import "lib-dashboard" Tools.Error
 
@@ -41,23 +40,16 @@ handler :: FlowServer API
 handler = internalAuthHandler
 
 data InternalAuthResp = InternalAuthResp
-  { personId :: Id DP.Person
+  { personId :: Id DP.Person,
+    personIds :: [Id DP.Person]
   }
   deriving (Generic, ToSchema)
 
 instance ToJSON InternalAuthResp where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; other -> other}
+  toJSON = genericToJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; "personIds" -> "driverIds"; other -> other}
 
 instance FromJSON InternalAuthResp where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; other -> other}
-
-getFleetOwnerId :: Text -> Flow Text
-getFleetOwnerId memberPersonId = do
-  FMA.findAllActiveByfleetMemberId memberPersonId True
-    >>= \case
-      [] -> return memberPersonId
-      [DFMA.FleetMemberAssociation {..}] -> return fleetOwnerId
-      _ -> throwError AccessDenied
+  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; "personIds" -> "driverIds"; other -> other}
 
 internalAuthHandler ::
   Maybe Text ->
@@ -68,8 +60,12 @@ internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
   unless (apiKey == Just internalAuthAPIKey) $ do
     throwError $ InvalidRequest "Invalid API key"
   (personId, _, _) <- Auth.verifyPerson (fromMaybe "" token)
-  fleetOwnerId <- getFleetOwnerId personId.getId
-  pure $
-    InternalAuthResp
-      { personId = Id fleetOwnerId
-      }
+  fleetOwnerIds <- getFleetOwnerIds personId.getId
+  case fleetOwnerIds of
+    [] -> throwError $ InternalError "No Fleet Member Association Found"
+    fleetOwner@(fleetOwnerId, _) : fleetOwners ->
+      pure $
+        InternalAuthResp
+          { personId = Id fleetOwnerId,
+            personIds = (Id . fst) <$> ([fleetOwner] <> fleetOwners)
+          }
