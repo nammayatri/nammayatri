@@ -20,6 +20,7 @@ imports:
   GetFareResponse: Lib.JourneyModule.Types
   BookingUpdateRequest: Domain.Types.BookingUpdateRequest
   RouteStopMapping: Domain.Types.RouteStopMapping
+  JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
 
 module: MultimodalConfirm
 
@@ -70,6 +71,17 @@ types:
     duration: Maybe Seconds
     bookingUpdateRequestId: Maybe (Id BookingUpdateRequest)
 
+  MultimodalTransitOptionsReq:
+    sourceLatLong: LatLong
+    destLatLong: LatLong
+
+  MultimodalTransitOptionData:
+    travelModes: [MultimodalTravelMode]
+    duration: Maybe Seconds
+
+  MultimodalTransitOptionsResp:
+    options: [MultimodalTransitOptionData]
+
   RiderLocationReq:
     latLong: LatLong
     currTime: UTCTime
@@ -95,6 +107,10 @@ types:
     rating: Maybe Int
     rateTravelMode: [RateMultiModelTravelModes]
     additionalFeedBack: Maybe Text
+
+  MultimodalUserPreferences:
+    allowedTransitModes: [MultimodalTravelMode]
+    journeyOptionsSortingType: Maybe JourneyOptionsSortingType
 
   RateMultiModelTravelModes:
     travelMode: Maybe MultimodalTravelMode
@@ -228,3 +244,22 @@ apis:
         journeyId: Id Journey
       response:
         type: (Maybe JourneyFeedBackForm)
+
+  - GET:
+      endpoint: multimodal/user/preferences
+      response:
+        type: MultimodalUserPreferences
+
+  - POST:
+      endpoint: multimodal/user/preferences
+      request:
+        type: MultimodalUserPreferences
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: multimodal/transitOptions/lite
+      request:
+        type: MultimodalTransitOptionsReq
+      response:
+        type: MultimodalTransitOptionsResp

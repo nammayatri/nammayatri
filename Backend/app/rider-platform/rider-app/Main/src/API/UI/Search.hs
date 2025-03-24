@@ -32,6 +32,7 @@ import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.MultimodalConfirm as DMC
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -40,12 +41,14 @@ import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Estimate as Estimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MultiModal
-import Kernel.External.MultiModal.Interface.Types
+import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -131,9 +134,15 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   fork "Multimodal Search" $ do
     let merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+    userPreferences <- DMC.getMultimodalUserPreferences (Just personId, merchantId)
+    let permissibleModesToUse =
+          if null userPreferences.allowedTransitModes
+            then fromMaybe [] riderConfig.permissibleModes
+            else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
+    let sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
     when riderConfig.makeMultiModalSearch $
       case req of
-        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance riderConfig.minimumWalkDistance (fromMaybe [] riderConfig.permissibleModes) riderConfig.maxAllowedPublicTransportLegs
+        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance riderConfig.minimumWalkDistance permissibleModesToUse riderConfig.maxAllowedPublicTransportLegs sortingType
         _ -> pure ()
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
@@ -144,6 +153,23 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
       let isNonScheduled = diffUTCTime sReq.startTime sReq.createdAt < scheduleRideBufferTime
           isValid = sReq.validTill > now
       return $ isNonScheduled && isValid
+
+    userPreferencesToGeneralVehicleTypes :: [DTrip.MultimodalTravelMode] -> [GeneralVehicleType]
+    userPreferencesToGeneralVehicleTypes = mapMaybe allowedTransitModeToGeneralVehicleType
+
+    allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> Maybe GeneralVehicleType
+    allowedTransitModeToGeneralVehicleType mode = case mode of
+      DTrip.Bus -> Just MultiModalTypes.Bus
+      DTrip.Metro -> Just MultiModalTypes.MetroRail
+      DTrip.Subway -> Just MultiModalTypes.Subway
+      DTrip.Walk -> Just MultiModalTypes.Walk
+      _ -> Nothing
+
+    convertSortingType :: DMP.JourneyOptionsSortingType -> SortingType
+    convertSortingType sortType = case sortType of
+      DMP.FASTEST -> Fastest
+      DMP.MINIMUM_TRANSITS -> Minimum_Transits
+      _ -> Fastest -- Default case for any other values
 
 handleBookingCancellation :: Id Merchant.Merchant -> Id Person.Person -> Id SearchRequest.SearchRequest -> Flow ()
 handleBookingCancellation merchantId _personId sReqId = do
@@ -175,8 +201,9 @@ multiModalSearch ::
   Meters ->
   [GeneralVehicleType] ->
   Int ->
+  SortingType ->
   Flow ()
-multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs = do
+multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs sortingType = do
   dest <- extractDest searchReq.destination
   let transitRoutesReq =
         GetTransitRoutesReq
@@ -189,7 +216,8 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
             transportModes = Nothing,
             minimumWalkDistance = minimumWalkDistance,
             permissibleModes = permissibleModes,
-            maxAllowedPublicTransportLegs = maxAllowedPublicTransportLegs
+            maxAllowedPublicTransportLegs = maxAllowedPublicTransportLegs,
+            sortingType = sortingType
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
   otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")

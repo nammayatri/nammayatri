@@ -649,6 +649,7 @@ library
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
+      Domain.Types.MultimodalPreferences
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
@@ -766,6 +767,7 @@ library
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
+      Storage.Beam.MultimodalPreferences
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
@@ -884,6 +886,7 @@ library
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
+      Storage.Queries.MultimodalPreferences
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
