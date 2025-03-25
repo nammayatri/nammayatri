@@ -4,6 +4,7 @@ import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
+import qualified Data.Map as Map
 import Data.Ord (comparing)
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
@@ -274,14 +275,18 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
 startJourney ::
   (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Maybe Int ->
+  Maybe (Map.Map Int Int) ->
   Id DJourney.Journey ->
   m ()
-startJourney forcedBookedLegOrder journeyId = do
+startJourney forcedBookedLegOrder mbTicketQuantityMap journeyId = do
   allLegs <- getAllLegsInfo journeyId
   mapM_
     ( \leg ->
-        when (leg.status /= JL.Skipped) $
-          JLI.confirm (if (leg.order == 0) then True else (Just leg.order == forcedBookedLegOrder)) leg
+        when (leg.status /= JL.Skipped) $ do
+          let quantity = case mbTicketQuantityMap of
+                Nothing -> Nothing
+                Just quantityMap -> Map.lookup leg.order quantityMap
+          JLI.confirm (if (leg.order == 0) then True else (Just leg.order == forcedBookedLegOrder)) quantity leg
     )
     allLegs
 
@@ -939,7 +944,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       QJourneyLeg.create journeyLeg
       cancelRequiredLegs
       void $ addTaxiLeg parentSearchReq journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
-      startJourney (Just currentLeg.order) journeyId
+      startJourney (Just currentLeg.order) Nothing journeyId
 
     cancelRequiredLegs = do
       case mbEndLegOrder of
@@ -1234,7 +1239,7 @@ switchLeg journeyId req = do
     newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
     addAllLegs journeyId [newJourneyLeg]
     when (legData.status /= JL.InPlan) $
-      fork "Start journey thread" $ withShortRetry $ startJourney Nothing journeyId
+      fork "Start journey thread" $ withShortRetry $ startJourney Nothing Nothing journeyId
 
 upsertJourneyLeg :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (DJourneyLeg.JourneyLeg -> m ())
 upsertJourneyLeg journeyLeg = do
