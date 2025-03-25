@@ -460,6 +460,7 @@ data BecknTag
   | PREFER_SAFETY_PLUS
   | SAFETY_PLUS_CHARGES
   | IS_SAFETY_PLUS
+  | IS_MULTIMODAL_SEARCH
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -488,6 +489,7 @@ instance CompleteTag BecknTag where
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
     IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
+    IS_MULTIMODAL_SEARCH -> (Just "Is Multimodal Search", Nothing)
     FARE_PARAMETERS_IN_RATECARD -> (Just "Fare Parametes in RateCard information", Nothing)
     SENDER_NUMBER -> (Just "Delivery Sender Number", Nothing)
     SENDER_NAME -> (Just "Delivery Sender Name", Nothing)
@@ -526,6 +528,7 @@ instance CompleteTag BecknTag where
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
     IS_METER_RIDE_SEARCH -> SEARCH_REQUEST_INFO
+    IS_MULTIMODAL_SEARCH -> SEARCH_REQUEST_INFO
     FARE_PARAMETERS_IN_RATECARD -> FARE_PARAMETERS_IN_RATECARD_INFO
     CUSTOMER_LANGUAGE -> CUSTOMER_INFO
     DASHBOARD_USER -> CUSTOMER_INFO

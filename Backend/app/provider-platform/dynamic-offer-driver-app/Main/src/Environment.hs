@@ -100,6 +100,7 @@ data AppCfg = AppCfg
     googleTranslateKey :: Text,
     appBackendBapInternal :: AppBackendBapInternal,
     searchRequestExpirationSeconds :: Int,
+    searchRequestExpirationSecondsForMultimodal :: Int,
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
@@ -193,6 +194,7 @@ data AppEnv = AppEnv
     bppMetrics :: BPPMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
+    searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
@@ -266,7 +268,7 @@ toConnectInfo config =
     }
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, ..} = do
+buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, searchRequestExpirationSecondsForMultimodal = _searchRequestExpirationSecondsForMultimodal, ..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
@@ -302,6 +304,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
+      searchRequestExpirationSecondsForMultimodal = fromIntegral cfg.searchRequestExpirationSecondsForMultimodal
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg

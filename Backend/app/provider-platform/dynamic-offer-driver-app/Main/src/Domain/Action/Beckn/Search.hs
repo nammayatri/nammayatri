@@ -137,7 +137,8 @@ data DSearchReq = DSearchReq
     routePoints :: Maybe [LatLong],
     isDashboardRequest :: Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
-    driverIdentifier :: Maybe DRL.DriverIdentifier
+    driverIdentifier :: Maybe DRL.DriverIdentifier,
+    isMultimodalSearch :: Maybe Bool
   }
 
 data DSearchReqLocation = DSearchReqLocation
@@ -459,7 +460,8 @@ buildSearchRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasField "searchRequestExpirationSecondsForMultimodal" r NominalDiffTime
   ) =>
   DSearchReq ->
   Context.City ->
@@ -491,8 +493,14 @@ buildSearchRequest ::
 buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
   uuid <- generateGUID
   now <- getCurrentTime
-  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let validTill = searchRequestExpirationSeconds `addUTCTime` startTime
+  validTill <-
+    case isMultimodalSearch of
+      Just True -> do
+        searchRequestExpirationSecondsForMultimodal <- asks (.searchRequestExpirationSecondsForMultimodal)
+        return $ searchRequestExpirationSecondsForMultimodal `addUTCTime` startTime
+      _ -> do
+        searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+        return $ searchRequestExpirationSeconds `addUTCTime` startTime
   pure
     DSR.SearchRequest
       { id = Id uuid,

@@ -115,3 +115,9 @@ updateIsCancelled (Id searchRequestId) isDeleted = do
   updateOneWithKV
     [Se.Set BeamSR.isDeleted isDeleted]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateStartTime :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> UTCTime -> m ()
+updateStartTime (Id searchRequestId) startTime = do
+  updateOneWithKV
+    [Se.Set BeamSR.startTime startTime]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
