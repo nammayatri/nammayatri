@@ -90,7 +90,7 @@ import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude ((<|>))
+import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.HasCoordinates
@@ -1088,19 +1088,19 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName req = do
   case mbPerson of
     Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
     Just person -> do
-      let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-          phoneNumber = req.mobileCountryCode <> req.mobileNumber
-      otpCode <- maybe generateOTPCode return useFakeOtpM
       withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message) <-
-          MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
-            MessageBuilder.BuildFleetJoiningMessageReq
-              { otp = otpCode,
-                fleetOwnerName = fleetOwnerName
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-          >>= Sms.checkSmsResult
+        let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+            phoneNumber = req.mobileCountryCode <> req.mobileNumber
+        otpCode <- maybe generateOTPCode return useFakeOtpM
+        whenNothing_ useFakeOtpM $ do
+          (mbSender, message) <-
+            MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
+              MessageBuilder.BuildFleetJoiningMessageReq
+                { otp = otpCode,
+                  fleetOwnerName = fleetOwnerName
+                }
+          let sender = fromMaybe smsCfg.sender mbSender
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         let key = makeFleetDriverOtpKey phoneNumber
         Redis.setExp key otpCode 3600
       pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
