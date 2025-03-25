@@ -102,7 +102,7 @@ SELECT
 FROM
     atlas_driver_offer_bpp.document_verification_config
 WHERE
-    vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type in ('BackgroundVerification','VehicleInspectionForm') ON CONFLICT DO NOTHING;
+    vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type in ('VehicleInspectionForm') ON CONFLICT DO NOTHING;
 
 INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     check_expiry,
@@ -466,4 +466,6 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set document_category = 'Permission' where document_type in ('Permissions');
 UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set document_category = 'Training' where document_type in ('Training');
 
--- order in category column?
+-- Run in master only --
+
+-- update atlas_driver_offer_bpp.document_verification_config set dependency_document_type = '{}' where document_type in ('AadhaarCard', 'PanCard') AND merchant_id = (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER');

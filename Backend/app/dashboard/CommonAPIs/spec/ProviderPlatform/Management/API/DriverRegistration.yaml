@@ -156,6 +156,7 @@ types:
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - createdAt: UTCTime
+    - failedRules: [Text]
   DocumentsListResponse:
     - driverLicense: [Text]
     - vehicleRegistrationCertificate: [Text]
@@ -169,7 +170,6 @@ types:
     - vehicleInspectionForm: [Text]
     - vehiclePermit: [Text]
     - vehiclePUC: [Text]
-    # TODO(Rupak): add vehiclePermit and vehiclePUC
     - vehicleFront: [Text]
     - vehicleBack: [Text]
     - vehicleRight: [Text]

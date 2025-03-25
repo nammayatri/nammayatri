@@ -30,6 +30,7 @@ where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -41,6 +42,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import Domain.Types.RCValidationRules
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
@@ -74,6 +76,7 @@ import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.RCValidationRules
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
@@ -561,6 +564,11 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
 
+  -- Validate request --
+  rcValidationRules <- findByCityId driver.merchantOperatingCityId
+  failures <- case rcValidationRules of
+    Nothing -> pure []
+    Just rules -> validateRCResponse req rules
   -- Create RC for vehicle before verifying it
   now <- getCurrentTime
   mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
@@ -572,10 +580,12 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
+  unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures -- validate here too
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+      unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do
@@ -592,6 +602,25 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
+
+validateRCResponse :: MonadFlow m => Common.AddVehicleReq -> RCValidationRules -> m [Text]
+validateRCResponse rc rule = do
+  now <- getCurrentTime
+  let fuelValid = maybe True (\ft -> Kernel.Prelude.any (`T.isInfixOf` ft) (T.toLower <$> rule.fuelType)) (T.toLower <$> rc.fuelType)
+      vehicleClassValid = maybe True (\vc -> Kernel.Prelude.any (`T.isInfixOf` vc) (T.toLower <$> rule.vehicleClass)) (Just $ T.toLower rc.vehicleClass)
+      manufacturerValid = maybe True (\m -> Kernel.Prelude.any (`T.isInfixOf` m) (T.toLower <$> rule.vehicleOEM)) (Just $ T.toLower rc.make)
+      vehicleAge = getVehicleAge rc.mYManufacturing now
+      vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
+
+  let failures =
+        catMaybes
+          [ if not fuelValid then Just ("Invalid fuel type : " <> show rc.fuelType) else Nothing,
+            if not vehicleClassValid then Just ("Invalid vehicle class : " <> show rc.vehicleClass) else Nothing,
+            if not manufacturerValid then Just ("Invalid OEM : " <> show rc.make) else Nothing,
+            if not vehicleAgeValid then Just ("Invalid manufacturing: " <> show rc.mYManufacturing) else Nothing
+          ]
+
+  return failures
 
 createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
 createRCInputFromVehicle req@Common.AddVehicleReq {..} =

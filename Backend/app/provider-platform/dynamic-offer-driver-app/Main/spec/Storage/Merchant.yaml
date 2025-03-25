@@ -1012,6 +1012,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Integer
     dynamicReferralCodeValidForMinutes: Integer
     dynamicReferralCodeEnabled: Bool
+    maxAllowedDocSizeInMB: Maybe Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

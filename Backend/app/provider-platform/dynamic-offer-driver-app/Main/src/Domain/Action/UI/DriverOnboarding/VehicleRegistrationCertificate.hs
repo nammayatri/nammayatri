@@ -340,32 +340,33 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
       return Ack
 
 onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
-onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus = do
+onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus' = do
   let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
   rcValidationRules <- findByCityId person.merchantOperatingCityId
-  case rcValidationRules of
-    Nothing -> pure ()
-    Just rules -> Kernel.Prelude.unlessM (validateRCResponse rcVerificationResponse rules) $ throwError (InvalidRequest "Failed city based RC checks")
+  failures <- case rcValidationRules of
+    Nothing -> pure []
+    Just rules -> validateRCResponse rcVerificationResponse rules
+  let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
   let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
   mVehicleRC <- do
     case mbVehicleVariant of
       Just vehicleVariant ->
         maybeM
           (return Nothing)
-          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant)
+          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant failures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
-      Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput
+      Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput failures
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
     then do
-      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
+      flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation mVehicleRC now mbFleetOwnerId failures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
           resVerifyRes <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
           case resVerifyRes of
-            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId
+            Left _ -> initiateRCCreation mVehicleRC now mbFleetOwnerId failures
             Right verifyRes -> do
               case verifyRes.verifyRCResp of
                 Verification.AsyncResp res -> do
@@ -376,7 +377,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
                 Verification.SyncResp resp -> do
                   onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC multipleRC imageId mbRetryCnt mbReqStatus
-    else initiateRCCreation mVehicleRC now mbFleetOwnerId
+    else initiateRCCreation mVehicleRC now mbFleetOwnerId failures
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
     createRCInput vehicleCategory fleetOwnerId documentImageId dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
@@ -411,8 +412,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     readFromJson (Number val) = Just $ T.pack $ show (floor val :: Int)
     readFromJson _ = Nothing
 
-    createVehicleRC :: MonadFlow m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
-    createVehicleRC merchantId merchantOperatingCityId input vehicleVariant certificateNumber = do
+    createVehicleRC :: MonadFlow m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
+    createVehicleRC merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
       let updatedVehicleVariant = case input.vehicleCategory of
@@ -448,7 +449,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             ventilator = input.ventilator,
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
-            failedRules = [],
+            failedRules = failedRules,
             dateOfRegistration = input.dateOfRegistration,
             vehicleModelYear = input.vehicleModelYear,
             vehicleDoors = mbVehicleDoors,
@@ -458,7 +459,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             unencryptedCertificateNumber = input.registrationNumber,
             updatedAt = now
           }
-    initiateRCCreation mVehicleRC now mbFleetOwnerId = do
+    initiateRCCreation mVehicleRC now mbFleetOwnerId failures = do
       case mVehicleRC of
         Just vehicleRC -> do
           -- upsert vehicleRC
@@ -484,7 +485,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
               whenJust mbVehicle $ \vehicle -> do
-                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant) $ do
+                when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null failures) $ do
                   driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                   driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
@@ -494,7 +495,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
         Nothing -> pure ()
 
-    validateRCResponse :: (MonadFlow m) => Verification.RCVerificationResponse -> RCValidationRules -> m Bool
+    validateRCResponse :: (MonadFlow m) => Verification.RCVerificationResponse -> RCValidationRules -> m [Text]
     validateRCResponse rc rule = do
       now <- getCurrentTime
       let fuelValid = maybe True (\ft -> Kernel.Prelude.any (`isInfixOf` ft) (T.toLower <$> rule.fuelType)) (T.toLower <$> rc.fuelType)
@@ -502,7 +503,16 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           manufacturerValid = maybe True (\m -> Kernel.Prelude.any (`isInfixOf` m) (T.toLower <$> rule.vehicleOEM)) (T.toLower <$> rc.manufacturer)
           vehicleAge = getVehicleAge (convertTextToDay (rc.mYManufacturing <> Just "-01")) now
           vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
-      return (fuelValid && vehicleClassValid && manufacturerValid && vehicleAgeValid)
+
+      let failures =
+            catMaybes
+              [ if not fuelValid then Just ("Invalid fuel type : " <> show rc.fuelType) else Nothing,
+                if not vehicleClassValid then Just ("Invalid vehicle class : " <> show rc.vehicleClass) else Nothing,
+                if not manufacturerValid then Just ("Invalid OEM : " <> show rc.manufacturer) else Nothing,
+                if not vehicleAgeValid then Just ("Invalid manufacturing: " <> show rc.mYManufacturing) else Nothing
+              ]
+
+      return failures
 
 compareRegistrationDates :: Maybe Text -> Maybe UTCTime -> Bool
 compareRegistrationDates actualDate providedDate =

@@ -139,6 +139,7 @@ data TransporterConfigT f = TransporterConfigT
     mandateExecutionRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateNotificationRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateValidity :: B.C f Kernel.Prelude.Int,
+    maxAllowedDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxPayoutReferralForADay :: B.C f Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,

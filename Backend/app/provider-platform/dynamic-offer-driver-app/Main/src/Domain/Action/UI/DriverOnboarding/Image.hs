@@ -29,7 +29,7 @@ import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Types (base64Encode)
+import EulerHS.Types (base64Decode, base64Encode)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Verification.Interface as VI
 import Kernel.Prelude
@@ -127,7 +127,11 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   let merchantId = person.merchantId
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  imageSizeInBytes <- fromMaybeM (InvalidRequest "Failed to decode base64 image") $ base64Decode image
+  let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
+  when (BS.length imageSizeInBytes > maxSizeInBytes) $
+    throwError $ InvalidRequest $ "Image size " <> show (BS.length imageSizeInBytes) <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show (fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB) <> "MB)"
   let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC]
   mbRcId <-
     if imageType `elem` rcDependentDocuments
@@ -148,7 +152,6 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
 
   images <- filter ((\txnId -> isNothing txnId || (txnId /= workflowTransactionId)) . (.workflowTransactionId)) <$> Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
-    transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit * bool 1 2 (imageType == DVC.AadhaarCard)) $ do
       -- not needed now
