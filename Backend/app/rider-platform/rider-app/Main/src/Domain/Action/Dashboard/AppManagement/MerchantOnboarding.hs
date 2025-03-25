@@ -1,0 +1,334 @@
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wwarn=unused-imports #-}
+
+module Domain.Action.Dashboard.AppManagement.MerchantOnboarding
+  ( merchantOnboardingInfo,
+    merchantOnboardingStart,
+    merchantOnboardingList,
+    merchantOnboardingStepSubmit,
+    merchantOnboardingStepUpdatePayload,
+    merchantOnboardingStepReject,
+    merchantOnboardingStepApprove,
+    merchantOnboardingStepUploadFile,
+    merchantOnboardingReject,
+    merchantOnboadingListAll,
+    merchantOnboardingStepList,
+  )
+where
+
+import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
+import qualified AWS.S3 as S3
+import qualified Data.Aeson
+import qualified Data.ByteString as BS
+import qualified Data.Map as Map
+import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers as Handlers
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOnboarding as DMO
+import qualified "this" Domain.Types.MerchantOnboarding
+import qualified Domain.Types.MerchantOnboarding.Handler as H
+import qualified Domain.Types.MerchantOnboardingStep as DMOS
+import qualified "this" Domain.Types.MerchantOnboardingStep
+import qualified "this" Domain.Types.MerchantOnboardingStepConfig
+import qualified Environment
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (id)
+import EulerHS.Types (base64Encode)
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
+import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id (Id)
+import qualified Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo, throwError)
+import Servant hiding (throwError)
+import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.Queries.MerchantOnboarding as QMO
+import Storage.Queries.MerchantOnboardingStep as QMOS
+import Storage.Queries.MerchantOnboardingStepConfig as QMOSC
+import Tools.Auth
+import Tools.Error
+
+mkMerchantOnboardingAPI :: Domain.Types.MerchantOnboarding.MerchantOnboarding -> [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep] -> Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
+mkMerchantOnboardingAPI onboarding steps =
+  Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
+    { id = onboarding.id,
+      requestorId = onboarding.requestorId,
+      onboardingType = onboarding.onboardingType,
+      description = onboarding.description,
+      status = onboarding.status,
+      remarks = onboarding.remarks,
+      steps = steps,
+      createdAt = onboarding.createdAt,
+      updatedAt = onboarding.updatedAt
+    }
+
+getStepsAndUpdate :: Kernel.Types.Id.Id Domain.Types.MerchantOnboarding.MerchantOnboarding -> Environment.Flow [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep]
+getStepsAndUpdate onboardingId = do
+  steps <- QMOS.findByMerchantOnboardingId (Kernel.Types.Id.getId onboardingId)
+
+  let stepStatusMap =
+        Kernel.Prelude.foldl'
+          ( \acc step ->
+              Map.insert (step.id.getId) step.status acc
+          )
+          Map.empty
+          steps
+
+  let updatedSteps = map (updateStepStatus' stepStatusMap) steps
+
+  let stepsToUpdate =
+        filter (\(original, updated) -> original.status /= updated.status) $
+          zip steps updatedSteps
+
+  forM_ stepsToUpdate $ \(_, updatedStep) ->
+    QMOS.updateStepStatus updatedStep.status updatedStep.id
+
+  return $ if null stepsToUpdate then steps else updatedSteps
+  where
+    updateStepStatus' statusMap step =
+      case step.status of
+        Domain.Types.MerchantOnboardingStep.AVAILABLE -> step
+        Domain.Types.MerchantOnboardingStep.UNAVAILABLE ->
+          if allDependenciesCompleted statusMap step.dependency
+            then step {Domain.Types.MerchantOnboardingStep.status = Domain.Types.MerchantOnboardingStep.AVAILABLE}
+            else step
+        _ -> step
+
+    allDependenciesCompleted statusMap dependencies =
+      null dependencies
+        || all
+          ( \depId ->
+              case Map.lookup depId.getId statusMap of
+                Just Domain.Types.MerchantOnboardingStep.COMPLETED -> True
+                _ -> False
+          )
+          dependencies
+
+merchantOnboardingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingInfo merchantShortId opCity onboardingType requestorId = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
+  onboarding <- QMO.findByRequestorIdAndOnboardingType reqId onboardingType >>= fromMaybeM (InvalidRequest $ "No onboarding present of type " <> show onboardingType)
+  steps <- getStepsAndUpdate onboarding.id
+  return $ mkMerchantOnboardingAPI onboarding steps
+
+merchantOnboardingStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingStart merchantShortId opCity onboardingType requestorId = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
+  mbOnboarding <- QMO.findByRequestorIdAndOnboardingType reqId onboardingType
+  case mbOnboarding of
+    Just onboarding -> do
+      steps <- getStepsAndUpdate onboarding.id
+      return $ mkMerchantOnboardingAPI onboarding steps
+    Nothing -> do
+      now <- getCurrentTime
+      onboardingId <- generateGUID
+      stepConfigs <- QMOSC.findByOnboardingType onboardingType
+      when (null stepConfigs) $ throwError (InvalidRequest $ "No step configurations found for onboarding type " <> show onboardingType)
+      let onboarding =
+            Domain.Types.MerchantOnboarding.MerchantOnboarding
+              { id = Kernel.Types.Id.Id onboardingId,
+                requestorId = reqId,
+                onboardingType = onboardingType,
+                description = Just $ "Onboarding process for " <> show onboardingType,
+                status = Domain.Types.MerchantOnboarding.INPROGRESS,
+                remarks = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+      QMO.create onboarding
+      stepNameToIdMap <-
+        foldM
+          ( \m config -> do
+              stepId <- generateGUID
+              return $ Map.insert config.stepNameIdentifier stepId m
+          )
+          Map.empty
+          stepConfigs
+      forM_ stepConfigs $ \config -> do
+        stepId <- (Map.lookup config.stepNameIdentifier stepNameToIdMap) & fromMaybeM (InternalError $ "Step ID not found for " <> config.stepNameIdentifier)
+        let stepDependencies = map (Kernel.Types.Id.Id) $ catMaybes $ map (\depName -> Map.lookup depName stepNameToIdMap) config.dependency
+        let initialStatus =
+              if null config.dependency
+                then Domain.Types.MerchantOnboardingStep.AVAILABLE
+                else Domain.Types.MerchantOnboardingStep.UNAVAILABLE
+
+        let step =
+              Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep
+                { id = Kernel.Types.Id.Id stepId,
+                  merchantOnboardingId = onboardingId,
+                  stepNameIdentifier = config.stepNameIdentifier,
+                  stepDescription = config.stepDescription,
+                  dependency = stepDependencies,
+                  status = initialStatus,
+                  isApprovalRequired = config.isApprovalRequired,
+                  payload = Nothing,
+                  remarks = Nothing,
+                  createdAt = now,
+                  updatedAt = now
+                }
+
+        QMOS.create step
+      updatedSteps <- getStepsAndUpdate onboarding.id
+      return $ mkMerchantOnboardingAPI onboarding updatedSteps
+
+merchantOnboardingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+merchantOnboardingList merchantShortId opCity requestorId = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
+  onboardings <- QMO.findAllByRequestorId reqId
+  return onboardings
+
+merchantOnboardingStepSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId payload = do
+  reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
+  onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.requestorId == reqId) $
+    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS) $
+    throwError $ InvalidRequest "Step is not available for submission"
+  let mbHandler = Map.lookup (onboarding.onboardingType, step.stepNameIdentifier <> "-SUBMIT-HANDLER") Handlers.handlerRegistry.handlers
+  whenJust mbHandler $ \handler -> do
+    result <- handler.validateAndProcess (Kernel.Types.Id.Id stepId) payload
+    unless result.success $
+      throwError $ InvalidRequest $ fromMaybe "Step processing failed" result.message
+  if step.isApprovalRequired
+    then updateStepStatus DMOS.SUBMITTED step.id
+    else updateStepStatus DMOS.COMPLETED step.id
+  steps <- getStepsAndUpdate onboarding.id
+  return $ mkMerchantOnboardingAPI onboarding steps
+
+merchantOnboardingStepUpdatePayload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepUpdatePayload merchantShortId opCity stepId requestorId payload = do
+  reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
+  onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.requestorId == reqId) $
+    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+
+  unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
+    throwError $ InvalidRequest "Step is not available for update"
+  QMOS.updateStepPayload (Just payload) step.id
+  return Kernel.Types.APISuccess.Success
+
+data StepRejectRequest = StepRejectRequest
+  { remarks :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+merchantOnboardingStepReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepReject merchantShortId opCity stepId requestorId payload = do
+  reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
+  unless (step.status == DMOS.SUBMITTED) $
+    throwError $ InvalidRequest "Step is not pending approval"
+  rejectReq :: StepRejectRequest <- fromjson payload
+  updateStepStatus DMOS.REOPENED step.id
+  updateStepRemarks (Just rejectReq.remarks) step.id
+  return Kernel.Types.APISuccess.Success
+
+data StepApproveRequest = StepApproveRequest
+  { remarks :: Maybe Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepApprove merchantShortId opCity stepId requestorId payload = do
+  step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
+  onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (step.status == DMOS.SUBMITTED && step.isApprovalRequired) $
+    throwError $ InvalidRequest "Step is not pending approval"
+  approveReq :: StepApproveRequest <- fromjson payload
+  case Map.lookup (onboarding.onboardingType, step.stepNameIdentifier <> "-APPROVAL-HANDLER") Handlers.handlerRegistry.handlers of
+    Nothing -> do
+      updateStepStatus DMOS.COMPLETED step.id
+      updateStepRemarks approveReq.remarks step.id
+    Just handler -> do
+      res <- handler.validateAndProcess (Kernel.Types.Id.Id stepId) payload
+      unless res.success $
+        throwError $ InvalidRequest $ fromMaybe "Step processing failed" res.message
+      pure ()
+  _ <- getStepsAndUpdate onboarding.id
+  return Kernel.Types.APISuccess.Success
+
+merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
+merchantOnboardingStepUploadFile _merchantShortId opCity stepId payloadKey requestorId req = do
+  reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
+  unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
+    throwError $ InvalidRequest "Step is not available for upload"
+  onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.requestorId == reqId) $
+    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantConfig <- CQM.findById (merchant.id) >>= fromMaybeM (MerchantNotFound merchant.id.getId)
+  documentFile <- L.runIO $ base64Encode <$> BS.readFile req.file
+  filePath <- S3.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> payloadKey) req.fileType ""
+  let fileUrl =
+        merchantConfig.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "merchant-onboarding"
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) documentFile
+  uploadFileRes <- createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType = req.fileType}
+  return uploadFileRes
+
+data MBRejectRequest = MBRejectRequest
+  { remarks :: Kernel.Prelude.Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+merchantOnboardingReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingReject merchantShortId opCity onboardingId requestorId req = do
+  rejectReq :: MBRejectRequest <- fromjson req
+  onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.status /= DMO.COMPLETED) $
+    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  QMO.updateOnboardingStatusAndRemarks DMO.REJECTED (Just rejectReq.remarks) onboarding.id
+  return Kernel.Types.APISuccess.Success
+
+merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+merchantOnboadingListAll merchantShortId opCity mbRequestorId mbStatus = do
+  status <- mbStatus & fromMaybeM (InvalidRequest "Status filter is required")
+  QMO.findAllByStatus status
+
+merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Maybe Text -> Environment.Flow [DMOS.MerchantOnboardingStep])
+merchantOnboardingStepList merchantShortId opCity onboardingId requestorId mbStatus = do
+  reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.requestorId == reqId) $
+    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  steps <- QMOS.findByMerchantOnboardingId onboarding.id.getId
+  return $ case mbStatus of
+    Nothing -> steps
+    Just status -> filter (\step -> show step.status == status) steps
+
+createMediaEntry :: Common.AddLinkAsMedia -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse
+createMediaEntry Common.AddLinkAsMedia {..} = do
+  fileEntity <- mkFile url
+  MFQuery.create fileEntity
+  return $ API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse {fileId = Kernel.Types.Id.cast $ fileEntity.id}
+  where
+    mkFile fileUrl = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DMF.MediaFile
+          { id,
+            _type = S3.Image,
+            url = fileUrl,
+            s3FilePath = Nothing,
+            createdAt = now
+          }
+
+fromjson :: (FromJSON a) => Data.Aeson.Value -> Environment.Flow a
+fromjson val = case Data.Aeson.fromJSON val of
+  Data.Aeson.Success x -> return x
+  Data.Aeson.Error err -> throwError (InvalidRequest $ T.pack err)
