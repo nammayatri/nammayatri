@@ -19,6 +19,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.API.NearbyDrivers as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute as VehicleTracking
 import SharedLogic.External.LocationTrackingService.Types
 
@@ -37,3 +38,13 @@ vehicleTrackingOnRoute vehicleTracking = do
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_VEHICLE_TRACKING_API") url)
   logDebug $ "lts vehicle tracking on route: " <> show vehicleTrackingOnRouteResp
   return vehicleTrackingOnRouteResp
+
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => NearByDriverReq -> m [NearByDriverRes]
+nearBy req = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  nearByRes <-
+    callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
+      >>= fromEitherM (ExternalAPICallError (Just "ERROR_IN_LTS_NEAR_BY_API") url)
+  logDebug $ "lts nearBy: " <> show nearByRes
+  return nearByRes

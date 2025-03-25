@@ -4,6 +4,8 @@
 
 module Storage.Queries.RiderConfig where
 
+import qualified Data.Aeson
+import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderConfig
 import Kernel.Beam.Functions
@@ -14,6 +16,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderConfig as Beam
 
@@ -79,6 +82,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.minRidesToShowCancellationRate minRidesToShowCancellationRate,
       Se.Set Beam.minimumWalkDistance (Just minimumWalkDistance),
       Se.Set Beam.multimodalTesting (Just multimodalTesting),
+      Se.Set Beam.nearByDriverRingBucketCfg (nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.payoutBatchDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) payoutBatchDelay),
       Se.Set Beam.payoutBatchSize payoutBatchSize,
       Se.Set Beam.payoutReferralProgram (Just payoutReferralProgram),
@@ -100,6 +104,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.trackingShortUrlPattern trackingShortUrlPattern,
       Se.Set Beam.useUserSettingsForSafetyIVR (Just useUserSettingsForSafetyIVR),
+      Se.Set Beam.variantListForNearByReq (variantListForNearByReq >>= Just . map show),
       Se.Set Beam.videoFileSizeUpperLimit videoFileSizeUpperLimit,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
@@ -154,6 +159,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             minRidesToShowCancellationRate = minRidesToShowCancellationRate,
             minimumWalkDistance = fromMaybe 100 minimumWalkDistance,
             multimodalTesting = fromMaybe False multimodalTesting,
+            nearByDriverRingBucketCfg = nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe,
             payoutBatchDelay = fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay),
             payoutBatchSize = payoutBatchSize,
             payoutReferralProgram = fromMaybe False payoutReferralProgram,
@@ -175,6 +181,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             timeDiffFromUtc = timeDiffFromUtc,
             trackingShortUrlPattern = trackingShortUrlPattern,
             useUserSettingsForSafetyIVR = fromMaybe False useUserSettingsForSafetyIVR,
+            variantListForNearByReq = variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack),
             videoFileSizeUpperLimit = videoFileSizeUpperLimit,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             createdAt = createdAt,
@@ -224,6 +231,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.minRidesToShowCancellationRate = minRidesToShowCancellationRate,
         Beam.minimumWalkDistance = Just minimumWalkDistance,
         Beam.multimodalTesting = Just multimodalTesting,
+        Beam.nearByDriverRingBucketCfg = nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON,
         Beam.payoutBatchDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) payoutBatchDelay,
         Beam.payoutBatchSize = payoutBatchSize,
         Beam.payoutReferralProgram = Just payoutReferralProgram,
@@ -245,6 +253,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.timeDiffFromUtc = timeDiffFromUtc,
         Beam.trackingShortUrlPattern = trackingShortUrlPattern,
         Beam.useUserSettingsForSafetyIVR = Just useUserSettingsForSafetyIVR,
+        Beam.variantListForNearByReq = variantListForNearByReq >>= Just . map show,
         Beam.videoFileSizeUpperLimit = videoFileSizeUpperLimit,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.createdAt = createdAt,

@@ -12,11 +12,19 @@ imports:
   ServiceTierType : Domain.Types.ServiceTierType
   RentalsConfig: Domain.Types.RentalsIntercityCache
   IntercitySearchLocation: Domain.Types.RentalsIntercityCache
+  VehicleVariant: Domain.Types.VehicleVariant
 
 RiderConfig:
+  types:
+    RingBucketCfg:
+      derive: "Eq"
+      radiusInMeters: Meters
+      vehVariant: VehicleVariant
+      size: Int
+
   tableName: rider_config
 
-  derives: "Show, Generic, ToJSON, FromJSON,Eq"
+  derives: "Show, Generic, ToJSON, FromJSON, Eq"
 
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -81,6 +89,8 @@ RiderConfig:
     intercitySearchLocations : "Maybe [IntercitySearchLocation]"
     payoutReferralThresholdPerDay: Int
     payoutReferralThresholdPerMonth: Int
+    variantListForNearByReq: "Maybe [VehicleVariant]"
+    nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -107,6 +117,8 @@ RiderConfig:
     isFirstReferredRideEnabled: Maybe Bool
     payoutReferralThresholdPerDay: Maybe Int
     payoutReferralThresholdPerMonth: Maybe Int
+    variantListForNearByReq: Maybe [Text]
+    nearByDriverRingBucketCfg: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -140,6 +152,8 @@ RiderConfig:
     isFirstReferredRideEnabled: fromMaybe False isFirstReferredRideEnabled|E
     payoutReferralThresholdPerDay: fromMaybe 5 payoutReferralThresholdPerDay|E
     payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -166,6 +180,8 @@ RiderConfig:
     isFirstReferredRideEnabled: Just isFirstReferredRideEnabled|E
     payoutReferralThresholdPerDay: Just payoutReferralThresholdPerDay|E
     payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -220,6 +236,8 @@ RiderConfig:
     excludedVehicleVariants: text []
     rentalsConfig: text []
     intercitySearchLocations : text []
+    variantListForNearByReq: text []
+    nearByDriverRingBucketCfg: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
