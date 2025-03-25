@@ -162,7 +162,8 @@ data AppCfg = AppCfg
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic, FromDhall)
 
@@ -259,7 +260,8 @@ data AppEnv = AppEnv
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic)
 

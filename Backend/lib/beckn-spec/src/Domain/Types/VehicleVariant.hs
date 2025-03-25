@@ -22,6 +22,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified EulerHS.Prelude as EP
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -54,9 +55,12 @@ data VehicleVariant
   | BUS_AC
   | HERITAGE_CAB
   | EV_AUTO_RICKSHAW
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded, EP.Hashable)
 
 instance CH.ClickhouseValue VehicleVariant
+
+allVehicleVariants :: [VehicleVariant]
+allVehicleVariants = [minBound .. maxBound]
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
 

@@ -212,6 +212,7 @@ library
       Domain.Action.UI.MeterRideInternal
       Domain.Action.UI.Miscellaneous
       Domain.Action.UI.MultimodalConfirm
+      Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -313,6 +314,7 @@ library
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.External.BbpsService.Flow
+      SharedLogic.External.LocationTrackingService.API.NearbyDrivers
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
@@ -539,6 +541,7 @@ library
       API.Action.UI.MeterRideInternal
       API.Action.UI.Miscellaneous
       API.Action.UI.MultimodalConfirm
+      API.Action.UI.NearbyDrivers
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
@@ -584,6 +587,7 @@ library
       API.Types.UI.MeterRideInternal
       API.Types.UI.Miscellaneous
       API.Types.UI.MultimodalConfirm
+      API.Types.UI.NearbyDrivers
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin

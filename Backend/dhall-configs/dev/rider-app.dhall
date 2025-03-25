@@ -280,6 +280,8 @@ let riderClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
+
 let dashboardClickhouseCfg = riderClickhouseCfg
 
 in  { esqDBCfg
@@ -370,4 +372,5 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , nearByDriverAPIRateLimitOptions
     }

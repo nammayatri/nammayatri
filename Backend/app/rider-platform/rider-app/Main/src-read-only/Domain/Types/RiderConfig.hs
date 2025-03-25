@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RentalsIntercityCache
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import qualified IssueManagement.Common
 import qualified Kernel.External.MultiModal.Interface.Types
@@ -60,6 +61,7 @@ data RiderConfig = RiderConfig
     minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minimumWalkDistance :: Kernel.Types.Common.Meters,
     multimodalTesting :: Kernel.Prelude.Bool,
+    nearByDriverRingBucketCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.RingBucketCfg],
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,
@@ -81,9 +83,13 @@ data RiderConfig = RiderConfig
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,
+    variantListForNearByReq :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     videoFileSizeUpperLimit :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, Eq)
+
+data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

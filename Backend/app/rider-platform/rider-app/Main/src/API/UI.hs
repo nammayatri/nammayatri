@@ -30,6 +30,7 @@ import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
+import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
@@ -127,6 +128,7 @@ type API =
            :<|> BBPS.API
            :<|> RentalsIntercityCache.API
            :<|> Miscellaneous.API
+           :<|> NearbyDrivers.API
        )
 
 handler :: FlowServer API
@@ -183,3 +185,4 @@ handler =
     :<|> BBPS.handler
     :<|> RentalsIntercityCache.handler
     :<|> Miscellaneous.handler
+    :<|> NearbyDrivers.handler
