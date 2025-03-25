@@ -195,7 +195,9 @@ getLegFare :: DJourneyLeg.JourneyLeg -> Flow Price
 getLegFare leg = do
   let defaultPrice = Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}
   case leg.legSearchId of
-    Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+    Nothing -> do
+      logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
+      return defaultPrice
     Just legSearchIdText -> do
       let legSearchId = Id legSearchIdText
       case leg.mode of

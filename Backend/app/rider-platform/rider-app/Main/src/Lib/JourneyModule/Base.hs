@@ -126,18 +126,30 @@ getAllLegsInfo journeyId = do
     allLegsRawData <- getJourneyLegs journeyId
     allLegsRawData `forM` \leg -> do
       case leg.legSearchId of
-        Just legSearchIdText -> do
-          let legSearchId = Id legSearchIdText
-          case leg.mode of
-            DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
-            DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
-            DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-            DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-            DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
-        Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+        Just legSearchIdText -> getLegInfo leg legSearchIdText
+        Nothing -> do
+          logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
+          addAllLegs journeyId [leg] -- try to add the leg again
+          updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
+          legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
+          getLegInfo updatedLeg legSearchIdText'
+  where
+    getLegInfo ::
+      JL.GetStateFlow m r c =>
+      DJourneyLeg.JourneyLeg ->
+      Text ->
+      m JL.LegInfo
+    getLegInfo leg legSearchIdText = do
+      let legSearchId = Id legSearchIdText
+      case leg.mode of
+        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId}
+        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration}
 
 getAllLegsStatus ::
-  JL.GetStateFlow m r c =>
+  (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
   DJourney.Journey ->
   m [JL.JourneyLegState]
 getAllLegsStatus journey = do
@@ -158,7 +170,7 @@ getAllLegsStatus journey = do
   return allLegsState
   where
     processLeg ::
-      JL.GetStateFlow m r c =>
+      (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
       [APITypes.RiderLocationReq] ->
       (Bool, [JL.JourneyLegState]) ->
       DJourneyLeg.JourneyLeg ->
@@ -180,7 +192,15 @@ getAllLegsStatus journey = do
                 JL.Transit legDataList -> all (\legData -> legData.status == JL.Completed) legDataList,
               legsState <> [legState]
             )
-        Nothing -> throwError $ InvalidRequest ("LegId null for Mode: " <> show leg.mode)
+        Nothing -> do
+          logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
+          addAllLegs journey.id [leg] -- try to add the leg again
+          updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
+          case updatedLeg.legSearchId of
+            Just _ -> do
+              processLeg riderLastPoints (isLastCompleted, legsState) updatedLeg
+            Nothing -> do
+              throwError $ JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber
 
 getMultiModalTransitOptions ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
