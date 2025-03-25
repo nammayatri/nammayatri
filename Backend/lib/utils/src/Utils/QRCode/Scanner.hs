@@ -22,9 +22,10 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Kernel.Prelude hiding (handle, putStrLn, try)
+import System.Exit
 import System.IO (hClose, hFlush)
 import System.IO.Temp (withSystemTempFile)
-import System.Process (readProcess)
+import System.Process (readCreateProcessWithExitCode, shell)
 import qualified Prelude (putStrLn)
 
 -- | Scan QR code from image bytes
@@ -40,15 +41,18 @@ scanQRCode imgBytes = do
     hClose handle
 
     -- Call zbarimg to scan QR code
-    try @SomeException $ readProcess "zbarimg" ["--quiet", "--raw", tmpFile] ""
+    try @SomeException $ readCreateProcessWithExitCode (shell $ "zbarimg " <> tmpFile) ""
 
   case result of
     Left err -> do
       -- Log error but don't fail
       Prelude.putStrLn $ "Error scanning QR code: " <> show err
       pure Nothing
-    Right output ->
+    Right (ExitSuccess, output, _) ->
       -- If output is empty, no QR code was found
       if null output
         then pure Nothing
         else pure $ Just $ T.strip $ TE.decodeUtf8 $ BL.toStrict $ fromString output
+    Right (_, _, err) -> do
+      Prelude.putStrLn $ "Error code returned from command: " <> show err
+      pure Nothing

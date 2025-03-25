@@ -28,6 +28,7 @@ import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
@@ -125,6 +126,7 @@ type API =
            :<|> TrackRoute.API
            :<|> BBPS.API
            :<|> RentalsIntercityCache.API
+           :<|> Miscellaneous.API
        )
 
 handler :: FlowServer API
@@ -180,3 +182,4 @@ handler =
     :<|> TrackRoute.handler
     :<|> BBPS.handler
     :<|> RentalsIntercityCache.handler
+    :<|> Miscellaneous.handler
