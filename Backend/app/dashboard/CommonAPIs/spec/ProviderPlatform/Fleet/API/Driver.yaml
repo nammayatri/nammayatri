@@ -957,6 +957,7 @@ types:
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
     - vehicleTags: Maybe [Text]
+    - fuelType: Maybe Text
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType

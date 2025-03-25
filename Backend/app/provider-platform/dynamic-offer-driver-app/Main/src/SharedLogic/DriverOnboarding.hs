@@ -336,14 +336,14 @@ data CreateRCInput = CreateRCInput
     unladdenWeight :: Maybe Float
   }
 
-buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> m (Maybe VehicleRegistrationCertificate)
-buildRC merchantId merchantOperatingCityId input = do
+buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> m (Maybe VehicleRegistrationCertificate)
+buildRC merchantId merchantOperatingCityId input failedRules = do
   now <- getCurrentTime
   id <- generateGUID
   rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
-  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now <$> mEncryptedRC <*> mbFitnessExpiry
+  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules <$> mEncryptedRC <*> mbFitnessExpiry
 
 createRC ::
   Id DTM.Merchant ->
@@ -352,10 +352,11 @@ createRC ::
   DVC.DocumentVerificationConfig ->
   Id VehicleRegistrationCertificate ->
   UTCTime ->
+  [Text] ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNumber expiry = do
+createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
   let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
       airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
@@ -393,7 +394,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       ventilator = input.ventilator,
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
-      failedRules = [],
+      failedRules = failedRules,
       dateOfRegistration = input.dateOfRegistration,
       vehicleModelYear = input.vehicleModelYear,
       rejectReason = Nothing,

@@ -514,9 +514,11 @@ types:
     - licExpiry: UTCTime
     - vehicleClass: [Text]
   RCDetails:
+    - vehicleRegistrationCertNumber: Text
     - vehicleClass: Text
     - fitnessExpiry: UTCTime
     - insuranceExpiry: Maybe UTCTime
+    - failedRules: [Text]
   DriverAadhaarInfoRes:
     - driverName: Text
     - driverGender: Text

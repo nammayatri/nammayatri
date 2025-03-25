@@ -144,6 +144,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mandateExecutionRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateNotificationRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateValidity :: Kernel.Prelude.Int,
+    maxAllowedDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxPayoutReferralForADay :: Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,

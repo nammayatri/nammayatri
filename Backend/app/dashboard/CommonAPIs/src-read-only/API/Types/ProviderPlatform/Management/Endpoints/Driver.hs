@@ -197,7 +197,13 @@ data PauseOrResumeServiceChargesReq = PauseOrResumeServiceChargesReq
 instance Kernel.Types.HideSecrets.HideSecrets PauseOrResumeServiceChargesReq where
   hideSecrets = Kernel.Prelude.identity
 
-data RCDetails = RCDetails {vehicleClass :: Kernel.Prelude.Text, fitnessExpiry :: Kernel.Prelude.UTCTime, insuranceExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime}
+data RCDetails = RCDetails
+  { vehicleRegistrationCertNumber :: Kernel.Prelude.Text,
+    vehicleClass :: Kernel.Prelude.Text,
+    fitnessExpiry :: Kernel.Prelude.UTCTime,
+    insuranceExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    failedRules :: [Kernel.Prelude.Text]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

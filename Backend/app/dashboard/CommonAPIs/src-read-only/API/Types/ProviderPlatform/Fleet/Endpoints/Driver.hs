@@ -51,7 +51,8 @@ data AddVehicleReq = AddVehicleReq
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Day,
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+    vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    fuelType :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

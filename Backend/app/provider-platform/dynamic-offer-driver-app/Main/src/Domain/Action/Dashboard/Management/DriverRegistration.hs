@@ -168,7 +168,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
             vehicleSeatBelts = rc.vehicleSeatBelts,
             createdAt = rc.createdAt,
             dateOfRegistration = rc.dateOfRegistration,
-            vehicleModelYear = rc.vehicleModelYear
+            vehicleModelYear = rc.vehicleModelYear,
+            failedRules = rc.failedRules
           }
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
