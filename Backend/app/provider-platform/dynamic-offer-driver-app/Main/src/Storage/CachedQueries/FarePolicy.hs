@@ -14,16 +14,17 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.FarePolicy
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ But most likely you need a version from Cac with inMem results feature."
-    #-}
+-- {-# WARNING
+--   "This module contains direct calls to the table and redis. \
+-- \ But most likely you need a version from Cac with inMem results feature."
+--   #-}
   ( clearCache,
     create,
     delete,
     update',
     clearCacheById,
     findFarePolicyFromDB,
+    findFarePolicyFromDB',
   )
 where
 
@@ -31,13 +32,17 @@ import Data.Coerce (coerce)
 import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.FarePolicy
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.FarePolicy as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findFarePolicyFromDB id = do
@@ -45,6 +50,10 @@ findFarePolicyFromDB id = do
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> do
       flip whenJust cacheFarePolicy /=<< Queries.findById id
+
+findFarePolicyFromDB' :: (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> Id FarePolicy -> m (Maybe FarePolicy)
+findFarePolicyFromDB' merchantOpCityId configVersionMap extraDimensions id = do
+  DynamicLogic.findOneConfigWithCacheKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.FarePolicy) (Just configVersionMap) extraDimensions (Queries.findById id) (makeIdKey id)
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do

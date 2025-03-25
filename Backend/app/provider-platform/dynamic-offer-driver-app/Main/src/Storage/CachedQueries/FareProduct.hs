@@ -25,18 +25,19 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as Domain
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, Value)
 import qualified Lib.Types.SpecialLocation as SL
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.Queries.FareProduct as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, Esq.EsqDBFlow m r, CacheFlow m r) => FareProduct -> m ()
 create = Queries.create
 
-findAllUnboundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> m [FareProduct]
-findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area) >>= \case
-    Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area /=<< Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True searchSources
+findAllUnboundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r, BeamFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> [SearchSource] -> DTC.TripCategory -> SL.Area -> m [FareProduct]
+findAllUnboundedFareProductForVariants merchantOpCityId configVersionMap extraDimensions searchSources tripCategory area = do
+  DynamicLogic.findAllConfigsWithCacheKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.FareProduct) (Just configVersionMap) extraDimensions (Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True searchSources) (makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area)
 
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area fareProducts = do
@@ -48,11 +49,9 @@ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searc
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllUnboundedFareProductForArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> m [FareProduct]
-findAllUnboundedFareProductForArea merchantOpCityId searchSources area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area) >>= \case
-    Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area /=<< Queries.findAllUnboundedFareProductForArea merchantOpCityId area Domain.Unbounded True searchSources
+findAllUnboundedFareProductForArea :: (CacheFlow m r, Esq.EsqDBFlow m r, BeamFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> [SearchSource] -> SL.Area -> m [FareProduct]
+findAllUnboundedFareProductForArea merchantOpCityId configVersionMap extraDimensions searchSources area = do
+  DynamicLogic.findAllConfigsWithCacheKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.FareProduct) (Just configVersionMap) extraDimensions (Queries.findAllUnboundedFareProductForArea merchantOpCityId area Domain.Unbounded True searchSources) (makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area)
 
 cacheAllUnboundedFareProductByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area fareProducts = do
@@ -64,11 +63,9 @@ makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources ar
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllFareProductByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [FareProduct]
-findAllFareProductByMerchantOpCityId merchantOpCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdKey merchantOpCityId) >>= \case
-    Just a -> pure a
-    Nothing -> cacheAllFareProductByMerchantOpCityId merchantOpCityId /=<< Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True
+findAllFareProductByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r, BeamFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> m [FareProduct]
+findAllFareProductByMerchantOpCityId merchantOpCityId configVersionMap extraDimensions = do
+  DynamicLogic.findAllConfigs (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.FareProduct) (Just configVersionMap) extraDimensions (Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True)
 
 cacheAllFareProductByMerchantOpCityId :: (CacheFlow m r) => Id MerchantOperatingCity -> [FareProduct] -> m ()
 cacheAllFareProductByMerchantOpCityId merchantOpCityId fareProducts = do
@@ -80,11 +77,9 @@ makeFareProductByMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQuer
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe FareProduct)
-findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
-    Just a -> pure a
-    Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area) /=<< Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId area tripCategory serviceTier Domain.Unbounded True searchSources
+findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r, BeamFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe FareProduct)
+findUnboundedByMerchantVariantArea merchantOpCityId configVersionMap extraDimensions searchSources tripCategory serviceTier area = do
+  DynamicLogic.findOneConfigWithCacheKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.FareProduct) (Just configVersionMap) extraDimensions (Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId area tripCategory serviceTier Domain.Unbounded True searchSources) (makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area)
 
 cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> FareProduct -> m ()
 cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProduct = do
@@ -96,11 +91,9 @@ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m [FareProduct]
-findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
-    Just a -> pure a
-    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area /=<< Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True searchSources
+findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r, BeamFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> Maybe Value -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m [FareProduct]
+findAllBoundedByMerchantVariantArea merchantOpCityId configVersionMap extraDimensions searchSources tripCategory serviceTier area = do
+  DynamicLogic.findAllConfigsWithCacheKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.FareProduct) (Just configVersionMap) extraDimensions (Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True searchSources) (makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area)
 
 cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [FareProduct] -> m ()
 cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProducts = do

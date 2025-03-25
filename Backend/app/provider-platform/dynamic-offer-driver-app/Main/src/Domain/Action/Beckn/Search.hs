@@ -249,7 +249,28 @@ handler ValidatedDSearchReq {..} sReq = do
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion) `mapM` possibleTripOption.tripCategories)
+  configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
+  allFarePoliciesProduct <-
+    combineFarePoliciesProducts
+      <$> ( mapM
+              ( \tripCategory ->
+                  getAllFarePoliciesProduct
+                    merchant.id
+                    merchantOpCityId
+                    sReq.isDashboardRequest
+                    sReq.pickupLocation
+                    sReq.dropLocation
+                    (Just (TransactionId (Id sReq.transactionId)))
+                    fromLocGeohashh
+                    toLocGeohash
+                    mbDistance
+                    mbDuration
+                    mbVersion
+                    tripCategory
+                    configVersionMap
+              )
+              possibleTripOption.tripCategories
+          )
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
@@ -258,7 +279,6 @@ handler ValidatedDSearchReq {..} sReq = do
       specialLocationName = allFarePoliciesProduct.specialLocationName
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   let mbDriverInfo = driverIdForSearch
-  configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
   searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId fromLocation mbToLocation mbDistance mbDuration spcllocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
