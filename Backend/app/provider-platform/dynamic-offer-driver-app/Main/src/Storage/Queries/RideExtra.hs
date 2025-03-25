@@ -249,6 +249,16 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateStatusAndRideEndedBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideStatus -> RideEndedBy -> m ()
+updateStatusAndRideEndedBy rideId status rideEndedBy = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.status status,
+      Se.Set BeamR.rideEndedBy $ Just rideEndedBy,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateRideEndedBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideEndedBy -> m ()
 updateRideEndedBy rideId rideEndedBy = do
   updateOneWithKV
