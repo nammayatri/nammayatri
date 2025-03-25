@@ -8,10 +8,13 @@ imports:
 module: PriceBreakup
 types:
   MeterRidePriceReq:
-    locationUpdates: "[LatLong]"
+    locationUpdates: "Maybe [LatLong]"
   MeterRidePriceRes:
     fare: HighPrecMoney
     distance: HighPrecMeters
+    tripStartTime: Maybe UTCTime
+    status: Maybe Domain.Types.Ride.RideStatus
+
 apis:
   - POST:
       endpoint: /meterRide/price
