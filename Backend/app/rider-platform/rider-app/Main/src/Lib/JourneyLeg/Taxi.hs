@@ -99,9 +99,10 @@ instance JT.JourneyLeg TaxiLegRequest m where
   search _ = throwError (InternalError "Not Supported")
 
   confirm (TaxiLegRequestConfirm req) = do
-    -- now <- getCurrentTime
     let shouldSkipBooking = req.skipBooking || (not req.forcedBooked)
     unless shouldSkipBooking $ do
+      now <- getCurrentTime
+      QSearchRequest.updateStartTime (Id req.searchId) now
       mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
       case mbEstimate of
         Just estimate -> do

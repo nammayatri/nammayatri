@@ -280,6 +280,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
+      let isMultimodalSearch = case journeySearchData of
+            Just _ -> True
+            Nothing -> False
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
@@ -291,7 +294,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
                 (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
                 (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
-                (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText)
+                (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
+                (Beckn.IS_MULTIMODAL_SEARCH, Just $ show isMultimodalSearch)
               ],
             Beckn.paymentTags =
               [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
