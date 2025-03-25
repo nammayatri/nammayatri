@@ -4,6 +4,7 @@
 module API.Client.RiderPlatform.AppManagement where
 
 import qualified "rider-app" API.Dashboard
+import qualified "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
@@ -13,12 +14,15 @@ import Servant
 import qualified "lib-dashboard" Tools.Auth.Merchant
 import qualified "lib-dashboard" Tools.Client
 
-newtype AppManagementAPIs = AppManagementAPIs {ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs}
+data AppManagementAPIs = AppManagementAPIs {merchantOnboardingDSL :: API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingAPIs, ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs}
 
 mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> AppManagementAPIs)
-mkAppManagementAPIs merchantId city token = do let { ticketsDSL = API.Types.Dashboard.AppManagement.Tickets.mkTicketsAPIs ticketsClientDSL }; (AppManagementAPIs {..})
+mkAppManagementAPIs merchantId city token = do
+  let merchantOnboardingDSL = API.Types.Dashboard.AppManagement.MerchantOnboarding.mkMerchantOnboardingAPIs merchantOnboardingClientDSL
+  let ticketsDSL = API.Types.Dashboard.AppManagement.Tickets.mkTicketsAPIs ticketsClientDSL
+  (AppManagementAPIs {..})
   where
-    ticketsClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    merchantOnboardingClientDSL :<|> ticketsClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.
