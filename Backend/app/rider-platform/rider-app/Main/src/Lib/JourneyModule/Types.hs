@@ -662,9 +662,9 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         Spec.BUS -> do
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
 
-          fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") (journeyRouteDetail.fromStationId)
-          toStationId' <- fromMaybeM (InternalError "ToStationId is missing") (journeyRouteDetail.toStationId)
-          routeId' <- fromMaybeM (InternalError "Route is missing") (journeyRouteDetail.routeId)
+          fromStationId' <- fromMaybeM (InternalError "FromStationId is missing") journeyRouteDetail.fromStationId
+          toStationId' <- fromMaybeM (InternalError "ToStationId is missing") journeyRouteDetail.toStationId
+          routeId' <- fromMaybeM (InternalError "Route is missing") journeyRouteDetail.routeId
 
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
