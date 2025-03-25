@@ -33,6 +33,7 @@ updateByPrimaryKey (Domain.Types.DeletedPerson.DeletedPerson {..}) = do
       Se.Set Beam.deviceId deviceId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.reasonToDelete reasonToDelete,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
@@ -48,6 +49,7 @@ instance FromTType' Beam.DeletedPerson Domain.Types.DeletedPerson.DeletedPerson 
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
+            reasonToDelete = reasonToDelete,
             updatedAt = updatedAt
           }
 
@@ -60,5 +62,6 @@ instance ToTType' Beam.DeletedPerson Domain.Types.DeletedPerson.DeletedPerson wh
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.reasonToDelete = reasonToDelete,
         Beam.updatedAt = updatedAt
       }
