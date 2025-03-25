@@ -31,7 +31,8 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     bookingAllowed :: Bool,
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    quantity :: Maybe Int
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData

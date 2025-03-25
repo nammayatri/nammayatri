@@ -24,6 +24,7 @@ where
 import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified Data.Map as Map
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
@@ -90,10 +91,11 @@ postMultimodalConfirm ::
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
+  let ticketQuantityMap = Map.fromList [(element.journeyLegOrder, fromMaybe 1 element.ticketQuantity) | element <- confirmElements]
   forM_ confirmElements $ \element ->
     when element.skipBooking $
       JM.skipLeg journeyId element.journeyLegOrder
-  void $ JM.startJourney forcedBookLegOrder journey.id
+  void $ JM.startJourney forcedBookLegOrder (Just ticketQuantityMap) journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   pure Kernel.Types.APISuccess.Success
 
@@ -166,7 +168,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   whenJust mbEstimate $ \estimate -> do
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True journeyLegInfo{pricingId = Just req.estimateId.getId}
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs now
 
@@ -228,7 +230,7 @@ postMultimodalRiderLocation personOrMerchantId journeyId req = do
   journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
   forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
     when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
-      void $ JM.startJourney (Just nextLeg.legOrder) journeyId
+      void $ JM.startJourney (Just nextLeg.legOrder) Nothing journeyId
   return journeyStatus
 
 postMultimodalJourneyCancel ::

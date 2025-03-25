@@ -135,8 +135,8 @@ getFare merchantId merchantOperatingCityId leg = \case
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> JL.LegInfo -> m ()
-confirm forcedBooked JL.LegInfo {..} =
+confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> JL.LegInfo -> m ()
+confirm forcedBooked ticketQuantity JL.LegInfo {..} =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -178,7 +178,8 @@ confirm forcedBooked JL.LegInfo {..} =
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
-              merchantOperatingCityId
+              merchantOperatingCityId,
+              quantity = ticketQuantity
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -191,7 +192,8 @@ confirm forcedBooked JL.LegInfo {..} =
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
-              merchantOperatingCityId
+              merchantOperatingCityId,
+              quantity = ticketQuantity
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -204,5 +206,6 @@ confirm forcedBooked JL.LegInfo {..} =
               quoteId = Id <$> pricingId,
               personId,
               merchantId,
-              merchantOperatingCityId
+              merchantOperatingCityId,
+              quantity = ticketQuantity
             }

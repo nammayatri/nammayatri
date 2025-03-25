@@ -381,12 +381,12 @@ search vehicleCategory personId merchantId quantity city journeyLeg = do
         )
         routeDetails
 
-confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Id FRFSSearch -> Maybe (Id FRFSQuote) -> Bool -> Bool -> m ()
-confirm personId merchantId searchId mbQuoteId skipBooking bookingAllowed = do
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Id FRFSSearch -> Maybe (Id FRFSQuote) -> Maybe Int -> Bool -> Bool -> m ()
+confirm personId merchantId searchId mbQuoteId ticketQuantity skipBooking bookingAllowed = do
   mbBooking <- QTBooking.findBySearchId searchId -- if booking already there no need to confirm again
   when (not skipBooking && bookingAllowed && isNothing mbBooking) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
-    void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId DIBC.MULTIMODAL
+    void $ FRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, merchantId) quoteId ticketQuantity DIBC.MULTIMODAL
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
 cancel searchId cancellationType isSkipped = do

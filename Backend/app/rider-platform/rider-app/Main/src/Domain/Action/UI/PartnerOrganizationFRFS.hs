@@ -658,7 +658,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
           (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id DIBC.PARTNERORG
+      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id Nothing DIBC.PARTNERORG
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return
