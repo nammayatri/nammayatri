@@ -5,6 +5,7 @@ module API.Client.ProviderPlatform.Operator where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified API.Types.ProviderPlatform.Operator.Driver
+import qualified API.Types.ProviderPlatform.Operator.Registration
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
 import Kernel.Prelude
@@ -13,12 +14,15 @@ import Servant
 import qualified "lib-dashboard" Tools.Auth.Merchant
 import qualified "lib-dashboard" Tools.Client
 
-newtype OperatorAPIs = OperatorAPIs {driverDSL :: API.Types.ProviderPlatform.Operator.Driver.DriverAPIs}
+data OperatorAPIs = OperatorAPIs {driverDSL :: API.Types.ProviderPlatform.Operator.Driver.DriverAPIs, registrationDSL :: API.Types.ProviderPlatform.Operator.Registration.RegistrationAPIs}
 
 mkOperatorAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> OperatorAPIs)
-mkOperatorAPIs merchantId city token = do let { driverDSL = API.Types.ProviderPlatform.Operator.Driver.mkDriverAPIs driverClientDSL }; (OperatorAPIs {..})
+mkOperatorAPIs merchantId city token = do
+  let driverDSL = API.Types.ProviderPlatform.Operator.Driver.mkDriverAPIs driverClientDSL
+  let registrationDSL = API.Types.ProviderPlatform.Operator.Registration.mkRegistrationAPIs registrationClientDSL
+  (OperatorAPIs {..})
   where
-    driverClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.OperatorDSLAPI) merchantId city token
+    driverClientDSL :<|> registrationClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.OperatorDSLAPI) merchantId city token
 
 callOperatorAPI ::
   forall m r b c.
