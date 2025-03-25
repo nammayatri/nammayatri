@@ -1,0 +1,52 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name operatorRegistration
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/operator/register
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "firstName": "John",
+    "lastName": "Smith",
+    "mobileNumber": "2212345678",
+    "mobileCountryCode": "+91",
+    "email": "operator@nammayatri.in"
+}
+
+###
+
+# @name operatorLogin
+
+POST {{bpp-dashboard-host}}/fleet/login/otp
+content-type: application/json
+
+  { "mobileNumber": "2212345678",
+    "mobileCountryCode": "+91",
+    "merchantId": "NAMMA_YATRI_PARTNER",
+    "city": "Kochi"
+  }
+
+###
+
+# @name operatorVerify
+
+POST {{bpp-dashboard-host}}/fleet/verify/otp
+content-type: application/json
+
+  { "mobileNumber": "2212345678",
+    "mobileCountryCode": "+91",
+    "merchantId": "NAMMA_YATRI_PARTNER",
+    "city": "Kochi",
+    "otp": "7891"
+  }

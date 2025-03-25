@@ -28,7 +28,8 @@ INSERT INTO atlas_bpp_dashboard.role (id, name, dashboard_access_type, descripti
     ('d5644e83-ffa3-4e0d-ae81-c3155eedb8fd', 'JUSPAY_OPS', 'DASHBOARD_USER', 'Juspay OPS', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('37947162-3b5d-4ed6-bcac-08841be1534d', 'JUSPAY_ADMIN', 'DASHBOARD_ADMIN', 'Juspay admin can create and assign other roles', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('a708c6a1-78b5-4e5e-9df8-468cd81dc2aa', 'CUSTOMER_SERVICE', 'DASHBOARD_USER', 'customer service', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
-    ('e5a69a26-d165-455a-a711-33a41e0d4812', 'FLEET', 'FLEET_OWNER', 'fleetOwner', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00');
+    ('e5a69a26-d165-455a-a711-33a41e0d4812', 'FLEET', 'FLEET_OWNER', 'fleetOwner', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
+    ('00000000-0000-0000-000-operator-role', 'OPERATOR', 'DASHBOARD_OPERATOR', 'dashboardOperator', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00');
 
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, created_at, updated_at) VALUES
     ('03b312b7-1899-4708-984f-e4b1e70e8a39', 'e5a69a26-d165-455a-a711-33a41e0d47c6', 'RIDES', 'USER_READ_ACCESS', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
