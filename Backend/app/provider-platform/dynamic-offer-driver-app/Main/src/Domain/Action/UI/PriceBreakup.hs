@@ -66,7 +66,9 @@ postMeterRidePrice ::
 postMeterRidePrice (Nothing, _, _) rideId _ = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
 postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  whenJust (NE.nonEmpty req.locationUpdates) $ \locUpdates -> do
+  let tripStartTime = ride.tripStartTime
+  let rideStatus = ride.status
+  whenJust (NE.nonEmpty (fromMaybe [] req.locationUpdates)) $ \locUpdates -> do
     void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
   traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide)
@@ -74,6 +76,6 @@ postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstiamte -> do
-        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = traveledDistance}
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = traveledDistance, tripStartTime = tripStartTime, status = Just rideStatus}
     )
     mbMeterRideEstimate
