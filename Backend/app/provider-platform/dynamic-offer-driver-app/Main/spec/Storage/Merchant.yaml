@@ -1006,12 +1006,12 @@ TransporterConfig:
     minThresholdForPassThroughDestination: Maybe Meters
     requiresOnboardingInspection: Maybe Bool
     allowedReferralEntities: "[Role]"
-
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer
     meterRideBulkLocUpdateBatchSize: Integer
     dynamicReferralCodeValidForMinutes: Integer
     dynamicReferralCodeEnabled: Bool
+    maxAllowedDocSizeInMB: Maybe Int
     bulkWaiveOffLimit : Int
   beamType:
     currency: Maybe Currency
