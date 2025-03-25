@@ -108,6 +108,7 @@ data HandlerEnv = HandlerEnv
     cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
     searchRequestExpirationSeconds :: NominalDiffTime,
+    searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     s3Env :: S3Env Flow,
     passettoContext :: PassettoContext,
     serviceClickhouseCfg :: ClickhouseCfg,
@@ -149,7 +150,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let s3Env = buildS3Env s3Config
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', ..}
+      searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

@@ -369,6 +369,7 @@ in  { esqDBCfg
     , jobInfoMapx
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
+    , searchRequestExpirationSecondsForMultimodal = +14400
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
