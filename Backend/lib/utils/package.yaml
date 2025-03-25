@@ -116,6 +116,8 @@ dependencies:
   - yudhishthira
   - aeson-casing
   - jwt
+  - process
+  - temporary
 
 ghc-options:
   - -fwrite-ide-info
