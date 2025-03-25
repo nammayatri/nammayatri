@@ -572,6 +572,7 @@ library
       API.Types.Dashboard.RideBooking.Select
       API.Types.UI.BBPS
       API.Types.UI.CustomerReferral
+      API.Types.UI.DeletedPerson
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver

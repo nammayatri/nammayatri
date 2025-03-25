@@ -15,6 +15,7 @@ DeletedPerson:
     updatedAt : UTCTime
     deviceId : Maybe Text
     clientOsType: Maybe DeviceType
+    reasonToDelete: Maybe Text
 
   constraints:
     personId: PrimaryKey
