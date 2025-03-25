@@ -2,6 +2,7 @@
 
 module Domain.Action.UI.DeletedPerson (postDeletedPerson) where
 
+import qualified API.Types.UI.DeletedPerson
 import Data.OpenApi (ToSchema)
 import Domain.Types.DeletedPerson
 import qualified Domain.Types.Merchant
@@ -20,8 +21,8 @@ import qualified Storage.Queries.SavedReqLocation as QSRL
 import Tools.Auth
 import Tools.Error
 
-postDeletedPerson :: ((Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow APISuccess.APISuccess)
-postDeletedPerson (mbPersonId, merchantId) = do
+postDeletedPerson :: ((Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.DeletedPerson.DeletedPersonReq -> Environment.Flow APISuccess.APISuccess)
+postDeletedPerson (mbPersonId, merchantId) (API.Types.UI.DeletedPerson.DeletedPersonReq {reasonToDelete}) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
@@ -39,5 +40,6 @@ postDeletedPerson (mbPersonId, merchantId) = do
           merchantId = merchantId,
           merchantOperatingCityId = person.merchantOperatingCityId,
           personId = person.id,
-          updatedAt = now
+          updatedAt = now,
+          reasonToDelete
         }
