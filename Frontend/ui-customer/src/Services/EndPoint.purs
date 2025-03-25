@@ -377,3 +377,6 @@ updateVpa dummy = (getBaseUrl "50") <> "/payoutVpa/upsert"
 
 payoutHistory :: String -> String
 payoutHistory dummy = (getBaseUrl "50") <> "/referralPayout/history"
+
+getIsIntercity :: String
+getIsIntercity = (getBaseUrl "") <> "/serviceability/isInterCity"

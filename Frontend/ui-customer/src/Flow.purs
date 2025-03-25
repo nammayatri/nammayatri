@@ -2977,8 +2977,14 @@ findEstimates updatedState = do
   else
     pure unit
   (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION
+  res <- lift $ lift $ Remote.getIsIntercity (Remote.mkIsIntercityReq state.props.sourceLat state.props.sourceLong (Just state.props.destinationLat) (Just state.props.destinationLong))
   let
-    isIntercity = updatedState.data.fareProductType /= FPT.AMBULANCE && (updatedState.data.currentCityConfig.enableIntercity && any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity))
+    isIntercity = updatedState.data.fareProductType /= FPT.AMBULANCE 
+                  && updatedState.data.currentCityConfig.enableIntercity 
+                  && case res of 
+                      (Right (IsIntercityResp resp)) -> 
+                        (not resp.isCrossCity) && (resp.isInterCity)
+                      (Left err) -> (updatedState.data.currentCityConfig.enableIntercity && any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity))
     schedulingEnabled = updatedState.data.currentCityConfig.enableScheduling
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { fareProductType = if isIntercity then FPT.INTER_CITY else homeScreen.data.fareProductType} })
   when (state.data.startTimeUTC /= "" && not isIntercity) do

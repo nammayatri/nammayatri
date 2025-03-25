@@ -4716,3 +4716,28 @@ instance decodePayoutStatus :: Decode PayoutStatus
               "ManualReview" -> except $ Right ManualReview
               _              -> fail $ ForeignError "Unknown response"
 instance encodePayoutStatus :: Encode PayoutStatus where encode = defaultEncode
+
+----------------------------------------- IsIntercityReq ---------------------------
+newtype IsIntercityReq = IsIntercityReq {
+  pickupLatLong :: LatLong, 
+  mbDropLatLong :: Maybe LatLong
+}
+derive instance genericIsIntercityReq :: Generic IsIntercityReq _
+instance standardEncodeIsIntercityReq :: StandardEncode IsIntercityReq where standardEncode (IsIntercityReq body) = standardEncode body
+instance showIsIntercityReq :: Show IsIntercityReq where show = genericShow
+instance decodeIsIntercityReq :: Decode IsIntercityReq where decode = defaultDecode
+instance encodeIsIntercityReq  :: Encode IsIntercityReq where encode = defaultEncode
+
+newtype IsIntercityResp = IsIntercityResp {
+  isInterCity :: Boolean,
+  isCrossCity :: Boolean
+}
+derive instance genericIsIntercityResp :: Generic IsIntercityResp _
+instance standardEncodeIsIntercityResp :: StandardEncode IsIntercityResp where standardEncode (IsIntercityResp body) = standardEncode body
+instance showIsIntercityResp :: Show IsIntercityResp where show = genericShow
+instance decodeIsIntercityResp :: Decode IsIntercityResp where decode = defaultDecode
+instance encodeIsIntercityResp  :: Encode IsIntercityResp where encode = defaultEncode
+
+instance makeIsIntercityReq :: RestEndpoint IsIntercityReq  where
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.getIsIntercity) headers reqBody Nothing
+  encodeRequest req = standardEncode req
