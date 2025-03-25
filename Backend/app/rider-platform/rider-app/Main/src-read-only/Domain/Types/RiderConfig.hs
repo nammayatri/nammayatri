@@ -55,6 +55,8 @@ data RiderConfig = RiderConfig
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,
     payoutReferralStartDate :: Kernel.Prelude.UTCTime,
+    payoutReferralThresholdPerDay :: Kernel.Prelude.Int,
+    payoutReferralThresholdPerMonth :: Kernel.Prelude.Int,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
