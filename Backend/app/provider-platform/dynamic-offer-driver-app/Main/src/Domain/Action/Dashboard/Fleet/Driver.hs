@@ -318,7 +318,7 @@ getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRe
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
   mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
-  vehicleList <- RCQuery.findAllByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
+  vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
   vehicles <- traverse convertToVehicleAPIEntity vehicleList
   return $ Common.ListVehicleRes vehicles
 
