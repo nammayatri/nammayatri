@@ -609,6 +609,7 @@ getOd =
     , customer_added_a_stop: "ଗ୍ରାହକ ଏକ ବିରତି ଯୋଡିଛି!"
     , aadhaar_linking_required_description: (\_ -> "ଆମ ଆପ୍ ପାଇଁ ଚାଲନ କରିବାକୁ, ଦୟାକରି ଆପଣଙ୍କ ଆଧାର ID ଯୋଡନ୍ତୁ")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "ବିଗତି ଉପରେ କ୍ଲିକ୍ କରି, ଆପଣ ଆମର &nbsp; <a href=\"\">T&Cs</a> ସହିତ ସମ୍ମତ ହେବେ"
+    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue, you agree to our "
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "ଆଧାର ସହିତ ସଂଯୋଜିତ ମୋବାଇଲ୍ ସଂଖ୍ୟାରେ OTP ପଠାଯାଇଛି"
@@ -1049,6 +1050,7 @@ getOd =
     , subscription_plan_str: (\_ -> "ସବସ୍କ୍ରିପ୍ସନ୍ ପ୍ଲାନ୍")
     , complete_autopay_later: "‘ମାଇ ପ୍ଲାନ୍’ ବିଭାଗରୁ ପରେ ଆଟୋପେ ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ।"
     , start_earning_in_four_steps: "ସାଧାରଣ {} ପଦକ୍ଷେପରେ ଆର୍ଜନ ଆରମ୍ଭ କରନ୍ତୁ"
+    , complete_the_steps_to_start_earning: "ଉପାର୍ଜନ ଆରମ୍ଭ କରିବା ପାଇଁ ପଦକ୍ଷେପଗୁଡ଼ିକ ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ!"
     , complete: "ସମ୍ପୂର୍ଣ୍ଣ"
     , how_to_upload: "କିପରି ଅପଲୋଡ୍ କରିବେ"
     , take_clear_picture_dl: "ଆପଣଙ୍କ ଚାଳନା ଲାଇସେନ୍ସର ଫଟୋ ପକ୍ଷର ଏକ ସ୍ପଷ୍ଟ ଛବି ସମତଳ ପୃଷ୍ଠରେ ନିଅନ୍ତୁ।"
@@ -1064,6 +1066,7 @@ getOd =
     , retake_rc: "\nଦୟାକରି ଚିହ୍ନିତ ଅଞ୍ଚଳର ଭିତରେ RC ସହିତ ପୁନଃ ଫଟୋ ନିଅନ୍ତୁ"
     , retake_dl: "\nଦୟାକରି ଚିହ୍ନିତ ଅଞ୍ଚଳର ଭିତରେ DL ସହିତ ପୁନଃ ଫଟୋ ନିଅନ୍ତୁ"
     , lets_get_you_trip_ready: "ଆସନ୍ତୁ ଆପଣଙ୍କ ଯାତ୍ରା ପାଇଁ ପ୍ରସ୍ତୁତ ହେବା!"
+    , welcome_lets_get_started : "ସ୍ୱାଗତ! ଆସନ୍ତୁ ଆରମ୍ଭ କରିବା"
     , got_an_otp: "OTP ପାଇଛନ୍ତି କି?"
     , driving_license_details: "ଚାଳନା ଲାଇସେନ୍ସ ବିବରଣୀ"
     , vehicle_registration_details: "ଯାନ ପଞ୍ଜିକରଣ ବିବରଣୀ"

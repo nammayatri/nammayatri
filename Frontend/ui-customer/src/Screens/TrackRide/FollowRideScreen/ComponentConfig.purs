@@ -34,7 +34,7 @@ primaryButtonConfig state =
       }
     , id = "DonePrimaryButton"
     , margin = Margin 16 32 16 24
-    , background = state.data.config.primaryBackground
+    , background = state.data.config.primaryButtonBackground
     }
 
 type SOSOverlayConfig

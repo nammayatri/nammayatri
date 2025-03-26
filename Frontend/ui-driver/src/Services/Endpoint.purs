@@ -106,6 +106,9 @@ validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
 referDriver :: String -> String
 referDriver dummyString = (getBaseUrl "") <> "/driver/referral"
 
+getDriverReferralDetails :: String -> String
+getDriverReferralDetails dummyString = (getBaseUrl "") <> "/driver/referral/details"
+
 getstatsInfo :: String -> String
 getstatsInfo day = (getBaseUrl "") <> "/driver/profile/stats?day="<> day
 

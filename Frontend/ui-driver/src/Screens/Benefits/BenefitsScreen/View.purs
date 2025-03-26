@@ -65,6 +65,7 @@ import Helpers.Utils as HU
 import Services.API as API
 import Data.String as DS
 import Data.Array as DA
+import Screens.Types as ST
 
 screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -328,8 +329,8 @@ tabView push state =
     , margin $ MarginBottom 16
     , gravity CENTER
     ]
-    [ tabItem push (state.props.driverReferralType == CUSTOMER) (getString LT.REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
-    ,  tabItem push (state.props.driverReferralType == DRIVER) (getString LT.REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
+    [ tabItem push (state.props.driverReferralType == ST.CUSTOMER) (getString LT.REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" ST.CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
+    ,  tabItem push (state.props.driverReferralType == ST.DRIVER) (getString LT.REFER_DRIVER) "ny_ic_new_avatar_profile" ST.DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
     ]
   where
   cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -487,21 +488,21 @@ driverReferralCode push state =
       , height $ V 1
       , background config.separatorColor
       , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == ST.DRIVER
       ][]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
-      ][ referralCountView false (getString LT.REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == ST.DRIVER
+      ][ referralCountView false (getString LT.REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == ST.CUSTOMER) push REFERRED_CUSTOMERS_POPUP
        , referralCountView true config.infoText (show activatedCount) true push config.popupType
        ]
     ]
   where
-  activatedCount = if state.props.driverReferralType == DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
+  activatedCount = if state.props.driverReferralType == ST.DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
 
-  config = if state.props.driverReferralType == DRIVER then driverReferralConfig else customerReferralConfig
+  config = if state.props.driverReferralType == ST.DRIVER then driverReferralConfig else customerReferralConfig
 
   driverReferralConfig =
     let appConfigs = getAppConfig appConfig
@@ -649,7 +650,7 @@ appQRCodeView push state =
         ]
     ]
   where
-  qr_img = if state.props.driverReferralType == DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
+  qr_img = if state.props.driverReferralType == ST.DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
 
 referralInfoPop :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralInfoPop push state =
@@ -701,7 +702,7 @@ referralInfoPop push state =
         ]
     ]
   where
-  qr_img = if state.props.driverReferralType == DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
+  qr_img = if state.props.driverReferralType == ST.DRIVER then "ny_driver_app_qr_code" else "ny_customer_app_qr_code"
 
   config = case state.props.referralInfoPopType of
     REFERRED_DRIVERS_POPUP -> { heading: getString LT.REFERRED_DRIVERS, subtext: getString $ LT.REFERRED_DRIVERS_INFO "REFERRED_DRIVERS_INFO" }

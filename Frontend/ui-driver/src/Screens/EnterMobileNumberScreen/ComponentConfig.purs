@@ -28,7 +28,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (not)
+import Prelude (not,(<>))
 import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -109,6 +109,7 @@ mobileNumberConfig state = let
       , text = ""
       , placeholder = getString TEN_DIGIT_MOBILE_NUMBER
       , padding = Padding 0 16 16 16
+      , focused = state.props.mobileNumberEditFocused
       }
     , showCountryCodeField = false
     , topLabel
@@ -124,5 +125,8 @@ mobileNumberConfig state = let
         , margin = MarginBottom 1
         }
     , showErrorLabel = state.props.isValid
+    , background = state.data.config.themeColors.radioInactiveBackground
+    , focusedStroke = ("1," <> state.data.config.themeColors.editTextFocusedStroke)
+    , stroke = state.data.config.themeColors.radioInactiveBackground
     }
   in mobileNumberEditor'

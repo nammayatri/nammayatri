@@ -138,7 +138,7 @@ permissionsListView state push =
                 , stroke $ "1," <> (if isPermissionEnabled  then  Color.green900 else Color.grey900)
                 , background $ if isPermissionEnabled then  Color.green200 else Color.white900          
                 , gravity CENTER_VERTICAL
-                ][  titleImage item isPermissionEnabled,
+                ][  titleImage item isPermissionEnabled state,
                     titleAndDescriptionList item,
                     checkBox item state
                 ]
@@ -197,13 +197,13 @@ checkBox item state =
     ]
       
 
-titleImage :: forall w. Listtype -> Boolean -> PrestoDOM (Effect Unit) w
-titleImage item isPermissionEnabled = 
+titleImage :: forall w. Listtype -> Boolean -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
+titleImage item isPermissionEnabled state = 
     linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , gravity CENTER
-        , background if isPermissionEnabled then Color.white900 else Color.blue600
+        , background if isPermissionEnabled then Color.white900 else state.data.config.themeColors.onboardingStepImgBg
         , margin $ MarginRight 15
         , padding $ Padding 8 8 8 8
         , cornerRadius 25.0

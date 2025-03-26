@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "in.juspay.nammayatripartner.debug",
+  "variantName": "msilDriverProdDebug",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 177,
+      "versionName": "3.0.36",
+      "outputFile": "app-msilDriver-prod-debug.apk"
+    }
+  ],
+  "elementType": "File"
+}

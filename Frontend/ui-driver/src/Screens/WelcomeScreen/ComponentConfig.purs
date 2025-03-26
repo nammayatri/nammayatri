@@ -10,13 +10,13 @@ import Screens.Types (WelcomeScreenState)
 import Helpers.Utils as HU
 
 carouselData :: WelcomeScreenState -> Common.CarouselModal
-carouselData _state =
+carouselData state =
   { gravity: "CENTER"
   , carouselData:
       map
         ( \item ->
-            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: "#FFFAED", cornerRadius: 8.0 , isUrl : true }
-            , backgroundColor: "#FFFAED"
+            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: state.data.config.themeColors.welcomeScreenBackground, cornerRadius: 8.0 , isUrl : true }
+            , backgroundColor: state.data.config.themeColors.welcomeScreenBackground
             , youtubeConfig: dummyYoutubeData
             , gravity: item.gravity
             , contentType: "IMAGE"

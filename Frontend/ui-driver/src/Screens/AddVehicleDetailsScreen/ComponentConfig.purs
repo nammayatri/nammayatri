@@ -47,6 +47,7 @@ import Components.RequestInfoCard as RequestInfoCard
 import PrestoDOM.Animation as PrestoAnim
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
+import JBridge as JB
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -58,7 +59,7 @@ primaryButtonConfig state = let
                 -- (state.data.dateOfRegistration /= Just "") && 
                 (state.data.vehicleCategory /= Just ST.AmbulanceCategory || state.props.isvariant /= "") &&
                 state.data.vehicle_registration_number /= "" &&
-                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex) &&
+                (state.data.vehicleCategory /= Just ST.CarCategory || isJust state.props.buttonIndex || (JB.getAppName unit) == "ONDC fleetX") &&
                 ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` state.data.rcNumberPrefixList)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
@@ -66,10 +67,8 @@ primaryButtonConfig state = let
                            else getString UPLOAD_REGISTRATION_CERTIFICATE}
       , width = MATCH_PARENT
       , height = (V 50)
-      , background = Color.black900 
       , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
-      , alpha = if activate then 1.0 else 0.8
       , isClickable = activate
       , id = "AddVehiclePrimaryButton"
       }
@@ -163,7 +162,7 @@ genericHeaderConfig state = let
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = (getValueToLocalStore MOBILE_NUMBER_KEY)
-      , color = Color.white900
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -179,13 +178,16 @@ appOnboardingNavBarConfig state =
   { genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
-      { text = if state.props.openHowToUploadManual
+      { color = state.data.config.themeColors.onboardingHeaderTextColor,
+        text = if state.props.openHowToUploadManual
                 then getString UPLOAD_REGISTRATION_CERTIFICATE_STR 
                 else getString VEHICLE_REGISTRATION_DETAILS
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
-      text = getString HELP_FAQ
-      }
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+      prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ image = state.data.config.themeColors.defaultBackButton }
   }
 
 optionsMenuConfig :: ST.AddVehicleDetailsScreenState -> OptionsMenuConfig.Config
@@ -193,7 +195,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,

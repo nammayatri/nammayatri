@@ -110,7 +110,10 @@ view push state =
             , visibility $ boolToVisibility (state.props.currentStage == DETECT_LOCATION)
             ] [ currentLocationView state push
               , currentLanguageView state push  ]
-          , if DA.any (_ == state.props.currentStage) [SELECT_LANG, SELECT_CITY] then radioButtonView state push true else dummyView
+          , case state.props.currentStage of
+              SELECT_LANG -> languageRadioButtonView state push 
+              SELECT_CITY -> cityRadioButtonView state push
+              _ -> dummyView
           , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -144,7 +147,8 @@ currentLocationView state push =
           "" -> ""
           "Paris" -> "Odisha"
           _ -> locSelectedVal
-
+      appName = JB.getAppName unit
+      selectCityConfig = RC.selectCityConfig appName
   in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -187,10 +191,10 @@ currentLocationView state push =
       , textView $
         [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
         , gravity CENTER
-        , color Color.blue800
+        , color state.data.config.themeColors.highlightedTextColor
         , margin $ MarginTop 16
         , onClick push $ const $ ChangeStage SELECT_CITY
-        , visibility GONE -- Disable change city for now
+        , visibility $ boolToVisibility selectCityConfig.enableChangeCity
         ] <> FontStyle.tags TypoGraphy
     ]
 
@@ -225,23 +229,20 @@ currentLanguageView state push =
     , textView $ 
       [ text $ getString CHANGE_LANGUAGE_STR <> if getLanguageLocale languageKey == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected state.data.config <> ")" else ""
       , gravity CENTER
-      , color Color.blue800
+      , color state.data.config.themeColors.highlightedTextColor
       , onClick push $ const $ ChangeStage SELECT_LANG
       , margin $ MarginTop 16
-      ] <> FontStyle.body3 TypoGraphy
+      ] <> FontStyle.body1 TypoGraphy
   ]
 
 
-radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
-radioButtonView state push visibility' =
+languageRadioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+languageRadioButtonView state push =
   let appName = JB.getAppName unit
-      getLanguageList = if state.props.currentStage == SELECT_LANG then RC.appLanguageConfig appName else []
-      languageList = if not DA.null getLanguageList then getLanguageList else state.data.config.languageList
-      items = if state.props.currentStage == SELECT_LANG then languageList else transformCityConfig state.data.merchantOperatingCityConfig
-      subTitle = if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
-      selectedVal = if state.props.currentStage == SELECT_LANG then state.props.radioMenuFocusedLang else state.props.radioMenuFocusedCity
+      getLanguageList = RC.appLanguageConfig appName
+      items = if not DA.null getLanguageList then getLanguageList else state.data.config.languageList
   in
-  PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -249,7 +250,7 @@ radioButtonView state push visibility' =
   , background Color.white900
   ][  headerView state push
     , textView $
-      [ text $ getString subTitle
+      [ text $ getString SELECT_LANGUAGE_DESC
       , color Color.black800
       , margin $ Margin 16 24 16 16
       ] <> FontStyle.subHeading2 TypoGraphy
@@ -263,10 +264,43 @@ radioButtonView state push visibility' =
           (\ index language ->  
           PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
-          ] $ MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig index language selectedVal)) items
+          ] $ MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig index language state.props.radioMenuFocusedLang state)) items
       )
   ]
 
+
+cityRadioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+cityRadioButtonView state push =
+  let appName = JB.getAppName unit
+      selectCityConfig = RC.selectCityConfig appName
+      cityList = selectCityConfig.cityNames
+      items = transformCityConfig cityList
+  in
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  ][  headerView state push
+    , textView $
+      [ text $ getString SELECT_LOCATION_DESC
+      , color Color.black800
+      , margin $ Margin 16 24 16 16
+      ] <> FontStyle.subHeading2 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , margin $ Margin 16 16 16 5
+      , background Color.white900
+      ](DA.mapWithIndex
+          (\ index language ->  
+          PrestoAnim.animationSet
+          [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
+          ] $ MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig index language state.props.radioMenuFocusedCity state )) items
+      )
+  ]
 
 enableLocationPermission :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 enableLocationPermission state push = 
@@ -327,5 +361,5 @@ mockLocationEnabledView push state =
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [visibility GONE][]
 
-transformCityConfig :: Array CityConfig -> Array MenuButton.Text
-transformCityConfig cityConfig = map (\city -> {name: city.cityName, value: city.cityName, subtitle: ""}) cityConfig
+transformCityConfig :: Array String -> Array MenuButton.Text
+transformCityConfig cityConfig = map (\city -> {name: city, value: city, subtitle: ""}) cityConfig

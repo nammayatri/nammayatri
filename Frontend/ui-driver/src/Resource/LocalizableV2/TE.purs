@@ -611,6 +611,7 @@ getTe =
     , customer_added_a_stop: "కస్టమర్ స్టాప్ జోడించారు"
     , aadhaar_linking_required_description: (\_ -> "యాత్రి సాతి కోసం డ్రైవింగ్ ప్రారంభించడానికి, దయచేసి \n మీ ఆధార్ IDని లింక్ చేయండి")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "కొనసాగించు క్లిక్ చేయడం ద్వారా, మీరు మా &nbsp; <a href=\"\">T&Cs</a>"
+    , by_clicking_this_you_will_be_agreeing_to_our : "కొనసాగించు క్లిక్ చేయడం ద్వారా, మీరు మా "
     , terms_and_conditions_short: "నిబంధనలు & షరతులు"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "మీ ఆధార్‌తో లింక్ చేయబడిన మొబైల్ నంబర్‌కు OTP పంపబడింది"
@@ -1051,6 +1052,7 @@ getTe =
     , subscription_plan_str: (\_ -> "సబ్‌స్క్రిప్షన్ ప్లాన్")
     , complete_autopay_later: "తర్వాత ‘మై ప్లాన్’ విభాగం నుండి ఆటోపేను పూర్తి చేయండి."
     , start_earning_in_four_steps: "{} సాధారణ దశల్లో సంపాదించడం ప్రారంభించండి"
+    , complete_the_steps_to_start_earning: "సంపాదించడం ప్రారంభించడానికి దశలను పూర్తి చేయండి!"
     , complete: "పూర్తి"
     , how_to_upload: "ఎలా అప్‌లోడ్ చేయాలి"
     , take_clear_picture_dl: "ఫ్లాట్ ఉపరితలంపై మీ డ్రైవింగ్ లైసెన్స్ ఫోటో వైపు స్పష్టమైన చిత్రాన్ని తీయండి."
@@ -1069,6 +1071,7 @@ getTe =
     , retake_photo: "ఫోటోను మళ్లీ తీయండి"
     , change_city: "నగరాన్ని మార్చండి"
     , lets_get_you_trip_ready: "మీ యాత్రను సిద్ధం చేద్దాం!"
+    , welcome_lets_get_started : "స్వాగతం! ప్రారంభిద్దాం"
     , got_an_otp: "OTP వచ్చిందా?"
     , driving_license_details: "డ్రైవింగ్ లైసెన్స్ వివరాలు"
     , vehicle_registration_details: "వాహన రిజిస్ట్రేషన్ వివరాలు"

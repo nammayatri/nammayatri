@@ -289,7 +289,6 @@ type RegistrationScreenState = {
   props :: RegistrationScreenProps
 }
 type RegistrationScreenData = {
-  activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
@@ -315,7 +314,8 @@ type RegistrationScreenData = {
   linkedRc :: Maybe String,
   accessToken :: String,
   hvTxnId :: Maybe String,
-  hvFlowId :: Maybe String
+  hvFlowId :: Maybe String,
+  refereeName :: Maybe String
 }
 
 type DocumentStatus = {
@@ -342,7 +342,8 @@ type StepProgress = {
   disableWarning :: String,
   isHidden :: Boolean,
   dependencyDocumentType :: Array RegisterationStep,
-  rcNumberPrefixList :: Array String
+  rcNumberPrefixList :: Array String,
+  documentCategory :: Maybe API.DocumentCategory
 }
 
 type RegistrationScreenProps = {
@@ -362,7 +363,15 @@ type RegistrationScreenProps = {
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
   manageVehicleCategory :: Maybe VehicleCategory,
-  dontAllowHvRelaunch :: Boolean
+  dontAllowHvRelaunch :: Boolean,
+  categoryToStepProgressMap :: Array CategoryToStepMap,
+  selectedDocumentCategory :: Maybe API.DocumentCategory
+}
+
+type CategoryToStepMap = {
+  category :: API.DocumentCategory,
+  registrationSteps :: Array StepProgress,
+  completionStatus :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -382,6 +391,7 @@ data RegisterationStep =
   | VEHICLE_INSURANCE
   | VEHICLE_PUC
   | NO_OPTION
+  | VEHICLE_PHOTOS
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
@@ -2719,7 +2729,8 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  config :: AppConfig
 }
 ---------------------------------------------------- DriverEarningsScreen ----------------------------------
 
@@ -3038,7 +3049,8 @@ type DocumentCaptureScreenData = {
   vehicleCategory :: Maybe VehicleCategory,
   docId :: String,
   linkedRc :: Maybe String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  config :: AppConfig
 } 
 
 type DocumentCaptureScreenProps = {
@@ -3047,7 +3059,9 @@ type DocumentCaptureScreenProps = {
   validating :: Boolean,
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  uploadVehiclePhotos :: Boolean,
+  vehicleTypeImageToUpload :: Maybe API.VehicleImageType
 } 
 
 

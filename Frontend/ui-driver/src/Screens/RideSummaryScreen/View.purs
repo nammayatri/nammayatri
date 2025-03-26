@@ -47,7 +47,7 @@ import PrestoDOM.Core (getPushFn)
 import Services.Backend as Remote
 import Data.Array (union, (!!), filter, length, (:), foldl, drop,  replicate, updateAt, elemIndex, (..), last, find, catMaybes, sortBy, reverse)
 import JBridge as JB
-import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
+import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Constants.Configs (getPolylineAnimationConfig)
 import Helpers.Utils(getCurrentLocation, LatLon(..))

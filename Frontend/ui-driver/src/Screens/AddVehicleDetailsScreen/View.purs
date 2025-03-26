@@ -286,6 +286,8 @@ referralAppliedView state push =
 
 vehicleRegistrationNumber :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 vehicleRegistrationNumber state push = 
+  let appName = JB.getAppName unit
+  in 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -496,7 +498,7 @@ vehicleRegistrationNumber state push =
                     ]
                   , facilityListView state push
           ]
-        , checkACView state push
+        , if appName == "ONDC fleetX" then rcEligibilityCriteriaView state push else checkACView state push
         ]
       ]
   ]
@@ -619,6 +621,34 @@ checkACView state push =
             [ getString YES, getString NO ]
     ]
 
+rcEligibilityCriteriaView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+rcEligibilityCriteriaView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity LEFT
+    , margin $ MarginTop 16
+    ]
+    [ textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text "Eligibility criteria for RC"
+      , color Color.grey600
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text "-   Your car must be less than 3 years old"
+      , margin $ Margin 16 8 0 0
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text "-   Your car must be a sedan vehicle"
+      , margin $ Margin 16 8 0 0
+      ]
+    ]
 
 
 ----------------------------------------------------------------- uploadRC ------------------------------------------------------

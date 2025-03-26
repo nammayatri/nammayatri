@@ -22,7 +22,6 @@ import Services.API (ModuleCompletionCriteria(..), LmsModuleRes(..), LmsCategory
 import Foreign.Object (empty)
 import ConfigProvider
 import Prelude
-import Screens.RegistrationScreen.ScreenData as RSD
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: BenefitsScreenState

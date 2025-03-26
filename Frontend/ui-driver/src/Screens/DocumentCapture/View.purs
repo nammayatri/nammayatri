@@ -16,15 +16,24 @@
 
 module Screens.DocumentCaptureScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width,  textView, text, color, textSize, fontStyle, visibility, cornerRadius, stroke, imageView, imageWithFallback, frameLayout, scrollView)
+import Animation as Anim
+import Animation.Config
+import PrestoDOM 
 import Screens.Types as ST
 import Styles.Colors as Color
 import Effect (Effect)
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.GenericHeader as GenericHeader
+import Components.GenericHeader as GenericHeaders
 import Components.PrimaryButton as PrimaryButton
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=))
+import Data.Array as DA
+import Data.String as DS
+import Data.Maybe
+import Data.Function.Uncurried (runFn1)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (>), not, show, (*), (+))
+import PrestoDOM.Properties (cornerRadii)
+import Engineering.Helpers.Commons as EHC
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.DocumentCaptureScreen.ComponentConfig
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -50,6 +59,8 @@ import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
+import Mobility.Prelude (boolToVisibility)
+import Services.API as API
 
 screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
@@ -95,10 +106,10 @@ view push state =
                   , width MATCH_PARENT
                   , orientation VERTICAL
                   , margin $ Margin 20 20 15 0
-                  ][ howToUpload push state ]
+                  ] (if state.props.uploadVehiclePhotos then [uploadVehicleImageView push state] else [ howToUpload push state ])
                 ]
           ]
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+        , if state.props.uploadVehiclePhotos then PrimaryButton.view (push <<< VehicleUploadPrimaryButtonAC) (vehicleUploadButtonConfig state) else PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
       ]
     , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     ] <> if state.props.validateDocModal then [ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateDocModalState state)] else []
@@ -128,8 +139,204 @@ popupModal push state =
       popupConfig = if state.props.logoutModalView then (logoutPopUp CTA.Language)
                     else changeVehicleConfig FunctionCall
 
+uploadVehicleImageView :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> PrestoDOM (Effect Unit) w
+uploadVehicleImageView push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  ]
+  [ linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ] (DA.mapWithIndex (\index item -> vehicleImageRowView push state index item) vehicleImageRowItem)
+  ]
+
+vehicleImageRowView :: forall w. (Action -> Effect Unit) -> ST.DocumentCaptureScreenState -> Int -> {leftImage :: String, leftText :: Maybe API.VehicleImageType ,rightImage :: String, rightText :: Maybe API.VehicleImageType} -> PrestoDOM (Effect Unit) w
+vehicleImageRowView push state index item = 
+  let leftImageBounds = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
+      rightImageBounds = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
+      leftText = getText item.leftText
+      rightText = getText item.rightText
+  in
+  PrestoAnim.animationSet [Anim.translateInYAnim translateYAnimConfig { duration = 1 , fromY = 0, toY = 0} ] $
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , margin $ MarginVertical 4 4
+  , onAnimationEnd push $ const AfterRender
+  ]
+  [ linearLayout 
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , visibility $ boolToVisibility $ isJust item.leftText
+    ]
+    [ relativeLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ]
+      [ linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , margin $ Margin 8 8 8 8
+        , id $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
+        ]
+        [ imageView 
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
+          ]
+        ]
+      , linearLayout
+        [ height if leftImageBounds.height == 0 then WRAP_CONTENT else (V leftImageBounds.height)
+        , width if leftImageBounds.width == 0 then WRAP_CONTENT else (V leftImageBounds.width)
+        , background Color.blue600
+        , alpha 0.8
+        , stroke $ "1," <> Color.blue800
+        -- , dashWidth 4
+        -- , gapWidth 4
+        , margin $ Margin 8 8 8 8
+        , cornerRadius 8.0
+        ]
+        [ imageView 
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
+          , visibility INVISIBLE
+          ]
+        ]
+      , linearLayout
+        [ height $ V leftImageBounds.height
+        , width $ V leftImageBounds.width
+        , margin $ Margin 8 8 8 8
+        , gravity CENTER
+        , orientation VERTICAL
+        , onClick push $ const $ UploadImageWihType item.leftText
+        ]
+        [ imageView 
+          [ height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_plus_blue"
+          ]
+        , textView 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ leftText
+          , color Color.black900
+          ]
+        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width $ V leftImageBounds.width
+        , gravity RIGHT
+        , margin $ MarginLeft 16
+        ]
+        [ imageView
+          [ height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_cross_circle_white_gray"
+          , gravity RIGHT
+          ]
+        ] 
+      ]
+    ]
+  , linearLayout 
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , visibility $ boolToVisibility $ isJust item.rightText
+    ]
+    [ relativeLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ]
+      [ linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , cornerRadius 8.0
+        , gravity CENTER
+        , margin $ Margin 8 8 0 8
+        , id $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
+        ]
+        [ imageView 
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.rightImage
+          ]
+        ]
+      , linearLayout
+        [ height if rightImageBounds.height == 0 then WRAP_CONTENT else (V rightImageBounds.height)
+        , width if rightImageBounds.width == 0 then WRAP_CONTENT else (V rightImageBounds.width)
+        , background Color.blue600
+        , alpha 0.8
+        , stroke $ "1," <> Color.blue800
+        -- , dashWidth 4
+        -- , gapWidth 4
+        , margin $ Margin 8 8 0 8
+        , cornerRadius 8.0
+        ]
+        [ imageView 
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
+          , visibility INVISIBLE
+          ]
+        ]
+      , linearLayout
+        [ height $ V rightImageBounds.height
+        , width $ V rightImageBounds.width
+        , margin $ Margin 8 8 0 8
+        , gravity CENTER
+        , orientation VERTICAL
+        , onClick push $ const $ UploadImageWihType item.rightText
+        ]
+        [ imageView 
+          [ height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_plus_blue"
+          ]
+        , textView 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ rightText
+          , color Color.black900
+          ]
+        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width $ V rightImageBounds.width
+        , gravity RIGHT
+        , margin $ MarginLeft 16
+        ]
+        [ imageView
+          [ height $ V 20
+          , width $ V 20
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_cross_circle_white_gray"
+          , gravity RIGHT
+          ]
+        ]
+      ]
+    ]
+  ]
+  where getText text = 
+          case text of
+            Just API.VehicleFront -> "Front"
+            Just API.VehicleBack -> "Back"
+            Just API.VehicleLeft -> "Left"
+            Just API.VehicleRight -> "Right"
+            Just API.VehicleFrontInterior -> "Front Interior"
+            Just API.VehicleBackInterior -> "Rear Interior" 
+            Just API.Odometer_ -> "Odometer"
+            _ -> ""
+
 howToUpload :: (Action -> Effect Unit) ->  ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w
 howToUpload push state = 
+  let text1 = case state.data.docType of 
+                ST.VEHICLE_PHOTOS -> "Take a clear picture of the vehicle from the suggested angles"
+                ST.PROFILE_PHOTO -> "Take a clear selfie with your face inside the marked area"
+                _ -> (getVarString CAPTURE_DOC_DESC_1 [Constant.transformDocText state.data.docType])
+      text2 = case state.data.docType of 
+                ST.VEHICLE_PHOTOS -> "Ensure only your vehicle is in the frame when uploading" 
+                ST.PROFILE_PHOTO -> "Only your face should be in the frame when uploading the image"
+                _ -> (getString ENSURE_ADEQUATE_LIGHT)
+      text3 = case state.data.docType of 
+                ST.VEHICLE_PHOTOS -> "" 
+                ST.PROFILE_PHOTO -> ""
+                _ -> getVarString CAPTURE_DOC_DESC_3 [Constant.transformDocText state.data.docType]
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -146,21 +353,24 @@ howToUpload push state =
     , padding $ PaddingVertical 16 16
     ][ 
       textView $ 
-      [ text $ getVarString CAPTURE_DOC_DESC_1 [Constant.transformDocText state.data.docType]
+      [ text text1
       , color Color.black800
       , margin $ MarginBottom 18
+      , visibility $ boolToVisibility $ not $ DS.null text1
       ] <> FontStyle.body3 TypoGraphy
 
       , textView $ 
-      [ text $ getString ENSURE_ADEQUATE_LIGHT
+      [ text text2
       , color Color.black800
       , margin $ MarginBottom 18
+      , visibility $ boolToVisibility $ not $ DS.null text2
       ] <> FontStyle.body3 TypoGraphy
 
       , textView $ 
-      [ text $ getVarString CAPTURE_DOC_DESC_3 [Constant.transformDocText state.data.docType]
+      [ text text3
       , margin $ MarginBottom 40
       , color Color.black800
+      , visibility $ boolToVisibility $ not $ DS.null text3
       ] <> FontStyle.body3 TypoGraphy
       , linearLayout
         [ width MATCH_PARENT
@@ -185,19 +395,49 @@ rightWrongView isRight state =
   , margin $ MarginBottom 16
   ][ imageView
     [ width $ V 120
-    , height $ V if isRight then 80 else 100
+    , height $ V 120
     , imageWithFallback $ fetchImage FF_ASSET $ sampleImage isRight state
     ]
-  , linearLayout
-    [ width MATCH_PARENT
+  , case state.data.docType of
+      ST.VEHICLE_PHOTOS -> rightWrongItemViewForVehicelePhotos state isRight
+      ST.PROFILE_PHOTO -> rightWrongItemViewForProfilePhoto state isRight
+      _ -> linearLayout [ 
+              width MATCH_PARENT
+            , height MATCH_PARENT
+            , orientation VERTICAL
+            , padding $ Padding 16 16 0 0
+            , gravity CENTER
+            ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+            , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+            ]
+  ]
+
+rightWrongItemViewForVehicelePhotos :: ST.DocumentCaptureScreenState -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongItemViewForVehicelePhotos state isRight =
+  linearLayout [ 
+      width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
     , padding $ Padding 16 16 0 0
     , gravity CENTER
     ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
-     , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+     , rightWrongItemView isRight $ if isRight then "Full View" else "Avoid people"
+     , rightWrongItemView isRight $ if isRight then "" else "Cropped area"
     ]
-  ]
+
+rightWrongItemViewForProfilePhoto :: ST.DocumentCaptureScreenState -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongItemViewForProfilePhoto state isRight =
+  linearLayout [ 
+      width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 0 0
+    , gravity CENTER
+    ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+     , rightWrongItemView isRight $ if isRight then "Inside Marked Area" else "No closed eyes"
+     , rightWrongItemView isRight $ if isRight then "" else "More than 1 face"
+     , rightWrongItemView isRight $ if isRight then "" else "Outside Marked Area"
+    ]
 
 sampleImage :: Boolean -> ST.DocumentCaptureScreenState -> String
 sampleImage isRight state = 
@@ -206,6 +446,8 @@ sampleImage isRight state =
     ST.FITNESS_CERTIFICATE -> if isRight then "ny_ic_fitness_clear" else "ny_ic_fitness_blur"
     ST.VEHICLE_INSURANCE -> if isRight then "ny_ic_insurance_clear" else "ny_ic_insurance_blur"
     ST.VEHICLE_PUC -> if isRight then "ny_ic_puc_clear" else "ny_ic_puc_blur"
+    ST.VEHICLE_PHOTOS -> if isRight then "ic_vehicle_image_clear" else "ic_vehicle_image_blur"
+    ST.PROFILE_PHOTO -> if isRight then "ny_ic_profile_photo_clear" else "ny_ic_profile_photo_blur"
     _ -> if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
 
 rightWrongItemView :: Boolean -> String -> forall w . PrestoDOM (Effect Unit) w
@@ -215,6 +457,7 @@ rightWrongItemView isRight text' =
   , height WRAP_CONTENT
   , margin $ MarginBottom 5
   , gravity CENTER_VERTICAL
+  , visibility $ boolToVisibility $ not $ DS.null text'
   ][ imageView
     [ width $ V 16
     , height $ V 16
@@ -226,3 +469,9 @@ rightWrongItemView isRight text' =
     , margin $ MarginLeft 8
     ] <> FontStyle.body1 TypoGraphy
   ]
+
+vehicleImageRowItem :: Array {leftImage :: String, leftText :: Maybe API.VehicleImageType ,rightImage :: String, rightText :: Maybe API.VehicleImageType}
+vehicleImageRowItem = [ {leftImage : "ic_vehicle_front_view", leftText : Just API.VehicleFront, rightImage : "ic_vehicle_back_view", rightText : Just API.VehicleBack},
+                        {leftImage : "ic_vehicle_right_view", leftText : Just API.VehicleRight, rightImage : "ic_vehicle_left_view", rightText : Just API.VehicleLeft},
+                        {leftImage : "ic_vehicle_front_interior_view", leftText : Just API.VehicleFrontInterior, rightImage : "ic_vehicle_rear_interior_view", rightText : Just API.VehicleBackInterior},
+                        {leftImage : "ic_vehicle_front_interior_view", leftText : Just API.Odometer_, rightImage : "", rightText : Nothing}]

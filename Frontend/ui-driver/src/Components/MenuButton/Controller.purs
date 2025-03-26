@@ -26,10 +26,12 @@ type State = {
       index :: Int,
       lineVisibility :: Boolean,
       activeBgColor :: Color,
+      inactiveBgColor :: Color,
       activeStrokeColor :: Color,
       inactiveStrokeColor :: Color,
       margin :: Margin,
-      padding :: Padding
+      padding :: Padding,
+      radioSelectedImage :: String
       }
 type Text = { 
     name :: String, 
@@ -49,8 +51,10 @@ config = {
   index : 0 ,
   lineVisibility : false,
   activeBgColor : "",
+  inactiveBgColor : "",
   activeStrokeColor : "",
   inactiveStrokeColor : "",
   margin : MarginBottom 16,
-  padding : Padding 16 16 16 16
+  padding : Padding 16 16 16 16,
+  radioSelectedImage : "ny_ic_radio_selected"
 }

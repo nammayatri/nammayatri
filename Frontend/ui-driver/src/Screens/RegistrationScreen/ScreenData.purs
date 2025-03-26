@@ -34,11 +34,11 @@ import Language.Types (STR(..))
 import Data.Array as DA
 import Common.Types.App as Common
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Services.API as API
 
 initData :: RegistrationScreenState
 initData = {
       data: {
-        activeIndex : 1,
         registerationStepsCabs : [],
         registerationStepsAuto : [],
         registerationStepsBike : [],
@@ -64,7 +64,8 @@ initData = {
         linkedRc : Nothing,
         accessToken : "",
         hvTxnId : Nothing,
-        hvFlowId : Nothing
+        hvFlowId : Nothing,
+        refereeName : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -83,6 +84,8 @@ initData = {
         menuOptions : false,
         manageVehicle : false,
         manageVehicleCategory : Nothing,
-        dontAllowHvRelaunch : false
+        dontAllowHvRelaunch : false,
+        categoryToStepProgressMap : [{category: API.PERMISSION, registrationSteps: [], completionStatus: false}, {category: API.DRIVER, registrationSteps: [], completionStatus: false}, {category: API.VEHICLE, registrationSteps: [], completionStatus: false}, {category: API.TRAINING, registrationSteps: [], completionStatus: false}],
+        selectedDocumentCategory : Nothing
       }
   }

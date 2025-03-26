@@ -23,7 +23,11 @@ window.getMerchantConfig = function () {
     "popupBackground" : "#FFFFFF",
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FFFFFF",
-    "primaryBackground": "#2E3494",
+    "primaryBackground": "#F5F5F5",
+    "primaryButtonBackground" : "#171C8F",
+    "buttonInactiveBackground" : "#D6D6D6",
+    "buttonInactiveTextColor" : "#A1A1A1",
+    "alphaInPrimaryButtonAllowed" : false,
     "showCorporateAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
@@ -110,7 +114,19 @@ window.getMerchantConfig = function () {
       "primaryStrokeColor" : "#2E3494",
       "openMapsStrokeColor" : "#A8AEF0",
       "secondaryStrokeColor" : "#A8AEF0",
-      "openMapsTextColor" : "#A8AEF0"
+      "openMapsTextColor" : "#A8AEF0",
+      "onboardingHeaderTextColor" : "#0F1114",
+      "onboardingHeaderStroke" : "#171C8FB2",
+      "radioInactiveBackground" : "#F5F5F5",
+      "radioActiveBackground" : "#1F171C8F",
+      "editTextFocusedStroke" : "#171C8F",
+      "mobileNumberScreenHeaderText" : "WELCOME_LETS_GET_STARTED",
+      "defaultBackButton" : "ny_ic_arrow_left_black",
+      "highlightedTextColor" : "#171C8F",
+      "radioSelectedImage" : "ny_ic_radio_selected_purple",
+      "radioActiveStroke" : "#1F171C8F",
+      "onboardingStepImgBg" : "#0A171C8F",
+      "welcomeScreenBackground" : "#F9FAFC"
     }
     , "allowAllMobileNumber" : false
     , "acExplanation" : true
@@ -195,6 +211,7 @@ window.getMerchantConfig = function () {
       , "name" : "Namma Yatri"
     }
     , "enableMockLocation" : true
+    , "enableChangeVehicleType" : false
     , "cityConfig" : [
       {
         "cityName" : "Bangalore",
@@ -809,7 +826,7 @@ window.getMerchantConfig = function () {
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       },
-      "enableHvSdk" : true,
+      "enableHvSdk" : false, // change later
       "purpleRideConfig" : {
         "purpleRideConfigForAuto" : {
           "vehicleVariant" : "Auto",

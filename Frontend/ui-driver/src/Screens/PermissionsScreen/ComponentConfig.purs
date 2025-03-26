@@ -40,7 +40,7 @@ primaryButtonConfig state = let
     isEnabled = (state.props.isOverlayPermissionChecked && 
                 state.props.isAutoStartPermissionChecked && 
                 (state.props.androidVersion < 13 || state.props.isNotificationPermissionChecked || not state.data.config.permissions.notification) && 
-                (not state.data.config.permissions.locationPermission || state.props.isLocationPermissionChecked)
+                (not state.data.config.permissions.locationPermission || state.props.isLocationPermissionChecked) 
                 )
     primaryButtonConfig' = config 
       { textConfig
@@ -62,7 +62,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = Color.transparent
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -73,7 +73,7 @@ genericHeaderConfig state = let
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = (getValueToLocalStore MOBILE_NUMBER_KEY)
-      , color = Color.white900
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -89,6 +89,13 @@ appOnboardingNavBarConfig state =
   { genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
-              { text = getString GRANT_PERMISSIONS
-              }
+              { text = "App Permissions"-- getString GRANT_PERMISSIONS
+              , color = state.data.config.themeColors.onboardingHeaderTextColor
+              },
+    navBarOpen = state.props.logoutModalView,
+    rightButton = AppOnboardingNavBar.config.rightButton{
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+    prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ image = state.data.config.themeColors.defaultBackButton }
   }

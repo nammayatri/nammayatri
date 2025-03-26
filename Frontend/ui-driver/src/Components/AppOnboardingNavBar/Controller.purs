@@ -19,7 +19,8 @@ type Config = {
   genericHeaderConfig :: GenericHeader.Config,
   headerTextConfig :: TextConfig,
   appConfig :: AppConfig,
-  rightButton :: TextConfig
+  rightButton :: TextConfig,
+  navBarOpen :: Boolean
 }
 
 type ImageConfig = {
@@ -57,5 +58,6 @@ config = {
     color : Color.white900,
     fontStyle : Style.Heading1
   },
-  appConfig : getAppConfig appConfig
+  appConfig : getAppConfig appConfig,
+  navBarOpen : false
 }
