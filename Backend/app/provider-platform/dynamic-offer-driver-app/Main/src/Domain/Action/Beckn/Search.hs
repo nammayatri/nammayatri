@@ -319,7 +319,7 @@ handler ValidatedDSearchReq {..} sReq = do
         }
 
     processPolicy ::
-      (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
+      (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Maybe Minutes -> Flow DEst.Estimate) ->
       (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
       DFP.FullFarePolicy ->
       ([DEst.Estimate], [DQuote.Quote]) ->
@@ -329,7 +329,7 @@ handler ValidatedDSearchReq {..} sReq = do
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem ->
           case tripCategoryToPricingPolicy fp.tripCategory of
-            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp >>= \est -> pure (est : estimates, quotes)
+            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp Nothing >>= \est -> pure (est : estimates, quotes)
             QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp >>= \quote -> pure (estimates, quote : quotes)
         Nothing -> do
           logError $ "Vehicle service tier not found for " <> show fp.vehicleServiceTier
@@ -640,8 +640,9 @@ buildEstimate ::
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
+  Maybe Minutes ->
   m DEst.Estimate
-buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy waitingTime = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
       isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
   (minFareParams, maxFareParams) <- do
@@ -652,7 +653,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               rideTime = startTime,
               returnTime,
               roundTrip,
-              waitingTime = Nothing,
+              waitingTime = waitingTime,
               stopWaitingTimes = [],
               actualRideDuration = Nothing,
               vehicleAge = Nothing,
