@@ -596,7 +596,7 @@ getDriverFleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbL
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
   merchant <- findMerchantByShortId _merchantShortId
-  listOfAllRc <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing
+  listOfAllRc <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   res <- forM listOfAllRc $ \rc -> do
     rcNo <- decrypt rc.certificateNumber
     (totalEarning, distanceTravelled, totalRides, cancelledRides, duration) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
@@ -633,8 +633,8 @@ calculateTimeDifference diffTime = Common.TotalDuration {..}
     minutes :: Int
     minutes = floor (remainingSeconds / 60)
 
-getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Flow [VehicleRegistrationCertificate]
-getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId mbSearchString = do
+getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [VehicleRegistrationCertificate]
+getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId mbSearchString statusAwareVehicleNo = do
   let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
       offset = fromIntegral $ fromMaybe 0 mbOffset
   case mbVehicleNo of
@@ -642,13 +642,13 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
     Nothing -> do
       case mbStatus of
         -- This Status is Associated with Driver and
-        Just Common.Active -> RCQuery.findAllActiveRCForFleet fleetOwnerId merchantId mbSearchString
-        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId mbSearchString
+        Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
+        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
-        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId mbSearchString
-        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId mbSearchString
-        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId mbSearchString
-        Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId mbSearchString
+        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId
 
 castFleetVehicleStatus :: Maybe Common.FleetVehicleStatus -> Documents.VerificationStatus
 castFleetVehicleStatus = \case
@@ -741,7 +741,7 @@ getDriverFleetDriverVehicleAssociation ::
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
-  listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing
+  listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
   let summary = Common.Summary {totalCount = 10000, count = length filteredItems}
@@ -909,10 +909,11 @@ getDriverFleetVehicleAssociation ::
   Maybe UTCTime ->
   Maybe Common.FleetVehicleStatus ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString = do
+getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString
+  listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
