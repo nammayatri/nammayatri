@@ -1,0 +1,24 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  VehicleInfo: Domain.Types.VehicleInfo
+  Text: Data.Text
+
+module: VehicleInfo
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      response:
+        type: "[VehicleInfo]"
+  - PUT:
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateVehicleInfoReq
+      response:
+        type: APISuccess
+
+types:
+  UpdateVehicleInfoReq:
+    newInfo: "[VehicleInfo]"
