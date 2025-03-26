@@ -64,6 +64,7 @@ updateByPrimaryKey (Domain.Types.OperationHubRequests.OperationHubRequests {..})
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.operationHubId (Kernel.Types.Id.getId operationHubId),
       Se.Set Beam.operatorId (Kernel.Types.Id.getId <$> operatorId),
+      Se.Set Beam.registrationNo registrationNo,
       Se.Set Beam.remarks remarks,
       Se.Set Beam.requestStatus requestStatus,
       Se.Set Beam.requestType requestType,
