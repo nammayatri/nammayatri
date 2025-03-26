@@ -658,6 +658,7 @@ newtype Keymap
   , customer_added_a_stop :: String
   , aadhaar_linking_required_description :: String -> String
   , by_clicking_this_you_will_be_agreeing_to_our_tc :: String
+  , by_clicking_this_you_will_be_agreeing_to_our :: String
   , terms_and_conditions_short :: String
   , otp_sent_to_aadhaar_number :: String
   , enter_six_digit_otp :: String
@@ -1101,6 +1102,7 @@ newtype Keymap
   , subscription_plan_str :: String -> String
   , complete_autopay_later :: String
   , start_earning_in_four_steps :: String
+  , complete_the_steps_to_start_earning :: String
   , complete :: String
   , how_to_upload :: String
   , take_clear_picture_dl :: String
@@ -1119,6 +1121,7 @@ newtype Keymap
   , retake_photo :: String
   , change_city :: String
   , lets_get_you_trip_ready :: String
+  , welcome_lets_get_started :: String
   , got_an_otp :: String
   , driving_license_details :: String
   , vehicle_registration_details :: String
@@ -3733,6 +3736,9 @@ aadhaar_linking_required_description = a
 by_clicking_this_you_will_be_agreeing_to_our_tc :: Proxy "by_clicking_this_you_will_be_agreeing_to_our_tc"
 by_clicking_this_you_will_be_agreeing_to_our_tc = a
 
+by_clicking_this_you_will_be_agreeing_to_our :: Proxy "by_clicking_this_you_will_be_agreeing_to_our"
+by_clicking_this_you_will_be_agreeing_to_our = a
+
 terms_and_conditions_short :: Proxy "terms_and_conditions_short"
 terms_and_conditions_short = a
 
@@ -5062,6 +5068,9 @@ complete_autopay_later = a
 start_earning_in_four_steps :: Proxy "start_earning_in_four_steps"
 start_earning_in_four_steps = a
 
+complete_the_steps_to_start_earning :: Proxy "complete_the_steps_to_start_earning"
+complete_the_steps_to_start_earning = a
+
 complete :: Proxy "complete"
 complete = a
 
@@ -5115,6 +5124,9 @@ change_city = a
 
 lets_get_you_trip_ready :: Proxy "lets_get_you_trip_ready"
 lets_get_you_trip_ready = a
+
+welcome_lets_get_started :: Proxy "welcome_lets_get_started"
+welcome_lets_get_started = a
 
 got_an_otp :: Proxy "got_an_otp"
 got_an_otp = a

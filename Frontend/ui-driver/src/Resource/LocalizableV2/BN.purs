@@ -602,6 +602,7 @@ getBn =
     , customer_added_a_stop: "গ্রাহক একটি স্টপ যোগ করেছে"
     , aadhaar_linking_required_description: (\_ -> "যাত্রী সাথীর জন্য গাড়ি চালানো শুরু করতে, দয়া করে \n আপনার আধার আইডি লিঙ্ক করুন")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "অবিরত ক্লিক করে, আপনি আমাদের &nbsp; <a href=\"\">T&Cs</a>৷"
+    , by_clicking_this_you_will_be_agreeing_to_our: "অবিরত ক্লিক করে, আপনি আমাদের "
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "আপনার আধারের সাথে লিঙ্ক করা মোবাইল নম্বরে OTP পাঠানো হয়েছে"
@@ -1020,6 +1021,7 @@ getBn =
     , subscription_plan_str: (\_ -> "সাবস্ক্রিপশন প্ল্যান")
     , complete_autopay_later: "পরে 'আমার পরিকল্পনা' অনুভাগ থেকে স্বয়ংক্রিয় পেমেন্ট সম্পূর্ণ করুন।"
     , start_earning_in_four_steps: "{} টি সহজ পদক্ষেপে আর্জন শুরু করুন"
+    , complete_the_steps_to_start_earning: "উপার্জন শুরু করতে ধাপগুলি সম্পূর্ণ করুন!"
     , complete: "সমাপ্ত"
     , how_to_upload: "কিভাবে আপলোড করবেন"
     , take_clear_picture_dl: "আপনার ড্রাইভিং লাইসেন্সের ফটো পাশের প্রান্তে পরিষ্কার ছবি তুলুন।"
@@ -1037,6 +1039,7 @@ getBn =
     , confirm_and_upload: "নিশ্চিত করুন এবং আপলোড করুন"
     , retake_photo: "ফটো নতুন তুলুন"
     , lets_get_you_trip_ready: "আসুন আপনি ট্রিপ প্রস্তুত করা যাক!"
+    , welcome_lets_get_started : "স্বাগতম! শুরু করা যাক"
     , got_an_otp: "একটি OTP পেয়েছেন?"
     , driving_license_details: "ড্রাইভিং লাইসেন্সের বিশদ বিবরণ"
     , vehicle_registration_details: "গাড়ির রেজিস্ট্রেশনের বিবরণ"

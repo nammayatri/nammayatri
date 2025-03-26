@@ -48,13 +48,24 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
+vehicleUploadButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
+vehicleUploadButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      {   textConfig
+        { text = getString CONTINUE } 
+        , margin = Margin 16 16 16 16
+        , id = "vehicleUploadButton"
+      }
+  in primaryButtonConfig'
+
 genericHeaderConfig :: ST.DocumentCaptureScreenState -> GenericHeader.Config
 genericHeaderConfig state = let 
   config = GenericHeader.config
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = "#2C2F3A"
+    , background = Color.transparent
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -65,7 +76,7 @@ genericHeaderConfig state = let
     , padding = PaddingVertical 5 5
     , textConfig {
         text = getValueToLocalStore MOBILE_NUMBER_KEY
-      , color = Color.white900
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -80,11 +91,15 @@ appOnboardingNavBarConfig state =
   AppOnboardingNavBar.config
   { genericHeaderConfig = genericHeaderConfig state,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{ 
-      text = getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType]
+      text = getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType],
+      color = state.data.config.themeColors.onboardingHeaderTextColor
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
-      text = getString HELP_FAQ
-      }
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+    navBarOpen = state.props.menuOptions,
+    prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ image = state.data.config.themeColors.defaultBackButton }
   }
 
 validateDocModalState :: ST.DocumentCaptureScreenState -> ValidateDocumentModal.ValidateDocumentModalState
@@ -114,7 +129,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,

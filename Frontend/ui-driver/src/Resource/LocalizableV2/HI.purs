@@ -608,6 +608,7 @@ getHi =
     , customer_added_a_stop: "ग्राहक ने एक स्टॉप जोड़ा"
     , aadhaar_linking_required_description: (\_ -> "यात्री साथी के लिए ड्राइविंग शुरू करने के लिए, कृपया अपना आधार आईडी लिंक करें")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "जारी रखें पर क्लिक करके, आप हमारे &nbsp; से सहमत होते हैं; <a href=\"\">T&Cs</a>"
+    , by_clicking_this_you_will_be_agreeing_to_our: "जारी रखें पर क्लिक करके, आप हमारे से सहमत होते हैं "
     , terms_and_conditions_short: "नियम एवं शर्तें"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "आपके आधार से जुड़े मोबाइल नंबर पर ओटीपी भेजा गया"
@@ -1045,6 +1046,7 @@ getHi =
     , subscription_plan_str: (\_ -> "सदस्यता योजना")
     , complete_autopay_later: "बाद में 'मेरी योजना' सेक्शन से स्वत: भुगतान पूरा करें।"
     , start_earning_in_four_steps: "{} सरल कदमों में कमाई शुरू करें"
+    , complete_the_steps_to_start_earning: "कमाई शुरू करने के लिए चरणों को पूरा करें!"
     , complete: "पूरा"
     , how_to_upload: "अपलोड कैसे करें"
     , take_clear_picture_dl: "अपने ड्राइविंग लाइसेंस के फोटो साइड का स्पष्ट चित्र एक समतल सतह पर लें।"
@@ -1062,6 +1064,7 @@ getHi =
     , confirm_and_upload: "पुष्टि करें और अपलोड करें"
     , retake_photo: "फोटो फिर से लें"
     , lets_get_you_trip_ready: "आइए हम आपकी यात्रा के लिए तैयार हों!"
+    , welcome_lets_get_started : "स्वागत है! चलिए शुरू करते हैं"
     , got_an_otp: "OTP मिला?"
     , driving_license_details: "ड्राइविंग लाइसेंस विवरण"
     , vehicle_registration_details: "वाहन पंजीकरण विवरण"

@@ -579,6 +579,7 @@ getKn =
     , customer_added_a_stop: "ಗ್ರಾಹಕರು ಒಂದು ನಿಲ್ದಾಣವನ್ನು ಸೇರಿಸಿದರು"
     , aadhaar_linking_required_description: (\_ -> "ಯಾತ್ರಿ ಸತಿಗೆ ಚಾಲನೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು, ದಯವಿಟ್ಟು \n ನಿಮ್ಮ ಆಧಾರ್ ಐಡಿಯನ್ನು ಲಿಂಕ್ ಮಾಡಿ")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "ಮುಂದುವರಿಸು ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ &nbsp; <a href=\"\">T&Cs</a>"
+    , by_clicking_this_you_will_be_agreeing_to_our: "ಮುಂದುವರಿಸು ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ "
     , terms_and_conditions_short: "T&C ಗೆ ಸಮ್ಮತಿಸುತ್ತೀರಿ"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "ನಿಮ್ಮ ಆಧಾರ್‌ನೊಂದಿಗೆ ಲಿಂಕ್ ಮಾಡಲಾದ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ OTP ಕಳುಹಿಸಲಾಗಿದೆ"
@@ -1017,6 +1018,7 @@ getKn =
     , subscription_plan_str: (\_ -> "ಚಂಚಲೀಕರಣ ಯೋಜನೆ")
     , complete_autopay_later: "ನಂತರ 'ನನ್ನ ಯೋಜನೆ' ವಿಭಾಗದಿಂದ ಸ್ವಯಂಚಾಲಿತ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ."
     , start_earning_in_four_steps: "{} ಸರಳ ಹಂತಗಳಿಂದ ಗಳಿಸಲು ಪ್ರಾರಂಭಿಸಿ"
+    , complete_the_steps_to_start_earning: "ಗಳಿಕೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ!"
     , complete: "ಪೂರ್ಣಗೊಳಿಸಿ"
     , how_to_upload: "ಹೇಗೆ ಅಪ್ಲೋಡ್ ಮಾಡಬೇಕು"
     , take_clear_picture_dl: "ಸಮತಲ ಸಾಮಗ್ರಿಯ ಮೇಲೆ ನಿಮ್ಮ ಡ್ರೈವಿಂಗ್ ಲೈಸೆನ್ಸ್ ಯಾವಾಗಲೂ ಸ್ಪಷ್ಟ ಚಿತ್ರವನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ."
@@ -1034,6 +1036,7 @@ getKn =
     , confirm_and_upload: "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
     , retake_photo: "ಫೋಟೊ ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ"
     , lets_get_you_trip_ready: "ನಿಮ್ಮ ಪ್ರವಾಸವನ್ನು ಸಿದ್ಧಗೊಳಿಸೋಣ!"
+    , welcome_lets_get_started : "ಸ್ವಾಗತ! ಪ್ರಾರಂಭಿಸೋಣ."
     , got_an_otp: "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?"
     , driving_license_details: "ಚಾಲನಾ ಪರವಾನಗಿ ವಿವರಗಳು"
     , vehicle_registration_details: "ವಾಹನ ನೋಂದಣಿ ವಿವರಗಳು"

@@ -719,6 +719,7 @@ getProxy str = case str of
   CUSTOMER_ADDED_A_STOP -> \a -> a @~ customer_added_a_stop
   AADHAAR_LINKING_REQUIRED_DESCRIPTION arg1 -> \a -> (a @~ aadhaar_linking_required_description) arg1
   BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC -> \a -> a @~ by_clicking_this_you_will_be_agreeing_to_our_tc
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR -> \a -> a @~ by_clicking_this_you_will_be_agreeing_to_our
   TERMS_AND_CONDITIONS_SHORT -> \a -> a @~ terms_and_conditions_short
   OTP_SENT_TO_AADHAAR_NUMBER -> \a -> a @~ otp_sent_to_aadhaar_number
   ENTER_SIX_DIGIT_OTP -> \a -> a @~ enter_six_digit_otp
@@ -1162,6 +1163,7 @@ getProxy str = case str of
   SUBSCRIPTION_PLAN_STR arg1 -> \a -> (a @~ subscription_plan_str) arg1
   COMPLETE_AUTOPAY_LATER -> \a -> a @~ complete_autopay_later
   START_EARNING_IN_FOUR_STEPS -> \a -> a @~ start_earning_in_four_steps
+  COMPLETE_THE_STEPS_TO_START_EARNING -> \a -> a @~ complete_the_steps_to_start_earning
   COMPLETE -> \a -> a @~ complete
   HOW_TO_UPLOAD -> \a -> a @~ how_to_upload
   TAKE_CLEAR_PICTURE_DL -> \a -> a @~ take_clear_picture_dl
@@ -1180,6 +1182,7 @@ getProxy str = case str of
   RETAKE_PHOTO -> \a -> a @~ retake_photo
   CHANGE_CITY -> \a -> a @~ change_city
   LETS_GET_YOU_TRIP_READY -> \a -> a @~ lets_get_you_trip_ready
+  WELCOME_LETS_GET_STARTED -> \a -> a @~ welcome_lets_get_started
   GOT_AN_OTP -> \a -> a @~ got_an_otp
   DRIVING_LICENSE_DETAILS -> \a -> a @~ driving_license_details
   VEHICLE_REGISTRATION_DETAILS -> \a -> a @~ vehicle_registration_details

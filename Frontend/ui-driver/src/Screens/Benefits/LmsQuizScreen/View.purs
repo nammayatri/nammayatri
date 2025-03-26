@@ -88,6 +88,7 @@ view :: forall w. (Action -> Effect Unit) -> LmsQuizScreenState -> PrestoDOM (Ef
 view push state =
   let areTotalQuestionsDone = length state.data.questions == state.props.currentQuestionIndex
   in
+  Anim.screenAnimation $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -98,7 +99,7 @@ view push state =
      , height $ MATCH_PARENT
      , orientation VERTICAL
      , background Color.white900
-     ]([ ] <> if not areTotalQuestionsDone then 
+     ]([] <> if not areTotalQuestionsDone then 
                 [
                    customHeaderView push state
                 ,  separatorView push state
@@ -124,7 +125,6 @@ view push state =
 customHeaderView :: forall w. (Action -> Effect Unit) -> LmsQuizScreenState -> PrestoDOM (Effect Unit) w
 customHeaderView push state =
   let moduleName = maybe "" (\moduleInfo -> moduleInfo ^. _name) state.props.selectedTranslatedModule
-      sw = (screenWidth unit) - 305
   in
   linearLayout
   [ width $ MATCH_PARENT
@@ -146,17 +146,16 @@ customHeaderView push state =
         ]
       , textView $
         [ text $ moduleName <> " " <> (StringsV2.getString state.props.selectedLanguage QUIZ) 
+        , weight 1.0
         , ellipsize true
         , width $ V 240
         , maxLines 1
         , color Color.black900
         ] <> (FontStyle.h3 LanguageStyle)
-      , linearLayout [ weight 1.0][]
       , linearLayout
-        [ width $ V sw
+        [ width WRAP_CONTENT
         , height $ WRAP_CONTENT
         , orientation HORIZONTAL
-        , gravity CENTER
         , onClick push $ const ChangeLanguage
         ][ imageView
            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_language_logo"
@@ -169,7 +168,7 @@ customHeaderView push state =
            , color Color.blue800
            , ellipsize true
            , maxLines 1
-           , width $ V (sw - 19)
+           , width WRAP_CONTENT
            ] <> FontStyle.body1 LanguageStyle
         ]
      ]

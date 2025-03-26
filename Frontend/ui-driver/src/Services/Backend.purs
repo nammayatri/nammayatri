@@ -904,6 +904,13 @@ driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam) = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+getDriverReferralDetails :: ReferDriverReq -> Flow GlobalState (Either ErrorResponse DriverReferralDetailsRes)
+getDriverReferralDetails payload = do
+     headers <- getHeaders "" false
+     withAPIResult (EP.getDriverReferralDetails "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
 referDriver :: ReferDriverReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 referDriver payload = do
      headers <- getHeaders "" false
@@ -911,10 +918,11 @@ referDriver payload = do
     where
         unwrapResponse (x) = x
 
-makeReferDriverReq :: String -> ReferDriverReq
-makeReferDriverReq referralNumber = ReferDriverReq
+makeReferDriverReq :: String -> Maybe String -> ReferDriverReq
+makeReferDriverReq referralNumber role = ReferDriverReq
     {
-      "value" : referralNumber
+      "value" : referralNumber,
+      "role" : role
     }
 
 getDriverProfileStatsBT :: DriverProfileStatsReq -> FlowBT String DriverProfileStatsResp

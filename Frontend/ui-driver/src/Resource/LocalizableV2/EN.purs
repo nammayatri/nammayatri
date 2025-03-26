@@ -610,6 +610,7 @@ getEn =
     , customer_added_a_stop: "Customer added a stop!"
     , aadhaar_linking_required_description: (\_ -> "To start driving for our app, please \n link your Aadhaar ID")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "By clicking Continue, you agree to our &nbsp; <a href=\"\">T&Cs</a>"
+    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue, you agree to our "
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "OTP sent to mobile number linked with your aadhar"
@@ -1051,6 +1052,7 @@ getEn =
     , subscription_plan_str: (\_ -> "Subscription Plan")
     , complete_autopay_later: "Complete Autopay from ‘My Plan’ section later."
     , start_earning_in_four_steps: "Start earning in {} simple steps"
+    , complete_the_steps_to_start_earning: "Complete the steps to start earning!"
     , complete: "Complete"
     , how_to_upload: "How to upload"
     , take_clear_picture_dl: "Take a clear picture of the photo side of your Driving Licence on a flat surface."
@@ -1066,6 +1068,7 @@ getEn =
     , retake_rc: "\nPlease retake photo with RC inside marked area"
     , retake_dl: "\nPlease retake photo with DL inside marked area"
     , lets_get_you_trip_ready: "Let's get you trip ready!"
+    , welcome_lets_get_started : "Welcome! Let’s get started"
     , got_an_otp: "Got an OTP?"
     , driving_license_details: "Driving Licence Details"
     , vehicle_registration_details: "Vehicle Registration Details"

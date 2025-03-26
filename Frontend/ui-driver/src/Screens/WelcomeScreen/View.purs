@@ -40,7 +40,7 @@ view push state =
         , gravity CENTER
         , onBackPressed push $ const BackPressed
         , afterRender push $ const AfterRender
-        , background "#FFFAED"
+        , background state.data.config.themeColors.welcomeScreenBackground
         , padding $ PaddingBottom 24
         ][  imageView
             [ height $ V 100

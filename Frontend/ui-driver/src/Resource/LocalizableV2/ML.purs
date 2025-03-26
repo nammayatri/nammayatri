@@ -582,6 +582,7 @@ getMl =
     , customer_added_a_stop: "ഉപഭോക്താവ് ഒരു സ്റ്റോപ്പ് ചേർത്തു"
     , aadhaar_linking_required_description: (\_ -> "യാത്രി സതിക്കായി ഡ്രൈവിംഗ് ആരംഭിക്കാൻ, ദയവായി \n നിങ്ങളുടെ ആധാർ ഐഡി ലിങ്ക് ചെയ്യുക")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "തുടരുക ക്ലിക്കുചെയ്യുന്നതിലൂടെ, നിങ്ങൾ ഞങ്ങളുടെ &nbsp; <a href=\"\">T&Cs</a>"
+    , by_clicking_this_you_will_be_agreeing_to_our : "തുടരുക ക്ലിക്കുചെയ്യുന്നതിലൂടെ, നിങ്ങൾ ഞങ്ങളുടെ "
     , terms_and_conditions_short: "T&C"
     , tc_tail: "അംഗീകരിക്കുന്നു"
     , otp_sent_to_aadhaar_number: "നിങ്ങളുടെ ആധാറുമായി ലിങ്ക് ചെയ്‌തിരിക്കുന്ന മൊബൈൽ നമ്പറിലേക്ക് OTP അയച്ചു"
@@ -987,6 +988,7 @@ getMl =
     , subscription_plan_str: (\_ -> "സബ്സ്ക്രിപ്ഷൻ പ്ലാൻ")
     , complete_autopay_later: "ശേഷി ഓട്ടോപേ പൂർത്തിയാക്കുക 'എന്റെ പ്ലാൻ' വിഭാഗത്തിൽ ശേഷി ഓട്ടോപേ പൂർത്തിയാക്കുക"
     , start_earning_in_four_steps: "{} നാലാംഘട്ടത്തിൽ സംരംഭിക്കാൻ തുടങ്ങുക"
+    , complete_the_steps_to_start_earning: "സമ്പാദിക്കാൻ തുടങ്ങാനുള്ള ഘട്ടങ്ങൾ പൂർത്തിയാക്കുക!"
     , complete: "പൂർത്തിയാക്കുക"
     , how_to_upload: "അപ്ലോഡ് എങ്ങനെ"
     , take_clear_picture_dl: "ഫ്ലാറ്റ് ഉപരിതലത്തിൽ നിങ്ങളുടെ ഡ്രൈവിംഗ് ലൈസൻസിന്റെ ഫോട്ടോ ഭാഗത്തെ ശുദ്ധമായ ചിത്രം എടുക്കുക"
@@ -1004,6 +1006,7 @@ getMl =
     , confirm_and_upload: "സ്ഥിരീകരിക്കുക മറ്റും അപ്ലോഡ് ചെയ്യുക"
     , retake_photo: "ഫോട്ടോ പുനഃതെളിക്കുക"
     , lets_get_you_trip_ready: "നിങ്ങളുടെ യാത്ര തയ്യാറാക്കാം!"
+    , welcome_lets_get_started : "സ്വാഗതം! നമുക്ക് ആരംഭിക്കാം."
     , got_an_otp: "ഒരു OTP കിട്ടിയോ?"
     , driving_license_details: "ഡ്രൈവിംഗ് ലൈസൻസ് വിശദാംശങ്ങൾ"
     , vehicle_registration_details: "വാഹന രജിസ്ട്രേഷൻ വിശദാംശങ്ങൾ"

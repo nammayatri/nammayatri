@@ -62,7 +62,6 @@ primaryButtonConfig state = let
                            else getString UPLOAD_DRIVING_LICENSE
       }
       , width = MATCH_PARENT
-      , background = Color.black900
       , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
       , height = V 50
@@ -167,13 +166,17 @@ appOnboardingNavBarConfig state =
   { genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
-              { text = if state.props.openHowToUploadManual 
+              { color = state.data.config.themeColors.onboardingHeaderTextColor,
+                text = if state.props.openHowToUploadManual 
                         then getString UPLOAD_DRIVING_LICENSE 
                         else getString DRIVING_LICENSE_DETAILS
               },
     rightButton = AppOnboardingNavBar.config.rightButton{
-      text = getString HELP_FAQ
-      }
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+    navBarOpen = state.props.menuOptions,
+    prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ image = state.data.config.themeColors.defaultBackButton }
   }
 
 genericHeaderConfig :: ST.UploadDrivingLicenseState -> GenericHeader.Config
@@ -182,7 +185,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = Color.transparent
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -193,7 +196,7 @@ genericHeaderConfig state = let
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = (getValueToLocalStore MOBILE_NUMBER_KEY)
-      , color = Color.white900
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -208,7 +211,7 @@ optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,

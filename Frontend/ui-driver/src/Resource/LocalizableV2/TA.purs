@@ -580,6 +580,7 @@ getTa =
     , customer_added_a_stop: "வாடிக்கையாளர் ஒரு நிறுத்தம் சேர்க்கப்பட்டது"
     , aadhaar_linking_required_description: (\_ -> "யாத்ரி சதிக்கு வாகனம் ஓட்டத் தொடங்க, தயவுசெய்து \n உங்கள் ஆதார் ஐடியை இணைக்கவும்")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "தொடரவும் என்பதைக் கிளிக் செய்வதன் மூலம், எங்களின் &nbsp; <a href=\"\">T&C</a> &nbsp; ஐ ஒப்புக்கொள்கிறீர்கள்"
+    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue, you agree to our "
     , terms_and_conditions_short: "T&C"
     , tc_tail: "ஐ ஏற்கிறீர்கள்"
     , otp_sent_to_aadhaar_number: "OTP உங்கள் ஆதாருடன் இணைக்கப்பட்ட மொபைல் எண்ணுக்கு அனுப்பப்பட்டது"
@@ -1020,6 +1021,7 @@ getTa =
     , subscription_plan_str: (\_ -> "சந்தா திட்டம்")
     , complete_autopay_later: "பின்னணி செய்கிறது முழுமையாக 'எனது திட்டம்' பிரிவிலிருந்து."
     , start_earning_in_four_steps: "{} எளிய படிகளில் சம்பாதிக்கவும்"
+    , complete_the_steps_to_start_earning: "சம்பாதிக்கத் தொடங்க படிகளை முடிக்கவும்!"
     , complete: "நிறைவு"
     , how_to_upload: "எப்படி பதிவேற்ற வேண்டும்"
     , take_clear_picture_dl: "சமமான மேற்பரப்பில் உங்கள் ஓட்டுநர் உரிமத்தின் புகைப்படத்தைத் தெளிவாக எடுக்கவும்."
@@ -1037,6 +1039,7 @@ getTa =
     , confirm_and_upload: "உறுதிப்படுத்தி பதிவேற்று"
     , retake_photo: "புகைப்படத்தை மீண்டும் எடு"
     , lets_get_you_trip_ready: "உங்கள் பயணத்தை தயார் செய்வோம்!"
+    , welcome_lets_get_started : "வரவேற்கிறோம்! தொடங்குவோம்"
     , got_an_otp: "OTP கிடைத்ததா?"
     , driving_license_details: "ஓட்டுநர் உரிம விவரங்கள்"
     , vehicle_registration_details: "வாகனப் பதிவு விவரங்கள்"

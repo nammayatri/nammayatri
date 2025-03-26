@@ -399,6 +399,20 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | AADHAAR_PAN_SELFIE_UPLOAD RegistrationScreenState HyperVergeKycResult
                                 | GO_TO_APP_UPDATE_POPUP_SCREEN RegistrationScreenState
 
+data REGISTRATION_SCREEN_V2_OUTPUT = UPLOAD_DRIVER_LICENSE_V2 RegistrationScreenState
+                                | UPLOAD_VEHICLE_DETAILS_V2 RegistrationScreenState (Array String)
+                                | PERMISSION_SCREEN_V2 RegistrationScreenState
+                                | LOGOUT_FROM_REGISTERATION_SCREEN_V2
+                                | GO_TO_ONBOARD_SUBSCRIPTION_V2 RegistrationScreenState
+                                | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN_V2 RegistrationScreenState
+                                | REFRESH_REGISTERATION_SCREEN_V2
+                                | REFERRAL_CODE_SUBMIT_V2 RegistrationScreenState
+                                | GET_DRIVER_REFERRAL_DETAILS RegistrationScreenState
+                                | DOCUMENT_CAPTURE_FLOW_V2 RegistrationScreenState RegisterationStep
+                                | SELECT_LANG_FROM_REGISTRATION_V2
+                                | AADHAAR_PAN_SELFIE_UPLOAD_V2 RegistrationScreenState HyperVergeKycResult
+                                | GO_TO_APP_UPDATE_POPUP_SCREEN_V2 RegistrationScreenState
+
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
                                           | VALIDATE_DATA_API UploadDrivingLicenseState 
                                           | GOTO_VEHICLE_DETAILS_SCREEN 
@@ -617,6 +631,7 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | LOGOUT_FROM_DOC_CAPTURE 
                                       | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
+                                      | UPLOAD_VEHICLE_API DocumentCaptureScreenState String 
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
 

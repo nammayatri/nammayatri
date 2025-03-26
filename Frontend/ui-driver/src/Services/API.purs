@@ -1267,7 +1267,10 @@ instance encodeDriverRegistrationStatusResp :: Encode DriverRegistrationStatusRe
 
 
 -- ReferDriver API request, response types
-data ReferDriverReq = ReferDriverReq { value :: String}
+data ReferDriverReq = ReferDriverReq {
+  value :: String,
+  role :: Maybe String
+  }
 
 
 instance makeReferDriverReq :: RestEndpoint ReferDriverReq where
@@ -1280,6 +1283,18 @@ instance standardEncodeReferDriverReq :: StandardEncode ReferDriverReq where sta
 instance decodeReferDriverReq :: Decode ReferDriverReq where decode = defaultDecode
 instance encodeReferDriverReq :: Encode ReferDriverReq where encode = defaultEncode
 
+-- DriverReferralDetails API response type
+data DriverReferralDetailsRes = DriverReferralDetailsRes
+  { driverId :: String,
+    name :: Maybe String,
+    role :: String
+  }
+
+derive instance genericDriverReferralDetailsRes :: Generic DriverReferralDetailsRes _
+instance showDriverReferralDetailsRes :: Show DriverReferralDetailsRes where show = genericShow
+instance standardEncodeDriverReferralDetailsRes :: StandardEncode DriverReferralDetailsRes where standardEncode (DriverReferralDetailsRes req) = standardEncode req
+instance decodeDriverReferralDetailsRes :: Decode DriverReferralDetailsRes where decode = defaultDecode
+instance encodeDriverReferralDetailsRes :: Encode DriverReferralDetailsRes where encode = defaultEncode
 
 -- DriverProfileStats API request, response types
 
@@ -4387,8 +4402,24 @@ newtype OnboardingDoc = OnboardingDoc {
   disableWarning :: Maybe String,
   isHidden :: Boolean,
   dependencyDocumentType :: Array String,
-  rcNumberPrefixList :: Array String
+  rcNumberPrefixList :: Array String,
+  documentCategory :: Maybe DocumentCategory
 }
+
+data DocumentCategory = DRIVER | VEHICLE | PERMISSION | TRAINING | NONE
+
+derive instance genericDocumentCategory :: Generic DocumentCategory _
+instance showDocumentCategory :: Show DocumentCategory where show = genericShow
+instance decodeDocumentCategory :: Decode DocumentCategory
+  where decode body = case unsafeFromForeign body of
+                  "Vehicle"       -> except $ Right VEHICLE
+                  "Driver"        -> except $ Right DRIVER
+                  "Permission"    -> except $ Right PERMISSION
+                  "Training"      -> except $ Right TRAINING
+                  _               -> except $ Right NONE                  
+instance encodeDocumentCategory :: Encode DocumentCategory where encode = defaultEnumEncode
+instance standardEncodeDocumentCategory :: StandardEncode DocumentCategory where standardEncode _ = standardEncode {}
+instance eqDocumentCategory :: Eq DocumentCategory where eq = genericEq
 
 instance makeOnboardingDocsReq :: RestEndpoint OnboardingDocsReq where
   makeRequest reqBody@(OnboardingDocsReq makeAadhaarSelfieMandatory onlyVehicle) headers = defaultMakeRequestWithoutLogs GET (EP.onBoardingConfigs makeAadhaarSelfieMandatory onlyVehicle) headers reqBody Nothing
@@ -5081,6 +5112,14 @@ instance standardEncodeHotspotsDetails :: StandardEncode HotspotsDetails where s
 instance showHotspotsDetails :: Show HotspotsDetails where show = genericShow
 instance decodeHotspotsDetails :: Decode HotspotsDetails where decode = defaultDecode
 instance encodeHotspotsDetails :: Encode HotspotsDetails where encode = defaultEncode
+
+data VehicleImageType = VehicleLeft | VehicleRight | VehicleFront | VehicleBack | VehicleFrontInterior | VehicleBackInterior | Odometer_
+
+derive instance genericVehicleImageType :: Generic VehicleImageType _
+instance showVehicleImageType :: Show VehicleImageType where show = genericShow
+instance decodeVehicleImageType :: Decode VehicleImageType where decode = defaultEnumDecode
+instance encodeVehicleImageType :: Encode VehicleImageType where encode = defaultEnumEncode
+instance standardEncodeVehicleImageType :: StandardEncode VehicleImageType where standardEncode _ = standardEncode {}
 
 data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String String String
 

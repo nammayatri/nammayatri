@@ -11,6 +11,10 @@ config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , primaryButtonBackground : "#2C2F3A"
+  , buttonInactiveBackground : "#2C2F3A"
+  , buttonInactiveTextColor : "#FCC32C"
+  , alphaInPrimaryButtonAllowed : true
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
@@ -1044,6 +1048,7 @@ config =
             -- }
         ]
   , enableMockLocation : false
+  , enableChangeVehicleType : true
   , permissions : {
       locationPermission : false,
       notification : true
@@ -1063,9 +1068,22 @@ config =
     goOnlineColor : "#53BB6F",
     navBarBackground : "#FFFFFF",
     primaryStrokeColor : "#E5E7EB",
-    openMapsStrokeColor : "",
+    openMapsStrokeColor : "#00FFFFFF",
     secondaryStrokeColor : "#B9BABE",
-    openMapsTextColor : "#FFFFFF"
+    openMapsTextColor : "#FFFFFF",
+    onlineStatusColor : "#53BB6F",
+    onboardingHeaderTextColor : "#FFFFFF",
+    onboardingHeaderStroke : "#FFFFFF",
+    radioInactiveBackground : "#FFFFFF",
+    radioActiveBackground : "#f4F7FF",
+    editTextFocusedStroke : "#e4e4e4",
+    mobileNumberScreenHeaderText : "LETS_GET_YOU_TRIP_READY",
+    defaultBackButton : "ny_ic_chevron_left_white",
+    highlightedTextColor : "#2194FF",
+    radioSelectedImage : "ny_ic_radio_selected",
+    radioActiveStroke : "#0066FF",
+    onboardingStepImgBg : "#f4F7FF",
+    welcomeScreenBackground : "#FFFAED"
   }
   , primaryButtonConfig : defaultPrimaryButtonConfig
   , fontConfig : defaultFontConfig
