@@ -1093,7 +1093,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
         let dailyPayoutCount = fromMaybe 0 dailyPayoutCount_ -- for referredBy customer
             isDeviceIdValid = (length personsWithSameDeviceId == 1) -- deviceId of new customer should be unique
             isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
-            payoutProgramThresholdChecks = (dailyPayoutCount <= riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations <= riderConfig.payoutReferralThresholdPerMonth) && isDeviceIdValid
+            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations < riderConfig.payoutReferralThresholdPerMonth) && isDeviceIdValid
         when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
@@ -1110,9 +1110,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             case isReferredByPerson of
               True -> do
                 QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
-                expirationPeriodForDay <- getExpirationSeconds riderConfig.timeDiffFromUtc
-                let dailyPayoutCountKey = getDailyPayoutCountKey person.id.getId
-                Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
+                setPayoutCountForReferree person.id.getId dailyPayoutCount
               False -> QPersonStats.updateReferredByEarningsPayoutStatus (Just DPS.Processing) person.id
             phoneNo <- mapM decrypt person.mobileNumber
             emailId <- mapM decrypt person.email
@@ -1126,6 +1124,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
         Nothing ->
           when isReferredByPerson $ do
+            setPayoutCountForReferree person.id.getId dailyPayoutCount
             QPersonStats.updateEarningsAndActivations (referredByPersonStats.referralEarnings + amount) (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
 
     getPersonStats personId = do
@@ -1171,6 +1170,11 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
           nextLocalMidnight = UTCTime (addDays 1 (utctDay localTime)) 0
           secondsUntilExpiration = round $ diffUTCTime nextLocalMidnight localTime
       pure secondsUntilExpiration
+
+    setPayoutCountForReferree personId dailyPayoutCount = do
+      expirationPeriodForDay <- getExpirationSeconds riderConfig.timeDiffFromUtc
+      let dailyPayoutCountKey = getDailyPayoutCountKey personId
+      Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
