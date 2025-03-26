@@ -1686,3 +1686,21 @@ instance IsHTTPError WMBErrors where
     AlreadyOnActiveTripWithAnotherBadge _ -> E400
 
 instance IsAPIError WMBErrors
+
+newtype OperationHubError
+  = OperationHubDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OperationHubError
+
+instance IsBaseError OperationHubError where
+  toMessage = \case
+    OperationHubDoesNotExist operationHubId -> Just $ "No operation hub matches passed data \"" <> show operationHubId <> "\" not exist."
+
+instance IsHTTPError OperationHubError where
+  toErrorCode = \case
+    OperationHubDoesNotExist _ -> "OPERATION_HUB_DOES_NOT_EXIST"
+  toHttpCode = \case
+    OperationHubDoesNotExist _ -> E400
+
+instance IsAPIError OperationHubError

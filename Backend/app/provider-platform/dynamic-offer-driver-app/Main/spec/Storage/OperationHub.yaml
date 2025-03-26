@@ -38,6 +38,7 @@ OperationHubRequests:
     operationHubId : Id OperationHub
     requestType : RequestType
     driverId: Id Person
+    registrationNo: Text
     requestStatus: RequestStatus
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
