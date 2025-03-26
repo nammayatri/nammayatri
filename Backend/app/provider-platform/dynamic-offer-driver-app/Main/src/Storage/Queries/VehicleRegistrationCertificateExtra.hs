@@ -324,8 +324,8 @@ updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]
 
-findAllByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
-findAllByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchString mbSearchStringHash = do
+findAllValidRcByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
+findAllValidRcByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchString mbSearchStringHash = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -338,6 +338,7 @@ findAllByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId 
                   ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId')
                         B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                        B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                         B.&&?. ( maybe
                                    (B.sqlBool_ $ B.val_ True)
                                    (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
