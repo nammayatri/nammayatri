@@ -112,15 +112,15 @@ sendIssue (personId, merchantId) request = do
   return Success
 
 safetyCheckSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, MonadFlow m) => (Id Person.Person, Id Merchant.Merchant) -> SafetyCheckSupportReq -> m SendIssueRes
-safetyCheckSupport (personId, merchantId) req = do
+safetyCheckSupport (personId, _merchantId) req = do
   ride <- runInReplica $ QRide.findActiveByRBId req.bookingId >>= fromMaybeM (RideDoesNotExist "")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let moCityId = person.merchantOperatingCityId
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
   riderConfig <- QRC.findByMerchantOperatingCityId moCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
   void $ QRide.updateSafetyCheckStatus ride.id $ Just req.isSafe
-  ticketRequest <- ticketReq ride person phoneNumber req.description merchant.kaptureDisposition riderConfig.kaptureQueue
+  let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+  ticketRequest <- ticketReq ride person phoneNumber req.description riderConfig.kaptureConfig.disposition kaptureQueue
   if not req.isSafe && riderConfig.enableSupportForSafety
     then do
       logDebug $ "Safety req from frontend is not safe and creating ticket : " <> show req.isSafe
