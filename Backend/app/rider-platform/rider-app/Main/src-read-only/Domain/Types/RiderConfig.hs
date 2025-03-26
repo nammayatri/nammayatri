@@ -61,6 +61,8 @@ data RiderConfig = RiderConfig
     payoutReferralProgram :: Kernel.Prelude.Bool,
     payoutReferralStartDate :: Kernel.Prelude.UTCTime,
     permissibleModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
+    payoutReferralThresholdPerDay :: Kernel.Prelude.Int,
+    payoutReferralThresholdPerMonth :: Kernel.Prelude.Int,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,

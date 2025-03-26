@@ -51,6 +51,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
 import Domain.Types.SafetySettings
+import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -77,6 +78,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
@@ -126,7 +128,8 @@ data ProfileRes = ProfileRes
     referralEarnings :: Maybe HighPrecMoney,
     referredByEarnings :: Maybe HighPrecMoney,
     referralAmountPaid :: Maybe HighPrecMoney,
-    cancellationRate :: Maybe Int
+    cancellationRate :: Maybe Int,
+    isPayoutEnabled :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -250,9 +253,10 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc
+  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -276,6 +280,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           referralEarnings = Just personStats.referralEarnings,
           referredByEarnings = Just personStats.referredByEarnings,
           referralAmountPaid = Just personStats.referralAmountPaid,
+          isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           cancellationRate = cancellationPerc,
           ..
         }
