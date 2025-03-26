@@ -12,10 +12,12 @@ VehicleInfo:
   constraints:
     id: PrimaryKey
   queries:
-    findAllByVehicleId:
+    findAllByRcId:
       kvFunction: findAllWithKV
       where: rcId
     updateVehicleInfo:
       kvFunction: updateWithKV
       params: [questionName, question, answer]
       where: id
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

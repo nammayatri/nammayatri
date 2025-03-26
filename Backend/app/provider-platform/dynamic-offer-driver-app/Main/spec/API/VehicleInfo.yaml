@@ -21,4 +21,5 @@ apis:
 
 types:
   UpdateVehicleInfoReq:
-    newInfo: "[VehicleInfo]"
+    - recordType: NewType
+    - newInfo: "[VehicleInfo]"

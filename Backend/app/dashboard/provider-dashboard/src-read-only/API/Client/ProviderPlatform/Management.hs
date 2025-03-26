@@ -19,6 +19,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.System
+import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
 import Kernel.Prelude
@@ -42,7 +43,8 @@ data ManagementAPIs = ManagementAPIs
     payoutDSL :: API.Types.ProviderPlatform.Management.Payout.PayoutAPIs,
     revenueDSL :: API.Types.ProviderPlatform.Management.Revenue.RevenueAPIs,
     rideDSL :: API.Types.ProviderPlatform.Management.Ride.RideAPIs,
-    systemDSL :: API.Types.ProviderPlatform.Management.System.SystemAPIs
+    systemDSL :: API.Types.ProviderPlatform.Management.System.SystemAPIs,
+    vehicleInfoDSL :: API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIs
   }
 
 mkManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> ManagementAPIs)
@@ -62,9 +64,10 @@ mkManagementAPIs merchantId city token = do
   let revenueDSL = API.Types.ProviderPlatform.Management.Revenue.mkRevenueAPIs revenueClientDSL
   let rideDSL = API.Types.ProviderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let systemDSL = API.Types.ProviderPlatform.Management.System.mkSystemAPIs systemClientDSL
+  let vehicleInfoDSL = API.Types.ProviderPlatform.Management.VehicleInfo.mkVehicleInfoAPIs vehicleInfoClientDSL
   (ManagementAPIs {..})
   where
-    bookingClientDSL :<|> coinsConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    bookingClientDSL :<|> coinsConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.
