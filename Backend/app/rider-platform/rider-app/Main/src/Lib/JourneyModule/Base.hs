@@ -153,21 +153,22 @@ getAllLegsStatus ::
   DJourney.Journey ->
   m [JL.JourneyLegState]
 getAllLegsStatus journey = do
-  allLegsRawData <- getJourneyLegs journey.id
-  riderLastPoints <- getLastThreePoints journey.id
-  (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
-  when
-    ( all
-        ( \st -> case st of
-            JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
-            JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
-        )
-        allLegsState
-        && journey.status /= DJourney.CANCELLED
-    )
-    $ do
-      updateJourneyStatus journey DJourney.FEEDBACK_PENDING
-  return allLegsState
+  whenJourneyUpdateInProgress journey.id $ do
+    allLegsRawData <- getJourneyLegs journey.id
+    riderLastPoints <- getLastThreePoints journey.id
+    (_, allLegsState) <- foldlM (processLeg riderLastPoints) (True, []) allLegsRawData
+    when
+      ( all
+          ( \st -> case st of
+              JL.Single legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]
+              JL.Transit legStates -> all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) legStates
+          )
+          allLegsState
+          && journey.status /= DJourney.CANCELLED
+      )
+      $ do
+        updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+    return allLegsState
   where
     processLeg ::
       (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c) =>
@@ -673,9 +674,6 @@ cancelRemainingLegs journeyId isExtend = do
   unless (null failures) $
     throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
 
-multimodalLegSearchIdAccessLockKey :: Text -> Text
-multimodalLegSearchIdAccessLockKey legSearchId = "Multimodal:Leg:SearchIdAccess:" <> legSearchId
-
 skipLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
@@ -728,16 +726,17 @@ addSkippedLeg journeyId legOrder = do
   when (isSkippedOrCancelled /= Just True) $
     throwError $ InvalidRequest $ "isSkipped is not True for legOrder: " <> show legOrder
 
-  exep <- try @_ @SomeException $ do
-    QJourneyLeg.updateIsSkipped (Just False) skippedLeg.legSearchId
-    addAllLegs journeyId [skippedLeg {DJourneyLeg.isSkipped = Just False, DJourneyLeg.legSearchId = Nothing}]
-  case exep of
-    Left _ -> do
-      -- Rollback operations
-      QJourneyLeg.updateLegSearchId skippedLeg.legSearchId skippedLeg.id
-      QJourneyLeg.updateIsSkipped (Just True) skippedLeg.legSearchId
-      throwError $ InvalidRequest "Failed to update skipped leg, as Search operation failed"
-    Right _ -> return ()
+  withJourneyUpdateInProgress journeyId $ do
+    exep <- try @_ @SomeException $ do
+      QJourneyLeg.updateIsSkipped (Just False) skippedLeg.legSearchId
+      addAllLegs journeyId [skippedLeg {DJourneyLeg.isSkipped = Just False, DJourneyLeg.legSearchId = Nothing}]
+    case exep of
+      Left _ -> do
+        -- Rollback operations
+        QJourneyLeg.updateLegSearchId skippedLeg.legSearchId skippedLeg.id
+        QJourneyLeg.updateIsSkipped (Just True) skippedLeg.legSearchId
+        throwError $ InvalidRequest "Failed to update skipped leg, as Search operation failed"
+      Right _ -> return ()
   where
     checkFRFSBooking legSearchId = do
       frfsBooking <- QTBooking.findBySearchId (Id legSearchId)
@@ -1256,13 +1255,11 @@ switchLeg journeyId req = do
   isCancellable <- checkIfCancellable legData
   unless isCancellable $ do throwError (JourneyLegCannotBeCancelled journeyLeg.id.getId)
   unless canSwitch $ do throwError (JourneyLegCannotBeSwitched journeyLeg.id.getId)
-  let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
-  Redis.whenWithLockRedis lockKey 5 $ do
-    cancelLeg legData (SCR.CancellationReasonCode "") False
-    newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
-    addAllLegs journeyId [newJourneyLeg]
-    when (legData.status /= JL.InPlan) $
-      fork "Start journey thread" $ withShortRetry $ startJourney Nothing Nothing journeyId
+  cancelLeg legData (SCR.CancellationReasonCode "") False
+  newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
+  addAllLegs journeyId [newJourneyLeg]
+  when (legData.status /= JL.InPlan) $
+    fork "Start journey thread" $ withShortRetry $ startJourney Nothing Nothing journeyId
 
 upsertJourneyLeg :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (DJourneyLeg.JourneyLeg -> m ())
 upsertJourneyLeg journeyLeg = do
