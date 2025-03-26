@@ -453,6 +453,7 @@ differenceOfLocationLists arr1 arr2 = filter ( \item1 -> length (filter( \ (item
 filterRecentSearches :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 filterRecentSearches arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId /= item1.placeId)) arr2) /= (length arr2)) arr1
 
+-- Haversine Distance Calculation
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
   let latPoint1 = toRad (lat1)
@@ -1112,7 +1113,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
                 ( if vehicleType == "BUS" 
                   then 
                     [ "Cancellation of tickets is not applicable" 
-                    , "The ticket is valid for only 30 minutes from the time of booking"
+                    , "The ticket is valid for only 12 hours from the time of booking"
                     , "Fare is commission-free and determined by the WBTC" 
                     ] 
                   else
@@ -1147,7 +1148,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
             "" 
             "" 
             "" 
-            [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC] 
+            ["This ticket is non-transferrable and non-refundable" , "The ticket is valid for 12 hours from the time of booking"] 
             "" 
             false 
             config

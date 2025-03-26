@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, WmbFlowConfig)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -414,3 +414,17 @@ isDeliveryTruckVariant vehicleVariant = DA.any (_ == vehicleVariant) [
   "DELIVERY_TRUCK_MEDIUM",
   "DELIVERY_TRUCK_LARGE",
   "DELIVERY_TRUCK_ULTRA_LARGE"]
+
+fetchWmbFlowConfig :: LazyCheck -> WmbFlowConfig
+fetchWmbFlowConfig _ = 
+    let config = fetchRemoteConfigString "wmb_flow_configs"
+        value = decodeForeignObject (parseJSON config) defaultWmbFlowConfig
+    in value
+
+defaultWmbFlowConfig :: WmbFlowConfig
+defaultWmbFlowConfig =
+  { maxDeviatedDistanceInMeters: 1000.0
+  , showAllDeviatedBus: false
+  , maxAllowedTimeDiffInLTSinSec: 1800 
+  , maxSnappingOnRouteDistance: 1000.0
+  }

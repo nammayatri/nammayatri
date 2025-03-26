@@ -416,3 +416,6 @@ _driverArrivalTime = lens (unwrap >>> _.driverArrivalTime) (\oldRec newVal -> wr
 
 _destinationReachedAt :: forall a b c. Newtype a { destinationReachedAt :: b | c } => Lens' a b
 _destinationReachedAt = lens (unwrap >>> _.destinationReachedAt) (\oldRec newVal -> wrap ((unwrap oldRec) { destinationReachedAt = newVal }))
+
+_stopPoint :: forall a b c. Newtype a { stopPoint :: b | c } => Lens' a b
+_stopPoint = lens (unwrap >>> _.stopPoint) (\oldRec newVal -> wrap ((unwrap oldRec) { stopPoint = newVal }))

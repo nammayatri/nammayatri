@@ -4362,7 +4362,7 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
     latitude :: Maybe Number,
     longitude :: Maybe Number,
     speed :: Maybe Number,
-    timestamp :: Maybe String
+    timestamp :: String
 }
 
 newtype RouteStopMapping = RouteStopMapping { 
@@ -4372,11 +4372,11 @@ newtype RouteStopMapping = RouteStopMapping {
     stopPoint :: LatLong,
     stopName :: String,
     -- timeBounds :: Kernel.Types.TimeBound.TimeBound,
-    vehicleType :: String--,
+    vehicleType :: String,
     -- merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     -- merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
-    -- createdAt :: Kernel.Prelude.UTCTime,
-    -- updatedAt :: Kernel.Prelude.UTCTime
+    createdAt :: String,
+    updatedAt :: String
   }
 
 derive instance genericBusTrackingRouteReq :: Generic BusTrackingRouteReq _

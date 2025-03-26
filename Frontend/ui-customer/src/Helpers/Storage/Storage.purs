@@ -123,6 +123,7 @@ data KeyStore
   | RECENT_BUS_STOPS
   | RECENT_BUS_ROUTES
   | ONBOARDED_VEHICLE_INFO
+  | CAN_HAVE_ACTIVE_TICKETS
 
 derive instance genericKeyStore :: Generic KeyStore _
 
