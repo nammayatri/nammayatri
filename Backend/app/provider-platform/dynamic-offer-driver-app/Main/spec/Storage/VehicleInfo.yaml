@@ -1,0 +1,17 @@
+imports:
+  Vehicle: Domain.Types.Vehicle
+
+VehicleInfo:
+  tableName: vehicle_info
+  fields:
+    id: Id VehicleInfo
+    vehicleId: Id Vehicle
+    questionName: Text
+    question: Text
+    answer: Text
+  constraints:
+    id: PrimaryKey
+  queries:
+    findAllByVehicleId:
+      kvFunction: findAllWithKV
+      where: vehicleId
