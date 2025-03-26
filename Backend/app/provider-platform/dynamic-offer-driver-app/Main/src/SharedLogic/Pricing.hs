@@ -160,7 +160,7 @@ getQARVehicleCategoryCity time vehicleCategory cityId = do
   demandDataN :: Maybe Int <- Hedis.withCrossAppRedis $ Hedis.get demandKey
   demandDataN_1 :: Maybe Int <- Hedis.withCrossAppRedis $ Hedis.get demandKeyN_1
   let demandData = fromMaybe 0 demandDataN + fromMaybe 0 demandDataN_1
-  if demandData > 4
+  if demandData > 30
     then do
       let acceptanceKey = mkAcceptanceVehicleCategoryCity time vehicleCategory cityId
           acceptanceKeyN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vehicleCategory cityId
