@@ -23,12 +23,14 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
+import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOperatorAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TransporterConfig
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (getDbHash)
@@ -47,6 +49,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
