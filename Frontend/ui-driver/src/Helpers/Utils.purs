@@ -1322,9 +1322,23 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
     _ = spy "locationUpdateServiceConfig" locationUpdateServiceConfig
     _ = spy  "tripType" tripType
     _ = spy "stage" stage
+
+  -- Update the local store with the new keys
   void $ pure $ Storage.setValueToLocalStore RIDE_G_FREQUENCY
                       $ if frequentLocationUpdates
                         then locationUpdateServiceConfig.rideGFrequencyWithFrequentUpdates
                         else locationUpdateServiceConfig.rideGFrequencyWithoutFrequentUpdates
+
   void $ pure $ Storage.setValueToLocalStore DRIVER_MIN_DISPLACEMENT locationUpdateServiceConfig.minDisplacement
   void $ pure $ Storage.setValueToLocalStore RIDE_T_FREQUENCY locationUpdateServiceConfig.rideTFrequency
+
+  -- New updates for additional keys
+  void $ pure $ Storage.setValueToLocalStore LOCATION_REQUEST_INTERVAL
+                      $ if frequentLocationUpdates
+                        then locationUpdateServiceConfig.locationRequestInterval
+                      else locationUpdateServiceConfig.locationRequestIntervalWithFrequentUpdates
+  void $ pure $ Storage.setValueToLocalStore LOCATION_FRESHNESS_THRESHOLD locationUpdateServiceConfig.freshnessThreshold
+  void $ pure $ Storage.setValueToLocalStore LOCATION_UPDATE_INTERVAL locationUpdateServiceConfig.updateInterval
+  void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_INTERVAL locationUpdateServiceConfig.batchInterval
+  void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_SIZE locationUpdateServiceConfig.batchSize
+  void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge

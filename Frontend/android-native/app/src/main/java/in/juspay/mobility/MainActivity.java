@@ -17,6 +17,7 @@ import static in.juspay.mobility.Utils.initCTSignedCall;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
+import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -108,6 +109,7 @@ import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.CleverTapSignedCall;
 import in.juspay.mobility.app.LocationUpdateService;
+import in.juspay.mobility.app.LocationUpdateServiceV2;
 import in.juspay.mobility.app.MissedCallActionsHandler;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
@@ -302,21 +304,40 @@ public class MainActivity extends AppCompatActivity {
                 WorkManager mWorkManager = WorkManager.getInstance(getApplicationContext());
                 if (status.equals("null")) {
                     if (context != null) {
-                        Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                        Intent locationUpdateIntent;
+                        if (sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                            locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                        } else {
+                            locationUpdateIntent = new Intent(context, LocationUpdateServiceV2.class);
+                        }
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
                     } else {
                         Context context = getApplicationContext();
-                        Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                        Intent locationUpdateIntent;
+                        if (sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                            locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                        } else {
+                            locationUpdateIntent = new Intent(context, LocationUpdateServiceV2.class);
+                        }
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
                     }
                 }
             }
-            if (key != null && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY") || key.equals("TRIP_STATUS"))) {
+            if (key != null && sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1") && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY") || key.equals("TRIP_STATUS"))) {
                 System.out.println("TRIGGERED UPDATE POLLING");
                 Context context = getApplicationContext();
-                Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
+                Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);;
+                if(key.equals("TRIP_STATUS")){
+                    locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key,"null"));
+                }
+                context.startService(locationUpdateIntent);
+            }
+            if (key != null && !sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1") && (key.equals("TRIP_STATUS") || key.equals("DRIVER_STATUS")) && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true")) {
+                System.out.println("TRIGGERED UPDATE POLLING");
+                Context context = getApplicationContext();
+                Intent locationUpdateIntent = new Intent(context, LocationUpdateServiceV2.class);;
                 if(key.equals("TRIP_STATUS")){
                     locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key,"null"));
                 }
@@ -445,7 +466,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if (sharedPref != null) {
                 Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }

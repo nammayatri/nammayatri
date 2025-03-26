@@ -343,37 +343,35 @@ public class NotificationUtils {
                             }
                         }, BIND_AUTO_CREATE);
                     } else {
-                        if (overlayFeatureNotAvailable(context)) {
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.postDelayed(() -> {
-                                try {
-                                    String reqId = entity_payload.getString("searchRequestId");
-                                    boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(reqId);
-                                    if (isClearedReq){
-                                        MyFirebaseMessagingService.clearedRideRequest.remove(reqId);
-                                        return;
-                                    }
-                                    mFirebaseAnalytics.logEvent("low_ram_device", params);
-                                    if (RideRequestActivity.getInstance() == null) {
-                                        Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                        intent.putExtras(sheetData);
-                                        context.getApplicationContext().startActivity(intent);
-                                    } else {
-                                        RideRequestActivity.getInstance().addToList(sheetData);
-                                    }
-                                    lastRideReq = new Bundle();
-                                    lastRideReq.putAll(sheetData);
-                                    lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                    RideRequestUtils.createRideRequestNotification(context);
-                                } catch (Exception e) {
-                                    Exception exception = new Exception("Error in onCreate ride req activity " + e);
-                                    FirebaseCrashlytics.getInstance().recordException(exception);
-                                    params.putString("exception", e.toString());
-                                    mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.postDelayed(() -> {
+                            try {
+                                String reqId = entity_payload.getString("searchRequestId");
+                                boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(reqId);
+                                if (isClearedReq){
+                                    MyFirebaseMessagingService.clearedRideRequest.remove(reqId);
+                                    return;
                                 }
-                            }, (sheetData.getInt("keepHiddenForSeconds", 0) * 1000L));
-                        }
+                                mFirebaseAnalytics.logEvent("low_ram_device", params);
+                                if (RideRequestActivity.getInstance() == null) {
+                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                    intent.putExtras(sheetData);
+                                    context.getApplicationContext().startActivity(intent);
+                                } else {
+                                    RideRequestActivity.getInstance().addToList(sheetData);
+                                }
+                                lastRideReq = new Bundle();
+                                lastRideReq.putAll(sheetData);
+                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
+                                RideRequestUtils.createRideRequestNotification(context);
+                            } catch (Exception e) {
+                                Exception exception = new Exception("Error in onCreate ride req activity " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
+                                params.putString("exception", e.toString());
+                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
+                            }
+                        }, (sheetData.getInt("keepHiddenForSeconds", 0) * 1000L));
 
 //                        Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
                         System.out.println("no_overlay_permission" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
@@ -878,6 +876,7 @@ public class NotificationUtils {
         return isLowRamDevice || modelNotSupported;
     }
 
+    @Deprecated
     public static void updateLocationUpdateDisAndFreq(String fcmType, SharedPreferences sharedPref) {
         if (remoteConfigs.hasKey("loc_pings_config")){
             String locationPingsConfig = remoteConfigs.getString("loc_pings_config");
@@ -1023,7 +1022,7 @@ public class NotificationUtils {
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
 //                    startMainActivity(context);
                     if (merchantType.equals("DRIVER")){
-                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
                     break;
                 case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
@@ -1031,7 +1030,7 @@ public class NotificationUtils {
                         NotificationUtils.showNotification(context, title, body, payload, imageUrl);
                     }
                     if (merchantType.equals("DRIVER")){
-                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
                     break;
             }

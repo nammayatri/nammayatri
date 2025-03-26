@@ -40,6 +40,7 @@
         <activity
             android:name=".RideRequestActivity"
             android:exported="false"
+            android:excludeFromRecents="true"
             android:resizeableActivity="false"
             android:screenOrientation="portrait" />
 
@@ -65,6 +66,12 @@
         </receiver>
         <service
             android:name=".LocationUpdateService"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:largeHeap="true"
+            android:stopWithTask="false" />
+        <service
+            android:name=".LocationUpdateServiceV2"
             android:exported="false"
             android:foregroundServiceType="location"
             android:largeHeap="true"

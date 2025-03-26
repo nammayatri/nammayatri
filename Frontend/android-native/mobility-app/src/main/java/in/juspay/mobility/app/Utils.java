@@ -55,7 +55,7 @@ public class Utils {
             "PRIORITY_PASSIVE", 105
     );
 
-    private static final int DEFAULT_PRIORITY = 100; // Default priority to PRIORITY_HIGH_ACCURACY if invalid
+    private static final int DEFAULT_PRIORITY = 102; // Default priority to PRIORITY_HIGH_ACCURACY if invalid
 
     public static int getPriority(String priority) {
         Integer value = PRIORITY_MAP.get(priority);
