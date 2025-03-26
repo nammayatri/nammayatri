@@ -99,6 +99,7 @@ import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
+import in.juspay.mobility.app.LocationUpdateServiceV2;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.TranslatorMLKit;
@@ -120,6 +121,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private static String storeUpdateTimeCallBack = null;
     private String storeAddRideStopCallBack = null;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
+    private LocationUpdateServiceV2.UpdateTimeCallback locationCallbackV2;
     private PreviewView previewView;
     private ImageCapture imageCapture;
     private Button bCapture;
@@ -201,6 +203,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             locationCallback = this::callUpdateTimeCallBack;
             LocationUpdateService.registerCallback(locationCallback);
         }
+        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+            locationCallbackV2 = this::callUpdateTimeCallBack;
+            LocationUpdateServiceV2.registerCallback(locationCallbackV2);
+        }
     }
 
     public void onDestroy() {
@@ -208,6 +214,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         DefaultMediaPlayerControl.mediaPlayer.reset();
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             LocationUpdateService.deRegisterCallback(locationCallback);
+        }
+        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+            LocationUpdateServiceV2.deRegisterCallback(locationCallbackV2);
         }
         // Clearing all static variables
         // Media Utils
@@ -225,29 +234,54 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void startLocationPollingAPI() {
         ExecutorManager.runOnBackgroundThread(() -> {
-            if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-                Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
-                locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                WorkManager mWorkManager;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
-                } else {
-                    bridgeComponents.getContext().startService(locationUpdateService);
+            if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
+                if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+                    Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+                    locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    WorkManager mWorkManager;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
+                    } else {
+                        bridgeComponents.getContext().startService(locationUpdateService);
+                    }
+                    mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+                    Constraints constraints = new Constraints.Builder()
+                            .setRequiresDeviceIdle(false)
+                            .build();
+                    PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 16, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
+                    mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                    Log.i(LOCATION, "Start Location Polling");
                 }
-                mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-                Constraints constraints = new Constraints.Builder()
-                        .setRequiresDeviceIdle(false)
-                        .build();
-                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 16, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
-                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
-                Log.i(LOCATION, "Start Location Polling");
+            } else {
+                if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+                    Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateServiceV2.class);
+                    locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    WorkManager mWorkManager;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
+                    } else {
+                        bridgeComponents.getContext().startService(locationUpdateService);
+                    }
+                    mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+                    Constraints constraints = new Constraints.Builder()
+                            .setRequiresDeviceIdle(false)
+                            .build();
+                    PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 16, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
+                    mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                    Log.i(LOCATION, "Start Location Polling");
+                }
             }
         });
     }
 
     @JavascriptInterface
     public void stopLocationPollingAPI() {
-        Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+        Intent locationUpdateService;
+        if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
+            locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+        } else {
+            locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateServiceV2.class);
+        }
         bridgeComponents.getContext().stopService(locationUpdateService);
         WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
         mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update));

@@ -49,8 +49,8 @@ data KeyStore = USER_NAME
                 | RIDE_STATUS_POLLING_ID
                 | RENTAL_RIDE_STATUS_POLLING
                 | RENTAL_RIDE_STATUS_POLLING_ID
-                | RIDE_T_FREQUENCY
-                | RIDE_G_FREQUENCY
+                | RIDE_T_FREQUENCY -- Deprecated
+                | RIDE_G_FREQUENCY -- Deprecated
                 | IS_DRIVER_VERIFIED
                 | DRIVER_MIN_DISPLACEMENT
                 | DEMO_MODE_PASSWORD
@@ -170,6 +170,12 @@ data KeyStore = USER_NAME
                 | DRIVER_LOCATION_TS
                 | POINTS_FACTOR
                 | ACCURACY_THRESHOLD
+                | LOCATION_UPDATE_INTERVAL
+                | LOCATION_BATCH_INTERVAL
+                | LOCATION_BATCH_SIZE
+                | LOCATION_REQUEST_INTERVAL
+                | LOCATION_MAX_BATCH_AGE
+                | LOCATION_FRESHNESS_THRESHOLD
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

@@ -53,6 +53,7 @@ screen initialState =
   , view
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
+    void $ HU.storeCallBackForNotification push FcmNotificationAction
     void $ JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
     void $ JB.storeCallBackNotificationPermission push NotificationPermissionCallBack
     void $ JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack

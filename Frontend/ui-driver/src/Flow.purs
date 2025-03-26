@@ -128,7 +128,7 @@ import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..), NotificationBody)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AddDestRes(..),LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
@@ -334,6 +334,7 @@ checkRideAndInitiate event driverInfoResponse = do
     case driverInfoResponse of
       Just (Right (GetDriverInfoResp driverInfoResp)) -> do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
+        checkStatusAndStartLocationUpdates
         pure (Tuple Nothing driverInfoResp.onRide)
       _ -> do
         GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
@@ -2074,6 +2075,10 @@ permissionsScreenFlow event activeRideResp isActiveRide = do
       liftFlowBT $ logEvent logField_ "ny_driver_submit_permissions"
       handleDeepLinksFlow event activeRideResp isActiveRide
     LOGOUT_FROM_PERMISSIONS_SCREEN -> logoutFlow
+    FCM_NOTIFICATION_PERMISSION notificationType notificationBody -> do
+      (GlobalState state) <- getState
+      handleFcm notificationType state.homeScreen notificationBody
+      permissionsScreenFlow  event activeRideResp isActiveRide
     GO_TO_REGISTERATION_SCREEN state -> do
       let allChecked = state.props.isNotificationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked
           partialChecked = state.props.isNotificationPermissionChecked || state.props.isOverlayPermissionChecked || state.props.isAutoStartPermissionChecked
@@ -2651,51 +2656,8 @@ homeScreenFlow = do
       removeChatService ""
       homeScreenFlow
     FCM_NOTIFICATION notificationType state notificationBody -> do
-      if (notificationType /= "EDIT_LOCATION") then void $ pure $ removeAllPolylines "" else pure unit
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
-      case notificationType of
-        "CANCELLED_PRODUCT" -> do
-          resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
-          handleDriverActivityResp resp
-          void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-          void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"
-          void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
-          void $ pure $ JB.destroySignedCall unit
-          removeChatService ""
-          void $ updateStage $ HomeScreenStage HomeScreen
-          updateDriverDataToStates
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {rideRequestPill{isPillClickable =  true} , checkUpcomingRide = true}})
-          modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> rideSummaryScreen {props {throughBanner = false}})
-          homeScreenFlow
-        "DRIVER_ASSIGNMENT" -> do
-          let (GlobalState defGlobalState) = defaultGlobalState
-          when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showAccessbilityPopup = true, specialZoneProps{ currentGeoHash = "" }}})
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true,rentalInfoPopUp = homeScreen.data.activeRide.tripType == ST.Rental ,intercityInfoPopUp = homeScreen.data.activeRide.tripType == ST.Intercity , currentStage = RideAccepted , checkUpcomingRide = true, retryRideList = true}})
-          currentRideFlow Nothing Nothing
-        "RIDE_REQUESTED"    -> do
-          void $ updateStage $ HomeScreenStage RideRequested
-          homeScreenFlow
-        "TRIP_STARTED" -> do
-          if state.props.currentStage /= RideStarted then do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ activeRide{status = INPROGRESS}}})
-            void $ updateStage $ HomeScreenStage RideStarted
-            void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
-            void $ pure $ setValueToLocalStore TRIP_STATUS "started"
-            currentRideFlow Nothing Nothing
-          else do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatServiceKilled = true}})
-            homeScreenFlow
-        "EDIT_LOCATION" -> do
-          if isNothing state.data.advancedRideData then do
-            void $ pure $ removeAllPolylines ""
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
-            baseAppFlow false Nothing Nothing
-          else pure unit
-        "USER_FAVOURITE_DRIVER" -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
-          homeScreenFlow
-        _                   -> homeScreenFlow
+      handleFcm notificationType state notificationBody
+      homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {rideActionModal = false, cancelRideModalShow = false, enterOtpModal = false, routeVisible = false, refreshAnimation = false}})
@@ -3091,6 +3053,54 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader false
     GO_TO_METER_RIDE_SCREEN -> meterRideScreenFlow
   homeScreenFlow
+
+handleFcm :: String -> HomeScreenState -> NotificationBody -> FlowBT String Unit
+handleFcm notificationType state notificationBody = do
+  if (notificationType /= "EDIT_LOCATION") then void $ pure $ removeAllPolylines "" else pure unit
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
+  case notificationType of
+    "CANCELLED_PRODUCT" -> do
+      resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
+      handleDriverActivityResp resp
+      void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+      void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"
+      void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
+      void $ pure $ JB.destroySignedCall unit
+      removeChatService ""
+      void $ updateStage $ HomeScreenStage HomeScreen
+      updateDriverDataToStates
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {rideRequestPill{isPillClickable =  true} , checkUpcomingRide = true}})
+      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> rideSummaryScreen {props {throughBanner = false}})
+      homeScreenFlow
+    "DRIVER_ASSIGNMENT" -> do
+      let (GlobalState defGlobalState) = defaultGlobalState
+      when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showAccessbilityPopup = true, specialZoneProps{ currentGeoHash = "" }}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true,rentalInfoPopUp = homeScreen.data.activeRide.tripType == ST.Rental ,intercityInfoPopUp = homeScreen.data.activeRide.tripType == ST.Intercity , currentStage = RideAccepted , checkUpcomingRide = true, retryRideList = true}})
+      currentRideFlow Nothing Nothing
+    "RIDE_REQUESTED"    -> do
+      void $ updateStage $ HomeScreenStage RideRequested
+      homeScreenFlow
+    "TRIP_STARTED" -> do
+      if state.props.currentStage /= RideStarted then do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ activeRide{status = INPROGRESS}}})
+        void $ updateStage $ HomeScreenStage RideStarted
+        void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
+        void $ pure $ setValueToLocalStore TRIP_STATUS "started"
+        currentRideFlow Nothing Nothing
+      else do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatServiceKilled = true}})
+        homeScreenFlow
+    "EDIT_LOCATION" -> do
+      if isNothing state.data.advancedRideData then do
+        void $ pure $ removeAllPolylines ""
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
+        baseAppFlow false Nothing Nothing
+      else pure unit
+    "USER_FAVOURITE_DRIVER" -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
+      homeScreenFlow
+    _                   -> pure unit 
 
 endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> FlowBT String Unit
 endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
