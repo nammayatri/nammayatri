@@ -79,7 +79,14 @@ type LocationUpdateServiceConfig = {
   rideGFrequencyWithFrequentUpdates :: String,
   rideTFrequency :: String,
   stage :: String,
-  rideGFrequencyWithoutFrequentUpdates :: String
+  rideGFrequencyWithoutFrequentUpdates :: String,
+  freshnessThreshold :: String,
+  updateInterval :: String,
+  batchInterval :: String,
+  batchSize :: String,
+  maxBatchAge :: String,
+  locationRequestInterval :: String,
+  locationRequestIntervalWithFrequentUpdates :: String
 }
 
 type PerfConfig = {

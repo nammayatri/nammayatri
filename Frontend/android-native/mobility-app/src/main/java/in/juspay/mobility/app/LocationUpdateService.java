@@ -91,6 +91,7 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 
+@Deprecated
 public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
@@ -214,6 +215,7 @@ public class LocationUpdateService extends Service {
         timer = new Timer();
         resetTimer(delayForGNew, minDispDistanceNew, delayForTNew);
 
+
         internetBroadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -305,6 +307,13 @@ public class LocationUpdateService extends Service {
         }
 
         return START_STICKY;
+    }
+
+    public void checkVersionMismatch() {
+        String locationServiceVersion = getValueFromStorage("LOCATION_SERVICE_VERSION");
+        if (locationServiceVersion != null && !locationServiceVersion.equals("V1")) {
+            stopSelf();
+        }
     }
 
 
@@ -1030,6 +1039,7 @@ public class LocationUpdateService extends Service {
         timerTask = new TimerTask() {
             @Override
             public void run() {
+                checkVersionMismatch();
                 // Location strategy: Use either getCurrentLocation with fallbacks or getLastKnownLocation based on GPS method setting
                 if (timerTask == null) return;
                 Log.d(LOG_TAG, "TimerTriggered");
@@ -1175,54 +1185,54 @@ public class LocationUpdateService extends Service {
     }
 
     @AddTrace(name = "checkNearByPickupZoneTrace", enabled = true)
-     private void checkNearByPickupZone(Location location) {
-            try {
-                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
-                String enableSpecialPickupWidget = getValueFromStorage("ENABLE_SPECIAL_PICKUP_WIDGET");
-                if (location != null && rideStatus != null && enableSpecialPickupWidget != null && rideStatus.equals("false") && enableSpecialPickupWidget.equals("true")) {
-                    String stringifiedZones = sharedPref.getString("SPECIAL_LOCATION_LIST", null);
-                    JSONArray zones = new JSONArray(stringifiedZones);
-                    GeoHash geoHash = new GeoHash();
-                    String currentGeoHash = geoHash.encode(location.getLatitude(), location.getLongitude(), 7);
-                    Double nearbyGeoHashRadius = Double.parseDouble(sharedPref.getString("SEARCH_SPECIAL_PICKUP_WITHIN_RADIUS", "150.0"));
-                    ArrayList<String> nearbyGeohashes = geoHash.nearbyGeohashes(currentGeoHash, nearbyGeoHashRadius);
-                    nearbyGeohashes.add(currentGeoHash);
+    private void checkNearByPickupZone(Location location) {
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
+            String enableSpecialPickupWidget = getValueFromStorage("ENABLE_SPECIAL_PICKUP_WIDGET");
+            if (location != null && rideStatus != null && enableSpecialPickupWidget != null && rideStatus.equals("false") && enableSpecialPickupWidget.equals("true")) {
+                String stringifiedZones = sharedPref.getString("SPECIAL_LOCATION_LIST", null);
+                JSONArray zones = new JSONArray(stringifiedZones);
+                GeoHash geoHash = new GeoHash();
+                String currentGeoHash = geoHash.encode(location.getLatitude(), location.getLongitude(), 7);
+                Double nearbyGeoHashRadius = Double.parseDouble(sharedPref.getString("SEARCH_SPECIAL_PICKUP_WITHIN_RADIUS", "150.0"));
+                ArrayList<String> nearbyGeohashes = geoHash.nearbyGeohashes(currentGeoHash, nearbyGeoHashRadius);
+                nearbyGeohashes.add(currentGeoHash);
 
-                    currentZoneGeoHash = getValueFromStorage("CURRENT_ZONE_GEO_HASH");
-                    if (getValueFromStorage("CURRENT_ZONE_GEO_HASH") == null) {
-                        updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
-                        currentZoneGeoHash = currentGeoHash;
+                currentZoneGeoHash = getValueFromStorage("CURRENT_ZONE_GEO_HASH");
+                if (getValueFromStorage("CURRENT_ZONE_GEO_HASH") == null) {
+                    updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
+                    currentZoneGeoHash = currentGeoHash;
+                }
+                boolean nearBySpecialPickup = false;
+                for (int i = 0; i < zones.length(); i++) {
+                    JSONArray zoneMap = (JSONArray) zones.get(i);
+                    String zoneGeoHash = (String) zoneMap.get(0);
+                    nearBySpecialPickup = nearbyGeohashes.contains(zoneGeoHash);
+                    if (!currentZoneGeoHash.equals(zoneGeoHash) && nearBySpecialPickup) {
+                        isSpecialpickup = true;
+                        showWidget(true);
+                        currentZoneGeoHash = zoneGeoHash;
+                        updateStorage("CURRENT_ZONE_GEO_HASH", zoneGeoHash);
                     }
-                    boolean nearBySpecialPickup = false;
-                    for (int i = 0; i < zones.length(); i++) {
-                        JSONArray zoneMap = (JSONArray) zones.get(i);
-                        String zoneGeoHash = (String) zoneMap.get(0);
-                        nearBySpecialPickup = nearbyGeohashes.contains(zoneGeoHash);
-                        if (!currentZoneGeoHash.equals(zoneGeoHash) && nearBySpecialPickup) {
-                            isSpecialpickup = true;
-                            showWidget(true);
-                            currentZoneGeoHash = zoneGeoHash;
-                            updateStorage("CURRENT_ZONE_GEO_HASH", zoneGeoHash);
-                        }
-                        if (nearBySpecialPickup) {
-                            isSpecialpickup = true;
-                            break;
-                        }
-                    }
-                    if (!nearBySpecialPickup && isSpecialpickup) {
-                        currentZoneGeoHash = currentGeoHash;
-                        isSpecialpickup = false;
-                        updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
-                        showWidget(false);
+                    if (nearBySpecialPickup) {
+                        isSpecialpickup = true;
+                        break;
                     }
                 }
-            } catch (Exception e) {
-                Exception exception = new Exception("Error in CheckNearByPickupZones " + e);
-                FirebaseCrashlytics.getInstance().recordException(exception);
-                e.printStackTrace();
+                if (!nearBySpecialPickup && isSpecialpickup) {
+                    currentZoneGeoHash = currentGeoHash;
+                    isSpecialpickup = false;
+                    updateStorage("CURRENT_ZONE_GEO_HASH", currentGeoHash);
+                    showWidget(false);
+                }
             }
-     }
+        } catch (Exception e) {
+            Exception exception = new Exception("Error in CheckNearByPickupZones " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            e.printStackTrace();
+        }
+    }
 
 
     private void showWidget(boolean isSpecialPickupZone) {

@@ -131,7 +131,6 @@ public class RideRequestActivity extends AppCompatActivity {
         if (getIntent() != null) {
             addToList(getIntent().getExtras());
         }
-        View v = findViewById(R.id.indicator1);
     }
 
     public void addToList(Bundle rideRequestBundle) {
