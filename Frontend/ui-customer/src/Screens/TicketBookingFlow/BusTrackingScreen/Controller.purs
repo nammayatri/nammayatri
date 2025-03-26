@@ -94,6 +94,7 @@ data ScreenOutput
   | GoToBusTicketBooking ST.BusTrackingScreenState
   | GoToSearchLocation ST.BusTrackingScreenState
   | GoToViewTicket ST.BusTrackingScreenState
+  | GoBackToSearchLocationScreen ST.BusTrackingScreenState
 
 data Action
   = AfterRender
@@ -157,7 +158,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = exit $ GoToSearchLocation state
 
-eval BackPressed state = exit $ GoToBusTicketBooking state
+eval BackPressed state = exit $ GoBackToSearchLocationScreen state
 
 eval ViewTicket state = exit $ GoToViewTicket state
 
@@ -364,7 +365,7 @@ drawDriverRoute resp state = do
     routeConfig = transformStationsForMap resp filteredRoute srcCode destinationCode
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
-  EHC.liftFlow $ JB.drawRoute [ routeConfig {routeColor = Color.black700} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
   void $ foldM processStop 0 state.data.stopsList
   where
@@ -462,7 +463,7 @@ userBoardedActions state vehicles vehicle = do
   --     pure $ if locationResp.isInPath then { points: DA.reverse locationResp.points } else state.data.routePts
   --   _, _ -> pure state.data.routePts
   markerAvailable <- EHC.liftFlow $ runEffectFn1 JB.checkMarkerAvailable vehicle.vehicleId
-  EHC.liftFlow $ JB.drawRoute [ routeConfig{routeColor = Color.black700} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   if (markerAvailable)
     -- then EHC.liftFlow $ runEffectFn1 JB.updateRoute JB.updateRouteConfig { json = {points: DA.reverse locationResp.points}, eta = JB.fromMetersToKm locationResp.distance, srcMarker = vehicle.vehicleId , pureScriptID = (EHC.getNewIDWithTag "BusTrackingScreenMap"),  polylineKey = "DEFAULT"}
     then 

@@ -1148,7 +1148,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
             "" 
             "" 
             "" 
-            [getString CHENNAI_METRO_TERM_1 , "The ticket is valid for only 12 hours from the time of booking", getString FARE_COMMISSION_FREE_WBTC] 
+            ["This ticket is non-transferrable and non-refundable" , "The ticket is valid for 12 hours from the time of booking"] 
             "" 
             false 
             config

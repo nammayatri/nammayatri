@@ -66,6 +66,7 @@ data Action = BackPressed
             | SelectRouteslistView
             | OfferInfoClicked
             | ApplyOffer String
+            | UpdatePaymentOption
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -99,7 +100,9 @@ eval (ApplyOffer offerType) state =
 
 eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
-  continue updatedState
+  if (state.props.currentStage == ST.BusTicketSelection )
+    then continueWithCmd updatedState [ do pure UpdatePaymentOption]
+    else continue updatedState
 
 eval BackPressed state =  
   if state.props.ticketServiceType ==API.BUS 
@@ -108,6 +111,13 @@ eval BackPressed state =
         ST.OfferSelection -> continue state { props { currentStage = ST.ConfirmMetroQuote }}
         _ -> exit $ GotoSearchScreen state 
     else exit $ GoToHome
+
+eval UpdatePaymentOption state = do
+  if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do
+    -- void $ pure $ toast $ "Please Select Route"
+    -- void $ pure $ toggleBtnLoader "" false
+    continue state 
+  else updateAndExit state $ UpdateAction state
 
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do
@@ -120,12 +130,12 @@ eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
   if state.data.ticketCount < 6
-    then continue state { data {ticketCount = state.data.ticketCount + 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+    then continueWithCmd state { data {ticketCount = state.data.ticketCount + 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}} [do pure UpdatePaymentOption]
     else continue state
 
 eval DecrementTicket state = do
   if state.data.ticketCount > 1
-    then continue state { data {ticketCount = state.data.ticketCount - 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+    then continueWithCmd state { data {ticketCount = state.data.ticketCount - 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}} [do pure UpdatePaymentOption]
     else continue state
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap

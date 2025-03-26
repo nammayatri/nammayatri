@@ -308,7 +308,7 @@ searchRouteButton push state =
       , margin $ MarginRight 12
       ]
     , textView $ 
-      [ text "Enter Bus No/Destination"
+      [ text "Track & Book your ticket"
       , color Color.black900
       , singleLine false
       , gravity CENTER_VERTICAL

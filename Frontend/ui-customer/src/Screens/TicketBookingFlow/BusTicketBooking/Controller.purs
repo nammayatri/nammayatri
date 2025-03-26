@@ -27,7 +27,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Constants.Configs (getPolylineAnimationConfig)
 import Data.Array as DA
-import Data.Maybe( Maybe(..), fromMaybe, maybe, isJust)
+import Data.Maybe( Maybe(..), fromMaybe, maybe, isNothing)
 import Data.Tuple
 import Debug (spy)
 import Effect.Aff (launchAff)
@@ -83,7 +83,7 @@ eval (BusTicketBookingListRespAC bookingList) state =
   let newState = state {data {ticketDetailsState = Just $ metroTicketListApiToMyTicketsTransformer bookingList $ fromMaybe MetroMyTicketsScreenData.initData state.data.ticketDetailsState}}
       isActiveTicket = DA.find (\(API.FRFSTicketBookingStatusAPIRes list) -> list.status == "ACTIVE") bookingList
   -- in continue newState
-  in if isJust isActiveTicket then do
+  in if isNothing isActiveTicket then do
       void $ pure $ deleteValueFromLocalStore ONBOARDED_VEHICLE_INFO
       void $ pure $ deleteValueFromLocalStore CAN_HAVE_ACTIVE_TICKETS
       continue newState
