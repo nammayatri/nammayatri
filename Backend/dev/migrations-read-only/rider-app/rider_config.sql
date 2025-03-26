@@ -201,3 +201,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN multimodal_testing boolean  defaul
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN is_first_referred_ride_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_month integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_day integer ;
