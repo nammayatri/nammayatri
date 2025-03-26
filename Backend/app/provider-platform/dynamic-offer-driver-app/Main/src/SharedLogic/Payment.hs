@@ -14,6 +14,7 @@
 
 module SharedLogic.Payment where
 
+import Control.Applicative ((<|>))
 import Data.List (groupBy, sortBy)
 import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
@@ -119,10 +120,10 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      createOrderCall = TPayment.createOrder merchantId opCity serviceName -- api call
+  (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity serviceName -- api call
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
-    Just createOrderRes -> return (createOrderRes, cast invoiceId)
+    Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
       createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled -- call same function with no existing order
