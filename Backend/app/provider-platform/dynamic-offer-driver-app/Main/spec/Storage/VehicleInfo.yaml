@@ -1,11 +1,11 @@
 imports:
-  Vehicle: Domain.Types.Vehicle
+  VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
 
 VehicleInfo:
   tableName: vehicle_info
   fields:
     id: Id VehicleInfo
-    vehicleId: Id Vehicle
+    rcId: Id VehicleRegistrationCertificate
     questionName: Text
     question: Text
     answer: Text
@@ -14,4 +14,8 @@ VehicleInfo:
   queries:
     findAllByVehicleId:
       kvFunction: findAllWithKV
-      where: vehicleId
+      where: rcId
+    updateVehicleInfo:
+      kvFunction: updateWithKV
+      params: [questionName, question, answer]
+      where: id

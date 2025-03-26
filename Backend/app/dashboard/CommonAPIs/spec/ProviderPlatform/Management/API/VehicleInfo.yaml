@@ -7,18 +7,18 @@ module: VehicleInfo
 
 apis:
   - GET:
-      endpoint: /vehicleInfo
-      auth: TokenAuth PROVIDER_TYPE
+      endpoint: /list
+      auth: ApiAuthV2
       response:
         type: "[VehicleInfo]"
   - PUT:
-      endpoint: /vehicleInfo
-      auth: TokenAuth PROVIDER_TYPE
+      endpoint: /update
+      auth: ApiAuthV2
       request:
-        type: UpdateVehicleInfosReq
+        type: UpdateVehicleInfoReq
       response:
         type: APISuccess
 
 types:
-  UpdateVehicleInfosReq:
+  UpdateVehicleInfoReq:
     newInfo: "[VehicleInfo]"
