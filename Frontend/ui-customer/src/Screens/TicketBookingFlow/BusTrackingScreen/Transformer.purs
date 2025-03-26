@@ -104,6 +104,8 @@ getStopMarker stopType = do
   case stopType of
     SOURCE_STOP -> markers.srcMarker
     DESTINATION_STOP -> markers.destMarker
+    ROUTE_SOURCE -> "ny_ic_route_start"
+    ROUTE_END -> "ny_ic_route_end"
     _ -> "ny_ic_stop_grey"
 
 getStopMarkerSize :: StopType -> Int 
@@ -112,16 +114,16 @@ getStopMarkerSize stopType =
     SOURCE_STOP -> 90
     DESTINATION_STOP -> 90
     NORMAL_STOP -> 20
-    _ -> 50
+    _ -> 100
 
 getStopType :: String -> Int -> BusTrackingScreenState-> StopType 
 getStopType code index state = do
   let srcCode = state.data.sourceStation <#> _.stationCode
       destCode = state.data.destinationStation <#> _.stationCode
-  if isJust srcCode  && srcCode == Just code then SOURCE_STOP
+  if index == 0 then ROUTE_SOURCE
+  else if index == DA.length state.data.stopsList - 1 then ROUTE_END
+  else if isJust srcCode  && srcCode == Just code then SOURCE_STOP
   else if isJust destCode  && destCode == Just code then DESTINATION_STOP
-  else if isJust srcCode  &&  index == 0 then ROUTE_SOURCE
-  else if isJust srcCode  &&  index == DA.length state.data.stopsList - 1 then ROUTE_END
-  else if index == 0 then SOURCE_STOP
-  else if index == DA.length state.data.stopsList - 1 then DESTINATION_STOP
+  else if isJust srcCode  &&  index == 0 then SOURCE_STOP
+  else if isJust srcCode  &&  index == DA.length state.data.stopsList - 1 then DESTINATION_STOP
   else NORMAL_STOP

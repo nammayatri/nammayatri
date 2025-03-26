@@ -926,6 +926,8 @@
       "ny_ic_large_truck": true,
       "ny_ic_large_truck_left_side": true,
       "ny_ic_ultra_large_truck": true,
-      "ny_ic_ultra_large_truck_left_side": true
+      "ny_ic_ultra_large_truck_left_side": true,
+      "ny_ic_route_start.png": true,
+      "ny_ic_route_end.png": true
    }
 }

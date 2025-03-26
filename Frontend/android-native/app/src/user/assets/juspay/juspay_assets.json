@@ -686,6 +686,8 @@
       "ny_ic_qr_code_expired" : true,
       "ny_ic_delivery_truck_nav_on_map" : true,
       "ic_fluent_box_filled" : true,
-      "ny_ic_clock_filled_dark.png" : true
+      "ny_ic_clock_filled_dark.png" : true,
+      "ny_ic_route_start.png": true,
+      "ny_ic_route_end.png": true
    }
 }

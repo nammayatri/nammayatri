@@ -835,6 +835,8 @@
       "ny_ic_wallet_outline": true,
       "ny_ic_refresh" : true,
       "ny_ic_qr_code_expired" : true,
-      "ny_ic_delivery_truck_nav_on_map": true
+      "ny_ic_delivery_truck_nav_on_map": true,
+      "ny_ic_route_start.png": true,
+      "ny_ic_route_end.png": true
    }
 }
