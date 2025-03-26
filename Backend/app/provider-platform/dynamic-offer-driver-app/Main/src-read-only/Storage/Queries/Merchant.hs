@@ -52,8 +52,6 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.enabled enabled,
       Se.Set Beam.fromTime fromTime,
       Se.Set Beam.gatewayAndRegistryPriorityList (Kernel.Prelude.Just gatewayAndRegistryPriorityList),
-      Se.Set Beam.generateReferralCodeForFleet generateReferralCodeForFleet,
-      Se.Set Beam.generateReferralCodeForOperator generateReferralCodeForOperator,
       Se.Set Beam.geoHashPrecisionValue geoHashPrecisionValue,
       Se.Set Beam.destinationRestriction (Kernel.Types.Geofencing.destination geofencingConfig),
       Se.Set Beam.originRestriction (Kernel.Types.Geofencing.origin geofencingConfig),

@@ -223,6 +223,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
                       cancellationCharges = 0.0,
                       tipAmount = 0.0,
                       totalRideTime = 0,
+                      numDriversOnboarded = 0,
+                      numFleetsOnboarded = 0,
                       merchantId = Just merchantId,
                       merchantOperatingCityId = Just merchantOperatingCity.id
                     }

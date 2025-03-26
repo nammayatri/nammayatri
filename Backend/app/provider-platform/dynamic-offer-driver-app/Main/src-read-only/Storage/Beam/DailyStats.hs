@@ -26,6 +26,8 @@ data DailyStatsT f = DailyStatsT
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    numDriversOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    numFleetsOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     numRides :: B.C f Kernel.Prelude.Int,
     payoutOrderId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus),

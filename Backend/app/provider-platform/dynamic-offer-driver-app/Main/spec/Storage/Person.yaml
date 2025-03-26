@@ -202,6 +202,14 @@ Person:
       where:
         and: [email, merchantId]
 
+    findAllByPersonIdsAndMerchant:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [id]
+          - eq: [merchantId]
+          - eq: [merchantOperatingCityId]
+
     updateName:
       kvFunction: updateOneWithKV
       params: [firstName]

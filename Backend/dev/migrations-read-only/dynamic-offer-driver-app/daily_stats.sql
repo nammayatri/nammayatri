@@ -65,3 +65,13 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN bonus_earnings double 
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN num_fleets_onboarded integer ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN num_drivers_onboarded integer ;
+
+
+------- SQL updates -------
+

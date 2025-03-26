@@ -25,7 +25,7 @@ newtype GetReferredFleetOwnerRes = GetReferredFleetOwnerRes
   {value :: Int}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-data FleetReferralRes = SuccessCode {val :: Text}
+newtype FleetReferralRes = SuccessCode {val :: Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
 
