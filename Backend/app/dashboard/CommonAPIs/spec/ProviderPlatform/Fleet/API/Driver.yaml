@@ -475,6 +475,7 @@ apis:
         - to: UTCTime
         - status: FleetVehicleStatus
         - mbSearchString: Text
+        - statusAwareVehicleNo: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -494,6 +495,7 @@ apis:
               - to: UTCTime
               - status: FleetVehicleStatus
               - mbSearchString: Text
+              - statusAwareVehicleNo: Text
             response:
               type: DrivertoVehicleAssociationRes
 
