@@ -26,6 +26,7 @@ in
               curl
               htop
               wget
+              zbar
             ];
             name = "beckn-root";
             pathsToLink = [
