@@ -1,3 +1,6 @@
+imports:
+  OperationHub: Dashboard.Common
+
 module: Driver
 
 apis:
@@ -13,23 +16,10 @@ apis:
         - mbOffset: Int
         - mbDriverId: Text
         - mbMobileNumber: Text
+        - mbOperationHubId: Id OperationHub
+        - mbRegistrationNo: Text
       response:
         type: OperationHubReqResp
-      helperApi:
-        - GET:
-            endpoint: /operator/fetch/hubRequests
-            auth: ApiAuthV2
-            query:
-              - mbFrom: UTCTime
-              - mbTo: UTCTime
-              - mbStatus: RequestStatus
-              - mbReqType: RequestType
-              - mbLimit: Int
-              - mbOffset: Int
-              - mbDriverId: Text
-              - mbMobileNumber: Text
-            response:
-              type: OperationHubReqResp
 
   - POST: # RespondOperationHubRequest
       endpoint: /operator/respond/hubRequest
@@ -38,14 +28,6 @@ apis:
         type: RespondHubRequest
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /operator/respond/hubRequest
-            auth: ApiAuthV2
-            request:
-              type: RespondHubRequest
-            response:
-              type: APISuccess
 
 types:
   RequestStatus:
@@ -59,8 +41,9 @@ types:
     - requests: [OperationHubDriverRequest]
   OperationHubDriverRequest:
     id: Text
-    operationHubId: Text
+    operationHubId: Id OperationHub
     driverId: Text
+    registrationNo: Text
     requestType: RequestType
     requestStatus: RequestStatus
     requestTime: UTCTime

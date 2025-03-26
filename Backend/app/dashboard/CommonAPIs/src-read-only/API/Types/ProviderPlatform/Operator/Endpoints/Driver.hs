@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Operator.Endpoints.Driver where
 
+import qualified Dashboard.Common
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -12,6 +13,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
+import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import Servant
 import Servant.Client
@@ -19,7 +21,8 @@ import Servant.Client
 data OperationHubDriverRequest = OperationHubDriverRequest
   { driverId :: Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
-    operationHubId :: Kernel.Prelude.Text,
+    operationHubId :: Kernel.Types.Id.Id Dashboard.Common.OperationHub,
+    registrationNo :: Kernel.Prelude.Text,
     requestStatus :: RequestStatus,
     requestTime :: Kernel.Prelude.UTCTime,
     requestType :: RequestType
@@ -58,7 +61,7 @@ data RespondHubRequest = RespondHubRequest
 instance Kernel.Types.HideSecrets.HideSecrets RespondHubRequest where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequestsHelper :<|> PostDriverOperatorRespondHubRequestHelper))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> PostDriverOperatorRespondHubRequest))
 
 type GetDriverOperatorFetchHubRequests =
   ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
@@ -78,29 +81,11 @@ type GetDriverOperatorFetchHubRequests =
       :> QueryParam
            "mbMobileNumber"
            Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           OperationHubReqResp
-  )
-
-type GetDriverOperatorFetchHubRequestsHelper =
-  ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime
       :> QueryParam
-           "mbTo"
-           Kernel.Prelude.UTCTime
-      :> QueryParam "mbStatus" RequestStatus
-      :> QueryParam "mbReqType" RequestType
+           "mbOperationHubId"
+           (Kernel.Types.Id.Id Dashboard.Common.OperationHub)
       :> QueryParam
-           "mbLimit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "mbOffset"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "mbDriverId"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "mbMobileNumber"
+           "mbRegistrationNo"
            Kernel.Prelude.Text
       :> Get
            '[JSON]
@@ -109,10 +94,8 @@ type GetDriverOperatorFetchHubRequestsHelper =
 
 type PostDriverOperatorRespondHubRequest = ("operator" :> "respond" :> "hubRequest" :> ReqBody '[JSON] RespondHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverOperatorRespondHubRequestHelper = ("operator" :> "respond" :> "hubRequest" :> ReqBody '[JSON] RespondHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
-
 data DriverAPIs = DriverAPIs
-  { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
+  { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
     postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 

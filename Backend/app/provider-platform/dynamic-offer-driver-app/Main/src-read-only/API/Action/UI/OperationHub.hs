@@ -25,11 +25,11 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "operation" :> "getAllHubs" :> Get '[JSON] [Domain.Types.OperationHub.OperationHub] :<|> TokenAuth :> "operation" :> "createRequest"
+  ( TokenAuth :> "operation" :> "getAllHubs" :> Get ('[JSON]) [Domain.Types.OperationHub.OperationHub] :<|> TokenAuth :> "operation" :> "createRequest"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.OperationHub.DriverOperationHubRequest
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API

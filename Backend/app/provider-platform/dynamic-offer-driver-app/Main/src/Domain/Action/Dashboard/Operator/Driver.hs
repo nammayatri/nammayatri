@@ -1,20 +1,21 @@
 module Domain.Action.Dashboard.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest, opsHubRequestLockKey) where
 
 import qualified API.Types.ProviderPlatform.Operator.Driver
+import qualified Dashboard.Common as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Environment
-import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (getDbHash)
-import qualified Kernel.Prelude
+import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -25,16 +26,30 @@ import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 
-getDriverOperatorFetchHubRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.RequestStatus -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp)
-getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber = do
+getDriverOperatorFetchHubRequests ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe API.Types.ProviderPlatform.Operator.Driver.RequestStatus ->
+  Maybe API.Types.ProviderPlatform.Operator.Driver.RequestType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (Id Common.OperationHub) ->
+  Maybe Text ->
+  Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp
+getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbReqOperationHubId mbRegistrationNo = do
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
       defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
+      mbOperationHubId = cast @Common.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
-  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId
+  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbRegistrationNo
   pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {requests = map castHubRequests reqList}
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
@@ -76,7 +91,8 @@ castHubRequests OperationHubRequests {..} =
   API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
     { driverId = driverId.getId,
       id = id.getId,
-      operationHubId = operationHubId.getId,
+      operationHubId = cast @DOH.OperationHub @Common.OperationHub operationHubId,
+      registrationNo,
       requestStatus = castReqStatus requestStatus,
       requestTime = createdAt,
       requestType = castReqType requestType

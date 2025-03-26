@@ -20,6 +20,7 @@ data OperationHubRequests = OperationHubRequests
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
     operatorId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    registrationNo :: Kernel.Prelude.Text,
     remarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestStatus :: Domain.Types.OperationHubRequests.RequestStatus,
     requestType :: Domain.Types.OperationHubRequests.RequestType,
