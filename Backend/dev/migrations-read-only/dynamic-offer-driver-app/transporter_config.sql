@@ -384,3 +384,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN qar_cal_radius_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_dynamic_pricing_qar_cal_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_doc_size_in_mb integer ;

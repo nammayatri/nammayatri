@@ -136,7 +136,8 @@ data RCDetails = RCDetails
     vehicleModelYear :: Maybe Int,
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    failedRules :: [Text]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -241,7 +242,8 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
             dateOfRegistration = rc.dateOfRegistration,
             vehicleModelYear = rc.vehicleModelYear,
             oxygen = rc.oxygen,
-            ventilator = rc.ventilator
+            ventilator = rc.ventilator,
+            failedRules = rc.failedRules
           }
 
 fetchDriverDocuments ::
