@@ -213,7 +213,7 @@ multiModalSearch searchRequest initateJourney = do
           { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}},
             destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}}},
             arrivalTime = Nothing,
-            departureTime = Just searchRequest.startTime,
+            departureTime = Nothing,
             mode = Nothing,
             transitPreferences = Nothing,
             transportModes = Nothing,
