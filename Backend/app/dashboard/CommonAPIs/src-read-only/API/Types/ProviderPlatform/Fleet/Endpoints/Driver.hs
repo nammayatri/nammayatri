@@ -214,11 +214,11 @@ newtype FleetBadgeResT = FleetBadgeResT {fleetBadgeInfos :: [FleetBadgesAPIEntit
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype FleetBadgesAPIEntity = FleetBadgesAPIEntity {badgeName :: Kernel.Prelude.Text}
+data FleetBadgesAPIEntity = FleetBadgesAPIEntity {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetBadgesAPIEntityT = FleetBadgesAPIEntityT {badgeName :: Kernel.Prelude.Text, fleetOwnerId :: Kernel.Prelude.Text, fleetOwnerName :: Kernel.Prelude.Text}
+data FleetBadgesAPIEntityT = FleetBadgesAPIEntityT {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool, fleetOwnerId :: Kernel.Prelude.Text, fleetOwnerName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
