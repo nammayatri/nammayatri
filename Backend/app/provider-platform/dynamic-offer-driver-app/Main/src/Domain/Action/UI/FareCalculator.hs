@@ -41,7 +41,7 @@ getCalculateFare ::
   )
 getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropLatLong pickupLatlong = do
   (_, mbDistance, mbDuration, mbRoute, _) <- calculateDistanceAndRoutes merchantId merchanOperatingCityId distanceWeightage [pickupLatlong, dropLatLong] -----------------if you want congestionCharges to be considered then pass geohash imstead of nothing
-  calculateFareUtil merchantId merchanOperatingCityId (Just dropLatLong) pickupLatlong mbDistance mbDuration mbRoute (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
+  calculateFareUtil merchantId merchanOperatingCityId (Just dropLatLong) pickupLatlong mbDistance mbDuration mbRoute (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) Nothing
 
 data CalculateFareReq = CalculateFareReq
   { dropLatLong :: Maybe Kernel.External.Maps.Types.LatLong,
@@ -59,7 +59,7 @@ calculateFare merchantId merchantCity apiKey CalculateFareReq {..} = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-  calculateFareUtil merchantId merchantOperatingCity.id dropLatLong pickupLatLong mbDistance mbDuration Nothing tripCategory
+  calculateFareUtil merchantId merchantOperatingCity.id dropLatLong pickupLatLong mbDistance mbDuration Nothing tripCategory Nothing
 
 calculateFareUtil ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
@@ -70,8 +70,9 @@ calculateFareUtil ::
   Maybe Seconds ->
   Maybe Utils.RouteInfo ->
   DTC.TripCategory ->
+  Maybe Minutes ->
   Environment.Flow API.Types.UI.FareCalculator.FareResponse
-calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory = do
+calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory waitingTime = do
   now <- getCurrentTime
   transporterConfig <- CCT.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   let mbFromLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (pickupLatlong.lat, pickupLatlong.lon)
@@ -91,7 +92,7 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
       vehicleServiceTierItem <-
         CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchanOperatingCityId
           >>= fromMaybeM (VehicleServiceTierNotFound $ show fp.vehicleServiceTier)
-      DBS.buildEstimate merchantId merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp
+      DBS.buildEstimate merchantId merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp waitingTime
 
     selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' =
       filter isValid
