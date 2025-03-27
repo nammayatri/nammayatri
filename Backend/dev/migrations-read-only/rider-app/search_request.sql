@@ -199,6 +199,7 @@ ALTER TABLE atlas_app.search_request ADD COLUMN is_meter_ride_search boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN recent_location_id character varying(36) ;
+ALTER TABLE atlas_app.search_request ADD COLUMN route_code text ;
 
 
 ------- SQL updates -------
@@ -209,6 +210,13 @@ ALTER TABLE atlas_app.search_request ADD COLUMN recent_location_id character var
 ------- SQL updates -------
 
 
+
+
+------- SQL updates -------
+
+
+ALTER TABLE atlas_app.search_request ADD COLUMN origin_stop_code text ;
+ALTER TABLE atlas_app.search_request ADD COLUMN destination_stop_code text ;
 
 
 ------- SQL updates -------
