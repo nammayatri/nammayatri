@@ -384,8 +384,12 @@ getFrfsTransitStops (_personId, _mId) platformType = do
   allStops <-
     foldM
       ( \acc vehicleType -> do
-          stops <- getFrfsStationsAsTransitStops platformType vehicleType personCityInfo.merchantOperatingCityId
-          return (acc ++ stops)
+          exep <- try @_ @SomeException $ do
+            stops <- getFrfsStationsAsTransitStops platformType vehicleType personCityInfo.merchantOperatingCityId
+            return stops
+          case exep of
+            Left _ -> return acc
+            Right stops -> return (acc ++ stops)
       )
       []
       vehicleTypes

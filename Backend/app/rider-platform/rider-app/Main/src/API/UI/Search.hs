@@ -88,6 +88,7 @@ data MultimodalSearchResp = MultimodalSearchResp
   { searchId :: Id SearchRequest.SearchRequest,
     searchExpiry :: UTCTime,
     journeys :: [DQuote.JourneyData],
+    firstJourney :: Maybe DQuote.JourneyData,
     firstJourneyInfo :: Maybe ApiTypes.JourneyInfoResp
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
@@ -245,10 +246,10 @@ multiModalSearch searchRequest initateJourney = do
         DMP.FASTEST -> sortRoutesByDuration <$> journeys
         DMP.CHEAPEST -> sortRoutesByFare <$> journeys
         DMP.MINIMUM_TRANSITS -> sortRoutesByNumberOfLegs <$> journeys
+  let mbFirstJourney = listToMaybe (fromMaybe [] sortedJourneys)
   firstJourneyInfo <-
     if initateJourney
       then do
-        let mbFirstJourney = listToMaybe (fromMaybe [] sortedJourneys)
         case mbFirstJourney of
           Just firstJourney -> do
             resp <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.journeyId
@@ -260,6 +261,7 @@ multiModalSearch searchRequest initateJourney = do
       { searchId = searchRequest.id,
         searchExpiry = searchRequest.validTill,
         journeys = fromMaybe [] sortedJourneys,
+        firstJourney = mbFirstJourney,
         firstJourneyInfo = firstJourneyInfo
       }
   where
