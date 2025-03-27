@@ -11,7 +11,6 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified Domain.Action.ProviderPlatform.Management.VehicleInfo
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.VehicleInfo
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
 import qualified Kernel.Types.APISuccess
@@ -29,21 +28,21 @@ handler merchantId city = getVehicleInfoList merchantId city :<|> putVehicleInfo
 
 type GetVehicleInfoList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.VEHICLE_INFO) / ('API.Types.ProviderPlatform.Management.VehicleInfo.GET_VEHICLE_INFO_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.VEHICLE_INFO / 'API.Types.ProviderPlatform.Management.VehicleInfo.GET_VEHICLE_INFO_LIST)
       :> API.Types.ProviderPlatform.Management.VehicleInfo.GetVehicleInfoList
   )
 
 type PutVehicleInfoUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.VEHICLE_INFO) / ('API.Types.ProviderPlatform.Management.VehicleInfo.PUT_VEHICLE_INFO_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.VEHICLE_INFO / 'API.Types.ProviderPlatform.Management.VehicleInfo.PUT_VEHICLE_INFO_UPDATE)
       :> API.Types.ProviderPlatform.Management.VehicleInfo.PutVehicleInfoUpdate
   )
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [Domain.Types.VehicleInfo.VehicleInfo])
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
 getVehicleInfoList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.VehicleInfo.getVehicleInfoList merchantShortId opCity apiTokenInfo
 
 putVehicleInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.VehicleInfo.UpdateVehicleInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

@@ -7,6 +7,7 @@ module Domain.Action.ProviderPlatform.Management.VehicleInfo
 where
 
 import qualified API.Client.ProviderPlatform.Management
+import qualified API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
@@ -23,7 +24,7 @@ import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Domain.Types.VehicleInfo.VehicleInfo])
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo.VehicleInfoAPIEntity])
 getVehicleInfoList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.vehicleInfoDSL.getVehicleInfoList)

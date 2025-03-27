@@ -1,7 +1,8 @@
 imports:
   APISuccess: Kernel.Types.APISuccess
-  VehicleInfo: Domain.Types.VehicleInfo
   Text: Data.Text
+  VehicleInfo: Dashboard.Common
+  VehicleRegistrationCertificate: Dashboard.Common.Driver
 
 module: VehicleInfo
 
@@ -10,7 +11,7 @@ apis:
       endpoint: /list
       auth: ApiAuthV2
       response:
-        type: "[VehicleInfo]"
+        type: "[VehicleInfoAPIEntity]"
   - PUT:
       endpoint: /update
       auth: ApiAuthV2
@@ -22,4 +23,11 @@ apis:
 types:
   UpdateVehicleInfoReq:
     - recordType: NewType
-    - newInfo: "[VehicleInfo]"
+    - newInfo: "[VehicleInfoAPIEntity]"
+    - derive: "'HideSecrets"
+  VehicleInfoAPIEntity:
+    - id: Id VehicleInfo
+    - rcId: Id VehicleRegistrationCertificate
+    - questionName: Text
+    - question: Text
+    - answer: Text

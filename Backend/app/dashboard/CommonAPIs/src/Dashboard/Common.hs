@@ -74,6 +74,8 @@ data CoinsConfig
 
 data Operator
 
+data VehicleInfo
+
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

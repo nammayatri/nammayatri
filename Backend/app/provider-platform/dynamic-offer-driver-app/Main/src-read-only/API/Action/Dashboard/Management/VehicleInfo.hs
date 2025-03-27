@@ -10,7 +10,6 @@ where
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified Domain.Action.Dashboard.Management.VehicleInfo as Domain.Action.Dashboard.Management.VehicleInfo
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.VehicleInfo
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess
@@ -23,7 +22,7 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.VehicleInfo.API)
 handler merchantId city = getVehicleInfoList merchantId city :<|> putVehicleInfoUpdate merchantId city
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler [Domain.Types.VehicleInfo.VehicleInfo])
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
 getVehicleInfoList a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleInfo.getVehicleInfoList a2 a1
 
 putVehicleInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.VehicleInfo.UpdateVehicleInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
