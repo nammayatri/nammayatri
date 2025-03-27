@@ -37,6 +37,7 @@ import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -66,8 +67,15 @@ import com.google.firebase.perf.metrics.AddTrace;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -147,6 +155,7 @@ public class LocationUpdateService extends Service {
     private boolean isSpecialpickup = false;
     private String driverId = "empty";
 
+
     enum LocationSource {
         CurrentLocation,
         LastLocation
@@ -181,12 +190,69 @@ public class LocationUpdateService extends Service {
     }
 
     private final LocalBinder binder = new LocalBinder();
+    private boolean storeLocationInFile = false;
+    private final String FILE_NAME = "lat_long.txt";
+
+    @Override
+    public void onRebind(Intent intent) {
+        super.onRebind(intent);
+        System.out.println("NammaMater: onRebind");
+    }
 
     @Nullable
     @Override
-    public IBinder onBind(Intent intent)
-    {
+    public IBinder onBind(Intent intent) {
+        System.out.println("NammaMeter: onBind");
+        storeLocationInFile = false;
         return binder;
+    }
+
+    @Nullable
+    @Override
+    public boolean onUnbind(Intent intent){
+        System.out.println("NammaMeter: onUnbind");
+        storeLocationInFile = true;
+         super.onUnbind(intent);
+         return true;
+    }
+
+    public void appendLatLngToFile(String value) {
+//        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+        File path = getFilesDir();
+
+        File newDir = new File(path + "/" + FILE_NAME );
+
+        try {
+            if(!newDir.exists()){
+                newDir.createNewFile();
+            }
+
+            FileOutputStream writer = new FileOutputStream(new File(path, FILE_NAME), true);
+            writer.write((value + "\n").getBytes());
+            writer.close();
+//            emitReactEvent();
+            System.out.println("NammaMeter: Writen to file " + newDir);
+            System.out.println("NammaMeter: value "+ value);
+        } catch (Exception e) {
+           System.out.println("Exception e "+ e.toString());
+        }
+    }
+
+    public interface ReactLocationEmitter {
+        void emitter(String payload);
+    }
+
+    public ReactLocationEmitter locationEmitter;
+
+    public void storeReactEmitter(ReactLocationEmitter reactLocationEmitter){
+        locationEmitter = reactLocationEmitter;
+    }
+
+    public void emitReactEvent(String payload) {
+        if(locationEmitter != null){
+            locationEmitter.emitter(payload);
+            storeLocationInFile = true;
+        }
     }
 
     @Override
@@ -241,6 +307,7 @@ public class LocationUpdateService extends Service {
             context.registerReceiver(internetBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
     }
+
 
     private boolean isNetworkAvailable(Context context) {
         ConnectivityManager connectivityManager
@@ -456,6 +523,7 @@ public class LocationUpdateService extends Service {
             timer.scheduleAtFixedRate(tt, 0, delayForT);
         }
     }
+
 
     /* To update driver status if location is disabled. To prevent false location updates*/
     private void updateDriverStatus(Boolean status) {
@@ -723,6 +791,9 @@ public class LocationUpdateService extends Service {
                 return;
             }
 
+            System.out.println("NammaMeter: storeLocationInFile "+storeLocationInFile);
+
+
             JSONObject locationData = new JSONObject();
 
             locationData.put("pt", point);
@@ -734,6 +805,10 @@ public class LocationUpdateService extends Service {
             if (!locationData.has("pt")) return;
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
+
+            if(locationEmitter != null){
+                emitReactEvent(locationPayload.toString());
+            }
 
             Log.d(LOG_TAG, "DriverUpdateLoc Payload Created - " + locationPayload);
             Log.d(LOG_TAG, "DriverUpdateLoc Executor Status - " + executorLocUpdate.isShutdown() + " ExecutorOffFor - " + executorBusy + " delayForGNew - " + delayForGNew);

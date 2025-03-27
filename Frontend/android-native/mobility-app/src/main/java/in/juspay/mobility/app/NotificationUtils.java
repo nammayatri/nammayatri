@@ -1021,7 +1021,7 @@ public class NotificationUtils {
                     NotificationUtils.showNotification(context, title, body, payload, imageUrl);
                     sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
-                    startMainActivity(context);
+//                    startMainActivity(context);
                     if (merchantType.equals("DRIVER")){
                         NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
