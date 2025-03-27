@@ -3103,7 +3103,7 @@ handleFcm notificationType state notificationBody = do
     "USER_FAVOURITE_DRIVER" -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
       homeScreenFlow
-    _                   -> pure unit 
+    _                   -> pure unit
 
 endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> FlowBT String Unit
 endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do

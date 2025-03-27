@@ -3246,6 +3246,7 @@ export const setupVoiceRecognitionView = function(id) {
 }
 
 export const startOpenMeterActivity = (cb) => {
+export const startOpenMeterActivity = (cb) => {
   return () => {
     const callback = () => {
       const timeTaken = Date.now() - window.onPauseTime;
