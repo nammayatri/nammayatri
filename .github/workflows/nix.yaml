@@ -104,16 +104,6 @@ jobs:
       - name: Checkout repository
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
-      - name: Install om
-        run: |
-          curl -L https://github.com/nix-community/om/releases/download/v0.1.0/om-linux-amd64 -o om
-          chmod +x om
-          sudo mv om /usr/local/bin/om
-
-      - name: Build all flake outputs
-        if: steps.check-conditions.outputs.should_build == 'true'
-        run: |
-          om ci run --systems "${{ matrix.system }}" --no-link -- -v
 
       - name: Build And Push Docker image
         id: docker
