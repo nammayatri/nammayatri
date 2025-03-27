@@ -224,13 +224,13 @@ type API =
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq
-      :> Get
+      :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> getMultimodalTransitOptionsLite
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -395,11 +395,11 @@ postMultimodalUserPreferences ::
   )
 postMultimodalUserPreferences a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalUserPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getMultimodalTransitOptionsLite ::
+postMultimodalTransitOptionsLite ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
   )
-getMultimodalTransitOptionsLite a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalTransitOptionsLite (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalTransitOptionsLite a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTransitOptionsLite (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

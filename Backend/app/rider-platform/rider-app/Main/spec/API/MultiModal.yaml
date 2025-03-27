@@ -258,7 +258,7 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  - GET:
+  - POST:
       endpoint: multimodal/transitOptions/lite
       request:
         type: MultimodalTransitOptionsReq
