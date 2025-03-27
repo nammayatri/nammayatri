@@ -17,7 +17,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalFeedback,
     getMultimodalUserPreferences,
     postMultimodalUserPreferences,
-    getMultimodalTransitOptionsLite,
+    postMultimodalTransitOptionsLite,
   )
 where
 
@@ -476,14 +476,14 @@ postMultimodalUserPreferences (mbPersonId, merchantId) multimodalUserPreferences
       QMP.create newPreferences
   pure Kernel.Types.APISuccess.Success
 
-getMultimodalTransitOptionsLite ::
+postMultimodalTransitOptionsLite ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
   )
-getMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
+postMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   userPreferences <- getMultimodalUserPreferences (mbPersonId, merchantId)
