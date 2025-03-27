@@ -16,6 +16,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import Tools.Error
@@ -33,6 +34,7 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
     opsHubReq <- QOHR.findByDriverStatusAndType driverId PENDING req.requestType
     unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
+    void $ SStatus.checkAvailableVehicleRC driverId req.registrationNo
     let operationHubReq =
           OperationHubRequests
             { operationHubId = req.operationHubId,

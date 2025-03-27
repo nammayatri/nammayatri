@@ -24,7 +24,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Vehicle as QVehicle
 
 getDriverOperatorFetchHubRequests ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -69,18 +68,16 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
         person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let language = fromMaybe merchantOpCity.language person.language
         driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language
-        vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
-        vehicleDoc <-
-          find (\doc -> doc.registrationNo == req.registrationNo) vehicleDocumentsUnverified
-            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> req.registrationNo)
-        let makeSelfieAadhaarPanMandatory = Nothing
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
-        allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
-        when (allVehicleDocsVerified && allDriverDocsVerified) $
-          void $ postDriverEnable merchantShortId opCity (Kernel.Types.Id.Id req.driverId)
-        mbVehicle <- QVehicle.findById personId
-        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified) $
-          void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
+        mbVehicleDocumentUnverified <- SStatus.fetchVehicleDocumentsByRcNo personId merchantOpCity transporterConfig language req.registrationNo
+        case mbVehicleDocumentUnverified of
+          Nothing -> logError $ "Vehicle doc for driverId " <> personId.getId <> " and registartionNo " <> req.registrationNo <> " is not available"
+          Just vehicleDoc -> do
+            let makeSelfieAadhaarPanMandatory = Nothing
+            allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
+            allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
+            when (allVehicleDocsVerified && allDriverDocsVerified) $ do
+              void $ postDriverEnable merchantShortId opCity (Kernel.Types.Id.Id req.driverId)
+              void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity vehicleDoc.registrationNo)
   pure Success
 
 opsHubRequestLockKey :: Text -> Text
