@@ -131,8 +131,8 @@ ApprovalRequest:
 
   types:
     RequestStatus:
-      - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"     
-      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema" 
+      - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
+      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
     RequestorType:
       enum: "SystemGenerated, DriverGenerated"
@@ -187,7 +187,7 @@ ApprovalRequest:
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-   
+
   beamType:
     entityId: Maybe Text
     entityType: Maybe EntityType
