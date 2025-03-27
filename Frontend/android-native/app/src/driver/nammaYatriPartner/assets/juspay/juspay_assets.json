@@ -680,6 +680,7 @@
       "ny_ic_offline_status" : true,
       "ny_ic_one_more_ride" : true,
       "ny_ic_ontime_badge" : true,
+      "ny_ic_open_meter_icon" : true,
       "ny_ic_orange_pfp_ring" : true,
       "ny_ic_orange_shield_with_eye" : true,
       "ny_ic_other_issues" : true,
