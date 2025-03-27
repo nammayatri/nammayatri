@@ -20,19 +20,23 @@ module API.UI.Search
     DSearch.RentalSearchReq (..),
     DSearch.SearchReqLocation (..),
     API,
+    SearchAPI,
     search',
     search,
     handler,
   )
 where
 
+import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
+import Data.List (sortBy)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
+import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -40,7 +44,6 @@ import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Estimate as Estimate
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -81,7 +84,30 @@ import qualified Tools.MultiModal as TMultiModal
 
 -------- Search Flow --------
 
+data MultimodalSearchResp = MultimodalSearchResp
+  { searchId :: Id SearchRequest.SearchRequest,
+    searchExpiry :: UTCTime,
+    journeys :: [DQuote.JourneyData],
+    firstJourneyInfo :: Maybe ApiTypes.JourneyInfoResp
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
 type API =
+  SearchAPI
+    :<|> "multimodalSearch"
+      :> TokenAuth
+      :> ReqBody '[JSON] DSearch.SearchReq
+      :> Header "initateJourney" Bool
+      :> Header "x-bundle-version" Version
+      :> Header "x-client-version" Version
+      :> Header "x-config-version" Version
+      :> Header "x-rn-version" Text
+      :> Header "client-id" (Id DC.Client)
+      :> Header "x-device" Text
+      :> Header "is-dashboard-request" Bool
+      :> Post '[JSON] MultimodalSearchResp
+
+type SearchAPI =
   "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] DSearch.SearchReq
@@ -95,7 +121,7 @@ type API =
     :> Post '[JSON] DSearch.SearchResp
 
 handler :: FlowServer API
-handler = search
+handler = search :<|> multimodalSearchHandler
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice
@@ -125,25 +151,13 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing False
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  fork "Multimodal Search" $ do
-    let merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId
-    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
-    userPreferences <- DMC.getMultimodalUserPreferences (Just personId, merchantId)
-    let permissibleModesToUse =
-          if null userPreferences.allowedTransitModes
-            then fromMaybe [] riderConfig.permissibleModes
-            else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
-    let sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
-    when riderConfig.makeMultiModalSearch $
-      case req of
-        OneWaySearch searchReq -> multiModalSearch searchReq dSearchRes.searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance riderConfig.minimumWalkDistance permissibleModesToUse riderConfig.maxAllowedPublicTransportLegs sortingType
-        _ -> pure ()
+  fork "Multimodal Search" $ void (multiModalSearch dSearchRes.searchRequest False)
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -153,23 +167,6 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
       let isNonScheduled = diffUTCTime sReq.startTime sReq.createdAt < scheduleRideBufferTime
           isValid = sReq.validTill > now
       return $ isNonScheduled && isValid
-
-    userPreferencesToGeneralVehicleTypes :: [DTrip.MultimodalTravelMode] -> [GeneralVehicleType]
-    userPreferencesToGeneralVehicleTypes = mapMaybe allowedTransitModeToGeneralVehicleType
-
-    allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> Maybe GeneralVehicleType
-    allowedTransitModeToGeneralVehicleType mode = case mode of
-      DTrip.Bus -> Just MultiModalTypes.Bus
-      DTrip.Metro -> Just MultiModalTypes.MetroRail
-      DTrip.Subway -> Just MultiModalTypes.Subway
-      DTrip.Walk -> Just MultiModalTypes.Walk
-      _ -> Nothing
-
-    convertSortingType :: DMP.JourneyOptionsSortingType -> SortingType
-    convertSortingType sortType = case sortType of
-      DMP.FASTEST -> Fastest
-      DMP.MINIMUM_TRANSITS -> Minimum_Transits
-      _ -> Fastest -- Default case for any other values
 
 handleBookingCancellation :: Id Merchant.Merchant -> Id Person.Person -> Id SearchRequest.SearchRequest -> Flow ()
 handleBookingCancellation merchantId _personId sReqId = do
@@ -190,34 +187,39 @@ handleBookingCancellation merchantId _personId sReqId = do
       void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
     _ -> pure ()
 
--- TODO : remove this code after multiple search req issue get fixed from frontend
---END
+multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler MultimodalSearchResp
+multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI $
+  withPersonIdLogTag personId $ do
+    checkSearchRateLimit personId
+    fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+    dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
+    let initateJourney = fromMaybe False mbInitateJourney
+    multiModalSearch dSearchRes.searchRequest initateJourney
 
-multiModalSearch ::
-  OneWaySearchReq ->
-  SearchRequest.SearchRequest ->
-  Id DMOC.MerchantOperatingCity ->
-  Meters ->
-  Meters ->
-  [GeneralVehicleType] ->
-  Int ->
-  SortingType ->
-  Flow ()
-multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDistance minimumWalkDistance permissibleModes maxAllowedPublicTransportLegs sortingType = do
-  dest <- extractDest searchReq.destination
+multiModalSearch :: SearchRequest.SearchRequest -> Bool -> Flow MultimodalSearchResp
+multiModalSearch searchRequest initateJourney = do
+  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
+  let permissibleModesToUse =
+        if null userPreferences.allowedTransitModes
+          then fromMaybe [] riderConfig.permissibleModes
+          else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
+  let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
+  destination <- extractDest searchRequest.toLocation
   let transitRoutesReq =
         GetTransitRoutesReq
-          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchReq.origin.gps.lat, longitude = searchReq.origin.gps.lon}}},
-            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = dest.gps.lat, longitude = dest.gps.lon}}},
+          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}},
+            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}}},
             arrivalTime = Nothing,
-            departureTime = searchReq.startTime,
+            departureTime = Just searchRequest.startTime,
             mode = Nothing,
             transitPreferences = Nothing,
             transportModes = Nothing,
-            minimumWalkDistance = minimumWalkDistance,
-            permissibleModes = permissibleModes,
-            maxAllowedPublicTransportLegs = maxAllowedPublicTransportLegs,
-            sortingType = sortingType
+            minimumWalkDistance = riderConfig.minimumWalkDistance,
+            permissibleModes = permissibleModesToUse,
+            maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+            sortingType = convertSortingType sortingType
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
   otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
@@ -234,13 +236,61 @@ multiModalSearch searchReq searchRequest merchantOperatingCityId maximumWalkDist
               estimatedDuration = r.duration,
               startTime = r.startTime,
               endTime = r.endTime,
-              maximumWalkDistance
+              maximumWalkDistance = riderConfig.maximumWalkDistance
             }
-    QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
     JM.init initReq
+  QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
+  journeys <- DQuote.getJourneys searchRequest
+  let sortedJourneys = case sortingType of
+        DMP.FASTEST -> sortRoutesByDuration <$> journeys
+        DMP.CHEAPEST -> sortRoutesByFare <$> journeys
+        DMP.MINIMUM_TRANSITS -> sortRoutesByNumberOfLegs <$> journeys
+  firstJourneyInfo <-
+    if initateJourney
+      then do
+        let mbFirstJourney = listToMaybe (fromMaybe [] sortedJourneys)
+        case mbFirstJourney of
+          Just firstJourney -> do
+            resp <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.journeyId
+            return $ Just resp
+          Nothing -> return Nothing
+      else return Nothing
+  return $
+    MultimodalSearchResp
+      { searchId = searchRequest.id,
+        searchExpiry = searchRequest.validTill,
+        journeys = fromMaybe [] sortedJourneys,
+        firstJourneyInfo = firstJourneyInfo
+      }
   where
-    extractDest Nothing = throwError $ InvalidRequest "Destination Does Not Exist"
+    extractDest Nothing = throwError $ InvalidRequest "Destination is required for multimodal search"
     extractDest (Just d) = return d
+
+    sortRoutesByDuration :: [DQuote.JourneyData] -> [DQuote.JourneyData]
+    sortRoutesByDuration = sortBy (\j1 j2 -> fromMaybe LT (compare <$> j1.duration <*> j2.duration))
+
+    sortRoutesByNumberOfLegs :: [DQuote.JourneyData] -> [DQuote.JourneyData]
+    sortRoutesByNumberOfLegs = sortBy (\j1 j2 -> compare (length j1.journeyLegs) (length j2.journeyLegs))
+
+    sortRoutesByFare :: [DQuote.JourneyData] -> [DQuote.JourneyData]
+    sortRoutesByFare = sortBy (\j1 j2 -> compare j1.totalMaxFare.getHighPrecMoney j2.totalMaxFare.getHighPrecMoney)
+
+    userPreferencesToGeneralVehicleTypes :: [DTrip.MultimodalTravelMode] -> [GeneralVehicleType]
+    userPreferencesToGeneralVehicleTypes = mapMaybe allowedTransitModeToGeneralVehicleType
+
+    allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> Maybe GeneralVehicleType
+    allowedTransitModeToGeneralVehicleType mode = case mode of
+      DTrip.Bus -> Just MultiModalTypes.Bus
+      DTrip.Metro -> Just MultiModalTypes.MetroRail
+      DTrip.Subway -> Just MultiModalTypes.Subway
+      DTrip.Walk -> Just MultiModalTypes.Walk
+      _ -> Nothing
+
+    convertSortingType :: DMP.JourneyOptionsSortingType -> SortingType
+    convertSortingType sortType = case sortType of
+      DMP.FASTEST -> Fastest
+      DMP.MINIMUM_TRANSITS -> Minimum_Transits
+      _ -> Fastest -- Default case for any other values
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

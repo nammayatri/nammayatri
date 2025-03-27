@@ -159,8 +159,9 @@ search ::
   Maybe Text ->
   Bool ->
   Maybe JPT.JourneySearchData ->
+  Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
@@ -178,7 +179,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let stopsLatLong = map (.gps) stops
   originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
-  updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
+  unless justMultimodalSearch $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
   -- merchant operating city of search-request-origin-location
   merchantOperatingCity <-
