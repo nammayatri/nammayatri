@@ -111,7 +111,7 @@ data DriverBlockTillReq = DriverBlockTillReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-data RideInfo = Bus
+data BusRideInfo = BusRideInfo
   { routeCode :: Text,
     busNumber :: Text,
     destination :: LatLong,

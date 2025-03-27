@@ -187,7 +187,7 @@ ApprovalRequest:
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-  
+   
   beamType:
     entityId: Maybe Text
     entityType: Maybe EntityType

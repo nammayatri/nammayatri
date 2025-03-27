@@ -47,7 +47,8 @@ data AddVehicleReq = AddVehicleReq
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Day,
-    vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -497,7 +498,7 @@ data TripDetails = TripDetails {routeCode :: Kernel.Prelude.Text, roundTrip :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails]}
+data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, badgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -654,7 +655,7 @@ type GetDriverFleetGetDriverRequests =
       :> QueryParam "mbOffset" Kernel.Prelude.Int
       :> Get
            '[JSON]
-           DriverRequestResp
+           DriverRequestRespT
   )
 
 type GetDriverFleetDriverRequestsHelper =
@@ -672,7 +673,12 @@ type GetDriverFleetDriverRequestsHelper =
            DriverRequestResp
   )
 
-type PostDriverFleetRespondDriverRequest = ("fleet" :> "respond" :> "driverRequest" :> ReqBody '[JSON] RequestRespondReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverFleetRespondDriverRequest =
+  ( "fleet" :> "respond" :> "driverRequest" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> ReqBody '[JSON] RequestRespondReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostDriverFleetDriverRequestRespondHelper =
   ( "fleet" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> "driverRequest" :> "respond" :> ReqBody '[JSON] RequestRespondReq
@@ -702,7 +708,7 @@ type GetDriverFleetGetAllVehicle =
       :> QueryParam
            "mbRegNumberString"
            Kernel.Prelude.Text
-      :> Get '[JSON] ListVehicleRes
+      :> Get '[JSON] ListVehicleResT
   )
 
 type GetDriverFleetGetAllVehicleHelper =
@@ -762,9 +768,10 @@ type GetDriverFleetGetAllBadgeHelper =
 
 type PostDriverFleetUnlink =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> Capture "vehicleNo" Kernel.Prelude.Text :> "fleet" :> "unlink"
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> QueryParam
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverFleetUnlinkHelper =
@@ -777,7 +784,12 @@ type PostDriverFleetUnlinkHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type PostDriverFleetRemoveVehicle = (Capture "vehicleNo" Kernel.Prelude.Text :> "fleet" :> "remove" :> "vehicle" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverFleetRemoveVehicle =
+  ( Capture "vehicleNo" Kernel.Prelude.Text :> "fleet" :> "remove" :> "vehicle" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostDriverFleetRemoveVehicleHelper =
   ( Capture "fleetOwnerId" Kernel.Prelude.Text :> Capture "vehicleNo" Kernel.Prelude.Text :> "fleet" :> "remove" :> "vehicle"
@@ -786,7 +798,13 @@ type PostDriverFleetRemoveVehicleHelper =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type PostDriverFleetRemoveDriver = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleet" :> "remove" :> "driver" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverFleetRemoveDriver =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleet" :> "remove" :> "driver"
+      :> QueryParam
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostDriverFleetRemoveDriverHelper =
   ( Capture "fleetOwnerId" Kernel.Prelude.Text
@@ -962,7 +980,7 @@ type GetDriverFleetDriverAssociation =
            Kernel.Prelude.Text
       :> Get
            '[JSON]
-           DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationResT
   )
 
 type GetDriverFleetGetFleetDriverAssociationHelper =
@@ -1024,7 +1042,7 @@ type GetDriverFleetVehicleAssociation =
            Kernel.Prelude.Text
       :> Get
            '[JSON]
-           DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationResT
   )
 
 type GetDriverFleetGetFleetVehicleAssociationHelper =
@@ -1185,7 +1203,7 @@ type GetDriverFleetTripTransactions =
            Kernel.Prelude.Int
       :> Get
            '[JSON]
-           TripTransactionResp
+           TripTransactionRespT
   )
 
 type GetDriverFleetTripTransactionsHelper =
@@ -1258,10 +1276,13 @@ type PostDriverFleetLinkRCWithDriverHelper =
   )
 
 type PostDriverDashboardFleetWmbTripEnd =
-  ( "dashboard" :> "fleet" :> "wmb" :> "trip" :> Capture "tripTransactionId" (Kernel.Types.Id.Id Dashboard.Common.TripTransaction) :> "end"
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+  ( "dashboard" :> "fleet" :> "wmb" :> "trip"
+      :> Capture
+           "tripTransactionId"
+           (Kernel.Types.Id.Id Dashboard.Common.TripTransaction)
+      :> "end"
+      :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverDashboardFleetWmbTripEndHelper =
@@ -1283,7 +1304,7 @@ type GetDriverFleetWmbRouteDetailsHelper =
            RouteDetails
   )
 
-type PostDriverFleetGetNearbyDrivers = ("fleet" :> "getNearbyDrivers" :> ReqBody '[JSON] NearbyDriverReq :> Post '[JSON] NearbyDriverResp)
+type PostDriverFleetGetNearbyDrivers = ("fleet" :> "getNearbyDrivers" :> ReqBody '[JSON] NearbyDriverReq :> Post '[JSON] NearbyDriverRespT)
 
 type PostDriverFleetGetNearbyDriversHelper = ("fleet" :> "getNearbyDrivers" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> ReqBody '[JSON] NearbyDriverReq :> Post '[JSON] NearbyDriverResp)
 

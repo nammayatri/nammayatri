@@ -1324,8 +1324,7 @@ postDriverFleetTripPlanner ::
 postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
-  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber
+  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId req.vehicleNumber
   void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName
   createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
   pure Success
@@ -1503,7 +1502,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     foldlM
       ( \unprocessedEntities (driver, driverMobileNumber, vehicleNumber, tripPlannerRequests) -> do
           try @_ @SomeException
-            ( WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False -- TODO :: Make this dynamic by adding the force_assign field in CSV.
+            ( WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId vehicleNumber -- TODO :: Make this dynamic by adding the force_assign field in CSV.
             -- void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName -- TODO :: Capture Badge Name from CSV
             )
             >>= \case

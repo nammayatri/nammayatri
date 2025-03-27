@@ -14,7 +14,7 @@ imports:
   FleetConfig: Domain.Types.FleetConfig
   RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
   RequestStatus: Domain.Types.ApprovalRequest
-
+ 
 module: WMB
 
 types:

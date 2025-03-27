@@ -815,3 +815,4 @@ HyperVergeSdkLogs:
       orderBy:
         field: createdAt
         order: asc
+  

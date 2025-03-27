@@ -124,7 +124,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         tripTransactionId <- generateGUID
         now <- getCurrentTime
         closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (StopNotFound)
-        vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber
+        vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId vehicleNumber
         driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate (Just driver.firstName)
         -- TODO :: Handle Transaction Failure
@@ -294,8 +294,8 @@ linkFleetBadgeToDriver driverId _merchantId _merchantOperatingCityId fleetOwnerI
   void $ QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName >>= fromMaybeM (FleetBadgeNotFound badgeName)
   QP.updatePersonName driverId badgeName
 
-linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> FleetConfig -> Text -> Text -> Bool -> Flow VehicleRegistrationCertificate
-linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetOwnerId vehicleNumber isForceAssign = do
+linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow VehicleRegistrationCertificate
+linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetOwnerId vehicleNumber = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
@@ -303,9 +303,6 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig flee
     >>= \case
       Nothing -> pure ()
       Just tripTransaction -> unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
-  vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-  unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
-  unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
   QV.findByRegistrationNo vehicleNumber >>= \case
     Just vehicle -> when (vehicle.driverId /= driverId) $ throwError (VehicleLinkedToAnotherDriver vehicleNumber)
     Nothing -> pure ()
