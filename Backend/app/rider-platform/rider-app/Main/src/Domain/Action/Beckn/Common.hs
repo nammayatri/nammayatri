@@ -1087,8 +1087,9 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
         dailyPayoutCount_ <- Redis.get dailyPayoutCountKey
         let dailyPayoutCount = fromMaybe 0 dailyPayoutCount_ -- for referredBy customer
             isDeviceIdValid = (length personsWithSameDeviceId == 1) -- deviceId of new customer should be unique
+            deviceIdCheck = fromMaybe False riderConfig.isDeviceIdCheckDisabled || isDeviceIdValid
             isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
-            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations < riderConfig.payoutReferralThresholdPerMonth) && isDeviceIdValid
+            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
         when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id

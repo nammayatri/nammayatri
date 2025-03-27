@@ -75,6 +75,7 @@ RiderConfig:
     isFirstReferredRideEnabled: Bool
     payoutReferralThresholdPerDay: Int
     payoutReferralThresholdPerMonth: Int
+    isDeviceIdCheckDisabled: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

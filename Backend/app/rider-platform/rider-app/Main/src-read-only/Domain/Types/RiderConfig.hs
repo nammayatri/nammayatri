@@ -42,6 +42,7 @@ data RiderConfig = RiderConfig
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
+    isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFirstReferredRideEnabled :: Kernel.Prelude.Bool,
     ivrTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     kaptureConfig :: IssueManagement.Common.KaptureConfig,
