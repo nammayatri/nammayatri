@@ -16,12 +16,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FleetBadgeAssociation as Beam
 import Storage.Queries.FleetBadgeAssociationExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetBadgeAssociation.FleetBadgeAssociation -> m ())
-create = createWithKV
-
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetBadgeAssociation.FleetBadgeAssociation] -> m ())
-createMany = traverse_ create
-
 deleteByBadgeId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge -> m ())
 deleteByBadgeId badgeId = do deleteWithKV [Se.Is Beam.badgeId $ Se.Eq (Kernel.Types.Id.getId badgeId)]
 
