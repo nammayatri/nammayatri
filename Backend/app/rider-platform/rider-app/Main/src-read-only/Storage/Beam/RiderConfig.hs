@@ -46,6 +46,7 @@ data RiderConfigT f = RiderConfigT
     incidentReportSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     intercitySearchLocations :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation]),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
+    isDeviceIdCheckDisabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFirstReferredRideEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     ivrTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     kaptureConfig :: B.C f IssueManagement.Common.KaptureConfig,
