@@ -545,8 +545,7 @@ editTextView state push =
       , padding (Padding 6 0 6 60)
       , orientation VERTICAL
       ][
-          PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
-        , linearLayout
+          linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
