@@ -17,6 +17,7 @@ module API.UI.Search
     DSearch.SearchRes (..),
     DSearch.SearchResp (..),
     DSearch.OneWaySearchReq (..),
+    DSearch.PublicTransportSearchReq (..),
     DSearch.RentalSearchReq (..),
     DSearch.SearchReqLocation (..),
     API,
@@ -32,7 +33,7 @@ import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
-import Data.List (sortBy)
+import Data.List (partition, sortBy, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
@@ -197,6 +198,33 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
     let initateJourney = fromMaybe False mbInitateJourney
     multiModalSearch dSearchRes.searchRequest initateJourney
 
+mkRouteKey :: Text -> Text
+mkRouteKey routeId = "route:" <> routeId
+
+data BusData = BusData
+  { latitude :: Double,
+    longitude :: Double,
+    timestamp :: UTCTime,
+    speed :: Int,
+    device_id :: Text,
+    etaData :: [BusStopETA]
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data FullBusData = FullBusData
+  { vehicleNumber :: Text,
+    busData :: BusData
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data BusStopETA = BusStopETA
+  { stopId :: Text,
+    stopSeq :: Int,
+    stopName :: Text,
+    arrivalTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
 multiModalSearch :: SearchRequest.SearchRequest -> Bool -> Flow MultimodalSearchResp
 multiModalSearch searchRequest initateJourney = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
@@ -225,6 +253,97 @@ multiModalSearch searchRequest initateJourney = do
   transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
   otpResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
   logDebug $ "[Multimodal - OTP Response]" <> show otpResponse
+
+  directJourney <-
+    case searchRequest.routeCode of
+      Just routeCode -> do
+        let routeCodekey = mkRouteKey routeCode
+        busDataPairs <- Redis.withCrossAppRedis $ Redis.hGetAll routeCodekey
+        let originStopCode = searchRequest.originStopCode
+        let destinationStopCode = searchRequest.destinationStopCode
+        let busesWithData =
+              mapMaybe
+                ( \(vehicleId, busDataJson) -> do
+                    busData <- decodeFromText busDataJson :: Maybe BusData
+                    return (vehicleId, busData)
+                )
+                busDataPairs
+
+        -- Find the best bus with ETAs for our route
+        let mbBestBus =
+              listToMaybe $
+                sortOn getBestBusScore $
+                  filter hasBothStops busesWithData
+              where
+                hasBothStops (_, busData) =
+                  case (originStopCode, destinationStopCode) of
+                    (Just origCode, Just destCode) ->
+                      any (\eta -> eta.stopId == origCode) busData.etaData
+                        && any (\eta -> eta.stopId == destCode) busData.etaData
+                    _ -> True
+
+                defaultLargeTimeDiff :: NominalDiffTime
+                defaultLargeTimeDiff = realToFrac (1000000 :: Double)
+
+                getBestBusScore (_, busData) =
+                  case (originStopCode, destinationStopCode) of
+                    (Just origCode, Just destCode) -> do
+                      let mbOrigTime = getStopArrivalTime origCode busData.etaData
+                      let mbDestTime = getStopArrivalTime destCode busData.etaData
+                      case (mbOrigTime, mbDestTime) of
+                        (Just origTime, Just _) ->
+                          abs (diffUTCTime origTime searchRequest.startTime) -- Sort by closest arrival time
+                        _ -> defaultLargeTimeDiff
+                    _ -> defaultLargeTimeDiff
+
+        let originStopTime = case (mbBestBus, originStopCode) of
+              (Just (_, busData), Just origCode) ->
+                getStopArrivalTime origCode busData.etaData
+              _ -> Nothing
+        let destStopTime = case (mbBestBus, destinationStopCode) of
+              (Just (_, busData), Just destCode) ->
+                getStopArrivalTime destCode busData.etaData
+              _ -> Nothing
+
+        let calculatedDuration = case (originStopTime, destStopTime) of
+              (Just origTime, Just destTime) ->
+                Seconds $ round $ diffUTCTime destTime origTime
+              _ -> Seconds $ 0
+
+        let originStopName = case (mbBestBus, originStopCode) of
+              (Just (_, busData), Just origCode) ->
+                getStopName origCode busData.etaData
+              _ -> Nothing
+
+        let destStopName = case (mbBestBus, destinationStopCode) of
+              (Just (_, busData), Just destCode) ->
+                getStopName destCode busData.etaData
+              _ -> Nothing
+
+        departureTimeFromSource <- case originStopTime of
+          Just time -> return time
+          Nothing -> return searchRequest.startTime
+        let arrivalTimeAtDestination = destStopTime
+        let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
+        toLocation <- searchRequest.toLocation & fromMaybeM (InternalError "To Location not found")
+        let leg = mkMultiModalLeg distance calculatedDuration MultiModalTypes.Bus searchRequest.fromLocation.lat searchRequest.fromLocation.lon toLocation.lat toLocation.lon departureTimeFromSource arrivalTimeAtDestination originStopCode destinationStopCode originStopName destStopName
+
+        let directRouteInitReq =
+              JMTypes.JourneyInitData
+                { parentSearchId = searchRequest.id,
+                  merchantId = searchRequest.merchantId,
+                  merchantOperatingCityId,
+                  personId = searchRequest.riderId,
+                  legs = [leg],
+                  estimatedDistance = distance,
+                  estimatedDuration = calculatedDuration,
+                  startTime = Just searchRequest.startTime,
+                  endTime = arrivalTimeAtDestination,
+                  maximumWalkDistance = riderConfig.maximumWalkDistance
+                }
+        JM.init directRouteInitReq
+      Nothing -> pure Nothing
+
   forM_ otpResponse.routes $ \r -> do
     let initReq =
           JMTypes.JourneyInitData
@@ -246,6 +365,13 @@ multiModalSearch searchRequest initateJourney = do
         DMP.FASTEST -> sortRoutesByDuration <$> journeys
         DMP.CHEAPEST -> sortRoutesByFare <$> journeys
         DMP.MINIMUM_TRANSITS -> sortRoutesByNumberOfLegs <$> journeys
+  let sortedJourneys' = case (directJourney, sortedJourneys) of
+        (Just dj, Just js) ->
+          Just $
+            let (directJs, otherJs) = partition (\j -> j.journeyId == dj.id) js
+             in directJs <> otherJs
+        _ -> sortedJourneys
+  logDebug $ "sortedJourneys' " <> show sortedJourneys'
   let mbFirstJourney = listToMaybe (fromMaybe [] sortedJourneys)
   firstJourneyInfo <-
     if initateJourney
@@ -267,6 +393,14 @@ multiModalSearch searchRequest initateJourney = do
   where
     extractDest Nothing = throwError $ InvalidRequest "Destination is required for multimodal search"
     extractDest (Just d) = return d
+
+    getStopArrivalTime :: Text -> [BusStopETA] -> Maybe UTCTime
+    getStopArrivalTime stopId etaData =
+      listToMaybe [eta.arrivalTime | eta <- etaData, eta.stopId == stopId]
+
+    getStopName :: Text -> [BusStopETA] -> Maybe Text
+    getStopName stopId etaData =
+      listToMaybe [eta.stopName | eta <- etaData, eta.stopId == stopId]
 
     sortRoutesByDuration :: [DQuote.JourneyData] -> [DQuote.JourneyData]
     sortRoutesByDuration = sortBy (\j1 j2 -> fromMaybe LT (compare <$> j1.duration <*> j2.duration))
@@ -293,6 +427,37 @@ multiModalSearch searchRequest initateJourney = do
       DMP.FASTEST -> Fastest
       DMP.MINIMUM_TRANSITS -> Minimum_Transits
       _ -> Fastest -- Default case for any other values
+    mkMultiModalLeg distance duration mode originLat originLon destLat destLon departureTimeFromSource arrivalTimeAtDestination originStopCode destinationStopCode originStopName destStopName =
+      MultiModalTypes.MultiModalLeg
+        { distance,
+          duration,
+          polyline = Polyline {encodedPolyline = ""},
+          mode,
+          startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
+          endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
+          fromStopDetails =
+            Just $
+              MultiModalTypes.MultiModalStopDetails
+                { stopCode = originStopCode,
+                  platformCode = Nothing,
+                  name = originStopName,
+                  gtfsId = originStopCode
+                },
+          toStopDetails =
+            Just $
+              MultiModalTypes.MultiModalStopDetails
+                { stopCode = destinationStopCode,
+                  platformCode = Nothing,
+                  name = destStopName,
+                  gtfsId = destinationStopCode
+                },
+          routeDetails = [],
+          agency = Nothing,
+          fromArrivalTime = Just departureTimeFromSource,
+          fromDepartureTime = Just departureTimeFromSource,
+          toArrivalTime = arrivalTimeAtDestination,
+          toDepartureTime = arrivalTimeAtDestination
+        }
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

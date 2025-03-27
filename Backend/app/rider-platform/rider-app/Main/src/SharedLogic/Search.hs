@@ -46,7 +46,7 @@ data SearchRes = SearchRes
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -103,6 +103,17 @@ data OneWaySearchReq = OneWaySearchReq
     placeNameSource :: Maybe Text,
     driverIdentifier :: Maybe DRL.DriverIdentifier,
     isMeterRideSearch :: Maybe Bool,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation)
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PublicTransportSearchReq = PublicTransportSearchReq
+  { origin :: SearchReqLocation,
+    destination :: Maybe SearchReqLocation,
+    originStopCode :: Text,
+    destinationStopCode :: Text,
+    startTime :: Maybe UTCTime,
+    routeCode :: Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -165,7 +176,10 @@ data SearchDetails = SearchDetails
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,
     driverIdentifier_ :: Maybe DRL.DriverIdentifier,
-    recentLocationId :: Maybe (Id DTRL.RecentLocation)
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    routeCode :: Maybe Text,
+    destinationStopCode :: Maybe Text,
+    originStopCode :: Maybe Text
   }
   deriving (Generic, Show)
 
