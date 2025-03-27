@@ -9,13 +9,15 @@ import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetBadgeAssociation as BeamFBA
 import Storage.Queries.OrphanInstances.FleetBadgeAssociation
+
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => FleetBadgeAssociation -> m ()
+create = createWithKV
 
 findActiveFleetBadgeByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe FleetBadgeAssociation)
 findActiveFleetBadgeByDriverId (Id driverId) = do
@@ -58,3 +60,12 @@ findActiveFleetBadgeAssociationById (Id fleetBadge) = do
     (Just 1)
     Nothing
     <&> listToMaybe
+
+createBadgeAssociationIfNotExists :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetBadgeAssociation -> m ()
+createBadgeAssociationIfNotExists badgeAssociation = do
+  existingBadgeAssociation <- findActiveFleetBadgeAssociationById badgeAssociation.badgeId
+  case existingBadgeAssociation of
+    Just _ -> pure ()
+    Nothing -> do
+      create badgeAssociation
+      pure ()

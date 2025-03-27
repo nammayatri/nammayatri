@@ -315,6 +315,12 @@ validateVehicleAssignment driverId vehicleNumber _ _ fleetOwnerId = do
 
 validateBadgeAssignment :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow (FleetBadge)
 validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId badgeName = do
+  findNextActiveTripTransaction driverId
+    >>= \case
+      Nothing -> pure ()
+      Just tripTransaction ->
+        whenJust tripTransaction.driverName $ \driverName ->
+          when (driverName /= badgeName) $ throwError (AlreadyOnActiveTripWithAnotherBadge driverName)
   badge <-
     QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName
       >>= \case
@@ -324,12 +330,6 @@ validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId
   case driverBadge of
     Just dBadge -> when (dBadge.driverId.getId /= driverId.getId) $ throwError (FleetBadgeAlreadyLinked dBadge.driverId.getId)
     Nothing -> pure ()
-  findNextActiveTripTransaction driverId
-    >>= \case
-      Nothing -> pure ()
-      Just tripTransaction ->
-        whenJust tripTransaction.driverName $ \driverName ->
-          when (driverName /= badge.badgeName) $ throwError (AlreadyOnActiveTripWithAnotherBadge driverName)
   return badge
   where
     createNewBadge = do
@@ -353,14 +353,14 @@ validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId
 -- TODO :: Unlink Fleet Badge Driver to be Figured Out, If Required
 linkFleetBadgeToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> FleetBadge -> Flow ()
 linkFleetBadgeToDriver driverId _ _ fleetOwnerId badge = do
-  createBadgeAssociation
+  createBadgeAssociation -- Upsert the badge association
   QP.updatePersonName driverId badge.badgeName
   where
     createBadgeAssociation = do
       now <- getCurrentTime
       fleetBadgeId <- generateGUID
       let fleetBadgeAssoc = buildBadgeAssociation fleetBadgeId now
-      QFBA.create fleetBadgeAssoc
+      QFBA.createBadgeAssociationIfNotExists fleetBadgeAssoc
 
     buildBadgeAssociation fleetBadgeId now =
       FleetBadgeAssociation
@@ -408,7 +408,9 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ vehicleNumber 
 --       forceCancelAllActiveTripTransaction vehicleDriverId
 
 unlinkFleetBadgeFromDriver :: Id Person -> Flow ()
-unlinkFleetBadgeFromDriver driverId = QFBA.endAssociationForDriver driverId
+unlinkFleetBadgeFromDriver driverId = do
+  QFBA.endAssociationForDriver driverId
+  QP.updatePersonName driverId "Driver"
 
 unlinkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
 unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber = do
