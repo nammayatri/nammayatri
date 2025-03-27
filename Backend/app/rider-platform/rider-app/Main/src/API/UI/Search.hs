@@ -241,7 +241,7 @@ multiModalSearch searchRequest initateJourney = do
             }
     JM.init initReq
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
-  journeys <- DQuote.getJourneys searchRequest
+  journeys <- DQuote.getJourneys searchRequest (Just True)
   let sortedJourneys = case sortingType of
         DMP.FASTEST -> sortRoutesByDuration <$> journeys
         DMP.CHEAPEST -> sortRoutesByFare <$> journeys
