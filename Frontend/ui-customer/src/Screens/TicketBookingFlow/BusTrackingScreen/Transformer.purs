@@ -104,14 +104,18 @@ getStopMarker stopType = do
   case stopType of
     SOURCE_STOP -> markers.srcMarker
     DESTINATION_STOP -> markers.destMarker
+    ROUTE_SOURCE -> "ny_ic_route_start_pointer"
+    ROUTE_END -> "ny_ic_route_end_pointer"
     _ -> "ny_ic_stop_black"
 
 getStopMarkerSize :: StopType -> Int 
 getStopMarkerSize stopType = 
   case stopType of
-    SOURCE_STOP -> 90
-    DESTINATION_STOP -> 90
+    SOURCE_STOP -> 100
+    DESTINATION_STOP -> 100
     NORMAL_STOP -> 20
+    ROUTE_SOURCE -> 100
+    ROUTE_END -> 100
     _ -> 50
 
 getStopType :: String -> Int -> BusTrackingScreenState-> StopType 

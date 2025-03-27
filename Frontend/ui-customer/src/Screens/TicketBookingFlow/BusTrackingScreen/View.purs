@@ -84,7 +84,7 @@ import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
-screen initialState =
+screen initialState = 
   { initialState
   , view
   , name: "BusTrackingScreen"
@@ -234,7 +234,7 @@ verticalLineView push idTag showOnlyBullet vehicles =
         [ width MATCH_PARENT
         , height $ V 20
         , margin $ MarginTop $ marginTop
-        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_bus_marker_with_arrow"
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_bus_nav_on_map"
         ]
       ]
 
