@@ -80,15 +80,15 @@ jobs:
             host: x86_64-linux
             arch: amd64
             continue-on-error: false
-          # - system: aarch64-darwin
-          #   host: aarch64-darwin
-          #   continue-on-error: false
-          # - system: aarch64-linux
-          #   host: aarch64-darwin
-          #   arch: arm64
-          #   continue-on-error: ${{ github.event.pull_request.merged == 'true' && github.ref == 'refs/heads/backend/ci/add-fail-fast-check' }}
+          - system: aarch64-darwin
+            host: aarch64-darwin
+            continue-on-error: false
+          - system: aarch64-linux
+            host: aarch64-darwin
+            arch: arm64
+            continue-on-error: ${{ github.event.pull_request.merged == 'true' && github.ref == 'refs/heads/backend/ci/add-fail-fast-check' }}
       fail-fast: false
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
@@ -104,6 +104,11 @@ jobs:
       - name: Checkout repository
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
+
+      - name: Build all flake outputs
+        if: steps.check-conditions.outputs.should_build == 'true'
+        run: |
+          om ci run --systems "${{ matrix.system }}" --no-link -- -v
 
       - name: Build And Push Docker image
         id: docker
