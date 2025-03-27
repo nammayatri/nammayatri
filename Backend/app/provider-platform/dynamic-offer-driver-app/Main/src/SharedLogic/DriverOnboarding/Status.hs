@@ -11,7 +11,8 @@ module SharedLogic.DriverOnboarding.Status
     getAadhaarStatus,
     mapStatus,
     fetchDriverDocuments,
-    fetchVehicleDocuments,
+    fetchVehicleDocumentsByRcNo,
+    checkAvailableVehicleRC,
     checkAllVehicleDocsVerified,
     checkAllDriverDocsVerified,
     activateRCAutomatically,
@@ -69,7 +70,7 @@ import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.BackgroundVerification as BackgroundVerification
-import Tools.Error (DriverOnboardingError (ImageNotValid))
+import Tools.Error (DriverOnboardingError (ImageNotValid, RCAlreadyLinked))
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
@@ -271,76 +272,126 @@ fetchVehicleDocuments ::
   Language ->
   Flow [VehicleDocumentItem]
 fetchVehicleDocuments personId merchantOpCity transporterConfig language = do
-  processedVehicleDocuments <- fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig language
-  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig language processedVehicleDocuments
-  pure $ processedVehicleDocuments <> inprogressVehicleDocuments
-
-fetchProcessedVehicleDocuments ::
-  Id DP.Person ->
-  DMOC.MerchantOperatingCity ->
-  DTC.TransporterConfig ->
-  Language ->
-  Flow [VehicleDocumentItem]
-fetchProcessedVehicleDocuments personId merchantOpCity transporterConfig language = do
-  let merchantId = merchantOpCity.merchantId
-      merchantOpCityId = merchantOpCity.id
   processedVehicleDocumentsWithRC <- do
     processedVehicles <- do
       associations <- DRAQuery.findAllLinkedByDriverId personId
       if null associations
         then return []
         else (associations `forM` (\assoc -> RCQuery.findById assoc.rcId >>= (\rc -> return $ (assoc.isRcActive,) <$> rc))) >>= (return . catMaybes)
-    processedVehicles `forM` \(isActive, processedVehicle) -> do
-      registrationNo <- decrypt processedVehicle.certificateNumber
-      let dateOfUpload = processedVehicle.createdAt
-      documents <-
-        vehicleDocumentTypes `forM` \docType -> do
-          (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedVehicleDocuments docType personId processedVehicle merchantId merchantOpCityId
-          case mbStatus of
-            Just status -> do
-              message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
-            Nothing -> do
-              (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-              message <- documentStatusMessage status mbReason docType mbUrl language
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
-      return $
-        VehicleDocumentItem
-          { registrationNo,
-            userSelectedVehicleCategory = fromMaybe (maybe DVC.CAR DV.castVehicleVariantToVehicleCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
-            verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant,
-            isVerified = False,
-            isActive,
-            vehicleModel = processedVehicle.vehicleModel,
-            documents,
-            dateOfUpload
-          }
+    processedVehicles `forM` buildProcessedVehicleWithRCDocumentItem personId merchantOpCity transporterConfig language
 
-  processedVehicleDocumentsWithoutRC <- do
-    mbVehicle <- QVehicle.findById personId
-    case mbVehicle of
-      Just vehicle -> do
-        if isJust $ find (\doc -> doc.registrationNo == vehicle.registrationNo) processedVehicleDocumentsWithRC
-          then return []
-          else do
-            documents <-
-              vehicleDocumentTypes `forM` \docType -> do
-                return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing}
-            return $
-              [ VehicleDocumentItem
-                  { registrationNo = vehicle.registrationNo,
-                    userSelectedVehicleCategory = DV.castVehicleVariantToVehicleCategory vehicle.variant,
-                    verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant,
-                    isVerified = True,
-                    isActive = True,
-                    vehicleModel = Just vehicle.model,
-                    documents,
-                    dateOfUpload = vehicle.createdAt
-                  }
-              ]
-      Nothing -> return []
+  processedVehicleDocumentsWithoutRC <- buildProcessedVehicleWithoutRCDocumentItems personId processedVehicleDocumentsWithRC
+  let processedVehicleDocuments = processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
 
-  pure $ processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
+  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig language processedVehicleDocuments
+  pure $ processedVehicleDocuments <> inprogressVehicleDocuments
+
+type IsActive = Bool
+
+checkAvailableVehicleRC ::
+  Id DP.Person ->
+  Text ->
+  Flow (Maybe (IsActive, RC.VehicleRegistrationCertificate))
+checkAvailableVehicleRC personId rcNo = do
+  -- find vehicle by rcNo even if rc did not linked to driver
+  mbRc <- RCQuery.findLastVehicleRCWrapper rcNo
+  now <- getCurrentTime
+
+  case mbRc of
+    Just rc -> do
+      mbAsociation <- DRAQuery.findLatestLinkedByRCId rc.id now
+      case mbAsociation of
+        Just association -> do
+          if (association.driverId == personId || not association.isRcActive)
+            then pure $ Just (association.isRcActive, rc)
+            else throwError RCAlreadyLinked
+        Nothing -> pure $ Just (False, rc)
+    Nothing -> pure Nothing -- for this case we try to find docs without rc
+
+fetchVehicleDocumentsByRcNo ::
+  Id DP.Person ->
+  DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Language ->
+  Text ->
+  Flow (Maybe VehicleDocumentItem)
+fetchVehicleDocumentsByRcNo personId merchantOpCity transporterConfig language rcNo = do
+  mbProcessedVehicle <- checkAvailableVehicleRC personId rcNo
+
+  mbProcessedVehicleDocumentsWithRC <- forM mbProcessedVehicle $ buildProcessedVehicleWithRCDocumentItem personId merchantOpCity transporterConfig language
+
+  case mbProcessedVehicleDocumentsWithRC of
+    Just processedVehicleDocumentsWithRC -> pure $ Just processedVehicleDocumentsWithRC
+    Nothing -> do
+      mbProcessedVehicleDocumentsWithoutRC <- find (\doc -> doc.registrationNo == rcNo) <$> buildProcessedVehicleWithoutRCDocumentItems personId []
+      case mbProcessedVehicleDocumentsWithoutRC of
+        Just processedVehicleDocumentsWithoutRC -> pure $ Just processedVehicleDocumentsWithoutRC
+        Nothing -> do
+          mbInprogressVehicleDocuments <- find (\doc -> doc.registrationNo == rcNo) <$> fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig language []
+          pure mbInprogressVehicleDocuments
+
+buildProcessedVehicleWithRCDocumentItem ::
+  Id DP.Person ->
+  DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  Language ->
+  (IsActive, RC.VehicleRegistrationCertificate) ->
+  Flow VehicleDocumentItem
+buildProcessedVehicleWithRCDocumentItem personId merchantOpCity transporterConfig language (isActive, processedVehicle) = do
+  let merchantId = merchantOpCity.merchantId
+      merchantOpCityId = merchantOpCity.id
+  registrationNo <- decrypt processedVehicle.certificateNumber
+  let dateOfUpload = processedVehicle.createdAt
+  documents <-
+    vehicleDocumentTypes `forM` \docType -> do
+      (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedVehicleDocuments docType personId processedVehicle merchantId merchantOpCityId
+      case mbStatus of
+        Just status -> do
+          message <- documentStatusMessage status Nothing docType mbProcessedUrl language
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
+        Nothing -> do
+          (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
+          message <- documentStatusMessage status mbReason docType mbUrl language
+          return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+  return $
+    VehicleDocumentItem
+      { registrationNo,
+        userSelectedVehicleCategory = fromMaybe (maybe DVC.CAR DV.castVehicleVariantToVehicleCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
+        verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant,
+        isVerified = False,
+        isActive,
+        vehicleModel = processedVehicle.vehicleModel,
+        documents,
+        dateOfUpload
+      }
+
+buildProcessedVehicleWithoutRCDocumentItems ::
+  Id DP.Person ->
+  [VehicleDocumentItem] ->
+  Flow [VehicleDocumentItem]
+buildProcessedVehicleWithoutRCDocumentItems personId processedVehicleDocumentsWithRC = do
+  mbVehicle <- QVehicle.findById personId
+  case mbVehicle of
+    Just vehicle -> do
+      if isJust $ find (\doc -> doc.registrationNo == vehicle.registrationNo) processedVehicleDocumentsWithRC
+        then return []
+        else do
+          documents <-
+            vehicleDocumentTypes `forM` \docType -> do
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing}
+          return $
+            [ VehicleDocumentItem
+                { registrationNo = vehicle.registrationNo,
+                  userSelectedVehicleCategory = DV.castVehicleVariantToVehicleCategory vehicle.variant,
+                  verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant,
+                  isVerified = True,
+                  isActive = True,
+                  vehicleModel = Just vehicle.model,
+                  documents,
+                  dateOfUpload = vehicle.createdAt
+                }
+            ]
+    Nothing -> return []
 
 fetchInprogressVehicleDocuments ::
   Id DP.Person ->
@@ -376,7 +427,7 @@ fetchInprogressVehicleDocuments personId merchantOpCity transporterConfig langua
                   (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
                   message <- documentStatusMessage status mbReason docType mbUrl language
                   return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
-              return
+              return $
                 [ VehicleDocumentItem
                     { registrationNo,
                       userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory,

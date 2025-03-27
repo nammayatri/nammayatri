@@ -76,6 +76,7 @@ import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 import Tools.Notifications as Notify
 
+-- TODO fetch docs based on rcId
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId city driverId = do
   merchant <- findMerchantByShortId merchantShortId

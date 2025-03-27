@@ -130,21 +130,22 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
 
   let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC]
   mbRcId <-
-    if imageType `elem` rcDependentDocuments
-      then case rcNumber of
-        Just rcNo -> do
-          rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
-          case person.role of
-            Person.FLEET_OWNER -> do
-              fleetAssoc <- FRCA.findLatestByRCIdAndFleetOwnerId rc.id personId
-              when (isNothing fleetAssoc) $ throwError RCNotLinkedWithFleet
-              return $ Just rc.id
-            _ -> do
-              mbAssoc <- QDRCA.findLatestByRCIdAndDriverId rc.id personId
-              when (isNothing mbAssoc) $ throwError RCNotLinked
-              return $ Just rc.id
-        Nothing -> throwError $ RCMandatory (show imageType)
-      else return Nothing
+    case rcNumber of
+      Just rcNo -> do
+        rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
+        case person.role of
+          Person.FLEET_OWNER -> do
+            fleetAssoc <- FRCA.findLatestByRCIdAndFleetOwnerId rc.id personId
+            when (isNothing fleetAssoc) $ throwError RCNotLinkedWithFleet
+            return $ Just rc.id
+          _ -> do
+            mbAssoc <- QDRCA.findLatestByRCIdAndDriverId rc.id personId
+            when (isNothing mbAssoc) $ throwError RCNotLinked
+            return $ Just rc.id
+      Nothing -> do
+        when (imageType `elem` rcDependentDocuments) $
+          throwError $ RCMandatory (show imageType)
+        return Nothing
 
   images <- filter ((\txnId -> isNothing txnId || (txnId /= workflowTransactionId)) . (.workflowTransactionId)) <$> Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
