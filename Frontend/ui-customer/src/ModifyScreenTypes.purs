@@ -160,3 +160,4 @@ data FlowState = HelpAndSupportScreenFlow
                | ChangeLanguageScreenFlow
                | RiderRideCompleted
                | RiderRideEndScreen
+               | DeleteAccountFlow

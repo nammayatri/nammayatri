@@ -1587,4 +1587,15 @@ getPayoutHistory vpa = do
   headers <- getHeaders "" false
   withAPIResult (EP.payoutHistory "") unwrapResponse $ callAPI headers (PayoutHistoryReq "")
   where
+
+---------------------------------------- deletePerson ---------------------------------------------
+deletePerson :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+deletePerson reason = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deletePerson "") unwrapResponse $ callAPI headers $ makeReq reason
+  where
+    makeReq :: String -> DeletePersonReq
+    makeReq reason = DeletePersonReq {
+      reasonToDelete : reason
+    }
     unwrapResponse x = x
