@@ -18,6 +18,7 @@ data TripTransactionT f = TripTransactionT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     deviationCount :: B.C f Kernel.Prelude.Int,
     driverId :: B.C f Data.Text.Text,
+    driverName :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     endLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     endLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     endRideApprovalRequestId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),

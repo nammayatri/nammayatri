@@ -45,6 +45,7 @@ Person:
     identifierType : IdentifierType
     email : Maybe Text
     mobileNumber : Maybe (EncryptedHashedField e Text)
+    maskedMobileDigits: Maybe Text
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
     identifier : Maybe Text

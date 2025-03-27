@@ -1,9 +1,10 @@
 module Storage.Queries.VehicleRegistrationCertificateExtra where
 
+import Data.Text (toLower)
 import qualified Database.Beam as B
-import Domain.Types.Image
+import Domain.Types.Image hiding (id)
 import qualified Domain.Types.Merchant as Merchant
-import Domain.Types.VehicleRegistrationCertificate
+import Domain.Types.VehicleRegistrationCertificate hiding (id)
 import Domain.Types.VehicleVariant as Vehicle
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -16,6 +17,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverRCAssociation as BeamDRA
+import qualified Storage.Beam.Person as BeamPerson
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
@@ -47,7 +49,8 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.luggageCapacity luggageCapacity,
           Se.Set BeamVRC.userPassedVehicleCategory userPassedVehicleCategory,
           Se.Set BeamVRC.mYManufacturing mYManufacturing,
-          Se.Set BeamVRC.updatedAt updatedAt
+          Se.Set BeamVRC.updatedAt updatedAt,
+          Se.Set BeamVRC.unencryptedCertificateNumber a.unencryptedCertificateNumber
         ]
         [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]
     else createWithKV a
@@ -93,6 +96,30 @@ findLastVehicleRCFleet' certNumber fleetOwnerId = do
   certNumberHash <- getDbHash certNumber
   runInReplica $ findLastVehicleRCFleet certNumberHash fleetOwnerId
 
+partialFindLastVehicleRCFleet :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Integer -> Integer -> m [VehicleRegistrationCertificate]
+partialFindLastVehicleRCFleet certNumber fleetOwnerId limit offset = do
+  dbConf <- getReplicaBeamConfig
+  certNumberHash <- getDbHash certNumber
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limit $
+            B.offset_ offset $
+              B.orderBy_ (\rc' -> B.desc_ rc'.updatedAt) $
+                B.filter_'
+                  ( \rc ->
+                      rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                        B.&&?. ( B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower certNumber <> "%")))
+                                   B.||?. (rc.certificateNumberHash B.==?. B.val_ certNumberHash)
+                               )
+                  )
+                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  case res of
+    Right res' -> do
+      catMaybes <$> mapM fromTType' res'
+    Left _ -> pure []
+
 findByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (DbHash -> m (Maybe VehicleRegistrationCertificate))
@@ -100,8 +127,8 @@ findByCertificateNumberHash certificateHash = do
   findOneWithKV
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
-findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Documents.VerificationStatus -> Maybe Bool -> Integer -> Integer -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
-findAllRCByStatusForFleet fleetOwnerId status mbRcActive limitVal offsetVal (Id merchantId') = do
+findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
+findAllRCByStatusForFleet fleetOwnerId status limitVal offsetVal (Id merchantId') = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -109,30 +136,26 @@ findAllRCByStatusForFleet fleetOwnerId status mbRcActive limitVal offsetVal (Id 
         B.select $
           B.limit_ limitVal $
             B.offset_ offsetVal $
-              B.orderBy_ (\(rc', _) -> B.desc_ rc'.createdAt) $
+              B.orderBy_ (\rc' -> B.desc_ rc'.createdAt) $
                 B.filter_'
-                  ( \(rc, driverRcAssociation) ->
+                  ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId')
                         B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
-                        B.&&?. rc.verificationStatus B.==?. B.val_ status
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isRcActive -> driverRcAssociation.isRcActive B.==?. B.val_ isRcActive) mbRcActive
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\s -> rc.verificationStatus B.==?. B.val_ s) status
                   )
                   do
                     rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
-                    driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
-                    pure (rc, driverRcAssociation)
+                    pure rc
   case res of
     Right res' -> do
-      let rcList = fst <$> res'
-      catMaybes <$> mapM fromTType' rcList
+      catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
 findAllInactiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Integer -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
 findAllInactiveRCForFleet fleetOwnerId limitVal offsetVal merchantId = do
-  allActiveRCs <- findAllActiveRCForFleet fleetOwnerId Documents.VALID merchantId
-  -- now find all the rc which are not in this list
-  let allActiveRCIds = map (.id.getId) allActiveRCs
   dbConf <- getReplicaBeamConfig
+  allActiveRCs <- findAllActiveRCForFleet fleetOwnerId merchantId
+  let allActiveRCIds = map (.id.getId) allActiveRCs
   res <-
     L.runDB dbConf $
       L.findRows $
@@ -146,14 +169,16 @@ findAllInactiveRCForFleet fleetOwnerId limitVal offsetVal merchantId = do
                         B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
                         B.&&?. B.sqlBool_ (B.not_ (rc.id `B.in_` (B.val_ <$> allActiveRCIds)))
                   )
-                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                  do
+                    rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                    pure rc
   case res of
     Right res' -> do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
-findAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Documents.VerificationStatus -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
-findAllActiveRCForFleet fleetOwnerId status (Id merchantId') = do
+findAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m [VehicleRegistrationCertificate]
+findAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   res <-
@@ -165,7 +190,7 @@ findAllActiveRCForFleet fleetOwnerId status (Id merchantId') = do
               ( \(rc, driverRcAssociation) ->
                   rc.merchantId B.==?. B.val_ (Just merchantId')
                     B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
-                    B.&&?. rc.verificationStatus B.==?. B.val_ status
+                    B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                     B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
                     B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
               )
@@ -175,9 +200,71 @@ findAllActiveRCForFleet fleetOwnerId status (Id merchantId') = do
                 pure (rc, driverRcAssociation)
   case res of
     Right res' -> do
-      let rcList = fst <$> res'
+      let rcList = (\(rc, _) -> rc) <$> res'
       catMaybes <$> mapM fromTType' rcList
     Left _ -> pure []
+
+findAllActiveRCForFleetByLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> Integer -> Integer -> Maybe Text -> Maybe Text -> m [VehicleRegistrationCertificate]
+findAllActiveRCForFleetByLimitOffset fleetOwnerId (Id merchantId') limitVal offsetVal mbSearchString statusAwareVehicleNo = do
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
+  case mbSearchString of
+    Just searchString -> do
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ limitVal $
+                B.offset_ offsetVal $
+                  B.orderBy_ (\(rc', _, _) -> B.desc_ rc'.createdAt) $
+                    B.filter_'
+                      ( \(rc, driverRcAssociation, driver) ->
+                          rc.merchantId B.==?. B.val_ (Just merchantId')
+                            B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                            B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
+                            B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cNum -> B.sqlBool_ $ B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))) statusAwareVehicleNo
+                            B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. ( B.sqlBool_ (B.like_ (B.lower_ driver.firstName) (B.val_ ("%" <> toLower searchString <> "%")))
+                                       B.||?. B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))
+                                   )
+                      )
+                      do
+                        rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                        driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                        driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamPerson.id person B.==. BeamDRA.driverId driverRcAssociation)
+                        pure (rc, driverRcAssociation, driver)
+      case res of
+        Right res' -> do
+          let rcList = (\(rc, _, _) -> rc) <$> res'
+          catMaybes <$> mapM fromTType' rcList
+        Left _ -> pure []
+    Nothing -> do
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ limitVal $
+                B.offset_ offsetVal $
+                  B.orderBy_ (\(rc', _) -> B.desc_ rc'.createdAt) $
+                    B.filter_'
+                      ( \(rc, driverRcAssociation) ->
+                          rc.merchantId B.==?. B.val_ (Just merchantId')
+                            B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
+                            B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
+                            B.&&?. driverRcAssociation.isRcActive B.==?. B.val_ True
+                            B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cNum -> B.sqlBool_ $ B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))) statusAwareVehicleNo
+                      )
+                      do
+                        rc <- B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+                        driverRcAssociation <- B.join_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\driverRcAssociation -> BeamVRC.id rc B.==. BeamDRA.rcId driverRcAssociation)
+                        pure (rc, driverRcAssociation)
+      case res of
+        Right res' -> do
+          let rcList = (\(rc, _) -> rc) <$> res'
+          catMaybes <$> mapM fromTType' rcList
+        Left _ -> pure []
 
 countAllActiveRCForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> m Int
 countAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
@@ -208,8 +295,8 @@ updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]
 
-findAllByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
-findAllByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchStringHash = do
+findAllValidRcByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
+findAllValidRcByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchString mbSearchStringHash = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -222,7 +309,16 @@ findAllByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId 
                   ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId')
                         B.&&?. rc.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStringHash
+                        B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
+                        B.&&?. ( maybe
+                                   (B.sqlBool_ $ B.val_ True)
+                                   (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
+                                   mbSearchString
+                                   B.||?. maybe
+                                     (B.sqlBool_ $ B.val_ True)
+                                     (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash)
+                                     mbSearchStringHash
+                               )
                   )
                   $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
   case res of
