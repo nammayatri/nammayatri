@@ -1677,7 +1677,6 @@ confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   where
     unwrapResponse x = x
 
-
 ---------------------------------------- confirmMetroQuoteV2 ---------------------------------------------
 verifyVpa :: String -> Flow GlobalState (Either ErrorResponse VerifyVPAResp)
 verifyVpa vpa = do
@@ -1698,4 +1697,16 @@ getPayoutHistory vpa = do
   headers <- getHeaders "" false
   withAPIResult (EP.payoutHistory "") unwrapResponse $ callAPI headers (PayoutHistoryReq "")
   where
+    unwrapResponse x = x
+
+---------------------------------------- deletePerson ---------------------------------------------
+deletePerson :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+deletePerson reason = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deletePerson "") unwrapResponse $ callAPI headers $ makeReq reason
+  where
+    makeReq :: String -> DeletePersonReq
+    makeReq reason = DeletePersonReq {
+      reasonToDelete : reason
+    }
     unwrapResponse x = x
