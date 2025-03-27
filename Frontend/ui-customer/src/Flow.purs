@@ -3488,6 +3488,7 @@ flowRouter flowState = case flowState of
   HomeScreenFlow -> homeScreenFlow
   RiderRideCompleted -> riderRideCompletedScreenFlow
   RiderRideEndScreen -> riderRideCompletedScreenFlow
+  DeleteAccountFlow -> clearLocalStoreAuthDataFlow
   ActivateSafetyScreenFlow -> activateSafetyScreenFlow
   TripDetailsScreenFlow -> tripDetailsScreenFlow
   ContactUsScreenFlow -> contactUsScreenFlow
@@ -7879,3 +7880,24 @@ rideCompletedEventParams state =
     {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
     {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} 
   ]
+
+clearLocalStoreAuthDataFlow :: FlowBT String Unit
+clearLocalStoreAuthDataFlow = do
+  removeChatService ""
+  void $ pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
+  void $ pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
+  void $ pure $ deleteValueFromLocalStore CUSTOMER_ID
+  void $ pure $ deleteValueFromLocalStore CONTACTS
+  void $ pure $ deleteValueFromLocalStore USER_EMAIL
+  void $ pure $ deleteValueFromLocalStore CUSTOMER_FIRST_RIDE
+  void $ pure $ deleteValueFromLocalStore BOOKING_TIME_LIST
+  void $ pure $ deleteValueFromLocalStore DISABILITY_NAME
+  deleteValueFromLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION
+  void $ pure $ factoryResetApp ""
+  void $ pure $ clearCache ""
+  logField_ <- lift $ lift $ getLogFields
+  void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"
+  void $ pure $ (setText (getNewIDWithTag "EnterMobileNumberEditText") "")
+  modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> EnterMobileNumberScreenData.initData)
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+  enterMobileNumberScreenFlow -- Removed choose langauge screen
