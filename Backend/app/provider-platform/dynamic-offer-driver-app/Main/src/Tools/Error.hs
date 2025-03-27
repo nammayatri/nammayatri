@@ -48,8 +48,6 @@ instance IsHTTPError LocationServiceabilityError where
 
 instance IsAPIError LocationServiceabilityError
 
-instanceExceptionWithParent 'HTTPException ''LocationServiceabilityError
-
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
@@ -1565,6 +1563,8 @@ data WMBErrors
   | AlreadyOnActiveTripWithAnotherVehicle Text
   | AlreadyOnActiveTrip
   | FleetBadgeNotFound Text
+  | FleetBadgeAlreadyLinked Text
+  | AlreadyOnActiveTripWithAnotherBadge Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1605,6 +1605,8 @@ instance IsBaseError WMBErrors where
     VehicleRouteMappingBlocked -> Just "Vehicle Route Mapping is blocked, unblock and try again."
     AlreadyOnActiveTrip -> Just "Driver is already on an Active trip."
     FleetBadgeNotFound badgeName -> Just $ "Fleet Badge Name Not Found : " <> badgeName
+    FleetBadgeAlreadyLinked driverId -> Just $ "Fleet Badge already linked to driver id : " <> driverId
+    AlreadyOnActiveTripWithAnotherBadge driverName -> Just $ "Driver is already on an Active trip with another badge : " <> driverName
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1642,6 +1644,8 @@ instance IsHTTPError WMBErrors where
     VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
     AlreadyOnActiveTrip -> "ALREADY_ON_ACTIVE_TRIP"
     FleetBadgeNotFound _ -> "FLEET_BADGE_NOT_FOUND"
+    FleetBadgeAlreadyLinked _ -> "FLEET_BADGE_ALREADY_LINKED"
+    AlreadyOnActiveTripWithAnotherBadge _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_BADGE"
 
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
@@ -1678,5 +1682,7 @@ instance IsHTTPError WMBErrors where
     VehicleRouteMappingBlocked -> E400
     AlreadyOnActiveTrip -> E400
     FleetBadgeNotFound _ -> E400
+    FleetBadgeAlreadyLinked _ -> E400
+    AlreadyOnActiveTripWithAnotherBadge _ -> E400
 
 instance IsAPIError WMBErrors
