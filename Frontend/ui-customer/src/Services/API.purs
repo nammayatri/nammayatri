@@ -50,9 +50,6 @@ import Accessor (_amount)
 import DecodeUtil
 import Data.Function.Uncurried (runFn3)
 import Debug
-import Data.Argonaut.Core as AC
-import Data.Tuple (Tuple(..))
-import Foreign (unsafeToForeign)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -254,6 +251,21 @@ instance showLogOutReq :: Show LogOutReq where show = genericShow
 instance standardEncodeLogOutReq :: StandardEncode LogOutReq where standardEncode (LogOutReq) = standardEncode {}
 instance decodeLogOutReq :: Decode LogOutReq where decode = defaultDecode
 instance encodeLogOutReq :: Encode LogOutReq where encode = defaultEncode
+
+-------------------------------------------------- Logout API Types --------------------------------------------
+data DeletePersonReq = DeletePersonReq {
+  reasonToDelete :: String
+}
+
+instance makeDeletePersonReq  :: RestEndpoint DeletePersonReq  where
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.deletePerson "") headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericDeletePersonReq :: Generic DeletePersonReq _
+instance showDeletePersonReq :: Show DeletePersonReq where show = genericShow
+instance standardEncodeDeletePersonReq :: StandardEncode DeletePersonReq where standardEncode (DeletePersonReq payload) = standardEncode payload
+instance decodeDeletePersonReq :: Decode DeletePersonReq where decode = defaultDecode
+instance encodeDeletePersonReq :: Encode DeletePersonReq where encode = defaultEncode
 
 
 -------------------------------------------------- Search Location API Types --------------------------------------------
