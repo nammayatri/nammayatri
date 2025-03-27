@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.Trip
 import qualified Kernel.External.Maps
@@ -59,6 +60,7 @@ data SearchRequest = SearchRequest
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,

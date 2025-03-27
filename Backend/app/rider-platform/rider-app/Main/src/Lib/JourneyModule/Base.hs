@@ -103,7 +103,8 @@ init journeyReq = do
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance
+      searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance (searchReq.recentLocationId)
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -482,6 +483,7 @@ addMetroLeg parentSearchReq journeyLeg = do
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
+            recentLocationId = parentSearchReq.recentLocationId,
             city,
             journeyLeg
           }
@@ -502,6 +504,7 @@ addSubwayLeg parentSearchReq journeyLeg = do
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
+            recentLocationId = parentSearchReq.recentLocationId,
             city,
             journeyLeg
           }
@@ -522,6 +525,7 @@ addBusLeg parentSearchReq journeyLeg = do
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
+            recentLocationId = parentSearchReq.recentLocationId,
             city,
             journeyLeg
           }

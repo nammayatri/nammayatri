@@ -29,6 +29,7 @@ imports:
   DriverIdentifier: Domain.Types.RefereeLink
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  RecentLocation: Domain.Types.RecentLocation
 
 SearchRequest:
   tableName: search_request
@@ -37,6 +38,7 @@ SearchRequest:
 
   fields:
     id: Id SearchRequest
+    recentLocationId: Maybe (Id RecentLocation)
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool

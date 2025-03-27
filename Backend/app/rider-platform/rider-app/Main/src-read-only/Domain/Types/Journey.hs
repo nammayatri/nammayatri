@@ -8,6 +8,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.SearchRequest
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -23,6 +24,7 @@ data Journey = Journey
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

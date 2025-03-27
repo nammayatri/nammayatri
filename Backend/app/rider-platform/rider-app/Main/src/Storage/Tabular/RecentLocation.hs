@@ -17,6 +17,7 @@
 
 module Storage.Tabular.RecentLocation where
 
+import Domain.Types.RecentLocation
 import qualified Domain.Types.RecentLocation as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -35,7 +36,14 @@ mkPersist
       riderId Text
       lat Double
       lon Double
-      entityId Text
+      routeCode Text Maybe
+      stopCode Text Maybe
+      stopLat Double Maybe
+      stopLon Double Maybe
+      fromStopCode Text Maybe
+      fromStopName Text Maybe
+      address Text Maybe
+      frequency Int
       entityType Domain.EntityType
       routeId Text Maybe
       createdAt UTCTime
@@ -56,8 +64,15 @@ instance FromTType RecentLocationT Domain.RecentLocation where
       Domain.RecentLocation
         { id = Id id,
           riderId = Id riderId,
-          entityId = entityId,
+          routeCode = routeCode,
+          stopCode = stopCode,
+          stopLat = stopLat,
+          stopLon = stopLon,
+          address = address,
+          fromStopCode = fromStopCode,
+          fromStopName = fromStopName,
           entityType = entityType,
+          frequency = frequency,
           routeId = routeId,
           lat = lat,
           lon = lon,

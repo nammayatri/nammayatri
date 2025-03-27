@@ -82,6 +82,7 @@ data BookingT f = BookingT
     providerId :: B.C f Kernel.Prelude.Text,
     providerUrl :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f Kernel.Prelude.Text,
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

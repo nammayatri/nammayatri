@@ -19,6 +19,7 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RecentLocation as DRL
 import Domain.Types.Station
 import Domain.Types.StationType
 import Domain.Types.Trip as DTrip
@@ -280,8 +281,8 @@ getInfo searchId fallbackFare distance duration = do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
       JT.mkLegInfoFromFrfsSearchRequest searchReq fallbackFare distance duration
 
-search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> m JT.SearchResponse
-search vehicleCategory personId merchantId quantity city journeyLeg = do
+search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> m JT.SearchResponse
+search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId = do
   let journeySearchData =
         JPT.JourneySearchData
           { journeyId = journeyLeg.journeyId.getId,

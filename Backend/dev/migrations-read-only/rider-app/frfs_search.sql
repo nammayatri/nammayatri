@@ -72,3 +72,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN is_on_search_received boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_search ADD COLUMN integrated_bpp_config_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN recent_location_id character varying(36) ;

@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.Route
 import qualified Domain.Types.Station
 import Kernel.Prelude
@@ -30,6 +31,7 @@ data FRFSSearch = FRFSSearch
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     quantity :: Kernel.Prelude.Int,
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,

@@ -84,6 +84,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 stops = Just stops',
                 destination = Just destination,
                 isMeterRideSearch = Just False,
+                recentLocationId = Nothing,
                 ..
               }
 

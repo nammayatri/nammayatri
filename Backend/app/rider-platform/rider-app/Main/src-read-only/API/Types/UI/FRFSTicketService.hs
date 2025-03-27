@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -145,6 +146,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
   { fromStationCode :: Data.Text.Text,
     journeySearchData :: Data.Maybe.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     quantity :: Kernel.Prelude.Int,
+    recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     toStationCode :: Data.Text.Text
   }

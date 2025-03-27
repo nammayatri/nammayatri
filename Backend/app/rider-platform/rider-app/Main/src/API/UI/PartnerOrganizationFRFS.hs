@@ -133,7 +133,7 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
     getFareHitsCountKey = "BAP:FRFS:PartnerOrgId:" <> getId partnerOrg.orgId <> ":GetFare:hitsCount"
 
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
-    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {..}
+    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, ..}
 
 getConfigByStationIds :: PartnerOrganization -> Text -> Text -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = withFlowHandlerAPI . withLogTag $ do

@@ -135,6 +135,7 @@ dependencies:
   - jwt
   - insert-ordered-containers
   - mtl
+  - transformers
 
 ghc-options:
   - -fwrite-ide-info

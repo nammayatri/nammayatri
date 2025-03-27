@@ -5,32 +5,38 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
   RideStatus: Domain.Types.RideStatus
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  Price: Kernel.Types.Price
 
 module: NearbyBuses
 
 types:
   NearbyBus:
-      busId: Maybe Text
-      routeId: Text
+      vehicleNumber: Maybe Text
+      routeCode: Text
+      routeLongName: Text
+      routeShortName: Text
       currentLocation: LatLong
       nextStop: Maybe Text
       distance: Maybe Double
-      eta: Maybe Int
+      serviceType: Maybe Text
+      eta: Maybe UTCTime
       capacity: Maybe Int
       occupancy: Maybe Int
 
   RecentRide:
       fromStopCode: Text
       toStopCode: Text
-      quantity: Int
+      fromStopName: Text
+      toStopName: Text
+      fare: Price
       routeCode: Maybe Text
 
 
   NearbyBusesRequest:
-      merchantOperatingCityId: Id MerchantOperatingCity
       userLat: Double
       userLon: Double
-      personId: Id Person
+      platformType: PlatformType
       requireRecentRide: Bool
 
   NearbyBusesResponse:

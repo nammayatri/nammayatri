@@ -61,6 +61,7 @@ data RiderConfigT f = RiderConfigT
     minimumWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     multimodalTesting :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     nearByDriverRingBucketCfg :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    nearbyDriverSearchRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutReferralProgram :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

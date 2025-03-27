@@ -91,6 +91,7 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Int
     variantListForNearByReq: "Maybe [VehicleVariant]"
     nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
+    nearbyDriverSearchRadius: Maybe Double
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
