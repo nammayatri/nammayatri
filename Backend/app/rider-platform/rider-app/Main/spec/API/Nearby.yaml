@@ -28,7 +28,7 @@ types:
     applicableServiceTierTypes: "[ServiceTierType]"
     distance: Meters
     driverId: Text
-    bearing: Int
+    bearing: Maybe Int
 
 apis:
   - POST:
