@@ -6,6 +6,7 @@ import BecknV2.FRFS.Enums
 import Data.Either
 import qualified Data.Text as T
 import qualified Database.Beam as B
+import Domain.Types.IntegratedBPPConfig
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Route
 import qualified EulerHS.Language as L
@@ -17,8 +18,8 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Route as BeamR
 import Storage.Queries.OrphanInstances.Route ()
 
-findAllMatchingRoutes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> m [Route]
-findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle = do
+findAllMatchingRoutes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Integer -> Maybe Integer -> Id MerchantOperatingCity -> VehicleCategory -> Id IntegratedBPPConfig -> m [Route]
+findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantOperatingCityId') vehicle (Id integratedBPPConfigId) = do
   dbConf <- getReplicaBeamConfig
   routes <-
     L.runDB dbConf $
@@ -30,6 +31,7 @@ findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantO
                 ( \BeamR.RouteT {..} ->
                     merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId'
                       B.&&?. vehicleType B.==?. B.val_ vehicle
+                      B.&&?. integratedBppConfigId B.==?. B.val_ integratedBPPConfigId
                       B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ code `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                                  B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ shortName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                                  B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ longName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
@@ -37,7 +39,7 @@ findAllMatchingRoutes mbSearchStr (Just limitVal) (Just offsetVal) (Id merchantO
                 )
                 $ B.all_ (BeamCommon.route BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] routes)
-findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle = do
+findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle (Id integratedBPPConfigId) = do
   dbConf <- getReplicaBeamConfig
   routes <-
     L.runDB dbConf $
@@ -47,6 +49,7 @@ findAllMatchingRoutes mbSearchStr _ _ (Id merchantOperatingCityId') vehicle = do
             ( \BeamR.RouteT {..} ->
                 merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId'
                   B.&&?. vehicleType B.==?. B.val_ vehicle
+                  B.&&?. integratedBppConfigId B.==?. B.val_ integratedBPPConfigId
                   B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ code `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                              B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ shortName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
                              B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ longName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchStr
