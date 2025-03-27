@@ -1101,8 +1101,8 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
     Just userInput -> do
       let mbLimitInteger = fmap toInteger mbLimit
           mbOffsetInteger = fmap toInteger mbOffset
-      matchingStops <- QStation.findAllMatchingStations (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle
-      matchingRoutes <- QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle
+      matchingStops <- QStation.findAllMatchingStations (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
+      matchingRoutes <- QRoute.findAllMatchingRoutes (Just userInput) mbLimitInteger mbOffsetInteger merchantOpCity.id vehicle integratedBPPConfig.id
       currentTime <- getCurrentTime
       let serviceableStops = DTB.findBoundedDomain matchingStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) matchingStops
           serviceableRoutes = DTB.findBoundedDomain matchingRoutes currentTime ++ filter (\route -> route.timeBounds == DTB.Unbounded) matchingRoutes

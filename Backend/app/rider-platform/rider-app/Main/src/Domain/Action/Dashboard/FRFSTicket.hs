@@ -60,7 +60,7 @@ getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleTyp
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   routes <- case searchStr of
-    Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType
+    Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
     Nothing -> QRoute.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
 
   frfsRoutes <- forM routes $ \rte -> do
@@ -286,7 +286,7 @@ getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset veh
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   stations <- case searchStr of
-    Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType
+    Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType integratedBPPConfig.id
     Nothing -> QStation.findAllByVehicleType (Just limit) (Just offset) vehicleType integratedBPPConfig.id
 
   frfsStations <- forM stations $ \station -> do
