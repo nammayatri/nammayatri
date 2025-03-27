@@ -26,6 +26,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Interface as EMInterface
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -38,6 +39,7 @@ import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Types.Time
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -68,6 +70,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import Storage.Queries.JourneyLegExtra as SQJ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -904,6 +907,26 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         isSkipped = Just False
       }
 
+mkMultiModalLeg :: (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => Distance -> Seconds -> GeneralVehicleType -> Double -> Double -> Double -> Double -> Maybe UTCTime -> m EMInterface.MultiModalLeg
+mkMultiModalLeg distance duration mode originLat originLon destLat destLon mbStartTime =
+  pure $
+    MultiModalTypes.MultiModalLeg
+      { distance,
+        duration,
+        polyline = Polyline {encodedPolyline = ""},
+        mode,
+        startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
+        endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
+        fromStopDetails = Nothing,
+        toStopDetails = Nothing,
+        routeDetails = [],
+        agency = Nothing,
+        fromArrivalTime = mbStartTime,
+        fromDepartureTime = mbStartTime,
+        toArrivalTime = Nothing,
+        toDepartureTime = Nothing
+      }
+
 extendLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
@@ -930,7 +953,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           Nothing -> return $ filter (\leg -> leg.order >= startLegOrder) allLegs
       -- checkIfRemainingLegsAreCancellable legsToCancel
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
-      let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
+      leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon (Just currentLeg.startTime)
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance (Just fare)
       startLocationAddress <-
@@ -964,7 +987,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
   where
     extendWalkLeg startlocation endLocation currentLeg parentSearchReq = do
       now <- getCurrentTime
-      let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
+      leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon (Just now)
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance (Just fare)
       withJourneyUpdateInProgress journeyId $ do
@@ -1007,24 +1030,6 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       lat <- fromMaybeM (InvalidRequest $ label <> " latitude not found") mLat
       lon <- fromMaybeM (InvalidRequest $ label <> " longitude not found") mLon
       return (lat, lon)
-
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon startTime =
-      MultiModalTypes.MultiModalLeg
-        { distance,
-          duration,
-          polyline = Polyline {encodedPolyline = ""},
-          mode,
-          startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
-          endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
-          fromStopDetails = Nothing,
-          toStopDetails = Nothing,
-          routeDetails = [],
-          agency = Nothing,
-          fromArrivalTime = Just startTime,
-          fromDepartureTime = Just startTime,
-          toArrivalTime = Nothing,
-          toDepartureTime = Nothing
-        }
 
     mkExtendLegKey = "Extend:Leg:For:JourneyId-" <> journeyId.getId
 
@@ -1149,7 +1154,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
               distanceUnit = Meter
             }
       let distance = convertMetersToDistance Meter distResp.distance
-      let multiModalLeg = mkMultiModalLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
+      multiModalLeg <- mkMultiModalLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon Nothing
       estimatedFare <- JLI.getFare currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
       return $
         APITypes.ExtendLegGetFareResp
@@ -1203,24 +1208,6 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
                 bookingUpdateRequestId = Just bookingUpdateReq.id
               }
 
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon =
-      MultiModalTypes.MultiModalLeg
-        { distance,
-          duration,
-          polyline = Polyline {encodedPolyline = ""},
-          mode,
-          startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
-          endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
-          fromStopDetails = Nothing,
-          toStopDetails = Nothing,
-          routeDetails = [],
-          agency = Nothing,
-          fromArrivalTime = Nothing,
-          fromDepartureTime = Nothing,
-          toArrivalTime = Nothing,
-          toDepartureTime = Nothing
-        }
-
     getAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}
 
 switchLeg ::
@@ -1273,3 +1260,57 @@ upsertJourneyLeg journeyLeg = do
   (findOneWithKV [Se.And [Se.Is BJourneyLeg.id $ Se.Eq (Kernel.Types.Id.getId journeyLeg.id)]]) >>= \case
     Just _ -> QJourneyLeg.updateByPrimaryKey journeyLeg
     Nothing -> QJourneyLeg.create journeyLeg
+
+addIntermediateJourneyLeg ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
+  ) =>
+  Id DJourney.Journey ->
+  DLocation.LocationAPIEntity ->
+  DLocation.LocationAPIEntity ->
+  Int ->
+  m ()
+addIntermediateJourneyLeg journeyId startPoint endPoint legOrder = do
+  journey <- getJourney journeyId
+  allLegs <- getJourneyLegs journeyId
+  currentLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidRequest $ "Leg not found with leg Order1: " <> show legOrder)
+  merchantOperatingCityId <- currentLeg.merchantOperatingCityId & fromMaybeM (InvalidRequest $ "Leg not found with leg Order2: " <> show legOrder)
+  merchantId <- currentLeg.merchantId & fromMaybeM (InvalidRequest $ "Leg not found with leg Order3: " <> show legOrder)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  endLocation <- getEndLocation endPoint
+  startLocation <- getStartLocation startPoint
+
+  updateNextJourneyLeg allLegs (legOrder + 1)
+  QSearchRequest.updateSearchRequestLegs allLegs (legOrder + 1)
+  distResp <-
+    Maps.getDistance merchantId merchantOperatingCityId $
+      Maps.GetDistanceReq
+        { origin = startLocation,
+          destination = endLocation,
+          travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Nothing,
+          distanceUnit = Meter
+        }
+  let distance = convertMetersToDistance Meter distResp.distance
+  multiModalLeg <- mkMultiModalLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon Nothing
+  estimatedFare <- JLI.getFare merchantId merchantOperatingCityId multiModalLeg DTrip.Taxi
+  journeyLeg <- JL.mkJourneyLeg (legOrder + 1) multiModalLeg merchantId merchantOperatingCityId journeyId riderConfig.maximumWalkDistance estimatedFare
+  snappedLeg <- snapJourneyLegToNearestGate journeyLeg
+  parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
+  QJourneyLeg.create journeyLeg
+  searchResp <- addTaxiLeg parentSearchReq snappedLeg (mkLocationAddress startPoint) (mkLocationAddress endPoint)
+  upsertJourneyLeg $ journeyLeg {DJourneyLeg.legSearchId = Just searchResp.id}
+  startJourney (Just $ legOrder + 1) Nothing journeyId
+  where
+    getStartLocation startloc = pure $ LatLong {lat = startloc.lat, lon = startloc.lon}
+    getEndLocation location =
+      pure $
+        LatLong
+          { lat = location.lat,
+            lon = location.lon
+          }
+    mkLocationAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}

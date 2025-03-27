@@ -61,6 +61,11 @@ types:
     endLocation: Maybe LocationAPIEntity
     bookingUpdateRequestId: Maybe (Id BookingUpdateRequest)
 
+  AddIntermediateJourneyLegReq:
+    startPoint: LocationAPIEntity
+    endLocation: LocationAPIEntity
+    legOrder: Int
+
   ExtendLegGetFareReq:
     startLocation: ExtendLegStartPoint
     endLocation: Maybe LocationAPIEntity
@@ -183,6 +188,15 @@ apis:
       endpoint: /multimodal/extend/{journeyId}/leg # only applicable for current leg
       request:
         type: ExtendLegReq
+      params:
+        journeyId: Id Journey
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/addIntermediate/{journeyId}/leg # only applicable for current leg
+      request:
+        type: AddIntermediateJourneyLegReq
       params:
         journeyId: Id Journey
       response:

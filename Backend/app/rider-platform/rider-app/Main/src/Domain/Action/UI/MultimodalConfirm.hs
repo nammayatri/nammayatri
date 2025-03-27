@@ -12,6 +12,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalJourneyLegAddSkippedLeg,
     getMultimodalJourneyStatus,
     postMultimodalExtendLegGetfare,
+    postMultimodalAddIntermediateLeg,
     postMultimodalJourneyFeedback,
     getActiveJourneyIds,
     getMultimodalFeedback,
@@ -256,6 +257,17 @@ postMultimodalExtendLeg ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalExtendLeg (_, _) journeyId req = do
   JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration req.bookingUpdateRequestId
+  return Kernel.Types.APISuccess.Success
+
+postMultimodalAddIntermediateLeg ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Id Domain.Types.Journey.Journey ->
+  ApiTypes.AddIntermediateJourneyLegReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalAddIntermediateLeg (_, _) journeyId ApiTypes.AddIntermediateJourneyLegReq {..} = do
+  JM.addIntermediateJourneyLeg journeyId startPoint endLocation legOrder
   return Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLegGetfare ::

@@ -24,6 +24,10 @@ import qualified Lib.JourneyModule.Types
 import Servant
 import Tools.Auth
 
+data AddIntermediateJourneyLegReq = AddIntermediateJourneyLegReq {endLocation :: Domain.Types.Location.LocationAPIEntity, legOrder :: Kernel.Prelude.Int, startPoint :: Domain.Types.Location.LocationAPIEntity}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -1,6 +1,7 @@
 module Storage.Queries.SearchRequestExtra where
 
 import Domain.Types.Journey
+import Domain.Types.JourneyLeg as DTJ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Person (Person)
@@ -115,6 +116,20 @@ updateIsCancelled (Id searchRequestId) isDeleted = do
   updateOneWithKV
     [Se.Set BeamSR.isDeleted isDeleted]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateLegOrder :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Int -> DTJ.JourneyLeg -> m ())
+updateLegOrder legOrder journeyLeg = do
+  updateWithKV
+    [ Se.Set BeamSR.journeyLegOrder (Just $ journeyLeg.sequenceNumber + 1)
+    ]
+    [ Se.And
+        [ Se.Is BeamSR.journeyId $ Se.Eq (Just $ Kernel.Types.Id.getId journeyLeg.id),
+          Se.Is BeamSR.journeyLegOrder $ Se.GreaterThanOrEq (Just legOrder)
+        ]
+    ]
+
+updateSearchRequestLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([DTJ.JourneyLeg] -> Int -> m ())
+updateSearchRequestLegs journeyLegs legOrder = mapM_ (updateLegOrder legOrder) journeyLegs
 
 findAllById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m [SearchRequest]
 findAllById srids = findAllWithKV [Se.Is BeamSR.id $ Se.In srids]

@@ -73,3 +73,17 @@ create journeyLeg = do
     RD.create routeDetails
 
   create' journeyLeg
+
+updateLegOrder :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Int -> Domain.Types.JourneyLeg.JourneyLeg -> m ())
+updateLegOrder legOrder journeyLeg = do
+  updateWithKV
+    [ Se.Set Beam.sequenceNumber (journeyLeg.sequenceNumber + 1)
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyLeg.id),
+          Se.Is Beam.sequenceNumber $ Se.GreaterThanOrEq legOrder
+        ]
+    ]
+
+updateNextJourneyLeg :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLeg.JourneyLeg] -> Int -> m ())
+updateNextJourneyLeg journeyLegs legOrder = mapM_ (updateLegOrder legOrder) journeyLegs
