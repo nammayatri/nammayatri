@@ -25,6 +25,8 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 
 data FareProducts = FareProducts
@@ -55,8 +57,8 @@ getDropSpecialLocation merchantOpCityId dropSpecialLocation = do
 getSearchSources :: Bool -> [DFareProduct.SearchSource]
 getSearchSources isDashboard = [DFareProduct.ALL] <> (if isDashboard then [DFareProduct.DASHBOARD] else [DFareProduct.MOBILE_APP])
 
-getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts
-getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong tripCategory = do
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> m FareProducts
+getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong tripCategory configVersionMap = do
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantOpCityId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
   mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLoc)) mToLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
@@ -92,7 +94,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           }
 
     getDefaultFareProducts = do
-      defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
+      defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId configVersionMap Nothing searchSources tripCategory SL.Default
       fareProducts <- mapM getBoundedOrDefaultFareProduct defFareProducts
       return $
         FareProducts
@@ -105,21 +107,21 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
     getFareProducts area = do
-      fareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area
-      otherFareProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources area
+      fareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId configVersionMap Nothing searchSources tripCategory area
+      otherFareProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId configVersionMap Nothing searchSources area
       if null fareProducts && area /= SL.Default && null otherFareProducts
         then do
-          defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
+          defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId configVersionMap Nothing searchSources tripCategory SL.Default
           mapM getBoundedOrDefaultFareProduct defFareProducts
         else do
           mapM getBoundedOrDefaultFareProduct fareProducts
 
     getBoundedOrDefaultFareProduct fareProduct = do
-      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
+      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area configVersionMap
       return $ fromMaybe fareProduct boundedFareProduct
 
-getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
-getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
-  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
+getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [LYT.ConfigVersionMap] -> m (Maybe DFareProduct.FareProduct)
+getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area configVersionMap = do
+  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId configVersionMap Nothing searchSources tripCategory serviceTier area
   currentIstTime <- getLocalCurrentTime 19800
   return $ listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime)

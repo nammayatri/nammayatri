@@ -152,6 +152,7 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.FarePolicy as SCFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
@@ -943,9 +944,11 @@ postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantShortId city reqFarePol
   pure Success
 
 postMerchantConfigFarePolicyUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
-postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
+postMerchantConfigFarePolicyUpdate merchantShortId city reqFarePolicyId req = do
   let farePolicyId = cast reqFarePolicyId
-  farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
+  farePolicy <- SCFP.findFarePolicyFromDB' merchantOperatingCity.id [] Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   SMerchant.checkCurrencies farePolicy.currency $
     [ req.serviceChargeWithCurrency,
       req.perMinuteRideExtraTimeChargeWithCurrency,
@@ -1323,7 +1326,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 if isJust value
                   then return ([], boundedAlreadyDeletedMap)
                   else do
-                    fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [searchSource] tripCategory vehicleServiceTier area
+                    fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [] Nothing [searchSource] tripCategory vehicleServiceTier area
                     let updatedBoundedAlreadyDeletedMap = markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                     return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
@@ -1940,9 +1943,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- fare products
   mbFareProducts <-
-    CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId [] Nothing >>= \case
       [] -> do
-        fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
+        fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId [] Nothing
         newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
         return $ Just newFareProducts
       _ -> return Nothing
