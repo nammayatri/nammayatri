@@ -69,6 +69,7 @@ data SearchRequestT f = SearchRequestT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     placeNameSource :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    recentLocationId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     returnTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     riderId :: (B.C f Kernel.Prelude.Text),
     riderPreferredOption :: (B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.RiderPreferredOption)),

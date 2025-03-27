@@ -257,6 +257,7 @@ library
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
+      Domain.Types.Extra.RecentLocation
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
@@ -376,6 +377,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
+      Storage.CachedQueries.Merchant.MultiModalBus
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
@@ -549,8 +551,8 @@ library
       API.Action.UI.Miscellaneous
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
-      API.Action.UI.Places
       API.Action.UI.NearbyDrivers
+      API.Action.UI.Places
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
@@ -597,8 +599,8 @@ library
       API.Types.UI.Miscellaneous
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
-      API.Types.UI.Places
       API.Types.UI.NearbyDrivers
+      API.Types.UI.Places
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin
@@ -1140,6 +1142,7 @@ library
     , text-conversions
     , text-format
     , time
+    , transformers
     , unliftio-core
     , unordered-containers
     , utils
@@ -1270,6 +1273,7 @@ executable rider-app-exe
     , text-conversions
     , text-format
     , time
+    , transformers
     , unliftio-core
     , unordered-containers
     , uuid

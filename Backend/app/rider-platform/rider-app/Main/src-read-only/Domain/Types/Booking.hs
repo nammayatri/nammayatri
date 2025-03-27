@@ -17,6 +17,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ParcelDetails
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import qualified Domain.Types.TripTerms
@@ -76,6 +77,7 @@ data Booking = Booking
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,
     quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

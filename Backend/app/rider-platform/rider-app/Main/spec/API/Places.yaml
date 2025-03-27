@@ -7,38 +7,40 @@ imports:
   MultiModalResponse: Kernel.External.MultiModal.Interface.Types
   Places: Storage.Queries.OrphanInstances.Places
   EntityType: Domain.Types.RecentLocation
+  RecentLocation: Domain.Types.RecentLocation
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
 
 module: Places
 
 types:
-  PopularLocation:
+  MultiModalLocation:
       name: Text
       address: Text
       lat: Double
       lon: Double
-      type_: Text
+      type_: Maybe Text
+      mode: Maybe EntityType
       rating: Maybe Double
       distance: Maybe Double  # in meters
-      multimodalRoutes: MultiModalResponse
-
-  RecentLocation:
-      name: Text
-      address: Text
-      lat: Double
-      lon: Double
-      distance: Maybe Double  # in meters
-      mode: EntityType
       multimodalRoutes: Maybe MultiModalResponse
+      toStationCode: Maybe Text
+      fromStationCode: Maybe Text
+      fromStationName: Maybe Text
+      toStationName: Maybe Text
+      routeCode: Maybe Text
+      routeId: Maybe Text
+      recentLocationId: Maybe (Id RecentLocation)
+
+
 
   PlacesRequest:
-      merchantOperatingCityId: Id MerchantOperatingCity
       userLat: Double
       userLon: Double
-      personId: Id Person
+      integratedBppConfigId: Id IntegratedBPPConfig
 
   PlacesResponse:
-      popularLocations: [PopularLocation]
-      recentLocations: [RecentLocation]
+      popularLocations: [MultiModalLocation]
+      recentLocations: [MultiModalLocation]
 
 apis:
   - POST:

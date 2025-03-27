@@ -48,6 +48,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.modes modes,
+      Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
       Se.Set Beam.startTime startTime,

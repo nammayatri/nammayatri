@@ -5,10 +5,10 @@ module Storage.Queries.RecentLocationExtra where
 
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as Person
-import Domain.Types.RecentLocation
+import Domain.Types.RecentLocation as DRecentLocation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
 import Kernel.Types.Error
@@ -34,3 +34,13 @@ findByPersonIdAndRouteId personId mocId routeId = do
 findRecentLocationsByRouteIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> [Text] -> m [RecentLocation]
 findRecentLocationsByRouteIds personId routeIds = do
   findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Id.getId personId), Se.Is Beam.routeId $ Se.In (map Just routeIds)]]
+
+increaceFrequencyById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id RecentLocation -> m ()
+increaceFrequencyById id = do
+  recentLoc <- findOneWithKV [Se.Is Beam.id $ Se.Eq (Id.getId id)]
+  case recentLoc of
+    Nothing -> pure ()
+    Just rl ->
+      updateOneWithKV
+        [Se.Set Beam.frequency ((rl.frequency :: Int) + 1)]
+        [Se.Is Beam.id $ Se.Eq (Id.getId id)]

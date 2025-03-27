@@ -220,3 +220,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_day 
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN variant_list_for_near_by_req text [] ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN near_by_driver_ring_bucket_cfg json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_driver_search_radius double precision ;

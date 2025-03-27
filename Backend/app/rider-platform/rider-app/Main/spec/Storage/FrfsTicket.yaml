@@ -33,6 +33,7 @@ imports:
   StationType: Domain.Types.StationType
   MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
 
 FRFSSearch:
   tableName: frfs_search
@@ -54,6 +55,7 @@ FRFSSearch:
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    recentLocationId: Maybe (Id RecentLocation)
 
   beamFields:
     journeyLegInfo:
@@ -320,6 +322,7 @@ FRFSTicketBooking:
     isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    recentLocationId: Maybe (Id RecentLocation)
 
   default:
     customerCancelled: "false"

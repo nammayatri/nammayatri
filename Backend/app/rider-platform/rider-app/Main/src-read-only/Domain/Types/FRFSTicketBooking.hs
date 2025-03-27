@@ -13,6 +13,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
+import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -63,6 +64,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     providerName :: Kernel.Prelude.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

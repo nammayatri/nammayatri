@@ -25,6 +25,7 @@ imports:
   JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
   PlatformType: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
 
 module: FRFSTicketService
 types:
@@ -34,6 +35,7 @@ types:
     routeCode: Maybe Text
     quantity: Int
     journeySearchData: Maybe JourneySearchData
+    recentLocationId: Maybe (Id RecentLocation)
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch

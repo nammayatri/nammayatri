@@ -12,15 +12,22 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RecentLocationT f = RecentLocationT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    entityId :: (B.C f Kernel.Prelude.Text),
+  { address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
     entityType :: (B.C f Domain.Types.RecentLocation.EntityType),
+    frequency :: (B.C f Kernel.Prelude.Int),
+    fromStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    fromStopName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     lat :: (B.C f Kernel.Prelude.Double),
     lon :: (B.C f Kernel.Prelude.Double),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     riderId :: (B.C f Kernel.Prelude.Text),
+    routeCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     routeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    stopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    stopLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    stopLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
