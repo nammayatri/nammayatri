@@ -86,7 +86,7 @@ data NearByDriverRes = NearByDriverRes
     coordinatesCalculatedAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    bear :: Int,
+    bear :: Maybe Int,
     vehicleType :: VV.VehicleVariant
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)

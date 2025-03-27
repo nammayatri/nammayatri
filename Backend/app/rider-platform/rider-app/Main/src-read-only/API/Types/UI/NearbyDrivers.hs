@@ -16,7 +16,7 @@ import Tools.Auth
 
 data DriverInfo = DriverInfo
   { applicableServiceTierTypes :: [Domain.Types.ServiceTierType.ServiceTierType],
-    bearing :: Kernel.Prelude.Int,
+    bearing :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distance :: Kernel.Types.Distance.Meters,
     driverId :: Data.Text.Text,
     lat :: Kernel.Prelude.Double,
