@@ -3245,8 +3245,11 @@ export const setupVoiceRecognitionView = function(id) {
   }
 }
 
-export const startOpenMeterActivity = () => {
+export const startOpenMeterActivity = (cb) => {
   return () => {
-    JBridge.startOpenMeterActivity();
+    const callback = callbackMapper.map(() => {
+      cb();
+    });
+    JBridge.startOpenMeterActivity(callback);
   }
 }

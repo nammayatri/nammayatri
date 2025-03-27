@@ -897,9 +897,7 @@ meterBooking state push =
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , cornerRadius 22.0
-    , onClick (\action -> do
-        _ <- JB.startOpenMeterActivity unit
-        pure unit) $ const GotoMeterRideScreen
+    , onClick push $ const $ GotoMeterRideScreen
     , background Color.white900
     , padding $ Padding 15 11 15 11
     , gravity CENTER
