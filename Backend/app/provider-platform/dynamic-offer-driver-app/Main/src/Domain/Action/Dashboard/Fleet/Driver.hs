@@ -122,6 +122,7 @@ import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.FleetBadge as QFB
+import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
@@ -939,7 +940,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
             latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now ------- when there is not any active association then i will find out the latest association  (vehicle is in inActive state)
             case latestAssociation of
               Just latestAssoc -> getFleetDriverInfo latestAssoc.driverId False
-              Nothing -> pure (Nothing, Nothing, Nothing, Nothing, False, False, Nothing) -------- when vehicle is unAssigned
+              Nothing -> pure (Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing) -------- when vehicle is unAssigned
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
@@ -955,8 +956,8 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
               Common.DriveVehicleAssociationListItem
                 { vehicleNo = Just decryptedVehicleRC,
                   status = Just $ castDriverStatus driverStatus,
-                  isDriverOnRide = (Just isDriverOnRide),
-                  isDriverOnPickup = (Just isDriverOnPickup),
+                  isDriverOnRide = isDriverOnRide,
+                  isDriverOnPickup = isDriverOnPickup,
                   isDriverActive = isDriverActive,
                   earning = snd stats,
                   completedRides = fst stats,
@@ -967,24 +968,27 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
                 }
         pure ls
 
-getFleetDriverInfo :: Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Bool, Bool, Maybe Text)
+getFleetDriverInfo :: Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text)
 getFleetDriverInfo driverId isDriver = do
-  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverInfo' <- QDriverInfo.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
-  mode <-
-    if isDriver
-      then return (driverInfo'.mode)
-      else return Nothing
-  (isDriverOnPickup, isDriverOnRide, routeCode) <-
-    if driverInfo'.onRide
-      then do
-        case currentTripTransaction of
-          Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
-          Nothing -> return (False, False, Nothing)
-      else return (False, False, Nothing)
-  mobileNumber <- mapM decrypt driver.mobileNumber
-  return (Just driver.firstName, Just driver.id.getId, mobileNumber, mode, isDriverOnPickup, isDriverOnRide, routeCode)
+  mbDriver <- QPerson.findById driverId
+  mbDriverInfo' <- QDriverInfo.findById driverId
+  case (mbDriverInfo', mbDriver) of
+    (Just driverInfo', Just driver) -> do
+      currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
+      mode <-
+        if isDriver
+          then return (driverInfo'.mode)
+          else return Nothing
+      (isDriverOnPickup, isDriverOnRide, routeCode) <-
+        if driverInfo'.onRide
+          then do
+            case currentTripTransaction of
+              Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
+              Nothing -> return (False, False, Nothing)
+          else return (False, False, Nothing)
+      mobileNumber <- mapM decrypt driver.mobileNumber
+      return (Just driver.firstName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode)
+    (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
 ---------------------------------------------------------------------
 postDriverFleetVehicleDriverRcStatus ::
@@ -1208,7 +1212,14 @@ getDriverFleetGetAllBadge merchantShortId opCity fleetOwnerId limit offset mbSea
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (toInteger <$> limit) (toInteger <$> offset) merchantOpCity.id fleetOwnerId
-  return $ Common.FleetBadgeRes $ map (\badge -> Common.FleetBadgesAPIEntity badge.badgeName) fleetBadgesByOwner
+  fleetBadgeInfos <-
+    mapM
+      ( \badge -> do
+          driverBadgeAssociation <- QFBA.findActiveFleetBadgeAssociationById badge.id
+          pure $ Common.FleetBadgesAPIEntity badge.badgeName (isJust driverBadgeAssociation)
+      )
+      fleetBadgesByOwner
+  return $ Common.FleetBadgeRes {..}
 
 ---------------------------------------------------------------------
 getDriverFleetRoutes ::
@@ -1333,18 +1344,35 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
-  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber (fromMaybe False req.isForceAssign)
-  void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName
-  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
-  pure Success
+  badgeName <-
+    case req.badgeName of
+      Just badgeName -> do
+        badge <- WMB.validateBadgeAssignment (cast req.driverId) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badgeName
+        WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId badge
+        return badge.badgeName
+      Nothing -> do
+        driver <- QP.findById (Id req.driverId.getId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+        return driver.firstName
+  try @_ @SomeException
+    ( do
+        vehicleRC <- WMB.validateVehicleAssignment (cast req.driverId) req.vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
+        WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber vehicleRC
+        return vehicleRC
+    )
+    >>= \case
+      Left err -> do
+        _ <- WMB.unlinkFleetBadgeFromDriver (cast req.driverId)
+        throwError (InternalError $ "Something went wrong while linking vehicle to driver. Error: " <> (T.pack $ displayException err))
+      Right vehicleRC -> do
+        createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC badgeName req.trips
+        pure Success
 
-createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
-createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC trips = do
-  driver <- QP.findById (Id driverId.getId) >>= fromMaybeM (PersonNotFound driverId.getId)
+createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Text -> [Common.TripDetails] -> Flow ()
+createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC badgeName trips = do
   allTransactions <-
     foldM
       ( \accTransactions trip -> do
-          transactions <- makeTripTransactions trip driver.firstName
+          transactions <- makeTripTransactions trip badgeName
           return $ accTransactions <> transactions
       )
       []
@@ -1457,14 +1485,16 @@ data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
   { driverId :: Text,
     vehicleNumber :: Text,
     routeCode :: Text,
-    roundTripFreq :: Text
+    roundTripFreq :: Text,
+    badgeName :: Maybe Text
   }
 
 data DriverBusRouteDetails = DriverBusRouteDetails
   { driverPhoneNo :: Text,
     vehicleNumber :: Text,
     routeCode :: Text,
-    roundTripFreq :: Maybe Int
+    roundTripFreq :: Maybe Int,
+    badgeName :: Maybe Text
     -- forceAssign :: Bool
   }
 
@@ -1475,6 +1505,7 @@ instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
       <*> r .: "vehicle_number"
       <*> r .: "route_code"
       <*> r .: "round_trip_freq"
+      <*> (Just <$> r .: "badge_name" <|> pure Nothing)
 
 -- <*> r .: "force_assign"
 
@@ -1507,25 +1538,37 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
               Just driver -> do
                 let vehicleNumber = driverGroup.vehicleNumber
                     tripPlannerRequests = map makeTripPlannerReq ([driverGroup] <> driverGroups)
-                return (driver, driverGroup.driverPhoneNo, vehicleNumber, tripPlannerRequests)
+                return (driver, driverGroup.driverPhoneNo, driverGroup.badgeName, vehicleNumber, tripPlannerRequests)
       )
       groupedDetails
 
   unprocessedEntities <-
     foldlM
-      ( \unprocessedEntities (driver, driverMobileNumber, vehicleNumber, tripPlannerRequests) -> do
+      ( \unprocessedEntities (driver, driverMobileNumber, mbBadgeName, vehicleNumber, tripPlannerRequests) -> do
           try @_ @SomeException
-            ( WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False -- TODO :: Make this dynamic by adding the force_assign field in CSV.
-            -- void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName -- TODO :: Capture Badge Name from CSV
+            ( do
+                vehicleRC <- WMB.validateVehicleAssignment (cast driver.id) vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
+                badge <-
+                  case mbBadgeName of
+                    Just badgeName -> do
+                      badge <- WMB.validateBadgeAssignment (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badgeName
+                      return $ Just badge
+                    Nothing -> return Nothing
+                return (vehicleRC, badge)
             )
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to link vehicle to the Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
-              Right vehicleRC -> do
+              Right (vehicleRC, mbBadge) -> do
                 try @_ @SomeException
-                  (createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC tripPlannerRequests)
+                  ( do
+                      WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber vehicleRC
+                      whenJust mbBadge $ \badge -> WMB.linkFleetBadgeToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badge
+                      createTripTransactions merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId (cast driver.id) vehicleRC (maybe driver.firstName (.badgeName) mbBadge) tripPlannerRequests
+                  )
                   >>= \case
                     Left err -> do
-                      WMB.unlinkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id vehicleNumber
+                      void $ WMB.unlinkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id vehicleNumber
+                      void $ WMB.unlinkFleetBadgeFromDriver (cast driver.id)
                       return $ unprocessedEntities <> ["Unable to create Trip Transactions for Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
                     Right _ -> return unprocessedEntities
       )
@@ -1545,7 +1588,11 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
       vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
       routeCode <- cleanCSVField idx row.routeCode "Route code"
       let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
-      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq
+      badgeName <-
+        case row.badgeName of
+          Just badgeName -> Just <$> cleanCSVField idx badgeName "Badge name"
+          Nothing -> pure Nothing
+      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq badgeName
 
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =

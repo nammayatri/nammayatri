@@ -214,11 +214,11 @@ newtype FleetBadgeResT = FleetBadgeResT {fleetBadgeInfos :: [FleetBadgesAPIEntit
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype FleetBadgesAPIEntity = FleetBadgesAPIEntity {badgeName :: Kernel.Prelude.Text}
+data FleetBadgesAPIEntity = FleetBadgesAPIEntity {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetBadgesAPIEntityT = FleetBadgesAPIEntityT {badgeName :: Kernel.Prelude.Text, fleetOwnerId :: Kernel.Prelude.Text, fleetOwnerName :: Kernel.Prelude.Text}
+data FleetBadgesAPIEntityT = FleetBadgesAPIEntityT {badgeName :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Bool, fleetOwnerId :: Kernel.Prelude.Text, fleetOwnerName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -498,13 +498,7 @@ data TripDetails = TripDetails {routeCode :: Kernel.Prelude.Text, roundTrip :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripPlannerReq = TripPlannerReq
-  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
-    badgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleNumber :: Kernel.Prelude.Text,
-    isForceAssign :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    trips :: [TripDetails]
-  }
+data TripPlannerReq = TripPlannerReq {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, badgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text, trips :: [TripDetails]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

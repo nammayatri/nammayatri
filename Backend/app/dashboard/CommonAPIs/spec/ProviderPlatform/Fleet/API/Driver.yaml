@@ -904,7 +904,6 @@ types:
     - driverId: Id Driver
     - badgeName: Maybe Text
     - vehicleNumber: Text
-    - isForceAssign: Maybe Bool
     - trips: [TripDetails]
     - derive: "'HideSecrets"
   FleetOwnerListRes:
@@ -982,10 +981,11 @@ types:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntityT]
   FleetBadgesAPIEntity:
-    - recordType: NewType
     - badgeName: Text
+    - isActive: Bool
   FleetBadgesAPIEntityT:
     - badgeName: Text
+    - isActive: Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetListDriverResT:

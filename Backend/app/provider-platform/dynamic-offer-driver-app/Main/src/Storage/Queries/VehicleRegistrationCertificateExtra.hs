@@ -204,10 +204,11 @@ findAllActiveRCForFleet fleetOwnerId (Id merchantId') = do
       catMaybes <$> mapM fromTType' rcList
     Left _ -> pure []
 
-findAllActiveRCForFleetByLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Merchant.Merchant -> Integer -> Integer -> Maybe Text -> Maybe Text -> m [VehicleRegistrationCertificate]
+findAllActiveRCForFleetByLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> Id Merchant.Merchant -> Integer -> Integer -> Maybe Text -> Maybe Text -> m [VehicleRegistrationCertificate]
 findAllActiveRCForFleetByLimitOffset fleetOwnerId (Id merchantId') limitVal offsetVal mbSearchString statusAwareVehicleNo = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
+  mbSearchHash <- mapM getDbHash mbSearchString
   case mbSearchString of
     Just searchString -> do
       res <-
@@ -227,6 +228,7 @@ findAllActiveRCForFleetByLimitOffset fleetOwnerId (Id merchantId') limitVal offs
                             B.&&?. B.sqlBool_ (driverRcAssociation.associatedTill B.>=. B.val_ (Just now))
                             B.&&?. ( B.sqlBool_ (B.like_ (B.lower_ driver.firstName) (B.val_ ("%" <> toLower searchString <> "%")))
                                        B.||?. B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> searchString <> "%")))
+                                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> driver.mobileNumberHash B.==?. B.val_ (Just hash)) mbSearchHash
                                    )
                       )
                       do
