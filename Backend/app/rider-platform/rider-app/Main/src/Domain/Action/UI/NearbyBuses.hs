@@ -3,7 +3,8 @@
 module Domain.Action.UI.NearbyBuses (postNearbyBusBooking) where
 
 import qualified API.Types.UI.NearbyBuses
-import qualified BecknV2.FRFS.Enums
+import qualified BecknV2.FRFS.Enums as Spe
+import qualified BecknV2.OnDemand.Enums
 import Data.Text.Encoding (decodeUtf8)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -14,10 +15,20 @@ import EulerHS.Prelude hiding (decodeUtf8, id)
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Logging
+import qualified SharedLogic.FRFSUtils as FRFSUtils
+import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as QRecentLocation
+import qualified Storage.Queries.Route as QRoute
+import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
+import Tools.Error
 
 nearbyBusKey :: Text
 nearbyBusKey = "bus_locations"
@@ -29,63 +40,93 @@ postNearbyBusBooking ::
     API.Types.UI.NearbyBuses.NearbyBusesRequest ->
     Environment.Flow API.Types.UI.NearbyBuses.NearbyBusesResponse
   )
-postNearbyBusBooking (_, _) req = do
-  let radius :: Double = 0.5 --TODO: To be moved to config.
+postNearbyBusBooking (mbPersonId, merchantId) req = do
+  riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
+  person <- QP.findById riderId >>= fromMaybeM (PersonNotFound "No person found")
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+
+  let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
 
   -- Convert ByteString to Text after geo search
   busesBS :: [ByteString] <- Hedis.withCrossAppRedis $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLat req.userLon) (Hedis.ByRadius radius "km")
   let buses = map decodeUtf8 busesBS
 
   busRouteMapping <- QVehicleRouteMapping.findAllByVehicleNumber buses
-  let routIds :: [Text] = map DTVRM.routeId busRouteMapping
+  let routeIds :: [Text] = map DTVRM.routeId busRouteMapping
 
-  recentLocations <- QRecentLocation.findRecentLocationsByRouteIds req.personId routIds
+  recentLocations <- QRecentLocation.findRecentLocationsByRouteIds riderId routeIds
 
   -- Process recent locations to build RecentRide objects
   recentRidesNested <- forM recentLocations $ \recentLoc -> do
     case recentLoc.entityType of
       Domain.Types.RecentLocation.BUS -> do
-        let limit = 10
-            journeyId = recentLoc.entityId -- Assuming entityId is the journeyId
-
-        -- Fix the function call with correct parameters
-        frfstickets <- QFRFSTicketBooking.findAllByJourneyIdAndRiderId req.personId journeyId limit
-
-        -- Process each ticket
-        rides <- forM frfstickets $ \ticket -> do
-          case ticket.vehicleType of
-            BecknV2.FRFS.Enums.BUS ->
-              -- Create RecentRide, handling Maybe routeId properly
-              return $
-                Just $
-                  API.Types.UI.NearbyBuses.RecentRide
-                    (getId ticket.fromStationId)
-                    ticket.quantity
-                    recentLoc.routeId -- This is already Maybe Text so no need to wrap
-                    (getId ticket.toStationId)
-            _ -> return Nothing
-        return $ catMaybes rides
+        if (isJust recentLoc.fromStopCode && isJust recentLoc.routeCode)
+          then do
+            integratedBPPConfig' <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.BUS req.platformType
+            case integratedBPPConfig' of
+              Just integratedBPPConfig -> do
+                stopMapping <- Kernel.Prelude.listToMaybe <$> QRouteStopMapping.findByStopCode (fromMaybe "" recentLoc.stopCode) integratedBPPConfig.id
+                if isJust stopMapping
+                  then do
+                    getFares <- Kernel.Prelude.listToMaybe <$> FRFSUtils.getFares (Just riderId) Spe.BUS integratedBPPConfig.id merchantId person.merchantOperatingCityId (fromMaybe "" recentLoc.routeCode) (fromMaybe "" recentLoc.fromStopCode) (fromMaybe "" recentLoc.stopCode)
+                    -- need to validate this.
+                    if isNothing getFares
+                      then
+                        return $
+                          [ -- Return a single element list instead of Just
+                            API.Types.UI.NearbyBuses.RecentRide
+                              { fare = (Kernel.Prelude.fromJust getFares).price,
+                                fromStopCode = fromMaybe "" recentLoc.fromStopCode,
+                                fromStopName = fromMaybe "" recentLoc.fromStopName,
+                                routeCode = recentLoc.routeCode,
+                                toStopName = (Kernel.Prelude.fromJust stopMapping).stopName,
+                                toStopCode = fromMaybe "" recentLoc.stopCode -- Using same stop as placeholder
+                              }
+                          ]
+                      else return []
+                  else return []
+              Nothing -> return []
+          else return []
       _ -> return []
 
   -- Flatten the nested list and prepare the response
   let recentRides = concat recentRidesNested
+  allBusesForRides <- mapM CQMMB.getRoutesBuses routeIds
+  logDebug $ "All buses for rides: " <> show allBusesForRides
+  let allBusesData =
+        map
+          ( \routeData -> do
+              let filteredBus = filter (\bus -> elem bus.vehicleNumber buses) routeData.buses
+              (routeData {buses = filteredBus})
+          )
+          allBusesForRides
+  logDebug $ "All buses data: " <> show allBusesData
 
   -- Create nearby bus objects
-  let nearbyBuses =
-        map
-          ( \bus ->
-              API.Types.UI.NearbyBuses.NearbyBus
-                { busId = Just bus.vehicleNo,
-                  routeId = bus.routeId,
-                  currentLocation = Maps.LatLong 0.0 0.0, -- Placeholder coordinates
-                  nextStop = Just "nextStop", -- Placeholder stop name
-                  distance = Just 0.0, -- Placeholder distance
-                  eta = Just 10, -- Placeholder ETA in minutes
-                  capacity = Just 10, -- Placeholder capacity
-                  occupancy = Just 0 -- Placeholder occupancy
-                }
-          )
-          busRouteMapping
+  nearbyBuses <-
+    mapM
+      ( \busData -> do
+          mapM
+            ( \bus -> do
+                route <- QRoute.findByRouteId (Id busData.routeId) >>= fromMaybeM (InternalError "Route not found")
+                return $
+                  API.Types.UI.NearbyBuses.NearbyBus
+                    { capacity = Nothing,
+                      currentLocation = Maps.LatLong bus.busData.latitude bus.busData.longitude,
+                      distance = Nothing,
+                      eta = Nothing,
+                      nextStop = Nothing,
+                      occupancy = Nothing,
+                      routeCode = busData.routeId,
+                      serviceType = Nothing,
+                      vehicleNumber = Just $ bus.vehicleNumber,
+                      routeLongName = route.longName,
+                      routeShortName = route.shortName
+                    }
+            )
+            busData.buses
+      )
+      allBusesData
 
   -- Return the complete response
-  return $ API.Types.UI.NearbyBuses.NearbyBusesResponse nearbyBuses recentRides
+  return $ API.Types.UI.NearbyBuses.NearbyBusesResponse (concat nearbyBuses) recentRides

@@ -640,6 +640,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
                 isDeleted = Just False,
                 isSkipped = Just False,
                 quantity = ticketQuantity',
+                recentLocationId = mbSearch >>= (.recentLocationId),
                 ..
               }
       QFRFSTicketBooking.create booking

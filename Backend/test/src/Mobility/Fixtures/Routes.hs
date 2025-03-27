@@ -37,7 +37,8 @@ defaultSearchReq =
         placeNameSource = Nothing,
         driverIdentifier = Nothing,
         fareParametersInRateCard = Nothing,
-        isMeterRideSearch = Just False
+        isMeterRideSearch = Just False,
+        recentLocationId = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -105,7 +106,8 @@ searchReqFromUpdatesList updList =
               placeNameSource = Nothing,
               driverIdentifier = Nothing,
               fareParametersInRateCard = Nothing,
-              isMeterRideSearch = Just False
+              isMeterRideSearch = Just False,
+              recentLocationId = Nothing
             }
    in (origin, destination, req)
 
@@ -127,7 +129,8 @@ mkSearchReqFromLocations origin destination =
               placeNameSource = Nothing,
               driverIdentifier = Nothing,
               fareParametersInRateCard = Nothing,
-              isMeterRideSearch = Just False
+              isMeterRideSearch = Just False,
+              recentLocationId = Nothing
             }
    in (origin, destination, req)
 

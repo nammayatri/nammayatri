@@ -32,14 +32,21 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RecentLocation.RecentLocation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.entityId entityId,
+    [ Se.Set Beam.address address,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.entityType entityType,
+      Se.Set Beam.frequency frequency,
+      Se.Set Beam.fromStopCode fromStopCode,
+      Se.Set Beam.fromStopName fromStopName,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeCode routeCode,
       Se.Set Beam.routeId routeId,
+      Se.Set Beam.stopCode stopCode,
+      Se.Set Beam.stopLat stopLat,
+      Se.Set Beam.stopLon stopLon,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

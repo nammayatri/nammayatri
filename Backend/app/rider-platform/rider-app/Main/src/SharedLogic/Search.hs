@@ -8,6 +8,7 @@ import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -101,7 +102,8 @@ data OneWaySearchReq = OneWaySearchReq
     sessionToken :: Maybe Text,
     placeNameSource :: Maybe Text,
     driverIdentifier :: Maybe DRL.DriverIdentifier,
-    isMeterRideSearch :: Maybe Bool
+    isMeterRideSearch :: Maybe Bool,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -116,7 +118,8 @@ data RentalSearchReq = RentalSearchReq
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
-    placeNameSource :: Maybe Text
+    placeNameSource :: Maybe Text,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -133,7 +136,8 @@ data InterCitySearchReq = InterCitySearchReq
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
-    placeNameSource :: Maybe Text
+    placeNameSource :: Maybe Text,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -160,7 +164,8 @@ data SearchDetails = SearchDetails
     fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,
-    driverIdentifier_ :: Maybe DRL.DriverIdentifier
+    driverIdentifier_ :: Maybe DRL.DriverIdentifier,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation)
   }
   deriving (Generic, Show)
 

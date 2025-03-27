@@ -2,20 +2,28 @@ imports:
   Person: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  LatLong: Kernel.External.Maps.Types
 
 RecentLocation:
   tableName: recent_location
 
   types:
     EntityType:
-      enum: "MULTIMODAL, BUS, METRO, NAMMA_YATRI"
+      enum: "MULTIMODAL, BUS, METRO, TAXI"
 
 
   fields:
     id : Id RecentLocation
     riderId : Id Person
-    entityId: Text
+    frequency : Int
     entityType: EntityType
+    address: Maybe Text
+    stopLat: Maybe Double
+    stopLon: Maybe Double
+    routeCode: Maybe Text
+    stopCode: Maybe Text
+    fromStopCode: Maybe Text
+    fromStopName: Maybe Text
     routeId: Maybe Text
     lat: Double
     lon: Double
@@ -26,6 +34,7 @@ RecentLocation:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
   constraints:
     id: PrimaryKey

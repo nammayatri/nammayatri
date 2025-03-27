@@ -62,6 +62,7 @@ data RiderConfig = RiderConfig
     minimumWalkDistance :: Kernel.Types.Common.Meters,
     multimodalTesting :: Kernel.Prelude.Bool,
     nearByDriverRingBucketCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.RingBucketCfg],
+    nearbyDriverSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,
