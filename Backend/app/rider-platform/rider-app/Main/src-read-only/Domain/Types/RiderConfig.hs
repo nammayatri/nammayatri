@@ -47,6 +47,7 @@ data RiderConfig = RiderConfig
     incidentReportSupport :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     isAvoidToll :: Kernel.Prelude.Bool,
+    isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFirstReferredRideEnabled :: Kernel.Prelude.Bool,
     ivrTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     kaptureConfig :: IssueManagement.Common.KaptureConfig,

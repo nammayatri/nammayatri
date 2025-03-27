@@ -92,6 +92,7 @@ RiderConfig:
     variantListForNearByReq: "Maybe [VehicleVariant]"
     nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
     nearbyDriverSearchRadius: Maybe Double
+    isDeviceIdCheckDisabled: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
