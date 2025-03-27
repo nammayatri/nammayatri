@@ -981,10 +981,11 @@ types:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntityT]
   FleetBadgesAPIEntity:
-    - recordType: NewType
     - badgeName: Text
+    - isActive: Bool
   FleetBadgesAPIEntityT:
     - badgeName: Text
+    - isActive: Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetListDriverResT:
