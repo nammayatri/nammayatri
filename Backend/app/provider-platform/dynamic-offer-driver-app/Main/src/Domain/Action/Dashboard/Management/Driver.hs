@@ -1122,10 +1122,11 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestedEn
 
   whenJust mbEntityId $ \e_Id -> do
     let entityId = cast @Common.Driver @DP.Person e_Id
-    entities <- QPerson.findAllByPersonIdsAndMerchant [Id requestedEntityId, entityId] merchant.id merchantOpCityId
-    when (length entities /= 2) $ throwError (PersonDoesNotExist (requestedEntityId <> " or " <> entityId.getId))
-    isValid <- validatePersonAccessAndAssociation entities
-    unless isValid $ throwError (InternalError "Entity does not have access to this entity data")
+    when (entityId.getId /= requestedEntityId) $ do
+      entities <- QPerson.findAllByPersonIdsAndMerchant [Id requestedEntityId, entityId] merchant.id merchantOpCityId
+      when (length entities /= 2) $ throwError (PersonDoesNotExist (requestedEntityId <> " or " <> entityId.getId))
+      isValid <- validatePersonAccessAndAssociation entities
+      unless isValid $ throwError AccessDenied
 
   let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestedEntityId) mbEntityId
   findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
