@@ -426,7 +426,7 @@ playRideAssignedAudio tripCategory rideId vehicleVariant push = do
         "RENTALS" -> config.rentals
         "LOCAL" -> config.local
         _ -> Nothing
-        
+
       -- Fall back to trip category if no variant-specific audio
       tripAudioUrl = case tripCategory of
         ST.Rental ->  config.rental
@@ -435,7 +435,7 @@ playRideAssignedAudio tripCategory rideId vehicleVariant push = do
         ST.Delivery -> config.delivery
         ST.OneWay -> config.oneWay
         ST.RideShare -> config.rideShare
-        
+
       -- Use variant audio if available, otherwise use trip-based audio
       audioUrl = if isJust variantAudioUrl then variantAudioUrl else tripAudioUrl
     case audioUrl of
@@ -915,8 +915,8 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ][  meterBooking state push -- if fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
-          , locationUpdateView push state
+        ][  --meterBooking state push -- if fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter then meterBooking state push else linearLayout[][]
+        locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
             then gotoButton push state else linearLayout[][]
           , if hotspotsRemoteConfig.enableHotspotsFeature then seeNearbyHotspots state push else noView
@@ -937,10 +937,8 @@ meterBooking state push =
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , cornerRadius 22.0
-    , onClick (\action -> do
-        _ <- JB.startOpenMeterActivity unit
-        pure unit) $ const GotoMeterRideScreen
-    , background Color.white900
+    , onClick push $ const $ GotoMeterRideScreen
+    , background Color.blue800
     , padding $ Padding 15 11 15 11
     , gravity CENTER
     , stroke $ "1,"<> Color.grey900
@@ -949,16 +947,16 @@ meterBooking state push =
     ][ imageView
         [ width $ V 15
         , height $ V 15
-        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_odometer"
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_open_meter_icon"
         ]
       , textView $
         [ weight 1.0
         , text $ getString NAMMA_METER
         , gravity CENTER
-        , margin $ MarginLeft 10
-        , color Color.blue800
+        , margin $ MarginLeft 6
+         , color Color.white900
         , padding $ PaddingBottom 3
-        ] <> FontStyle.tags TypoGraphy
+        ] <> FontStyle.body37 TypoGraphy
     ]
 
 locationUpdateView :: forall w .(Action -> Effect Unit) -> HomeScreenState  ->  PrestoDOM (Effect Unit) w
@@ -1012,11 +1010,55 @@ addAadhaarOrOTPView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity if showAddAadhaar then CENTER else RIGHT
-      ][  addAadhaarNumber push state showAddAadhaar
+      ][
+        linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][ addAadhaarNumber push state showAddAadhaar
         , if (state.data.config.feature.enableOtpRide || otpRideEnabledCityConfig.enableOtpRide) then otpButtonView state push else dummyTextView
+        , if showMeterRide then meterRideButtonView state push else dummyTextView
         ]
       ]
-  where showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
+  ]
+  where
+    showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
+    showMeterRide = ( fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter )
+      && state.props.currentStage == ST.HomeScreen
+      && state.props.statusOnline
+
+meterRideButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+meterRideButtonView state push =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , background Color.white900
+  , stroke $ "1," <> Color.grey900
+  , cornerRadius 22.0
+  , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+  , padding $ Padding 12 10 12 10
+  , onClick push $ const $ GotoMeterRideScreen
+  , margin $ MarginLeft 10
+  , gravity CENTER
+  ][ imageView
+      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_open_meter_icon"
+      , width $ V 20
+      , height $ V 20
+      ]
+    , textView $
+      [ text $ "Open Meter"
+      , color Color.black800
+      , singleLine true
+      , margin $ MarginLeft 5
+      , gravity CENTER
+      ] <> (FontStyle.tags TypoGraphy)
+    , imageView
+      [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_grey"
+      , width $ V 12
+      , height $ V 12
+      , margin $ MarginLeft 5
+      ]
+  ]
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
@@ -2401,10 +2443,8 @@ offlineNavigationLinks push state =
           linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , background Color.white900
             , orientation HORIZONTAL
             , cornerRadius 32.0
-            , stroke $ "1," <> Color.black600
             , padding $ Padding 12 12 12 12
             , margin $ MarginLeft if index == 0 then 0 else 5
             , gravity CENTER_VERTICAL
@@ -2413,6 +2453,8 @@ offlineNavigationLinks push state =
             , rippleColor Color.rippleShade
             , alpha $ itemAlpha item.action
             , clickable $ itemClickable item.action
+            , background item.background
+            , stroke item.stroke
             ][  imageView
                 [ width $ V 16
                 , height $ V 16
@@ -2424,19 +2466,21 @@ offlineNavigationLinks push state =
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , text item.title
-                , color Color.black900
+                , color item.color
                 , padding $ PaddingBottom 1
                 ] <> FontStyle.tags TypoGraphy
             ]
           ) navLinksArray)
     ]
     where
-      navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
-                        {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen},
-                        {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction},
-                        {title : getString RIDE_REQUESTS, icon : "ny_ic_location", action : RideRequestsList},
-                        {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
-                        {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
+      navLinksArray = [
+        {title : getString NAMMA_METER, icon : "ny_ic_open_meter_icon", action : GotoMeterRideScreen, color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
+        {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
+                        {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
+                        {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
+                        {title : getString RIDE_REQUESTS, icon : "ny_ic_location", action : RideRequestsList, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
+                        {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
+                        {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600}
                       ]
       itemVisibility action config = case action of
                         AddAlternateNumberAction -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
@@ -2446,6 +2490,7 @@ offlineNavigationLinks push state =
                           let hotspotsRemoteConfig = getHotspotsFeatureData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
                           boolToVisibility hotspotsRemoteConfig.enableHotspotsFeature
                         RideRequestsList -> boolToVisibility config.enableScheduledRides
+                        GotoMeterRideScreen ->boolToVisibility $ fromMaybe false $ lookup (getValueToLocalStore VEHICLE_VARIANT) $ fromMaybe empty state.data.cityConfig.enableNammaMeter
                         _ -> VISIBLE
       itemAlpha action = case action of
                     RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5
