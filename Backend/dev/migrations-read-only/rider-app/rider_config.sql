@@ -225,3 +225,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN near_by_driver_ring_bucket_cfg jso
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_driver_search_radius double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN is_device_id_check_disabled boolean ;
