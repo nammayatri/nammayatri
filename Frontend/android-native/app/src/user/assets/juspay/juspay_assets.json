@@ -191,6 +191,7 @@
       "ny_ic_bus_icon_light_blue" : true,
       "ny_ic_bus_marker" : true,
       "ny_ic_bus_marker_with_arrow" : true,
+      "ny_ic_yellow_bus_marker_with_arrow" : true,
       "ny_ic_bus_ticket_illustration" : true,
       "ny_ic_bus_white" : true,
       "ny_ic_busview" : true,
@@ -686,6 +687,10 @@
       "ny_ic_qr_code_expired" : true,
       "ny_ic_delivery_truck_nav_on_map" : true,
       "ic_fluent_box_filled" : true,
-      "ny_ic_clock_filled_dark.png" : true
+      "ny_ic_clock_filled_dark" : true,
+      "ny_ic_route_start": true,
+      "ny_ic_route_end": true,
+      "ny_ic_route_start_pointer": true,
+      "ny_ic_route_end_pointer": true
    }
 }

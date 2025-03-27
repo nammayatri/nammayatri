@@ -91,27 +91,37 @@ transformStationsForMap stations route srcCode destCode = do
 getStationsFromBusRoute ::  API.FRFSRouteAPI -> Array API.FRFSStationAPI 
 getStationsFromBusRoute (API.FRFSRouteAPI stop) = fromMaybe [] stop.stations
 
-getStopImage :: StopType -> String 
-getStopImage stopType = 
-  case stopType of
-    SOURCE_STOP -> "ny_ic_source_dot"
-    DESTINATION_STOP -> "ny_ic_dest_dot"
-    _ -> "ny_ic_stop_black"
+getStopImage :: StopType -> Maybe RideType -> String 
+getStopImage stopType rideType = 
+  case stopType, rideType of
+    SOURCE_STOP, Just STOP -> "ny_ic_source_dot"
+    SOURCE_STOP, _ -> "ny_ic_stop_black"
+    DESTINATION_STOP, Just STOP -> "ny_ic_dest_dot"
+    DESTINATION_STOP, _ -> "ny_ic_stop_black"
+    ROUTE_SOURCE, _ -> "ny_ic_stop_black"
+    ROUTE_END, _ -> "ny_ic_stop_black"
+    _, _ -> "ny_ic_stop_black"
 
-getStopMarker :: StopType -> String 
-getStopMarker stopType = do
+getStopMarker :: StopType -> Maybe RideType -> String 
+getStopMarker stopType rideType = do
   let markers = HU.normalRoute ""
-  case stopType of
-    SOURCE_STOP -> markers.srcMarker
-    DESTINATION_STOP -> markers.destMarker
-    _ -> "ny_ic_stop_black"
+  case stopType,rideType of
+    SOURCE_STOP, Just STOP -> markers.srcMarker
+    SOURCE_STOP, _ -> "ny_ic_route_start_pointer"
+    DESTINATION_STOP, Just STOP -> markers.destMarker
+    DESTINATION_STOP, _ -> "ny_ic_route_end_pointer"
+    ROUTE_SOURCE, _ -> "ny_ic_route_start_pointer"
+    ROUTE_END, _ -> "ny_ic_route_end_pointer"
+    _, _ -> "ny_ic_stop_black"
 
 getStopMarkerSize :: StopType -> Int 
 getStopMarkerSize stopType = 
   case stopType of
-    SOURCE_STOP -> 90
-    DESTINATION_STOP -> 90
+    SOURCE_STOP -> 100
+    DESTINATION_STOP -> 100
     NORMAL_STOP -> 20
+    ROUTE_SOURCE -> 100
+    ROUTE_END -> 100
     _ -> 50
 
 getStopType :: String -> Int -> BusTrackingScreenState-> StopType 

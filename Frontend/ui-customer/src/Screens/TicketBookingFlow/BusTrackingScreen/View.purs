@@ -84,7 +84,7 @@ import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
-screen initialState =
+screen initialState = 
   { initialState
   , view
   , name: "BusTrackingScreen"
@@ -580,7 +580,7 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
               [ imageView
                 [ height $ V imageDimension
                 , width $ V imageDimension
-                , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET (getStopImage stopType)
+                , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET (getStopImage stopType state.data.rideType)
                 , margin $ MarginLeft (if stopType == NORMAL_STOP then 6 else 2)
                 , visibility $ boolToVisibility showOnlyBullet
                 ]
