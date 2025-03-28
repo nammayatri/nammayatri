@@ -128,16 +128,16 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         Nothing -> pure ()
         Just plan -> do
           let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
-              (mandateSetupDate, mandateId) = case mbDriverPlan of
-                Nothing -> (now, Nothing)
-                Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
+              (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage) = case mbDriverPlan of
+                Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0)
+                Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage)
               coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
           let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
           --------- calculations based of frequency happens here ------------
           (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
-            calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee
+            calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode
           ---------------------------------------------------------------------
           ------------- update driver fee with offer and plan details ---------
           let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -271,23 +271,32 @@ getFinalOrderAmount ::
   UTCTime ->
   Int ->
   DriverFee ->
+  HighPrecMoney ->
+  DPlan.WaiveOffMode ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
-getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee = do
+getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee waiveOffPercentage waiveOffMode = do
   now <- getCurrentTime
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
-      feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
+      waiveOffMultiplier = if waiveOffMode == DPlan.NO_WAIVE_OFF then 1.0 else (1.0 - (waiveOffPercentage / 100))
+      feeWithoutDiscountWithWaiveOff = feeWithoutDiscount * waiveOffMultiplier
+      feeWithOutDiscountPlusSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
   if feeWithOutDiscountPlusSpecialZone == 0
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+      offerResp <- do
+        case waiveOffMode of
+          DPlan.WITHOUT_OFFER -> return []
+          _ -> do
+            offers <- SPayment.offerListCache merchantId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+            return offers.offerResp
       (finalOrderAmount, offerId, offerTitle) <-
-        if null offers.offerResp
+        if null offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
           else do
-            let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
+            let bestOffer = minimumBy (comparing (.finalOrderAmount)) offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       if finalOrderAmount + driverFee.specialZoneAmount == 0
         then do
@@ -576,18 +585,20 @@ calcFinalOrderAmounts ::
   Text ->
   HighPrecMoney ->
   DriverFee ->
+  HighPrecMoney ->
+  DPlan.WaiveOffMode ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
-calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee =
+calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode =
   case (planBaseFrequcency, plan.basedOnEntity) of
     ("PER_RIDE", RIDE) -> do
       let feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRidesForPlanCharges)))
-      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode
     ("DAILY", RIDE) -> do
       let feeWithoutDiscount = if numRidesForPlanCharges > 0 then baseAmount else 0
-      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode
     ("DAILY", NONE) -> do
       let feeWithoutDiscount = baseAmount
-      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode
     _ -> return (0.0, 0.0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
 
 manualInvoiceGeneratedNudgeKey :: Text

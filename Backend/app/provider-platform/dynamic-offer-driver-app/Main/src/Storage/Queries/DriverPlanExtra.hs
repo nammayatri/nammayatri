@@ -175,3 +175,27 @@ updateLastBillGeneratedAt driverId serviceName endTime = do
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
+
+updateAllWithWaiveOffPercantageAndType ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [WaiveOffEntity] ->
+  m ()
+updateAllWithWaiveOffPercantageAndType waiveOffEntityArray = do
+  mapM_ (\we -> updateWaiveOffPercantageAndType we) waiveOffEntityArray
+
+updateWaiveOffPercantageAndType ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  WaiveOffEntity ->
+  m ()
+updateWaiveOffPercantageAndType waiveOffEntity = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.waiverOffPercentage $ Just waiveOffEntity.percentage,
+      Se.Set BeamDF.waiveOfMode $ Just waiveOffEntity.waiveOfMode,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq (waiveOffEntity.driverId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just waiveOffEntity.serviceName)
+        ]
+    ]

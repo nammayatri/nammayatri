@@ -1012,6 +1012,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Integer
     dynamicReferralCodeValidForMinutes: Integer
     dynamicReferralCodeEnabled: Bool
+    bulkWaiveOffLimit : Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1066,6 +1067,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Maybe Integer
     dynamicReferralCodeValidForMinutes: Maybe Integer
     dynamicReferralCodeEnabled: Maybe Bool
+    bulkWaiveOffLimit : Maybe Int
 
   beamFields:
     fcmConfig:
@@ -1130,6 +1132,7 @@ TransporterConfig:
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
+    bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1199,6 +1202,7 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities:  maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities|E
+    bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
