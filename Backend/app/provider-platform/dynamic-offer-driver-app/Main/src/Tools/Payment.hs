@@ -73,7 +73,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName = 
   where
     getPclient vsc = do
       case vsc of
-        Payment.JuspayConfig config -> config.pseudoClientId
+        Payment.JuspayConfig _config -> Nothing -- FIXME config.pseudoClientId -- just to make it compiled
         _ -> Nothing
 
 createIndividualConnectAccount ::
