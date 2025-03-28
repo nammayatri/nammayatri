@@ -54,8 +54,8 @@ instance ToJSON BusStopETA where
 data BusData = BusData
   { latitude :: Double,
     longitude :: Double,
-    timestamp :: UTCTime,
-    speed :: Int,
+    timestamp :: Int,
+    speed :: Double,
     device_id :: Text,
     etaData :: Maybe [BusStopETA]
   }
@@ -84,6 +84,9 @@ getRoutesBuses routeId = do
   let key = mkRouteKey routeId
 
   -- Get all bus data from Redis directly
+
+  busDataPairs' :: [(Text, Text)] <- withCrossAppRedisNew $ Hedis.hGetAll key
+  logDebug $ "Got bus data for route busDataPairs " <> routeId <> ": " <> show busDataPairs'
   busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
   logDebug $ "Got bus data for route " <> routeId <> ": " <> show busDataPairs
 
