@@ -152,10 +152,12 @@ postDriverFleetAddVehicle ::
   Text ->
   Text ->
   Maybe Text ->
+  Maybe Text ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId mbMobileCountryCode req = do
+postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId mbMobileCountryCode mbRequestorId req = do
   runRequestValidation Common.validateAddVehicleReq req
+  _fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
@@ -262,9 +264,11 @@ postDriverFleetAddRCWithoutDriver ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.RegisterRCReq ->
   Flow APISuccess
-postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
+postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId mbRequestorId req = do
+  _fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = Id fleetOwnerId :: Id DP.Person
@@ -420,14 +424,16 @@ postDriverFleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
 postDriverFleetAddVehicles ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Common.CreateVehiclesReq ->
   Flow Common.APISuccessWithUnprocessedEntities
-postDriverFleetAddVehicles merchantShortId opCity req = do
+postDriverFleetAddVehicles merchantShortId opCity mbRequestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
+  _fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   rcReq <- readCsv req.file merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
   unprocessedVehicleRouteMappingEntities <-
@@ -464,7 +470,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
     foldlM
       ( \unprocessedEntities (registerRcReq, _, _) -> do
           try @_ @SomeException
-            (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq)
+            (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId mbRequestorId registerRcReq)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): " <> (T.pack $ displayException err)]
               Right _ -> return unprocessedEntities
