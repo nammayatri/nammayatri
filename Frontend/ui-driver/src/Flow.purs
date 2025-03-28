@@ -3089,7 +3089,10 @@ homeScreenFlow = do
               pure unit
         Left err -> pure unit
       void $ lift $ lift $ toggleLoader false
-    GO_TO_METER_RIDE_SCREEN -> lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
+    GO_TO_METER_RIDE_SCREEN -> do
+      (GlobalState globalstate) <- getState
+      when (globalstate.homeScreen.props.driverStatusSet == ST.Offline) $ changeDriverStatus ST.Online
+      lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
   homeScreenFlow
 
 endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> FlowBT String Unit

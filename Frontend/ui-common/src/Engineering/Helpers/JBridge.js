@@ -3247,9 +3247,17 @@ export const setupVoiceRecognitionView = function(id) {
 
 export const startOpenMeterActivity = (cb) => {
   return () => {
-    const callback = callbackMapper.map(() => {
-      cb();
-    });
-    JBridge.startOpenMeterActivity(callback);
+    const callback = () => {
+      const timeTaken = Date.now() - window.onPauseTime;
+      console.log("timeTaken", timeTaken);
+      if (timeTaken > 500) {
+        cb()();
+        window.onResumeListeners = window.onResumeListeners.filter(item => {
+          return item !== callback;
+        })
+      }
+    }
+    window.onResumeListeners.push(callback);
+    JBridge.startOpenMeterActivity("callback");
   }
 }
