@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Screens.CancellationRateScreen.View where
@@ -59,19 +59,18 @@ screen initialState =
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.CancellationRateScreenState -> PrestoDOM (Effect Unit) w
-view push state = 
+view push state =
   let configs = reduceCancellationRate $ "cancellation_rate_trivia" <> (getLanguage $ getLanguageLocale languageKey)
   in
-    linearLayout
+    Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 16 16
     , background Color.white900
     , onBackPressed push $ const BackPressed
     ]
     [ headerLayout state push
-    , scrollView 
+    , scrollView
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , scrollBarY false
@@ -90,7 +89,7 @@ view push state =
       ]
     ]
   where
-    getLanguage lang = 
+    getLanguage lang =
       let language = DS.toLower $ DS.take 2 lang
       in if not (DS.null language) then "_" <> language else "_en"
 
@@ -148,14 +147,14 @@ cancellationRateGauge state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      ] 
-      [ 
+      ]
+      [
         relativeLayout
         [ height $ V 103
         , width $ V $ ((screenWidth unit)/ 2) - 32
         , gravity CENTER
-        ][ 
-          imageView 
+        ][
+          imageView
           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_gauge_image"
           , width $ V $ ((screenWidth unit)/ 2) - 32
           , height $ V 100
@@ -206,10 +205,10 @@ cancellationRateGauge state push =
         ]
       ]
     ]
-  
+
 cancellationRateData :: forall w. ST.CancellationRateScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 cancellationRateData state push =
-  linearLayout 
+  linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -359,6 +358,5 @@ horizontalLine =
     [ height $ V 1
     , width MATCH_PARENT
     , background Color.greyBackDarkColor
-    , margin $ MarginBottom 15
     ]
     []

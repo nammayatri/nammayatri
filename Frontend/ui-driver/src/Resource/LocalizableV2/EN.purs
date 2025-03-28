@@ -1815,7 +1815,7 @@ getEn =
     , payments_temporarily_unavailable : "Payments are temporarily unavailable and will be back soon. Please try again later."
     , extra_charge_penalty : "Extra-Charge Penalty"
     , out_of_rides : (\numerator denaminator -> (numerator <> " out of " <> denaminator <> " rides"))
-    , extra_charged : "Extra-charged"
+    , extra_charged : "Extra-charged\n"
     , get_clarified : "Get Certified"
     , dont_ask_extra_suspend : "Don’t ask extra to avoid suspension"
     , dont_ask_extra_blocking : "Don’t ask extra to avoid blocking"
@@ -1838,7 +1838,7 @@ getEn =
     , overcharging_blocked_desc : "Due to frequent overcharging, you are blocked from taking rides"
     , overcharging_suspended_desc : "Due to frequent overcharging, you are suspended from going online"
     , suspended_till : (\time date -> "Suspended till " <> time <> ", " <> date <> " ⚠️")
-    , fair_price_driver : "Fair price driver"
+    , fair_price_driver : "Fair price\ndriver"
     , resume_ride : "Resume ride"
     , end_ride_with_stops : "You have more stops until drop End Ride anyway?"
     , stop: (\n -> "Stop " <> n)
@@ -1861,4 +1861,17 @@ getEn =
     , bus_type: "Bus Type"
     , namma_meter: "Namma Meter"
     , package : "Package"
+    , overcharging_score : "Overcharging Score"
+    , cancellation_score : "Cancellation Score"
+    , safety_score : "Safety Score"
+    , you_have_been_unsafe : "You have been\nunsafe"
+    , you_have_been_watchlisted : "You have been\nwatchlisted"
+    , you_are_safe : "You are\nSafe"
+    , watchlisted : "Watchlisted"
+    , unsafe : "Unsafe"
+    , safe : "Safe"
+    , good_cancellation_score : "Your cancellation\nscore is good"
+    , poor_cancellation_score : "Your cancellation\nscore is poor"
+    , good : "Good"
+    , poor : "Poor"
     }
