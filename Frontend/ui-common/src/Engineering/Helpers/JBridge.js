@@ -2133,7 +2133,7 @@ export const shareImageMessage = function (message) {
 }
 
 export const showInAppNotification = function (payload) {
-  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload))()
+  return window.JOS.emitEvent("java","onEvent",JSON.stringify(payload));
 }
 
 export const openWhatsAppSupport = function (contactNumber) {

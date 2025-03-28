@@ -5320,6 +5320,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
+                Toast.makeText(bridgeComponents.getContext(), bridgeComponents.getContext().getString(R.string.media_upload_success), Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(bridgeComponents.getContext(), bridgeComponents.getContext().getString(R.string.unable_to_upload_media), Toast.LENGTH_SHORT).show();
             }
