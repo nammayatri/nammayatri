@@ -27,8 +27,17 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode DIBC.APPLICATION
+  vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode DIBC.APPLICATION Nothing
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = map mkVehicleTrackingResponse vehicleTracking}
   where
-    mkVehicleTrackingResponse VehicleTracking {..} = TrackRoute.VehicleInfo {vehicleInfo = mkVehicleInfo vehicleInfo, ..}
+    mkVehicleTrackingResponse VehicleTracking {..} =
+      TrackRoute.VehicleInfo
+        { vehicleId = fromMaybe "" vehicleId,
+          nextStop = nextStop,
+          nextStopTravelTime = nextStopTravelTime,
+          nextStopTravelDistance = fromMaybe 0 nextStopTravelDistance,
+          upcomingStops = upcomingStops,
+          delay = delay,
+          vehicleInfo = maybe (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkVehicleInfo vehicleInfo
+        }
     mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}
