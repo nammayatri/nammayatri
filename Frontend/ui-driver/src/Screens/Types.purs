@@ -430,7 +430,8 @@ type PrimaryEditTextState = {
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------
 type DriverProfileScreenState = {
   data :: DriverProfileScreenData,
-  props :: DriverProfileScreenProps
+  props :: DriverProfileScreenProps,
+  showDriverDetails :: Boolean
 }
 
 type DriverProfileScreenData = {

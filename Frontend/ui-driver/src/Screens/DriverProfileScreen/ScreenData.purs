@@ -145,6 +145,7 @@ initData =
     canSwitchToInterCity : Nothing,
     showDriverBlockedPopup : false
    }
+, showDriverDetails : false
 }
 
 inputTextState' = {

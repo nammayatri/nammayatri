@@ -68,6 +68,7 @@ import Engineering.Helpers.Commons as EHC
 import Mobility.Prelude(boolToInt)
 import Screens (ScreenName(..)) as Screen
 import Components.ExtraChargeCard as ExtraChargeCard
+import Components.DriverProfileScoreCard as DriverProfileScoreCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -273,6 +274,10 @@ data Action = BackPressed
             | DriverBLockedPopupAction PopUpModal.Action
             | ExtraChargeCardAC ExtraChargeCard.Action
             | UpdateGlobalEvent
+            | DriverProfileScoreCardAC DriverProfileScoreCard.Action
+            | OnMoreDetailsClick
+            | OnCloseDriverDetailsClick
+            | BottomSheetStageChanged String
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -289,8 +294,8 @@ eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = 
 eval BackPressed state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
-                                else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit $ GoBack state else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
+                                else if state.props.showGenderView then continue $ state { props{ showGenderView = false}, showDriverDetails = true}
+                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit $ GoBack state else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}, showDriverDetails = true}
                                 else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
@@ -392,8 +397,8 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       goHomeActive = driverGoHomeInfo.status == Just "ACTIVE",
                                       driverInfoResponse = Just (SA.GetDriverInfoResp driverProfileResp
                                       -- {
-                                        -- @TODO {DANGER} need to remove while merging
-                                      --   overchargingTag = Just SA.HighOverCharging
+                                      --   -- @TODO {DANGER} need to remove while merging
+                                      --   overchargingTag = Just SA.NoOverCharging
                                       -- , ridesWithFareIssues = Just 9
                                       -- , totalRidesConsideredForFareIssues = Just 10
                                       -- }
@@ -440,7 +445,8 @@ eval (ChangeScreen screenType) state = do
     _ -> do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_settings_click"
       pure unit
-  continue state{props{ screenType = screenType }}
+
+  continue state{props{ screenType = screenType }, showDriverDetails = screenType == ST.DRIVER_DETAILS && state.props.screenType == ST.DRIVER_DETAILS}
 
 eval OpenSettings state = continue state{props{openSettings = true}}
 
@@ -463,17 +469,17 @@ eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state =
   if state.data.fromHomeScreen then do
     void $ pure $ hideKeyboardOnNavigation true
     exit $ GoBack state
-  else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
+  else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}, showDriverDetails=true}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   if state.props.alternateNumberView then do
       _ <- pure $ hideKeyboardOnNavigation true
       exit (ValidateAlternateNumber state {props {numberExistError = false, otpIncorrect = false}})
-  else exit (UpdateGender state{data{driverGender = state.data.genderTypeSelect},props{showGenderView = false}})
+  else exit (UpdateGender state{data{driverGender = state.data.genderTypeSelect},props{showGenderView = false}, showDriverDetails = true})
 
 eval SelectGender state = do
-  continue state{props{showGenderView = true}, data{genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
+  continue state{showDriverDetails = false, props{showGenderView = true}, data{genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
 
 eval UpdateAlternateNumber state = do
   let curr_time = getCurrentUTC ""
@@ -483,7 +489,7 @@ eval UpdateAlternateNumber state = do
     pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
   else
-    continue state{props{alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false}, data{alterNumberEditableText = isJust state.data.driverAlternateNumber}}
+    continue state{props{alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false}, data{alterNumberEditableText = isJust state.data.driverAlternateNumber}, showDriverDetails = false}
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value))state = do
   if DS.length value <= 10 then (do
@@ -518,7 +524,7 @@ eval RemoveAlterNumber state = continue state {props = state.props {removeAltern
 eval (RemoveAlternateNumberAC (PopUpModal.OnButton1Click)) state = continue state {props{ removeAlternateNumber = false}}
 
 eval (RemoveAlternateNumberAC (PopUpModal.OnButton2Click)) state =
-  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true},data{driverEditAlternateMobile = Nothing}})
+  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true},data{driverEditAlternateMobile = Nothing}, showDriverDetails = true})
 
 eval ( CheckBoxClick genderType ) state = do
   continue state{data{genderTypeSelect = getGenderValue genderType}}
@@ -623,9 +629,25 @@ eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = sta
     pure $ DeactivateRc rcType ""
   ]
 
-eval (ExtraChargeCardAC (ExtraChargeCard.LearnMoreExtraChargeBtnAC (PrimaryButton.OnClick))) state = exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
+eval (ExtraChargeCardAC (ExtraChargeCard.LearnMoreExtraChargeBtnAC (PrimaryButton.OnClick ))) state = exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
 
 eval (UpdateGlobalEvent) state = update state {props {skipGlobalEvents = false}}
+
+eval OnMoreDetailsClick state = continue state {showDriverDetails = true}
+
+eval OnCloseDriverDetailsClick state = continue state {showDriverDetails = false}
+
+eval (DriverProfileScoreCardAC (DriverProfileScoreCard.OnPrimaryButtonClick cardType (PrimaryButton.OnClick ))) state = do
+  case cardType of
+    DriverProfileScoreCard.ExtraCharge -> exit $ GoToExtraChargeInfoScreen state {props {skipGlobalEvents = true}}
+    DriverProfileScoreCard.Cancellation -> exit $ GoToCancellationRateScreen state {props {skipGlobalEvents = true}}
+    _ -> update state
+    -- DriverProfileScoreCard.Safety -> exit $ GoToSafetyInfoScreen state {props {skipGlobalEvents = true}}
+
+eval (BottomSheetStageChanged stage) state =
+  if state.props.alternateNumberView || state.props.showGenderView then continue state {showDriverDetails = false}
+  else if stage == "5" then continue state {showDriverDetails = false}
+  else update state {showDriverDetails = true}
 
 eval _ state = update state
 
