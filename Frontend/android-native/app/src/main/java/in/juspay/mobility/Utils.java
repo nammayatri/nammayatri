@@ -157,7 +157,11 @@ public class Utils {
                             break;
 
                         case SplitInstallSessionStatus.INSTALLED:
-                            if (sharedPref!= null) sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
+                            if (sharedPref!= null) {
+                                sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
+                                sharedPref.edit().putString("GLSDK_INSTALLED_V2", "true").apply();
+
+                            }
                             if (!installOnly){
                                 Intent intent = new Intent();
                                 intent.putExtra("token", token);
