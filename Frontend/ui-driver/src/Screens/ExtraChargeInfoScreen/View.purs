@@ -37,11 +37,10 @@ import Resource.Localizable.TypesV2
 import Storage
 import RemoteConfig as RC
 
-screen :: ExtraChargeInfoScreenState -> ScopedScreen Action ExtraChargeInfoScreenState ScreenOutput
+screen :: ExtraChargeInfoScreenState -> Screen Action ExtraChargeInfoScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , parent : Just "ExtraChargeInfoScreen"
   , name : "ExtraChargeInfoScreen"
   , globalEvents : []
   , eval : (\action state -> do
@@ -69,7 +68,7 @@ view push state =
         width MATCH_PARENT
       , height WRAP_CONTENT
       , scrollBarY false
-      , padding $ Padding 16 8 16 16
+      , padding $ Padding 16 0 16 16
       ][
         bodyView push state
       ]
@@ -118,7 +117,8 @@ bodyView push state =
     width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ PaddingBottom 120
+  , margin $ MarginTop 8
+  , padding $ PaddingBottom 130
   ][
     gaugeMeterView push state
   , questionAndAnswersView push state
