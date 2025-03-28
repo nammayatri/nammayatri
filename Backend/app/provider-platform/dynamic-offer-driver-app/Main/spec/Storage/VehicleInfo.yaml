@@ -15,9 +15,11 @@ VehicleInfo:
     findAllByRcId:
       kvFunction: findAllWithKV
       where: rcId
-    updateVehicleInfo:
-      kvFunction: updateWithKV
-      params: [questionName, question, answer]
-      where: id
+    deleteAllByRcId:
+      kvFunction: deleteWithKV
+      where: rcId
+
+  default:
+    id: "''"
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

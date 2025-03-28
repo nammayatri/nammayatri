@@ -14,6 +14,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleInfo
+import qualified Domain.Types.VehicleRegistrationCertificate
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -25,26 +26,35 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "vehicleInfo" :> "list" :> Get ('[JSON]) [Domain.Types.VehicleInfo.VehicleInfo] :<|> TokenAuth :> "vehicleInfo" :> "update"
+  ( TokenAuth :> "vehicleInfo" :> Capture "rcId" (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate) :> "list"
+      :> Get
+           '[JSON]
+           [Domain.Types.VehicleInfo.VehicleInfo]
+      :<|> TokenAuth
+      :> "vehicleInfo"
+      :> "update"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.VehicleInfo.UpdateVehicleInfoReq
-      :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getVehicleInfoList :<|> putVehicleInfoUpdate
+handler = getVehicleInfoList :<|> postVehicleInfoUpdate
 
 getVehicleInfoList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate ->
     Environment.FlowHandler [Domain.Types.VehicleInfo.VehicleInfo]
   )
-getVehicleInfoList a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleInfo.getVehicleInfoList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getVehicleInfoList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleInfo.getVehicleInfoList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-putVehicleInfoUpdate ::
+postVehicleInfoUpdate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -52,4 +62,4 @@ putVehicleInfoUpdate ::
     API.Types.UI.VehicleInfo.UpdateVehicleInfoReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-putVehicleInfoUpdate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleInfo.putVehicleInfoUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postVehicleInfoUpdate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleInfo.postVehicleInfoUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

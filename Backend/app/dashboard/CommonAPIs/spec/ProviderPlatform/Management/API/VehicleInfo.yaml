@@ -1,6 +1,5 @@
 imports:
   APISuccess: Kernel.Types.APISuccess
-  Text: Data.Text
   VehicleInfo: Dashboard.Common
   VehicleRegistrationCertificate: Dashboard.Common.Driver
 
@@ -8,11 +7,13 @@ module: VehicleInfo
 
 apis:
   - GET:
-      endpoint: /list
+      endpoint: /{rcId}/list
+      params:
+        rcId: Id VehicleRegistrationCertificate
       auth: ApiAuthV2
       response:
         type: "[VehicleInfoAPIEntity]"
-  - PUT:
+  - POST:
       endpoint: /update
       auth: ApiAuthV2
       request:

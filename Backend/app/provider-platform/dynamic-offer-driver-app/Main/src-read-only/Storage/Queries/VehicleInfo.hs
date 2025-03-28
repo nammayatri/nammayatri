@@ -9,7 +9,6 @@ import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -22,21 +21,13 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleInfo.VehicleInfo] -> m ())
 createMany = traverse_ create
 
+deleteAllByRcId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+deleteAllByRcId rcId = do deleteWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
+
 findAllByRcId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ([Domain.Types.VehicleInfo.VehicleInfo]))
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehicleInfo.VehicleInfo])
 findAllByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
-
-updateVehicleInfo ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleInfo.VehicleInfo -> m ())
-updateVehicleInfo questionName question answer id = do
-  updateWithKV
-    [ Se.Set Beam.questionName questionName,
-      Se.Set Beam.question question,
-      Se.Set Beam.answer answer
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleInfo.VehicleInfo -> m (Maybe Domain.Types.VehicleInfo.VehicleInfo))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

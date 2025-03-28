@@ -631,7 +631,6 @@ library
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
-      Storage.Queries.VehicleInfoExtra
       Storage.Queries.VehicleInsuranceExtra
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.VehicleRouteMappingExtra

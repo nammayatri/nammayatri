@@ -8,6 +8,7 @@ module API.Action.Dashboard.Management.VehicleInfo
 where
 
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
+import qualified Dashboard.Common.Driver
 import qualified Domain.Action.Dashboard.Management.VehicleInfo as Domain.Action.Dashboard.Management.VehicleInfo
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -20,10 +21,10 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.VehicleInfo.API)
-handler merchantId city = getVehicleInfoList merchantId city :<|> putVehicleInfoUpdate merchantId city
+handler merchantId city = getVehicleInfoList merchantId city :<|> postVehicleInfoUpdate merchantId city
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
-getVehicleInfoList a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleInfo.getVehicleInfoList a2 a1
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver.VehicleRegistrationCertificate -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
+getVehicleInfoList a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleInfo.getVehicleInfoList a3 a2 a1
 
-putVehicleInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.VehicleInfo.UpdateVehicleInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-putVehicleInfoUpdate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleInfo.putVehicleInfoUpdate a3 a2 a1
+postVehicleInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.VehicleInfo.UpdateVehicleInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postVehicleInfoUpdate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleInfo.postVehicleInfoUpdate a3 a2 a1

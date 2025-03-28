@@ -5,7 +5,6 @@ module API.Types.UI.VehicleInfo where
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.VehicleInfo
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 

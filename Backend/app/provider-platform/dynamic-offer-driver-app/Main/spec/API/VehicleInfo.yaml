@@ -1,17 +1,19 @@
 imports:
   APISuccess: Kernel.Types.APISuccess
   VehicleInfo: Domain.Types.VehicleInfo
-  Text: Data.Text
+  VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
 
 module: VehicleInfo
 
 apis:
   - GET:
-      endpoint: /vehicleInfo/list
+      endpoint: /vehicleInfo/{rcId}/list
+      params:
+        rcId: Id VehicleRegistrationCertificate
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: "[VehicleInfo]"
-  - PUT:
+  - POST:
       endpoint: /vehicleInfo/update
       auth: TokenAuth PROVIDER_TYPE
       request:
