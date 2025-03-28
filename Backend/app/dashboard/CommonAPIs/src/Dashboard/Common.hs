@@ -182,6 +182,11 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
 
 $(mkHttpInstancesForEnum ''ServiceNames)
 
+data WaiveOffMode = WITH_OFFER | WITHOUT_OFFER | NO_WAIVE_OFF
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''WaiveOffMode)
+
 newtype TransactionLogId = TransactionLogId Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

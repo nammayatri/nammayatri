@@ -44,7 +44,9 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             subscriptionServiceRelatedData = subscriptionServiceRelatedData',
             totalCoinsConvertedCash = totalCoinsConvertedCash,
             updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory'
+            vehicleCategory = vehicleCategory',
+            waiveOfMode = Kernel.Prelude.fromMaybe Domain.Types.DriverPlan.NO_WAIVE_OFF waiveOfMode,
+            waiverOffPercentage = Kernel.Prelude.fromMaybe 0 waiverOffPercentage
           }
 
 instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
@@ -69,5 +71,7 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.rentedVehicleNumber = Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData,
         Beam.totalCoinsConvertedCash = totalCoinsConvertedCash,
         Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = vehicleCategory
+        Beam.vehicleCategory = vehicleCategory,
+        Beam.waiveOfMode = Kernel.Prelude.Just waiveOfMode,
+        Beam.waiverOffPercentage = Kernel.Prelude.Just waiverOffPercentage
       }
