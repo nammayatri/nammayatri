@@ -5,12 +5,14 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     getRoutesBuses,
     getBusesForRoutes,
     mkRouteKey,
+    withCrossAppRedisNew,
   )
 where
 
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import qualified Environment
 import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -24,6 +26,11 @@ data BusStopETA = BusStopETA
     arrivalTime :: UTCTime
   }
   deriving (Generic, Show, Eq)
+
+withCrossAppRedisNew ::
+  (Hedis.HedisFlow m env, Kernel.Prelude.HasField "ltsHedisEnv" env Hedis.HedisEnv) => m f -> m f
+withCrossAppRedisNew f = do
+  local (\env -> env{hedisEnv = env.ltsHedisEnv, hedisClusterEnv = env.ltsHedisEnv}) f
 
 instance FromJSON BusStopETA where
   parseJSON = withObject "BusStopETA" $ \v -> do
@@ -50,7 +57,7 @@ data BusData = BusData
     timestamp :: UTCTime,
     speed :: Int,
     device_id :: Text,
-    etaData :: [BusStopETA]
+    etaData :: Maybe [BusStopETA]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -72,12 +79,12 @@ mkRouteKey :: Text -> Text
 mkRouteKey routeId = "route:" <> routeId
 
 -- Get all buses for a single route
-getRoutesBuses :: (CacheFlow m r, EsqDBFlow m r) => Text -> m RouteWithBuses
+getRoutesBuses :: Text -> Environment.Flow RouteWithBuses
 getRoutesBuses routeId = do
   let key = mkRouteKey routeId
 
   -- Get all bus data from Redis directly
-  busDataPairs <- Hedis.withCrossAppRedis $ Hedis.hGetAll key
+  busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
   logDebug $ "Got bus data for route " <> routeId <> ": " <> show busDataPairs
 
   -- The values are already BusData objects
@@ -88,5 +95,5 @@ getRoutesBuses routeId = do
   return $ RouteWithBuses routeId buses
 
 -- Get buses for multiple routes
-getBusesForRoutes :: (CacheFlow m r, EsqDBFlow m r) => [Text] -> m [RouteWithBuses]
+getBusesForRoutes :: [Text] -> Environment.Flow [RouteWithBuses]
 getBusesForRoutes routeIds = mapM getRoutesBuses routeIds
