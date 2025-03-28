@@ -33,3 +33,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_on_free_trial boole
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_category_level_subscription_enabled boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN waiver_off_percentage double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN waive_of_mode text ;

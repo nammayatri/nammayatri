@@ -39,6 +39,20 @@ data DriverPlan = DriverPlan
     subscriptionServiceRelatedData :: Domain.Types.Extra.DriverPlan.SubscriptionServiceRelatedData,
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode,
+    waiverOffPercentage :: Kernel.Types.Common.HighPrecMoney
   }
-  deriving (Generic, Show, Eq, Ord)
+  deriving (Generic, (Show), (Eq), (Ord))
+
+data WaiveOffEntity = WaiveOffEntity
+  { driverId :: Kernel.Prelude.Text,
+    percentage :: Kernel.Types.Common.HighPrecMoney,
+    serviceName :: Domain.Types.Extra.Plan.ServiceNames,
+    waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data WaiveOffMode = WITH_OFFER | WITHOUT_OFFER | NO_WAIVE_OFF deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''WaiveOffMode))

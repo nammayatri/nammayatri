@@ -38,6 +38,7 @@ data TransporterConfigT f = TransporterConfigT
     badDebtTimeThreshold :: B.C f Kernel.Prelude.Int,
     bankErrorExpiry :: B.C f Kernel.Types.Common.Seconds,
     bookAnyVehicleDowngradeLevel :: B.C f Kernel.Prelude.Int,
+    bulkWaiveOffLimit :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     cacheOfferListByDriverId :: B.C f Kernel.Prelude.Bool,
     cachedDevicesOSForSearchRequest :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     canAddCancellationFee :: B.C f Kernel.Prelude.Bool,
@@ -179,6 +180,7 @@ data TransporterConfigT f = TransporterConfigT
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
+    requiresOnboardingInspection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rideTimeEstimatedThreshold :: B.C f Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
     schedulePayoutForDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
@@ -222,8 +224,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))

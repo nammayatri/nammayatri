@@ -305,6 +305,8 @@ createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) pla
             vehicleCategory = Just plan.vehicleCategory,
             isOnFreeTrial = True,
             isCategoryLevelSubscriptionEnabled = Nothing,
+            waiveOfMode = NO_WAIVE_OFF,
+            waiverOffPercentage = 0.0,
             ..
           }
   QDPlan.create dPlan
@@ -484,6 +486,8 @@ mkDriverPlan plan (driverId, merchantId, merchantOpCityId) = do
         vehicleCategory = Just plan.vehicleCategory,
         isOnFreeTrial = True,
         isCategoryLevelSubscriptionEnabled = Nothing,
+        waiveOfMode = NO_WAIVE_OFF,
+        waiverOffPercentage = 0.0,
         ..
       }
 
@@ -973,3 +977,10 @@ isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do
       let isOnFreeTrial' = not $ (totalRides > freeTrialRides && subscriptionConfig.freeTrialRidesApplicable) || freeTrialDaysLeft <= 0
       fork "update free trial flag" $ QDPlan.updateFreeTrialByDriverIdAndServiceName isOnFreeTrial' driverId subscriptionConfig.serviceName
       return (isOnFreeTrial', Just totalRides)
+
+updateWaiveOffByDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> [WaiveOffEntity] -> m ()
+updateWaiveOffByDriver merchantOpCityId waiveOffEntities = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  if (length waiveOffEntities) > transporterConfig.bulkWaiveOffLimit
+    then throwError $ InvalidRequest "Length entities exceeds bulk update limit"
+    else QDPlan.updateAllWithWaiveOffPercantageAndType waiveOffEntities

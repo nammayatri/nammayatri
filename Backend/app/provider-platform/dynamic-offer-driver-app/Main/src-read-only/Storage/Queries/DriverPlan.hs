@@ -149,6 +149,8 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.rentedVehicleNumber (Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData),
       Se.Set Beam.totalCoinsConvertedCash totalCoinsConvertedCash,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.waiveOfMode (Kernel.Prelude.Just waiveOfMode),
+      Se.Set Beam.waiverOffPercentage (Kernel.Prelude.Just waiverOffPercentage)
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
