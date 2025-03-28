@@ -33,6 +33,11 @@ import Tools.Error
 nearbyBusKey :: Text
 nearbyBusKey = "bus_locations"
 
+withCrossAppRedisNew ::
+  (Hedis.HedisFlow m env, Kernel.Prelude.HasField "ltsHedisEnv" env Hedis.HedisEnv) => m f -> m f
+withCrossAppRedisNew f = do
+  local (\env -> env{hedisEnv = env.ltsHedisEnv, hedisClusterEnv = env.ltsHedisEnv}) f
+
 postNearbyBusBooking ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -48,15 +53,17 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
   let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
 
   -- Convert ByteString to Text after geo search
-  busesBS :: [ByteString] <- Hedis.withCrossAppRedis $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLat req.userLon) (Hedis.ByRadius radius "km")
+  busesBS :: [ByteString] <- withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLat req.userLon) (Hedis.ByRadius radius "km")
 
-  logDebug $ "Buses: " <> show busesBS
-  let buses = map decodeUtf8 busesBS
-  logDebug $ "Buses: " <> show buses
-  busesBS' :: [ByteString] <- Hedis.withCrossAppRedis $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius radius "km")
+  logDebug $ "BusesBS: " <> show busesBS
+  let buses'' = map decodeUtf8 busesBS
+  logDebug $ "Buses: " <> show buses''
+  busesBS' :: [ByteString] <- withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius radius "km")
   let buses' = map decodeUtf8 busesBS'
   logDebug $ "BusesBS': " <> show busesBS'
-  logDebug $ "BusesBS: " <> show buses'
+  logDebug $ "Buses': " <> show buses'
+
+  let buses = buses'' <> buses'
 
   busRouteMapping <- QVehicleRouteMapping.findAllByVehicleNumber buses
   let routeIds :: [Text] = map DTVRM.routeId busRouteMapping
