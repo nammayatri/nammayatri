@@ -1308,6 +1308,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     indicatorTipList.get(i).setBackground(getDrawable(isSpecialZone ? R.drawable.zone_curve : (sheetArrayList.get(i).getCustomerTip() > 0 ? R.drawable.rectangle_9506 : R.drawable.blue_curve)));
                     indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
                 } else {
+                    shimmerTipList.get(i).setVisibility(View.INVISIBLE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
                     indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
                 }
