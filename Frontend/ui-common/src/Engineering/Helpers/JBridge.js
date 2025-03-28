@@ -3268,5 +3268,6 @@ export const startGActivity = (token) => {
   return () => {
     console.log("startGActivity...", token);
     JBridge.startGActivity(token);
+    JBridge.startOpenMeterActivity("callback");
   }
 }
