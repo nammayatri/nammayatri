@@ -49,10 +49,19 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
 
   -- Convert ByteString to Text after geo search
   busesBS :: [ByteString] <- Hedis.withCrossAppRedis $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLat req.userLon) (Hedis.ByRadius radius "km")
+
+  logDebug $ "Buses: " <> show busesBS
   let buses = map decodeUtf8 busesBS
+  logDebug $ "Buses: " <> show buses
+  busesBS' :: [ByteString] <- Hedis.withCrossAppRedis $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius radius "km")
+  let buses' = map decodeUtf8 busesBS'
+  logDebug $ "BusesBS': " <> show busesBS'
+  logDebug $ "BusesBS: " <> show buses'
 
   busRouteMapping <- QVehicleRouteMapping.findAllByVehicleNumber buses
   let routeIds :: [Text] = map DTVRM.routeId busRouteMapping
+
+  logDebug $ "Route IDs: " <> show routeIds
 
   recentLocations <- QRecentLocation.findRecentLocationsByRouteIds riderId routeIds
 
