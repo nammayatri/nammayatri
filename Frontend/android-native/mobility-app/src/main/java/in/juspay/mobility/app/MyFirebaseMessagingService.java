@@ -142,6 +142,7 @@ public  class MyFirebaseMessagingService {
                 String title;
                 String body;
                 String imageUrl;
+                String messageId = remoteMessage.getMessageId();
 
                 if (remoteMessage.getData().containsKey("notification_json") && remoteMessage.getData().get("notification_json") != null) {
                     String notificationData = remoteMessage.getData().get("notification_json");
@@ -226,7 +227,7 @@ public  class MyFirebaseMessagingService {
                                 if (driverPayloadJsonObject.has("isEdit") && !driverPayloadJsonObject.isNull("isEdit")) {
                                     String stopStatus = driverPayloadJsonObject.optBoolean("isEdit", false) ? "EDIT_STOP" : "ADD_STOP";
                                     payload.put("stopStatus", stopStatus);
-                                    NotificationUtils.showNotification(context, title, body, payload, null);
+                                    NotificationUtils.showNotification(context, title, body, payload, null, messageId);
                                 }
                             }
                         }
@@ -248,7 +249,7 @@ public  class MyFirebaseMessagingService {
                                 }
                                 showOverlayMessage(context, driverNotificationJsonObject);
                                 if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") && driverNotificationJsonObject.getBoolean("showPushNotification")) {
-                                    NotificationUtils.showNotification(context, title, body, payload, null);
+                                    NotificationUtils.showNotification(context, title, body, payload, null, messageId);
                                 }
                             }
                         }
@@ -327,7 +328,7 @@ public  class MyFirebaseMessagingService {
 
                     case NotificationTypes.CANCELLED_PRODUCT:
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         }
                         sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
                         if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
@@ -342,12 +343,12 @@ public  class MyFirebaseMessagingService {
 
                     case NotificationTypes.DRIVER_QUOTE_INCOMING:
                         if (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause")) {
-                            NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         }
                         break;
 
                     case NotificationTypes.TRIP_FINISHED:
-                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         if (merchantType.equals("USER")) {
                             String vehicleCategory = entity_payload.optString("vehicleCategory");
                             String appNamePrefix = getPackageNamePrefix(context.getPackageName());
@@ -378,7 +379,7 @@ public  class MyFirebaseMessagingService {
                             callbacks.hideInAppNotification("EditDest");
                         }
                         if (payload.get("show_notification").equals("true")) {
-                            NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         }
                         break;
 
@@ -407,12 +408,12 @@ public  class MyFirebaseMessagingService {
 
                     case NotificationTypes.NEW_MESSAGE:
                         sharedPref.edit().putString("ALERT_RECEIVED", "true").apply();
-                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         break;
 
                     case NotificationTypes.REGISTRATION_APPROVED:
                         sharedPref.edit().putString(context.getString(R.string.REGISTRATION_APPROVED), "true").apply();
-                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         break;
 
                     case NotificationTypes.REFERRAL_ACTIVATED:
@@ -467,7 +468,7 @@ public  class MyFirebaseMessagingService {
                             String getCurrTime = dateFormat.format(new Date());
                             sharedPref.edit().putString(context.getString(R.string.FINDING_QUOTES_START_TIME), getCurrTime).apply();
                             sharedPref.edit().putString(context.getString(R.string.LOCAL_STAGE), context.getString(R.string.ReAllocated)).apply();
-                            NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                             sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
                         } catch (Exception e) {
                             Exception exception = new Exception("Error in REALLOCATE_PRODUCT " + e);
@@ -490,7 +491,7 @@ public  class MyFirebaseMessagingService {
                         jsonObject.put("buttonText", entity_payload.has("buttonText") && !entity_payload.isNull("buttonText") ? entity_payload.getString("buttonText") : "Okay");
                         jsonObject.put("heading", entity_payload.has("heading") && !entity_payload.isNull("heading") ? entity_payload.getString("heading") : "");
                         sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
-                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         break;
                     case NotificationTypes.UPDATE_BUNDLE:
                         Intent bundle = new Intent(context, RemoteAssetsDownloader.class);
@@ -517,7 +518,7 @@ public  class MyFirebaseMessagingService {
                         break;
                     default:
                         if (payload.get("show_notification").equals("true")) {
-                            NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
                         }  // Silent notification
                         break;
                 }
@@ -827,7 +828,7 @@ public  class MyFirebaseMessagingService {
                 cleverTapAPI.pushEvent("ny_user_night_safety_alert", cleverTapParams);
             }
             notificationBody = body.equals("Deviation") ? context.getString(R.string.safety_deviation_alert) : context.getString(R.string.we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip);
-            NotificationUtils.showNotification(context, notificationTitle, notificationBody, payload, imageUrl);
+            NotificationUtils.showNotification(context, notificationTitle, notificationBody, payload, imageUrl, null);
         }
         catch (Exception e) {
             Exception exception = new Exception("Error in showSafetyAlert " + e);
