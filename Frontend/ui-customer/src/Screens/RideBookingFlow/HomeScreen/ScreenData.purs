@@ -212,6 +212,7 @@ initData = let
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
     , cancellationRate : Nothing
+    , enquiryBannerStage : Just ST.QuestionStage
     },
     props: {
       rideRequestFlow : false
@@ -434,6 +435,7 @@ initData = let
     , showBoostSearch : false
     , busClicked : false
     , ticketServiceType : API.METRO
+    , enquiryBannerUndoTimer : Nothing
   }
 }
 
