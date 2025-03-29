@@ -236,5 +236,5 @@ postSubscriptionFeeWaiveOff ::
 postSubscriptionFeeWaiveOff merchantShortId opCity req = do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  void $ Domain.Action.UI.Plan.updateWaiveOffByDriver mOCityId req
+  void $ Domain.Action.UI.Plan.updateWaiveOffByDriver mOCityId req.waiveOffEntities
   return Kernel.Types.APISuccess.Success
