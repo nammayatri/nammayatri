@@ -171,6 +171,7 @@ import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Foreign.Generic (class Decode, decodeJSON, encode, encodeJSON)
 import Common.RemoteConfig (fetchRemoteConfigString)
 import Engineering.Helpers.Events as EHE
+import Timers
 
 -- Controllers
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -344,7 +345,7 @@ eval (UpdateRepeatTrips rideList) state = do
 
 eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
 
-eval (MarkerLabelOnClick markerName) state = do
+eval (MarkerLabelOnClick markerName) state =do
   let isHybridFlowParcel = state.data.fareProductType == FPT.DELIVERY && HU.isParentView FunctionCall
   if state.props.currentStage == SettingPrice then do
     void $ pure $ updateLocalStage SearchLocationModel
@@ -993,7 +994,7 @@ eval BackPressed state = do
     FindingQuotes ->  do
                       void $ pure $ performHapticFeedback unit
                       if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
-                      else if state.props.showBoostSearch then do 
+                      else if state.props.showBoostSearch then do
                         void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
                         continue state{props{showBoostSearch = false}}
                       else continue $ state { props{isPopUp = ConfirmBack}}
@@ -1145,7 +1146,7 @@ eval OpenSearchLocation state = do
   _ <- pure $ firebaseLogEvent "ny_user_hs_pickup_click"
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.PickupSearch" "true"
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
-  _ <- pure $ updateLocalStage 
+  _ <- pure $ updateLocalStage
   let _ = EHE.addEvent (EHE.defaultEventObject "destination_selection_clicked") { module = "onboarding"}
   exit $ UpdateSavedLocation state { props { homeScreenPrimaryButtonLottie = true, isSource = Just false, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2},  rideSearchProps{ sessionId = generateSessionId unit }}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
@@ -2125,9 +2126,9 @@ eval (MicPermissionCallBack isMicPermissionEnabled) state = do
 eval (ShowCallDialer item) state = do
   case item of
     ANONYMOUS_CALLER -> do
-        let driverCuid = 
+        let driverCuid =
               if not (STR.null state.data.driverInfoCardState.bppRideId)
-              then state.data.driverInfoCardState.bppRideId 
+              then state.data.driverInfoCardState.bppRideId
               else ""
         let phoneNum = getExoPhoneNumber state
         let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
@@ -2136,11 +2137,11 @@ eval (ShowCallDialer item) state = do
           if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
             continueWithCmd state [ do
               push <-  getPushFn Nothing "HomeScreen"
-              void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+              void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack
               void $ pure $ JB.checkAndAskMicrophonePermission unit
               pure NoAction
             ]
-          else 
+          else
             continueWithCmd state [ do
               push <- getPushFn Nothing "HomeScreen"
               void $ runEffectFn6 JB.voipDialer driverCuid false phoneNum false push VOIPCallBack
@@ -2757,9 +2758,9 @@ eval (QuoteListModelActionController (QuoteListModelController.GotItAction Prima
   void $ pure $ performHapticFeedback unit
   continue state{props{showBookAnyOptions = false}}
 
-eval (QuoteListModelActionController (QuoteListModelController.CloseBoostSearch)) state = 
+eval (QuoteListModelActionController (QuoteListModelController.CloseBoostSearch)) state =
   if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
-  else do 
+  else do
     void $ pure $ setValueToLocalStore BOOSTED_SEARCH "true"
     continue state{props{showBoostSearch = false}}
 
@@ -2768,16 +2769,16 @@ eval (QuoteListModelActionController (QuoteListModelController.ShowBookAnyInfo))
   continue state{props{showBookAnyOptions = true}}
 
 eval (QuoteListModelActionController (QuoteListModelController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
-  continueWithCmd state [do 
+  continueWithCmd state [do
     pure $ ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC state.props.tipViewProps (ChooseVehicleController.ShowRateCard config))
   ]
 
-eval (QuoteListModelActionController (QuoteListModelController.ServicesOnClick config item)) state = do 
+eval (QuoteListModelActionController (QuoteListModelController.ServicesOnClick config item)) state = do
   let updatedServices = if elem item config.selectedServices then delete item config.selectedServices else insert item config.selectedServices
   if length updatedServices < 1 then continue state
   else continue state{data{boostSearchEstimate{selectedServices = updatedServices}}}
 
-eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction (PrimaryButtonController.OnClick))) state = do 
+eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction (PrimaryButtonController.OnClick))) state = do
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
   void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   let tipConfig = getTipConfig state.data.boostSearchEstimate.vehicleVariant
@@ -2797,13 +2798,13 @@ eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction
   void $ pure $ setValueToLocalStore BOOSTED_SEARCH "true"
   void $ pure $ clearTimerWithId updatedState.props.timerId
   updateAndExit updatedState $ RetryFindingQuotes true state.props.estimateId updatedState
-  where 
-    filterSelectedServiceConfigs :: Array ChooseVehicleController.Config -> Array String -> Array ChooseVehicleController.Config 
+  where
+    filterSelectedServiceConfigs :: Array ChooseVehicleController.Config -> Array String -> Array ChooseVehicleController.Config
     filterSelectedServiceConfigs chooseVehicleConfigs selectedServices = DA.filter (\chooseVehicleConfg -> DA.any (\selectedService -> (Just selectedService) == chooseVehicleConfg.serviceTierName) selectedServices) chooseVehicleConfigs
 
     getUpdatedQuotes :: Array String -> Int -> Array ChooseVehicleController.Config
-    getUpdatedQuotes updatedServices activeIndex = map (\item -> 
-      if item.vehicleVariant == "BOOK_ANY" then 
+    getUpdatedQuotes updatedServices activeIndex = map (\item ->
+      if item.vehicleVariant == "BOOK_ANY" then
         item {
           selectedServices = updatedServices
         , hasTollCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasTollCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
@@ -2811,7 +2812,7 @@ eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction
         , activeIndex = activeIndex
         }
       else item{activeIndex = activeIndex}
-    ) state.data.specialZoneQuoteList 
+    ) state.data.specialZoneQuoteList
 
 eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value boostSearchTipViewProps)) state = do
   let check = index == state.props.tipViewProps.activeIndex
@@ -3153,7 +3154,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                         "CANCELLED" -> HomeScreen
                         _ -> RideAccepted
                     , bookingId = response.id
-                    }, data { 
+                    }, data {
                       driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState}}
   continue newState
 
@@ -3220,9 +3221,9 @@ eval (GetReferralPopup popUpAction) state = do
   case popUpAction of
     PopUpModal.OnButton2Click -> do
       let _ = setValueToCache "TAKE_FIRST_REFERRAL_RIDE" (show $ HU.getTime unit) identity
-      continue state{showTakeFirstRidePopup = false} 
+      continue state{showTakeFirstRidePopup = false}
     PopUpModal.OnButton1Click -> do
-      let _ = setValueToCache "TAKE_FIRST_REFERRAL_RIDE" (show $ HU.getTime unit) identity 
+      let _ = setValueToCache "TAKE_FIRST_REFERRAL_RIDE" (show $ HU.getTime unit) identity
       continueWithCmd state{showTakeFirstRidePopup = false} [pure $ WhereToClick]
     _ -> update state
 
@@ -3364,12 +3365,12 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
     ]
 eval AmbulanceAgreeClick state = do
     let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
-        (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
+        (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject
     _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
     void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
     void $ pure $ cacheRateCard state
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
-        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
+        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps
                           else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
                           else state.props.tipViewProps
         updatedState = state{props{ searchExpire = (getSearchExpiryTime true), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
@@ -3502,7 +3503,7 @@ eval (ServicesOnClick service) state = do
     RC.RENTAL -> do
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_rentals") { module = "onboarding"}
       exit $ GoToRentalsFlow updatedState { data {rentalsInfo = Nothing } }
-    RC.INTERCITY -> do 
+    RC.INTERCITY -> do
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_intercity") { module = "onboarding"}
       if updatedState.data.currentCityConfig.enableIntercity then do
         void $ pure $ updateLocalStage SearchLocationModel
@@ -3510,10 +3511,10 @@ eval (ServicesOnClick service) state = do
         else do
           void $ pure $ EHU.showToast $ getString INTERCITY_RIDES_COMING_SOON
           continue updatedState
-    RC.INSTANT -> do 
+    RC.INSTANT -> do
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_instant") { module = "onboarding"}
       continueWithCmd updatedState [ pure $ WhereToClick]
-    RC.TRANSIT -> do 
+    RC.TRANSIT -> do
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_transit") { module = "onboarding"}
       exit $ GoToMetroTicketBookingFlow updatedState
     RC.BIKE_TAXI -> do
@@ -3527,7 +3528,7 @@ eval (ServicesOnClick service) state = do
       , showPermissionPopUp = hasPhoneNumberPermission /= "true" && hasPhoneNumberPermission /= "false"
       , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
       }}} [pure $ IntercityBusAC]
-    RC.DELIVERY -> do 
+    RC.DELIVERY -> do
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_delivery") { module = "onboarding"}
       exit $ GoToParcelInstructions state
     RC.BUS -> do
@@ -3557,10 +3558,52 @@ eval (EnableShareRideForContact personId) state = do
 
 eval ReferralPayout state = exit $ GoToReferral GIVE_REFERRAL state
 
+eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state =
+  continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
+    do
+      push <- getPushFn Nothing "HomeScreen"
+      void $ startTimer 15 "undoEnquiryBanner" "1" push UnDoEnquiryBannerAC
+      pure NoAction
+  ]
+
+eval (UnDoEnquiryBannerAC seconds timerID timeInMinutes ) state = do
+  if seconds == 0 then do
+    continueWithCmd state{ data {enquiryBannerStage = Nothing}} [ do
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+        let
+          city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+          vehicleCat = RC.getCategoryFromVariant state.data.vehicleVariant
+          mbEnquiryRemoteConfig = RC.getEnquiryBannerConfig city vehicleCat
+          postIssueBody = API.PostIssueReqBody {
+            optionId : maybe Nothing (\enquiryRemoteConfig -> enquiryRemoteConfig.optionId ) mbEnquiryRemoteConfig
+          , rideId : Just state.data.driverInfoCardState.rideId
+          , categoryId : maybe "" (\enquiryRemoteConfig -> enquiryRemoteConfig.categoryId ) mbEnquiryRemoteConfig
+          , mediaFiles : []
+          , description : ""
+          , chats : []
+          , createTicket : false
+          }
+        void $ Remote.postIssueBT "en" postIssueBody
+      void $ pure $ clearTimerWithId "undoEnquiryBanner"
+      void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
+      pure NoAction
+    ]
+  else do
+    continue state { props { enquiryBannerUndoTimer = Just seconds}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqFirstBtnClick)) state = do
+  if state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then do
+    void $ pure $ clearTimerWithId "undoEnquiryBanner"
+    continue state{ data {enquiryBannerStage = Just ST.QuestionStage}, props { enquiryBannerUndoTimer = Nothing}}
+  else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage then do
+    continue state{ data {enquiryBannerStage = Nothing}}
+  else do
+    continue state{ data {enquiryBannerStage = Just ST.FirstBtnClickStage}}
+
 eval _ state = update state
 
 updateBoostSearchConfig :: HomeScreenState -> HomeScreenState
-updateBoostSearchConfig state = do 
+updateBoostSearchConfig state = do
   let tipConfig = getTipConfig state.data.boostSearchEstimate.vehicleVariant
       userCity = DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
       customerTipArrayWithValues = if state.props.customerTip.tipForDriver <=0 then tipConfig.customerTipArrayWithValues else [0, state.props.customerTip.tipForDriver, state.props.customerTip.tipForDriver + 10, state.props.customerTip.tipForDriver+20]
@@ -3573,8 +3616,8 @@ updateBoostSearchConfig state = do
       otherSelectedEstimates = fromMaybe state.data.otherSelectedEstimates $ tail $ selectedEstimates
       selectedIndex = fromMaybe state.data.selectedEstimatesObject.activeIndex (findIndex(\item -> item.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList)
       bookAnySerices = RC.getBookAnyServices userCity
-      updatedBookAny = case bookAnyEstimate of 
-                          Just estimate -> do 
+      updatedBookAny = case bookAnyEstimate of
+                          Just estimate -> do
                                              let filteredEstimates = filter(\item -> item `elem` bookAnySerices) estimate.availableServices
                                              let sortedEstimates =  DA.sortWith (\item -> not $ item `elem` boostSearchConfig.selectedEstimates) filteredEstimates
                                              estimate{selectedServices = boostSearchConfig.selectedEstimates, availableServices = sortedEstimates, activeIndex = selectedIndex}
@@ -3924,7 +3967,7 @@ findingQuotesSearchExpired gotQuotes isNormalRide reverse =
 
 callDriver :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 callDriver state callType = do
-  let newState = state{props{ showCallPopUp = false }}
+  let newState = state{props{ showCallPopUp = false}, data {enquiryBannerStage =  Just ST.QuestionStage}}
       driverNumber = case callType of
                         "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
                         _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
