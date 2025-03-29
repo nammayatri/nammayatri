@@ -19,6 +19,12 @@ FleetOperatorAssociation:
     operatorId: "!SecondaryKey"
     fleetOwnerId: "!SecondaryKey"
 
+  queries:
+    findByOperatorIdAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [operatorId, fleetOwnerId, isActive]
+
   sqlType:
     id: text
     operatorId: text
