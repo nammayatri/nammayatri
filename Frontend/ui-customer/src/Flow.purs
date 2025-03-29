@@ -128,7 +128,7 @@ import Screens.Types (Gender(..)) as Gender
 import Screens.Types as ST
 import Screens.Types
 import Services.Backend as Remote
-import Services.Config (getBaseUrl, getSupportNumber)
+import Services.Config (getBaseUrl, getSupportNumber, getQuickReportIssueConfig)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, setUserCity, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Types.App
@@ -814,6 +814,11 @@ riderRideCompletedScreenFlow = do
       else if checkIfSafetyEnabled && issueType == CTA.NightSafety then do
         modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> SafetyScreenData.initData { props { reportPastRide = true, fromScreen = Just RideCompletedScreen }, data { lastRideDetails = Arr.head $ myRideListTransformer true [ updatedState.ratingViewState.rideBookingRes ] updatedState.config Nothing  } })
         activateSafetyScreenFlow
+      else if issueType == CTA.TollCharge then do
+        let tollConfig = (getQuickReportIssueConfig "lazy").tollIssue
+        let _ = spy "insidePostQuickIssue" tollConfig
+        postQuickIssue tollConfig.categoryId tollConfig.optionId (Just updatedState.rideRatingState.rideId) "RIDE_END_QUICK_TOLL_REPORT"
+        riderRideCompletedScreenFlow
       else do
         let
           language = fetchLanguage $ getLanguageLocale languageKey
@@ -911,6 +916,19 @@ riderRideCompletedScreenFlow = do
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       currentFlowStatus false
 
+
+postQuickIssue :: String -> Maybe String -> Maybe String -> String -> FlowBT String Unit
+postQuickIssue categoryId' mbOptionId mbRideId  description' = do
+  let postIssueBody = API.PostIssueReqBody {
+      optionId : mbOptionId
+    , rideId : mbRideId
+    , categoryId : categoryId'
+    , mediaFiles : []
+    , description : description'
+    , chats : []
+    , createTicket : false
+    }
+  void $ Remote.postIssueBT "en" postIssueBody
 
 currentFlowStatus :: Boolean -> FlowBT String Unit
 currentFlowStatus prioritizeRating = do
@@ -2071,7 +2089,7 @@ homeScreenFlow = do
       else do
         lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
         let voipConfig = getCustomerVoipConfig $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        if (voipConfig.customer.enableVoipFeature) then do 
+        if (voipConfig.customer.enableVoipFeature) then do
           void $ pure $ JB.initSignedCall state.data.driverInfoCardState.rideId false (getExoPhoneNumber state)
         else pure unit
         homeScreenFlow
@@ -2916,7 +2934,7 @@ homeScreenFlow = do
     GO_TO_BUS_TICKET_BOOKING_SCREEN state -> do
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData { props {srcLat =  state.props.sourceLat , srcLong = state.props.sourceLong}, data {ticketServiceType = BUS}})
       busTicketBookingFlow
-    ADD_VPA_OUT earnings state -> do 
+    ADD_VPA_OUT earnings state -> do
       out <- UI.upiNotVerificationScreen UpiScreenData.initialState{isSkipable = true, title = getString $ STR.YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE (show earnings), subTitle = getString STR.VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS, coverImage  = fetchImage GLOBAL_COMMON_ASSET "ny_ic_green_tick"}
       case out of
         Nothing -> do
@@ -2925,9 +2943,9 @@ homeScreenFlow = do
         Just vpa -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false, showUpiSuccess = true}, data {existingVpa = Just vpa}})
       homeScreenFlow
     _ -> homeScreenFlow
-  
+
 referralPayoutScreenFlow :: FlowBT String Unit
-referralPayoutScreenFlow = do 
+referralPayoutScreenFlow = do
   act <- UI.referralPayoutScreen
   case act of
     ReferralPayoutScreen.GoToHomeScreen state -> homeScreenFlow
@@ -2935,7 +2953,7 @@ referralPayoutScreenFlow = do
     ReferralPayoutScreen.VerifyVPAOut state -> do
       resp <- lift $ lift $ Remote.verifyVpa state.data.vpa
       case resp of
-        Right (VerifyVPAResp respData) -> do 
+        Right (VerifyVPAResp respData) -> do
           modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{data{verificationStatus = if fromMaybe false respData.isValid then ST.UpiVerified else ST.UpiFailed, vpa = fromMaybe referralPayoutScreen.data.vpa respData.vpa}})
         Left resp -> do
           modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{data{verificationStatus = ST.UpiFailed}})
@@ -8016,7 +8034,7 @@ rideCompletedEventParams state =
     {key: "Destination Reached", value: unsafeToForeign state.data.driverInfoCardState.destinationReached},
     {key: "Service Tier Name", value: unsafeToForeign state.data.driverInfoCardState.serviceTierName},
     {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
-    {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} 
+    {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant}
   ]
 
 clearLocalStoreAuthDataFlow :: FlowBT String Unit
@@ -8039,3 +8057,4 @@ clearLocalStoreAuthDataFlow = do
   modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> EnterMobileNumberScreenData.initData)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
   enterMobileNumberScreenFlow -- Removed choose langauge screen
+

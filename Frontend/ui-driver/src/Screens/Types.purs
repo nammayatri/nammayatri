@@ -1141,6 +1141,8 @@ type FavouritePopUp = {
   message :: String
 }
 
+data EnquiryBannerStage = QuestionStage | FirstBtnClickStage | SecondBtnClickStage
+
 type PlansState = {
   showSwitchPlanModal :: Boolean,
   plansList :: Array PlanCardState,
