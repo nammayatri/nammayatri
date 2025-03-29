@@ -166,6 +166,7 @@ import RemoteConfig as RemoteConfig
 import Foreign.Generic (class Decode, decodeJSON, encode, encodeJSON)
 import Common.RemoteConfig (fetchRemoteConfigString)
 import Data.Either (Either(..))
+import Timers
 
 -- Controllers
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -3358,6 +3359,14 @@ eval (EnableShareRideForContact personId) state = do
 eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state =
   continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
     do
+      push <- getPushFn Nothing "HomeScreen"
+      void $ startTimer 15 "undoEnquiryBanner" "1" push UnDoEnquiryBannerAC
+      pure NoAction
+  ]
+
+eval (UnDoEnquiryBannerAC seconds timerID timeInMinutes ) state = do
+  if seconds == 0 then do
+    continueWithCmd state{ data {enquiryBannerStage = Nothing}} [ do
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         let
           city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
@@ -3373,13 +3382,21 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnCli
           , createTicket : false
           }
         void $ Remote.postIssueBT "en" postIssueBody
+      void $ pure $ clearTimerWithId "undoEnquiryBanner"
       void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
       pure NoAction
-  ]
+    ]
+  else do
+    continue state { props { enquiryBannerUndoTimer = Just seconds}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqFirstBtnClick)) state = do
-  void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
-  continue state{ data {enquiryBannerStage = if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage || state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then Nothing else Just ST.FirstBtnClickStage}}
+  if state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then do
+    void $ pure $ clearTimerWithId "undoEnquiryBanner"
+    continue state{ data {enquiryBannerStage = Just ST.QuestionStage}, props { enquiryBannerUndoTimer = Nothing}}
+  else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage then do
+    continue state{ data {enquiryBannerStage = Nothing}}
+  else do
+    continue state{ data {enquiryBannerStage = Just ST.FirstBtnClickStage}}
 eval ReferralPayout state = exit $ GoToReferral GIVE_REFERRAL state
 
 eval _ state = update state
