@@ -1149,6 +1149,7 @@ type HomeScreenStateProps =
   , isTripSchedulable :: Boolean
   , showBookAnyOptions :: Boolean
   , showBoostSearch :: Boolean
+  , enquiryBannerUndoTimer :: Maybe Int
   }
 
 type EditedLocation = {

@@ -423,6 +423,7 @@ initData = let
     , isTripSchedulable : false
     , showBookAnyOptions : false
     , showBoostSearch : false
+    , enquiryBannerUndoTimer : Nothing
   }
 }
 

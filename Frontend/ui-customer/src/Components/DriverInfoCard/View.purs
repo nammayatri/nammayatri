@@ -235,7 +235,7 @@ driverInfoViewSpecialZone push state =
                  ][]
                ]
               , titleAndETA push state
-              , enquiryBanner push state.props.enquiryBannerData
+              , enquiryBanner push state.props.enquiryBannerData state.props.enquiryBannerUndoTimer
               , driverDetailsView push (getDriverDetails state) "SpecialDriverDetailsView" "SpecialNumberPlate"
               , navigateView push state
               , paymentMethodView push state (getString FARE_ESTIMATE) true "SpecialPaymentMethodView"
@@ -254,8 +254,8 @@ driverInfoViewSpecialZone push state =
       ]
   ]
 
-enquiryBanner :: forall w. (Action -> Effect Unit) ->  Maybe EnquiryBannerConfig -> PrestoDOM ( Effect Unit) w
-enquiryBanner push enquiryBannerMbConfig =
+enquiryBanner :: forall w. (Action -> Effect Unit) ->  Maybe EnquiryBannerConfig -> Maybe Int -> PrestoDOM ( Effect Unit) w
+enquiryBanner push enquiryBannerMbConfig undoTimer =
   case enquiryBannerMbConfig of
     Nothing -> linearLayout[width $ V 0, height $ V 0][]
     Just enquiryBannerConfig ->
@@ -289,9 +289,9 @@ enquiryBanner push enquiryBannerMbConfig =
             , orientation HORIZONTAL
             , margin $ MarginTop 14
             ][
-              buttonView OnEnqFirstBtnClick enquiryBannerConfig.button1
+              buttonView OnEnqFirstBtnClick enquiryBannerConfig.button1 undoTimer
             , linearLayout[width $ V 8][]
-            , buttonView OnEnqSecondBtnClick enquiryBannerConfig.button2
+            , buttonView OnEnqSecondBtnClick enquiryBannerConfig.button2 Nothing
             ]
           ]
         ]
@@ -309,7 +309,7 @@ enquiryBanner push enquiryBannerMbConfig =
         ]
       ]
   where
-    buttonView action buttonMbConfig =
+    buttonView action buttonMbConfig undoTimer =
       case buttonMbConfig of
         Nothing -> linearLayout [height $ V 0, width $ V 0][]
         Just buttonConfig ->
@@ -326,7 +326,9 @@ enquiryBanner push enquiryBannerMbConfig =
               width WRAP_CONTENT
             , height WRAP_CONTENT
             , color buttonConfig.color
-            , text buttonConfig.title
+            , text $ buttonConfig.title <> (case undoTimer of
+                Just timer -> " (" <> show timer <> "sec )"
+                Nothing -> "")
             , padding $ PaddingBottom 4
             ] <> (FontStyle.body4 TypoGraphy)
           ]
@@ -825,7 +827,7 @@ driverInfoView push state =
                       , margin $ MarginTop if os == "IOS" && rideStarted then 12 else 0
                       ][addStopView push state
                       , rentalDetailsView push state
-                      , enquiryBanner push state.props.enquiryBannerData
+                      , enquiryBanner push state.props.enquiryBannerData state.props.enquiryBannerUndoTimer
                       , driverDetailsView push (getDriverDetails state) "DriverDetailsView" "NumberPlate"
                       , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                       , sizedBox (V 12) MATCH_PARENT
