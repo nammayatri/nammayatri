@@ -119,7 +119,7 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
       ( \busData -> do
           mapM
             ( \bus -> do
-                route <- QRoute.findByRouteId (Id busData.routeId) >>= fromMaybeM (InternalError "Route not found")
+                route <- QRoute.findByRouteId (Id busData.routeId)
                 return $
                   API.Types.UI.NearbyBuses.NearbyBus
                     { capacity = Nothing,
@@ -131,8 +131,8 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
                       routeCode = busData.routeId,
                       serviceType = Nothing,
                       vehicleNumber = Just $ bus.vehicleNumber,
-                      routeLongName = route.longName,
-                      routeShortName = route.shortName
+                      routeLongName = (\route' -> Just route'.longName) =<< route,
+                      routeShortName = (\route' -> Just route'.shortName) =<< route
                     }
             )
             busData.buses

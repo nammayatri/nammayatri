@@ -20,8 +20,8 @@ data NearbyBus = NearbyBus
     nextStop :: Kernel.Prelude.Maybe Data.Text.Text,
     occupancy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     routeCode :: Data.Text.Text,
-    routeLongName :: Data.Text.Text,
-    routeShortName :: Data.Text.Text,
+    routeLongName :: Kernel.Prelude.Maybe Data.Text.Text,
+    routeShortName :: Kernel.Prelude.Maybe Data.Text.Text,
     serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }

@@ -14,8 +14,8 @@ types:
   NearbyBus:
       vehicleNumber: Maybe Text
       routeCode: Text
-      routeLongName: Text
-      routeShortName: Text
+      routeLongName: Maybe Text
+      routeShortName: Maybe Text
       currentLocation: LatLong
       nextStop: Maybe Text
       distance: Maybe Double
