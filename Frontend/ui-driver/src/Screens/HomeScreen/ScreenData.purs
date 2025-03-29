@@ -305,6 +305,7 @@ initData =
       , retryRideList : false
       , showParcelIntroductionPopup : false
       , showMetroWarriorWarningPopup : false
+      , enquiryBannerUndoTimer : Nothing
       , setBusOnline : false
       , bus_input_data : ""
       , showEndRideWithStopPopup : false
