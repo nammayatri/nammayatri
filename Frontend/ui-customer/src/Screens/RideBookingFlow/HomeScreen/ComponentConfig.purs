@@ -1137,6 +1137,7 @@ driverInfoCardViewState state = { props:
                                   , showEndOTP : state.props.showEndOTP
                                   , stageBeforeChatScreen : state.props.stageBeforeChatScreen
                                   , enquiryBannerData : getEnquiryBannerData state
+                                  , enquiryBannerUndoTimer : state.props.enquiryBannerUndoTimer
                                   }
                               , data: driverInfoTransformer state
                             }
