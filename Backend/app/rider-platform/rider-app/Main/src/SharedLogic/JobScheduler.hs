@@ -18,9 +18,11 @@
 module SharedLogic.JobScheduler where
 
 import Data.Singletons.TH
+import Domain.Types.BecknConfig
 import Domain.Types.Booking
 import qualified Domain.Types.Extra.Booking as DEB
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
@@ -56,6 +58,7 @@ data RiderJobType
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
   | PostRideSafetyNotification
+  | CallFRFSStatus
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -86,6 +89,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
+  restoreAnyJobInfo SCallFRFSStatus jobData = AnyJobInfo <$> restoreJobInfo SCallFRFSStatus jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -278,3 +282,14 @@ data PostRideSafetyNotificationJobData = PostRideSafetyNotificationJobData
 instance JobInfoProcessor 'PostRideSafetyNotification
 
 type instance JobContent 'PostRideSafetyNotification = PostRideSafetyNotificationJobData
+
+data CallFRFSStatusJobData = CallFRFSStatusJobData
+  { bookingId :: Id DFTB.FRFSTicketBooking,
+    bapConfig :: BecknConfig,
+    platformType :: PlatformType
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CallFRFSStatus
+
+type instance JobContent 'CallFRFSStatus = CallFRFSStatusJobData

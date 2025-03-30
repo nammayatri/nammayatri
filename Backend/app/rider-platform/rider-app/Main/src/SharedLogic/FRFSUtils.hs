@@ -45,6 +45,7 @@ import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
@@ -570,3 +571,34 @@ partnerOrgBppSubscriberId = "partnerOrg_bpp_subscriber_id"
 
 partnerOrgBppSubscriberUrl :: Text
 partnerOrgBppSubscriberUrl = "partnerOrg_bpp_subscriber_url"
+
+waitingForOnConfirmKey :: Text
+waitingForOnConfirmKey = "CachedKey:WAITING_FOR_ON_CONFIRM"
+
+setWaitingForOnConfirmKey :: (CacheFlow m r) => m ()
+setWaitingForOnConfirmKey = do
+  let key = waitingForOnConfirmKey
+  Hedis.set key True
+
+getWaitingForOnConfirmKey :: (CacheFlow m r) => m (Maybe Bool)
+getWaitingForOnConfirmKey = do
+  let key = waitingForOnConfirmKey
+  Hedis.safeGet key
+
+deleteWaitingForOnConfirmKey :: (CacheFlow m r) => m ()
+deleteWaitingForOnConfirmKey = do
+  let key = waitingForOnConfirmKey
+  Hedis.del key
+
+statusPollCounterKey :: Text
+statusPollCounterKey = "CachedKey:STATUS_POLL_COUNTER"
+
+setStatusPollCounterKey :: (CacheFlow m r) => m Integer
+setStatusPollCounterKey = do
+  let key = statusPollCounterKey
+  Hedis.incr key
+
+deleteStatusPollCounterKey :: (CacheFlow m r) => m ()
+deleteStatusPollCounterKey = do
+  let key = statusPollCounterKey
+  Hedis.del key

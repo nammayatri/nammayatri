@@ -216,6 +216,7 @@ let RiderJobType =
       | MonthlyUpdateTag
       | QuarterlyUpdateTag
       | PostRideSafetyNotification
+      | CallFRFSStatus
       >
 
 let jobInfoMapx =

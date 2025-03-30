@@ -16,7 +16,10 @@ module BecknV2.FRFS.APIs where
 
 import qualified BecknV2.FRFS.Types as Spec
 import EulerHS.Prelude
+import qualified Kernel.Types.Beckn.Ack as Kernel
 import Servant (JSON, Post, ReqBody, (:>))
+
+type OnConfirmRes = Kernel.AckResponse
 
 type SearchAPI =
   "search"
@@ -61,7 +64,7 @@ confirmAPI = Proxy
 type OnConfirmAPI =
   "on_confirm"
     :> ReqBody '[JSON] Spec.OnConfirmReq
-    :> Post '[JSON] Spec.AckResponse
+    :> Post '[JSON] OnConfirmRes
 
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy

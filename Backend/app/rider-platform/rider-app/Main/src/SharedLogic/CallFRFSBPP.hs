@@ -21,6 +21,7 @@ import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
@@ -33,6 +34,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Metrics (CoreMetrics)
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
@@ -99,7 +102,14 @@ confirm ::
 confirm providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.confirmReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  callBecknAPIWithSignature' merchantId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
+  bookingId <- req.confirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId is missing")
+  withShortRetry'
+    ( do
+        messageId <- generateGUID
+        let updatedContext = req.confirmReqContext{contextMessageId = Just messageId}
+        callBecknAPIWithSignature' merchantId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req{confirmReqContext = updatedContext}
+    )
+    (Id bookingId)
 
 status ::
   BecknAPICallFlow m r =>
@@ -147,3 +157,26 @@ callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") $ do
     void $ pushLogs b (toJSON req') merchantId.getId "PUBLIC_TRANSPORT"
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
+
+withShortRetry' ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  m Spec.AckResponse ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  m Spec.AckResponse
+withShortRetry' action bookingId = go (3 :: Int)
+  where
+    go 0 = do
+      void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+      void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
+      throwError $ InvalidRequest "BPP gave NACK after 3 attempts"
+    go attemptsLeft = do
+      logDebug $ "Attempting request, attempts left: " <> show attemptsLeft
+      res <- action
+      if res.ackResponseMessage.ackMessageAck.ackStatus == Just "ACK"
+        then return res
+        else do
+          logDebug "BPP gave NACK, retrying..."
+          go (attemptsLeft - 1)

@@ -50,6 +50,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import SharedLogic.FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -138,6 +139,7 @@ onConfirm merchant booking' dOrder = do
         transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className
         url <- mkGoogleWalletLink serviceAccount transitObjects'
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+  deleteWaitingForOnConfirmKey
   return ()
   where
     sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()

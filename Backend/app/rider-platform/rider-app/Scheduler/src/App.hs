@@ -35,6 +35,7 @@ import qualified Kernel.Utils.FlowLogging as L
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
+import "rider-app" SharedLogic.Scheduler.Jobs.CallFRFSStatus
 import "rider-app" SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.Chakras
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP

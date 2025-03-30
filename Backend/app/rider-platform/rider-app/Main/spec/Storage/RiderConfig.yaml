@@ -98,6 +98,7 @@ RiderConfig:
     enableBusFiltering: Maybe Bool
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
     fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
+    frfsStatusDelay: NominalDiffTime
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -129,6 +130,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: Maybe Value
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
+    frfsStatusDelay: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -167,6 +169,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
+    frfsStatusDelay: fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> frfsStatusDelay)|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -198,6 +201,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
+    frfsStatusDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
 
   default:
     enableLocalPoliceSupport: "false"

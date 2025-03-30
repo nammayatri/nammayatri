@@ -349,6 +349,7 @@ library
       SharedLogic.PublicTransport
       SharedLogic.Referral
       SharedLogic.ScheduledNotifications
+      SharedLogic.Scheduler.Jobs.CallFRFSStatus
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP

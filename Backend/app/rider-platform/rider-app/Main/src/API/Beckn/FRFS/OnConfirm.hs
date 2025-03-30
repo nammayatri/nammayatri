@@ -24,6 +24,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Beckn.Ack as Kernel
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -43,8 +44,8 @@ handler = onConfirm
 onConfirm ::
   SignatureAuthResult ->
   Spec.OnConfirmReq ->
-  FlowHandler Spec.AckResponse
-onConfirm _ req = withFlowHandlerAPI $ do
+  FlowHandler Kernel.AckResponse
+onConfirm _ req = withFlowHandlerBecknAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
@@ -69,7 +70,7 @@ onConfirm _ req = withFlowHandlerAPI $ do
         fork "FRFS onConfirm received pushing ondc logs" do
           void $ pushLogs "on_confirm" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
       Nothing -> DOnConfirm.onConfirmFailure bapConfig ticketBooking
-  pure Utils.ack
+  pure Kernel.Ack
 
 onConfirmLockKey :: Text -> Text
 onConfirmLockKey id = "FRFS:OnConfirm:bppOrderId-" <> id
