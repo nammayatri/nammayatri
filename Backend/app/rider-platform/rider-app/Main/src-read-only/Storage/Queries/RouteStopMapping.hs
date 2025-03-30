@@ -23,6 +23,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopMapping.RouteStopMapping] -> m ())
 createMany = traverse_ create
 
+findAllByBppConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findAllByBppConfigId integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
+
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopMapping.RouteStopMapping])

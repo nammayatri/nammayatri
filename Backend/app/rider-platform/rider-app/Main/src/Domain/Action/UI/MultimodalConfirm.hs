@@ -18,16 +18,20 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalUserPreferences,
     postMultimodalUserPreferences,
     postMultimodalTransitOptionsLite,
+    getPublicTransportData,
   )
 where
 
 import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Map as Map
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
 import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
@@ -35,7 +39,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -48,6 +52,7 @@ import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -57,7 +62,10 @@ import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
+import qualified Storage.Queries.Route as QRoute
+import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
 -- import  Domain.Types.Location as DTL (Location(..))
@@ -491,3 +499,101 @@ postMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   userPreferences <- getMultimodalUserPreferences (mbPersonId, merchantId)
   JM.getMultiModalTransitOptions userPreferences merchantId personCityInfo.merchantOperatingCityId req
+
+getPublicTransportData ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
+  )
+getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+  integratedBPPConfigs <-
+    catMaybes
+      <$> forM
+        vehicleTypes
+        ( \vType ->
+            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
+        )
+
+  let fetchData bppConfig = do
+        stations <- QStation.findAllByBppConfigId bppConfig.id
+        routes <- QRoute.findAllByBppConfigId bppConfig.id
+        routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
+        pure
+          ApiTypes.PublicTransportData
+            { stations =
+                mapMaybe
+                  ( \s -> case (s.lat, s.lon) of
+                      (Just lat, Just lon) ->
+                        Just
+                          ApiTypes.TransportStation
+                            { id = s.id.getId,
+                              code = s.code,
+                              name = s.name,
+                              lat = lat,
+                              lon = lon,
+                              address = s.address,
+                              merchantId = s.merchantId.getId,
+                              merchantOperatingCityId = s.merchantOperatingCityId.getId,
+                              integratedBppConfigId = s.integratedBppConfigId.getId,
+                              vehicleType = show s.vehicleType
+                            }
+                      _ -> Nothing
+                  )
+                  stations,
+              routes =
+                map
+                  ( \r ->
+                      ApiTypes.TransportRoute
+                        { id = r.id.getId,
+                          code = r.code,
+                          shortName = r.shortName,
+                          longName = r.longName,
+                          startLat = r.startPoint.lat,
+                          startLon = r.startPoint.lon,
+                          endLat = r.endPoint.lat,
+                          endLon = r.endPoint.lon,
+                          color = r.color,
+                          polyline = r.polyline,
+                          merchantId = r.merchantId.getId,
+                          merchantOperatingCityId = r.merchantOperatingCityId.getId,
+                          integratedBppConfigId = r.integratedBppConfigId.getId,
+                          vehicleType = show r.vehicleType
+                        }
+                  )
+                  routes,
+              routeStopMappings =
+                map
+                  ( \rs ->
+                      ApiTypes.TransportRouteStopMapping
+                        { routeCode = rs.routeCode,
+                          stopCode = rs.stopCode,
+                          providerCode = rs.providerCode,
+                          stopName = rs.stopName,
+                          stopLat = rs.stopPoint.lat,
+                          stopLon = rs.stopPoint.lon,
+                          sequenceNum = rs.sequenceNum,
+                          estimatedTravelTimeFromPreviousStop = rs.estimatedTravelTimeFromPreviousStop <&> (.getSeconds),
+                          merchantId = rs.merchantId.getId,
+                          merchantOperatingCityId = rs.merchantOperatingCityId.getId,
+                          integratedBppConfigId = rs.integratedBppConfigId.getId,
+                          vehicleType = show rs.vehicleType
+                        }
+                  )
+                  routeStops,
+              publicTransportConfigVersion = "v1" -- TODO: handle this
+            }
+
+  transportDataList <- mapM fetchData integratedBPPConfigs
+  let transportData =
+        ApiTypes.PublicTransportData
+          { stations = concatMap (.stations) transportDataList,
+            routes = concatMap (.routes) transportDataList,
+            routeStopMappings = concatMap (.routeStopMappings) transportDataList,
+            publicTransportConfigVersion = "v1" -- TODO: handle this
+          }
+  return transportData

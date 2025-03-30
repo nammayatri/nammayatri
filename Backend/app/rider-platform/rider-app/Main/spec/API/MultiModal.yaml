@@ -124,6 +124,54 @@ types:
     skipBooking: Bool
     ticketQuantity: Maybe Int
 
+  TransportRoute:
+    code: Text
+    id: Text
+    shortName: Text
+    longName: Text
+    startLat: Double
+    startLon: Double
+    endLat: Double
+    endLon: Double
+    vehicleType: Text
+    color: Maybe Text
+    polyline: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    integratedBppConfigId: Text
+
+  TransportStation:
+    code: Text
+    id: Text
+    name: Text
+    lat: Double
+    lon: Double
+    address: Maybe Text
+    vehicleType: Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    integratedBppConfigId: Text
+
+  TransportRouteStopMapping:
+    routeCode: Text
+    stopCode: Text
+    stopName: Text
+    stopLat: Double
+    stopLon: Double
+    sequenceNum: Int
+    estimatedTravelTimeFromPreviousStop: Maybe Int
+    vehicleType: Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    providerCode: Text
+    integratedBppConfigId: Text
+
+  PublicTransportData:
+    routes: [TransportRoute]
+    stations: [TransportStation]
+    routeStopMappings: [TransportRouteStopMapping]
+    publicTransportConfigVersion: Text
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -264,3 +312,10 @@ apis:
         type: MultimodalTransitOptionsReq
       response:
         type: MultimodalTransitOptionsResp
+
+  - GET:
+      endpoint: /publicTransport/data
+      query:
+        publicTransportConfigVersion: Text
+      response:
+        type: PublicTransportData

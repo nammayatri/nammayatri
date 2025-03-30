@@ -22,7 +22,7 @@ Person:
 
   types:
     Role:
-      enum: "USER, CUSTOMER_SUPPORT"
+      enum: "USER, CUSTOMER_SUPPORT, METER_RIDE_DUMMY"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:

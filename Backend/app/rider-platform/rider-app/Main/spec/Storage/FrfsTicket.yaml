@@ -180,6 +180,10 @@ Station:
       kvFunction: findAllWithOptionsKV
       where:
         and: [vehicleType, integratedBppConfigId]
+    findAllByBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
     findById:
       kvFunction: findOneWithKV
       where: id
@@ -744,6 +748,10 @@ Route:
       kvFunction: findAllWithOptionsKV
       where:
         and: [vehicleType, integratedBppConfigId]
+    findAllByBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
     findByRouteCodes:
       kvFunction: findAllWithKV
       where:
@@ -799,6 +807,10 @@ RouteStopMapping:
       kvFunction: findAllWithKV
       where:
         and: [stopCode, integratedBppConfigId]
+    findAllByBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
     findByStopCodes:
       kvFunction: findAllWithKV
       where:

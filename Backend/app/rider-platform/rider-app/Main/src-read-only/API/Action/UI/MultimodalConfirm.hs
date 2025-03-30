@@ -227,10 +227,19 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
+      :<|> TokenAuth
+      :> "publicTransport"
+      :> "data"
+      :> QueryParam
+           "publicTransportConfigVersion"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.PublicTransportData
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -403,3 +412,12 @@ postMultimodalTransitOptionsLite ::
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
   )
 postMultimodalTransitOptionsLite a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTransitOptionsLite (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getPublicTransportData ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
+  )
+getPublicTransportData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

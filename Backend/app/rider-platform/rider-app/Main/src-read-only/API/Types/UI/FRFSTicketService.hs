@@ -212,14 +212,6 @@ data FRFSTicketVerifyReq = FRFSTicketVerifyReq {qrData :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSTransitStop = FRFSTransitStop {lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, stopName :: Data.Text.Text, stopType :: Data.Maybe.Maybe Data.Text.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FRFSTransitStopsCache = FRFSTransitStopsCache {stops :: [FRFSTransitStop]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI {_type :: BecknV2.FRFS.Enums.ServiceTierType, description :: Data.Text.Text, longName :: Data.Text.Text, providerCode :: Data.Text.Text, shortName :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
