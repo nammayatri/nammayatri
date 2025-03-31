@@ -1156,6 +1156,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
       -- fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
+
+      -- TODO check for other associations
       void $ DRBReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
@@ -1174,10 +1176,11 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
+      -- TODO reuse everywhere
       -- check for other associations
       existingAssociations <- FDV.findAllByDriverId person.id True
       unless (null existingAssociations) $ do
-        if merchant.overwriteFleetAssociation == Just True
+        if merchant.overwriteAssociation == Just True
           then forM_ existingAssociations $ \existingAssociation -> do
             logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
             FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
@@ -1732,7 +1735,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
                 FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
                 sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
               else do
-                when (merchant.overwriteFleetAssociation == Just True) $ do
+                when (merchant.overwriteAssociation == Just True) $ do
                   forM_ existingAssociations $ \existingAssociation -> do
                     logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
                     FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId

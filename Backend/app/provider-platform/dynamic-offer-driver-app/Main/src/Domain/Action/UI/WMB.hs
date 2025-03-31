@@ -380,7 +380,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   existingAssociations <- FDV.findAllByDriverId driver.id True
   unless (null existingAssociations) $ do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    if merchant.overwriteFleetAssociation == Just True
+    if merchant.overwriteAssociation == Just True
       then forM_ existingAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId

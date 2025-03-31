@@ -45,7 +45,7 @@ apis:
         - POST:
             endpoint: /operator/sendJoiningOtp
             auth: ApiAuthV2
-            query:
+            mandatoryQuery:
               - requestorId: Text
             request:
               type: AuthReq
@@ -67,6 +67,7 @@ apis:
             auth: ApiAuthV2
             query:
               - authId: Text
+            mandatoryQuery:
               - requestorId: Text
             request:
               type: VerifyOperatorJoiningOtpReq
@@ -84,7 +85,7 @@ apis:
         - POST:
             endpoint: /operator/addDrivers
             auth: ApiAuthV2
-            query:
+            mandatoryQuery:
               - requestorId: Text
             multipart:
               type: CreateDriversReq

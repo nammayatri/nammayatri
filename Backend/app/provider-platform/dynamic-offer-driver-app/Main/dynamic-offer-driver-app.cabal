@@ -210,6 +210,7 @@ library
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverOnboardingV2
+      Domain.Action.UI.DriverOperatorAssociation
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
@@ -526,6 +527,7 @@ library
       Storage.Queries.DriverInformationExtra
       Storage.Queries.DriverLicenseExtra
       Storage.Queries.DriverLocation.Internal
+      Storage.Queries.DriverOperatorAssociationExtra
       Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlanExtra
       Storage.Queries.DriverProfileQuestionsExtra
@@ -1155,6 +1157,7 @@ library
       Storage.Queries.OrphanInstances.DriverHomeLocation
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
+      Storage.Queries.OrphanInstances.DriverOperatorAssociation
       Storage.Queries.OrphanInstances.DriverPanCard
       Storage.Queries.OrphanInstances.DriverPlan
       Storage.Queries.OrphanInstances.DriverProfileQuestions
