@@ -410,7 +410,8 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ vehicleNumber 
 unlinkFleetBadgeFromDriver :: Id Person -> Flow ()
 unlinkFleetBadgeFromDriver driverId = do
   QFBA.endAssociationForDriver driverId
-  QP.updatePersonName driverId "Driver"
+
+-- QP.updatePersonName driverId "Driver"
 
 unlinkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
 unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber = do
