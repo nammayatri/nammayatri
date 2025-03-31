@@ -46,3 +46,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN generate_referral_code_fo
 
 
 ------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN overwrite_fleet_association boolean  default false;

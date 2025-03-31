@@ -91,6 +91,7 @@ Merchant:
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
     generateReferralCodeForFleet: Maybe Bool
     generateReferralCodeForOperator: Maybe Bool
+    overwriteFleetAssociation: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -117,6 +118,7 @@ Merchant:
     gatewayAndRegistryPriorityList: '''{"NY"}'''
     generateReferralCodeForFleet: "false"
     generateReferralCodeForOperator: "false"
+    overwriteFleetAssociation: "false"
 
   excludedFields:
     - merchantId

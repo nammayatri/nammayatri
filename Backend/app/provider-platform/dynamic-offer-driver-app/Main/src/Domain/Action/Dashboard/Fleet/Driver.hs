@@ -1077,6 +1077,8 @@ checkRequestorAccessToFleet ::
   Flow DP.Person
 checkRequestorAccessToFleet mbRequestorId fleetOwnerId = do
   fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
+  unless (fleetOwner.role == DP.FLEET_OWNER) $
+    throwError (InvalidRequest "Invalid fleet owner")
   case mbRequestorId of
     Nothing -> pure () -- old flow
     Just requestorId -> do
@@ -1171,6 +1173,16 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       when (otp /= req.otp) $ throwError InvalidOtp
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+
+      -- check for other associations
+      existingAssociations <- FDV.findAllByDriverId person.id True
+      unless (null existingAssociations) $ do
+        if merchant.overwriteFleetAssociation == Just True
+          then forM_ existingAssociations $ \existingAssociation -> do
+            logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
+            FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
+          else throwError (InvalidRequest "Driver already associated with another fleet")
+
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
   pure Success
@@ -1675,14 +1687,14 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   fleetOwnerId <- case req.fleetOwnerId of
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
-  _fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   driverDetails <- readCsv req.file
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   unprocessedEntities <-
     foldlM
       ( \unprocessedEntities driverDetail -> do
           try @_ @SomeException
-            (processDriver merchantOpCity fleetOwnerId driverDetail)
+            (processDriver merchant merchantOpCity fleetOwner driverDetail)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)]
               Right _ -> return unprocessedEntities
@@ -1691,8 +1703,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       driverDetails
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
   where
-    processDriver :: DMOC.MerchantOperatingCity -> Text -> DriverDetails -> Flow () -- TODO: create single query to update all later
-    processDriver moc fleetOwnerId req_ = do
+    processDriver :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriver merchant moc fleetOwner req_ = do
       let driverMobile = req_.driverPhoneNumber
           authData =
             DReg.AuthReq
@@ -1710,12 +1722,22 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
-      WMB.checkFleetDriverAssociation person.id (Id fleetOwnerId)
+      WMB.checkFleetDriverAssociation person.id fleetOwner.id
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
-            fleetOwner <- QPerson.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-            FDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) req_.driverOnboardingVehicleCategory False
-            sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
+            -- check for other associations
+            existingAssociations <- FDV.findAllByDriverId person.id True
+            if null existingAssociations
+              then do
+                FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
+                sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
+              else do
+                when (merchant.overwriteFleetAssociation == Just True) $ do
+                  forM_ existingAssociations $ \existingAssociation -> do
+                    logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
+                    FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
+                  FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
+                  sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     readCsv csvFile = do
       csvData <- L.runIO $ BS.readFile csvFile
