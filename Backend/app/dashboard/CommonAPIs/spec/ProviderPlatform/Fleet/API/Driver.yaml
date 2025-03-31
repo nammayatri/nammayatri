@@ -55,6 +55,8 @@ apis:
         - POST:
             endpoint: /fleet/addVehicles
             auth: ApiAuthV2
+            query:
+              - requestorId: Text
             multipart:
               type: CreateVehiclesReq
             response:
@@ -86,6 +88,7 @@ apis:
               fleetOwnerId: Text
             query:
               - mobileCountryCode: Text
+              - requestorId: Text
             request:
               type: AddVehicleReq
             response:
@@ -159,6 +162,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - requestorId: Text
             request:
               type: RegisterRCReq
             response:
@@ -576,10 +581,13 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
       helperApi:
         - POST:
-            endpoint: /{fleetOwnerId}/fleet/driver/sendJoiningOtp
+            endpoint: /{fleetOwnerName}/fleet/driver/sendJoiningOtp
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              fleetOwnerName: Text
+            query:
+              - fleetOwnerId: Text
+              - requestorId: Text
             request:
               type: AuthReq
             response:
@@ -605,6 +613,7 @@ apis:
               fleetOwnerId: Text
             query:
               - authId: Text
+              - requestorId: Text
             request:
               type: VerifyFleetJoiningOtpReq
             response:
@@ -726,6 +735,8 @@ apis:
         - POST:
             endpoint: /fleet/addDrivers
             auth: ApiAuthV2
+            query:
+              - requestorId: Text
             multipart:
               type: CreateDriversReq
             response:
