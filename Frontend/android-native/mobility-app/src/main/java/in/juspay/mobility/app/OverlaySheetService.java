@@ -11,7 +11,6 @@ package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.DELIVERY;
 import static in.juspay.mobility.app.NotificationUtils.INTERCITY;
-import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
 import static in.juspay.mobility.app.NotificationUtils.RENTAL;
 import static in.juspay.mobility.app.RideRequestUtils.getRideRequestSound;
 import static in.juspay.mobility.app.RideRequestUtils.getRideRequestSoundId;
@@ -25,7 +24,6 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
 import android.graphics.PixelFormat;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.Bundle;
@@ -36,7 +34,6 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -96,6 +93,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private final ArrayList<SheetModel> sheetArrayList = new ArrayList<>();
     private final Handler mainLooper = new Handler(Looper.getMainLooper());
     ExecutorService executor = Executors.newSingleThreadExecutor();
+    @Nullable
     private ViewPager2 viewPager;
     private Timer countDownTimer;
     private WindowManager windowManager;
@@ -505,7 +503,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 sheetAdapter.notifyItemRemoved(position);
                 sheetAdapter.notifyItemRangeChanged(position, sheetArrayList.size());
                 updateIndicators();
-                updateMediaPlayer(viewPager.getCurrentItem());
+                if (viewPager != null) {
+                    updateMediaPlayer(viewPager.getCurrentItem());
+                }
                 updateProgressBars(false);
                 if (sheetArrayList.isEmpty()) {
                     cleanUp();
@@ -1248,6 +1248,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     private void updateTopBarBackground(int i) {
+        if (viewPager == null) return;
         if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
             boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
             switch (sheetArrayList.get(i).getRideProductType()) {

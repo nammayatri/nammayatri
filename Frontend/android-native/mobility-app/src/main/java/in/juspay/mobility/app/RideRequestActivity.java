@@ -37,6 +37,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -82,6 +83,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private SharedPreferences sharedPref;
     private final MediaPlayer[] mediaPlayers = new MediaPlayer[3];
+    @Nullable
     private MediaPlayer currentMediaPlayer;
     private int currentMediaIndex = -1;
     int isMediaPlayerPrepared = 0;
@@ -220,7 +222,7 @@ public class RideRequestActivity extends AppCompatActivity {
             if (currentMediaIndex == -1) {
                 currentMediaIndex = getRideRequestSoundId(sheetModel.getRideProductType());
             }
-            if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || !currentMediaPlayer.isPlaying())) {
+            if (isMediaPlayerPrepared == 3 && (currentMediaPlayer == null || (!currentMediaPlayer.isPlaying()))) {
                 currentMediaPlayer = mediaPlayers[currentMediaIndex];
                 currentMediaPlayer.start();
                 if (sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true")){
@@ -503,6 +505,7 @@ public class RideRequestActivity extends AppCompatActivity {
         for (MediaPlayer mediaPlayer : mediaPlayers) {
             mediaPlayer.release();
         }
+        currentMediaPlayer = null;
         View progressDialog = findViewById(R.id.progress_loader);
         View viewPagerParentView = findViewById(R.id.view_pager_parent);
         mainLooper.post(() -> {
@@ -590,6 +593,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 for (MediaPlayer mediaPlayer : mediaPlayers) {
                     mediaPlayer.release();
                 }
+                currentMediaPlayer = null;
                 finish();
             }
         });
@@ -819,6 +823,7 @@ public class RideRequestActivity extends AppCompatActivity {
         for (MediaPlayer mediaPlayer : mediaPlayers) {
             mediaPlayer.release();
         }
+        currentMediaPlayer = null;
         NotificationUtils.lastRideReq.clear();
         RideRequestUtils.cancelRideReqNotification(this);
         super.onDestroy();
