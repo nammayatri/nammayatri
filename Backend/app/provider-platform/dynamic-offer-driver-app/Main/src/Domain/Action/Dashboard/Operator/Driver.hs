@@ -1,19 +1,30 @@
-module Domain.Action.Dashboard.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest, opsHubRequestLockKey) where
+module Domain.Action.Dashboard.Operator.Driver
+  ( getDriverOperatorFetchHubRequests,
+    postDriverOperatorRespondHubRequest,
+    opsHubRequestLockKey,
+    postDriverOperatorSendJoiningOtp,
+    postDriverOperatorVerifyJoiningOtp,
+    postDriverOperatorAddDrivers,
+  )
+where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
-import qualified Dashboard.Common as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
-import qualified Environment
+import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -119,3 +130,33 @@ castReqType :: RequestType -> API.Types.ProviderPlatform.Operator.Driver.Request
 castReqType = \case
   ONBOARDING_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.ONBOARDING_INSPECTION
   REGULAR_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.REGULAR_INSPECTION
+
+---------------------------------------------------------------------
+postDriverOperatorSendJoiningOtp ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Common.AuthReq ->
+  Flow Common.AuthRes
+postDriverOperatorSendJoiningOtp _merchantShortId _opCity _mbRequestorId _req = do
+  error "TODO"
+
+---------------------------------------------------------------------
+postDriverOperatorVerifyJoiningOtp ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  API.Types.ProviderPlatform.Operator.Driver.VerifyOperatorJoiningOtpReq ->
+  Flow APISuccess
+postDriverOperatorVerifyJoiningOtp _merchantShortId _opCity _mbAuthId _mbRequestorId _req = do
+  error "TODO"
+
+postDriverOperatorAddDrivers ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  API.Types.ProviderPlatform.Operator.Driver.CreateDriversReq ->
+  Flow CommonFleet.APISuccessWithUnprocessedEntities
+postDriverOperatorAddDrivers _merchantShortId _opCity _mbRequestorId _req = do
+  error "TODO"

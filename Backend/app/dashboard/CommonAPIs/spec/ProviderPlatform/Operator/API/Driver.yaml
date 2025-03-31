@@ -1,5 +1,9 @@
 imports:
   OperationHub: Dashboard.Common
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  APISuccessWithUnprocessedEntities: Dashboard.ProviderPlatform.Fleet.Driver
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
 
 module: Driver
 
@@ -29,6 +33,64 @@ apis:
       response:
         type: APISuccess
 
+  # following apis currently used only for Driver Cum Owner case
+  - POST: # SendFleetJoiningOtpAPI
+      endpoint: /operator/sendJoiningOtp
+      auth: ApiAuthV2
+      request:
+        type: AuthReq
+      response:
+        type: AuthRes
+      helperApi:
+        - POST:
+            endpoint: /operator/sendJoiningOtp
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: AuthReq
+            response:
+              type: AuthRes
+
+  - POST: # VerifyFleetJoiningOtpAPI
+      endpoint: /operator/verifyJoiningOtp
+      auth: ApiAuthV2
+      query:
+        - authId: Text
+      request:
+        type: VerifyOperatorJoiningOtpReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /operator/verifyJoiningOtp
+            auth: ApiAuthV2
+            query:
+              - authId: Text
+              - requestorId: Text
+            request:
+              type: VerifyOperatorJoiningOtpReq
+            response:
+              type: APISuccess
+
+  - POST: # BulkUploadDriversForFleetAPI
+      endpoint: /operator/addDrivers
+      auth: ApiAuthV2
+      multipart:
+        type: CreateDriversReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      helperApi:
+        - POST:
+            endpoint: /operator/addDrivers
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            multipart:
+              type: CreateDriversReq
+            response:
+              type: APISuccessWithUnprocessedEntities
+
 types:
   RequestStatus:
     enum: "PENDING,APPROVED,REJECTED"
@@ -54,3 +116,16 @@ types:
     operatorId: Text
     remarks: Text
     derive: "'HideSecrets"
+  VerifyOperatorJoiningOtpReq:
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - otp: Text
+    - deviceToken: Maybe FCMRecipientToken
+    - derive: "'HideSecrets"
+  CreateDriversReq:
+    - file: FilePath
+    - recordType: NewType
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
