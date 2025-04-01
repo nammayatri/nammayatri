@@ -48,7 +48,7 @@ data DriverPlan = DriverPlan
 data WaiveOffEntity = WaiveOffEntity
   { driverId :: Kernel.Prelude.Text,
     percentage :: Kernel.Types.Common.HighPrecMoney,
-    serviceName :: Domain.Types.Extra.Plan.ServiceNames,
+    serviceName :: Domain.Types.Plan.ServiceNames,
     waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
