@@ -36,6 +36,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverAssociation as SDA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -43,7 +44,6 @@ import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
-import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QP
@@ -184,29 +184,6 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
       pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
 
 ---------------------------------------------------------------------
-
--- TODO reuse for fleet apis also
-endActiveAssociationsIfAllowed ::
-  DM.Merchant ->
-  Id DP.Person ->
-  Flow ()
-endActiveAssociationsIfAllowed merchant personId = do
-  existingFleetAssociations <- QFDA.findAllByDriverId personId True
-  unless (null existingFleetAssociations) $ do
-    if merchant.overwriteAssociation == Just True
-      then forM_ existingFleetAssociations $ \existingAssociation -> do
-        logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
-        QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
-      else throwError (InvalidRequest "Driver already associated with another fleet")
-
-  existingOperatorAssociations <- QDOA.findAllByDriverId personId True
-  unless (null existingOperatorAssociations) $ do
-    if merchant.overwriteAssociation == Just True
-      then forM_ existingOperatorAssociations $ \existingAssociation -> do
-        logInfo $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
-        QDOA.endOperatorDriverAssociation existingAssociation.operatorId existingAssociation.driverId
-      else throwError (InvalidRequest "Driver already associated with another operator")
-
 postDriverOperatorVerifyJoiningOtp ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -240,7 +217,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId res.person.id operator.id True
       when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
 
-      endActiveAssociationsIfAllowed merchant person.id
+      SDA.endActiveAssociationsIfAllowed merchant person.id
 
       assoc <- DOA.makeDriverOperatorAssociation merchant.id merchantOpCityId res.person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
@@ -262,7 +239,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId person.id operator.id True
       when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
 
-      endActiveAssociationsIfAllowed merchant person.id
+      SDA.endActiveAssociationsIfAllowed merchant person.id
 
       assoc <- DOA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc

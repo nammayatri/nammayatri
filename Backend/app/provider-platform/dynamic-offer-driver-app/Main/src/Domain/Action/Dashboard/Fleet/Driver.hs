@@ -106,6 +106,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified SharedLogic.DriverAssociation as SDA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
@@ -1154,11 +1155,12 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-      -- fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
 
-      -- TODO check for other associations
       void $ DRBReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
+
+      SDA.endActiveAssociationsIfAllowed merchant person.id
+
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
         (mbSender, message) <-
@@ -1176,15 +1178,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
-      -- TODO reuse everywhere
-      -- check for other associations
-      existingAssociations <- FDV.findAllByDriverId person.id True
-      unless (null existingAssociations) $ do
-        if merchant.overwriteAssociation == Just True
-          then forM_ existingAssociations $ \existingAssociation -> do
-            logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
-            FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
-          else throwError (InvalidRequest "Driver already associated with another fleet")
+      SDA.endActiveAssociationsIfAllowed merchant person.id
 
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
@@ -1728,17 +1722,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       WMB.checkFleetDriverAssociation person.id fleetOwner.id
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
-            -- check for other associations
-            existingAssociations <- FDV.findAllByDriverId person.id True
-            if null existingAssociations
-              then do
-                FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
-                sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
-              else do
-                when (merchant.overwriteAssociation == Just True) $ do
-                  forM_ existingAssociations $ \existingAssociation -> do
-                    logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
-                    FDV.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
+            void $
+              try @_ @SomeException (SDA.endActiveAssociationsIfAllowed merchant person.id) >>= \case
+                Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)
+                Right _ -> do
                   FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
                   sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 

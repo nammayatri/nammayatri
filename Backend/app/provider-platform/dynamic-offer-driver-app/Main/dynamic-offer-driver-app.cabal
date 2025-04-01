@@ -357,6 +357,7 @@ library
       SharedLogic.CallIGMBAP
       SharedLogic.Cancel
       SharedLogic.DeleteDriver
+      SharedLogic.DriverAssociation
       SharedLogic.DriverFee
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Status
