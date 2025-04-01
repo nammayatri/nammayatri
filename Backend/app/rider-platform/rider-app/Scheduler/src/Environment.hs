@@ -49,6 +49,7 @@ import Passetto.Client
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
+import TransactionLogs.Types
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
@@ -96,7 +97,8 @@ data HandlerEnv = HandlerEnv
     cacConfig :: CacConfig,
     passettoContext :: PassettoContext,
     serviceClickhouseEnv :: ClickhouseEnv,
-    serviceClickhouseCfg :: ClickhouseCfg
+    serviceClickhouseCfg :: ClickhouseCfg,
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig
   }
   deriving (Generic)
 
@@ -129,6 +131,7 @@ buildHandlerEnv HandlerCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
+  let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

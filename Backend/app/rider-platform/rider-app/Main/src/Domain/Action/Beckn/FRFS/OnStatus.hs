@@ -15,28 +15,44 @@ statuses Copyright 2022-23, Juspay India Pvt Ltd
 
 module Domain.Action.Beckn.FRFS.OnStatus where
 
+import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
+import BecknV2.FRFS.Utils
 import qualified Data.HashMap.Strict as HashMap
 import Data.Tuple.Extra
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
+import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
+import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (second)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
+import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import Tools.Error
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
@@ -60,11 +76,34 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow ()
 onStatus _merchant booking (Booking dOrder) = do
   statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
+  platformType <- case (booking.integratedBppConfigId) of
+    Just integratedBppConfigId -> do
+      QIBP.findById integratedBppConfigId
+        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
+        <&> (.platformType)
+    Nothing -> do
+      pure DIBC.APPLICATION
+  merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just _merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> _merchant.id.getId)
+  now <- getCurrentTime
   let googleWalletStates = map (second GWSA.mapToGoogleTicketStatus) statuses
   whenJust dOrder.orderStatus $ \status ->
     case status of
       Spec.COMPLETE | booking.status == Booking.CANCEL_INITIATED -> QTBooking.updateStatusById Booking.TECHNICAL_CANCEL_REJECTED booking.id
-      Spec.CANCELLED | not booking.customerCancelled -> QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+      Spec.CANCELLED | not booking.customerCancelled -> do
+        void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.FAILED booking.id
+        void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+        let updatedBooking = booking {Booking.bppOrderId = Just dOrder.bppOrderId}
+        void $ cancel _merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking platformType True
+        QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+      Spec.COMPLETE | booking.status == Booking.CONFIRMED -> do
+        if booking.validTill > now
+          then do
+            void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.FAILED booking.id
+            void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+            let updatedBooking = booking {Booking.bppOrderId = Just dOrder.bppOrderId}
+            void $ cancel _merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking platformType True
+          else pure ()
       _ -> pure ()
   traverse_ updateTicket statuses
   whenJust booking.partnerOrgId $ \pOrgId -> do
@@ -99,3 +138,21 @@ onStatus _merchant booking (TicketVerification ticketPayload) = do
   ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketPayload.ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
   unless (ticket.status == Ticket.ACTIVE) $ throwError (InvalidRequest "Ticket is not in Active state")
   void $ QTicket.updateStatusByTBookingIdAndTicketNumber Ticket.USED booking.id ticket.ticketNumber
+
+cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> Booking.FRFSTicketBooking -> DIBC.PlatformType -> Bool -> Flow ()
+cancel merchant merchantOperatingCity bapConfig cancellationType booking platformType isItTechnicallCancellation = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+  case integratedBPPConfig.providerConfig of
+    DIBC.ONDC _ -> do
+      fork "FRFS ONDC Cancel Req" $ do
+        frfsConfig <-
+          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+        providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+        ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        let cancellationReasonId = if isItTechnicallCancellation then Just "000" else frfsConfig.cancellationReasonId
+        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (DOnCancel.makecancelledTtlKey booking.id) True ttl
+        bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} cancellationReasonId cancellationType merchantOperatingCity.city
+        logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
+        void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
+    _ -> return ()
