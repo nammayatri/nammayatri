@@ -280,8 +280,9 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
       waiveOffMultiplier = if waiveOffMode == DPlan.NO_WAIVE_OFF then 1.0 else (1.0 - (waiveOffPercentage / 100))
       feeWithoutDiscountWithWaiveOff = feeWithoutDiscount * waiveOffMultiplier
-      feeWithOutDiscountPlusSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
-  if feeWithOutDiscountPlusSpecialZone == 0
+      feeWithoutDiscountWithWaiveOffAndSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
+      feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
+  if (feeWithOutDiscountPlusSpecialZone == 0 || feeWithoutDiscountWithWaiveOffAndSpecialZone == 0)
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
@@ -290,11 +291,11 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
         case waiveOffMode of
           DPlan.WITHOUT_OFFER -> return []
           _ -> do
-            offers <- SPayment.offerListCache merchantId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
+            offers <- SPayment.offerListCache merchantId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscountWithWaiveOff driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
             return offers.offerResp
       (finalOrderAmount, offerId, offerTitle) <-
         if null offerResp
-          then pure (feeWithoutDiscount, Nothing, Nothing)
+          then pure (feeWithoutDiscountWithWaiveOff, Nothing, Nothing)
           else do
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
