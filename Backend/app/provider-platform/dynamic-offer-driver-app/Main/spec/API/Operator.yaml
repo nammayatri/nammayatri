@@ -1,0 +1,13 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: Operator
+
+types: {}
+
+apis:
+  - POST: # Provide consent for operator-related actions (Driver Cum Owner)
+      endpoint: /operator/consent
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: APISuccess
