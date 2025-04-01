@@ -535,6 +535,8 @@ onUpdate = \case
       toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
       JM.cancelRemainingLegs journeyId True
       QJourneyLeg.updateAfterEditLocation booking.estimatedDuration booking.estimatedDistance (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLegId
+      journeyChangeLogCounter :: Int <- Redis.safeGet (mkJourneyChangeLogKey journeyId.getId) >>= fromMaybeM (InvalidRequest "journeyChangeLogCounter not found in Redis")
+      Redis.setExp (mkJourneyChangeLogKey journeyId.getId) (journeyChangeLogCounter + 1) 14400 -- 4 hours
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language booking.configInExperimentVersions
@@ -717,3 +719,6 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
 
 mkExtendLegKey :: Text -> Text
 mkExtendLegKey journeyId = "Extend:Leg:For:JourneyId-" <> journeyId
+
+mkJourneyChangeLogKey :: Text -> Text
+mkJourneyChangeLogKey journeyId = "Journey:Change:Counter:JourneyId-" <> journeyId

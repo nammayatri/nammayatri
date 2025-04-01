@@ -100,6 +100,7 @@ init journeyReq = do
       )
       journeyReq.legs
   logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
+  Redis.setExp (mkJourneyChangeLogKey journeyId) (0 :: Int) (14400 :: Int) -- 4 hours
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
@@ -108,6 +109,8 @@ init journeyReq = do
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
+  where
+    mkJourneyChangeLogKey journeyId = "Journey:Change:Counter:JourneyId-" <> journeyId.getId
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)

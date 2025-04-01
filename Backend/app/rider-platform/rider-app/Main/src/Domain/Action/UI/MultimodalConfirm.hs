@@ -27,6 +27,7 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified API.UI.Select as Select
 import qualified Data.Map as Map
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
@@ -176,11 +177,25 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   QSearchRequest.updatePricingId legSearchId (Just req.estimateId.getId)
 
   whenJust mbEstimate $ \estimate -> do
+    when (estimate.status == DEst.COMPLETED) $ do
+      cancelPrevSearch legSearchId estimate.id
+      void $ QEstimate.updateStatus DEst.NEW req.estimateId
+      JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
+      cancelPrevSearch legSearchId estimate.id
+      JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs now
+  where
+    cancelPrevSearch legSearchId estimateId = do
+      searchReq <- QSearchRequest.findById legSearchId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId.getId)
+      cancelResponse <- Select.cancelSearch' (searchReq.riderId, searchReq.merchantId) estimateId
+      case cancelResponse of
+        Select.Success -> return ()
+        Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId.getId)
+        Select.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show legSearchId.getId)
 
 getActiveJourneyIds ::
   ( CacheFlow m r,
