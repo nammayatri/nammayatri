@@ -13,6 +13,7 @@ module Domain.Action.ProviderPlatform.AppManagement.Subscription
     getSubscriptionDriverPaymentHistoryAPIV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
     postSubscriptionCollectManualPayments,
+    postSubscriptionFeeWaiveOff,
   )
 where
 

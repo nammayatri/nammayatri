@@ -32,7 +32,7 @@ data DriverPlanT f = DriverPlanT
     payerVpa :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     planId :: (B.C f Kernel.Prelude.Text),
     planType :: (B.C f Domain.Types.Plan.PaymentMode),
-    serviceName :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Plan.ServiceNames)),
+    serviceName :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames)),
     rentedVehicleNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     totalCoinsConvertedCash :: (B.C f Kernel.Types.Common.HighPrecMoney),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
