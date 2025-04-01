@@ -28,6 +28,7 @@ where
 import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified API.UI.Select as Select
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
@@ -261,11 +262,25 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   QSearchRequest.updatePricingId legSearchId (Just req.estimateId.getId)
 
   whenJust mbEstimate $ \estimate -> do
+    when (estimate.status == DEst.COMPLETED) $ do
+      cancelPrevSearch legSearchId estimate.id
+      void $ QEstimate.updateStatus DEst.NEW req.estimateId
+      JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
+      cancelPrevSearch legSearchId estimate.id
+      JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs
+  where
+    cancelPrevSearch legSearchId estimateId = do
+      searchReq <- QSearchRequest.findById legSearchId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId.getId)
+      cancelResponse <- Select.cancelSearch' (searchReq.riderId, searchReq.merchantId) estimateId
+      case cancelResponse of
+        Select.Success -> return ()
+        Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId.getId)
+        Select.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show legSearchId.getId)
 
 postMultimodalOrderSwitchFRFSTier ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -418,6 +433,7 @@ getMultimodalJourneyStatus ::
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
+  journeyChangeLogCounter :: Int <- (Redis.safeGet mkJourneyChangeLogKey) <&> fromMaybe 0
   paymentStatus <-
     if journey.isPaymentSuccess /= Just True
       then do
@@ -439,8 +455,10 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
           then do
             return (Just FRFSTicketService.SUCCESS)
           else return Nothing
-  return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus}
+  return $ ApiTypes.JourneyStatusResp {legs = concat (map transformLeg legs), journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
   where
+    mkJourneyChangeLogKey = "Journey:Change:Counter:JourneyId-" <> journeyId.getId
+
     transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
     transformLeg legState =
       case legState of
