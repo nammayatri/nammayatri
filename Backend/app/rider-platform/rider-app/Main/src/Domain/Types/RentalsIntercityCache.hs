@@ -42,7 +42,7 @@ data RentalsConfig = RentalsConfig
 
 data IntercitySearchLocation = IntercitySearchLocation
   { destination :: Maybe LatLong,
-    destinationCity :: Maybe City.City
+    destinationCity :: Maybe Text
   }
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
