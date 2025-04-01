@@ -115,7 +115,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
             QTBooking.updateJourneyLegStatus (Just lastNewStatus) booking.id
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
           vehicleTrackingAndPositions <- do
-            let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing) routeStatuses
+            let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing || currstatus == JPT.Finishing) routeStatuses
             case findOngoingMetroOrSubway of
               Just (_, _, currstatus) -> do
                 getVehiclePosition booking.riderId booking.merchantId booking.merchantOperatingCityId currstatus userPosition booking.vehicleType (decodeFromText =<< booking.routeStationsJson)

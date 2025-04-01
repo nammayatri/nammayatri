@@ -89,7 +89,12 @@ data JourneyInfoResp = JourneyInfoResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyStatusResp = JourneyStatusResp {journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI, journeyStatus :: Domain.Types.Journey.JourneyStatus, legs :: [LegStatus]}
+data JourneyStatusResp = JourneyStatusResp
+  { journeyChangeLogCounter :: Kernel.Prelude.Int,
+    journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
+    journeyStatus :: Domain.Types.Journey.JourneyStatus,
+    legs :: [LegStatus]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -139,6 +139,7 @@ init journeyReq = do
       )
       journeyReq.legs
   logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
+  Redis.setExp (mkJourneyChangeLogKey journeyId) (0 :: Int) (14400 :: Int) -- 4 hours
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
@@ -148,6 +149,7 @@ init journeyReq = do
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
   where
+    mkJourneyChangeLogKey journeyId = "Journey:Change:Counter:JourneyId-" <> journeyId.getId
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
@@ -1040,7 +1042,9 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       lon <- fromMaybeM (InvalidRequest $ label <> " longitude not found") mLon
       return (lat, lon)
 
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon startTime =
+    mkMultiModalLeg distance duration mode originLat originLon destLat destLon startTime = do
+      now <- getCurrentTime
+      newStartTime <- if now > startTime then now else startTime
       MultiModalTypes.MultiModalLeg
         { distance,
           duration,
@@ -1053,8 +1057,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           routeDetails = [],
           serviceTypes = [],
           agency = Nothing,
-          fromArrivalTime = Just startTime,
-          fromDepartureTime = Just startTime,
+          fromArrivalTime = Just newStartTime,
+          fromDepartureTime = Just newStartTime,
           toArrivalTime = Nothing,
           toDepartureTime = Nothing
         }
