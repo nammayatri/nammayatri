@@ -15,7 +15,9 @@ import Kernel.Beam.Functions as B
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Action.Dashboard.Fleet.Driver as Fleet
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -24,6 +26,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
 import Environment
@@ -49,6 +52,7 @@ import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Tools.Csv as Csv
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -255,5 +259,51 @@ postDriverOperatorAddDrivers ::
   Text ->
   API.Types.ProviderPlatform.Operator.Driver.CreateDriversReq ->
   Flow CommonFleet.APISuccessWithUnprocessedEntities
-postDriverOperatorAddDrivers _merchantShortId _opCity _requestorId _req = do
-  error "TODO"
+postDriverOperatorAddDrivers merchantShortId opCity requestorId req = do
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $
+    throwError AccessDenied
+
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  driverDetails <- Csv.readCsv @Fleet.CreateDriversCSVRow @Fleet.DriverDetails req.file Fleet.parseDriverInfo
+  when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
+  unprocessedEntities <-
+    foldlM
+      ( \unprocessedEntities driverDetail -> do
+          try @_ @SomeException
+            (processDriver merchant merchantOpCity operator driverDetail)
+            >>= \case
+              Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)]
+              Right _ -> return unprocessedEntities
+      )
+      []
+      driverDetails
+  pure $ CommonFleet.APISuccessWithUnprocessedEntities unprocessedEntities
+  where
+    processDriver :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Fleet.DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriver merchant moc operator req_ = do
+      person <- Fleet.fetchOrCreatePerson moc req_
+      QDOA.checkDriverOperatorAssociation person.id operator.id
+        >>= \isAssociated -> unless isAssociated $ do
+          fork "Sending Operator Consent SMS to Driver" $ do
+            try @_ @SomeException (SDA.endActiveAssociationsIfAllowed merchant person.id) >>= \case
+              Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)
+              Right _ -> do
+                let driverMobile = req_.driverPhoneNumber
+                QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id req_.driverOnboardingVehicleCategory False
+                sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id operator
+
+    sendOperatorDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
+    sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId operator = do
+      let countryCode = fromMaybe "+91" person.mobileCountryCode
+          phoneNumber = countryCode <> mobileNumber
+      smsCfg <- asks (.smsCfg)
+      withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
+        (mbSender, message) <-
+          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+            MessageBuilder.BuildOperatorDeepLinkAuthMessage
+              { operatorName = operator.firstName
+              }
+        let sender = fromMaybe smsCfg.sender mbSender
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult

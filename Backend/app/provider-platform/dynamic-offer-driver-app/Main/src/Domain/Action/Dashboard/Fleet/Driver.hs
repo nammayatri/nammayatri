@@ -48,6 +48,10 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverDashboardFleetTrackDriver,
     getDriverFleetWmbRouteDetails,
     postDriverFleetGetNearbyDrivers,
+    parseDriverInfo,
+    fetchOrCreatePerson,
+    CreateDriversCSVRow,
+    DriverDetails,
   )
 where
 
@@ -1664,23 +1668,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   where
     processDriver :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriver merchant moc fleetOwner req_ = do
-      let driverMobile = req_.driverPhoneNumber
-          authData =
-            DReg.AuthReq
-              { mobileNumber = Just req_.driverPhoneNumber,
-                mobileCountryCode = Just "+91",
-                merchantId = moc.merchantId.getId,
-                merchantOperatingCity = Just opCity,
-                email = Nothing,
-                name = Just req_.driverName,
-                identifierType = Just DP.MOBILENUMBER,
-                registrationLat = Nothing,
-                registrationLon = Nothing
-              }
-      mobileNumberHash <- getDbHash req_.driverPhoneNumber
-      person <-
-        QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
-          >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
+      person <- fetchOrCreatePerson moc req_
       WMB.checkFleetDriverAssociation person.id fleetOwner.id
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
@@ -1688,15 +1676,9 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               try @_ @SomeException (SDA.endActiveAssociationsIfAllowed merchant person.id) >>= \case
                 Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)
                 Right _ -> do
+                  let driverMobile = req_.driverPhoneNumber
                   FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
                   sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
-
-    parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
-    parseDriverInfo idx row = do
-      driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
-      driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
-      driverOnboardingVehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
-      pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory
 
     sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
     sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId fleetOwner = do
@@ -1711,6 +1693,31 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+
+parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
+parseDriverInfo idx row = do
+  driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
+  driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
+  driverOnboardingVehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
+  pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory
+
+fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow DP.Person
+fetchOrCreatePerson moc req_ = do
+  let authData =
+        DReg.AuthReq
+          { mobileNumber = Just req_.driverPhoneNumber,
+            mobileCountryCode = Just "+91",
+            merchantId = moc.merchantId.getId,
+            merchantOperatingCity = Just moc.city,
+            email = Nothing,
+            name = Just req_.driverName,
+            identifierType = Just DP.MOBILENUMBER,
+            registrationLat = Nothing,
+            registrationLon = Nothing
+          }
+  mobileNumberHash <- getDbHash req_.driverPhoneNumber
+  QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
+    >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
 
 ---------------------------------------------------------------------
 postDriverDashboardFleetTrackDriver :: ShortId DM.Merchant -> Context.City -> Text -> Common.TrackDriverLocationsReq -> Flow Common.TrackDriverLocationsRes
