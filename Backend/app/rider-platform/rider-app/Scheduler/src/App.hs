@@ -35,6 +35,7 @@ import qualified Kernel.Utils.FlowLogging as L
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
+import "rider-app" SharedLogic.Scheduler.Jobs.CallFRFSStatus
 import "rider-app" SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.Chakras
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
@@ -82,6 +83,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . callFRFSStatus)
     }
 
 runRiderAppScheduler ::
