@@ -53,6 +53,7 @@ types:
     journeyStatus: Domain.Types.Journey.JourneyStatus
     legs: "[LegStatus]"
     journeyPaymentStatus: Maybe FRFSBookingPaymentStatusAPI
+    journeyChangeLogCounter: Int
 
   ExtendLegReq:
     distance: Distance

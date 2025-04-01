@@ -138,6 +138,7 @@ init journeyReq = do
       )
       journeyReq.legs
   logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
+  Redis.setExp (mkJourneyChangeLogKey journeyId) (0 :: Int) (14400 :: Int) -- 4 hours
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
@@ -147,6 +148,7 @@ init journeyReq = do
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
   where
+    mkJourneyChangeLogKey journeyId = "Journey:Change:Counter:JourneyId-" <> journeyId.getId
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
@@ -961,7 +963,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           Nothing -> return $ filter (\leg -> leg.order >= startLegOrder) allLegs
       -- checkIfRemainingLegsAreCancellable legsToCancel
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
-      let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
+      leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       startLocationAddress <-
@@ -995,7 +997,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
   where
     extendWalkLeg startlocation endLocation currentLeg parentSearchReq = do
       now <- getCurrentTime
-      let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
+      leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       withJourneyUpdateInProgress journeyId $ do
@@ -1039,24 +1041,27 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       lon <- fromMaybeM (InvalidRequest $ label <> " longitude not found") mLon
       return (lat, lon)
 
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon startTime =
-      MultiModalTypes.MultiModalLeg
-        { distance,
-          duration,
-          polyline = Polyline {encodedPolyline = ""},
-          mode,
-          startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
-          endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
-          fromStopDetails = Nothing,
-          toStopDetails = Nothing,
-          routeDetails = [],
-          serviceTypes = [],
-          agency = Nothing,
-          fromArrivalTime = Just startTime,
-          fromDepartureTime = Just startTime,
-          toArrivalTime = Nothing,
-          toDepartureTime = Nothing
-        }
+    mkMultiModalLeg distance duration mode originLat originLon destLat destLon startTime = do
+      now <- getCurrentTime
+      let newStartTime = if now > startTime then now else startTime
+      return $
+        MultiModalTypes.MultiModalLeg
+          { distance,
+            duration,
+            polyline = Polyline {encodedPolyline = ""},
+            mode,
+            startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
+            endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
+            fromStopDetails = Nothing,
+            toStopDetails = Nothing,
+            routeDetails = [],
+            serviceTypes = [],
+            agency = Nothing,
+            fromArrivalTime = Just newStartTime,
+            fromDepartureTime = Just newStartTime,
+            toArrivalTime = Nothing,
+            toDepartureTime = Nothing
+          }
 
     mkExtendLegKey = "Extend:Leg:For:JourneyId-" <> journeyId.getId
 
