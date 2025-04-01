@@ -649,6 +649,7 @@ library
       Tools.ChatCompletion
       Tools.ConfigPilot
       Tools.Constants
+      Tools.Csv
       Tools.Dashcam
       Tools.DriverBackgroundVerification
       Tools.Error

@@ -53,8 +53,6 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
@@ -63,7 +61,6 @@ import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
-import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -90,7 +87,6 @@ import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -142,6 +138,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
+import qualified Tools.Csv as Csv
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
@@ -435,7 +432,9 @@ postDriverFleetAddVehicles merchantShortId opCity mbRequestorId req = do
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   _fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
-  rcReq <- readCsv req.file merchantOpCity
+  rcReq <-
+    Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route]) req.file $
+      parseVehicleInfo merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
   unprocessedVehicleRouteMappingEntities <-
     foldlM
@@ -480,18 +479,12 @@ postDriverFleetAddVehicles merchantShortId opCity mbRequestorId req = do
       rcReq
   pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedVehicleRouteMappingEntities <> unprocessedRCAdditionEntities}
   where
-    readCsv csvFile merchantOpCity = do
-      csvData <- L.runIO $ BS.readFile csvFile
-      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector VehicleDetailsCSVRow)) of
-        Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM (parseVehicleInfo merchantOpCity) v >>= (pure . V.toList)
-
     parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, DbHash, [DRoute.Route])
     parseVehicleInfo moc idx row = do
-      let airConditioned :: (Maybe Bool) = readMaybeCSVField idx row.airConditioned "Air Conditioned"
-          mbRouteCodes :: Maybe [Text] = readMaybeCSVField idx row.routeCodes "Route Codes"
-      vehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.vehicleCategory "Vehicle Category"
-      vehicleRegistrationCertNumber <- cleanCSVField idx row.registrationNo "Registration No"
+      let airConditioned :: (Maybe Bool) = Csv.readMaybeCSVField idx row.airConditioned "Air Conditioned"
+          mbRouteCodes :: Maybe [Text] = Csv.readMaybeCSVField idx row.routeCodes "Route Codes"
+      vehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.vehicleCategory "Vehicle Category"
+      vehicleRegistrationCertNumber <- Csv.cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
         case mbRouteCodes of
@@ -512,14 +505,6 @@ postDriverFleetAddVehicles merchantShortId opCity mbRequestorId req = do
                 ..
               }
       VRM.upsert vehicleRouteMapping vehicleNumberHash
-
-    readCSVField :: Read a => Int -> Text -> Text -> Flow a
-    readCSVField idx fieldValue fieldName =
-      cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
-
-    cleanCSVField :: Int -> Text -> Text -> Flow Text
-    cleanCSVField idx fieldValue fieldName =
-      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
 data VehicleDetailsCSVRow = VehicleDetailsCSVRow
   { registrationNo :: Text,
@@ -1556,7 +1541,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
-  driverBusRouteDetails <- readCsv req.file
+  driverBusRouteDetails <- Csv.readCsv @CreateDriverBusRouteMappingCSVRow @DriverBusRouteDetails req.file parseMappingInfo
 
   when (length driverBusRouteDetails > 100) $ throwError $ MaxDriversLimitExceeded 100
   let groupedDetails = groupBy (\a b -> a.driverPhoneNo == b.driverPhoneNo) $ sortOn (.driverPhoneNo) driverBusRouteDetails
@@ -1611,46 +1596,23 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
       driverTripPlanner
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
   where
-    readCsv csvFile = do
-      csvData <- L.runIO $ BS.readFile csvFile
-      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CreateDriverBusRouteMappingCSVRow)) of
-        Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM parseMappingInfo v >>= (pure . V.toList)
-
     parseMappingInfo :: Int -> CreateDriverBusRouteMappingCSVRow -> Flow DriverBusRouteDetails
     parseMappingInfo idx row = do
-      driverPhoneNo <- cleanCSVField idx row.driverId "Driver Phone number"
-      vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
-      routeCode <- cleanCSVField idx row.routeCode "Route code"
-      let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
+      driverPhoneNo <- Csv.cleanCSVField idx row.driverId "Driver Phone number"
+      vehicleNumber <- Csv.cleanCSVField idx row.vehicleNumber "Vehicle number"
+      routeCode <- Csv.cleanCSVField idx row.routeCode "Route code"
+      let roundTripFreq = Csv.readMaybeCSVField idx row.roundTripFreq "Round trip freq"
       badgeName <-
         case row.badgeName of
-          Just badgeName -> Just <$> cleanCSVField idx badgeName "Badge name"
+          Just badgeName -> Just <$> Csv.cleanCSVField idx badgeName "Badge name"
           Nothing -> pure Nothing
       pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq badgeName
-
-    cleanCSVField :: Int -> Text -> Text -> Flow Text
-    cleanCSVField idx fieldValue fieldName =
-      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
     makeTripPlannerReq driverGroup =
       Common.TripDetails
         { routeCode = driverGroup.routeCode,
           roundTrip = fmap (\freq -> Common.RoundTripDetail {frequency = freq}) driverGroup.roundTripFreq
         }
-
-readMaybeCSVField :: Read a => Int -> Text -> Text -> Maybe a
-readMaybeCSVField _ fieldValue _ = cleanField fieldValue >>= readMaybe . T.unpack
-
-cleanField :: Text -> Maybe Text
-cleanField = replaceEmpty . T.strip
-
-replaceEmpty :: Text -> Maybe Text
-replaceEmpty = \case
-  "" -> Nothing
-  "no constraint" -> Nothing
-  "no_constraint" -> Nothing
-  x -> Just x
 
 ---------------------------------------------------------------------
 data CreateDriversCSVRow = CreateDriversCSVRow
@@ -1685,7 +1647,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   fleetOwner <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
-  driverDetails <- readCsv req.file
+  driverDetails <- Csv.readCsv @CreateDriversCSVRow @DriverDetails req.file parseDriverInfo
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
   unprocessedEntities <-
     foldlM
@@ -1729,26 +1691,12 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
                   FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id req_.driverOnboardingVehicleCategory False
                   sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
-    readCsv csvFile = do
-      csvData <- L.runIO $ BS.readFile csvFile
-      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CreateDriversCSVRow)) of
-        Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM parseDriverInfo v >>= (pure . V.toList)
-
     parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
     parseDriverInfo idx row = do
-      driverName <- cleanCSVField idx row.driverName "Driver name"
-      driverPhoneNumber <- cleanCSVField idx row.driverPhoneNumber "Mobile number"
-      driverOnboardingVehicleCategory :: DVC.VehicleCategory <- readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
+      driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
+      driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
+      driverOnboardingVehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
       pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory
-
-    readCSVField :: Read a => Int -> Text -> Text -> Flow a
-    readCSVField idx fieldValue fieldName =
-      cleanField fieldValue >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
-
-    cleanCSVField :: Int -> Text -> Text -> Flow Text
-    cleanCSVField idx fieldValue fieldName =
-      cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
     sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
     sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId fleetOwner = do
