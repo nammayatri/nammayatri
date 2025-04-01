@@ -13,13 +13,18 @@ module Domain.Action.Dashboard.AppManagement.MerchantOnboarding
     merchantOnboardingReject,
     merchantOnboadingListAll,
     merchantOnboardingStepList,
+    merchantOnboardingGetFile,
   )
 where
 
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import qualified AWS.S3 as S3
+import qualified Dashboard.Common
+import Data.Aeson as A
 import qualified Data.Aeson
+import Data.Aeson.Key (fromText)
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
 import Data.OpenApi (ToSchema)
@@ -113,15 +118,18 @@ getStepsAndUpdate onboardingId = do
           )
           dependencies
 
-merchantOnboardingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
-merchantOnboardingInfo merchantShortId opCity onboardingType requestorId = do
+merchantOnboardingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingInfo merchantShortId opCity onboardingType requestorId _mbRequestorRole = do
   reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   onboarding <- QMO.findByRequestorIdAndOnboardingType reqId onboardingType >>= fromMaybeM (InvalidRequest $ "No onboarding present of type " <> show onboardingType)
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   steps <- getStepsAndUpdate onboarding.id
   return $ mkMerchantOnboardingAPI onboarding steps
 
-merchantOnboardingStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
-merchantOnboardingStart merchantShortId opCity onboardingType requestorId = do
+merchantOnboardingStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingStart merchantShortId opCity onboardingType requestorId _mbRequestorRole = do
   reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   mbOnboarding <- QMO.findByRequestorIdAndOnboardingType reqId onboardingType
   case mbOnboarding of
@@ -180,18 +188,19 @@ merchantOnboardingStart merchantShortId opCity onboardingType requestorId = do
       updatedSteps <- getStepsAndUpdate onboarding.id
       return $ mkMerchantOnboardingAPI onboarding updatedSteps
 
-merchantOnboardingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
-merchantOnboardingList merchantShortId opCity requestorId = do
+merchantOnboardingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+merchantOnboardingList merchantShortId opCity requestorId _mbRequestorRole = do
   reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   onboardings <- QMO.findAllByRequestorId reqId
   return onboardings
 
-merchantOnboardingStepSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
-merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId payload = do
+merchantOnboardingStepSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Value -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId _mbRequestorRole payload = do
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS) $
     throwError $ InvalidRequest "Step is not available for submission"
@@ -206,14 +215,14 @@ merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId payload =
   steps <- getStepsAndUpdate onboarding.id
   return $ mkMerchantOnboardingAPI onboarding steps
 
-merchantOnboardingStepUpdatePayload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingStepUpdatePayload merchantShortId opCity stepId requestorId payload = do
+merchantOnboardingStepUpdatePayload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepUpdatePayload merchantShortId opCity stepId requestorId _mbRequestorRole payload = do
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId) $
-    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
-
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
     throwError $ InvalidRequest "Step is not available for update"
   QMOS.updateStepPayload (Just payload) step.id
@@ -224,9 +233,12 @@ data StepRejectRequest = StepRejectRequest
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-merchantOnboardingStepReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingStepReject merchantShortId opCity stepId requestorId payload = do
+merchantOnboardingStepReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepReject merchantShortId opCity stepId requestorId _mbRequestorRole payload = do
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   unless (step.status == DMOS.SUBMITTED) $
     throwError $ InvalidRequest "Step is not pending approval"
@@ -240,8 +252,12 @@ data StepApproveRequest = StepApproveRequest
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingStepApprove merchantShortId opCity stepId requestorId payload = do
+merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepApprove merchantShortId opCity stepId requestorId _mbRequestorRole payload = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
   unless (step.status == DMOS.SUBMITTED && step.isApprovalRequired) $
@@ -259,34 +275,54 @@ merchantOnboardingStepApprove merchantShortId opCity stepId requestorId payload 
   _ <- getStepsAndUpdate onboarding.id
   return Kernel.Types.APISuccess.Success
 
-merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
-merchantOnboardingStepUploadFile _merchantShortId opCity stepId payloadKey requestorId req = do
+merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
+merchantOnboardingStepUploadFile _merchantShortId opCity stepId payloadKey requestorId _mbRequestorRole req = do
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
     throwError $ InvalidRequest "Step is not available for upload"
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId) $
-    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have this access"
   merchant <- findMerchantByShortId _merchantShortId
   merchantConfig <- CQM.findById (merchant.id) >>= fromMaybeM (MerchantNotFound merchant.id.getId)
+
+  contentType' <- case req.fileType of
+    S3.Image | req.reqContentType == "image/png" -> pure "png"
+    S3.Image | req.reqContentType == "image/jpeg" -> pure "jpg"
+    S3.PDF | req.reqContentType == "application/pdf" -> pure "pdf"
+    _ -> throwError $ InvalidRequest $ "Unsupported content type: " <> req.reqContentType <> " for file type: " <> show req.fileType
+
   documentFile <- L.runIO $ base64Encode <$> BS.readFile req.file
-  filePath <- S3.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> payloadKey) req.fileType ""
+  filePath <- S3.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> payloadKey) req.fileType contentType'
   let fileUrl =
         merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "merchant-onboarding"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 put file" $ S3.put (T.unpack filePath) documentFile
   uploadFileRes <- createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType = req.fileType}
+  updateStepPayloadWithFileId step payloadKey uploadFileRes.fileId.getId
   return uploadFileRes
+  where
+    updateStepPayloadWithFileId step_ payloadKey_ fileId_ = do
+      let currentPayload = fromMaybe (A.Null) step_.payload
+      let newPayload = case currentPayload of
+            A.Object obj -> A.Object $ KeyMap.insert (fromText payloadKey_) (A.String fileId_) obj
+            _ -> A.Object $ KeyMap.singleton (fromText payloadKey_) (A.String fileId_)
+      QMOS.updateStepPayload (Just newPayload) step_.id
 
 data MBRejectRequest = MBRejectRequest
   { remarks :: Kernel.Prelude.Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-merchantOnboardingReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingReject merchantShortId opCity onboardingId requestorId req = do
+merchantOnboardingReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingReject merchantShortId opCity onboardingId requestorId _mbRequestorRole req = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   rejectReq :: MBRejectRequest <- fromjson req
   onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
   unless (onboarding.status /= DMO.COMPLETED) $
@@ -294,21 +330,24 @@ merchantOnboardingReject merchantShortId opCity onboardingId requestorId req = d
   QMO.updateOnboardingStatusAndRemarks DMO.REJECTED (Just rejectReq.remarks) onboarding.id
   return Kernel.Types.APISuccess.Success
 
-merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
-merchantOnboadingListAll merchantShortId opCity mbRequestorId mbStatus = do
+merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+merchantOnboadingListAll merchantShortId opCity mbRequestorId _mbRequestorRole mbStatus = do
   status <- mbStatus & fromMaybeM (InvalidRequest "Status filter is required")
+  reqId <- mbRequestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   QMO.findAllByStatus status
 
-merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Maybe Text -> Environment.Flow [DMOS.MerchantOnboardingStep])
-merchantOnboardingStepList merchantShortId opCity onboardingId requestorId mbStatus = do
+merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow [DMOS.MerchantOnboardingStep])
+merchantOnboardingStepList merchantShortId opCity onboardingId requestorId _mbRequestorRole = do
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
+  reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId) $
-    throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   steps <- QMOS.findByMerchantOnboardingId onboarding.id.getId
-  return $ case mbStatus of
-    Nothing -> steps
-    Just status -> filter (\step -> show step.status == status) steps
+  return steps
 
 createMediaEntry :: Common.AddLinkAsMedia -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse
 createMediaEntry Common.AddLinkAsMedia {..} = do
@@ -322,11 +361,23 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
       return $
         DMF.MediaFile
           { id,
-            _type = S3.Image,
+            _type = fileType,
             url = fileUrl,
             s3FilePath = Nothing,
             createdAt = now
           }
+
+merchantOnboardingGetFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
+merchantOnboardingGetFile merchantShortId opCity onboardingId fileId requestorId requestorRole = do
+  reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+    throwError $ InvalidRequest "RequestorId does not have access to this file"
+  file <- MFQuery.findById (Kernel.Types.Id.Id fileId) >>= fromMaybeM (InvalidRequest "No file found")
+  filePath <- file.s3FilePath & fromMaybeM (FileDoNotExist fileId)
+  base64File <- S3.get $ T.unpack filePath
+  return $ Domain.Types.MerchantOnboarding.GetFileResponse {fileBase64 = base64File, fileType = show file._type}
 
 fromjson :: (FromJSON a) => Data.Aeson.Value -> Environment.Flow a
 fromjson val = case Data.Aeson.fromJSON val of

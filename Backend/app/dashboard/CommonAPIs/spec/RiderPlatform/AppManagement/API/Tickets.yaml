@@ -89,4 +89,31 @@ apis:
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS GET_TICKET_BOOKING_DETAILS
 
-types: {}
+  - POST: # RegisterTicketDashboardAPI
+      endpoint: /ticketdashboard/register
+      auth: NoAuth
+      request:
+        type: TicketDashboardRegisterReq
+      response:
+        type: TicketDashboardRegisterResp
+  # - POST: # LoginTicketDashboardAPI
+  #     endpoint: /ticketdashboard/auth
+  #     auth: NoAuth
+  #     request:
+  #       type: TicketDashboardLoginReq
+  #     response:
+  #       type: APISuccess
+
+types:
+  TicketDashboardRegisterReq:
+    - firstName: Text
+    - lastName: Text
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - merchantId: Text
+    - city: Maybe Text
+    - email: Maybe Text
+  TicketDashboardRegisterResp:
+    - success: Bool
+    - message: Maybe Text
+    - id: Maybe Text

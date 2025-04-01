@@ -6,9 +6,11 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     postTicketsBookingsCancel,
     postTicketsServiceCancel,
     getTicketsBookingDetails,
+    postTicketsTicketdashboardRegister,
   )
 where
 
+import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified "this" API.Types.UI.TicketService
 import qualified Data.Time.Calendar
 import qualified Domain.Action.UI.TicketService
@@ -88,3 +90,12 @@ getTicketsBookingDetails ::
 getTicketsBookingDetails merchantShortId _opCity ticketBookingShortId = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.getTicketBookingsDetails (Nothing, m.id) ticketBookingShortId
+
+postTicketsTicketdashboardRegister ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq ->
+  Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+postTicketsTicketdashboardRegister merchantShortId _opCity req = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.postTicketDashboardRegister m req

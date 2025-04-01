@@ -2,6 +2,9 @@ imports:
   Value: Data.Aeson
   OnboardingType: Domain.Types.MerchantOnboarding
   MerchantOnboardingStep: Domain.Types.MerchantOnboardingStep
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  EncryptedHashedField: Kernel.External.Encryption
+
 
 MerchantOnboardingStep:
   tableName: merchant_onboarding_step
@@ -59,6 +62,12 @@ MerchantOnboarding:
   tableName: merchant_onboarding
 
   types:
+    GetFileResponse:
+      fileBase64: Text
+      fileType: Text
+    RequestorRole:
+      enum: "DASHBOARD_USER,TICKET_MERCHANT,TICKET_ADMIN,TICKET_APPROVER"
+      derive: "HttpInstance"
     OnboardingStatus:
       enum: "INPROGRESS,COMPLETED,REJECTED"
       derive: "HttpInstance"
@@ -150,3 +159,50 @@ MerchantOnboardingStepConfig:
       kvFunction: findOneWithKV
       where:
         and: [onboardingType, stepNameIdentifier]
+
+TicketMerchantDetails:
+  tableName: ticket_merchant_details
+
+  types:
+    BankAccountType:
+      enum: "CURRENT,SAVINGS"
+      derive: "HttpInstance"
+    ContactDetails:
+      name: Text
+      number: Text
+      email: Text
+
+  fields:
+    id: Id TicketMerchantDetails
+    orgName: Text
+    orgAddress: Maybe Text
+    pan: EncryptedHashedField e Text
+    gstin: EncryptedHashedField e Text
+    state: Text
+    contactDetails: ContactDetails
+    bankBeneficiaryName: Text
+    bankAccountNumber: Text
+    bankAccountType: BankAccountType
+    bankIfsc: Text
+    docPan: EncryptedHashedField e Text
+    docCancelledCheque: EncryptedHashedField e Text
+    isBlocked: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  fromTType:
+    contactDetails: makeContactDetails
+  toTType:
+    name: (.contactDetails.name)|I
+    number: (.contactDetails.number)|I
+    email: (.contactDetails.email)|I
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id

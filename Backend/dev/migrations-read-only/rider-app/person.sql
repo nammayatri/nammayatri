@@ -159,3 +159,7 @@ ALTER TABLE atlas_app.person ADD COLUMN juspay_customer_payment_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN live_activity_token text ;
+
+
+------- SQL updates -------
+

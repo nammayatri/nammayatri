@@ -5,6 +5,8 @@ imports:
   OnboardingType: Domain.Types.MerchantOnboarding
   OnboardingStatus: Domain.Types.MerchantOnboarding
   MerchantOnboardingStep: Domain.Types.MerchantOnboardingStep
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
   Value: Data.Aeson
   File: Dashboard.Common
   FileType: AWS.S3
@@ -26,6 +28,7 @@ apis:
       auth: ApiAuthV2
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         onboardingType: OnboardingType
       response:
@@ -36,6 +39,7 @@ apis:
       auth: ApiAuthV2
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         onboardingType: OnboardingType
       response:
@@ -46,6 +50,7 @@ apis:
       auth: ApiAuthV2
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       response:
         type: "[MerchantOnboarding]"
   - POST: # MerchantOnboardingStepSubmit
@@ -58,6 +63,7 @@ apis:
         type: "MerchantOnboardingAPI"
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: # MerchantOnboardingStepUpdatePayload
@@ -70,6 +76,7 @@ apis:
         type: "APISuccess"
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: # MerchantOnboardingStepReject
@@ -82,6 +89,7 @@ apis:
         type: "APISuccess"
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: # MerchantOnboardingStepApprove
@@ -94,6 +102,7 @@ apis:
         type: "APISuccess"
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: #MerchantOnboardingStepUploadFile
@@ -106,6 +115,7 @@ apis:
         type: UploadFileResponse
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         stepId: Text
         payloadKey: Text
@@ -119,6 +129,7 @@ apis:
         type: "APISuccess"
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
       params:
         onboardingId: Text
   - GET: #MerchantOnboadingListAll
@@ -127,6 +138,7 @@ apis:
       auth: ApiAuthV2
       query:
         - requestorId: Text
+        - requestorRole: RequestorRole
         - status: OnboardingStatus
       response:
         type: "[MerchantOnboarding]"
@@ -136,11 +148,24 @@ apis:
       auth: ApiAuthV2
       query:
         - requestorId: Text
-        - role: Text # Admin or Approver
+        - requestorRole: RequestorRole
       params:
         onboardingId: Text
       response:
         type: "[MerchantOnboardingStep]"
+  - GET: #MerchantOnboardingGetFile
+      endpoint: /onboarding/{onboardingId}/file/{fileId}
+      name: MerchantOnboardingGetFile
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        onboardingId: Text
+        fileId: Text
+      response:
+        type: GetFileResponse
+
 types:
   UploadFileRequest:
     - file: FilePath

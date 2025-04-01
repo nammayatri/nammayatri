@@ -1,5 +1,6 @@
 module Domain.Action.UI.TicketService where
 
+import qualified API.Types.Dashboard.AppManagement.Tickets
 import API.Types.UI.TicketService
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -10,6 +11,7 @@ import qualified Data.Text as Data.Text
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
@@ -31,7 +33,7 @@ import qualified Domain.Types.TicketService as Domain.Types.TicketService
 import qualified Environment as Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Payment.Interface.Types as Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.Prelude as Kernel.Prelude
@@ -49,6 +51,7 @@ import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.BusinessHour as QBH
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as PersonExtra
@@ -1235,3 +1238,47 @@ tryInstantBooking personId tscs = do
           case blockRes of
             BlockFailed _ -> return LockBookingFailed
             BlockSuccess _ -> tryLockBooking personId tscs
+
+postTicketDashboardRegister :: Domain.Types.Merchant.Merchant -> API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+postTicketDashboardRegister merchant req = do
+  mobileNumberHash <- getDbHash req.mobileNumber
+  personOpt <- QP.findByMobileNumberAndMerchantAndRole mobileNumberHash merchant.id [Domain.Types.Person.TICKET_MERCHANT, Domain.Types.Person.TICKET_USER, Domain.Types.Person.TICKET_ADMIN, Domain.Types.Person.TICKET_APPROVER]
+  case personOpt of
+    Just _ -> throwError $ InvalidRequest "Mobile number already registered"
+    Nothing -> do
+      let authReq =
+            Registration.AuthReq
+              { mobileNumber = Just req.mobileNumber,
+                mobileCountryCode = Just req.mobileCountryCode,
+                identifierType = Just Domain.Types.Person.MOBILENUMBER,
+                merchantId = merchant.shortId,
+                deviceToken = Nothing,
+                notificationToken = Nothing,
+                whatsappNotificationEnroll = Nothing,
+                firstName = Just req.firstName,
+                middleName = Nothing,
+                lastName = Just req.lastName,
+                email = req.email,
+                language = Nothing,
+                gender = Nothing,
+                otpChannel = Nothing,
+                registrationLat = Nothing,
+                registrationLon = Nothing,
+                enableOtpLessRide = Nothing,
+                allowBlockedUserLogin = Nothing
+              }
+      merchantOperatingCityId <-
+        CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+          >>= fmap (.id)
+            . fromMaybeM
+              ( MerchantOperatingCityNotFound $
+                  "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
+              )
+      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant merchant.defaultCity merchantOperatingCityId Nothing
+      QP.create (person {Domain.Types.Person.role = Domain.Types.Person.TICKET_USER})
+      return $
+        API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+          { success = True,
+            message = Just "User registered successfully!",
+            id = Just person.id.getId
+          }

@@ -264,8 +264,8 @@ library
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
-      Domain.Types.RentalsIntercityCache
       Domain.Types.MerchantOnboarding.Handler
+      Domain.Types.RentalsIntercityCache
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI
@@ -475,6 +475,7 @@ library
       Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.ServicePeopleCategory
       Storage.Queries.Transformers.SpecialZoneQuote
+      Storage.Queries.Transformers.TicketMerchantDetails
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.UiRiderConfigExtra
@@ -707,6 +708,7 @@ library
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
       Domain.Types.TicketBookingServiceCategory
+      Domain.Types.TicketMerchantDetails
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.TripTerms
@@ -827,6 +829,7 @@ library
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
       Storage.Beam.TicketBookingServiceCategory
+      Storage.Beam.TicketMerchantDetails
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.TripTerms
@@ -998,6 +1001,7 @@ library
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService
       Storage.Queries.TicketBookingServiceCategory
+      Storage.Queries.TicketMerchantDetails
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
       Storage.Queries.TripTerms

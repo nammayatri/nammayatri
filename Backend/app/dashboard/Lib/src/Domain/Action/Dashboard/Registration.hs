@@ -365,3 +365,73 @@ validateFleetOwner FleetRegisterReq {..} =
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+-- data TicketDashboardRegisterReq = TicketDashboardRegisterReq
+--   { firstName :: Text,
+--     lastName :: Text,
+--     mobileNumber :: Text,
+--     mobileCountryCode :: Text,
+--     merchantId :: ShortId DMerchant.Merchant,
+--     city :: Maybe City.City,
+--     email :: Maybe Text
+--   }
+--   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- validateTicketDashboardRegister :: Validate TicketDashboardRegisterReq
+-- validateTicketDashboardRegister TicketDashboardRegisterReq {..} =
+--   sequenceA_
+--     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+--       validateField "lastName" lastName $ NotEmpty `And` P.name,
+--       validateField "mobileNumber" mobileNumber P.mobileNumber,
+--       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+--     ]
+
+-- buildTicketDashboardUser ::
+--   (EncFlow m r) =>
+--   TicketDashboardRegisterReq ->
+--   Maybe Text ->
+--   Id DRole.Role ->
+--   DRole.DashboardAccessType ->
+--   m PT.Person
+-- buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
+--   pid <- case mbPersonId of
+--     Just personId -> return $ Id personId
+--     Nothing -> generateGUID
+--   now <- getCurrentTime
+--   mobileNumber <- encrypt req.mobileNumber
+--   email <- forM req.email encrypt
+--   return
+--     PT.Person
+--       { id = pid,
+--         firstName = req.firstName,
+--         lastName = req.lastName,
+--         roleId = roleId,
+--         email = email,
+--         mobileNumber = mobileNumber,
+--         mobileCountryCode = req.mobileCountryCode,
+--         passwordHash = Nothing,
+--         dashboardAccessType = Just dashboardAccessType,
+--         receiveNotification = Nothing,
+--         createdAt = now,
+--         updatedAt = now,
+--         verified = Nothing
+--       }
+
+-- registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) => TicketDashboardRegisterReq -> Maybe Text -> m APISuccess
+-- registerTicketDashboard req mbPersonId = do
+--   runRequestValidation validateTicketDashboardRegister req
+--   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $
+--     throwError (InvalidRequest "Phone already registered")
+--   ticketDashboardRole <-
+--     QRole.findByDashboardAccessType DASHBOARD_USER
+--       >>= fromMaybeM (RoleDoesNotExist "DASHBOARD_USER")
+--   ticketUser <- buildTicketDashboardUser req mbPersonId ticketDashboardRole.id ticketDashboardRole.dashboardAccessType
+--   merchant <-
+--     QMerchant.findByShortId req.merchantId
+--       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
+--   merchantServerAccessCheck merchant
+--   let city' = fromMaybe merchant.defaultOperatingCity req.city
+--   merchantAccess <- DP.buildMerchantAccess ticketUser.id merchant.id merchant.shortId city'
+--   QP.create ticketUser
+--   QAccess.create merchantAccess
+--   return Success

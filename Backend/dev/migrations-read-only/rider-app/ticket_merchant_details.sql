@@ -1,0 +1,25 @@
+CREATE TABLE atlas_app.ticket_merchant_details ();
+
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN bank_account_number text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN bank_account_type text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN bank_beneficiary_name text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN bank_ifsc text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN contact_details_email text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN contact_details_name text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN contact_details_number text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN doc_cancelled_cheque_encrypted character varying(255) NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN doc_cancelled_cheque_hash bytea NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN doc_pan_encrypted character varying(255) NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN doc_pan_hash bytea NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN gstin_encrypted character varying(255) NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN gstin_hash bytea NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN is_blocked boolean NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN org_address text ;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN org_name text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN pan_encrypted character varying(255) NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN pan_hash bytea NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN state text NOT NULL;
+ALTER TABLE atlas_app.ticket_merchant_details ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.ticket_merchant_details ADD PRIMARY KEY ( id);

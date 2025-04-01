@@ -274,7 +274,15 @@ data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, O
 
 data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = USER | CUSTOMER_SUPPORT | METER_RIDE_DUMMY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Role
+  = USER
+  | CUSTOMER_SUPPORT
+  | METER_RIDE_DUMMY
+  | TICKET_MERCHANT
+  | TICKET_USER
+  | TICKET_ADMIN
+  | TICKET_APPROVER
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Role)
 

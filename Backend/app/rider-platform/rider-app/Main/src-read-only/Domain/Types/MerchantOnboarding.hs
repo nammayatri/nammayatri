@@ -22,6 +22,8 @@ data MerchantOnboarding = MerchantOnboarding
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data GetFileResponse = GetFileResponse {fileBase64 :: Kernel.Prelude.Text, fileType :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data MerchantOnboardingAPI = MerchantOnboardingAPI
   { createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -39,10 +41,16 @@ data OnboardingStatus = INPROGRESS | COMPLETED | REJECTED deriving (Eq, Ord, Sho
 
 data OnboardingType = TICKET_MERCHANT_ONBOARDING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OnboardingStatus))
+data RequestorRole = DASHBOARD_USER | TICKET_MERCHANT | TICKET_ADMIN | TICKET_APPROVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkHttpInstancesForEnum (''OnboardingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OnboardingType))
+$(mkHttpInstancesForEnum ''OnboardingStatus)
 
-$(mkHttpInstancesForEnum (''OnboardingType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingType)
+
+$(mkHttpInstancesForEnum ''OnboardingType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RequestorRole)
+
+$(mkHttpInstancesForEnum ''RequestorRole)
