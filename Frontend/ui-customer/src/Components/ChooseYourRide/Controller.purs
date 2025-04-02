@@ -37,6 +37,7 @@ data Action
 
 type Config
   = { rideDistance :: String
+    , actualEstimateDistnace :: Int
     , rideDuration :: String
     , rideTime :: String
     , activeIndex :: Int
@@ -72,6 +73,7 @@ config :: Config
 config =
   { rideDistance: ""
   , rideDuration: ""
+  , actualEstimateDistnace: 0
   , rideTime: ""
   , activeIndex: 0
   , quoteList: []

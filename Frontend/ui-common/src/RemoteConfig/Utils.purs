@@ -18,7 +18,7 @@ import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConf
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
-import Prelude (not, ($), (==), (||))
+import Prelude
 import Data.Maybe (fromMaybe)
 import Data.Array (elem, filter, uncons)
 import Data.Array as DA
@@ -27,6 +27,10 @@ import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Common.RemoteConfig.Types as Types
+import Data.Foldable (foldl)
+import Data.Ord (compare)
+import LocalStorage.Cache
+import Foreign.Object (empty)
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -444,4 +448,24 @@ getConfigForVariant variant config =
     "BOOK_ANY" -> config.bookAny
     "DELIVERY_BIKE" -> config.deliveryBike
     _ -> config.default
-      
+
+defaultEstimateOfferConfig :: Types.EstimateOfferConfig
+defaultEstimateOfferConfig = {
+  conditions : [],
+  enableAllVariant : false,
+  translations : empty
+}
+
+getEstimateOfferConfig :: String -> Types.EstimateOfferConfig
+getEstimateOfferConfig city = getValueFromCache 
+                                ("estimate_offer_ratio_" <> city) 
+                                  (\_ -> 
+                                    let config = fetchRemoteConfigString "estimate_offer_ratio"
+                                        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEstimateOfferConfig
+                                    in getCityBasedConfig value $ toLower city)
+
+
+evaluateFarePolicy :: (Array Types.Conditions) -> Int -> String -> Number
+evaluateFarePolicy conditions distance variant = do
+  let sortedFares = DA.reverse $ DA.sortBy (\a b -> compare a.maxDistance b.maxDistance) conditions
+  foldl (\acc item -> if distance <= item.maxDistance && distance >= item.minDistance && ((fromMaybe variant item.variant) == variant) then item.ratio else acc) 0.0 sortedFares
