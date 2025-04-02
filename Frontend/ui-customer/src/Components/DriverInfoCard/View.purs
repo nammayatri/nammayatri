@@ -327,7 +327,7 @@ enquiryBanner push enquiryBannerMbConfig undoTimer =
             , height WRAP_CONTENT
             , color buttonConfig.color
             , text $ buttonConfig.title <> (case undoTimer of
-                Just timer -> " (" <> show timer <> "sec )"
+                Just timer -> " (" <> show timer <> ")"
                 Nothing -> "")
             , padding $ PaddingBottom 4
             ] <> (FontStyle.body4 TypoGraphy)
