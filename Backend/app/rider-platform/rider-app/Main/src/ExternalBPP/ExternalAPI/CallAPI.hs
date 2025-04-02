@@ -21,6 +21,7 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.Order as CMRLOrder
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus as CMRLPassengerViewStatus
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -38,6 +39,7 @@ getProviderName integrationBPPConfig =
     EBIX _ -> "Kolkata Buses"
     DIRECT _ -> "Direct Multimodal Services"
     Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
+    CRIS _ -> "CRIS Subway"
 
 getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
 getFares mbRiderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
@@ -108,3 +110,9 @@ getStationList integrationBPPConfig = do
 
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
+
+getRouteFare :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> CRISRouteFare.CRISFareRequest -> m CRISRouteFare.CRISFareResponse
+getRouteFare integrationBPPConfig request = do
+  case integrationBPPConfig.providerConfig of
+    CRIS config' -> CRISRouteFare.getRouteFare config' request
+    _ -> throwError $ InternalError "Unimplemented!"
