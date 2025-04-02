@@ -5,6 +5,7 @@ module Domain.Action.UI.NearbyBuses (postNearbyBusBooking) where
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
+import Data.List (nub)
 import Data.Text.Encoding (decodeUtf8)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -54,14 +55,12 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
   let buses'' = map decodeUtf8 busesBS
   logDebug $ "Buses: " <> show buses''
   busesBS' :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius radius "km")
-  let buses' = map decodeUtf8 busesBS'
+  let buses = map decodeUtf8 busesBS'
   logDebug $ "BusesBS': " <> show busesBS'
-  logDebug $ "Buses': " <> show buses'
-
-  let buses = buses'' <> buses'
+  logDebug $ "Buses': " <> show buses
 
   busRouteMapping <- QVehicleRouteMapping.findAllByVehicleNumber buses
-  let routeIds :: [Text] = map DTVRM.routeId busRouteMapping
+  let routeIds :: [Text] = nub $ map DTVRM.routeId busRouteMapping
 
   logDebug $ "Route IDs: " <> show routeIds
 
@@ -120,7 +119,7 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
           mapM
             ( \bus -> do
                 route <- QRoute.findByRouteId (Id busData.routeId)
-                let busEta = Kernel.Prelude.listToMaybe $ fromMaybe [] bus.busData.etaData
+                let busEta = Kernel.Prelude.listToMaybe $ fromMaybe [] bus.busData.eta_data
                 return $
                   API.Types.UI.NearbyBuses.NearbyBus
                     { capacity = Nothing,

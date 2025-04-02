@@ -105,7 +105,7 @@ filterTransitRoutes = filterM filterBusRoutes
                     return $
                       any
                         ( \bus -> do
-                            let busStopETA = find (\eta -> eta.stopId == stopCode) (fromMaybe [] bus.busData.etaData)
+                            let busStopETA = find (\eta -> eta.stopId == stopCode) (fromMaybe [] bus.busData.eta_data)
                             case busStopETA of
                               Just eta -> eta.arrivalTime > departureTimeWithBuffer
                               Nothing -> False

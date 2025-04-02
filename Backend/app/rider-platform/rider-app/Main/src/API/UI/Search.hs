@@ -250,8 +250,8 @@ multiModalSearch searchRequest initateJourney = do
                 hasBothStops bus =
                   case (originStopCode, destinationStopCode) of
                     (Just origCode, Just destCode) ->
-                      any (\eta -> eta.stopId == origCode) (fromMaybe [] bus.busData.etaData)
-                        && any (\eta -> eta.stopId == destCode) (fromMaybe [] bus.busData.etaData)
+                      any (\eta -> eta.stopId == origCode) (fromMaybe [] bus.busData.eta_data)
+                        && any (\eta -> eta.stopId == destCode) (fromMaybe [] bus.busData.eta_data)
                     _ -> True
 
                 defaultLargeTimeDiff :: NominalDiffTime
@@ -260,8 +260,8 @@ multiModalSearch searchRequest initateJourney = do
                 getBestBusScore bus =
                   case (originStopCode, destinationStopCode) of
                     (Just origCode, Just destCode) -> do
-                      let mbOrigTime = getStopArrivalTime origCode (fromMaybe [] bus.busData.etaData)
-                      let mbDestTime = getStopArrivalTime destCode (fromMaybe [] bus.busData.etaData)
+                      let mbOrigTime = getStopArrivalTime origCode (fromMaybe [] bus.busData.eta_data)
+                      let mbDestTime = getStopArrivalTime destCode (fromMaybe [] bus.busData.eta_data)
                       case (mbOrigTime, mbDestTime) of
                         (Just origTime, Just _) ->
                           abs (diffUTCTime origTime searchRequest.startTime) -- Sort by closest arrival time
@@ -270,11 +270,11 @@ multiModalSearch searchRequest initateJourney = do
 
         let originStopTime = case (mbBestBus, originStopCode) of
               (Just (_, busData), Just origCode) ->
-                getStopArrivalTime origCode (fromMaybe [] busData.etaData)
+                getStopArrivalTime origCode (fromMaybe [] busData.eta_data)
               _ -> Nothing
         let destStopTime = case (mbBestBus, destinationStopCode) of
               (Just (_, busData), Just destCode) ->
-                getStopArrivalTime destCode (fromMaybe [] busData.etaData)
+                getStopArrivalTime destCode (fromMaybe [] busData.eta_data)
               _ -> Nothing
 
         let calculatedDuration = case (originStopTime, destStopTime) of
@@ -284,12 +284,12 @@ multiModalSearch searchRequest initateJourney = do
 
         let originStopName = case (mbBestBus, originStopCode) of
               (Just (_, busData), Just origCode) ->
-                getStopName origCode (fromMaybe [] busData.etaData)
+                getStopName origCode (fromMaybe [] busData.eta_data)
               _ -> Nothing
 
         let destStopName = case (mbBestBus, destinationStopCode) of
               (Just (_, busData), Just destCode) ->
-                getStopName destCode (fromMaybe [] busData.etaData)
+                getStopName destCode (fromMaybe [] busData.eta_data)
               _ -> Nothing
 
         departureTimeFromSource <- case originStopTime of
@@ -367,12 +367,12 @@ multiModalSearch searchRequest initateJourney = do
     extractDest (Just d) = return d
 
     getStopArrivalTime :: Text -> [CQMultiModal.BusStopETA] -> Maybe UTCTime
-    getStopArrivalTime stopId etaData =
-      listToMaybe [eta.arrivalTime | eta <- etaData, eta.stopId == stopId]
+    getStopArrivalTime stopId eta_data =
+      listToMaybe [eta.arrivalTime | eta <- eta_data, eta.stopId == stopId]
 
     getStopName :: Text -> [CQMultiModal.BusStopETA] -> Maybe Text
-    getStopName stopId etaData =
-      listToMaybe [eta.stopName | eta <- etaData, eta.stopId == stopId]
+    getStopName stopId eta_data =
+      listToMaybe [eta.stopName | eta <- eta_data, eta.stopId == stopId]
 
     sortRoutesByDuration :: [DQuote.JourneyData] -> [DQuote.JourneyData]
     sortRoutesByDuration = sortBy (\j1 j2 -> fromMaybe LT (compare <$> j1.duration <*> j2.duration))
