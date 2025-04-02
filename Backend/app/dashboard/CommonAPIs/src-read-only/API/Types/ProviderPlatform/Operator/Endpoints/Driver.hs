@@ -164,10 +164,10 @@ data DriverAPIs = DriverAPIs
     postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverOperatorAddDrivers ::
       Kernel.Prelude.Text ->
-        ( Data.ByteString.Lazy.ByteString,
-          CreateDriversReq
-        ) ->
-        EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities
+      ( Data.ByteString.Lazy.ByteString,
+        CreateDriversReq
+      ) ->
+      EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)

@@ -8,10 +8,6 @@ module Domain.Action.Dashboard.Operator.Driver
   )
 where
 
-import EulerHS.Prelude (whenNothing_, (<|>))
-import Kernel.Sms.Config
-import qualified Domain.Types.RegistrationToken as SR
-import Kernel.Beam.Functions as B
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
@@ -25,13 +21,17 @@ import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.OperationHub as DOH
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RegistrationToken as SR
 import Environment
+import EulerHS.Prelude (whenNothing_, (<|>))
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
+import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Context as Context
