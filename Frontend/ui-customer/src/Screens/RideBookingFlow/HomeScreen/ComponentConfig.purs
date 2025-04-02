@@ -1636,6 +1636,7 @@ chooseYourRideConfig state =
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
       , rideDuration = state.data.rideDuration
+      , actualEstimateDistnace = state.data.actualEstimateDistnace
       , activeIndex = state.data.selectedEstimatesObject.index
       , quoteList = if isIntercity then state.data.quoteList else state.data.specialZoneQuoteList
       , nearByDrivers = state.data.nearByDrivers
