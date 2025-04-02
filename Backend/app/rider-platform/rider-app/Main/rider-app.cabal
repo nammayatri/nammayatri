@@ -289,6 +289,10 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus
       ExternalBPP.ExternalAPI.Metro.CMRL.StationList
       ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
+      ExternalBPP.ExternalAPI.Subway.CRIS.Auth
+      ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
+      ExternalBPP.ExternalAPI.Subway.CRIS.Error
+      ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
       Lib.JourneyLeg.Bus
