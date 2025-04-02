@@ -36,6 +36,7 @@ data ProviderConfig
   | DIRECT Domain.Types.Extra.IntegratedBPPConfig.DIRECTConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
+  | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
   deriving (Generic, FromJSON, ToJSON, Eq)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
