@@ -98,7 +98,9 @@ apis:
       query:
         - mbFrom: UTCTime
         - mbTo: UTCTime
-        - mbStatus: RequestStatus
+        - mbRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+        - mbRouteCode: Text
+        - mbDriverId: Text
         - mbLimit: Int
         - mbOffset: Int
       response:
@@ -114,7 +116,9 @@ apis:
             query:
               - from: UTCTime
               - to: UTCTime
-              - status: RequestStatus
+              - requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+              - routeCode: Text
+              - driverId: Text
               - limit: Int
               - offset: Int
             response:
@@ -1141,44 +1145,28 @@ types:
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
-  RequestStatus:
-    - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
-    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
-  RequestType:
-    - enum: "END_RIDE, OVERSPEEDING"
-  ApprovalRequestData:
-    - enum: "EndRide EndRideData, OverSpeeding OverSpeedingData"
-  EndRideData:
-    - lat: Double
-    - lon: Double
-    - tripTransactionId: Id TripTransaction
-    - tripCode: Maybe Text
-    - driverName: Text
-    - driverMobileNumber: Maybe Text
-    - vehicleRegistrationNumber: Text
-    - derive: "Eq,Ord,Read"
-  OverSpeedingData:
-    - speed: Double
-    - location: LatLong
-    - derive: "Eq,Ord,Read"
   DriverRequestDetails:
-    - requestData: ApprovalRequestData
+    - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
     - title: Text
     - body: Text
     - raisedAt: UTCTime
-    - status: Maybe RequestStatus
+    - status: Maybe Domain.Types.Alert.AlertRequestStatus
     - approvalRequestId: Text
+    - routeCode: Text
+    - driverId: Text
   DriverRequestDetailsT:
-    - requestData: ApprovalRequestData
+    - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
     - title: Text
     - body: Text
     - raisedAt: UTCTime
-    - status: Maybe RequestStatus
+    - status: Maybe Domain.Types.Alert.AlertRequestStatus
     - approvalRequestId: Text
+    - routeCode: Text
+    - driverId: Text
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   RequestRespondReq:
-    - status: RequestStatus
+    - status: Domain.Types.Alert.AlertRequestStatus
     - approvalRequestId: Text
     - reason: Text
     - derive: "'HideSecrets"

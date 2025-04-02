@@ -70,7 +70,8 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
-import qualified Domain.Types.ApprovalRequest as DTR
+import qualified Domain.Types.Alert as DTA
+import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.FleetConfig as DFC
@@ -115,7 +116,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
-import qualified Storage.Queries.ApprovalRequest as QDR
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
@@ -133,6 +134,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -188,47 +190,34 @@ getDriverFleetGetDriverRequests ::
   Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
-  Maybe Common.RequestStatus ->
+  Maybe DTA.AlertRequestType ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Flow Common.DriverRequestResp
-getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset = do
+getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let status_ = case mbStatus of
-        Nothing -> Nothing
-        Just status -> Just $ castReqStatus status
-  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo status_ mbLimit mbOffset
-  let driverRequestList = map buildDriverRequestListItem driverRequests
+  tripAlertRequests <- B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId mbRouteCode mbLimit mbOffset
+  driverRequestList <-
+    mapM
+      ( \tripAlertRequest -> do
+          alertRequest <- QAR.findByPrimaryKey tripAlertRequest.alertRequestId >>= fromMaybeM (DriverRequestNotFound tripAlertRequest.alertRequestId.getId)
+          buildDriverRequestListItem tripAlertRequest.driverId tripAlertRequest.routeCode alertRequest
+      )
+      tripAlertRequests
   pure $ Common.DriverRequestResp driverRequestList
   where
-    buildDriverRequestListItem DTR.ApprovalRequest {..} =
-      Common.DriverRequestDetails
-        { raisedAt = createdAt,
-          requestData = castCommonReqData requestData,
-          status = castStatusToCommon (Just status),
-          approvalRequestId = id.getId,
-          ..
-        }
-
-castCommonReqData :: DTR.ApprovalRequestData -> Common.ApprovalRequestData
-castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = Id tripTransactionId, ..}
-castCommonReqData (DTR.OverSpeeding DTR.OverSpeedingData {..}) = Common.OverSpeeding $ Common.OverSpeedingData {..}
-
-castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
-castReqStatus = \case
-  Common.AWAITING_APPROVAL -> DTR.AWAITING_APPROVAL
-  Common.ACCEPTED -> DTR.ACCEPTED
-  Common.REJECTED -> DTR.REJECTED
-  Common.REVOKED -> DTR.REVOKED
-
-castStatusToCommon :: Maybe DTR.RequestStatus -> Maybe Common.RequestStatus
-castStatusToCommon = \case
-  Just DTR.AWAITING_APPROVAL -> Just Common.AWAITING_APPROVAL
-  Just DTR.ACCEPTED -> Just Common.ACCEPTED
-  Just DTR.REJECTED -> Just Common.REJECTED
-  Just DTR.REVOKED -> Just Common.REVOKED
-  _ -> Nothing
+    buildDriverRequestListItem driverId routeCode DTR.AlertRequest {..} = do
+      pure $
+        Common.DriverRequestDetails
+          { raisedAt = createdAt,
+            approvalRequestId = id.getId,
+            driverId = driverId.getId,
+            status = Just status,
+            ..
+          }
 
 ---------------------------------------------------------------------
 postDriverFleetRespondDriverRequest ::
@@ -241,16 +230,16 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
+    driverRequest <- B.runInReplica $ QAR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
     driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
-      DTR.AWAITING_APPROVAL -> QDR.updateStatusWithReason (castReqStatus req.status) (Just req.reason) (Id req.approvalRequestId)
+      DTA.AWAITING_APPROVAL -> QAR.updateStatusWithReason req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
-      Common.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTR.REJECTED, reason = Just req.reason}
-      Common.ACCEPTED -> do
+      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTA.REJECTED, reason = Just req.reason}
+      DTA.ACCEPTED -> do
         case driverRequest.requestData of
-          DTR.EndRide DTR.EndRideData {..} -> do
+          DTA.EndRide DTA.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
             tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
             void $ WMB.endOngoingTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval False
@@ -263,12 +252,9 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       cs $
         unwords
           [ "Sorry, your request for",
-            (show $ getRequestType req_.requestData) <> " has been rejected",
+            (show $ DTA.castAlertRequestDataToRequestType req_.requestData) <> " has been rejected",
             "Check the app for more details."
           ]
-    getRequestType = \case
-      DTR.EndRide _ -> DTR.EndRideApproval
-      DTR.OverSpeeding _ -> DTR.OverSpeedingAlert
 
 ---------------------------------------------------------------------
 postDriverFleetAddRCWithoutDriver ::
@@ -352,7 +338,7 @@ getDriverFleetGetAllDriver ::
 getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  mbMobileNumberHash <- mapM getDbHash mbMobileNumber
+  mbMobileNumberHash <- mapM getDbHash (mbSearchString <|> mbMobileNumber)
   logDebug $ "mobile number hash: " <> show mbMobileNumberHash <> " param-string: " <> show mbMobileNumber
   pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberHash mbName mbSearchString (Just True) Nothing
   fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
@@ -790,7 +776,7 @@ getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe 
 getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString = do
   let limit = min 10 $ fromMaybe 5 mbLimit
       offset = fromMaybe 0 mbOffset
-  mobileNumberHash <- mapM getDbHash mbDriverPhNo
+  mobileNumberHash <- mapM getDbHash (mbSearchString <|> mbDriverPhNo)
   let mode = castDashboardDriverStatus <$> mbMode
   pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
   let (fleetDriverAssociation, _) = unzip pairs
