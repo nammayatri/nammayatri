@@ -58,6 +58,7 @@ type SettingSideBarState =
   , appConfig :: AppConfig
   , sideBarList :: Array String
   , hasCompletedSafetySetup :: Boolean
+  , isPayoutEnabled :: Boolean
   }
 
 type Item =

@@ -2675,9 +2675,16 @@ homeScreenFlow = do
       (GlobalState gState) <- getState
       modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode }})
       case gState.globalFlowCache.profileResp of
-        Nothing -> pure unit
-        Just (GetProfileRes resp) -> modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, existingVpa = resp.payoutVpa, referreeCode = fromMaybe "" resp.referralCode, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}, props{showUPIPopUp = (fromMaybe 0.0 resp.referralAmountPaid) - ((fromMaybe 0.0 resp.referralEarnings) + (fromMaybe 0.0 resp.referredByEarnings)) /= 0.0 && isNothing resp.payoutVpa}})
-      referralPayoutScreenFlow
+        Nothing -> do
+          modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode })
+          referralScreenFlow
+        Just (GetProfileRes resp) -> do 
+          if fromMaybe false resp.isPayoutEnabled then do
+            modifyScreenState $ ReferralPayoutScreenStateType (\referralScreen -> referralScreen { data {referralAmountPaid = fromMaybe 0.0 resp.referralAmountPaid, existingVpa = resp.payoutVpa, referreeCode = fromMaybe "" resp.referralCode, referralEarnings = fromMaybe 0.0 resp.referralEarnings, referredByEarnings = fromMaybe 0.0 resp.referredByEarnings}, props{showUPIPopUp = (fromMaybe 0.0 resp.referralAmountPaid) - ((fromMaybe 0.0 resp.referralEarnings) + (fromMaybe 0.0 resp.referredByEarnings)) /= 0.0 && isNothing resp.payoutVpa}})
+            referralPayoutScreenFlow
+            else do
+              modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode })
+              referralScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (APISuccessResp res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
@@ -3112,7 +3119,7 @@ rideSearchRequestFlow updatedState = do
         Just (LatLong source), Just (LatLong dest) -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { maxEstimatedDuration = maxEstimatedDuration }, props { routeEndPoints = Just ({ source: { lat: source.lat, lng: source.lon, place: state.data.source, address: Nothing, city: Nothing, isSpecialPickUp: Just false }, destination: { lat: dest.lat, lng: dest.lon, place: state.data.destination, address: Nothing, city: Nothing, isSpecialPickUp: Just false } })} })
         _, _ -> pure unit
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress }})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rideDistance = distance, actualEstimateDistnace = response.distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress }})
       let
         distanceBtwCurrentAndSource = getDistanceBwCordinates state.props.sourceLat state.props.sourceLong state.props.currentLocation.lat state.props.currentLocation.lng
 
@@ -3447,7 +3454,7 @@ rideSearchFlow flowType = do
                   Just (LatLong source), Just (LatLong dest) -> do
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeEndPoints = Just ({ source: { lat: source.lat, lng: source.lon, place: finalState.data.source, address: Nothing, city: Nothing, isSpecialPickUp: Just false }, destination: { lat: dest.lat, lng: dest.lon, place: finalState.data.destination, address: Nothing, city: Nothing, isSpecialPickUp: Just false } }) } })
                   _, _ -> pure unit
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rideDistance = distance, rideDuration = duration, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress } })
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rideDistance = distance, actualEstimateDistnace = response.distance, rideDuration = duration, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress } })
                 let
                   distanceBtwCurrentAndSource = getDistanceBwCordinates finalState.props.sourceLat finalState.props.sourceLong finalState.props.currentLocation.lat finalState.props.currentLocation.lng
 
