@@ -125,52 +125,30 @@ types:
     ticketQuantity: Maybe Int
 
   TransportRoute:
-    code: Text
-    id: Text
-    shortName: Text
-    longName: Text
-    startLat: Double
-    startLon: Double
-    endLat: Double
-    endLon: Double
-    vehicleType: Text
-    color: Maybe Text
-    polyline: Maybe Text
-    merchantId: Text
-    merchantOperatingCityId: Text
-    integratedBppConfigId: Text
+    cd: Text
+    sN: Text
+    lN: Text
+    vt: Text
+    clr: Maybe Text
 
   TransportStation:
-    code: Text
-    id: Text
-    name: Text
-    lat: Double
-    lon: Double
-    address: Maybe Text
-    vehicleType: Text
-    merchantId: Text
-    merchantOperatingCityId: Text
-    integratedBppConfigId: Text
+    cd: Text
+    nm: Text
+    lt: Double
+    ln: Double
+    vt: Text
+    ad: Maybe Text
 
   TransportRouteStopMapping:
-    routeCode: Text
-    stopCode: Text
-    stopName: Text
-    stopLat: Double
-    stopLon: Double
-    sequenceNum: Int
-    estimatedTravelTimeFromPreviousStop: Maybe Int
-    vehicleType: Text
-    merchantId: Text
-    merchantOperatingCityId: Text
-    providerCode: Text
-    integratedBppConfigId: Text
+    rc: Text
+    sc: Text
+    sn: Int
 
   PublicTransportData:
-    routes: [TransportRoute]
-    stations: [TransportStation]
-    routeStopMappings: [TransportRouteStopMapping]
-    publicTransportConfigVersion: Text
+    rs: [TransportRoute]
+    ss: [TransportStation]
+    rsm: [TransportRouteStopMapping]
+    ptcv: Text
 
 apis:
   - POST:

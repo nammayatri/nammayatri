@@ -120,7 +120,7 @@ data PaymentOrder = PaymentOrder {sdkPayload :: Kernel.Prelude.Maybe Kernel.Exte
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PublicTransportData = PublicTransportData {publicTransportConfigVersion :: Kernel.Prelude.Text, routeStopMappings :: [TransportRouteStopMapping], routes :: [TransportRoute], stations :: [TransportStation]}
+data PublicTransportData = PublicTransportData {ptcv :: Kernel.Prelude.Text, rs :: [TransportRoute], rsm :: [TransportRouteStopMapping], ss :: [TransportStation]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -145,53 +145,21 @@ data SwitchTaxiReq = SwitchTaxiReq {estimateId :: Kernel.Types.Id.Id Domain.Type
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TransportRoute = TransportRoute
-  { code :: Kernel.Prelude.Text,
-    color :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    endLat :: Kernel.Prelude.Double,
-    endLon :: Kernel.Prelude.Double,
-    id :: Kernel.Prelude.Text,
-    integratedBppConfigId :: Kernel.Prelude.Text,
-    longName :: Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Text,
-    merchantOperatingCityId :: Kernel.Prelude.Text,
-    polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    shortName :: Kernel.Prelude.Text,
-    startLat :: Kernel.Prelude.Double,
-    startLon :: Kernel.Prelude.Double,
-    vehicleType :: Kernel.Prelude.Text
-  }
+data TransportRoute = TransportRoute {cd :: Kernel.Prelude.Text, clr :: Kernel.Prelude.Maybe Kernel.Prelude.Text, lN :: Kernel.Prelude.Text, sN :: Kernel.Prelude.Text, vt :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TransportRouteStopMapping = TransportRouteStopMapping
-  { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    integratedBppConfigId :: Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Text,
-    merchantOperatingCityId :: Kernel.Prelude.Text,
-    providerCode :: Kernel.Prelude.Text,
-    routeCode :: Kernel.Prelude.Text,
-    sequenceNum :: Kernel.Prelude.Int,
-    stopCode :: Kernel.Prelude.Text,
-    stopLat :: Kernel.Prelude.Double,
-    stopLon :: Kernel.Prelude.Double,
-    stopName :: Kernel.Prelude.Text,
-    vehicleType :: Kernel.Prelude.Text
-  }
+data TransportRouteStopMapping = TransportRouteStopMapping {rc :: Kernel.Prelude.Text, sc :: Kernel.Prelude.Text, sn :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TransportStation = TransportStation
-  { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    code :: Kernel.Prelude.Text,
-    id :: Kernel.Prelude.Text,
-    integratedBppConfigId :: Kernel.Prelude.Text,
-    lat :: Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Double,
-    merchantId :: Kernel.Prelude.Text,
-    merchantOperatingCityId :: Kernel.Prelude.Text,
-    name :: Kernel.Prelude.Text,
-    vehicleType :: Kernel.Prelude.Text
+  { ad :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cd :: Kernel.Prelude.Text,
+    ln :: Kernel.Prelude.Double,
+    lt :: Kernel.Prelude.Double,
+    nm :: Kernel.Prelude.Text,
+    vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
