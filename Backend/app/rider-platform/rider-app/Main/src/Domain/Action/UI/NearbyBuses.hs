@@ -120,13 +120,14 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
           mapM
             ( \bus -> do
                 route <- QRoute.findByRouteId (Id busData.routeId)
+                let busEta = Kernel.Prelude.listToMaybe $ fromMaybe [] bus.busData.etaData
                 return $
                   API.Types.UI.NearbyBuses.NearbyBus
                     { capacity = Nothing,
                       currentLocation = Maps.LatLong bus.busData.latitude bus.busData.longitude,
                       distance = Nothing,
-                      eta = Nothing,
-                      nextStop = Nothing,
+                      eta = busEta >>= (\etaD -> Just etaD.arrivalTime),
+                      nextStop = busEta >>= (\etaD -> Just etaD.stopName),
                       occupancy = Nothing,
                       routeCode = busData.routeId,
                       serviceType = Nothing,

@@ -79,24 +79,20 @@ mkRouteKey :: Text -> Text
 mkRouteKey routeId = "route:" <> routeId
 
 -- Get all buses for a single route
-getRoutesBuses :: Text -> Environment.Flow RouteWithBuses
+getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m RouteWithBuses
 getRoutesBuses routeId = do
   let key = mkRouteKey routeId
-
-  -- Get all bus data from Redis directly
 
   busDataPairs' :: [(Text, Text)] <- withCrossAppRedisNew $ Hedis.hGetAll key
   logDebug $ "Got bus data for route busDataPairs " <> routeId <> ": " <> show busDataPairs'
   busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
   logDebug $ "Got bus data for route " <> routeId <> ": " <> show busDataPairs
 
-  -- The values are already BusData objects
-  let buses = map (\busDataPair -> FullBusData (fst busDataPair) (snd busDataPair)) busDataPairs
+  let buses = map (uncurry FullBusData) busDataPairs
 
   logDebug $ "Parsed bus data for route " <> routeId <> ": " <> show buses
 
   return $ RouteWithBuses routeId buses
 
--- Get buses for multiple routes
 getBusesForRoutes :: [Text] -> Environment.Flow [RouteWithBuses]
-getBusesForRoutes routeIds = mapM getRoutesBuses routeIds
+getBusesForRoutes = mapM getRoutesBuses
