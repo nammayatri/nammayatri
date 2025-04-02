@@ -453,14 +453,16 @@ screen initialState =
         (\push -> do 
             case initialState.data.profile of
               Just (GetProfileRes profile) -> do
-                let totalEarningPending = fromMaybe 0 $ fromNumber ((fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid))
-                if ((fromMaybe 0.0 profile.referredByEarnings) > 0.0) && (fromMaybe false profile.hasTakenValidRide) && totalEarningPending > 0 && isNothing profile.payoutVpa && itsBeenOneDay "COLLECT_EARNINGS" then
-                  push $ AddVPA $ totalEarningPending
-                else do
-                  let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
-                  if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
-                    then push $ TakeFirstRide
-                    else pure unit
+                if (fromMaybe false profile.isPayoutEnabled) then do
+                  let totalEarningPending = fromMaybe 0 $ fromNumber ((fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid))
+                  if ((fromMaybe 0.0 profile.referredByEarnings) > 0.0) && (fromMaybe false profile.hasTakenValidRide) && totalEarningPending > 0 && isNothing profile.payoutVpa && itsBeenOneDay "COLLECT_EARNINGS" then
+                    push $ AddVPA $ totalEarningPending
+                  else do
+                    let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
+                    if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
+                      then push $ TakeFirstRide
+                      else pure unit
+                  else pure unit
               Nothing -> pure unit
             pure $ pure unit)
       ]
@@ -1463,7 +1465,7 @@ settingSideBarView push state =
     , width MATCH_PARENT
     , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED && not (state.props.isPopUp /= NoPopUp) then DISABLE else DISABLE_DESCENDANT
     ]
-    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config}) ]
+    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config, isPayoutEnabled = maybe false (\(GetProfileRes resp) -> fromMaybe false resp.isPayoutEnabled) state.data.profile}) ]
 
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
@@ -4016,14 +4018,14 @@ pickupLocationView push state =
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity RIGHT
-              , visibility $ boolToVisibility state.data.config.feature.enableReferral
+              , visibility $ boolToVisibility (state.data.config.feature.enableReferral)
               ][ linearLayout
                  [ width WRAP_CONTENT
                  , height WRAP_CONTENT
                  , cornerRadius 24.0
                  , background Color.blue600
                  , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-                 , visibility $ boolToVisibility $ applyReferral || not isPayoutEnabled
+                 , visibility $ boolToVisibility $ (applyReferral || not isPayoutEnabled) && not hasTakenRide
                  ][ textView $
                     [ text $ if applyReferral then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
                     , color Color.blue900
@@ -4036,8 +4038,8 @@ pickupLocationView push state =
                     , height WRAP_CONTENT
                     , cornerRadius 24.0
                     , background if showCollect then Color.blue900 else Color.blue600
-                    , onClick push $ const $ if takeFirstRide then WhereToClick else ReferralPayout
-                    , visibility $ boolToVisibility $ (not applyReferral) && (showEarnNow ||  showCollect)
+                    , onClick push $ const $ if showCollect then ReferralPayout else if takeFirstRide then WhereToClick else ReferralPayout
+                    , visibility $ boolToVisibility $ (isPayoutEnabled) && (not applyReferral) && (showEarnNow ||  showCollect) 
                     , padding $ Padding 10 8 10 8
                     , gravity CENTER
                     ][ imageView
