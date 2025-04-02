@@ -28,6 +28,7 @@ import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import Foreign.Object (Object)
 
 type RemoteConfig a
   = { bangalore :: Maybe a
@@ -339,4 +340,17 @@ type VoipConfig = {
     enableVoipFeature :: Boolean,
     enableVoipCalling :: Boolean
   }
+}
+
+type EstimateOfferConfig = {
+  conditions :: Array Conditions,
+  enableAllVariant :: Boolean,
+  translations :: Object String
+}
+
+type Conditions = {
+  minDistance ::  Int,
+  maxDistance :: Int,
+  variant :: Maybe String,
+  ratio :: Number
 }

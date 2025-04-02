@@ -783,7 +783,7 @@ collectEarningView push state =
       , background Colors.blue600
       , padding $ Padding 16 16 16 16
       , gravity CENTER
-      , visibility $ boolToVisibility $ state.data.referreeCode /= "" && (isJust state.data.existingVpa || isPayoutPending)
+      , visibility $ boolToVisibility $ (isJust state.data.existingVpa || isPayoutPending)
       ]
       [ textView
           $ [ text if isPayoutPending then getString YAY_YOU_HAVE_REFERRAL_EARNINGS else getString YOUR_EARNINGS_N_ <> show totalEarning
