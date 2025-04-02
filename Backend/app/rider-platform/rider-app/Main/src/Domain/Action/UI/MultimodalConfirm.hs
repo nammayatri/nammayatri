@@ -63,7 +63,6 @@ import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
@@ -522,7 +521,7 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
   let fetchData bppConfig = do
         stations <- QStation.findAllByBppConfigId bppConfig.id
         routes <- QRoute.findAllByBppConfigId bppConfig.id
-        routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
+        -- routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
         pure
           ApiTypes.PublicTransportData
             { ss =
@@ -553,16 +552,16 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
                         }
                   )
                   routes,
-              rsm =
-                map
-                  ( \rs ->
-                      ApiTypes.TransportRouteStopMapping
-                        { rc = rs.routeCode,
-                          sc = rs.stopCode,
-                          sn = rs.sequenceNum
-                        }
-                  )
-                  routeStops,
+              rsm = [],
+              -- map
+              --   ( \rs ->
+              --       ApiTypes.TransportRouteStopMapping
+              --         { rc = rs.routeCode,
+              --           sc = rs.stopCode,
+              --           sn = rs.sequenceNum
+              --         }
+              --   )
+              --   routeStops,
               ptcv = "v1" -- TODO: handle this
             }
 
