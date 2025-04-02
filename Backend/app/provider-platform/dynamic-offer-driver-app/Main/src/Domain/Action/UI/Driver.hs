@@ -924,7 +924,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem)
   let isVehicleSupported = maybe False (`elem` supportedServiceTiers) mbDefaultServiceTier
   onRideFlag <-
-    if driverInfo.onRide
+    if driverInfo.onRide && driverInfo.onboardingVehicleCategory /= Just DVC.BUS
       then
         Ride.notOnRide person.id >>= \veryMuchNotOnRide ->
           if veryMuchNotOnRide

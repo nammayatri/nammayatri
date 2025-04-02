@@ -37,4 +37,8 @@ FleetBadgeAssociation:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  excludedDefaultQueries:
+    - create
+    - createMany
+
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

@@ -1,9 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OrphanInstances.ApprovalRequest where
+module Storage.Queries.OrphanInstances.AlertRequest where
 
-import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.Alert.AlertRequestType
+import qualified Domain.Types.AlertRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -11,39 +12,35 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.Beam.ApprovalRequest as Beam
+import qualified Storage.Beam.AlertRequest as Beam
 
-instance FromTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
-  fromTType' (Beam.ApprovalRequestT {..}) = do
+instance FromTType' Beam.AlertRequest Domain.Types.AlertRequest.AlertRequest where
+  fromTType' (Beam.AlertRequestT {..}) = do
     pure $
       Just
-        Domain.Types.ApprovalRequest.ApprovalRequest
+        Domain.Types.AlertRequest.AlertRequest
           { body = body,
             createdAt = createdAt,
-            entityId = Kernel.Prelude.fromMaybe "-" entityId,
-            entityType = Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.TRIP entityType,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             reason = reason,
             requestData = requestData,
-            requestType = Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.EndRideApproval requestType,
+            requestType = Kernel.Prelude.fromMaybe Domain.Types.Alert.AlertRequestType.EndRideApproval requestType,
             requesteeId = Kernel.Types.Id.Id requesteeId,
-            requesteeType = Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.FleetOwner requesteeType,
+            requesteeType = Kernel.Prelude.fromMaybe Domain.Types.AlertRequest.FleetOwner requesteeType,
             requestorId = Kernel.Types.Id.Id requestorId,
-            requestorType = Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.DriverGenerated requestorType,
+            requestorType = Kernel.Prelude.fromMaybe Domain.Types.AlertRequest.DriverGenerated requestorType,
             status = status,
             title = title,
             updatedAt = updatedAt
           }
 
-instance ToTType' Beam.ApprovalRequest Domain.Types.ApprovalRequest.ApprovalRequest where
-  toTType' (Domain.Types.ApprovalRequest.ApprovalRequest {..}) = do
-    Beam.ApprovalRequestT
+instance ToTType' Beam.AlertRequest Domain.Types.AlertRequest.AlertRequest where
+  toTType' (Domain.Types.AlertRequest.AlertRequest {..}) = do
+    Beam.AlertRequestT
       { Beam.body = body,
         Beam.createdAt = createdAt,
-        Beam.entityId = Kernel.Prelude.Just entityId,
-        Beam.entityType = Kernel.Prelude.Just entityType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

@@ -7,7 +7,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
-  ApprovalRequest: Domain.Types.ApprovalRequest
+  AlertRequest: Domain.Types.AlertRequest
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -64,7 +64,7 @@ TripTransaction:
     allowEndingMidRoute: Bool
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
-    endRideApprovalRequestId: Maybe (Id ApprovalRequest)
+    endRideApprovalRequestId: Maybe (Id AlertRequest)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     tripTerminationSource: Maybe ActionSource
@@ -126,113 +126,25 @@ TripTransaction:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-ApprovalRequest:
-  tableName: approval_request
-
-  types:
-    RequestStatus:
-      - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
-      - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    RequestorType:
-      enum: "SystemGenerated, DriverGenerated"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    RequesteeType:
-      enum: "FleetOwner, Driver"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    RequestType:
-      enum: "EndRideApproval, OverSpeedingAlert"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    EntityType:
-      enum: "TRIP, RIDE"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    ApprovalRequestData:
-      enum: "EndRide EndRideData, OverSpeeding OverSpeedingData"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    OverSpeedingData:
-      speed: Double
-      location: LatLong
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    EndRideData:
-      lat: Double
-      lon: Double
-      tripTransactionId: Text
-      tripCode: Maybe Text
-      driverName: Text
-      driverMobileNumber: Maybe Text
-      vehicleRegistrationNumber: Text
-      derive: "Eq,Ord,Read"
+TripAlertRequest:
+  tableName: trip_alert_request
 
   fields:
-    id: Id ApprovalRequest
-    entityId: Text
-    entityType: EntityType
-    requestorId: Id Person
-    requestorType: RequestorType
-    requesteeId: Id Person
-    requesteeType: RequesteeType
-    requestType: RequestType
-    requestData: ApprovalRequestData
-    title: Text
-    body: Text
-    status: RequestStatus
-    reason: Maybe Text
+    id: Id TripAlertRequest
+    alertRequestId: Id AlertRequest
+    tripTransactionId: Id TripTransaction
+    driverId: Id Person
+    fleetOwnerId: Id Person
+    routeCode: Text
+    alertRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
     createdAt: UTCTime
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
-  beamType:
-    entityId: Maybe Text
-    entityType: Maybe EntityType
-    requestorType: Maybe RequestorType
-    requesteeType: Maybe RequesteeType
-    requestType: Maybe RequestType
-
-  fromTType:
-    entityId: Kernel.Prelude.fromMaybe "-"|I
-    entityType: Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.TRIP|I
-    requestorType: Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.DriverGenerated|I
-    requesteeType: Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.FleetOwner|I
-    requestType: Kernel.Prelude.fromMaybe Domain.Types.ApprovalRequest.EndRideApproval|I
-
-  toTType:
-    entityId: Kernel.Prelude.Just|I
-    entityType: Kernel.Prelude.Just|I
-    requestorType: Kernel.Prelude.Just|I
-    requesteeType: Kernel.Prelude.Just|I
-    requestType: Kernel.Prelude.Just|I
-
   constraints:
     id: PrimaryKey
-    requestorId: "!SecondaryKey"
-    requesteeId: "!SecondaryKey"
-
-  queries:
-    updateStatusWithReason:
-      kvFunction: updateOneWithKV
-      params: [status, reason]
-      where: id
-
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ApprovalRequestData>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <ApprovalRequestData>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestStatus>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestStatus>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestorType>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestorType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequesteeType>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequesteeType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestType>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EntityType>
-    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <EntityType>
+    driverId: "!SecondaryKey"
 
   extraOperations:
     - EXTRA_QUERY_FILE

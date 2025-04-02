@@ -1,0 +1,37 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Storage.Queries.TripAlertRequestExtra where
+
+import Domain.Types.Alert
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.TripAlertRequest
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Sequelize as Se
+import qualified Storage.Beam.TripAlertRequest as Beam
+import Storage.Queries.OrphanInstances.TripAlertRequest
+
+findTripAlertRequestsByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
+findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId mbRouteCode mbLimit mbOffset = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
+            <> [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
+            <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is Beam.alertRequestType $ Se.Eq (fromJust mbAlertRequestType) | isJust mbAlertRequestType]
+            <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
+            <> [Se.Is Beam.routeCode $ Se.Eq (fromJust mbRouteCode) | isJust mbRouteCode]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
+  where
+    limitVal = min (fromMaybe 10 mbLimit) 10
+    offsetVal = fromMaybe 0 mbOffset
