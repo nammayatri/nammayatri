@@ -50,6 +50,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import Numeric (showHex)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -76,6 +77,8 @@ import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
 import qualified Utils.QRCode.Scanner as QRScanner
 import Web.JWT hiding (claims)
+
+-- import Text.Hex (encodeHex)
 
 validateRequest :: DOrder -> DIBC.PlatformType -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} platformType = do
@@ -234,7 +237,15 @@ mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
   (_, status_) <- Utils.getTicketStatus booking dTicket
-  processedQrData <- processQRData dTicket.qrData
+  newQrData <-
+    case booking.providerId of
+      "BMRCL_3567_0420" -> do
+        fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InvalidRequest $ "Station not found for stationId: " <> show booking.fromStationId)
+        fromStationLat <- fromStation.lat & fromMaybeM (InvalidRequest $ "Station lat not found for stationId: " <> show booking.fromStationId)
+        fromStationLon <- fromStation.lon & fromMaybeM (InvalidRequest $ "Station lon not found for stationId: " <> show booking.fromStationId)
+        mkBmrclDynamicQr dTicket.qrData fromStationLat fromStationLon
+      _ -> return $ dTicket.qrData  
+  processedQrData <- processQRData newQrData
   return
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
@@ -404,3 +415,9 @@ mkGoogleWalletLink serviceAccount tObject = do
   let textToken = snd token
   let url = "https://pay.google.com/gp/v/save/" <> textToken
   return url
+
+mkBmrclDynamicQr :: (MonadFlow m) => Text -> Double -> Double -> m Text
+mkBmrclDynamicQr qrStaticBlock lat lon = do
+  now <- liftIO getPOSIXTime
+  let hexTime = T.pack (showHex (floor now :: Integer) "")
+  return (qrStaticBlock <> "#{" <> hexTime <> "||" <> T.pack (show lat) <> "|" <> T.pack (show lon) <> "|}")
