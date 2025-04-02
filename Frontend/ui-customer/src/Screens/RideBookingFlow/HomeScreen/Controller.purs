@@ -3356,13 +3356,23 @@ eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
   continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state =
-  continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
-    do
-      push <- getPushFn Nothing "HomeScreen"
-      void $ startTimer 15 "undoEnquiryBanner" "1" push UnDoEnquiryBannerAC
+eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state = 
+  if state.data.enquiryBannerStage == Just ST.QuestionStage then do
+    continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
+      do
+        push <- getPushFn Nothing "HomeScreen"
+        void $ startTimer 15 "undoEnquiryBanner" "1" push UnDoEnquiryBannerAC
+        pure NoAction
+    ]
+  else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage || state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then do
+    continueWithCmd state [do
+      void $ openUrlInApp "https://nammayatri.in/ekd/"
       pure NoAction
-  ]
+    ]
+  else do
+    update state
+   
+
 
 eval (UnDoEnquiryBannerAC seconds timerID timeInMinutes ) state = do
   if seconds == 0 then do
@@ -3384,6 +3394,7 @@ eval (UnDoEnquiryBannerAC seconds timerID timeInMinutes ) state = do
         void $ Remote.postIssueBT "en" postIssueBody
       void $ pure $ clearTimerWithId "undoEnquiryBanner"
       void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
+      void $ pure $ toast "Feedback submitted!"
       pure NoAction
     ]
   else do
@@ -3394,8 +3405,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqFirstBtnClic
     void $ pure $ clearTimerWithId "undoEnquiryBanner"
     continue state{ data {enquiryBannerStage = Just ST.QuestionStage}, props { enquiryBannerUndoTimer = Nothing}}
   else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage then do
+    void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
     continue state{ data {enquiryBannerStage = Nothing}}
   else do
+    void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
     continue state{ data {enquiryBannerStage = Just ST.FirstBtnClickStage}}
 eval ReferralPayout state = exit $ GoToReferral GIVE_REFERRAL state
 
