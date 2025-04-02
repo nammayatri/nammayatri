@@ -93,6 +93,7 @@ RiderConfig:
     nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
     nearbyDriverSearchRadius: Maybe Double
     isDeviceIdCheckDisabled: Maybe Bool
+    enableBusFiltering: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

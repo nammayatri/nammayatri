@@ -35,6 +35,7 @@ data RiderConfig = RiderConfig
     driverReferredSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     dynamicLogicUpdatePassword :: Kernel.Prelude.Text,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
+    enableBusFiltering :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
