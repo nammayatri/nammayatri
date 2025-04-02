@@ -59,6 +59,8 @@ import Components.ChooseYourRide.Controller (getBookAnyProps, getMinMaxCapacity)
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Helpers.TipConfig
 import Common.RemoteConfig (fetchRemoteConfigString)
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -215,7 +217,7 @@ boostSearchView push state showBoostSearch =
          , margin $ MarginBottom 4
          ] <> FontStyle.body3 TypoGraphy
        , textView $ 
-         [ text $ getString BOOST_SEARCH_INSTANTLY
+         [ text $ getStringV2 boost_search_instantly
          , width MATCH_PARENT
          , gravity CENTER
          , color Color.black800
@@ -235,7 +237,7 @@ boostSearchView push state showBoostSearch =
          , orientation VERTICAL
          , cornerRadius 8.0
          ][ textView $
-            [ text $ getString ADD_A_TIP
+            [ text $ getStringV2 add_a_tip
             , color Color.black800
             , lineHeight "18"
             , margin $ MarginBottom 10
@@ -336,7 +338,7 @@ boostSearchView push state showBoostSearch =
       , margin $ MarginTop 16
       , visibility $ boolToVisibility $ enableBoostSearch
       ][ textView $ 
-          [ text $ getString UPDATED_FARE_STR
+          [ text $ getStringV2 updated_fare_str
           , color Color.black800
           ] <> FontStyle.subHeading3 TypoGraphy
         , linearLayout [weight 1.0, height WRAP_CONTENT][]
@@ -422,7 +424,7 @@ bookAnyDetails push state showBoostSearch =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ][ textView $
-           [ text $ getString BOOK_ANY_DETAILS
+           [ text $ getStringV2 book_any_details
            , width MATCH_PARENT
            , padding $ Padding 16 24 16 0
            , gravity CENTER
@@ -964,7 +966,7 @@ boostSearchButtonConfig state enableButton = let
     config = PrimaryButton.config
     boostSearchButtonConfig' = config
       { textConfig
-        { text = getString BOOST_SEARCH
+        { text = getStringV2 boost_search
         , accessibilityHint = "Boost Search" <> " : Button" 
         }
       , id = "boostSearchButtonConfig"

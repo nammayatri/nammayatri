@@ -36,7 +36,7 @@ import Helpers.CommonView (dummyView)
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Screens.Types (FareProductType(..)) as FPT
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Control.Monad.Except.Trans (lift)
 import Accessor(_status,_isScheduled)
 import Data.Lens((^.))

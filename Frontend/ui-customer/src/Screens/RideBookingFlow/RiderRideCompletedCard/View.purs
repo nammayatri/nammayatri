@@ -57,7 +57,7 @@ import Engineering.Helpers.Commons (os)
 import Animation (screenAnimation)
 import Components.FavouriteDriverInfoCard.FavouriteDriverInfoCard as FavouriteDriverInfoCard
 import Components.FavouriteDriverInfoCard.Controller as FavouriteDriverInfoCardController
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Components.BannerCarousel as BannerCarousel
 import Effect.Aff (Milliseconds(..), launchAff)
 import Presto.Core.Types.Language.Flow (callAPI, APIResult(..), Flow)

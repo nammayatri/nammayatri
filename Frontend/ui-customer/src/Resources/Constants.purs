@@ -33,7 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.Types as ST
 import Data.String as DS
 import Services.API (LocationAddress(..), AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..), LocationAPIEntity(..))
