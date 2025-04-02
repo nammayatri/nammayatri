@@ -19,6 +19,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.System
+import qualified API.Types.ProviderPlatform.Management.VehicleInfo
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -43,6 +44,7 @@ data ManagementUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
+  | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -64,6 +66,7 @@ instance Text.Show.Show ManagementUserActionType where
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
+    VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
 
 instance Text.Read.Read ManagementUserActionType where
   readsPrec d' =
@@ -198,6 +201,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "SYSTEM/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( VEHICLE_INFO v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "VEHICLE_INFO/" r,
                    ( v1,
                      r2
                      ) <-
