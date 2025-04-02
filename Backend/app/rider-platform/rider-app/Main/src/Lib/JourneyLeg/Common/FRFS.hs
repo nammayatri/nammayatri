@@ -86,7 +86,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   vehiclePosition = vehiclePosition,
                   nextStop = nextStopDetails <&> (.nextStop),
                   nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
-                  nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
+                  nextStopTravelDistance = join (nextStopDetails <&> (.nextStopTravelDistance)),
                   legOrder = journeyLegOrder,
                   subLegOrder = 1,
                   statusChanged,
@@ -99,12 +99,20 @@ getState mode searchId riderLastPoints isLastCompleted = do
           when lastStatusChanged $ do
             QTBooking.updateJourneyLegStatus (Just lastNewStatus) booking.id
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+          vehicleTrackingAndPosition <- do
+            let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing) routeStatuses
+            case findOngoingMetroOrSubway of
+              Just (_, _, currstatus) -> do
+                getVehiclePosition booking.riderId booking.merchantId booking.merchantOperatingCityId currstatus userPosition booking.vehicleType (decodeFromText =<< booking.routeStationsJson)
+              Nothing -> pure Nothing
+          let vehiclePosition = snd <$> vehicleTrackingAndPosition
+              nextStopDetails = fst <$> vehicleTrackingAndPosition
           let journeyLegStates =
                 [ JT.JourneyLegStateData
                     { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
                       userPosition,
-                      vehiclePosition = Nothing,
-                      nextStop = Nothing,
+                      vehiclePosition = vehiclePosition,
+                      nextStop = nextStopDetails <&> (.nextStop),
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       legOrder = journeyLegOrder,
@@ -142,7 +150,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   vehiclePosition = vehiclePosition,
                   nextStop = nextStopDetails <&> (.nextStop),
                   nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
-                  nextStopTravelDistance = nextStopDetails <&> (.nextStopTravelDistance),
+                  nextStopTravelDistance = join (nextStopDetails <&> (.nextStopTravelDistance)),
                   legOrder = journeyLegInfo.journeyLegOrder,
                   subLegOrder = 1,
                   statusChanged,
@@ -155,12 +163,28 @@ getState mode searchId riderLastPoints isLastCompleted = do
           let (_, lastStatusChanged, lastNewStatus) = lastSubRoute
           when lastStatusChanged $ QFRFSSearch.updateJourneyLegStatus (Just lastNewStatus) searchReq.id
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InternalError "JourneySearchData not found")
+          vehicleTrackingAndPosition <- do
+            let findOngoingMetroOrSubway = find (\(_, _, currstatus) -> currstatus == JPT.Ongoing) routeStatuses
+            case findOngoingMetroOrSubway of
+              Just (_, _, currstatus) -> do
+                case journeyLegInfo.pricingId of
+                  Just quoteId -> do
+                    mbQuote <- QFRFSQuote.findById (Id quoteId)
+                    case mbQuote of
+                      Just quote -> do
+                        let mbRouteStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+                        getVehiclePosition quote.riderId quote.merchantId quote.merchantOperatingCityId currstatus userPosition quote.vehicleType mbRouteStations
+                      Nothing -> pure Nothing
+                  Nothing -> pure Nothing
+              Nothing -> pure Nothing
+          let vehiclePosition = snd <$> vehicleTrackingAndPosition
+              nextStopDetails = fst <$> vehicleTrackingAndPosition
           let journeyLegStates =
                 [ JT.JourneyLegStateData
                     { status = newStatus,
                       userPosition,
-                      vehiclePosition = Nothing,
-                      nextStop = Nothing,
+                      vehiclePosition = vehiclePosition,
+                      nextStop = nextStopDetails <&> (.nextStop),
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       legOrder = journeyLegInfo.journeyLegOrder,
@@ -177,28 +201,50 @@ getState mode searchId riderLastPoints isLastCompleted = do
       Just routesStations ->
         case listToMaybe routesStations of
           Just routeStations -> do
-            vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL
-            if isUpcomingJourneyLeg journeyStatus
-              then do
-                let vehicleTrackingWithLatLong :: [(VehicleTracking, Double, Double)] = mapMaybe (\vehicleTrack -> (vehicleTrack,,) <$> vehicleTrack.vehicleInfo.latitude <*> vehicleTrack.vehicleInfo.longitude) vehicleTracking
-                    mbStartStation = find (\station -> station.stationType == Just START) routeStations.stations
-                    upcomingNearestVehicles =
-                      sortBy
-                        (comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStop.sequenceNum) <> comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStopTravelDistance))
-                        $ filter
-                          (\(vehicleTrack, _, _) -> maybe False (\startStation -> maybe False (\stationSequenceNum -> vehicleTrack.nextStop.sequenceNum <= stationSequenceNum) startStation.sequenceNum) mbStartStation)
-                          vehicleTrackingWithLatLong
-                pure ((\(vehicleTrack, lat, lon) -> (vehicleTrack, LatLong {..})) <$> listToMaybe upcomingNearestVehicles)
-              else
-                if isOngoingJourneyLeg journeyStatus
+            case vehicleType of
+              Spec.BUS -> do
+                vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL Nothing
+                if isUpcomingJourneyLeg journeyStatus
                   then do
-                    case riderPosition of
-                      Just riderLocation -> do
-                        let vehicleTrackWithLatLong :: [(VehicleTracking, Double, Double)] = mapMaybe (\vehicleTrack -> (vehicleTrack,,) <$> vehicleTrack.vehicleInfo.latitude <*> vehicleTrack.vehicleInfo.longitude) vehicleTracking
-                            nearestVehicleToUser = sortBy (comparing (\(_, lat, lon) -> distanceBetweenInMeters LatLong {..} riderLocation)) vehicleTrackWithLatLong
-                        pure ((\(vehicleTrack, lat, lon) -> (vehicleTrack, LatLong {..})) <$> listToMaybe nearestVehicleToUser)
-                      Nothing -> pure Nothing
-                  else pure Nothing
+                    let vehicleTrackingWithLatLong :: [(VehicleTracking, Double, Double)] =
+                          mapMaybe
+                            ( \vehicleTrack -> do
+                                info <- vehicleTrack.vehicleInfo
+                                (vehicleTrack,,)
+                                  <$> info.latitude <*> info.longitude
+                            )
+                            vehicleTracking
+                        mbStartStation = find (\station -> station.stationType == Just START) routeStations.stations
+                        upcomingNearestVehicles =
+                          sortBy
+                            (comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStop.sequenceNum) <> comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStopTravelDistance))
+                            $ filter
+                              (\(vehicleTrack, _, _) -> maybe False (\startStation -> maybe False (\stationSequenceNum -> vehicleTrack.nextStop.sequenceNum <= stationSequenceNum) startStation.sequenceNum) mbStartStation)
+                              vehicleTrackingWithLatLong
+                    pure ((\(vehicleTrack, lat, lon) -> (vehicleTrack, LatLong {..})) <$> listToMaybe upcomingNearestVehicles)
+                  else
+                    if isOngoingJourneyLeg journeyStatus
+                      then do
+                        case riderPosition of
+                          Just riderLocation -> do
+                            let vehicleTrackWithLatLong :: [(VehicleTracking, Double, Double)] =
+                                  mapMaybe
+                                    ( \vehicleTrack -> do
+                                        info <- vehicleTrack.vehicleInfo
+                                        (vehicleTrack,,)
+                                          <$> info.latitude <*> info.longitude
+                                    )
+                                    vehicleTracking
+                                nearestVehicleToUser = sortBy (comparing (\(_, lat, lon) -> distanceBetweenInMeters LatLong {..} riderLocation)) vehicleTrackWithLatLong
+                            pure ((\(vehicleTrack, lat, lon) -> (vehicleTrack, LatLong {..})) <$> listToMaybe nearestVehicleToUser)
+                          Nothing -> pure Nothing
+                      else pure Nothing
+              _ -> do
+                case riderPosition of
+                  Just riderLocation -> do
+                    vehicleTracking <- trackVehicles riderId merchantId merchantOperatingCityId vehicleType routeStations.code DIBC.MULTIMODAL riderPosition
+                    pure ((\vehicleTrack -> (vehicleTrack, riderLocation)) <$> listToMaybe vehicleTracking)
+                  Nothing -> pure Nothing
           Nothing -> pure Nothing
       Nothing -> pure Nothing
 
