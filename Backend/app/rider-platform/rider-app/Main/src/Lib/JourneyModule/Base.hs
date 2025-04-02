@@ -32,6 +32,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Distance
@@ -60,6 +61,7 @@ import qualified Sequelize as Se
 import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
@@ -75,6 +77,42 @@ import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
+
+filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> m [MultiModalRoute]
+filterTransitRoutes = filterM filterBusRoutes
+  where
+    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalRoute -> m Bool
+    filterBusRoutes route = do
+      let legs = route.legs
+          busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
+      if null busLegs
+        then return True
+        else do
+          busLegsValid <- forM busLegs $ \leg -> do
+            case (leg.fromDepartureTime, leg.fromStopDetails) of
+              (Nothing, _) -> return False
+              (_, Nothing) -> return False
+              (Just departureTime, Just stopDetails) ->
+                case (stopDetails.stopCode, stopDetails.gtfsId) of
+                  (Nothing, _) -> return False
+                  (_, Nothing) -> return False
+                  (Just stopCode, Just routeId) -> do
+                    let buffer = 300 -- TODO: MOVE TO CONFIG.
+                    let departureTimeWithBuffer = buffer `addUTCTime` departureTime
+                    routeWithBuses <- CQMMB.getRoutesBuses routeId
+
+                    -- Check if the bus has an ETA for this stop
+                    return $
+                      any
+                        ( \bus -> do
+                            let busStopETA = find (\eta -> eta.stopId == stopCode) (fromMaybe [] bus.busData.etaData)
+                            case busStopETA of
+                              Just eta -> eta.arrivalTime > departureTimeWithBuffer
+                              Nothing -> False
+                        )
+                        routeWithBuses.buses
+
+          return (all (\x -> x) busLegsValid)
 
 init ::
   JL.GetFareFlow m r =>
