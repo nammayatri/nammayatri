@@ -57,7 +57,7 @@ data BusData = BusData
     timestamp :: Int,
     speed :: Double,
     device_id :: Text,
-    etaData :: Maybe [BusStopETA]
+    eta_data :: Maybe [BusStopETA]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
