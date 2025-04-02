@@ -162,6 +162,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Operator.Registration
       Domain.Action.Dashboard.Ride
@@ -260,6 +261,7 @@ library
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
+      Domain.Action.UI.VehicleInfo
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
       Domain.Types.Beckn.Status
@@ -693,6 +695,7 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Operator
       API.Action.Dashboard.Operator.Driver
       API.Action.Dashboard.Operator.Registration
@@ -720,6 +723,7 @@ library
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
+      API.Action.UI.VehicleInfo
       API.Action.UI.WMB
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
@@ -758,6 +762,7 @@ library
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
+      API.Types.UI.VehicleInfo
       API.Types.UI.WMB
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
@@ -890,6 +895,7 @@ library
       Domain.Types.Vehicle
       Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
+      Domain.Types.VehicleInfo
       Domain.Types.VehicleInsurance
       Domain.Types.VehicleNOC
       Domain.Types.VehiclePermit
@@ -1032,6 +1038,7 @@ library
       Storage.Beam.Vehicle
       Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
+      Storage.Beam.VehicleInfo
       Storage.Beam.VehicleInsurance
       Storage.Beam.VehicleNOC
       Storage.Beam.VehiclePermit
@@ -1250,6 +1257,7 @@ library
       Storage.Queries.Vehicle
       Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
+      Storage.Queries.VehicleInfo
       Storage.Queries.VehicleInsurance
       Storage.Queries.VehicleNOC
       Storage.Queries.VehiclePermit
