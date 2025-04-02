@@ -768,6 +768,7 @@ type HomeScreenStateData =
   , selectedLocationListItem :: Maybe LocationListItemState
   , saveFavouriteCard :: SaveFavouriteCardState
   , rideDistance :: String
+  , actualEstimateDistnace :: Int 
   , rideDuration :: String
   , showPreferences :: Boolean
   , previousCurrentLocations:: PreviousCurrentLocations
