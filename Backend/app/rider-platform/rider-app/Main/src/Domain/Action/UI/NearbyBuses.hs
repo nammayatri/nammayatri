@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.NearbyBuses (postNearbyBusBooking) where
 
 import qualified API.Types.UI.NearbyBuses
@@ -26,7 +24,6 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as QRecentLocation
-import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import Tools.Error
@@ -118,7 +115,6 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
       ( \busData -> do
           mapM
             ( \bus -> do
-                route <- QRoute.findByRouteId (Id busData.routeId)
                 let busEta = Kernel.Prelude.listToMaybe $ fromMaybe [] bus.busData.eta_data
                 return $
                   API.Types.UI.NearbyBuses.NearbyBus
@@ -130,9 +126,7 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
                       occupancy = Nothing,
                       routeCode = busData.routeId,
                       serviceType = Nothing,
-                      vehicleNumber = Just $ bus.vehicleNumber,
-                      routeLongName = (\route' -> Just route'.longName) =<< route,
-                      routeShortName = (\route' -> Just route'.shortName) =<< route
+                      vehicleNumber = Just $ bus.vehicleNumber
                     }
             )
             busData.buses

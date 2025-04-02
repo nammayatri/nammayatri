@@ -228,7 +228,7 @@ multiModalSearch searchRequest initateJourney = do
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
   otpResponse' <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
-  otpResponse <- MInterface.MultiModalResponse <$> JM.filterTransitRoutes otpResponse'.routes
+  otpResponse <- MInterface.MultiModalResponse <$> JM.filterTransitRoutes otpResponse'.routes merchantOperatingCityId
 
   logDebug $ "[Multimodal - OTP Response]" <> show otpResponse
 

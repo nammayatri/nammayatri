@@ -230,3 +230,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_driver_search_radius double
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN is_device_id_check_disabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_bus_filtering boolean ;
