@@ -525,75 +525,53 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
         routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
         pure
           ApiTypes.PublicTransportData
-            { stations =
+            { ss =
                 mapMaybe
                   ( \s -> case (s.lat, s.lon) of
                       (Just lat, Just lon) ->
                         Just
                           ApiTypes.TransportStation
-                            { id = s.id.getId,
-                              code = s.code,
-                              name = s.name,
-                              lat = lat,
-                              lon = lon,
-                              address = s.address,
-                              merchantId = s.merchantId.getId,
-                              merchantOperatingCityId = s.merchantOperatingCityId.getId,
-                              integratedBppConfigId = s.integratedBppConfigId.getId,
-                              vehicleType = show s.vehicleType
+                            { cd = s.code,
+                              nm = s.name,
+                              lt = lat,
+                              ln = lon,
+                              ad = s.address,
+                              vt = show s.vehicleType
                             }
                       _ -> Nothing
                   )
                   stations,
-              routes =
+              rs =
                 map
                   ( \r ->
                       ApiTypes.TransportRoute
-                        { id = r.id.getId,
-                          code = r.code,
-                          shortName = r.shortName,
-                          longName = r.longName,
-                          startLat = r.startPoint.lat,
-                          startLon = r.startPoint.lon,
-                          endLat = r.endPoint.lat,
-                          endLon = r.endPoint.lon,
-                          color = r.color,
-                          polyline = r.polyline,
-                          merchantId = r.merchantId.getId,
-                          merchantOperatingCityId = r.merchantOperatingCityId.getId,
-                          integratedBppConfigId = r.integratedBppConfigId.getId,
-                          vehicleType = show r.vehicleType
+                        { cd = r.code,
+                          sN = r.shortName,
+                          lN = r.longName,
+                          vt = show r.vehicleType,
+                          clr = r.color
                         }
                   )
                   routes,
-              routeStopMappings =
+              rsm =
                 map
                   ( \rs ->
                       ApiTypes.TransportRouteStopMapping
-                        { routeCode = rs.routeCode,
-                          stopCode = rs.stopCode,
-                          providerCode = rs.providerCode,
-                          stopName = rs.stopName,
-                          stopLat = rs.stopPoint.lat,
-                          stopLon = rs.stopPoint.lon,
-                          sequenceNum = rs.sequenceNum,
-                          estimatedTravelTimeFromPreviousStop = rs.estimatedTravelTimeFromPreviousStop <&> (.getSeconds),
-                          merchantId = rs.merchantId.getId,
-                          merchantOperatingCityId = rs.merchantOperatingCityId.getId,
-                          integratedBppConfigId = rs.integratedBppConfigId.getId,
-                          vehicleType = show rs.vehicleType
+                        { rc = rs.routeCode,
+                          sc = rs.stopCode,
+                          sn = rs.sequenceNum
                         }
                   )
                   routeStops,
-              publicTransportConfigVersion = "v1" -- TODO: handle this
+              ptcv = "v1" -- TODO: handle this
             }
 
   transportDataList <- mapM fetchData integratedBPPConfigs
   let transportData =
         ApiTypes.PublicTransportData
-          { stations = concatMap (.stations) transportDataList,
-            routes = concatMap (.routes) transportDataList,
-            routeStopMappings = concatMap (.routeStopMappings) transportDataList,
-            publicTransportConfigVersion = "v1" -- TODO: handle this
+          { ss = concatMap (.ss) transportDataList,
+            rs = concatMap (.rs) transportDataList,
+            rsm = concatMap (.rsm) transportDataList,
+            ptcv = "v1" -- TODO: handle this
           }
   return transportData
