@@ -47,7 +47,7 @@ import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)

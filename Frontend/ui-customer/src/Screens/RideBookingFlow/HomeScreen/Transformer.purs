@@ -78,7 +78,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, interse
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths, FareList)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails, dummyIndividualCard)

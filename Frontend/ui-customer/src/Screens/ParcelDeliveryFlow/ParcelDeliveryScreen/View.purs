@@ -32,7 +32,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (chooseVehicleConfig, genericHeaderConfig, primaryButtonConfig)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
@@ -381,7 +381,7 @@ isNotInstructionsPage state = state.data.currentStage /= ST.DELIVERY_INSTRUCTION
 
 instructionData :: Array { title :: String, image :: String }
 instructionData = 
-  [ { title: getString ITEMS_SHOULD_FIT_IN_BACKPACK, image: "ny_ic_backpack" }
+  [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "5", image: "ny_ic_backpack" }
   , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
   , { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
   ]

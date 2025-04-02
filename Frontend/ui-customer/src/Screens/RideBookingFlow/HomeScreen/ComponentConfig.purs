@@ -96,7 +96,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import RemoteConfig as RemoteConfig
 import Resources.Constants (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig, dummyRideBooking)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
@@ -2468,7 +2468,7 @@ getAllServices dummy =
   , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee" , preferredEstimateOrder : [], secondaryPillColor : "#faeeee", hasSecondaryPill: false}
   , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe" , preferredEstimateOrder : [], secondaryPillColor : "#f1f8fe", hasSecondaryPill: false}
   , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
-  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
+  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : [], secondaryPillColor : "#fdf3ec", hasSecondaryPill: false}
   , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"], secondaryPillColor : "#F0FAF0", hasSecondaryPill: false}
   , {type: RemoteConfig.METRO, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}

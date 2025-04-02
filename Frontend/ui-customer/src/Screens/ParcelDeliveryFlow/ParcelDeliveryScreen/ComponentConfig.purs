@@ -21,7 +21,7 @@ import Language.Types (STR(..))
 import Prelude
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.Types as ST
 import Services.API as API
 import Styles.Colors as Color
@@ -61,7 +61,7 @@ genericHeaderConfig state = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = getString $ if state.data.currentStage == ST.DELIVERY_INSTRUCTIONS then DELIVERY else DELIVERY_DETAILS
+        text = getString $ if state.data.currentStage == ST.DELIVERY_INSTRUCTIONS then DELIVERY_STR else DELIVERY_DETAILS
       , color = Color.black800
       }
     , suffixImageConfig {

@@ -192,7 +192,7 @@ import Common.Types.App as CT
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.Controllers.Types
 import Helpers.Utils as HU
@@ -4049,7 +4049,7 @@ pickupLocationView push state =
                         , padding $ PaddingRight 4
                         ]
                       , textView $
-                        [ text $ if showCollect then getString $ COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else if takeFirstRide then getString $ TAKE_A_RIDE_AND_CLAIM (show $ fromMaybe 0 $ fromNumber theyGet) else getString $ INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
+                        [ text $ if showCollect then getString $ COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else if takeFirstRide then getString $ TAKE_A_RIDE__CLAIM_50 (show $ fromMaybe 0 $ fromNumber theyGet) else getString $ INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
                         , color if showCollect then Color.white900 else Color.blue900
                         , gravity CENTER
                         ] <> FontStyle.body4 TypoGraphy
