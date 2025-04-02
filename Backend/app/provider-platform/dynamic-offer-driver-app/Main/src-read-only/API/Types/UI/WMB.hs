@@ -4,7 +4,9 @@ module API.Types.UI.WMB where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
-import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.Alert.AlertRequestData
+import qualified Domain.Types.Alert.AlertRequestStatus
+import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.Common
 import qualified Domain.Types.TripTransaction
 import EulerHS.Prelude hiding (id)
@@ -18,7 +20,11 @@ data ActiveTripTransaction = ActiveTripTransaction {tripTransactionDetails :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ApprovalRequestResp = ApprovalRequestResp {status :: Domain.Types.ApprovalRequest.RequestStatus}
+data AlertReqResp = AlertReqResp {requestId :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AlertRequestResp = AlertRequestResp {status :: Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -30,17 +36,13 @@ data AvailableRouteReq = AvailableRouteReq {vehicleNumber :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DriverReqResp = DriverReqResp {requestId :: Data.Text.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data EndTripStatus
   = SUCCESS
   | WAITING_FOR_ADMIN_APPROVAL
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.ApprovalRequest.ApprovalRequestData, title :: Data.Text.Text}
+data RequestDetails = RequestDetails {body :: Data.Text.Text, requestData :: Domain.Types.Alert.AlertRequestData.AlertRequestData, title :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -70,7 +72,7 @@ data TripStartReq = TripStartReq {location :: Kernel.External.Maps.Types.LatLong
 
 data TripTransactionDetails = TripTransactionDetails
   { destination :: StopInfo,
-    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest),
+    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     routeInfo :: RouteInfo,
     source :: StopInfo,
     status :: Domain.Types.TripTransaction.TripStatus,

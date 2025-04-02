@@ -5,7 +5,7 @@
 module Storage.Queries.TripTransaction (module Storage.Queries.TripTransaction, module ReExport) where
 
 import qualified Data.Text
-import qualified Domain.Types.ApprovalRequest
+import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.Person
 import qualified Domain.Types.TripTransaction
 import Kernel.Beam.Functions
@@ -34,7 +34,7 @@ findByTransactionId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.I
 
 updateEndRideApprovalRequestId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ApprovalRequest.ApprovalRequest) -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest) -> Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction -> m ())
 updateEndRideApprovalRequestId endRideApprovalRequestId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.endRideApprovalRequestId (Kernel.Types.Id.getId <$> endRideApprovalRequestId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

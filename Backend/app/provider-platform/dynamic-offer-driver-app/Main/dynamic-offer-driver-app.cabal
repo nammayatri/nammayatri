@@ -63,6 +63,7 @@ library
       API.Internal.ReportIssue
       API.Internal.Ride
       API.Internal.StopDetection
+      API.Internal.ViolationDetection
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -182,6 +183,7 @@ library
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
       Domain.Action.Internal.StopDetection
+      Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -491,7 +493,6 @@ library
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
       Storage.Queries.AadhaarCardExtra
-      Storage.Queries.ApprovalRequestExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
@@ -611,6 +612,7 @@ library
       Storage.Queries.Transformers.SearchTry
       Storage.Queries.TranslationsExtra
       Storage.Queries.TransporterConfigExtra
+      Storage.Queries.TripAlertRequestExtra
       Storage.Queries.TripTransactionExtra
       Storage.Queries.Vehicle.Internal
       Storage.Queries.VehicleDetailsExtra
@@ -731,7 +733,7 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
-      Domain.Types.ApprovalRequest
+      Domain.Types.AlertRequest
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -844,6 +846,7 @@ library
       Domain.Types.Toll
       Domain.Types.Translations
       Domain.Types.TransporterConfig
+      Domain.Types.TripAlertRequest
       Domain.Types.TripTransaction
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
@@ -862,7 +865,7 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
-      Storage.Beam.ApprovalRequest
+      Storage.Beam.AlertRequest
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -975,6 +978,7 @@ library
       Storage.Beam.Toll
       Storage.Beam.Translations
       Storage.Beam.TransporterConfig
+      Storage.Beam.TripAlertRequest
       Storage.Beam.TripTransaction
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
@@ -996,7 +1000,7 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
-      Storage.Queries.ApprovalRequest
+      Storage.Queries.AlertRequest
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
@@ -1079,7 +1083,7 @@ library
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.Notification
       Storage.Queries.OrphanInstances.AadhaarCard
-      Storage.Queries.OrphanInstances.ApprovalRequest
+      Storage.Queries.OrphanInstances.AlertRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
@@ -1137,6 +1141,7 @@ library
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
+      Storage.Queries.OrphanInstances.TripAlertRequest
       Storage.Queries.OrphanInstances.TripTransaction
       Storage.Queries.OrphanInstances.Vehicle
       Storage.Queries.OrphanInstances.VehicleDetails
@@ -1177,6 +1182,7 @@ library
       Storage.Queries.Toll
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig
+      Storage.Queries.TripAlertRequest
       Storage.Queries.TripTransaction
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle

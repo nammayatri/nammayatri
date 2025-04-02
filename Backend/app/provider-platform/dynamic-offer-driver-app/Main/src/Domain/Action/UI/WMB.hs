@@ -26,7 +26,8 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.Call as Call
-import Domain.Types.ApprovalRequest
+import Domain.Types.Alert
+import Domain.Types.AlertRequest
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
@@ -39,6 +40,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
 import Domain.Types.RouteTripStopMapping
+import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
 import Domain.Types.Vehicle
 import qualified Domain.Types.VehicleCategory as DVehCategory
@@ -65,7 +67,7 @@ import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.Queries.ApprovalRequest as QDR
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
@@ -75,6 +77,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.TransporterConfig as QTC
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
@@ -250,9 +253,9 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
     throwError $ RideNotEligibleForEnding
   if fleetConfig.rideEndApproval && not (distanceLeft <= fleetConfig.endRideDistanceThreshold)
     then do
-      whenJust tripTransaction.endRideApprovalRequestId $ \endRideApprovalRequestId -> do
-        approvalRequest <- QDR.findByPrimaryKey endRideApprovalRequestId
-        when ((approvalRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError EndRideRequestAlreadyPresent
+      whenJust tripTransaction.endRideApprovalRequestId $ \endRideAlertRequestId -> do
+        alertRequest <- QAR.findByPrimaryKey endRideAlertRequestId
+        when ((alertRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError EndRideRequestAlreadyPresent
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       driverMobileNumber <- mapM decrypt driver.mobileNumber
       let requestData =
@@ -273,7 +276,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
         60
         ( do
             unless (tripTransaction.status == IN_PROGRESS) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-            createDriverRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
+            createAlertRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
         )
         >>= \case
           Right driverReq -> return $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
@@ -304,17 +307,17 @@ postWmbRequestsCancel ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Id ApprovalRequest ->
+    Id AlertRequest ->
     Flow APISuccess
   )
-postWmbRequestsCancel (mbPersonId, _, _) approvalRequestId = do
-  Redis.whenWithLockRedis (driverRequestLockKey approvalRequestId.getId) 60 $ do
-    approvalRequest <- QDR.findByPrimaryKey approvalRequestId >>= fromMaybeM (ApprovalRequestIdNotFound approvalRequestId.getId)
+postWmbRequestsCancel (mbPersonId, _, _) alertRequestId = do
+  Redis.whenWithLockRedis (driverRequestLockKey alertRequestId.getId) 60 $ do
+    alertRequest <- QAR.findByPrimaryKey alertRequestId >>= fromMaybeM (AlertRequestIdNotFound alertRequestId.getId)
     case mbPersonId of
-      Just personId -> unless (approvalRequest.requestorId == personId) $ throwError NotAnExecutor
+      Just personId -> unless (alertRequest.requestorId == personId) $ throwError NotAnExecutor
       _ -> pure ()
-    unless (approvalRequest.status == AWAITING_APPROVAL) $ throwError (RequestAlreadyProcessed approvalRequest.id.getId)
-    QDR.updateStatusWithReason REVOKED (Just "Cancelled by driver") approvalRequestId
+    unless (alertRequest.status == AWAITING_APPROVAL) $ throwError (RequestAlreadyProcessed alertRequest.id.getId)
+    QAR.updateStatusWithReason REVOKED (Just "Cancelled by driver") alertRequestId
   pure Success
 
 getWmbRequestsStatus ::
@@ -322,13 +325,13 @@ getWmbRequestsStatus ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Id ApprovalRequest ->
-    Flow ApprovalRequestResp
+    Id AlertRequest ->
+    Flow AlertRequestResp
   )
-getWmbRequestsStatus (mbPersonId, _, _) approvalRequestId = do
-  approvalRequest <- QDR.findByPrimaryKey approvalRequestId >>= fromMaybeM (ApprovalRequestIdNotFound approvalRequestId.getId)
-  whenJust mbPersonId $ \personId -> unless (approvalRequest.requestorId == personId) $ throwError NotAnExecutor
-  pure $ ApprovalRequestResp {status = approvalRequest.status}
+getWmbRequestsStatus (mbPersonId, _, _) alertRequestId = do
+  alertRequest <- QAR.findByPrimaryKey alertRequestId >>= fromMaybeM (AlertRequestIdNotFound alertRequestId.getId)
+  whenJust mbPersonId $ \personId -> unless (alertRequest.requestorId == personId) $ throwError NotAnExecutor
+  pure $ AlertRequestResp {status = alertRequest.status}
 
 postWmbTripRequest ::
   ( ( Maybe (Id Person),
@@ -337,26 +340,26 @@ postWmbTripRequest ::
     ) ->
     Id TripTransaction ->
     RequestDetails ->
-    Flow DriverReqResp
+    Flow AlertReqResp
   )
 postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId req = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   tripTransaction <- QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   fleetDriverAssociation <- FDV.findByDriverId tripTransaction.driverId True >>= fromMaybeM (NoActiveFleetAssociated tripTransaction.driverId.getId)
-  whenJust tripTransaction.endRideApprovalRequestId $ \endRideApprovalRequestId -> do
-    approvalRequest <- QDR.findByPrimaryKey endRideApprovalRequestId
-    when ((approvalRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError EndRideRequestAlreadyPresent
-  driverReq <- createDriverRequest tripTransaction.driverId fleetDriverAssociation.fleetOwnerId req.title req.body req.requestData tripTransaction
+  whenJust tripTransaction.endRideApprovalRequestId $ \endRideAlertRequestId -> do
+    alertRequest <- QAR.findByPrimaryKey endRideAlertRequestId
+    when ((alertRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError EndRideRequestAlreadyPresent
+  alertRequest <- createAlertRequest tripTransaction.driverId fleetDriverAssociation.fleetOwnerId req.title req.body req.requestData tripTransaction
   let maybeAppId = (HM.lookup FleetAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping -- currently only for END_RIDE
   whenJust transporterConfig.fleetAlertThreshold $ \threshold -> do
     let triggerFleetAlertTs = secondsToNominalDiffTime threshold
     createJobIn @_ @'FleetAlert (Just merchantId) (Just merchantOperatingCityId) triggerFleetAlertTs $
       FleetAlertJobData
         { fleetOwnerId = Id fleetDriverAssociation.fleetOwnerId,
-          entityId = driverReq.id,
+          entityId = alertRequest.id,
           appletId = maybeAppId
         }
-  pure $ DriverReqResp {requestId = driverReq.id.getId}
+  pure $ AlertReqResp {requestId = alertRequest.id.getId}
 
 postFleetConsent ::
   ( ( Maybe (Id Person),
@@ -384,31 +387,11 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
 driverRequestLockKey :: Text -> Text
 driverRequestLockKey reqId = "Driver:Request:Id-" <> reqId
 
-createDriverRequest :: Id Person -> Text -> Text -> Text -> ApprovalRequestData -> TripTransaction -> Flow ApprovalRequest
-createDriverRequest driverId requesteeId title body requestData tripTransaction = do
-  id <- generateGUID
-  now <- getCurrentTime
-  let driverReq =
-        ApprovalRequest
-          { entityId = tripTransaction.id.getId,
-            entityType = TRIP,
-            requestorId = driverId,
-            requestorType = DriverGenerated,
-            requesteeId = Id requesteeId,
-            requesteeType = FleetOwner,
-            requestType = EndRideApproval,
-            reason = Nothing,
-            status = AWAITING_APPROVAL,
-            createdAt = now,
-            updatedAt = now,
-            merchantId = tripTransaction.merchantId,
-            merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
-            ..
-          }
-  QDR.create driverReq
-  QTT.updateEndRideApprovalRequestId (Just id) tripTransaction.id
-  TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
-  pure driverReq
+createAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow AlertRequest
+createAlertRequest driverId requesteeId title body requestData tripTransaction = do
+  alertRequest <- triggerAlertRequest driverId requesteeId title body requestData tripTransaction
+  QTT.updateEndRideApprovalRequestId (Just alertRequest.id) tripTransaction.id
+  pure alertRequest
 
 buildRouteInfo :: Route -> RouteInfo
 buildRouteInfo Route {..} = RouteInfo {..}

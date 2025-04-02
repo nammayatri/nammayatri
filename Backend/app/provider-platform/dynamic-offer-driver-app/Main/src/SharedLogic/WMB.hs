@@ -5,6 +5,8 @@ import API.Types.UI.WMB
 import Data.List (sortBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import Domain.Types.Alert
+import Domain.Types.AlertRequest
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.FleetBadge
@@ -15,6 +17,7 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
+import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleRouteMapping
@@ -26,6 +29,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
+import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Documents as Documents
@@ -35,6 +39,7 @@ import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetBadge as QFB
@@ -43,6 +48,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -462,3 +468,42 @@ tripTransactionKey driverId = \case
   COMPLETED -> "WMB:TCO:" <> driverId.getId
   CANCELLED -> "WMB:TCA:" <> driverId.getId
   PAUSED -> "WMB:TP:" <> driverId.getId
+
+triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow AlertRequest
+triggerAlertRequest driverId requesteeId title body requestData tripTransaction = do
+  alertRequestId <- generateGUID
+  now <- getCurrentTime
+  let alertRequest =
+        AlertRequest
+          { id = alertRequestId,
+            requestorId = driverId,
+            requestorType = DriverGenerated,
+            requesteeId = Id requesteeId,
+            requesteeType = FleetOwner,
+            requestType = castAlertRequestDataToRequestType requestData,
+            reason = Nothing,
+            status = AWAITING_APPROVAL,
+            createdAt = now,
+            updatedAt = now,
+            merchantId = tripTransaction.merchantId,
+            merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
+            ..
+          }
+  QAR.create alertRequest
+  tripAlertRequestId <- generateGUID
+  QTAR.create $
+    TripAlertRequest
+      { id = tripAlertRequestId,
+        alertRequestId = alertRequestId,
+        tripTransactionId = tripTransaction.id,
+        driverId = driverId,
+        fleetOwnerId = Id requesteeId,
+        routeCode = tripTransaction.routeCode,
+        alertRequestType = castAlertRequestDataToRequestType requestData,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = tripTransaction.merchantId,
+        merchantOperatingCityId = tripTransaction.merchantOperatingCityId
+      }
+  TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
+  pure alertRequest
