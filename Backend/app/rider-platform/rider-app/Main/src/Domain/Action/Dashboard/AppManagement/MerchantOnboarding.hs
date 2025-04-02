@@ -123,7 +123,7 @@ merchantOnboardingInfo merchantShortId opCity onboardingType requestorId _mbRequ
   reqId <- requestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   onboarding <- QMO.findByRequestorIdAndOnboardingType reqId onboardingType >>= fromMaybeM (InvalidRequest $ "No onboarding present of type " <> show onboardingType)
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   steps <- getStepsAndUpdate onboarding.id
   return $ mkMerchantOnboardingAPI onboarding steps
@@ -200,7 +200,7 @@ merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId _mbReques
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not match onboarding requestorId"
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS) $
     throwError $ InvalidRequest "Step is not available for submission"
@@ -221,7 +221,7 @@ merchantOnboardingStepUpdatePayload merchantShortId opCity stepId requestorId _m
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
     throwError $ InvalidRequest "Step is not available for update"
@@ -237,7 +237,7 @@ merchantOnboardingStepReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 merchantOnboardingStepReject merchantShortId opCity stepId requestorId _mbRequestorRole payload = do
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   unless (step.status == DMOS.SUBMITTED) $
@@ -252,11 +252,11 @@ data StepApproveRequest = StepApproveRequest
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Maybe Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Value -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse)
 merchantOnboardingStepApprove merchantShortId opCity stepId requestorId _mbRequestorRole payload = do
   reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   step <- QMOS.findByStepId (Kernel.Types.Id.Id stepId) >>= fromMaybeM (InvalidRequest "Step not found")
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
@@ -273,7 +273,7 @@ merchantOnboardingStepApprove merchantShortId opCity stepId requestorId _mbReque
         throwError $ InvalidRequest $ fromMaybe "Step processing failed" res.message
       pure ()
   _ <- getStepsAndUpdate onboarding.id
-  return Kernel.Types.APISuccess.Success
+  return $ API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse {success = True, handlerName = Nothing, metadata = Nothing}
 
 merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
 merchantOnboardingStepUploadFile _merchantShortId opCity stepId payloadKey requestorId _mbRequestorRole req = do
@@ -283,7 +283,7 @@ merchantOnboardingStepUploadFile _merchantShortId opCity stepId payloadKey reque
   unless (step.status == DMOS.AVAILABLE || step.status == DMOS.INPROGRESS || step.status == DMOS.REOPENED) $
     throwError $ InvalidRequest "Step is not available for upload"
   onboarding <- QMO.findById (Kernel.Types.Id.Id step.merchantOnboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have this access"
   merchant <- findMerchantByShortId _merchantShortId
   merchantConfig <- CQM.findById (merchant.id) >>= fromMaybeM (MerchantNotFound merchant.id.getId)
@@ -321,7 +321,7 @@ merchantOnboardingReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 merchantOnboardingReject merchantShortId opCity onboardingId requestorId _mbRequestorRole req = do
   reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   rejectReq :: MBRejectRequest <- fromjson req
   onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
@@ -335,7 +335,7 @@ merchantOnboadingListAll merchantShortId opCity mbRequestorId _mbRequestorRole m
   status <- mbStatus & fromMaybeM (InvalidRequest "Status filter is required")
   reqId <- mbRequestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   QMO.findAllByStatus status
 
@@ -344,7 +344,7 @@ merchantOnboardingStepList merchantShortId opCity onboardingId requestorId _mbRe
   reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
   reqRole <- _mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this onboarding"
   steps <- QMOS.findByMerchantOnboardingId onboarding.id.getId
   return steps
@@ -372,7 +372,7 @@ merchantOnboardingGetFile merchantShortId opCity onboardingId fileId requestorId
   reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   onboarding <- QMO.findById (Kernel.Types.Id.Id onboardingId) >>= fromMaybeM (InvalidRequest "No onboarding found")
-  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_ADMIN, DMO.TICKET_APPROVER]) $
+  unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this file"
   file <- MFQuery.findById (Kernel.Types.Id.Id fileId) >>= fromMaybeM (InvalidRequest "No file found")
   filePath <- file.s3FilePath & fromMaybeM (FileDoNotExist fileId)

@@ -52,6 +52,7 @@ data MessageKey
   | WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
   | METRO_TICKET_BOOKING_CANCELLED
   | METRO_TICKET_BOOKED
+  | TICKET_MERCHANT_AGREEMENT_TEMPLATE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

@@ -7,6 +7,9 @@ module Domain.Action.RiderPlatform.AppManagement.Tickets
     postTicketsServiceCancel,
     getTicketsBookingDetails,
     postTicketsTicketdashboardRegister,
+    postTicketsTicketdashboardLoginAuth,
+    postTicketsTicketdashboardLoginVerify,
+    getTicketsTicketdashboardAgreement,
   )
 where
 
@@ -15,6 +18,7 @@ import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
 import qualified "rider-app" API.Types.UI.TicketService
 import qualified Data.Time.Calendar
 import qualified "lib-dashboard" Domain.Action.Dashboard.Person as DP
+import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Person.Type as PT
 import qualified "lib-dashboard" Domain.Types.Role as DRole
@@ -39,7 +43,7 @@ import Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
-import qualified "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -152,3 +156,26 @@ registerTicketDashboard req mbPersonId = do
   QP.create ticketUser
   QAccess.create merchantAccess
   return $ API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp {id = Nothing, success = True, message = Just "Ticket dashboard user registered successfully"}
+
+postTicketsTicketdashboardLoginAuth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postTicketsTicketdashboardLoginAuth merchantShortId opCity req = do
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardLoginAuth) req
+
+postTicketsTicketdashboardLoginVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginReq -> Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginResp)
+postTicketsTicketdashboardLoginVerify merchantShortId opCity req = do
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+  ticketDashboardRole <-
+    QRole.findByDashboardAccessType DRole.TICKET_DASHBOARD_USER
+      >>= fromMaybeM (RoleDoesNotExist "TICKET_DASHBOARD_USER")
+  person <- QP.findByMobileNumberAndRoleId req.mobileNumber req.mobileCountryCode ticketDashboardRole.id >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  _ <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardLoginVerify) req
+  token <- DR.generateToken person.id merchant.id merchant.defaultOperatingCity
+  unless (person.verified == Just True) $ QP.updatePersonVerifiedStatus person.id True
+  pure $ API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginResp {authToken = Just token}
+
+getTicketsTicketdashboardAgreement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardAgreementTemplateResp)
+getTicketsTicketdashboardAgreement merchantShortId opCity apiTokenInfo templateName = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardAgreement) templateName

@@ -4,6 +4,7 @@ imports:
   MerchantOnboardingStep: Domain.Types.MerchantOnboardingStep
   MediaFile: IssueManagement.Domain.Types.MediaFile
   EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
 
 
 MerchantOnboardingStep:
@@ -66,7 +67,7 @@ MerchantOnboarding:
       fileBase64: Text
       fileType: Text
     RequestorRole:
-      enum: "DASHBOARD_USER,TICKET_MERCHANT,TICKET_ADMIN,TICKET_APPROVER"
+      enum: "TICKET_DASHBOARD_USER,TICKET_DASHBOARD_MERCHANT,TICKET_DASHBOARD_ADMIN,TICKET_DASHBOARD_APPROVER"
       derive: "HttpInstance"
     OnboardingStatus:
       enum: "INPROGRESS,COMPLETED,REJECTED"
@@ -177,25 +178,44 @@ TicketMerchantDetails:
     orgName: Text
     orgAddress: Maybe Text
     pan: EncryptedHashedField e Text
-    gstin: EncryptedHashedField e Text
+    gstin: Maybe (EncryptedHashedField e Text)
     state: Text
     contactDetails: ContactDetails
     bankBeneficiaryName: Text
-    bankAccountNumber: Text
+    bankAccountNumber: EncryptedHashedField e Text
     bankAccountType: BankAccountType
-    bankIfsc: Text
+    bankIfsc: EncryptedHashedField e Text
     docPan: EncryptedHashedField e Text
-    docCancelledCheque: EncryptedHashedField e Text
-    isBlocked: Bool
+    docCancelledCheque: Maybe (EncryptedHashedField e Text)
+    agreementLetter: Maybe (EncryptedHashedField e Text)
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  beamFields:
+    docCancelledCheque:
+      docCancelledChequeEncrypted: Maybe Text
+      docCancelledChequeHash: Maybe DbHash
+    agreementLetter:
+      agreementLetterEncrypted: Maybe Text
+      agreementLetterHash: Maybe DbHash
+    gstin:
+      gstinEncrypted: Maybe Text
+      gstinHash: Maybe DbHash
   fromTType:
     contactDetails: makeContactDetails
+    docCancelledCheque: EncryptedHashed <$> (Encrypted <$> docCancelledChequeEncrypted) <*> docCancelledChequeHash|E
+    agreementLetter: EncryptedHashed <$> (Encrypted <$> agreementLetterEncrypted) <*> agreementLetterHash|E
+    gstin: EncryptedHashed <$> (Encrypted <$> gstinEncrypted) <*> gstinHash|E
   toTType:
     name: (.contactDetails.name)|I
     number: (.contactDetails.number)|I
     email: (.contactDetails.email)|I
+    docCancelledChequeEncrypted: (docCancelledCheque <&> unEncrypted . (.encrypted))|E
+    docCancelledChequeHash: (docCancelledCheque <&> (.hash))|E
+    agreementLetterEncrypted: (agreementLetter <&> unEncrypted . (.encrypted))|E
+    agreementLetterHash: (agreementLetter <&> (.hash))|E
+    gstinEncrypted: (gstin <&> unEncrypted . (.encrypted))|E
+    gstinHash: (gstin <&> (.hash))|E
 
   excludedFields: [merchantOperatingCityId, merchantId]
 

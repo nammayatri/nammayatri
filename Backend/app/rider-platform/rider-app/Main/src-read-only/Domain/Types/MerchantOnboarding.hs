@@ -41,7 +41,12 @@ data OnboardingStatus = INPROGRESS | COMPLETED | REJECTED deriving (Eq, Ord, Sho
 
 data OnboardingType = TICKET_MERCHANT_ONBOARDING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data RequestorRole = DASHBOARD_USER | TICKET_MERCHANT | TICKET_ADMIN | TICKET_APPROVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RequestorRole
+  = TICKET_DASHBOARD_USER
+  | TICKET_DASHBOARD_MERCHANT
+  | TICKET_DASHBOARD_ADMIN
+  | TICKET_DASHBOARD_APPROVER
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingStatus)
 

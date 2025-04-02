@@ -47,9 +47,12 @@ getDashboardAccessType :: (BeamFlow m r, EncFlow m r) => Kernel.Prelude.Text -> 
 getDashboardAccessType personId = do
   person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
   accessType <- person.dashboardAccessType & fromMaybeM (InvalidRequest "Person does not have proper access")
-  return $ case accessType of
-    Domain.Types.Role.TICKET_DASHBOARD_USER -> Domain.Types.MerchantOnboarding.TICKET_MERCHANT
-    _ -> Domain.Types.MerchantOnboarding.TICKET_MERCHANT
+  case accessType of
+    Domain.Types.Role.TICKET_DASHBOARD_USER -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_USER
+    Domain.Types.Role.TICKET_DASHBOARD_MERCHANT -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_MERCHANT
+    Domain.Types.Role.TICKET_DASHBOARD_ADMIN -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN
+    Domain.Types.Role.TICKET_DASHBOARD_APPROVER -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_APPROVER
+    _ -> throwError $ InvalidRequest "Person does not have proper access"
 
 merchantOnboardingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
 merchantOnboardingInfo merchantShortId opCity apiTokenInfo onboardingType _ _ = do
@@ -93,12 +96,14 @@ merchantOnboardingStepReject merchantShortId opCity apiTokenInfo stepId _ _ req 
   requestorRole <- getDashboardAccessType requestorId
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingStepReject) stepId (Just requestorId) (Just requestorRole) req
 
-merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> Data.Aeson.Value -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse)
 merchantOnboardingStepApprove merchantShortId opCity apiTokenInfo stepId _ _ req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingStepApprove) stepId (Just requestorId) (Just requestorRole) req
+  resp <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingStepApprove) stepId (Just requestorId) (Just requestorRole) req
+  -- TODO: Handler logic goes here --
+  return resp
 
 merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
 merchantOnboardingStepUploadFile merchantShortId opCity apiTokenInfo stepId payloadKey _ _ req = do

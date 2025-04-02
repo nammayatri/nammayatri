@@ -7,6 +7,9 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     postTicketsServiceCancel,
     getTicketsBookingDetails,
     postTicketsTicketdashboardRegister,
+    postTicketsTicketdashboardLoginAuth,
+    postTicketsTicketdashboardLoginVerify,
+    getTicketsTicketdashboardAgreement,
   )
 where
 
@@ -99,3 +102,30 @@ postTicketsTicketdashboardRegister ::
 postTicketsTicketdashboardRegister merchantShortId _opCity req = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.postTicketDashboardRegister m req
+
+postTicketsTicketdashboardLoginAuth ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketsTicketdashboardLoginAuth merchantShortId _opCity req = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.postTicketDashboardLoginAuth m req
+
+postTicketsTicketdashboardLoginVerify ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginReq ->
+  Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginResp
+postTicketsTicketdashboardLoginVerify merchantShortId _opCity req = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.postTicketDashboardLoginVerify m req
+
+getTicketsTicketdashboardAgreement ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardAgreementTemplateResp
+getTicketsTicketdashboardAgreement merchantShortId _opCity templateName = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.getTicketDashboardAgreement m templateName

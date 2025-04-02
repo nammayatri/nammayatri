@@ -99,7 +99,7 @@ apis:
       request:
         type: Value
       response:
-        type: "APISuccess"
+        type: ApproveResponse
       query:
         - requestorId: Text
         - requestorRole: RequestorRole
@@ -167,6 +167,10 @@ apis:
         type: GetFileResponse
 
 types:
+  ApproveResponse:
+    - success: Bool
+    - handlerName: Maybe Text
+    - metadata: Maybe Value
   UploadFileRequest:
     - file: FilePath
     - reqContentType: Text

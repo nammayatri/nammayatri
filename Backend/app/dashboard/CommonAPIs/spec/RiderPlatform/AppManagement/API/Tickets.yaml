@@ -96,13 +96,28 @@ apis:
         type: TicketDashboardRegisterReq
       response:
         type: TicketDashboardRegisterResp
-  # - POST: # LoginTicketDashboardAPI
-  #     endpoint: /ticketdashboard/auth
-  #     auth: NoAuth
-  #     request:
-  #       type: TicketDashboardLoginReq
-  #     response:
-  #       type: APISuccess
+  - POST: # LoginTicketDashboardAPI
+      endpoint: /ticketdashboard/login/auth
+      auth: NoAuth
+      request:
+        type: TicketDashboardLoginReq
+      response:
+        type: APISuccess
+  - POST: # LoginTicketDashboardVerifyAPI
+      endpoint: /ticketdashboard/login/verify
+      auth: NoAuth
+      request:
+        type: TicketDashboardLoginReq
+      response:
+        type: TicketDashboardLoginResp
+  - GET: # GetTicketAggrementTemplateAPI
+      endpoint: /ticketdashboard/agreement/{templateName}
+      auth: ApiAuthV2
+      params:
+        templateName: Text
+      response:
+        type: TicketDashboardAgreementTemplateResp
+
 
 types:
   TicketDashboardRegisterReq:
@@ -117,3 +132,11 @@ types:
     - success: Bool
     - message: Maybe Text
     - id: Maybe Text
+  TicketDashboardLoginReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otp: Maybe Text
+  TicketDashboardLoginResp:
+    - authToken: Maybe Text
+  TicketDashboardAgreementTemplateResp:
+    - template: Text

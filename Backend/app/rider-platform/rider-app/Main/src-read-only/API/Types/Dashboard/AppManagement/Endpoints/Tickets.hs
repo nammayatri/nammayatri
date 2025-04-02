@@ -20,6 +20,18 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data TicketDashboardAgreementTemplateResp = TicketDashboardAgreementTemplateResp {template :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketDashboardLoginReq = TicketDashboardLoginReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, otp :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketDashboardLoginResp = TicketDashboardLoginResp {authToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TicketDashboardRegisterReq = TicketDashboardRegisterReq
   { firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
@@ -36,7 +48,7 @@ data TicketDashboardRegisterResp = TicketDashboardRegisterResp {success :: Kerne
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister)
+type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement)
 
 type PostTicketsVerify =
   ( "tickets" :> Capture "personServiceId" (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService)
@@ -73,6 +85,12 @@ type GetTicketsBookingDetails =
 
 type PostTicketsTicketdashboardRegister = ("ticketdashboard" :> "register" :> ReqBody '[JSON] TicketDashboardRegisterReq :> Post '[JSON] TicketDashboardRegisterResp)
 
+type PostTicketsTicketdashboardLoginAuth = ("ticketdashboard" :> "login" :> "auth" :> ReqBody '[JSON] TicketDashboardLoginReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostTicketsTicketdashboardLoginVerify = ("ticketdashboard" :> "login" :> "verify" :> ReqBody '[JSON] TicketDashboardLoginReq :> Post '[JSON] TicketDashboardLoginResp)
+
+type GetTicketsTicketdashboardAgreement = ("ticketdashboard" :> "agreement" :> Capture "templateName" Kernel.Prelude.Text :> Get '[JSON] TicketDashboardAgreementTemplateResp)
+
 data TicketsAPIs = TicketsAPIs
   { postTicketsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketServiceVerificationResp,
     postTicketsServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketServiceResp],
@@ -81,13 +99,16 @@ data TicketsAPIs = TicketsAPIs
     postTicketsBookingsCancel :: API.Types.UI.TicketService.TicketBookingCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postTicketsServiceCancel :: API.Types.UI.TicketService.TicketServiceCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getTicketsBookingDetails :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketBookingDetails,
-    postTicketsTicketdashboardRegister :: TicketDashboardRegisterReq -> EulerHS.Types.EulerClient TicketDashboardRegisterResp
+    postTicketsTicketdashboardRegister :: TicketDashboardRegisterReq -> EulerHS.Types.EulerClient TicketDashboardRegisterResp,
+    postTicketsTicketdashboardLoginAuth :: TicketDashboardLoginReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postTicketsTicketdashboardLoginVerify :: TicketDashboardLoginReq -> EulerHS.Types.EulerClient TicketDashboardLoginResp,
+    getTicketsTicketdashboardAgreement :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketDashboardAgreementTemplateResp
   }
 
 mkTicketsAPIs :: (Client EulerHS.Types.EulerClient API -> TicketsAPIs)
 mkTicketsAPIs ticketsClient = (TicketsAPIs {..})
   where
-    postTicketsVerify :<|> postTicketsServices :<|> getTicketsPlaces :<|> postTicketsUpdate :<|> postTicketsBookingsCancel :<|> postTicketsServiceCancel :<|> getTicketsBookingDetails :<|> postTicketsTicketdashboardRegister = ticketsClient
+    postTicketsVerify :<|> postTicketsServices :<|> getTicketsPlaces :<|> postTicketsUpdate :<|> postTicketsBookingsCancel :<|> postTicketsServiceCancel :<|> getTicketsBookingDetails :<|> postTicketsTicketdashboardRegister :<|> postTicketsTicketdashboardLoginAuth :<|> postTicketsTicketdashboardLoginVerify :<|> getTicketsTicketdashboardAgreement = ticketsClient
 
 data TicketsUserActionType
   = POST_TICKETS_VERIFY
@@ -98,6 +119,9 @@ data TicketsUserActionType
   | POST_TICKETS_SERVICE_CANCEL
   | GET_TICKETS_BOOKING_DETAILS
   | POST_TICKETS_TICKETDASHBOARD_REGISTER
+  | POST_TICKETS_TICKETDASHBOARD_LOGIN_AUTH
+  | POST_TICKETS_TICKETDASHBOARD_LOGIN_VERIFY
+  | GET_TICKETS_TICKETDASHBOARD_AGREEMENT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

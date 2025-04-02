@@ -22,6 +22,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data ApproveResponse = ApproveResponse {success :: Kernel.Prelude.Bool, handlerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, metadata :: Kernel.Prelude.Maybe Data.Aeson.Value}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -104,9 +108,7 @@ type MerchantOnboardingStepApprove =
            "requestorRole"
            Domain.Types.MerchantOnboarding.RequestorRole
       :> ReqBody '[JSON] Data.Aeson.Value
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] ApproveResponse
   )
 
 type MerchantOnboardingStepUploadFile =
@@ -173,7 +175,7 @@ data MerchantOnboardingAPIs = MerchantOnboardingAPIs
     merchantOnboardingStepSubmit :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Domain.Types.MerchantOnboarding.MerchantOnboardingAPI,
     merchantOnboardingStepUpdatePayload :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     merchantOnboardingStepReject :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    merchantOnboardingStepApprove :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    merchantOnboardingStepApprove :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient ApproveResponse,
     merchantOnboardingStepUploadFile ::
       Kernel.Prelude.Text ->
       Kernel.Prelude.Text ->

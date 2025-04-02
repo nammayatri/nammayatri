@@ -163,3 +163,13 @@ ALTER TABLE atlas_app.person ADD COLUMN live_activity_token text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
