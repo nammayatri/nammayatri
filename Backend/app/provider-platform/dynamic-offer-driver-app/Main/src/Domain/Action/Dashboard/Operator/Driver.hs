@@ -17,7 +17,6 @@ import qualified Domain.Action.Dashboard.Fleet.Driver as Fleet
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
-import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
@@ -39,7 +38,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.DriverAssociation as SDA
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -221,9 +220,9 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId res.person.id operator.id True
       when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
 
-      SDA.endActiveAssociationsIfAllowed merchant person.id
+      SA.endDriverAssociationsIfAllowed merchant person.id
 
-      assoc <- DOA.makeDriverOperatorAssociation merchant.id merchantOpCityId res.person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId res.person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
 
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
@@ -243,9 +242,9 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId person.id operator.id True
       when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
 
-      SDA.endActiveAssociationsIfAllowed merchant person.id
+      SA.endDriverAssociationsIfAllowed merchant person.id
 
-      assoc <- DOA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
   pure Success
 
@@ -287,7 +286,7 @@ postDriverOperatorAddDrivers merchantShortId opCity requestorId req = do
       QDOA.checkDriverOperatorAssociation person.id operator.id
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Operator Consent SMS to Driver" $ do
-            try @_ @SomeException (SDA.endActiveAssociationsIfAllowed merchant person.id) >>= \case
+            try @_ @SomeException (SA.endDriverAssociationsIfAllowed merchant person.id) >>= \case
               Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)
               Right _ -> do
                 let driverMobile = req_.driverPhoneNumber

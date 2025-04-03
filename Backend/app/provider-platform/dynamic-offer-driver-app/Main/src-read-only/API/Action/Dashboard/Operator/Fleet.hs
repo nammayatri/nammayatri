@@ -21,10 +21,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Operator.Fleet.API)
-handler merchantId city = postFleetOperatorFleetRegister merchantId city :<|> postFleetOperatorFleetLink merchantId city :<|> postFleetOperatorFleetUnlink merchantId city
-
-postFleetOperatorFleetRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Operator.Fleet.FleetOwnerRegisterReq -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Fleet.FleetOwnerRegisterRes)
-postFleetOperatorFleetRegister a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Operator.Fleet.postFleetOperatorFleetRegister a4 a3 a2 a1
+handler merchantId city = postFleetOperatorFleetLink merchantId city :<|> postFleetOperatorFleetUnlink merchantId city
 
 postFleetOperatorFleetLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFleetOperatorFleetLink a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Operator.Fleet.postFleetOperatorFleetLink a4 a3 a2 a1

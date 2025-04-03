@@ -106,7 +106,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import qualified SharedLogic.DriverAssociation as SDA
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
@@ -1148,7 +1148,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
 
       void $ DRBReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
 
-      SDA.endActiveAssociationsIfAllowed merchant person.id
+      SA.endDriverAssociationsIfAllowed merchant person.id
 
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
@@ -1167,7 +1167,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
-      SDA.endActiveAssociationsIfAllowed merchant person.id
+      SA.endDriverAssociationsIfAllowed merchant person.id
 
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
@@ -1673,7 +1673,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         >>= \isAssociated -> unless isAssociated $ do
           fork "Sending Fleet Consent SMS to Driver" $ do
             void $
-              try @_ @SomeException (SDA.endActiveAssociationsIfAllowed merchant person.id) >>= \case
+              try @_ @SomeException (SA.endDriverAssociationsIfAllowed merchant person.id) >>= \case
                 Left err -> logError $ "Unable to add Driver (" <> req_.driverPhoneNumber <> ") to the Fleet: " <> (T.pack $ displayException err)
                 Right _ -> do
                   let driverMobile = req_.driverPhoneNumber

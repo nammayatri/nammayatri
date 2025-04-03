@@ -22,7 +22,6 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import Domain.Types.FleetOperatorAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -132,24 +132,6 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-makeFleetOperatorAssociation :: (MonadFlow m) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Maybe UTCTime -> m FleetOperatorAssociation
-makeFleetOperatorAssociation merchantId merchantOpCityId fleetOwnerId operatorId end = do
-  id <- generateGUID
-  now <- getCurrentTime
-  return $
-    FleetOperatorAssociation
-      { id = id,
-        operatorId = operatorId,
-        isActive = True,
-        fleetOwnerId = fleetOwnerId,
-        associatedOn = Just now,
-        associatedTill = end,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
-
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow DP.Person
 createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbEnabled mbgstNumber mbReferredOperatorId mbIsGenerateRefEntry = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -159,7 +141,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
   createFleetOwnerInfo person.id merchantId mbfleetType mbEnabled mbgstNumber mbReferredOperatorId
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
-    fleetOperatorAssData <- makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
     incrementFleetOwnerOnboardedCountByOperator (Id referredOperatorId)
   when (mbIsGenerateRefEntry == Just True) $ do

@@ -19,14 +19,14 @@ instance FromTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAsso
         Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation
           { associatedOn = associatedOn,
             associatedTill = associatedTill,
-            createdAt = createdAt,
             fleetOwnerId = fleetOwnerId,
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
             operatorId = operatorId,
-            updatedAt = updatedAt,
-            merchantId = fmap Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = fmap Kernel.Types.Id.Id merchantOperatingCityId
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation where
@@ -34,12 +34,12 @@ instance ToTType' Beam.FleetOperatorAssociation Domain.Types.FleetOperatorAssoci
     Beam.FleetOperatorAssociationT
       { Beam.associatedOn = associatedOn,
         Beam.associatedTill = associatedTill,
-        Beam.createdAt = createdAt,
         Beam.fleetOwnerId = fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
         Beam.operatorId = operatorId,
-        Beam.updatedAt = updatedAt,
-        Beam.merchantId = fmap Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = fmap Kernel.Types.Id.getId merchantOperatingCityId
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

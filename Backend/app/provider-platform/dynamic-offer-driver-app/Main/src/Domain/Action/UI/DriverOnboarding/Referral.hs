@@ -18,7 +18,6 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
-import qualified Domain.Action.UI.DriverOperatorAssociation as DOA
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -32,6 +31,7 @@ import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -119,7 +119,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           if hasNoAssociation
             then do
               DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-              driverOperatorAssData <- DOA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+              driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
               void $ QDOA.create driverOperatorAssData
               incrementOnboardedDriverCountByOperator dr.driverId
               return Success

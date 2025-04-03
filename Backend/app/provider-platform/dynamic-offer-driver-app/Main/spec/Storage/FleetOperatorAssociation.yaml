@@ -29,3 +29,6 @@ FleetOperatorAssociation:
     id: text
     operatorId: text
     fleetOwnerId: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

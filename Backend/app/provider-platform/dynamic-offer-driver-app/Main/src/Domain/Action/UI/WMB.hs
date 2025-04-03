@@ -63,7 +63,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import qualified SharedLogic.DriverAssociation as SDA
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
@@ -379,7 +379,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
-  SDA.endActiveAssociationsIfAllowed merchant driver.id
+  SA.endDriverAssociationsIfAllowed merchant driver.id
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
