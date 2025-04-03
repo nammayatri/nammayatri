@@ -3246,7 +3246,6 @@ export const setupVoiceRecognitionView = function(id) {
 }
 
 export const startOpenMeterActivity = (cb) => {
-export const startOpenMeterActivity = (cb) => {
   return () => {
     const callback = () => {
       const timeTaken = Date.now() - window.onPauseTime;
@@ -3268,6 +3267,5 @@ export const startGActivity = (token) => {
   return () => {
     console.log("startGActivity...", token);
     JBridge.startGActivity(token);
-    JBridge.startOpenMeterActivity("callback");
   }
 }
