@@ -11,7 +11,6 @@ imports:
   Language: Tools.Maps
   Money: Kernel.Types.Common
   Currency: Kernel.Types.Common
-  EncryptedHashedField: Kernel.External.Encryption
   DeliveryInitiation: BecknV2.OnDemand.Enums
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption

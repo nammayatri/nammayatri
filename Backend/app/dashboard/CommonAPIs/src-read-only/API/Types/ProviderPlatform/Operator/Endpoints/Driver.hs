@@ -47,7 +47,7 @@ data RequestType
   deriving stock (Generic, Eq)
   deriving anyclass (Kernel.Prelude.ToParamSchema, ToJSON, FromJSON, ToSchema)
 
-data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prelude.Text, operatorId :: Kernel.Prelude.Text, registrationNo :: Kernel.Prelude.Text, remarks :: Kernel.Prelude.Text, status :: RequestStatus}
+data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prelude.Text, operatorId :: Kernel.Prelude.Text, remarks :: Kernel.Prelude.Text, status :: RequestStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -4,7 +4,6 @@ imports:
   Price: Kernel.Types.Common
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  EncryptedHashedField: Kernel.External.Encryption
   Currency: Kernel.Types.Common
   Location: Domain.Types.Location
   Person: Domain.Types.Person

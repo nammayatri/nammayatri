@@ -2,7 +2,6 @@ imports:
   DbHash: Kernel.External.Encryption
   Merchant: Domain.Types.Merchant
   Value: Data.Aeson
-  EncryptedHashedField: Kernel.External.Encryption
   PartnerOrganizationConfig: Domain.Types.Extra.PartnerOrgConfig
   ConfigType: Domain.Types.Extra.PartnerOrgConfig
   Station: Domain.Types.Station

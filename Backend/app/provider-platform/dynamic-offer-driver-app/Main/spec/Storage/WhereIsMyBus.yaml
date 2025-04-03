@@ -4,7 +4,6 @@ imports:
   ServiceTierType: Domain.Types.Common
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
   ApprovalRequest: Domain.Types.ApprovalRequest

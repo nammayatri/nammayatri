@@ -1,7 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   Language: Kernel.External.Types
   Version: Kernel.Types.Version

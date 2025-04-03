@@ -8,6 +8,7 @@ import Domain.Types.OperationHubRequests
 import Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (encrypt)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -33,10 +34,11 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
     opsHubReq <- QOHR.findByDriverStatusAndType driverId PENDING req.requestType
     unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
+    registrationNo <- encrypt req.registrationNo
     let operationHubReq =
           OperationHubRequests
             { operationHubId = req.operationHubId,
-              registrationNo = req.registrationNo,
+              registrationNo,
               requestType = req.requestType,
               requestStatus = PENDING,
               createdAt = now,
