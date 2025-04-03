@@ -18,3 +18,7 @@ import Storage.Queries.OrphanInstances.VehicleRouteMapping
 findAllByVehicleNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Text] -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping]
 findAllByVehicleNumber vehicleNumbers = do
   findAllWithKV [Se.Is Beam.vehicleNo $ Se.In $ vehicleNumbers]
+
+findByVehicleNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe Domain.Types.VehicleRouteMapping.VehicleRouteMapping)
+findByVehicleNumber vehicleNumber = do
+  findOneWithKV [Se.Is Beam.vehicleNo $ Se.Eq vehicleNumber]

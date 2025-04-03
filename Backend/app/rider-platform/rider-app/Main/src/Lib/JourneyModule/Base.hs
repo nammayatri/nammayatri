@@ -94,28 +94,24 @@ filterTransitRoutes routes mocid = do
         then return True
         else do
           busLegsValid <- forM busLegs $ \leg -> do
-            case (leg.fromDepartureTime, leg.fromStopDetails) of
-              (Nothing, _) -> return False
-              (_, Nothing) -> return False
-              (Just departureTime, Just stopDetails) ->
-                case (stopDetails.stopCode, stopDetails.gtfsId) of
-                  (Nothing, _) -> return False
-                  (_, Nothing) -> return False
-                  (Just stopCode, Just routeId) -> do
-                    let buffer = 300 -- TODO: MOVE TO CONFIG.
-                    let departureTimeWithBuffer = buffer `addUTCTime` departureTime
-                    routeWithBuses <- CQMMB.getRoutesBuses routeId
+            case (leg.fromDepartureTime, leg.fromStopDetails >>= (.stopCode), leg.fromStopDetails >>= (.gtfsId)) of
+              (Just departureTime, Just stopCode, Just routeId) -> do
+                let buffer = 300 -- TODO: MOVE TO CONFIG.
+                let departureTimeWithBuffer = buffer `addUTCTime` departureTime
+                routeWithBuses <- CQMMB.getRoutesBuses routeId
 
-                    -- Check if the bus has an ETA for this stop
-                    return $
-                      any
-                        ( \bus -> do
-                            let busStopETA = find (\eta -> eta.stopId == stopCode) (fromMaybe [] bus.busData.eta_data)
-                            case busStopETA of
-                              Just eta -> eta.arrivalTime > departureTimeWithBuffer
-                              Nothing -> False
-                        )
-                        routeWithBuses.buses
+                -- Check if the bus has an ETA for this stop
+                return $
+                  any
+                    ( \bus -> do
+                        -- vehicleRouteMapping <- QVehicleRouteMapping.findByVehicleNumber bus.vehicleNo
+                        let busStopETA = find (\eta -> eta.stopId == stopCode) (fromMaybe [] bus.busData.eta_data)
+                        case busStopETA of
+                          Just eta -> eta.arrivalTime > departureTimeWithBuffer
+                          Nothing -> False
+                    )
+                    routeWithBuses.buses
+              _ -> return False
 
           return (all (\x -> x) busLegsValid)
 
@@ -1062,6 +1058,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
           routeDetails = [],
+          serviceTypes = [],
           agency = Nothing,
           fromArrivalTime = Just startTime,
           fromDepartureTime = Just startTime,
@@ -1257,6 +1254,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
           routeDetails = [],
+          serviceTypes = [],
           agency = Nothing,
           fromArrivalTime = Nothing,
           fromDepartureTime = Nothing,

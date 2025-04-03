@@ -469,6 +469,7 @@ multiModalSearch searchRequest initateJourney req' = do
                   gtfsId = destinationStopCode
                 },
           routeDetails = routeDetails,
+          serviceTypes = [],
           agency = Nothing,
           fromArrivalTime = Just departureTimeFromSource,
           fromDepartureTime = Just departureTimeFromSource,
