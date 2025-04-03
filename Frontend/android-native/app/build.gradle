@@ -315,7 +315,7 @@ android {
     // Conditionally include dynamic features
     if (includeDynamicFeature.toBoolean()){
         println "includeDynamicFeature " + includeDynamicFeature.toBoolean()
-        dynamicFeatures = [':dynamicfeature']
+//        dynamicFeatures = [':dynamicfeature']
     }
 
 //    signingConfigs {

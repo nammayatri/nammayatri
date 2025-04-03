@@ -6,7 +6,7 @@ import Prelude (class Show, bind, pure, ($), show, (<>))
 import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Screens (getScreen, ScreenName(..))
-import Screens.Types 
+import Screens.Types
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
 import Components.GenericHeader as GenericHeader
@@ -147,10 +147,10 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
 
-eval BackPressed state = 
-  if state.props.showDriverReferralQRCode then 
+eval BackPressed state =
+  if state.props.showDriverReferralQRCode then
     continue state{props{showDriverReferralQRCode = false}}
-  else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then 
+  else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
   else exit $ GoToHomeScreen state
 
@@ -158,7 +158,7 @@ eval (GoToCustomerReferralTracker openPP) state = exit $ GoToCustomerReferralTra
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
 
-eval (GullakSDKResponse _ ) state = 
+eval (GullakSDKResponse _ ) state =
   continueWithCmd state { props { glBannerClickable = true}}
     [do
       void $ EHU.terminateLoader ""
@@ -172,7 +172,7 @@ eval ShowQRCode state = do
 eval ShareQRLink state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
   let title = getString $ SHARE_NAMMA_YATRI "SHARE_NAMMA_YATRI"
-  let message = (getString SHARE_NAMMA_YATRI_MESSAGE) <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) <> (getString BE_OPEN_CHOOSE_OPEN) 
+  let message = (getString SHARE_NAMMA_YATRI_MESSAGE) <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) <> (getString BE_OPEN_CHOOSE_OPEN)
   _ <- pure $ shareTextMessage title message
   continue state
 
@@ -199,11 +199,11 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Earnings" -> exit $ EarningsScreen state
     _ -> continue state
 
-eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
+eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do
   continue state {
               data{
-                totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, 
-                totalActivatedCustomers = resp.referrals.totalActivatedCustomers, 
+                totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers,
+                totalActivatedCustomers = resp.referrals.totalActivatedCustomers,
                 totalReferredCustomers = resp.referrals.totalReferredCustomers,
                 eligiblePayoutAmount = resp.referrals.eligiblePayoutAmount,
                 lastPayoutAt = resp.referrals.lastPayoutAt,
@@ -231,7 +231,7 @@ eval (ChangeTab tab) state = do
       pure $ RenderQRCode
     ]
 
-eval (ShowReferedInfo referralInfoPopType) state = 
+eval (ShowReferedInfo referralInfoPopType) state =
   continue state {props {referralInfoPopType = referralInfoPopType}}
 
 eval GoToLeaderBoard state = do
@@ -258,9 +258,9 @@ eval UpdateBanner state = do
 eval (BannerChanged item) state = do
   let currentBanner = DI.fromString item
   case currentBanner of
-    Just idx -> do 
+    Just idx -> do
         let newState = state{data {bannerData{currentBanner = idx}}}
-        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit 
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit
           else pure unit
         continue newState
     Nothing  -> continue state
@@ -281,10 +281,10 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
             pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
-  ] 
+  ]
 
 eval GullakBannerClick state = continue state { props { glBannerClickable = false}}
-  
+
 eval _ state = update state
 
 shareImageMessageConfig :: BenefitsScreenState -> ShareImageConfig
@@ -305,6 +305,6 @@ getRemoteBannerConfigs action = do
   BannerCarousel.remoteConfigTransformer datas action Nothing
   where
     getLanguage :: String -> String
-    getLanguage lang = 
+    getLanguage lang =
       let language = DS.toLower $ DS.take 2 lang
       in if not (DS.null language) then "_" <> language else "_en"
