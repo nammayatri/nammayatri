@@ -343,8 +343,8 @@ instance showAction :: Show Action where
   show VerifyVPA = "VerifyVPA"
   show (VpaTextChanged _) = "VpaTextChanged"
   show CloseUPI = "CloseUPI"
-  show (PrimaryButtonActionController act) = "AddUPI_" <> show act
-  show (MaybeLaterPrimaryButtonAC act) = "MaybeLaterPrimaryButtonAC_" <> show act
+  show (PrimaryButtonActionController act) = "AddUPI"
+  show (MaybeLaterPrimaryButtonAC act) = "MaybeLaterPrimaryButtonAC"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit

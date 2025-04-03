@@ -22,6 +22,23 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
+
+if (window.JOS.self != "in.mobility.core") {
+  window.JOS.emitEventOriginal = window.JOS.emitEvent;
+  window.JOS.emitEvent = (_parent, _event, payload) => {
+    return () => {
+      window.JOS.emitEventOriginal(_parent)(_event)(payload)()();
+    }
+  }
+}
+
+// if (window.__OS === "IOS") {
+//   window.JOS.originalEmitEvent = window.JOS.emitEvent;
+//   window.JOS.emitEvent = (parent,_event,payload) => {
+//     window.JOS.originalEmitEvent(parent)(_event)(payload)()();
+//   }
+// }
+
 const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds", "addToLogList"])
 
 if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
@@ -238,7 +255,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
-    JBridge.initiateLocationServiceClient()
+    // JBridge.initiateLocationServiceClient()
     console.warn("Process called");
     try {
       const clientPaylod = window.__payload.payload;
@@ -428,6 +445,7 @@ if (typeof window.JOS != "undefined") {
   console.error("JOS not present")
 }
 
+}
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 const JOSFlags = window.JOS.getJOSflags()

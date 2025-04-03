@@ -335,14 +335,6 @@ getEnquiryBannerConfig city =
                     resp
 
 
-
-getCustomerVoipConfig :: String -> CT.VoipConfig
-getCustomerVoipConfig city = do
-    let config = fetchRemoteConfigString "voip_config"
-        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVoipConfig
-    getCityBasedConfig value $ toLower city
-
-
 defaultReferralPayout :: ReferralPayoutConfig
 defaultReferralPayout = {
     enable : Just true,
@@ -356,4 +348,4 @@ getReferralPayoutConfig :: String -> ReferralPayoutConfig
 getReferralPayoutConfig city = do
     let config = fetchRemoteConfigString "referral_payout_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultReferralPayout
-    getCityBasedConfig value $ toLower city
+    getCityBasedConfig value $ DS.toLower city

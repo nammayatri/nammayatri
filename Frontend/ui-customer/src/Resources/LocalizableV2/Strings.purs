@@ -107,6 +107,7 @@ getOD = getString "OD_IN"
 
 getProxy :: STR -> (Keymap -> String)
 getProxy str = case str of
+    TAKE_A_RIDE__CLAIM_50 arg1 -> \a -> (a @~ take_a_ride__claim_50) arg1
     TAKE_A_RIDE_NOW -> \a -> a @~ take_a_ride_now
     GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE ab -> \a -> (a @~ get_50_referral_benefit_for_your_first_ride) ab
     YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE ab -> \a -> (a @~ youve_earned_50_for_taking_your_first_ride) ab
@@ -1837,8 +1838,6 @@ getProxy str = case str of
     EXPERIENCE_OUR_PILOT_LAUNCH_FOR_BUS_TICKETING_IN_PRIME_ROUTES arg1 -> \a -> (a @~ experience_our_pilot_launch_for_bus_ticketing_in_prime_routes) arg1
     NOTE_YOUR_TICKET_IS_ONLY_VALID_FOR arg1 -> \a -> (a @~ note_your_ticket_is_only_valid_for) arg1
     HERE_IS_BUS_TICKET -> \a -> a @~ here_is_bus_ticket
-
-    AMBULANCE_ -> \a -> a @~ ambulance_
     YOUR_EARNINGS_WILL_BE_CREDITED_TO_THIS_ACCOUNT -> \a -> a @~ your_earnings_will_be_credited_to_this_account 
     TRANSACTION_HISTORY -> \a -> a @~ transaction_history 
     TOTAL_EARNED -> \a -> a @~ total_earned 

@@ -1784,4 +1784,5 @@ getKn = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a ->"ನೀವು ನಿಮ್ಮ ಮೊದಲ ಪ್ರಯಾಣಕ್ಕಾಗಿ ₹" <> a <> " ಗಳಿಸಿದ್ದೀರಿ!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"ನಿಮ್ಮ ಮೊದಲ ಪ್ರಯಾಣಕ್ಕಾಗಿ ₹" <> a <> " ರೆಫರಲ್ ಪ್ರಯೋಜನವನ್ನು ಪಡೆಯಿರಿ!"
     , take_a_ride_now: "ಈಗಲೇ ಪ್ರಯಾಣ ಮಾಡಿ"
+    , take_a_ride__claim_50: \a ->  "ಒಂದು ಪ್ರಯಾಣ ಮಾಡಿ ₹" <> a <> " ಪಡೆಯಿರಿ"
 }

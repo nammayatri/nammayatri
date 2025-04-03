@@ -41,7 +41,7 @@ def update_language_files(lang_folder, translations):
 
 def main():
     json_file = "translations.json"  # Update this path if needed
-    lang_folder = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2"
+    lang_folder = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2"
     
     translations = load_translations(json_file)
     update_language_files(lang_folder, translations)

@@ -1784,4 +1784,5 @@ getTa = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a ->"உங்கள் முதல் பயணத்திற்கு ₹" <> a <> " பெற்றுவிட்டீர்கள்!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"உங்கள் முதல் பயணத்திற்கு ₹" <> a <> " பரிந்துரை நன்மையைப் பெறுங்கள்!"
     , take_a_ride_now: "உடனே ஒரு பயணம் செய்யுங்கள்"
+    , take_a_ride__claim_50: \a ->  "ஒரு பயணத்தை எடுத்து ₹" <> a <> " பெறுங்கள்"
 }

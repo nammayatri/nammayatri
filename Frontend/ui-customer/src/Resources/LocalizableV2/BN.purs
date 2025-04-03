@@ -1784,4 +1784,5 @@ getBn = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a ->"আপনি আপনার প্রথম রাইড নেওয়ার জন্য ₹" <> a <> " উপার্জন করেছেন!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"আপনার প্রথম রাইডের জন্য " <> a <> " রেফারেল বেনিফিট পান!"
     , take_a_ride_now: "এখনই একটি যাত্রা করুন"
+    , take_a_ride__claim_50: \a ->  "একটি যাত্রা করুন এবং ₹" <> a <> " দাবি করুন"
 }
