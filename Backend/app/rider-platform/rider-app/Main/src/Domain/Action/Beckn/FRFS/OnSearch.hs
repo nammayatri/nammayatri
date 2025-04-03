@@ -31,6 +31,7 @@ import EulerHS.Prelude (comparing, toStrict)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -142,10 +143,6 @@ onSearch onSearchReq validatedReq = do
       zippedQuotes <- verifyAndZipQuotes quotesCreatedByCache quotes
       let updatedQuotes = map updateQuotes zippedQuotes
       for_ updatedQuotes \quote -> QQuote.updateCachedQuoteByPrimaryKey quote
-  let search = validatedReq.search
-      mbRequiredQuote = filterQuotes quotes
-  whenJust mbRequiredQuote $ \requiredQuote -> do
-    SLCF.createFares search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
   return ()
   where
@@ -169,7 +166,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
 
   startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
   endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
-  let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText

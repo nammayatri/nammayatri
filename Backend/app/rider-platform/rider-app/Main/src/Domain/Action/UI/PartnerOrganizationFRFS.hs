@@ -420,8 +420,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
       )
       routeCode
   merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
-  let partnerOrgRiderId = "partnerOrg_rider_id"
-  searchReq <- mkSearchReq frfsVehicleType partnerOrgRiderId partnerOrgTransactionId partnerOrg fromStation toStation route
+  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
     CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq
@@ -461,12 +460,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             partnerOrgTransactionId = partnerOrgTransactionId',
             partnerOrgId = Just partnerOrg'.orgId,
             journeyLegInfo = Nothing,
-            frequency = Nothing,
             isOnSearchReceived = Nothing,
-            lineColor = Nothing,
-            lineColorCode = Nothing,
-            journeyLegStatus = Nothing,
-            platformNumber = Nothing,
             ..
           }
 
@@ -634,8 +628,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
                 mobileCountryCode = req.mobileCountryCode,
                 mobileNumber = req.mobileNumber,
                 identifierType = req.identifierType,
-                partnerOrgTransactionId = Nothing,
-                cityId = fromStation.merchantOperatingCityId
+                partnerOrgTransactionId = Nothing
               }
       let mbRegCoordinates = mkLatLong fromStation.lat fromStation.lon
       (personId, token) <- upsertPersonAndGetToken partnerOrg.orgId regPOCfg fromStation.merchantOperatingCityId fromStation.merchantId mbRegCoordinates getFareReq

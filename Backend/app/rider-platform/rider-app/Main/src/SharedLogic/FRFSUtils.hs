@@ -185,6 +185,37 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
       )
       routes
 
+-- TODO :: This to be handled from OTP, Currently Hardcode for Chennai
+getPossibleTransitRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [[RouteStopInfo]]
+getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
+  case (startStationCode, endStationCode) of
+    ("MBTcSIip", "jQaLNViL") -> do
+      routes <- QRoute.findByRouteCodes ["jylLjHej", "BTuKbmBy"]
+      return $
+        [ map
+            ( \route ->
+                if route.code == "jylLjHej"
+                  then
+                    RouteStopInfo
+                      { route,
+                        totalStops = Just 6,
+                        startStopCode = "MBTcSIip",
+                        endStopCode = "TiulEaYs",
+                        travelTime = Just $ Seconds 660
+                      }
+                  else
+                    RouteStopInfo
+                      { route,
+                        totalStops = Just 8,
+                        startStopCode = "TiulEaYs",
+                        endStopCode = "jQaLNViL",
+                        travelTime = Just $ Seconds 1440
+                      }
+            )
+            routes
+        ]
+    _ -> return []
+
 getDiscountInfo :: Bool -> Maybe Int -> Maybe Int -> Price -> Int -> Int -> (Maybe Int, Maybe HighPrecMoney)
 getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price quantity ticketsBookedInEvent =
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
