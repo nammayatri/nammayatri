@@ -1787,4 +1787,5 @@ getEn = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a ->"You’ve earned ₹" <> a <> " for taking your first ride!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"Get ₹" <> a <> " Referral Benefit for your first ride!"
     , take_a_ride_now: "Take a ride now"
+    , take_a_ride__claim_50: \a ->  "Take a ride & claim ₹" <> a 
 }

@@ -107,6 +107,7 @@ getOD = getString "OD_IN"
 
 getProxy :: STR -> (Keymap -> String)
 getProxy str = case str of
+    TAKE_A_RIDE__CLAIM_50 arg1 -> \a -> (a @~ take_a_ride__claim_50) arg1
     TAKE_A_RIDE_NOW -> \a -> a @~ take_a_ride_now
     GET_50_REFERRAL_BENEFIT_FOR_YOUR_FIRST_RIDE ab -> \a -> (a @~ get_50_referral_benefit_for_your_first_ride) ab
     YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE ab -> \a -> (a @~ youve_earned_50_for_taking_your_first_ride) ab

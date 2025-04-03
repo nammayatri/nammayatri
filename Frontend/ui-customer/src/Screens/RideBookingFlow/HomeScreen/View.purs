@@ -3975,6 +3975,7 @@ pickupLocationView push state =
   let applyReferral = not $ state.props.isReferred
       referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
       youGet = fromMaybe 0.0 referralPayoutConfig.youGet
+      theyGet = fromMaybe 0.0 referralPayoutConfig.theyGet
       hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
       {isPayoutEnabled, totalEarningPending, takeFirstRide} = 
           case state.data.profile of 
@@ -4096,7 +4097,7 @@ pickupLocationView push state =
                         , padding $ PaddingRight 4
                         ]
                       , textView $
-                        [ text $ getString $ if showCollect then COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
+                        [ text $ if showCollect then getString $ COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else if takeFirstRide then getString $ TAKE_A_RIDE__CLAIM_50 (show $ fromMaybe 0 $ fromNumber theyGet) else getString $ INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
                         , color if showCollect then Color.white900 else Color.blue900
                         , gravity CENTER
                         ] <> FontStyle.body4 TypoGraphy
