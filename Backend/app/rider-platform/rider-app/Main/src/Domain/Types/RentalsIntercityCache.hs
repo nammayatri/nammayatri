@@ -35,14 +35,17 @@ data RentalsSearchResp = RentalsSearchResp
 data RentalsConfig = RentalsConfig
   { rentalDuration :: Seconds,
     rentalDistance :: Meters,
-    rentalPriority :: Int
+    rentalPriority :: Int,
+    rentalImageUrl :: Maybe Text
   }
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data IntercitySearchLocation = IntercitySearchLocation
   { destination :: Maybe LatLong,
-    destinationCity :: Maybe Text
+    destinationCity :: Maybe Text,
+    destinationCityBannerImageUrl :: Maybe Text,
+    destinationCityButtonImageUrl :: Maybe Text
   }
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

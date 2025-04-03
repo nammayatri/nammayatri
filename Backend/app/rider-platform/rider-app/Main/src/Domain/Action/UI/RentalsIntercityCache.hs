@@ -46,8 +46,8 @@ rentalsIntercityCache personId merchantId req = do
       specialLocationId = fmap (.id) checkForServiceable.specialLocation
       cityCenterLatLong = Just $ LatLong {lat = merchantOperatingCity.lat, lon = merchantOperatingCity.long}
       excludedVehicleVariants = riderConfig.excludedVehicleVariants
-      rentalsConfig = riderConfig.rentalsConfig
-      interCitySearchLocations = riderConfig.intercitySearchLocations
+      rentalsConfig = riderConfig.fareCacheRentalsConfig
+      interCitySearchLocations = riderConfig.fareCacheInterCitySearchLocations
   interCityResp <-
     case checkForSpecialLocation of
       True -> do

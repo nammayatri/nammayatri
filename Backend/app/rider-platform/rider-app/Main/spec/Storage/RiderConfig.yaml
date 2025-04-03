@@ -94,6 +94,8 @@ RiderConfig:
     nearbyDriverSearchRadius: Maybe Double
     isDeviceIdCheckDisabled: Maybe Bool
     enableBusFiltering: Maybe Bool
+    fareCacheRentalsConfig: "Maybe [RentalsConfig]"
+    fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -122,6 +124,8 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Maybe Int
     variantListForNearByReq: Maybe [Text]
     nearByDriverRingBucketCfg: Maybe Value
+    fareCacheRentalsConfig : Maybe Value
+    fareCacheInterCitySearchLocations : Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -157,6 +161,8 @@ RiderConfig:
     payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
     variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -185,6 +191,8 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
     variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -241,6 +249,8 @@ RiderConfig:
     intercitySearchLocations : text []
     variantListForNearByReq: text []
     nearByDriverRingBucketCfg: "json"
+    fareCacheRentalsConfig : "json"
+    fareCacheInterCitySearchLocations : "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
