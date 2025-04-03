@@ -1787,4 +1787,5 @@ getTe = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a -> "మీ మొదటి రైడ్ తీసుకున్నందుకు ₹" <> a <> " సంపాదించారు!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"మీ మొదటి రైడ్ కోసం ₹" <> a <> " రిఫరల్ ప్రయోజనం పొందండి!"
     , take_a_ride_now: "ఇప్పుడే ఒక ప్రయాణం చేయండి"
+    , take_a_ride__claim_50: \a ->  "ఒక రైడ్ తీసుకుని ₹" <> a <> " పొందండి"
 }

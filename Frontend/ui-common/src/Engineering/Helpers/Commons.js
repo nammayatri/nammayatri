@@ -170,9 +170,16 @@ export const getScreenPpi = function () {
   }
 }
 
+const assignDeviceDetails = () => {
+  if (!parent.__DEVICE_DETAILS) {
+    parent.__DEVICE_DETAILS = JSON.parse(JBridge.getSessionInfo())
+  }
+}
+
 
 export const safeMarginTopImpl = function () {
   try {
+    assignDeviceDetails();
     if (parent.__DEVICE_DETAILS && parent.__DEVICE_DETAILS.safe_area_frame) {
       return parent.__DEVICE_DETAILS.safe_area_frame.y
     }
@@ -185,6 +192,7 @@ export const safeMarginTopImpl = function () {
 
 export const safeMarginBottomImpl = function () {
   try {
+    assignDeviceDetails();
     const d = parent.__DEVICE_DETAILS;
     if (!d || !d.safe_area_frame) {
       return 0;
@@ -194,6 +202,8 @@ export const safeMarginBottomImpl = function () {
     return 0;
   }
 }
+
+
 
 export const getVersionByKey = function (key) {
   return window.version[key] || "";
