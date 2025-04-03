@@ -64,7 +64,8 @@ sendDriverReferralPayoutJobData ::
     MonadFlow m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Job 'DriverReferralPayout ->
   m ExecutionResult
@@ -131,7 +132,8 @@ callPayout ::
     MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   DS.DailyStats ->
   DI.DriverInformation ->
@@ -170,7 +172,7 @@ callPayout DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRet
               else pure 0.0
           let entityName = DLP.DRIVER_DAILY_STATS
               amount = referralEarnings + refundRegistrationAmt
-              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
+              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid

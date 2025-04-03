@@ -962,12 +962,13 @@ payoutStatusUpdates status_ orderId statusResp = do
         Nothing -> pure ()
     Nothing -> pure ()
 
-mkCreatePayoutOrderReq :: Text -> HighPrecMoney -> Maybe Text -> Maybe Text -> Text -> Text -> Maybe Text -> Text -> Text -> PT.CreatePayoutOrderReq
-mkCreatePayoutOrderReq orderId amount mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType =
+mkCreatePayoutOrderReq :: Text -> HighPrecMoney -> Maybe Text -> Maybe Text -> Text -> Text -> Maybe Text -> Text -> Text -> Bool -> PT.CreatePayoutOrderReq
+mkCreatePayoutOrderReq orderId amount mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired =
   PT.CreatePayoutOrderReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
       customerEmail = fromMaybe "dummymail@gmail.com" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,
+      isDynamicWebhookRequired = isDynamicWebhookRequired,
       ..
     }
 

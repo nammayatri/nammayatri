@@ -221,7 +221,7 @@ casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
-processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
+processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -244,7 +244,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
-          let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
+          let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
           let serviceName = DEMSC.PayoutService TPayout.Juspay
           let entityName = DPayment.BACKLOG
               createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity serviceName
