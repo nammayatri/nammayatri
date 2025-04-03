@@ -44,6 +44,7 @@ odia :: Proxy "odia"
 odia = a
 
 newtype Keymap = Keymap {
+    take_a_ride__claim_50  :: String -> String,
     take_a_ride_now  :: String ,
     get_50_referral_benefit_for_your_first_ride  :: String -> String,
     youve_earned_50_for_taking_your_first_ride  :: String -> String ,
@@ -7180,4 +7181,7 @@ get_50_referral_benefit_for_your_first_ride = a
 
 take_a_ride_now :: Proxy "take_a_ride_now"
 take_a_ride_now = a
+
+take_a_ride__claim_50 :: Proxy "take_a_ride__claim_50"
+take_a_ride__claim_50 = a
 

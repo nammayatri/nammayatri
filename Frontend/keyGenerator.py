@@ -101,11 +101,11 @@ def update_strings_v2(strings_v2_file, translations):
             f.writelines(new_lines)
 
 def main():
-    folder = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Screens/CustomerUtils/ReferralPayoutScreen"
-    types_file = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/Localizable/Types.purs"
-    types_v2_file = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2/Types.purs"
-    lang_folder = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2"
-    strings_v2_file = "/home/admin1/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2/Strings.purs"
+    folder = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-customer/src/Screens/RideBookingFlow/HomeScreen"
+    types_file = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-customer/src/Resources/Localizable/Types.purs"
+    types_v2_file = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2/Types.purs"
+    lang_folder = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2"
+    strings_v2_file = "/Users/vignesh.s/Documents/nammayatri/Frontend/ui-customer/src/Resources/LocalizableV2/Strings.purs"
     
     existing_keys = existing_keys_in_file(types_file) | existing_keys_in_file(types_v2_file) | existing_keys_in_file(strings_v2_file)
     for lang in ["EN", "TA", "TE", "ML", "BN", "HI", "KN", "OD"]:
