@@ -52,7 +52,6 @@ import Screens.Types (Stage(..),City(..))
 import Data.String as DS
 import Mobility.Prelude
 import Debug
-import Engineering.Helpers.Utils (getCityFromString)
 import Data.Int (fromNumber)
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w

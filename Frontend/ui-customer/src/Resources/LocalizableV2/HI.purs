@@ -1784,4 +1784,5 @@ getHi = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a ->"आपने अपनी पहली सवारी लेने के लिए ₹" <> a <> " कमा लिए हैं!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"अपनी पहली सवारी के लिए ₹" <> a <> " रेफरल लाभ प्राप्त करें!"
     , take_a_ride_now: "अभी यात्रा करें"
+    , take_a_ride__claim_50: \a ->  "एक सवारी करें और ₹" <> a <> " प्राप्त करें"
 }

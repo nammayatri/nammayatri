@@ -335,7 +335,7 @@ priceDetailsView push config =
     , accessibility DISABLE
     ][linearLayout
       ([ height MATCH_PARENT
-      , width $ if (isBookAny && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
+      , width $ if ((isBookAny || config.enableOffer) && os == "IOS") then V (((EHC.screenWidth unit) * 33) / 100) else WRAP_CONTENT
       , orientation VERTICAL
       ] <> if isBookAny || config.enableOffer then [gravity RIGHT] else [])
       [ linearLayout

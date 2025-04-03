@@ -24,7 +24,7 @@ import Screens (ScreenName(..), getScreen)
 import Helpers.Utils (emitTerminateApp, isParentView)
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
-import Storage (KeyStore(..), setValueToLocalStore, setUserCity)
+import Storage (KeyStore(..), setValueToLocalStore)
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Engineering.Helpers.Commons as EHC
