@@ -103,7 +103,8 @@ processBacklogReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id Person.Person ->
   Text ->
@@ -132,7 +133,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
           uid <- generateGUID
-          let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType
+          let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
           let serviceName = DEMSC.PayoutService PT.Juspay
               createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId serviceName

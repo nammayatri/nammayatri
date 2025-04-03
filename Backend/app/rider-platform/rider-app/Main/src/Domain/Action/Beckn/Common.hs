@@ -603,7 +603,8 @@ rideCompletedReqHandler ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -1127,7 +1128,8 @@ customerReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   DRide.Ride ->
   Maybe Bool ->
@@ -1174,7 +1176,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             emailId <- mapM decrypt person.email
             uid <- generateGUID
             let entityName = entity
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId serviceName
