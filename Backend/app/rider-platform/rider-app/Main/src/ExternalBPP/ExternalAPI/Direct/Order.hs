@@ -42,8 +42,8 @@ getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
     B.runInReplica $
       QRoute.findByRouteCode routeStation.code integratedBPPConfigId
         >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfigId >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfigId.getId)
-  toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfigId >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfigId.getId)
+  fromRoute <- (listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code integratedBPPConfigId) >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfigId.getId)
+  toRoute <- (listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code integratedBPPConfigId) >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfigId.getId)
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
     id <- generateGUID
