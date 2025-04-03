@@ -4,6 +4,7 @@ import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
 import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
+import qualified Domain.Types.IntegratedBPPConfig as DIBPC
 import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
@@ -103,7 +104,8 @@ data OneWaySearchReq = OneWaySearchReq
     placeNameSource :: Maybe Text,
     driverIdentifier :: Maybe DRL.DriverIdentifier,
     isMeterRideSearch :: Maybe Bool,
-    recentLocationId :: Maybe (Id DTRL.RecentLocation)
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -114,7 +116,8 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     destinationStopCode :: Text,
     startTime :: Maybe UTCTime,
     routeCode :: Text,
-    recentLocationId :: Maybe (Id DTRL.RecentLocation)
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -148,7 +151,8 @@ data InterCitySearchReq = InterCitySearchReq
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text,
-    recentLocationId :: Maybe (Id DTRL.RecentLocation)
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -179,7 +183,8 @@ data SearchDetails = SearchDetails
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     routeCode :: Maybe Text,
     destinationStopCode :: Maybe Text,
-    originStopCode :: Maybe Text
+    originStopCode :: Maybe Text,
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, Show)
 
