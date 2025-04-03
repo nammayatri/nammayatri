@@ -113,7 +113,8 @@ data HandlerEnv = HandlerEnv
     passettoContext :: PassettoContext,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
-    broadcastMessageTopic :: KafkaTopic
+    broadcastMessageTopic :: KafkaTopic,
+    selfUIUrl :: BaseUrl
   }
   deriving (Generic)
 
