@@ -32,7 +32,9 @@ module Domain.Action.UI.Profile
   )
 where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknEnums
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -45,6 +47,7 @@ import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person (RideShareOptions)
 import qualified Domain.Types.Person as Person
@@ -78,6 +81,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
@@ -256,9 +260,17 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           else pure Nothing
       else pure person.customerReferralCode
   mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY Nothing
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig
+  let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+  integratedBPPConfigs <-
+    catMaybes
+      <$> forM
+        vehicleTypes
+        ( \vType ->
+            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
+        )
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -284,7 +296,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           referralAmountPaid = Just personStats.referralAmountPaid,
           isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           cancellationRate = cancellationPerc,
-          publicTransportVersion = Nothing,
+          publicTransportVersion = if null integratedBPPConfigs then Nothing else Just (T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs),
           ..
         }
 

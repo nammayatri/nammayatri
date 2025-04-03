@@ -28,6 +28,7 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
@@ -562,7 +563,7 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
               --         }
               --   )
               --   routeStops,
-              ptcv = "v1" -- TODO: handle this
+              ptcv = bppConfig.id.getId
             }
 
   transportDataList <- mapM fetchData integratedBPPConfigs
@@ -571,6 +572,6 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = "v1" -- TODO: handle this
+            ptcv = T.intercalate (T.pack "#") $ map (.ptcv) transportDataList
           }
   return transportData
