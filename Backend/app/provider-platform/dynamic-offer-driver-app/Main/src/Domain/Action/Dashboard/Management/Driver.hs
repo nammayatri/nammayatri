@@ -1123,7 +1123,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestedEn
   whenJust mbEntityId $ \e_Id -> do
     let entityId = cast @Common.Driver @DP.Person e_Id
     when (entityId.getId /= requestedEntityId) $ do
-      entities <- QPerson.findAllByPersonIdsAndMerchant [Id requestedEntityId, entityId] merchant.id merchantOpCityId
+      entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestedEntityId, entityId] merchantOpCityId
       when (length entities /= 2) $ throwError (PersonDoesNotExist (requestedEntityId <> " or " <> entityId.getId))
       isValid <- validatePersonAccessAndAssociation entities
       unless isValid $ throwError AccessDenied

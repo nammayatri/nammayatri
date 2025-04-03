@@ -202,12 +202,11 @@ Person:
       where:
         and: [email, merchantId]
 
-    findAllByPersonIdsAndMerchant:
+    findAllByPersonIdsAndMerchantOpsCityId:
       kvFunction: findAllWithKV
       where:
         and:
           - in: [id]
-          - eq: [merchantId]
           - eq: [merchantOperatingCityId]
 
     updateName:
