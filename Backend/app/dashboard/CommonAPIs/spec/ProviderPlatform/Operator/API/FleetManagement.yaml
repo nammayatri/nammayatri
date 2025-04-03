@@ -11,6 +11,7 @@ apis:
       auth: ApiAuthV2
       query:
         - isActive: Bool
+        - verified: Bool
         - limit: Int
         - offset: Int
       response:
@@ -21,6 +22,7 @@ apis:
       auth: ApiAuthV2
       query:
         - isActive: Bool
+        - verified: Bool
         - limit: Int
         - offset: Int
       response:
@@ -30,17 +32,18 @@ types:
   FleetInfo:
     - id: Id Person
     - name: Text
-    - fleetType: FleetType
-    - enabled: Bool
-    - verified: Bool
-    - gstNumber: Maybe Text
+    - isActive: Bool
+    - mobileCountryCode: Text
+    - mobileNumber: Text
     - vehicleCount: Int
-    - activeVehicleCount: Int
+    - verified: Bool
   DriverInfo:
     - driverId: Id Driver
     - firstName: Text
     - middleName: Maybe Text
     - lastName: Text
+    - isActive: Bool
     - mobileCountryCode: Text
     - mobileNumber: Text
-    - isActive: Maybe Bool
+    - vehicle: Maybe Text
+    - verified: Bool
