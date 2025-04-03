@@ -49,6 +49,7 @@ import qualified Domain.Types.Estimate as Estimate
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -165,7 +166,10 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  fork "Multimodal Search" $ void (multiModalSearch dSearchRes.searchRequest False req)
+  fork "Multimodal Search" $ do
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+    when riderConfig.makeMultiModalSearch $ do
+      void (multiModalSearch dSearchRes.searchRequest riderConfig False req)
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -201,15 +205,15 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
     checkSearchRateLimit personId
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initateJourney = fromMaybe False mbInitateJourney
-    multiModalSearch dSearchRes.searchRequest initateJourney req
+    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney req
 
-multiModalSearch :: SearchRequest.SearchRequest -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
-multiModalSearch searchRequest initateJourney req' = do
+multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
+multiModalSearch searchRequest riderConfig initateJourney req' = do
   now <- getCurrentTime
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
-  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let permissibleModesToUse =
         if null userPreferences.allowedTransitModes
