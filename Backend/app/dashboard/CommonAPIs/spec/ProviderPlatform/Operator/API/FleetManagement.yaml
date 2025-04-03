@@ -1,0 +1,46 @@
+imports:
+  Person: Domain.Types.Person
+  FleetType: Domain.Types.FleetType
+
+module: FleetManagement
+apiPrefix: operator
+
+apis:
+  - GET: # ListFleetsAPI
+      endpoint: /fleets
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[FleetInfo]"
+
+  - GET: # ListDriversAPI
+      endpoint: /drivers
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[DriverInfo]"
+
+types:
+  FleetInfo:
+    - id: Id Person
+    - name: Text
+    - fleetType: FleetType
+    - enabled: Bool
+    - verified: Bool
+    - gstNumber: Maybe Text
+    - vehicleCount: Int
+    - activeVehicleCount: Int
+  DriverInfo:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Text
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - isActive: Maybe Bool
