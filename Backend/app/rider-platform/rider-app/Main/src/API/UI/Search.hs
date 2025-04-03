@@ -32,6 +32,8 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
+import qualified BecknV2.OnDemand.Enums
+import Control.Monad.Extra (maybeM)
 import Data.Aeson
 import Data.List (partition, sortBy, sortOn)
 import qualified Data.Text as T
@@ -51,7 +53,6 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import Kernel.External.Maps.Google.MapsClient.Types
--- import qualified Lib.JourneyModule.Base as JM
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -74,6 +75,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMultiModal
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -81,6 +83,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
@@ -162,7 +165,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  fork "Multimodal Search" $ void (multiModalSearch dSearchRes.searchRequest False)
+  fork "Multimodal Search" $ void (multiModalSearch dSearchRes.searchRequest False req)
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -199,10 +202,12 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
     let initateJourney = fromMaybe False mbInitateJourney
-    multiModalSearch dSearchRes.searchRequest initateJourney
+    multiModalSearch dSearchRes.searchRequest initateJourney req
 
-multiModalSearch :: SearchRequest.SearchRequest -> Bool -> Flow MultimodalSearchResp
-multiModalSearch searchRequest initateJourney = do
+multiModalSearch :: SearchRequest.SearchRequest -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
+multiModalSearch searchRequest initateJourney req' = do
+  now <- getCurrentTime
+  let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
@@ -238,6 +243,8 @@ multiModalSearch searchRequest initateJourney = do
         let originStopCode = searchRequest.originStopCode
         let destinationStopCode = searchRequest.destinationStopCode
         fullBusData <- CQMultiModal.getRoutesBuses routeCode
+        integratedBPPConfig <- maybeM (pure Nothing) (QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.BUS) (pure req.platformType)
+        route'' <- maybeM (pure Nothing) (\config -> QRoute.findByRouteCode routeCode config.id) (pure integratedBPPConfig)
 
         -- Find the best bus with ETAs for our route
         let mbBestBus =
@@ -292,13 +299,51 @@ multiModalSearch searchRequest initateJourney = do
                 getStopName destCode (fromMaybe [] busData.eta_data)
               _ -> Nothing
 
+        let routeDetails =
+              maybe
+                []
+                ( \route' -> do
+                    [ MultiModalTypes.MultiModalRouteDetails
+                        { gtfsId = Just routeCode,
+                          longName = Just route'.longName,
+                          shortName = Just route'.shortName,
+                          color = route'.color,
+                          frequency = Nothing,
+                          fromStopDetails =
+                            Just $
+                              MultiModalTypes.MultiModalStopDetails
+                                { stopCode = originStopCode,
+                                  platformCode = Nothing,
+                                  name = originStopName,
+                                  gtfsId = originStopCode
+                                },
+                          toStopDetails =
+                            Just $
+                              MultiModalTypes.MultiModalStopDetails
+                                { stopCode = destinationStopCode,
+                                  platformCode = Nothing,
+                                  name = destStopName,
+                                  gtfsId = destinationStopCode
+                                },
+                          startLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}},
+                          endLocation = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}},
+                          subLegOrder = 0,
+                          fromArrivalTime = originStopTime,
+                          fromDepartureTime = originStopTime,
+                          toArrivalTime = destStopTime,
+                          toDepartureTime = destStopTime
+                        }
+                      ]
+                )
+                route''
+
         departureTimeFromSource <- case originStopTime of
           Just time -> return time
           Nothing -> return searchRequest.startTime
         let arrivalTimeAtDestination = destStopTime
         let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
         toLocation <- searchRequest.toLocation & fromMaybeM (InternalError "To Location not found")
-        let leg = mkMultiModalLeg distance calculatedDuration MultiModalTypes.Bus searchRequest.fromLocation.lat searchRequest.fromLocation.lon toLocation.lat toLocation.lon departureTimeFromSource arrivalTimeAtDestination originStopCode destinationStopCode originStopName destStopName
+        let leg = mkMultiModalLeg distance calculatedDuration MultiModalTypes.Bus searchRequest.fromLocation.lat searchRequest.fromLocation.lon toLocation.lat toLocation.lon departureTimeFromSource arrivalTimeAtDestination originStopCode destinationStopCode originStopName destStopName routeDetails
 
         let directRouteInitReq =
               JMTypes.JourneyInitData
@@ -399,7 +444,7 @@ multiModalSearch searchRequest initateJourney = do
       DMP.FASTEST -> Fastest
       DMP.MINIMUM_TRANSITS -> Minimum_Transits
       _ -> Fastest -- Default case for any other values
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon departureTimeFromSource arrivalTimeAtDestination originStopCode destinationStopCode originStopName destStopName =
+    mkMultiModalLeg distance duration mode originLat originLon destLat destLon departureTimeFromSource arrivalTimeAtDestination originStopCode destinationStopCode originStopName destStopName routeDetails =
       MultiModalTypes.MultiModalLeg
         { distance,
           duration,
@@ -423,7 +468,7 @@ multiModalSearch searchRequest initateJourney = do
                   name = destStopName,
                   gtfsId = destinationStopCode
                 },
-          routeDetails = [],
+          routeDetails = routeDetails,
           agency = Nothing,
           fromArrivalTime = Just departureTimeFromSource,
           fromDepartureTime = Just departureTimeFromSource,

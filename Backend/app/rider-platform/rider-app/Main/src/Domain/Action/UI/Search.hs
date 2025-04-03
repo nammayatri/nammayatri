@@ -138,6 +138,98 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation mbHotSpotConfig =
         Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
         Nothing -> return ()
 
+extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
+extractSearchDetails now = \case
+  OneWaySearch reqDetails@OneWaySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.OneWay,
+        roundTrip = False,
+        stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        hasStops = reqDetails.stops >>= \s -> Just $ not (null s),
+        driverIdentifier_ = driverIdentifier,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        ..
+      }
+  RentalSearch RentalSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.Rental,
+        roundTrip = False,
+        stops = fromMaybe [] stops,
+        hasStops = Nothing,
+        returnTime = Nothing,
+        driverIdentifier_ = Nothing,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        ..
+      }
+  InterCitySearch InterCitySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.InterCity,
+        stops = fromMaybe [] stops,
+        hasStops = Nothing,
+        driverIdentifier_ = Nothing,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        ..
+      }
+  AmbulanceSearch OneWaySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.Ambulance,
+        roundTrip = False,
+        stops = maybe [] pure destination,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        hasStops = Nothing,
+        driverIdentifier_ = driverIdentifier,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        ..
+      }
+  DeliverySearch OneWaySearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.Delivery,
+        roundTrip = False,
+        stops = maybe [] pure destination,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        hasStops = Nothing,
+        driverIdentifier_ = driverIdentifier,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        ..
+      }
+  PTSearch PublicTransportSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.PublicTransport,
+        stops = maybe [] pure destination,
+        hasStops = Nothing,
+        driverIdentifier_ = Nothing,
+        roundTrip = False,
+        isSourceManuallyMoved = Nothing,
+        isSpecialLocation = Nothing,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        isReallocationEnabled = Nothing,
+        fareParametersInRateCard = Nothing,
+        quotesUnifiedFlow = Nothing,
+        placeNameSource = Nothing,
+        routeCode = Just routeCode,
+        destinationStopCode = Just destinationStopCode,
+        originStopCode = Just originStopCode,
+        ..
+      }
+
 {-
 # /search
 #  -> Make one normal search to BAP (no change in this)
@@ -349,95 +441,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
       DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
       PTSearch _ -> processOneWaySearch person merchant merchantOperatingCity searchRequestId Nothing Nothing Nothing stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-
-    extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
-    extractSearchDetails now = \case
-      OneWaySearch reqDetails@OneWaySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.OneWay,
-            roundTrip = False,
-            stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            hasStops = reqDetails.stops >>= \s -> Just $ length s > 0,
-            driverIdentifier_ = driverIdentifier,
-            routeCode = Nothing,
-            destinationStopCode = Nothing,
-            originStopCode = Nothing,
-            ..
-          }
-      RentalSearch RentalSearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.Rental,
-            roundTrip = False,
-            stops = fromMaybe [] stops,
-            hasStops = Nothing,
-            returnTime = Nothing,
-            driverIdentifier_ = Nothing,
-            routeCode = Nothing,
-            destinationStopCode = Nothing,
-            originStopCode = Nothing,
-            ..
-          }
-      InterCitySearch InterCitySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.InterCity,
-            stops = fromMaybe [] stops,
-            hasStops = Nothing,
-            driverIdentifier_ = Nothing,
-            routeCode = Nothing,
-            destinationStopCode = Nothing,
-            originStopCode = Nothing,
-            ..
-          }
-      AmbulanceSearch OneWaySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.Ambulance,
-            roundTrip = False,
-            stops = maybe [] pure destination,
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            hasStops = Nothing,
-            driverIdentifier_ = driverIdentifier,
-            routeCode = Nothing,
-            destinationStopCode = Nothing,
-            originStopCode = Nothing,
-            ..
-          }
-      DeliverySearch OneWaySearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.Delivery,
-            roundTrip = False,
-            stops = maybe [] pure destination,
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            hasStops = Nothing,
-            driverIdentifier_ = driverIdentifier,
-            routeCode = Nothing,
-            destinationStopCode = Nothing,
-            originStopCode = Nothing,
-            ..
-          }
-      PTSearch PublicTransportSearchReq {..} ->
-        SearchDetails
-          { riderPreferredOption = SearchRequest.PublicTransport,
-            stops = maybe [] pure destination,
-            hasStops = Nothing,
-            driverIdentifier_ = Nothing,
-            roundTrip = False,
-            isSourceManuallyMoved = Nothing,
-            isSpecialLocation = Nothing,
-            startTime = fromMaybe now startTime,
-            returnTime = Nothing,
-            isReallocationEnabled = Nothing,
-            fareParametersInRateCard = Nothing,
-            quotesUnifiedFlow = Nothing,
-            placeNameSource = Nothing,
-            routeCode = Just routeCode,
-            destinationStopCode = Just destinationStopCode,
-            originStopCode = Just originStopCode,
-            ..
-          }
 
     processOneWaySearch ::
       SearchRequestFlow m r =>
