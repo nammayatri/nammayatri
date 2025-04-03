@@ -794,13 +794,15 @@ RouteStopMapping:
   constraints:
     routeCode: PrimaryKey
     stopCode: PrimaryKey
+    sequenceNum: PrimaryKey
+    integratedBppConfigId: PrimaryKey
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
     findByRouteCodeAndStopCode:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where:
         and: [routeCode, stopCode, integratedBppConfigId]
     findByStopCode:
