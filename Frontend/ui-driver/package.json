@@ -36,22 +36,23 @@
     "commitlint-plugin-jira-rules": "^1.6.4",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^8.0.1",
+    "hyper-purescript": "^0.0.25",
     "node-notifier": "^10.0.1",
     "npm-run-all": "^4.1.5",
+    "purescript-psa": "0.8.2",
     "semantic-release": "^19.0.5",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0",
-    "hyper-purescript": "^0.0.25",
-    "purescript-psa": "0.8.2"
+    "webpack-merge": "^5.8.0"
   },
   "dependencies": {
+    "@gullak/react-native-gullak": "^0.6.5",
     "axios": ">=1.6.0",
     "core-js": "^2.6.11",
     "presto-ui": "git+https://github.com/Vignesh-772/presto-ui.git#nammayatri",
-    "ramda": "^0.26.1",
     "purty": "^7.0.0",
+    "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5",
     "spago": "^0.21.0"
   },
