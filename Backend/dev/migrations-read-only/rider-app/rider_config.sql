@@ -236,3 +236,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN is_device_id_check_disabled boolea
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_bus_filtering boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_rentals_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_inter_city_search_locations json ;
