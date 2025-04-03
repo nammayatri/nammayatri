@@ -139,7 +139,8 @@ getStatus ::
     EventStreamFlow m r,
     MonadFlow m,
     JobCreatorEnv r,
-    HasField "schedulerType" r SchedulerType
+    HasField "schedulerType" r SchedulerType,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
