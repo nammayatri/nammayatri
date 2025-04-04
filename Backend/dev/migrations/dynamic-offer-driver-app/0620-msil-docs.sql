@@ -469,3 +469,57 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 -- Run in master only --
 
 -- update atlas_driver_offer_bpp.document_verification_config set dependency_document_type = '{}' where document_type in ('AadhaarCard', 'PanCard') AND merchant_id = (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER');
+
+-- run in master (even if commented) --
+
+-- INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+--     check_expiry,
+--     check_extraction,
+--     dependency_document_type,
+--     description,
+--     disable_warning,
+--     document_type,
+--     is_disabled,
+--     is_hidden,
+--     is_mandatory,
+--     max_retry_count,
+--     merchant_id,
+--     merchant_operating_city_id,
+--     rc_number_prefix_list,
+--     supported_vehicle_classes_json,
+--     title,
+--     vehicle_category,
+--     vehicle_class_check_type,
+--     created_at,
+--     updated_at,
+--     is_default_enabled_on_manual_verification,
+--     is_image_validation_required,
+--     "order"
+-- )
+-- SELECT
+--     check_expiry,
+--     check_extraction,
+--     dependency_document_type,
+--     description,
+--     disable_warning,
+--     'InspectionHub',
+--     is_disabled,
+--     is_hidden,
+--     is_mandatory,
+--     max_retry_count,
+--     (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER') as merchant_id,
+--     (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') as merchant_operating_city_id,
+--     '{DL}',
+--     supported_vehicle_classes_json,
+--     title,
+--     vehicle_category,
+--     vehicle_class_check_type,
+--     CURRENT_TIMESTAMP as created_at,
+--     CURRENT_TIMESTAMP as updated_at,
+--     is_default_enabled_on_manual_verification,
+--     is_image_validation_required,
+--     "order"
+-- FROM
+--     atlas_driver_offer_bpp.document_verification_config
+-- WHERE
+--     vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') AND document_type in ('VehicleInspectionForm') ON CONFLICT DO NOTHING;

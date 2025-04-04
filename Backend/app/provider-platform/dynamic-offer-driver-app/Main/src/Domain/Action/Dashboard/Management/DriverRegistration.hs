@@ -214,6 +214,7 @@ mapDocumentType Common.VehicleBackInterior = Domain.VehicleBackInterior
 mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
 mapDocumentType Common.VehicleRight = Domain.VehicleRight
 mapDocumentType Common.Odometer = Domain.Odometer
+mapDocumentType Common.InspectionHub = Domain.InspectionHub
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

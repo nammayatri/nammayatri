@@ -70,6 +70,7 @@ data DocumentType
   | VehicleNOC
   | BusinessLicense
   | Odometer
+  | InspectionHub
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
