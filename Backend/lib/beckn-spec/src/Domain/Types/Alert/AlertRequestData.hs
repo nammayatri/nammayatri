@@ -3,6 +3,7 @@ module Domain.Types.Alert.AlertRequestData where
 import Data.Text
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.Common
 
 data AlertRequestData
   = EndRide EndRideData
@@ -21,7 +22,8 @@ data EndRideData = EndRideData
     lon :: Double,
     tripCode :: Maybe Text,
     tripTransactionId :: Text,
-    vehicleRegistrationNumber :: Text
+    vehicleRegistrationNumber :: Text,
+    distance :: Maybe HighPrecMeters
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
@@ -55,7 +57,8 @@ data WrongStartStopData = WrongStartStopData
   { driverMobileNumber :: Maybe Text,
     driverName :: Text,
     location :: LatLong,
-    stopName :: Text
+    stopName :: Text,
+    distance :: Maybe HighPrecMeters
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 

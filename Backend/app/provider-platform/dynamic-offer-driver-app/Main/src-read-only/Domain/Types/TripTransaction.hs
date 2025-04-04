@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.Common
+import qualified Domain.Types.FleetBadge
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -26,6 +27,7 @@ data TripTransaction = TripTransaction
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     endStopCode :: Data.Text.Text,
+    fleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
     isCurrentlyDeviated :: Kernel.Prelude.Bool,
@@ -46,14 +48,14 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | ForceDashboard deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | ForceDashboard deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TripStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''TripStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''ActionSource))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ActionSource)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ActionSource))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''ActionSource)

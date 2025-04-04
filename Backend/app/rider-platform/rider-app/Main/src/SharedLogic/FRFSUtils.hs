@@ -402,7 +402,7 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
                 ( \stop cumulativeDist duration -> do
                     UpcomingStop
                       { stop = stop,
-                        estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac speed)) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
+                        estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac (max 1.0 speed))) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
                         actualTravelTime = Nothing,
                         distance = highPrecMetersToMeters cumulativeDist
                       }
@@ -584,7 +584,7 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
             delay = liftM2 (\t (Seconds est) -> Seconds (t - est)) (getSeconds <$> actualTime) nextStopTravelTime
          in (actualTime, delay)
 
-    computeFromSpeed nextStopTravelDistance speed = Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac speed)
+    computeFromSpeed nextStopTravelDistance speed = Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac (max 1.0 speed))
 
 mkVehicleTrackingKey :: Text -> Text -> Text
 mkVehicleTrackingKey vehicleId routeCode = "FRFS:VehicleTracking:" <> vehicleId <> ":" <> routeCode

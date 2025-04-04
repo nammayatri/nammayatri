@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Alert.AlertRequestType
 import qualified Domain.Types.AlertRequest
+import qualified Domain.Types.FleetBadge
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -20,6 +21,7 @@ data TripAlertRequest = TripAlertRequest
     alertRequestType :: Domain.Types.Alert.AlertRequestType.AlertRequestType,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripAlertRequest.TripAlertRequest,
     isViolated :: Kernel.Prelude.Bool,
