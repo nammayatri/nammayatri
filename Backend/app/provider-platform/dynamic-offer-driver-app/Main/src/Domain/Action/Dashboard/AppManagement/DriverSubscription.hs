@@ -98,7 +98,7 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
           QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey mbVehicleCategory Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing Nothing Nothing Nothing Nothing (Just merchantMessage.containsUrlButton))
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       OVERLAY -> do
         oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
