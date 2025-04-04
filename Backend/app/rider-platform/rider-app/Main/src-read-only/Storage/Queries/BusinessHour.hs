@@ -31,7 +31,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.BusinessHour.BusinessHour {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.btype btype,
+    [ Se.Set Beam.bookingClosingTime bookingClosingTime,
+      Se.Set Beam.btype btype,
       Se.Set Beam.categoryId (Kernel.Types.Id.getId <$> categoryId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),

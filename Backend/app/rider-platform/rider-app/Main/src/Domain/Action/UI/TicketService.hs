@@ -304,7 +304,12 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             Domain.Types.BusinessHour.Slot time -> time
             Domain.Types.BusinessHour.Duration _ endTime' -> endTime'
       let visitDateTime = UTCTime visitDate (timeOfDayToTime businessHourTime)
-
+      case businessHour.bookingClosingTime of
+        Just closingTime ->
+          if closingTime < now
+            then throwError $ InvalidRequest "Booking is Closed Now"
+            else return () -- Normal flow
+        Nothing -> return () -- Normal flow
       when (visitDateTime < now) $ throwError $ InvalidRequest "Cannot book for past date"
 
       tBookingSCats <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour) categories
