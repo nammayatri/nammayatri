@@ -45,6 +45,7 @@ import Kernel.External.MultiModal.Utils
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (whenJust)
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Common as Common
@@ -381,6 +382,13 @@ postFrfsSearch (mbPersonId, merchantId) mbCity vehicleType_ req = do
             }
         ]
   postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ req frfsRouteDetails Nothing Nothing [] DIBC.APPLICATION
+
+postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postFrfsDiscoverySearch (_, merchantId) req = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  CallExternalBPP.discoverySearch merchant bapConfig req
+  return Kernel.Types.APISuccess.Success
 
 postFrfsSearchHandler ::
   CallExternalBPP.FRFSSearchFlow m r =>

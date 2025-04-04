@@ -91,6 +91,10 @@ data FRFSDiscountRes = FRFSDiscountRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types.Beckn.Context.City, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,

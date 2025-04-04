@@ -101,6 +101,16 @@ type API =
            API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
       :<|> TokenAuth
       :> "frfs"
+      :> "discovery"
+      :> "search"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "frfs"
       :> "search"
       :> Capture
            "searchId"
@@ -270,7 +280,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
+handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
 
 getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -321,6 +331,15 @@ postFrfsSearch ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
 postFrfsSearch a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postFrfsDiscoverySearch ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFrfsDiscoverySearch a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsDiscoverySearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getFrfsSearchQuote ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
