@@ -42,3 +42,8 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_termination_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN driver_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN fleet_badge_id character varying(36) ;

@@ -267,7 +267,8 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
                   vehicleRegistrationNumber = tripTransaction.vehicleNumber,
                   driverName = driver.firstName <> " " <> (fromMaybe "" driver.lastName),
                   driverMobileNumber = driverMobileNumber,
-                  tripCode = tripTransaction.tripCode
+                  tripCode = tripTransaction.tripCode,
+                  distance = Just distanceLeft
                 }
           requestTitle = "Your trip has ended!"
           requestBody = "You reached your end stop of this route."

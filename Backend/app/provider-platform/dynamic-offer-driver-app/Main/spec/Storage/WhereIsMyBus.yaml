@@ -8,6 +8,7 @@ imports:
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
   AlertRequest: Domain.Types.AlertRequest
+  FleetBadge: Domain.Types.FleetBadge
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -49,6 +50,7 @@ TripTransaction:
     fleetOwnerId: Id Person
     vehicleNumber: Text
     tripCode: Maybe Text
+    fleetBadgeId: Maybe (Id FleetBadge)
     driverId: Id Person
     driverName: Maybe Text
     routeCode: Text
@@ -135,6 +137,7 @@ TripAlertRequest:
     tripTransactionId: Id TripTransaction
     driverId: Id Person
     fleetOwnerId: Id Person
+    fleetBadgeId: Maybe (Id FleetBadge)
     routeCode: Text
     alertRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
     isViolated: Bool

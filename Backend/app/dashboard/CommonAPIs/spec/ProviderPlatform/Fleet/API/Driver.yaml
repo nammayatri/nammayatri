@@ -101,6 +101,7 @@ apis:
         - mbRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
         - mbRouteCode: Text
         - mbDriverId: Text
+        - mbBadgeName: Text
         - mbLimit: Int
         - mbOffset: Int
       response:
@@ -119,6 +120,7 @@ apis:
               - requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
               - routeCode: Text
               - driverId: Text
+              - badgeName: Text
               - limit: Int
               - offset: Int
             response:

@@ -4,6 +4,7 @@
 module Storage.Queries.TripAlertRequestExtra where
 
 import Domain.Types.Alert
+import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TripAlertRequest
 import Kernel.Beam.Functions
@@ -16,8 +17,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.TripAlertRequest as Beam
 import Storage.Queries.OrphanInstances.TripAlertRequest
 
-findTripAlertRequestsByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
-findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId mbRouteCode mbLimit mbOffset = do
+findTripAlertRequestsByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe (Id DFB.FleetBadge) -> Maybe Text -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
+findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId mbFleetBadgeId mbRouteCode mbLimit mbOffset = do
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
@@ -25,6 +26,7 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
             <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
             <> [Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
             <> [Se.Is Beam.alertRequestType $ Se.Eq (fromJust mbAlertRequestType) | isJust mbAlertRequestType]
+            <> [Se.Is Beam.fleetBadgeId $ Se.Eq (mbFleetBadgeId <&> (.getId)) | isJust mbFleetBadgeId]
             <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
             <> [Se.Is Beam.routeCode $ Se.Eq (fromJust mbRouteCode) | isJust mbRouteCode]
         )
@@ -38,4 +40,4 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
 
 findLatestTripAlertRequest :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> AlertRequestType -> Text -> Text -> m (Maybe TripAlertRequest)
 findLatestTripAlertRequest merchantOpCityId fleetOwnerId alertRequestType driverId routeCode = do
-  findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) (Just routeCode) (Just 1) (Just 0) <&> listToMaybe
+  findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) Nothing (Just routeCode) (Just 1) (Just 0) <&> listToMaybe
