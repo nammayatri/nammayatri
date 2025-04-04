@@ -34,6 +34,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
@@ -151,6 +152,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           endLocation = Nothing,
           fleetOwnerId = vehicleRouteMapping.fleetOwnerId,
           id = tripTransactionId,
+          fleetBadgeId = Nothing,
           isCurrentlyDeviated = False,
           routeCode = route.code,
           roundRouteCode = route.roundRouteCode,
@@ -312,7 +314,8 @@ startTripTransaction tripTransaction route closestStop sourceStopInfo currentLoc
                   { driverMobileNumber = mobileNumber,
                     driverName = fromMaybe driver.firstName tripStartTransaction.driverName,
                     location = currentLocation,
-                    stopName = sourceStopInfo.name
+                    stopName = sourceStopInfo.name,
+                    distance = Just $ distanceBetweenInMeters currentLocation sourceStopInfo.point
                   }
         void $ triggerAlertRequest tripStartTransaction.driverId tripStartTransaction.fleetOwnerId.getId "Trip started from wrong start stop!" "Your trip has started from wrong start stop!" requestData True tripTransaction
 
@@ -530,6 +533,7 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
             tripTransactionId = tripTransaction.id,
             driverId = driverId,
             fleetOwnerId = Id requesteeId,
+            fleetBadgeId = tripTransaction.fleetBadgeId,
             routeCode = tripTransaction.routeCode,
             alertRequestType = alertRequestType,
             isViolated = isViolated,

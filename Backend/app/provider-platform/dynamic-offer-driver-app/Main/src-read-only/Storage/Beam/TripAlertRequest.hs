@@ -17,6 +17,7 @@ data TripAlertRequestT f = TripAlertRequestT
     alertRequestType :: B.C f Domain.Types.Alert.AlertRequestType.AlertRequestType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Data.Text.Text,
+    fleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     fleetOwnerId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,
     isViolated :: B.C f Kernel.Prelude.Bool,
@@ -29,11 +30,11 @@ data TripAlertRequestT f = TripAlertRequestT
   deriving (Generic, B.Beamable)
 
 instance B.Table TripAlertRequestT where
-  data PrimaryKey TripAlertRequestT f = TripAlertRequestId (B.C f Data.Text.Text) (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
-  primaryKey = TripAlertRequestId <$> alertRequestId <*> id
+  data PrimaryKey TripAlertRequestT f = TripAlertRequestId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
+  primaryKey = TripAlertRequestId . id
 
 type TripAlertRequest = TripAlertRequestT Identity
 
-$(enableKVPG ''TripAlertRequestT ['alertRequestId, 'id] [['driverId]])
+$(enableKVPG ''TripAlertRequestT ['id] [['driverId]])
 
 $(mkTableInstances ''TripAlertRequestT "trip_alert_request")
