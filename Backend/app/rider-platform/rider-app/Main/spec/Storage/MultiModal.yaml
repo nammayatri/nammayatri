@@ -15,6 +15,7 @@ imports:
   MultiModalRouteDetails: Kernel.External.MultiModal.Interface.Types
   MultiModalAgency: Kernel.External.MultiModal.Interface.Types
   RecentLocation: Domain.Types.RecentLocation
+  ServiceTierType: BecknV2.FRFS.Enums
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -268,6 +269,7 @@ JourneyLeg:
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
     sequenceNumber: Int
+    serviceTypes: Maybe [ServiceTierType]
     legSearchId: Maybe Text
     isDeleted: Maybe Bool
     isSkipped: Maybe Bool

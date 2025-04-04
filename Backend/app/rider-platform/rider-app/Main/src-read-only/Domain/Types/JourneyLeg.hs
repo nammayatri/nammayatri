@@ -3,6 +3,7 @@
 
 module Domain.Types.JourneyLeg where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.Journey
@@ -33,6 +34,7 @@ data JourneyLeg = JourneyLeg
     mode :: Domain.Types.Common.MultimodalTravelMode,
     routeDetails :: [Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails],
     sequenceNumber :: Kernel.Prelude.Int,
+    serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

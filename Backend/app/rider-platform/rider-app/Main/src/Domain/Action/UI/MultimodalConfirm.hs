@@ -18,6 +18,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalUserPreferences,
     postMultimodalUserPreferences,
     postMultimodalTransitOptionsLite,
+    postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
   )
 where
@@ -56,6 +57,7 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
+import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
@@ -179,6 +181,24 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
+  updatedLegs <- JM.getAllLegsInfo journeyId
+  generateJourneyInfoResponse journey updatedLegs now
+
+postMultimodalOrderSwitchFRFSTier ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalOrderSwitchFRFSTier (_, _) journeyId legOrder req = do
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId
+  now <- getCurrentTime
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs now
 

@@ -79,6 +79,7 @@ getFare merchantId merchantOperatingCityId leg = \case
                 BusLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    serviceTypes = JL.castTextToServiceTierType <$> leg.serviceTypes,
                     ..
                   }
 

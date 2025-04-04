@@ -97,6 +97,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.legId legSearchId,
       Se.Set Beam.mode mode,
       Se.Set Beam.sequenceNumber sequenceNumber,
+      Se.Set Beam.serviceTypes serviceTypes,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),
       Se.Set Beam.toArrivalTime toArrivalTime,

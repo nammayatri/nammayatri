@@ -27,6 +27,7 @@ import qualified Data.Time as Time
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
+import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
@@ -599,6 +600,20 @@ getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback pric
               eventDiscountAmount = toHighPrecMoney $ discountedTickets * perTicketCashback
            in (Just discountedTickets, Just eventDiscountAmount)
         else (Nothing, Nothing)
+
+mergeFFRFSRouteDetails :: [FRFSRouteDetails] -> Maybe FRFSRouteDetails
+mergeFFRFSRouteDetails routeDetails = do
+  let mbFirstRouteDetails = listToMaybe routeDetails
+  let mbLastRouteDetails = listToMaybe (reverse routeDetails)
+  case (mbFirstRouteDetails, mbLastRouteDetails) of
+    (Just firstRouteDetails, Just lastRouteDetails) ->
+      Just $
+        FRFSRouteDetails
+          { routeCode = firstRouteDetails.routeCode,
+            startStationCode = firstRouteDetails.startStationCode,
+            endStationCode = lastRouteDetails.endStationCode
+          }
+    _ -> Nothing
 
 partnerOrgRiderId :: Id DP.Person
 partnerOrgRiderId = Id "partnerOrg_rider_id"

@@ -21,6 +21,7 @@ imports:
   BookingUpdateRequest: Domain.Types.BookingUpdateRequest
   RouteStopMapping: Domain.Types.RouteStopMapping
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
+  FRFSQuote: Domain.Types.FRFSQuote
 
 module: MultimodalConfirm
 
@@ -94,6 +95,9 @@ types:
 
   SwitchTaxiReq:
     estimateId: Id Estimate
+
+  SwitchFRFSTierReq:
+    quoteId: Id FRFSQuote
 
   JourneyBookingPaymentStatus:
     journeyId: Id Journey
@@ -253,6 +257,16 @@ apis:
         legOrder: Int
       request:
         type: SwitchTaxiReq
+      response:
+        type: JourneyInfoResp
+
+  - POST:
+      endpoint: multimodal/{journeyId}/order/{legOrder}/switchFRFSTier
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: SwitchFRFSTierReq
       response:
         type: JourneyInfoResp
 

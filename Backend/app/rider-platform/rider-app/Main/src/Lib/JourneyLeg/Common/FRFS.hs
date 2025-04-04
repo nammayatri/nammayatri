@@ -293,26 +293,39 @@ getState mode searchId riderLastPoints isLastCompleted = do
           QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
       pure newStatuses
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> m (Maybe JT.GetFareResponse)
-getFare merchant merchantOperatingCity vehicleCategory routeDetails = do
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m (Maybe JT.GetFareResponse)
+getFare merchant merchantOperatingCity vehicleCategory routeDetails serviceTypes = do
   QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
     >>= \case
       Just bapConfig -> do
         try @_ @SomeException
-          ( mapM
-              ( \FRFSRouteDetails {..} ->
-                  case routeCode of
-                    Just routeCode' -> CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig routeCode' startStationCode endStationCode vehicleCategory DIBC.MULTIMODAL
-                    Nothing -> return []
-              )
-              routeDetails
+          ( case vehicleCategory of
+              Spec.BUS -> do
+                mapM
+                  ( \FRFSRouteDetails {..} ->
+                      case routeCode of
+                        Just routeCode' -> CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig routeCode' startStationCode endStationCode vehicleCategory DIBC.MULTIMODAL
+                        Nothing -> return []
+                  )
+                  routeDetails
+              _ -> do
+                -- In case of metro fares of all exchanges are calculated together
+                let mbRouteDetail = mergeFFRFSRouteDetails routeDetails
+                case mbRouteDetail of
+                  Just routeDetail -> do
+                    case routeDetail.routeCode of
+                      Just routeCode' -> do
+                        fares <- CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig routeCode' routeDetail.startStationCode routeDetail.endStationCode vehicleCategory DIBC.MULTIMODAL
+                        return [fares]
+                      Nothing -> return []
+                  Nothing -> return []
           )
           >>= \case
             Right [] -> do
               logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory
               return Nothing
             Right farePerRouteAcrossVehicleServiceTiers -> do
-              let farePerRoute = catMaybes (listToMaybe <$> farePerRouteAcrossVehicleServiceTiers)
+              let farePerRoute = catMaybes (selectCorrectFare <$> farePerRouteAcrossVehicleServiceTiers)
               if length farePerRoute /= length farePerRouteAcrossVehicleServiceTiers
                 then do
                   logError $ "Not Getting Fares for All Transit Routes for Vehicle Category : " <> show vehicleCategory
@@ -326,6 +339,14 @@ getFare merchant merchantOperatingCity vehicleCategory routeDetails = do
       Nothing -> do
         logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
         return Nothing
+  where
+    selectCorrectFare :: [FRFSFare] -> Maybe FRFSFare
+    selectCorrectFare fares = do
+      let sortedFares = sortOn (\fare -> fare.price.amount.getHighPrecMoney) fares
+      let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` serviceTypes) sortedFares
+      if null filteredFares
+        then listToMaybe sortedFares
+        else listToMaybe filteredFares
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
 getInfo searchId fallbackFare distance duration = do
@@ -356,7 +377,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData) merchantOpCity integratedBPPConfig
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails merchantOpCity integratedBPPConfig
-  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails DIBC.MULTIMODAL
+  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails DIBC.MULTIMODAL (fromMaybe [] journeyLeg.serviceTypes)
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData merchantOpCity integratedBPPConfig = do
