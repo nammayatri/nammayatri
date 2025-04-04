@@ -68,6 +68,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AlertRequest as QAR
@@ -89,6 +90,7 @@ import qualified Storage.Queries.VehicleRouteMapping as VRM
 import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as TN
+import Utils.Common.Cac.KeyNameConstants
 
 availableRoutes :: (Text, ServiceTierType) -> Text -> Flow AvailableRoute
 availableRoutes (routeCode, vehicleServiceTierType) vhclNo = do
@@ -383,7 +385,10 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
-  QDI.updateEnabledVerifiedState driverId True (Just True)
+
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $
+    QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

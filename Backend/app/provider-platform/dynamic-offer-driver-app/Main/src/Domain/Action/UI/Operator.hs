@@ -13,6 +13,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation as QDI
@@ -21,6 +22,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAss
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as TN
+import Utils.Common.Cac.KeyNameConstants
 
 postOperatorConsent ::
   ( ( Maybe (Id Person),
@@ -41,7 +43,10 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
-  QDI.updateEnabledVerifiedState driverId True (Just True)
+
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $
+    QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title
