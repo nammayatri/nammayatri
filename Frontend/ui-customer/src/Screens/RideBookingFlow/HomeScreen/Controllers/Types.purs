@@ -114,7 +114,7 @@ data ScreenOutput = LogoutUser
   | ChangeVehicleVarient HomeScreenState
   | ExitToConfirmingLocationStage HomeScreenState
   | UpdateReferralCode HomeScreenState String
-  | GoToSafetySettingScreen 
+  | GoToSafetySettingScreen
   | GoToDriverProfiles HomeScreenState
   | GoToRideRelatedIssues HomeScreenState
   | Go_To_Search_Location_Flow HomeScreenState Boolean
@@ -253,7 +253,7 @@ data Action = NoAction
   | LoadMessages
   | KeyboardCallback String
   | NotifyDriverStatusCountDown Int String String
-  | UpdateProfileButtonAC PrimaryButtonController.Action 
+  | UpdateProfileButtonAC PrimaryButtonController.Action
   | SkipAccessibilityUpdateAC PrimaryButtonController.Action
   | SpecialZoneOTPExpiryAction Int String String
   | TicketBookingFlowBannerAC Banner.Action
@@ -270,18 +270,18 @@ data Action = NoAction
   | MessageViewAnimationEnd
   | RepeatRide Int Trip
   | Scroll Number
-  | WhereToClick 
-  | ShowMoreSuggestions 
+  | WhereToClick
+  | ShowMoreSuggestions
   | SuggestedDestinationClicked LocationListItemState Boolean
   | RepeatRideCountDown Int String String
-  | StopRepeatRideTimer 
+  | StopRepeatRideTimer
   | OpenLiveDashboard
-  | UpdatePeekHeight 
+  | UpdatePeekHeight
   | ReAllocate
-  | AutoScrollCountDown Int String String 
-  | StopAutoScrollTimer 
-  | UpdateRepeatTrips RideBookingListRes 
-  | RemoveShimmer 
+  | AutoScrollCountDown Int String String
+  | StopAutoScrollTimer
+  | UpdateRepeatTrips RideBookingListRes
+  | RemoveShimmer
   | ReportIssueClick
   | EditLocation LocationType
   | DateTimePickerAction String Int Int Int String Int Int
@@ -324,32 +324,32 @@ data Action = NoAction
   | ShowEndOTP
   | RentalInfoAction PopUpModal.Action
   | IntercitySpecialZone PopUpModal.Action
-  | StartScheduledRidePolling 
-  | RentalBannerClick 
+  | StartScheduledRidePolling
+  | RentalBannerClick
   | SetIssueReportBannerItems ListItem
   | UpdateNextIssueBannerPage Int
-  | UpdateNextIssueBanneerSwipe Int 
+  | UpdateNextIssueBanneerSwipe Int
   | TollChargeAmbigousPopUpAction PopUpModal.Action
   | UpdateNoInternet
   | InternetCallBackCustomer String
-  | MarkerLabelOnClick String 
+  | MarkerLabelOnClick String
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
   | TollChargeIncludedPopUpAction PopUpModal.Action
   | LocateOnMapCallBack String String String
   | UpdatePickupLocation String String String
-  | AmbulanceAgreeClick 
+  | AmbulanceAgreeClick
   | AgreePopUp PopUpModal.Action
   | ShakeActionCallback Int
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
-  | EnableShareRideForContact String 
+  | EnableShareRideForContact String
   | EditPickupPopupOnCancelAC PopUpModal.Action
   | DateSelectAction String String Int Int Int String Int Int
   | IntercityBusPermissionAction PopUpModal.Action
   | IntercityBusAC
   | HideIntercityBusView String
-  | OpenDeliverySearchLocation 
+  | OpenDeliverySearchLocation
   | ToggleCurrentPickupDropCurrentLocation Boolean
   | UpdateSearchActionType
   | DeliveryParcelImageOtpAction DeliveryParcelImageAndOtp.Action
@@ -357,6 +357,7 @@ data Action = NoAction
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
   | DestinationWaitingTimeAction String String Int
+  | UnDoEnquiryBannerAC Int String String
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
@@ -687,9 +688,9 @@ instance loggableAction :: Loggable Action where
   --   OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "OnResumeCallback"
   --   CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "CheckFlowStatusAction"
   --   IsMockLocation val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "IsMockLocation"
-  --   MenuButtonActionController act -> case act of 
+  --   MenuButtonActionController act -> case act of
   --     MenuButtonController.OnClick arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "menu_button_action" "on_click"
-  --   ChooseYourRideAction act -> case act of 
+  --   ChooseYourRideAction act -> case act of
   --     ChooseYourRideController.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "no_action"
   --     ChooseYourRideController.ChooseVehicleAC arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "choose_vehicle"
   --     ChooseYourRideController.RadioButtonClick arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "CheckBoxClick"
@@ -699,10 +700,10 @@ instance loggableAction :: Loggable Action where
   --       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "choose_your_ride_action" "primary_button"
   --       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "choose_your_ride_action" "primary_button_no_action"
   --   SearchForSelectedLocation -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "search_for_saved_location"
-  --   GenderBannerModal act -> case act of 
+  --   GenderBannerModal act -> case act of
   --     Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "gender_banner_modal" "banner_on_click"
   --     Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "gender_banner_modal" "banner_no_action"
-  --   CancelSearchAction act -> case act of 
+  --   CancelSearchAction act -> case act of
   --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "cancel"
   --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "accept"
   --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "no_action"
@@ -714,7 +715,7 @@ instance loggableAction :: Loggable Action where
   --     PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "options_with_html_click"
   --     PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "secondary_text_click"
   --   TriggerPermissionFlow val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "trigger_persmission_screen_flow"
-  --   PopUpModalCancelConfirmationAction act -> case act of 
+  --   PopUpModalCancelConfirmationAction act -> case act of
   --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "button1_click"
   --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "button2_click"
   --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "no_action"
@@ -733,7 +734,7 @@ instance loggableAction :: Loggable Action where
   --   RideDetails -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_details"
   --   TerminateApp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "terminate_app"
   --   DirectSearch -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "direct_search"
-  --   ZoneTimerExpired act -> case act of 
+  --   ZoneTimerExpired act -> case act of
   --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "button1_click"
   --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "button2_click"
   --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "no_action"
@@ -744,10 +745,10 @@ instance loggableAction :: Loggable Action where
   --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "popup_dismissed"
   --     PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "options_with_html_click"
   --     PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "secondary_text_click"
-  --   DisabilityBannerAC act -> case act of 
+  --   DisabilityBannerAC act -> case act of
   --     Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_banner" "banner_on_click"
   --     Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_banner" "banner_no_action"
-  --   DisabilityPopUpAC act -> case act of 
+  --   DisabilityPopUpAC act -> case act of
   --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "button1_click"
   --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "button2_click"
   --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "no_action"
@@ -758,13 +759,13 @@ instance loggableAction :: Loggable Action where
   --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "popup_dismissed"
   --     PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "options_with_html_click"
   --     PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "secondary_text_click"
-  --   RideCompletedAC act -> case act of 
+  --   RideCompletedAC act -> case act of
   --     RideCompletedCard.Support -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "support_clicked"
   --     RideCompletedCard.RideDetails -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "ride_details_clicked"
   --     RideCompletedCard.SelectButton arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "select_button_click"
   --     RideCompletedCard.IssueReportIndex arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "issue_report_index"
   --     RideCompletedCard.RateClick arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "rate_click"
-  --     RideCompletedCard.IssueReportPopUpAC act -> case act of 
+  --     RideCompletedCard.IssueReportPopUpAC act -> case act of
   --       CancelRidePopUp.Button1 act -> case act of
   --         PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup_1" "primary_button_on_click"
   --         PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup_1" "primary_button_no_action"
@@ -776,10 +777,10 @@ instance loggableAction :: Loggable Action where
   --       CancelRidePopUp.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "clear_options"
   --       CancelRidePopUp.TextChanged valId newVal ->  trackAppTextInput appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "text_changed"
   --       CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "no_action"
-  --     RideCompletedCard.SkipButtonActionController act -> case act of 
+  --     RideCompletedCard.SkipButtonActionController act -> case act of
   --       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_skip_button_action" "primary_button_on_click"
   --       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_skip_button_action" "primary_button_no_action"
-  --     RideCompletedCard.ContactSupportPopUpAC act -> case act of 
+  --     RideCompletedCard.ContactSupportPopUpAC act -> case act of
   --       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "button1_click"
   --       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "button2_click"
   --       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "no_action"
@@ -791,21 +792,21 @@ instance loggableAction :: Loggable Action where
   --       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "options_with_html_click"
   --       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "secondary_text_click"
   --     RideCompletedCard.UpiQrRendered arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "upi_qr_rendered"
-  --     RideCompletedCard.BannerAction act -> case act of 
+  --     RideCompletedCard.BannerAction act -> case act of
   --       Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_on_click"
   --       Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_no_action"
   --     RideCompletedCard.HelpAndSupportAC -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_help_and_support" "help_and_support"
   --   LoadMessages -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "load_messages"
   --   KeyboardCallback val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "key_board_callback"
   --   NotifyDriverStatusCountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notify_driver_status_countdown"
-  --   UpdateProfileButtonAC act -> case act of 
+  --   UpdateProfileButtonAC act -> case act of
   --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_profile_button" "primary_button_on_click"
   --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_profile_button" "primary_button_no_action"
-  --   SkipAccessibilityUpdateAC act -> case act of 
+  --   SkipAccessibilityUpdateAC act -> case act of
   --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "skip_accessibility_button" "primary_button_on_click"
   --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "skip_accessibility_button" "primary_button_no_action"
   --   SpecialZoneOTPExpiryAction arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "special_zone_otp_expiry_action"
-  --   TicketBookingFlowBannerAC act -> case act of 
+  --   TicketBookingFlowBannerAC act -> case act of
   --     Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ticket_booking_flow" "banner_on_click"
   --     Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ticket_booking_flow" "banner_no_action"
   --   WaitingInfo -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "waiting_info"
@@ -847,7 +848,7 @@ instance loggableAction :: Loggable Action where
   --     CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup" "no_action"
   --   CheckFlowStatusAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status_action"
   --   HideLiveDashboard arg -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "hide_dash_board_action"
-  --   PopUpModalAction act -> case act of 
+  --   PopUpModalAction act -> case act of
   --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "button1_click"
   --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "button2_click"
   --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "no_action"
@@ -870,12 +871,12 @@ instance loggableAction :: Loggable Action where
   --   UpdatePeekHeight -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_peek_height"
   --   ReAllocate -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "reallocate_ride"
   --   AutoScrollCountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "auto_scroll_count_down"
-  --   StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
+  --   StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer"
   --   UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
   --   RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
   --   ReportIssueClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "report_issue_click"
-  --   ChooseSingleVehicleAction act -> case act of 
+  --   ChooseSingleVehicleAction act -> case act of
   --         ChooseVehicleController.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "no_action"
   --         ChooseVehicleController.ShowRateCard arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "ShowRateCard"
-  --         ChooseVehicleController.OnImageClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnImageClick" 
+  --         ChooseVehicleController.OnImageClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnImageClick"
   --         ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"

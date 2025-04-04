@@ -127,7 +127,7 @@ import Screens.Types (Gender(..)) as Gender
 import Screens.Types as ST
 import Screens.Types
 import Services.Backend as Remote
-import Services.Config (getBaseUrl, getSupportNumber)
+import Services.Config (getBaseUrl, getSupportNumber, getQuickReportIssueConfig)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Types.App
@@ -609,6 +609,11 @@ riderRideCompletedScreenFlow = do
       else if checkIfSafetyEnabled && issueType == CTA.NightSafety then do
         modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> SafetyScreenData.initData { props { reportPastRide = true, fromScreen = Just RideCompletedScreen }, data { lastRideDetails = Arr.head $ myRideListTransformer true [ updatedState.ratingViewState.rideBookingRes ] updatedState.config Nothing  } })
         activateSafetyScreenFlow
+      else if issueType == CTA.TollCharge then do
+        let tollConfig = (getQuickReportIssueConfig "lazy").tollIssue
+        let _ = spy "insidePostQuickIssue" tollConfig
+        postQuickIssue tollConfig.categoryId tollConfig.optionId (Just updatedState.rideRatingState.rideId) "RIDE_END_QUICK_TOLL_REPORT"
+        riderRideCompletedScreenFlow
       else do
         let 
           language = fetchLanguage $ getLanguageLocale languageKey
@@ -697,6 +702,19 @@ riderRideCompletedScreenFlow = do
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       currentFlowStatus false
       
+
+postQuickIssue :: String -> Maybe String -> Maybe String -> String -> FlowBT String Unit
+postQuickIssue categoryId' mbOptionId mbRideId  description' = do
+  let postIssueBody = API.PostIssueReqBody {
+      optionId : mbOptionId
+    , rideId : mbRideId
+    , categoryId : categoryId'
+    , mediaFiles : []
+    , description : description'
+    , chats : []
+    , createTicket : false
+    }
+  void $ Remote.postIssueBT "en" postIssueBody
 
 currentFlowStatus :: Boolean -> FlowBT String Unit
 currentFlowStatus prioritizeRating = do

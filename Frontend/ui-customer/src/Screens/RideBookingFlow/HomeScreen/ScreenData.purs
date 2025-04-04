@@ -210,6 +210,7 @@ initData = let
     , cancellationRate : Nothing
     , driverArrivalTimeUTC : Nothing
     , destinationReachedAtUTC : Nothing
+    , enquiryBannerStage : Just ST.QuestionStage
     },
     props: {
       rideRequestFlow : false
@@ -428,6 +429,7 @@ initData = let
     , fromDeliveryScreen : false
     , busClicked : false
     , ticketServiceType : API.METRO
+    , enquiryBannerUndoTimer : Nothing
   }
 }
 

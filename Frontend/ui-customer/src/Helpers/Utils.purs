@@ -803,8 +803,8 @@ getTitleConfig vehicleVariant =
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
         "HERITAGE_CAB" -> mkReturnObj ("Heritage Cab") Color.blue800
-        _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800 
-  where mkReturnObj text' color' = 
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800
+  where mkReturnObj text' color' =
           {
             text : text',
             color : color'
@@ -1069,7 +1069,7 @@ getMetroConfigFromAppConfig config city = do
     Just cfg -> cfg
 
 getMetroConfigFromCity :: City -> Maybe FRFSConfigAPIRes -> String -> CityMetroConfig
-getMetroConfigFromCity city fcResponse vehicleType = 
+getMetroConfigFromCity city fcResponse vehicleType =
     let
         bookingStartTime = maybe "04:30:00" (\(FRFSConfigAPIRes r) -> r.bookingStartTime) fcResponse
         bookingEndTime = maybe "22:30:00" (\(FRFSConfigAPIRes r) -> r.bookingEndTime) fcResponse
@@ -1113,8 +1113,8 @@ getMetroConfigFromCity city fcResponse vehicleType =
                   then 
                     [ "Cancellation of tickets is not applicable" 
                     , "The ticket is valid for only 30 minutes from the time of booking"
-                    , "Fare is commission-free and determined by the WBTC" 
-                    ] 
+                    , "Fare is commission-free and determined by the WBTC"
+                    ]
                   else
                     [ getString CHENNAI_METRO_TERM_2
                     , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
@@ -1284,13 +1284,13 @@ mkSrcMarker city variant currentStage =
   in if ((JB.getResourceIdentifier srcMarker "drawable") /= 0) then srcMarker else "" -- Added local resource check for avoiding native crash
 
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = 
-  case variant of 
+fetchVehicleVariant variant =
+  case variant of
     "SUV"           -> Just ST.SUV
     "SEDAN"         -> Just ST.SEDAN
     "HATCHBACK"     -> Just ST.HATCHBACK
     "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-    "TAXI"          -> Just ST.TAXI 
+    "TAXI"          -> Just ST.TAXI
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
     "BIKE"          -> Just ST.BIKE
     "AMBULANCE_TAXI" -> Just ST.AMBULANCE_TAXI
@@ -1305,10 +1305,10 @@ fetchVehicleVariant variant =
     "DELIVERY_TRUCK_ULTRA_LARGE" -> Just ST.DELIVERY_TRUCK_ULTRA_LARGE
     _               -> Nothing
 
-getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = 
+getVehicleCapacity :: String -> String
+getVehicleCapacity variant =
   case fetchVehicleVariant variant of
-    Just ST.SUV -> "6" 
+    Just ST.SUV -> "6"
     Just ST.AUTO_RICKSHAW -> "3"
     Just ST.BIKE -> "1"
     _ -> "4"

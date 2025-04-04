@@ -167,7 +167,7 @@ import Data.Enum
 import Services.FlowCache as FlowCache
 import RemoteConfig as RemoteConfig
 import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
-
+import Timers
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
 import Screens.HomeScreen.Controllers.PopUpModelControllers as PopUpModelControllers
@@ -2985,7 +2985,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                         "CANCELLED" -> HomeScreen
                         _ -> RideAccepted
                     , bookingId = response.id
-                    }, data { 
+                    }, data {
                       driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState}}
   continue newState
   
@@ -3184,12 +3184,12 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
     ]
 eval AmbulanceAgreeClick state = do
     let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
-        (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
+        (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject
     _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
     void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
     void $ pure $ cacheRateCard state
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
-        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
+        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps
                           else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
                           else state.props.tipViewProps
         updatedState = state{props{ searchExpire = (getSearchExpiryTime true), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
@@ -3338,7 +3338,6 @@ eval (ServicesOnClick service) state = do
       , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
       }}} [pure $ IntercityBusAC]
     RC.DELIVERY -> exit $ GoToParcelInstructions state
-    RC.DELIVERY -> exit $ GoToParcelInstructions state
     RC.BUS -> do
       let newState = updatedState { props { ticketServiceType = API.BUS } }
       updateAndExit newState $ GoToBusTicketBookingFlow state
@@ -3362,6 +3361,49 @@ eval (IntercityBusPermissionAction (PopUpModal.OnButton2Click)) state = do
 eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
   continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
+
+
+eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state =
+  continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
+    do
+      push <- getPushFn Nothing "HomeScreen"
+      void $ startTimer 15 "undoEnquiryBanner" "1" push UnDoEnquiryBannerAC
+      pure NoAction
+  ]
+
+eval (UnDoEnquiryBannerAC seconds timerID timeInMinutes ) state = do
+  if seconds == 0 then do
+    continueWithCmd state{ data {enquiryBannerStage = Nothing}} [ do
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+        let
+          city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+          vehicleCat = RC.getCategoryFromVariant state.data.vehicleVariant
+          mbEnquiryRemoteConfig = RC.getEnquiryBannerConfig city vehicleCat
+          postIssueBody = API.PostIssueReqBody {
+            optionId : maybe Nothing (\enquiryRemoteConfig -> enquiryRemoteConfig.optionId ) mbEnquiryRemoteConfig
+          , rideId : Just state.data.driverInfoCardState.rideId
+          , categoryId : maybe "" (\enquiryRemoteConfig -> enquiryRemoteConfig.categoryId ) mbEnquiryRemoteConfig
+          , mediaFiles : []
+          , description : ""
+          , chats : []
+          , createTicket : false
+          }
+        void $ Remote.postIssueBT "en" postIssueBody
+      void $ pure $ clearTimerWithId "undoEnquiryBanner"
+      void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
+      pure NoAction
+    ]
+  else do
+    continue state { props { enquiryBannerUndoTimer = Just seconds}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqFirstBtnClick)) state = do
+  if state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then do
+    void $ pure $ clearTimerWithId "undoEnquiryBanner"
+    continue state{ data {enquiryBannerStage = Just ST.QuestionStage}, props { enquiryBannerUndoTimer = Nothing}}
+  else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage then do
+    continue state{ data {enquiryBannerStage = Nothing}}
+  else do
+    continue state{ data {enquiryBannerStage = Just ST.FirstBtnClickStage}}
 
 eval _ state = update state
 
@@ -3696,7 +3738,7 @@ findingQuotesSearchExpired gotQuotes isNormalRide =
 
 callDriver :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 callDriver state callType = do
-  let newState = state{props{ showCallPopUp = false }}
+  let newState = state{props{ showCallPopUp = false}, data {enquiryBannerStage =  Just ST.QuestionStage}}
       driverNumber = case callType of
                         "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
                         _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
