@@ -91,6 +91,7 @@ data DocumentType
   | VehicleFrontInterior
   | VehicleBackInterior
   | Odometer
+  | InspectionHub
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
