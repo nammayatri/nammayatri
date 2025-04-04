@@ -1,5 +1,6 @@
 module ExternalBPP.CallAPI where
 
+import qualified API.Types.UI.FRFSTicketService
 import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Confirm as ACL
 import qualified Beckn.ACL.FRFS.Init as ACL
@@ -59,6 +60,13 @@ type FRFSConfirmFlow m r =
     HasField "isMetroTestTransaction" r Bool
   )
 
+discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> m ()
+discoverySearch merchant bapConfig req = do
+  transactionId <- generateGUID
+  bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing req.city
+  logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
+  void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
+
 search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
 search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig = do
   case integratedBPPConfig.providerConfig of
@@ -66,7 +74,7 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
         toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
-        bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation merchantOperatingCity.city
+        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just fromStation) (Just toStation) merchantOperatingCity.city
         logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
         Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id

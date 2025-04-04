@@ -29,6 +29,9 @@ imports:
 
 module: FRFSTicketService
 types:
+  FRFSDiscoverySearchAPIReq:
+    city: City
+    vehicleType: VehicleCategory
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
@@ -250,6 +253,15 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+
+  # Discovery Search for finding metro/bus providers for a given city
+  - POST:
+      endpoint: /frfs/discovery/search
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   # Get quotes for metro/bus tickets
   - GET:
