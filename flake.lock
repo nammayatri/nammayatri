@@ -3602,6 +3602,7 @@
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "prodHotPush-BAP",
         "repo": "shared-kernel",
         "type": "github"
       }
