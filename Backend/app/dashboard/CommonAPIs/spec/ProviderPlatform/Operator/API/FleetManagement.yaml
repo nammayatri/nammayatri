@@ -1,5 +1,5 @@
 imports:
-  Person: Domain.Types.Person
+  Person: Dashboard.Common
 
 module: FleetManagement
 apiPrefix: operator

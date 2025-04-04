@@ -1,5 +1,6 @@
 imports:
   OperationHub: Dashboard.Common
+  Driver: Dashboard.Common
 
 module: Driver
 
@@ -30,7 +31,7 @@ apis:
         type: APISuccess
 
   - GET: # ListDriversAPI
-      endpoint: /drivers
+      endpoint: /operator/list
       auth: ApiAuthV2
       query:
         - isActive: Bool
@@ -41,7 +42,7 @@ apis:
         type: "[DriverInfo]"
       helperApi:
         - GET:
-            endpoint: /drivers
+            endpoint: /operator/list
             auth: ApiAuthV2
             query:
               - isActive: Bool
