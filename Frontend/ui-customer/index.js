@@ -22,16 +22,6 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
-
-if (window.JOS.self != "in.mobility.core") {
-  window.JOS.emitEventOriginal = window.JOS.emitEvent;
-  window.JOS.emitEvent = (_parent, _event, payload) => {
-    return () => {
-      window.JOS.emitEventOriginal(_parent)(_event)(payload)()();
-    }
-  }
-}
-
 // if (window.__OS === "IOS") {
 //   window.JOS.originalEmitEvent = window.JOS.emitEvent;
 //   window.JOS.emitEvent = (parent,_event,payload) => {
