@@ -1,0 +1,1 @@
+CREATE INDEX idx_documentImgId2_not_null ON atlas_driver_offer_bpp.driver_license(document_image_id2) WHERE document_image_id2 IS NOT NULL; -- adding partial index on documentImageId2 for driver_license.

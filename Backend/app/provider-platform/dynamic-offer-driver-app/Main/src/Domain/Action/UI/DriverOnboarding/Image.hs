@@ -60,7 +60,8 @@ data ImageValidateRequest = ImageValidateRequest
     rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
     validationStatus :: Maybe Domain.ValidationStatus,
     workflowTransactionId :: Maybe Text,
-    vehicleCategory :: Maybe VehicleCategory
+    vehicleCategory :: Maybe VehicleCategory,
+    sdkFailureReason :: Maybe Text -- used when frontend sdk is used for extraction.
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -150,21 +151,21 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   unless isDashboard $ do
     transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
-    when (length images > onboardingTryLimit * bool 1 2 (imageType == DVC.AadhaarCard)) $ do
+    when (length images > onboardingTryLimit * bool 1 2 (imageType == DVC.AadhaarCard || imageType == DVC.DriverLicense)) $ do
       -- not needed now
       driverPhone <- mapM decrypt person.mobileNumber
       notifyErrorToSupport person org.id merchantOpCityId driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
   -- WorkflowTransactionId is used only in case of hyperverge request
-  when (isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
-  when (isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
+  when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
+  when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   fork "S3 Put Image" do
     Redis.withLockRedis (imageS3Lock imagePath) 5 $
       S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
+  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
   Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -249,7 +250,7 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -261,8 +262,9 @@ mkImage ::
   Maybe (Id DVRC.VehicleRegistrationCertificate) ->
   Maybe Documents.VerificationStatus ->
   Maybe Text ->
+  Maybe Text ->
   m Domain.Image
-mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId verificationStatus workflowTransactionId = do
+mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId verificationStatus workflowTransactionId sdkFailureReason = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -273,7 +275,7 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
         s3Path,
         imageType = documentType_,
         verificationStatus = Just $ fromMaybe Documents.PENDING verificationStatus,
-        failureReason = Nothing,
+        failureReason = ImageNotValid <$> sdkFailureReason,
         rcId = getId <$> mbRcId,
         workflowTransactionId,
         reviewerEmail = Nothing,

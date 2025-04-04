@@ -157,7 +157,7 @@ types:
     - ventilator: Maybe Bool
     - createdAt: UTCTime
   DocumentsListResponse:
-    - driverLicense: [Text]
+    - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]
     - driverLicenseDetails: [DLDetails]
     - vehicleRegistrationCertificateDetails: [RCDetails]

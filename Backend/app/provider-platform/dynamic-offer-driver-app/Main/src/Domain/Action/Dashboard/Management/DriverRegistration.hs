@@ -27,6 +27,8 @@ module Domain.Action.Dashboard.Management.DriverRegistration
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
@@ -44,7 +46,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (map, whenJust)
+import EulerHS.Prelude hiding (foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -81,7 +83,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
   merchant <- findMerchantByShortId merchantShortId
   pucImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePUC)
   permitImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePermit)
-  dlImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
+  dlImgs <- groupByTxnIdInHM <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
   vInspectionImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInspectionForm)
   vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRegistrationCertificate)
   uploadProfImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.UploadProfile)
@@ -99,7 +101,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
   businessLicenseImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.BusinessLicense)
   aadhaarImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.AadhaarCard)
   vehicleNOCImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleNOC)
-  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) dlImgs))
+  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
   allRCDetails <- mapM convertRCToRCDetails allRCImgs
@@ -136,6 +138,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
         odometer = odometerImg
       }
   where
+    groupByTxnIdInHM = handleNullTxnIds . foldl' (\acc img -> HM.insertWith (++) (fromMaybe "Nothing" img.workflowTransactionId) [img.id.getId] acc) (HM.empty :: HM.HashMap Text [Text])
+    handleNullTxnIds hm = (maybe [] (map (: [])) $ HM.lookup "Nothing" hm) ++ (HM.elems $ HM.delete "Nothing" hm)
     convertDLToDLDetails dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
       pure $
@@ -228,7 +232,8 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           rcNumber = req.rcNumber,
           validationStatus = Nothing,
           workflowTransactionId = Nothing,
-          vehicleCategory = Nothing
+          vehicleCategory = Nothing,
+          sdkFailureReason = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
@@ -244,6 +249,9 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
         vehicleCategory = Nothing,
+        nameOnCardFromSdk = Nothing,
+        requestId = Nothing,
+        sdkTransactionId = Nothing,
         ..
       }
 
@@ -516,7 +524,7 @@ approveAndUpdateDL req = do
             DDL.verificationStatus = VALID
           }
   QDL.updateByPrimaryKey updatedDL
-  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.DriverLicense
+  void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) Domain.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
 
 approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
@@ -678,8 +686,9 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
           whenJust vInsurance $ \_ -> do
             QVI.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
         Domain.DriverLicense -> do
+          dl <- QDL.findByImageId imageId >>= fromMaybeM (InternalError "DL not found by image id")
           QDL.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
-          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason))) (Just dl.documentImageId1, dl.documentImageId2)
         Domain.VehicleRegistrationCertificate -> do
           QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
