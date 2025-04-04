@@ -47,7 +47,13 @@ type API =
 type FleetOwnerRegisterAPI =
   "register"
     :> ReqBody '[JSON] DP.FleetOwnerRegisterReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] FleetOwnerRegisterResp
+
+data FleetOwnerRegisterResp = FleetOwnerRegisterResp
+  { result :: Text,
+    authToken :: Maybe Text
+  }
+  deriving (Show, ToJSON, FromJSON, Generic, ToSchema)
 
 type FleetOwnerVerifyAPI =
   "verify"
@@ -81,7 +87,7 @@ fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
   unless (person.verified == Just True) $ QP.updatePersonVerifiedStatus person.id True
   pure $ DP.FleetOwnerVerifyRes {authToken = token}
 
-fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler APISuccess
+fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler FleetOwnerRegisterResp
 fleetOwnerRegister req = withFlowHandlerAPI' $ do
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -90,7 +96,9 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
       checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
       enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
   res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) (Just enabled) req
-  registerFleetOwner req' $ Just res.personId
+  void $ registerFleetOwner req' $ Just res.personId
+  token <- DR.generateToken (Id res.personId) merchant.id req.city
+  pure $ FleetOwnerRegisterResp "Success" (Just token)
 
 buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> FleetRegisterReq
 buildFleetOwnerRegisterReq DP.FleetOwnerRegisterReq {..} = do

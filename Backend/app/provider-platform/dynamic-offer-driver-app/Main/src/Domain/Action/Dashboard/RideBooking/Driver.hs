@@ -74,6 +74,7 @@ import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.RCValidationRules
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
@@ -561,6 +562,13 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
 
+  -- Validate request --
+  rcValidationRules <- findByCityId driver.merchantOperatingCityId
+  failures <- case rcValidationRules of
+    Nothing -> pure []
+    Just rules -> do
+      let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make}
+      DomainRC.validateRCResponse rcValidationReq rules
   -- Create RC for vehicle before verifying it
   now <- getCurrentTime
   mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
@@ -572,10 +580,12 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
+  unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures -- validate here too
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+      unless (null failures) $ throwError (InvalidRequest $ "RC validation failed: " <> show failures)
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do

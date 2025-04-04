@@ -89,8 +89,6 @@ Merchant:
     registryUrl: BaseUrl
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
-    generateReferralCodeForFleet: Maybe Bool
-    generateReferralCodeForOperator: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -115,8 +113,6 @@ Merchant:
     uniqueKeyId: "'FIXME'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: '''{"NY"}'''
-    generateReferralCodeForFleet: "false"
-    generateReferralCodeForOperator: "false"
 
   excludedFields:
     - merchantId
@@ -1006,12 +1002,14 @@ TransporterConfig:
     minThresholdForPassThroughDestination: Maybe Meters
     requiresOnboardingInspection: Maybe Bool
     allowedReferralEntities: "[Role]"
-
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer
     meterRideBulkLocUpdateBatchSize: Integer
     dynamicReferralCodeValidForMinutes: Integer
     dynamicReferralCodeEnabled: Bool
+    generateReferralCodeForFleet: Maybe Bool
+    generateReferralCodeForOperator: Maybe Bool
+    maxAllowedDocSizeInMB: Maybe Int
     bulkWaiveOffLimit : Int
   beamType:
     currency: Maybe Currency
@@ -1391,9 +1389,10 @@ TransporterConfig:
     minDistanceForStopFcm: "100"
     allowedReferralEntities: "'{DRIVER}'"
     recomputeDistanceThresholds: '''[{"estimatedDistanceUpper": 5000,"minThresholdPercentage": 40,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage": 30,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 15000,"minThresholdPercentage": 20,"minThresholdDistance": 1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage": 10,"minThresholdDistance": 1000}]'' :: json'
-
     minThreshildForPassThroughDestination: "1000"
     enableOverchargingBlocker: "false"
+    generateReferralCodeForFleet: "false"
+    generateReferralCodeForOperator: "false"
 
   excludedDefaultQueries:
     - findByPrimaryKey
