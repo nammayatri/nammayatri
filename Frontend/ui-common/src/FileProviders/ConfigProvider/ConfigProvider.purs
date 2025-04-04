@@ -60,7 +60,7 @@ loadAppConfig _ =
 
 getConfigFromFile :: String -> Array Foreign
 getConfigFromFile fileName = do
-  let config = loadFileInDUI $ fileName <> ReExport.dotJS
+  let config = loadFileInDUI $ fileName <> ReExport.dotJSA
   if isFilePresent config
     then
       [encode $ evalJSString config]

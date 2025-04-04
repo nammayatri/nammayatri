@@ -169,7 +169,7 @@ referralScreenInnerBody push state =
       , margin $ Margin 16 0 16 12
       , orientation VERTICAL
       ][ if shouldShowReferral state then driverReferralCode push state else dummyView
-      , if true then savingWithGullak push state gullakRemoteConfig.image else dummyView
+      , if gullakRemoteConfig.enabled then savingWithGullak push state gullakRemoteConfig.image else dummyView
       , rideLeaderBoardView push state
       ]
     , learnAndEarnShimmerView push state
@@ -750,7 +750,6 @@ savingWithGullak push state image =
             , onClick (\action -> do
                   void $ push action
                   void $ launchAff $ flowRunner defaultGlobalState $ checkTokenAndInitSDK push GullakSDKResponse
-
                   pure unit)
                 (const GullakBannerClick)
             , gravity CENTER
@@ -1022,7 +1021,6 @@ checkTokenAndInitSDK push action = do
     pure unit
   else do
     void $ EHU.loaderText (getString LT.LOADING) (getString LT.PLEASE_WAIT_WHILE_IN_PROGRESS)
-    EHU.toggleLoader true
     response <- HelperAPI.callApi $ API.GetSdkTokenReq "0" API.Gullak
     case response of
       Left _ -> do
