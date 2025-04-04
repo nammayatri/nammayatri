@@ -26,7 +26,7 @@ import Domain.Utils
 import Environment
 import qualified EulerHS.Prelude as EHS
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import qualified Kernel.External.Notification as Notification
@@ -124,8 +124,8 @@ buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCo
       isFirstBatchTrip = isFirstBatchTrip
     }
 
-assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> LatLong -> Flow TripTransaction
-assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo currentLocation = do
+assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> StopInfo -> LatLong -> Flow TripTransaction
+assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber startStopInfo destinationStopInfo currentLocation = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey driverId TRIP_ASSIGNED <> tripTransactionKey driverId IN_PROGRESS)
     60
@@ -140,7 +140,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         -- TODO :: Handle Transaction Failure
         QTT.create tripTransaction
         assignTripTransaction tripTransaction route False currentLocation destinationStopInfo.point False
-        startTripTransaction tripTransaction route closestStop currentLocation destinationStopInfo.point True
+        startTripTransaction tripTransaction route closestStop startStopInfo currentLocation destinationStopInfo.point True
     )
     >>= \case
       Right tripTransaction -> return tripTransaction
@@ -195,11 +195,11 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
               then do
                 whenJust tripTransaction.roundRouteCode $ \roundRouteCode -> do
                   route <- QR.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound roundRouteCode)
-                  (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
+                  (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
                   vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
                   vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (VehicleRouteMappingNotFound tripTransaction.vehicleNumber roundRouteCode)
                   when (not vehicleRouteMapping.blocked) $ do
-                    void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
+                    void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber sourceStopInfo destinationStopInfo currentLocation
               else do
                 QDI.updateOnRide False tripTransaction.driverId
                 unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
@@ -279,8 +279,8 @@ assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation des
       Right _ -> return ()
       Left _ -> throwError (InternalError "Process for Trip Assignment is Already Ongoing, Please try again!")
 
-startTripTransaction :: TripTransaction -> Route -> StopData -> LatLong -> LatLong -> Bool -> Flow TripTransaction
-startTripTransaction tripTransaction route closestStop currentLocation destination notify = do
+startTripTransaction :: TripTransaction -> Route -> StopData -> StopInfo -> LatLong -> LatLong -> Bool -> Flow TripTransaction
+startTripTransaction tripTransaction route closestStop sourceStopInfo currentLocation destination notify = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey tripTransaction.driverId IN_PROGRESS)
     60
@@ -294,11 +294,27 @@ startTripTransaction tripTransaction route closestStop currentLocation destinati
         QTT.updateOnStart tripStartTransaction.tripCode tripStartTransaction.startedNearStopCode tripStartTransaction.startLocation tripStartTransaction.status tripStartTransaction.tripStartTime tripStartTransaction.id
         when notify $ do
           TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+        fork "Check Wrong Start Stop" $ checkWrongStartStop tripStartTransaction
         return tripStartTransaction
     )
     >>= \case
       Right tripStartTransaction -> return tripStartTransaction
       Left _ -> throwError (InternalError "Process for Trip Start is Already Ongoing, Please try again!")
+  where
+    checkWrongStartStop :: TripTransaction -> Flow ()
+    checkWrongStartStop tripStartTransaction = do
+      unless (Just sourceStopInfo.code == tripStartTransaction.startedNearStopCode) $ do
+        driver <- QP.findById tripStartTransaction.driverId >>= fromMaybeM (PersonNotFound tripStartTransaction.driverId.getId)
+        mobileNumber <- mapM decrypt driver.mobileNumber
+        let requestData =
+              WrongStartStop
+                WrongStartStopData
+                  { driverMobileNumber = mobileNumber,
+                    driverName = fromMaybe driver.firstName tripStartTransaction.driverName,
+                    location = currentLocation,
+                    stopName = sourceStopInfo.name
+                  }
+        void $ triggerAlertRequest tripStartTransaction.driverId tripStartTransaction.fleetOwnerId.getId "Trip started from wrong start stop!" "Your trip has started from wrong start stop!" requestData True tripTransaction
 
 validateVehicleAssignment :: Id Person -> Text -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow (VehicleRegistrationCertificate)
 validateVehicleAssignment driverId vehicleNumber _ _ fleetOwnerId = do
@@ -469,41 +485,49 @@ tripTransactionKey driverId = \case
   CANCELLED -> "WMB:TCA:" <> driverId.getId
   PAUSED -> "WMB:TP:" <> driverId.getId
 
-triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow AlertRequest
-triggerAlertRequest driverId requesteeId title body requestData tripTransaction = do
-  alertRequestId <- generateGUID
-  now <- getCurrentTime
-  let alertRequest =
-        AlertRequest
-          { id = alertRequestId,
-            requestorId = driverId,
-            requestorType = DriverGenerated,
-            requesteeId = Id requesteeId,
-            requesteeType = FleetOwner,
-            requestType = castAlertRequestDataToRequestType requestData,
-            reason = Nothing,
-            status = AWAITING_APPROVAL,
+triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id AlertRequest)
+triggerAlertRequest driverId requesteeId title body requestData isViolated tripTransaction = do
+  let alertRequestType = castAlertRequestDataToRequestType requestData
+  if isViolated
+    then do
+      alertRequestId <- generateGUID
+      now <- getCurrentTime
+      let alertRequest =
+            AlertRequest
+              { id = alertRequestId,
+                requestorId = driverId,
+                requestorType = DriverGenerated,
+                requesteeId = Id requesteeId,
+                requesteeType = FleetOwner,
+                requestType = castAlertRequestDataToRequestType requestData,
+                reason = Nothing,
+                status = AWAITING_APPROVAL,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = tripTransaction.merchantId,
+                merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
+                ..
+              }
+      QAR.create alertRequest
+      tripAlertRequestId <- generateGUID
+      QTAR.create $
+        TripAlertRequest
+          { id = tripAlertRequestId,
+            alertRequestId = alertRequestId,
+            tripTransactionId = tripTransaction.id,
+            driverId = driverId,
+            fleetOwnerId = Id requesteeId,
+            routeCode = tripTransaction.routeCode,
+            alertRequestType = alertRequestType,
+            isViolated = isViolated,
             createdAt = now,
             updatedAt = now,
             merchantId = tripTransaction.merchantId,
-            merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
-            ..
+            merchantOperatingCityId = tripTransaction.merchantOperatingCityId
           }
-  QAR.create alertRequest
-  tripAlertRequestId <- generateGUID
-  QTAR.create $
-    TripAlertRequest
-      { id = tripAlertRequestId,
-        alertRequestId = alertRequestId,
-        tripTransactionId = tripTransaction.id,
-        driverId = driverId,
-        fleetOwnerId = Id requesteeId,
-        routeCode = tripTransaction.routeCode,
-        alertRequestType = castAlertRequestDataToRequestType requestData,
-        createdAt = now,
-        updatedAt = now,
-        merchantId = tripTransaction.merchantId,
-        merchantOperatingCityId = tripTransaction.merchantOperatingCityId
-      }
-  TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
-  pure alertRequest
+      TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
+      pure alertRequest.id
+    else do
+      tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)
+      QTAR.updateIsViolated False tripAlertRequest.id
+      pure tripAlertRequest.alertRequestId

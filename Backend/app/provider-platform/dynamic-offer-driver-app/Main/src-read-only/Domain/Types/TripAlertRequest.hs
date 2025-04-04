@@ -22,6 +22,7 @@ data TripAlertRequest = TripAlertRequest
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.TripAlertRequest.TripAlertRequest,
+    isViolated :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     routeCode :: Data.Text.Text,
