@@ -86,6 +86,7 @@ type DriverInfoCardProps =
     stageBeforeChatScreen :: Stage,
     isOtpRideFlow :: Boolean,
     enquiryBannerData ::  Maybe EnquiryBannerConfig
+  , enquiryBannerUndoTimer :: Maybe Int
   }
 
 type DriverInfoCardData =

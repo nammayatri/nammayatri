@@ -27,8 +27,8 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Common.RemoteConfig.Utils as CommonRC
 
 initData :: HomeScreenState
-initData = 
-  { data: 
+initData =
+  { data:
       { linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
@@ -260,7 +260,7 @@ initData =
       , showInterOperablePopUp : false
       , showReferralEarnedPopUp : false
       , showReferNowPopUp : false
-      , showAddUPIPopUp : false 
+      , showAddUPIPopUp : false
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
       , checkUpcomingRide : true
@@ -281,7 +281,7 @@ initData =
   }
 
 initialTollState :: TollState
-initialTollState = { 
+initialTollState = {
   showTollChargePopup: true
 , showTollChargeAmbigousPopup: true
 , finalCharge : 0.0

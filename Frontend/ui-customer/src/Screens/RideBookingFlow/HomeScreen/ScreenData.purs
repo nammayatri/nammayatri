@@ -433,6 +433,7 @@ initData = let
     , showBoostSearch : false
     , busClicked : false
     , ticketServiceType : API.METRO
+    , enquiryBannerUndoTimer : Nothing
   }
 }
 

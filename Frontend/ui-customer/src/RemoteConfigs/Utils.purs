@@ -318,21 +318,47 @@ defaultGetEnquiryBannerConfig = {
     categoryId: "",
     optionId: Nothing
 }
-getEnquiryBannerConfig :: String -> EnquiryBannerConfigs
-getEnquiryBannerConfig city =
+
+
+defaultGetVehicleEnquiryBannerConfig :: VehicleEnquiryBannerConfigs
+defaultGetVehicleEnquiryBannerConfig = {
+  auto : Nothing
+, car : Nothing
+, ambulance : Nothing
+, bike : Nothing
+}
+
+
+data VehicleCategory = AutoCategory | BikeCategory | AmbulanceCategory | CarCategory
+
+getCategoryFromVariant :: String -> VehicleCategory
+getCategoryFromVariant variant = case variant of
+  _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] -> AutoCategory
+  "BIKE" -> BikeCategory
+  _ | variant `DA.elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> AmbulanceCategory
+  _ -> CarCategory
+
+
+getEnquiryBannerConfig :: String -> VehicleCategory -> Maybe EnquiryBannerConfigs
+getEnquiryBannerConfig city mbVehicleCat =
     let
-        cachedValue = runFn3 getFromCache "customer_enquiry_config" Nothing Just
-        _ = spy "getEnquiryBannerConfig cachedValue" cachedValue
-    in
-        case cachedValue of
+        cachedValue = runFn3 getFromCache "customer_enquiry_config_v2" Nothing Just
+        finalValue = case cachedValue of
             Just value -> value
             Nothing ->
-                let config = fetchRemoteConfigString "customer_enquiry_config"
-                    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultGetEnquiryBannerConfig
+                let
+                    config = fetchRemoteConfigString "customer_enquiry_config_v2"
+                    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultGetVehicleEnquiryBannerConfig
                     resp = getCityBasedConfig value $ DS.toLower city
-                    _ = runFn2 setInCache "customer_enquiry_config" resp
+                    _ = runFn2 setInCache "customer_enquiry_config_v2" resp
                 in
                     resp
+    in
+        case mbVehicleCat of
+            AutoCategory -> finalValue.auto
+            BikeCategory -> finalValue.bike
+            AmbulanceCategory -> finalValue.ambulance
+            CarCategory -> finalValue.car
 
 
 defaultReferralPayout :: ReferralPayoutConfig

@@ -445,7 +445,6 @@ if (typeof window.JOS != "undefined") {
   console.error("JOS not present")
 }
 
-}
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 const JOSFlags = window.JOS.getJOSflags()

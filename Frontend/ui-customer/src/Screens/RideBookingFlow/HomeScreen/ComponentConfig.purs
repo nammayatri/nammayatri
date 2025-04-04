@@ -1146,6 +1146,7 @@ driverInfoCardViewState state = { props:
                                   , showEndOTP : state.props.showEndOTP
                                   , stageBeforeChatScreen : state.props.stageBeforeChatScreen
                                   , enquiryBannerData : getEnquiryBannerData state
+                                  , enquiryBannerUndoTimer : state.props.enquiryBannerUndoTimer
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -1159,13 +1160,15 @@ getEnquiryBannerData state =
     else
       let
         city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-        remoteConfig = spy "getEnquiryBannerConfig" $ RemoteConfig.getEnquiryBannerConfig city
+        vehicleCat = RemoteConfig.getCategoryFromVariant state.data.vehicleVariant
+        mbRemoteConfig = spy "getEnquiryBannerConfig" $ RemoteConfig.getEnquiryBannerConfig city vehicleCat
       in
-        case state.data.enquiryBannerStage of
-          Nothing -> Nothing
-          Just ST.QuestionStage -> remoteConfig.question
-          Just ST.FirstBtnClickStage ->  remoteConfig.firstBtnBanner
-          Just ST.SecondBtnClickStage ->  remoteConfig.secondBtnBanner
+        mbRemoteConfig >>= \remoteConfig ->
+          case state.data.enquiryBannerStage of
+            Nothing -> Nothing
+            Just ST.QuestionStage -> remoteConfig.question
+            Just ST.FirstBtnClickStage ->  remoteConfig.firstBtnBanner
+            Just ST.SecondBtnClickStage ->  remoteConfig.secondBtnBanner
 
 
 
