@@ -1,6 +1,5 @@
 imports:
   Person: Domain.Types.Person
-  FleetType: Domain.Types.FleetType
 
 module: FleetManagement
 apiPrefix: operator
@@ -16,17 +15,19 @@ apis:
         - offset: Int
       response:
         type: "[FleetInfo]"
-
-  - GET: # ListDriversAPI
-      endpoint: /drivers
-      auth: ApiAuthV2
-      query:
-        - isActive: Bool
-        - verified: Bool
-        - limit: Int
-        - offset: Int
-      response:
-        type: "[DriverInfo]"
+      helperApi:
+        - GET:
+            endpoint: /fleets
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - verified: Bool
+              - limit: Int
+              - offset: Int
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: "[FleetInfo]"
 
 types:
   FleetInfo:
@@ -36,14 +37,4 @@ types:
     - mobileCountryCode: Text
     - mobileNumber: Text
     - vehicleCount: Int
-    - verified: Bool
-  DriverInfo:
-    - driverId: Id Driver
-    - firstName: Text
-    - middleName: Maybe Text
-    - lastName: Text
-    - isActive: Bool
-    - mobileCountryCode: Text
-    - mobileNumber: Text
-    - vehicle: Maybe Text
     - verified: Bool
