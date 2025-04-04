@@ -2752,6 +2752,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.AddTip tipViewProps)) state
   if state.data.selectedEstimatesObject.searchResultType == ChooseVehicleController.QUOTES ChooseVehicleController.OneWaySpecialZoneAPIDetails then continue state
   else continue state { props { tipViewProps = tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
 
+eval (ChooseYourRideAction (ChooseYourRideController.ShowOfferPopUp)) state = continue state{showOfferPopUp = true}
+
 eval (ChooseYourRideAction (ChooseYourRideController.ChangeTip tipViewProps)) state = do
   continue state { props {tipViewProps = tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}}
 
@@ -3091,6 +3093,12 @@ eval (GetReferralPopup popUpAction) state = do
     PopUpModal.OnButton1Click -> do
       let _ = setValueToCache "TAKE_FIRST_REFERRAL_RIDE" (show $ HU.getTime unit) identity 
       continueWithCmd state{showTakeFirstRidePopup = false} [pure $ WhereToClick]
+    _ -> update state
+
+eval (OfferPopUp popUpAction) state = do
+  case popUpAction of
+    PopUpModal.OnButton1Click -> continue state{showOfferPopUp = false}
+    PopUpModal.DismissPopup -> continue state{showOfferPopUp = false}
     _ -> update state
 
 eval GoToHomeScreen state = do

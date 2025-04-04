@@ -49,6 +49,7 @@ initData = let
   in
   {
     showTakeFirstRidePopup : false,
+    showOfferPopUp : false,
     data: {
       suggestedAmount : 0
     , channelIdFromFCM : ""

@@ -680,7 +680,8 @@ view push state =
                       , background Color.black9000
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
                     else []
-              <> if state.showTakeFirstRidePopup then [PopUpModal.view (push <<< GetReferralPopup) (referralDonePopUp state)] else [])
+              <> if state.showTakeFirstRidePopup then [PopUpModal.view (push <<< GetReferralPopup) (referralDonePopUp state)] else []
+              <> if state.showOfferPopUp then [PopUpModal.view (push <<< OfferPopUp) (offerConfigPopUp state)] else [])
         ]
   ]
   where

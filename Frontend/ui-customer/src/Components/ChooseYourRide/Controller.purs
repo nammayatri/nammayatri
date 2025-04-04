@@ -33,6 +33,7 @@ data Action
   | TipBtnClick Int Int (Array Int)
   | AddTip TipViewProps
   | ChangeTip TipViewProps
+  | ShowOfferPopUp 
 
 
 type Config

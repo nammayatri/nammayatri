@@ -733,7 +733,8 @@ type HomeScreenState =
   {
     data :: HomeScreenStateData,
     props :: HomeScreenStateProps,
-    showTakeFirstRidePopup :: Boolean
+    showTakeFirstRidePopup :: Boolean,
+    showOfferPopUp :: Boolean
   }
 
 type HomeScreenStateData =
