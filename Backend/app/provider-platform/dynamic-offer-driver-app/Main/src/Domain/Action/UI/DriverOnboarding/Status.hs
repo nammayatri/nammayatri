@@ -49,15 +49,15 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Flow StatusRes
-statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory useHVSdkForDL = do
   -- multipleRC flag is temporary to support backward compatibility
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language
+  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit merchantOperatingCity.language useHVSdkForDL
   (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC merchantOperatingCity.language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,

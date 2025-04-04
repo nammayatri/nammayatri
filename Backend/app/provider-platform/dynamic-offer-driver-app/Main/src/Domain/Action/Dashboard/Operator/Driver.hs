@@ -89,7 +89,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
         transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
         person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let language = fromMaybe merchantOpCity.language person.language
-        driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language
+        driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language (Just True)
         vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
         vehicleDoc <-
           find (\doc -> doc.registrationNo == req.registrationNo) vehicleDocumentsUnverified
@@ -176,7 +176,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset reque
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' person.id merchantOpCity transporterConfig Nothing Nothing Nothing Nothing Nothing -- FXME: Need to change
+          <$> SStatus.statusHandler' person.id merchantOpCity transporterConfig Nothing Nothing Nothing Nothing Nothing (Just True) -- FXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,

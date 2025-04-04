@@ -160,7 +160,7 @@ types:
     - createdAt: UTCTime
     - failedRules: [Text]
   DocumentsListResponse:
-    - driverLicense: [Text]
+    - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]
     - driverLicenseDetails: [DLDetails]
     - vehicleRegistrationCertificateDetails: [RCDetails]

@@ -125,12 +125,12 @@ fleetOwnerRegister req = do
     createPanInfo req.personId person.merchantId person.merchantOperatingCityId req.panImageId1 req.panImageId2 req.panNumber
   fork "Uploading GST Image" $ do
     whenJust req.gstCertificateImage $ \gstImage -> do
-      let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
+      let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (req.personId, person.merchantId, person.merchantOperatingCityId) req'
       QFOI.updateGstImage req.gstNumber (Just image.imageId.getId) req.personId
   fork "Uploading Business License Image" $ do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
-      let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
+      let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (req.personId, person.merchantId, person.merchantOperatingCityId) req'
       QFOI.updateBusinessLicenseImage (Just image.imageId.getId) req.personId
   return Success
@@ -173,7 +173,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just panNo) = do
-  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
+  let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
   image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
   let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
   void $ Registration.postDriverRegisterPancard (Just personId, merchantId, merchantOperatingCityId) panReq
