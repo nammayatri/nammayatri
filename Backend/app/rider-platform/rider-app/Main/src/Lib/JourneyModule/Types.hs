@@ -54,7 +54,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Search
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as CQMMB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -790,11 +790,11 @@ castCategoryToMode Spec.BUS = DTrip.Bus
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m LegInfo
 mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance duration = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
-  mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  multiModalConfigs <- CQMMB.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   let bookingAllowed =
         case vehicleType of
-          Spec.METRO -> fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
-          Spec.SUBWAY -> fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
+          Spec.METRO -> fromMaybe False (multiModalConfigs >>= (.metroBookingAllowed))
+          Spec.SUBWAY -> fromMaybe False (multiModalConfigs >>= (.suburbanBookingAllowed))
           _ -> True
   now <- getCurrentTime
   (mbEstimatedFare, mbQuote) <-

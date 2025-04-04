@@ -19,6 +19,7 @@ import qualified Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MultiModalConfigs as MultiModalConfigs
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
@@ -62,8 +63,8 @@ import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as CMMC
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as QMultiModalConfigs
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -80,13 +81,13 @@ import qualified Tools.MultiModal as TMultiModal
 
 filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> m [MultiModalRoute]
 filterTransitRoutes routes mocid = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocid.getId)
-  if riderConfig.enableBusFiltering == Just True
-    then filterM filterBusRoutes routes
+  multiModalConfigs <- QMultiModalConfigs.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (MultiModalConfigsNotFound mocid.getId)
+  if multiModalConfigs.enableBusFiltering == Just True
+    then filterM (filterBusRoutes multiModalConfigs) routes
     else return routes
   where
-    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalRoute -> m Bool
-    filterBusRoutes route = do
+    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalConfigs.MultiModalConfigs -> MultiModalRoute -> m Bool
+    filterBusRoutes MultiModalConfigs.MultiModalConfigs {..} route = do
       let legs = route.legs
           busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
       if null busLegs
@@ -95,7 +96,7 @@ filterTransitRoutes routes mocid = do
           busLegsValid <- forM busLegs $ \leg -> do
             case (leg.fromDepartureTime, leg.fromStopDetails >>= (.stopCode), leg.fromStopDetails >>= (.gtfsId)) of
               (Just departureTime, Just stopCode, Just routeId) -> do
-                let buffer = 300 -- TODO: MOVE TO CONFIG.
+                let buffer = fromIntegral $ busFilterTimeBufferInSeconds.getSeconds
                 let departureTimeWithBuffer = buffer `addUTCTime` departureTime
                 routeWithBuses <- CQMMB.getRoutesBuses routeId
 
@@ -120,13 +121,13 @@ init ::
   m (Maybe DJourney.Journey)
 init journeyReq = do
   journeyId <- Common.generateGUID
-  riderConfig <- QRC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
+  multiModalConfigs <- CMMC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound journeyReq.merchantOperatingCityId.getId)
   mbTotalFares <-
     mapWithIndex
       ( \idx leg -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) (distanceToMeters leg.distance) journeyReq.maximumWalkDistance journeyReq.straightLineThreshold
           mbTotalLegFare <- measureLatency (JLI.getFare journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode) "multimodal getFare"
-          if riderConfig.multimodalTesting
+          if multiModalConfigs.multimodalTesting
             then do
               journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare
               QJourneyLeg.create journeyLeg
@@ -138,7 +139,7 @@ init journeyReq = do
       )
       journeyReq.legs
   logDebug $ "[Multimodal - Legs]" <> show mbTotalFares
-  if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
+  if not multiModalConfigs.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
@@ -251,11 +252,11 @@ getMultiModalTransitOptions ::
   APITypes.MultimodalTransitOptionsReq ->
   m APITypes.MultimodalTransitOptionsResp
 getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId req = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  multiModalConfigs <- QMultiModalConfigs.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound merchantOperatingCityId.getId)
   -- let permissibleModesToUse = fromMaybe [] riderConfig.permissibleModes
   let permissibleModesToUse =
         if null userPreferences.allowedTransitModes
-          then fromMaybe [] riderConfig.permissibleModes
+          then fromMaybe [] multiModalConfigs.permissibleModes
           else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
   now <- getCurrentTime
   let transitRoutesReq =
@@ -267,16 +268,16 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
             mode = Nothing,
             transitPreferences = Nothing,
             transportModes = Nothing,
-            minimumWalkDistance = riderConfig.minimumWalkDistance,
+            minimumWalkDistance = multiModalConfigs.minimumWalkDistance,
             permissibleModes = permissibleModesToUse,
-            maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+            maxAllowedPublicTransportLegs = multiModalConfigs.maxAllowedPublicTransportLegs,
             sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
   otpResponse <- KMultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
   logDebug $ "[getMultiModalTransitOptions - OTP Response]" <> show otpResponse
 
-  let processedRoutes = map (processRoute riderConfig.maximumWalkDistance) otpResponse.routes
+  let processedRoutes = map (processRoute multiModalConfigs.maximumWalkDistance) otpResponse.routes
   let transitOptions = map extractOptionFromRoute processedRoutes
 
   return $
@@ -962,8 +963,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       -- checkIfRemainingLegsAreCancellable legsToCancel
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
       let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
-      riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
+      multiModalConfigs <- QMultiModalConfigs.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound currentLeg.merchantOperatingCityId.getId)
+      journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId multiModalConfigs.maximumWalkDistance multiModalConfigs.straightLineThreshold (Just fare)
       startLocationAddress <-
         case currentLeg.legExtraInfo of
           JL.Walk walkLegExtraInfo -> return walkLegExtraInfo.origin.address
@@ -996,8 +997,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
     extendWalkLeg startlocation endLocation currentLeg parentSearchReq = do
       now <- getCurrentTime
       let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
-      riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
+      multiModalConfigs <- QMultiModalConfigs.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound currentLeg.merchantOperatingCityId.getId)
+      journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId multiModalConfigs.maximumWalkDistance multiModalConfigs.straightLineThreshold (Just fare)
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs
         QJourneyLeg.create journeyLeg

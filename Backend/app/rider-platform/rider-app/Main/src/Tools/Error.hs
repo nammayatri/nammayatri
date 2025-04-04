@@ -287,6 +287,7 @@ data RiderError
   = RiderConfigNotFound Text
   | RiderConfigDoesNotExist Text
   | RiderConfigFieldIsEmpty Text Text
+  | MultiModalConfigsNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RiderError
@@ -295,16 +296,19 @@ instance IsBaseError RiderError where
   toMessage (RiderConfigNotFound merchantOperatingCityId) = Just $ "Rider with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" not found."
   toMessage (RiderConfigDoesNotExist merchantOperatingCityId) = Just $ "Rider with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" does not exist."
   toMessage (RiderConfigFieldIsEmpty field merchantOperatingCityId) = Just $ "RiderConfig with merchantOperatingCityId \"" <> merchantOperatingCityId <> "\" , field \"" <> field <> "\" is empty."
+  toMessage (MultiModalConfigsNotFound merchantOperatingCityId) = Just $ "MultiModalConfigs with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" not found."
 
 instance IsHTTPError RiderError where
   toErrorCode = \case
     RiderConfigNotFound _ -> "RIDER_NOT_FOUND"
     RiderConfigDoesNotExist _ -> "RIDER_NOT_EXISTS"
     RiderConfigFieldIsEmpty _ _ -> "RIDER_CONFIG_FIELD_IS_EMPTY"
+    MultiModalConfigsNotFound _ -> "MULTI_MODAL_CONFIGS_NOT_FOUND"
   toHttpCode = \case
     RiderConfigNotFound _ -> E500
     RiderConfigDoesNotExist _ -> E400
     RiderConfigFieldIsEmpty _ _ -> E400
+    MultiModalConfigsNotFound _ -> E500
 
 instance IsAPIError RiderError
 

@@ -1,0 +1,71 @@
+imports:
+
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Seconds: Kernel.Types.Time
+  GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
+
+MultiModalConfigs:
+  tableName: multi_modal_configs
+
+  fields:
+    id: Id MultiModalConfigs
+    busFilterTimeBufferInSeconds: Seconds
+    enableBusFiltering: Maybe Bool
+    nearbyDriverSearchRadius: Maybe Double
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    straightLineThreshold: Meters
+    suburbanBookingAllowed: Maybe Bool
+    metroBookingAllowed: Maybe Bool
+    maximumWalkDistance: Meters
+    makeMultiModalSearch: Bool
+    permissibleModes: "Maybe [GeneralVehicleType]"
+    multimodalTesting: Bool
+    minimumWalkDistance: Meters
+    maxAllowedPublicTransportLegs: Int
+
+  beamType:
+    straightLineThreshold: Maybe Meters
+    maximumWalkDistance: Maybe Meters
+    makeMultiModalSearch: Maybe Bool
+    multimodalTesting: Maybe Bool
+    minimumWalkDistance: Maybe Meters
+    maxAllowedPublicTransportLegs: Maybe Int
+
+  fromTType:
+    straightLineThreshold: fromMaybe (300) straightLineThreshold|E
+    maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
+    makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
+    multimodalTesting: fromMaybe False multimodalTesting|E
+    minimumWalkDistance: fromMaybe (100) minimumWalkDistance|E
+    maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
+
+  toTType:
+    straightLineThreshold: Just straightLineThreshold|E
+    maximumWalkDistance: Just maximumWalkDistance|E
+    makeMultiModalSearch: Just makeMultiModalSearch|E
+    multimodalTesting: Just multimodalTesting|E
+    minimumWalkDistance: Just minimumWalkDistance|E
+    maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
+
+  default:
+    straightLineThreshold: "300"
+    maximumWalkDistance: "600"
+    makeMultiModalSearch: "false"
+    permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
+    multimodalTesting: "false"
+    minimumWalkDistance: "100"
+    maxAllowedPublicTransportLegs: "2"
+
+  sqlType:
+    permissibleModes: text []
+
+
+  excludedFields: [merchantId]
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId

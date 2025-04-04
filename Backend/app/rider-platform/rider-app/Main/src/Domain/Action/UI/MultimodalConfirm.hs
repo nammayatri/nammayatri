@@ -21,7 +21,6 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
     getMultimodalOrderGetLegTierOptions,
-    getMultimodalOrderGetBusTierOptions,
     postMultimodalPaymentUpdateOrder,
   )
 where
@@ -66,6 +65,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as CMMC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
@@ -77,7 +77,6 @@ import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
@@ -543,8 +542,8 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
           }
     Nothing -> do
       personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
-      let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] riderConfig.permissibleModes)
+      multiModalConfigs <- CMMC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound personCityInfo.merchantOperatingCityId.getId)
+      let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] multiModalConfigs.permissibleModes)
       return $
         ApiTypes.MultimodalUserPreferences
           { allowedTransitModes = convertedModes,

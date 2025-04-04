@@ -46,9 +46,9 @@ import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Estimate as Estimate
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.MultiModalConfigs
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -79,7 +79,8 @@ import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as CQMMB
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as QMultiModalConfigs
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
@@ -167,9 +168,9 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   fork "Multimodal Search" $ do
-    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
-    when riderConfig.makeMultiModalSearch $ do
-      void (multiModalSearch dSearchRes.searchRequest riderConfig False req)
+    multiModalConfigs <- QMultiModalConfigs.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (MultiModalConfigsNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+    when multiModalConfigs.makeMultiModalSearch $ do
+      void (multiModalSearch dSearchRes.searchRequest False req)
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -208,17 +209,18 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
       encryptedImeiNumber <- encrypt imeiNumber
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
-    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initateJourney = fromMaybe False mbInitateJourney
-    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney req
+    multiModalSearch dSearchRes.searchRequest initateJourney req
 
-multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initateJourney req' = do
+multiModalSearch :: SearchRequest.SearchRequest -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
+multiModalSearch searchRequest initateJourney req' = do
   now <- getCurrentTime
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
+
+  multiModalConfigs <- CQMMB.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound merchantOperatingCityId.getId)
   mbSingleModeRouteDetails <- JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig.id) "getSingleModeRouteDetails"
   otpResponse <- case mbSingleModeRouteDetails of
     Just singleModeRouteDetails -> do
@@ -290,7 +292,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
           }
     _ -> do
       userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
-      let permissibleModesToUse = if null userPreferences.allowedTransitModes then fromMaybe [] riderConfig.permissibleModes else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
+      let permissibleModesToUse = if null userPreferences.allowedTransitModes then fromMaybe [] multiModalConfigs.permissibleModes else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
       destination <- extractDest searchRequest.toLocation
       let transitRoutesReq =
@@ -302,9 +304,9 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                 mode = Nothing,
                 transitPreferences = Nothing,
                 transportModes = Nothing,
-                minimumWalkDistance = riderConfig.minimumWalkDistance,
+                minimumWalkDistance = multiModalConfigs.minimumWalkDistance,
                 permissibleModes = permissibleModesToUse,
-                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                maxAllowedPublicTransportLegs = multiModalConfigs.maxAllowedPublicTransportLegs,
                 sortingType = JMU.convertSortingType sortingType
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
@@ -332,8 +334,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               estimatedDuration = firstRoute.duration,
               startTime = firstRoute.startTime,
               endTime = firstRoute.endTime,
-              maximumWalkDistance = riderConfig.maximumWalkDistance,
-              straightLineThreshold = riderConfig.straightLineThreshold,
+              maximumWalkDistance = multiModalConfigs.maximumWalkDistance,
+              straightLineThreshold = multiModalConfigs.straightLineThreshold,
               relevanceScore = firstRoute.relevanceScore
             }
     JMU.measureLatency (void $ JM.init initReq) "Multimodal Init Time"
@@ -350,7 +352,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
           Nothing -> return Nothing
       else return Nothing
 
-  fork "Rest of the routes InIt" $ processRestOfRoutes otpResponse.routes
+  fork "Rest of the routes InIt" $ processRestOfRoutes otpResponse.routes multiModalConfigs
   return $
     MultimodalSearchResp
       { searchId = searchRequest.id,
@@ -360,8 +362,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         firstJourneyInfo = firstJourneyInfo
       }
   where
-    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> Flow ()
-    processRestOfRoutes routes = do
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> MultiModalConfigs -> Flow ()
+    processRestOfRoutes routes multiModalConfigs = do
       let restOfRoutes = drop 1 routes
       forM_ restOfRoutes $ \r' -> do
         let initReq' =
@@ -375,8 +377,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                   estimatedDuration = r'.duration,
                   startTime = r'.startTime,
                   endTime = r'.endTime,
-                  maximumWalkDistance = riderConfig.maximumWalkDistance,
-                  straightLineThreshold = riderConfig.straightLineThreshold,
+                  maximumWalkDistance = multiModalConfigs.maximumWalkDistance,
+                  straightLineThreshold = multiModalConfigs.straightLineThreshold,
                   relevanceScore = r'.relevanceScore
                 }
         JM.init initReq'

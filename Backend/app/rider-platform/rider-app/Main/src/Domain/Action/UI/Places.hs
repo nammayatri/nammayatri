@@ -20,11 +20,12 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.Common as Utils
 import qualified Lib.JourneyModule.Utils as JMU
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRiderConfig
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as CMMC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PopularLocation as QPopularLocation
 import qualified Storage.Queries.RecentLocation as QRecentLocation
 import qualified Storage.Queries.Station as QS
+import Tools.Error
 import qualified Tools.MultiModal as TMultiModal
 
 -- TODO: COMPLETED THIS AND MOVE THIS TO SOME OTHER FILE
@@ -50,9 +51,9 @@ import qualified Tools.MultiModal as TMultiModal
 
 getMultiModalModes :: API.PlacesRequest -> DRecntLoc.RecentLocation -> Id.Id DMerchant.Merchant -> DPerson.Person -> Id.Id MerchantOperatingCity -> Env.Flow (Maybe API.MultiModalLocation)
 getMultiModalModes req recentLoc merchantId person merchantOperatingCityId = do
-  riderConfig <- CQRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= Utils.fromMaybeM (Error.InternalError "Rider config not found")
+  multiModalConfigs <- CMMC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= Utils.fromMaybeM (MultiModalConfigsNotFound merchantOperatingCityId.getId)
   userPref <- DAUM.getMultimodalUserPreferences (Just person.id, merchantId)
-  if (isNothing recentLoc.stopLat || isNothing recentLoc.stopLon || isNothing recentLoc.address)
+  if isNothing recentLoc.stopLat || isNothing recentLoc.stopLon || isNothing recentLoc.address
     then return Nothing
     else do
       let transitRoutesReq =
@@ -84,9 +85,9 @@ getMultiModalModes req recentLoc merchantId person merchantOperatingCityId = do
                 mode = Nothing,
                 transitPreferences = Nothing,
                 transportModes = Nothing,
-                minimumWalkDistance = riderConfig.minimumWalkDistance,
-                permissibleModes = fromMaybe [] riderConfig.permissibleModes,
-                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                minimumWalkDistance = multiModalConfigs.minimumWalkDistance,
+                permissibleModes = fromMaybe [] multiModalConfigs.permissibleModes,
+                maxAllowedPublicTransportLegs = multiModalConfigs.maxAllowedPublicTransportLegs,
                 sortingType = JMU.convertSortingType $ fromMaybe DMP.FASTEST userPref.journeyOptionsSortingType
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
@@ -129,11 +130,7 @@ postPlaces (mbPersonId, merchantId) req = do
   personId <- Utils.fromMaybeM (Error.PersonNotFound "No person found") mbPersonId
   person <- QPerson.findById personId >>= Utils.fromMaybeM (Error.PersonNotFound "No person found")
   popularLocations <- QPopularLocation.findAllByMerchantOperatingCityId person.merchantOperatingCityId
-
-  -- Get rider config for multimodal settings
-  riderConfig <-
-    CQRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
-      >>= Utils.fromMaybeM (Error.InternalError "Rider config not found")
+  multiModalConfigs <- CMMC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= Utils.fromMaybeM (MultiModalConfigsNotFound person.merchantOperatingCityId.getId)
 
   let searchRadius = 100 -- Need to move it config
   recentLocations <- do
@@ -183,9 +180,9 @@ postPlaces (mbPersonId, merchantId) req = do
               mode = Nothing,
               transitPreferences = Nothing,
               transportModes = Nothing,
-              minimumWalkDistance = riderConfig.minimumWalkDistance,
-              permissibleModes = fromMaybe [] riderConfig.permissibleModes,
-              maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+              minimumWalkDistance = multiModalConfigs.minimumWalkDistance,
+              permissibleModes = fromMaybe [] multiModalConfigs.permissibleModes,
+              maxAllowedPublicTransportLegs = multiModalConfigs.maxAllowedPublicTransportLegs,
               sortingType = JMU.convertSortingType DMP.FASTEST
             }
     transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
