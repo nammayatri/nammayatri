@@ -128,7 +128,7 @@ import Screens.Types (Gender(..)) as Gender
 import Screens.Types as ST
 import Screens.Types
 import Services.Backend as Remote
-import Services.Config (getBaseUrl, getSupportNumber)
+import Services.Config (getBaseUrl, getSupportNumber, getQuickReportIssueConfig)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Types.App
@@ -748,6 +748,11 @@ riderRideCompletedScreenFlow = do
       else if checkIfSafetyEnabled && issueType == CTA.NightSafety then do
         modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> SafetyScreenData.initData { props { reportPastRide = true, fromScreen = Just RideCompletedScreen }, data { lastRideDetails = Arr.head $ myRideListTransformer true [ updatedState.ratingViewState.rideBookingRes ] updatedState.config Nothing  } })
         activateSafetyScreenFlow
+      else if issueType == CTA.TollCharge then do
+        let tollConfig = (getQuickReportIssueConfig "lazy").tollIssue
+        let _ = spy "insidePostQuickIssue" tollConfig
+        postQuickIssue tollConfig.categoryId tollConfig.optionId (Just updatedState.rideRatingState.rideId) "RIDE_END_QUICK_TOLL_REPORT"
+        riderRideCompletedScreenFlow
       else do
         let
           language = fetchLanguage $ getLanguageLocale languageKey
@@ -760,7 +765,7 @@ riderRideCompletedScreenFlow = do
             _ -> "Ride related"
 
         (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" updatedState.rideRatingState.rideId  ""
-        let 
+        let
           getOptionsRes'' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction currMessage.label "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsRes.messages
@@ -836,6 +841,19 @@ riderRideCompletedScreenFlow = do
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       currentFlowStatus false
 
+
+postQuickIssue :: String -> Maybe String -> Maybe String -> String -> FlowBT String Unit
+postQuickIssue categoryId' mbOptionId mbRideId  description' = do
+  let postIssueBody = API.PostIssueReqBody {
+      optionId : mbOptionId
+    , rideId : mbRideId
+    , categoryId : categoryId'
+    , mediaFiles : []
+    , description : description'
+    , chats : []
+    , createTicket : false
+    }
+  void $ Remote.postIssueBT "en" postIssueBody
 
 currentFlowStatus :: Boolean -> FlowBT String Unit
 currentFlowStatus prioritizeRating = do
@@ -1037,7 +1055,7 @@ currentFlowStatus prioritizeRating = do
               currentState.homeScreen.props.tipViewProps
           estimates = if length currentState.homeScreen.data.specialZoneQuoteList > 0 then currentState.homeScreen.data.specialZoneQuoteList else map (\item -> item{validTill = ""}) (getCachedEstimates "")
           selectedVariant = getValueToLocalStore SELECTED_VARIANT
-          selectedEstimate = case selectedVariant of 
+          selectedEstimate = case selectedVariant of
                                 "BOOK_ANY" -> fromMaybe ChooseVehicle.config $ DA.find (\item -> item.vehicleVariant == "BOOK_ANY") estimates
                                 _ -> fromMaybe ChooseVehicle.config $ DA.find (\item -> item.id == estimateId) estimates
           fareProductType = case tripCategory of
@@ -7920,7 +7938,7 @@ updateMetroBookingQuoteInfo metroBookingStatus = do
       pure unit
 
 rideCompletedEventParams :: HomeScreenState -> Array ClevertapEventParams
-rideCompletedEventParams state = 
+rideCompletedEventParams state =
   [ {key: "Source", value: unsafeToForeign (take 99 (state.data.driverInfoCardState.source))},
     {key: "Destination", value: unsafeToForeign (take 99 (state.data.driverInfoCardState.destination))},
     {key: "Ride Amount", value: unsafeToForeign state.data.driverInfoCardState.price},
@@ -7930,7 +7948,7 @@ rideCompletedEventParams state =
     {key: "Destination Reached", value: unsafeToForeign state.data.driverInfoCardState.destinationReached},
     {key: "Service Tier Name", value: unsafeToForeign state.data.driverInfoCardState.serviceTierName},
     {key: "ETA", value: unsafeToForeign state.data.driverInfoCardState.eta},
-    {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant} 
+    {key: "Vehicle Variant", value: unsafeToForeign state.data.driverInfoCardState.vehicleVariant}
   ]
 
 clearLocalStoreAuthDataFlow :: FlowBT String Unit

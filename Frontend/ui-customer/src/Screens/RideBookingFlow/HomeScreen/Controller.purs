@@ -170,6 +170,7 @@ import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Foreign.Generic (class Decode, decodeJSON, encode, encodeJSON)
 import Common.RemoteConfig (fetchRemoteConfigString)
 import Engineering.Helpers.Events as EHE
+import Timers
 
 -- Controllers
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -3466,31 +3467,60 @@ eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
   continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state =
-  continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
-    do
+eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqSecondBtnClick)) state = 
+  if state.data.enquiryBannerStage == Just ST.QuestionStage then do
+    continueWithCmd state{data{enquiryBannerStage = Just ST.SecondBtnClickStage }} [
+      do
+        push <- getPushFn Nothing "HomeScreen"
+        void $ startTimer 15 "undoEnquiryBanner" "1" push UnDoEnquiryBannerAC
+        pure NoAction
+    ]
+  else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage || state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then do
+    continueWithCmd state [do
+      void $ openUrlInApp "https://nammayatri.in/ekd/"
+      pure NoAction
+    ]
+  else do
+    update state
+   
+
+
+eval (UnDoEnquiryBannerAC seconds timerID timeInMinutes ) state = do
+  if seconds == 0 then do
+    continueWithCmd state{ data {enquiryBannerStage = Nothing}} [ do
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         let
           city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-          enquiryRemoteConfig = RC.getEnquiryBannerConfig city
+          vehicleCat = RC.getCategoryFromVariant state.data.vehicleVariant
+          mbEnquiryRemoteConfig = RC.getEnquiryBannerConfig city vehicleCat
           postIssueBody = API.PostIssueReqBody {
-            optionId : enquiryRemoteConfig.optionId
+            optionId : maybe Nothing (\enquiryRemoteConfig -> enquiryRemoteConfig.optionId ) mbEnquiryRemoteConfig
           , rideId : Just state.data.driverInfoCardState.rideId
-          , categoryId : enquiryRemoteConfig.categoryId
+          , categoryId : maybe "" (\enquiryRemoteConfig -> enquiryRemoteConfig.categoryId ) mbEnquiryRemoteConfig
           , mediaFiles : []
           , description : ""
           , chats : []
           , createTicket : false
           }
         void $ Remote.postIssueBT "en" postIssueBody
+      void $ pure $ clearTimerWithId "undoEnquiryBanner"
       void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
+      void $ pure $ toast "Feedback submitted!"
       pure NoAction
-  ]
+    ]
+  else do
+    continue state { props { enquiryBannerUndoTimer = Just seconds}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnEnqFirstBtnClick)) state = do
-  void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
-  continue state{ data {enquiryBannerStage = if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage || state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then Nothing else Just ST.FirstBtnClickStage}}
-
+  if state.data.enquiryBannerStage == Just ST.SecondBtnClickStage then do
+    void $ pure $ clearTimerWithId "undoEnquiryBanner"
+    continue state{ data {enquiryBannerStage = Just ST.QuestionStage}, props { enquiryBannerUndoTimer = Nothing}}
+  else if state.data.enquiryBannerStage == Just ST.FirstBtnClickStage then do
+    void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
+    continue state{ data {enquiryBannerStage = Nothing}}
+  else do
+    void $ pure $ setValueToCache (show ShowedEnquiryPopup) state.data.driverInfoCardState.rideId (\id -> id)
+    continue state{ data {enquiryBannerStage = Just ST.FirstBtnClickStage}}
 eval ReferralPayout state = exit $ GoToReferral GIVE_REFERRAL state
 
 eval _ state = update state
@@ -3869,9 +3899,10 @@ getInfoCardPeekHeight state =
       driverDetailsViewPadding = if isDriverInfoCardBanner && (state.data.fareProductType == FPT.RENTAL) then 16 else 0
       fareEstimate = runFn1 getLayoutBounds $ getNewIDWithTag "PaymentMethodView"
       city =  DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
-      remoteConfig = RemoteConfig.getEnquiryBannerConfig city
+      vehicleCat = RC.getCategoryFromVariant state.data.vehicleVariant
+      mbRemoteConfig = RemoteConfig.getEnquiryBannerConfig city vehicleCat
       alreadyShown = getValueFromCache (show ShowedEnquiryPopup) JB.getKeyInSharedPrefKeys == state.data.driverInfoCardState.rideId
-      enquiryBanner = if isJust remoteConfig.question && (not $ alreadyShown) then 110 else 0
+      enquiryBanner = if maybe false (\remoteConfig -> isJust remoteConfig.question) mbRemoteConfig && (not $ alreadyShown) then 110 else 0
       fareEstimateViewPadding = 12
       pixels = runFn1 getPixels FunctionCall
       density = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
