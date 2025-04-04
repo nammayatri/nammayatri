@@ -10,7 +10,7 @@ import Components.ChooseYourRide.Controller (Action(..), Config, BookAnyProps, b
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem, null)
 import Data.Function.Uncurried (runFn1)
-import Data.Maybe (fromMaybe, isJust, Maybe(..))
+import Data.Maybe (fromMaybe, isJust, Maybe(..), maybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
@@ -436,6 +436,8 @@ chooseYourRideView push config =
     nearByDrivers = fromMaybe 0 config.nearByDrivers
     offerConfig = RemoteConfig.getEstimateOfferConfig (JB.getKeyInSharedPrefKeys "CUSTOMER_LOCATION")
     offerText = fromMaybe "" $ lookup (DS.toLower (getLanguageLocale languageKey)) offerConfig.translations
+    enableInfo = offerConfig.enableInfoIcon
+    iconImage = offerConfig.iconImage
     hasOffer = case config.quoteList !! config.activeIndex of 
                   Nothing -> offerConfig.enableAllVariant 
                   Just item -> if item.vehicleVariant == "BOOK_ANY" then false else (getValueFromCache ("OfferCache_" <> item.id) $ (\_ -> RemoteConfig.evaluateFarePolicy offerConfig.conditions config.actualEstimateDistnace item.vehicleVariant)) > 0.0
@@ -558,10 +560,18 @@ chooseYourRideView push config =
             , width MATCH_PARENT
             , height WRAP_CONTENT
             , padding $ PaddingVertical 4 4
-            ][ textView $
-               [ text $ offerText
-               , color Color.white900 
-               ] <> FontStyle.body9 TypoGraphy
+            ][  textView $
+                [ text $ offerText
+                , color Color.white900 
+                ] <> FontStyle.body6 TypoGraphy
+              , imageView
+                [ height $ V 15
+                , width $ V 15
+                , visibility $ boolToVisibility enableInfo
+                , onClick push $ const ShowOfferPopUp
+                , margin $ MarginLeft 5 
+                , imageWithFallback $ if iconImage == "" then (HU.fetchImage HU.COMMON_ASSET "ny_ic_info_white") else "," <> iconImage
+                ]
             ]
           , textView $
             [ text $ getString SHOWING_FARE_FROM_MULTI_PROVIDER
@@ -587,7 +597,7 @@ chooseYourRideView push config =
         width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER_HORIZONTAL
-      , margin $ MarginTop 4
+      , margin $ MarginVertical 4 4
       ][
         linearLayout [
           width WRAP_CONTENT

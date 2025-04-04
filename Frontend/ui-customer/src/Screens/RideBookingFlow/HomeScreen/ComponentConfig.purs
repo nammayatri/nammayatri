@@ -113,10 +113,12 @@ import Debug (spy)
 import Data.Int
 import Components.CommonComponentConfig as CommonComponentConfig
 import RemoteConfig as RemoteConfig
+import Common.RemoteConfig.Utils as CRU
 import MerchantConfig.Types
 import Data.Tuple as DT
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Components.MessagingView.Controller as CMC
+import Foreign.Object (lookup)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -2842,3 +2844,57 @@ parcelFeedbackPillDataWithRating5 state =
     ]
   , [ { id: "10", text: getString SECURE_DELIVERY }]
   ]
+
+
+offerConfigPopUp :: ST.HomeScreenState -> PopUpModal.Config
+offerConfigPopUp state =
+  let
+    offerConfig = CRU.getEstimateOfferConfig (getValueToLocalStore CUSTOMER_LOCATION)
+
+    config = PopUpModal.config
+
+    popUpConfig' =
+      config
+        { gravity = CENTER
+        , enableAnim = true
+        , cornerRadius = Corners 20.0 true true true true
+        , backgroundColor = Color.blackLessTrans
+        , backgroundClickable = true
+        , dismissPopup = true
+        , padding = Padding 16 16 16 0
+        , margin = Margin 16 16 16 0
+        , primaryText
+          { text = fromMaybe "" $ lookup (DS.toLower (getLanguageLocale languageKey)) offerConfig.infoPopUp.title
+          , gravity = CENTER
+          }
+        , secondaryText { 
+          text = fromMaybe "" $ lookup (DS.toLower (getLanguageLocale languageKey)) offerConfig.infoPopUp.subTitle
+          , gravity = CENTER
+           }
+        , option1
+          { text = fromMaybe "" $ lookup (DS.toLower (getLanguageLocale languageKey)) offerConfig.infoPopUp.ctaText
+          , color = Color.yellow900
+          , background = Color.black900
+          , enableRipple = true
+          , rippleColor = Color.rippleShade
+          , width = V $ (EHC.screenWidth unit) - 64
+          , visibility = true
+          }
+        , option2
+          { color = Color.white900
+          , background = Color.white900
+          , rippleColor = Color.white900
+          , width = V 0
+          , height = V 0
+          , visibility = true
+          , margin = (Margin 0 0 0 0)
+          }
+        , coverImageConfig
+          { imageUrl = fetchImage COMMON_ASSET "ny_ic_referral_r2r_success_cover_1"
+          , visibility = GONE
+          , height = V 250
+          , width = MATCH_PARENT
+          }
+        }
+  in
+    popUpConfig'

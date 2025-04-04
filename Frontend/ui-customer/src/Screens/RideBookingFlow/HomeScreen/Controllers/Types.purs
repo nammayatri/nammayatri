@@ -347,6 +347,7 @@ data Action = NoAction
   | EnableShareRideForContact String
   | EditPickupPopupOnCancelAC PopUpModal.Action
   | GetReferralPopup PopUpModal.Action
+  | OfferPopUp PopUpModal.Action
   | AddVPA Int
   | TakeFirstRide
   | DateSelectAction String String Int Int Int String Int Int

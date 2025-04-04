@@ -294,7 +294,14 @@ type BundleLottieConfig = {
 type EstimateOfferConfig = {
   conditions :: Array Conditions,
   enableAllVariant :: Boolean,
-  translations :: Object String
+  translations :: Object String,
+  enableInfoIcon :: Boolean,
+  iconImage :: String,
+  infoPopUp :: {
+    title :: Object String,
+    subTitle :: Object String,
+    ctaText :: Object String
+  }
 }
 
 type Conditions = {
