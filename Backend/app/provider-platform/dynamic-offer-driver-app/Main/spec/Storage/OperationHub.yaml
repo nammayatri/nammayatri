@@ -38,7 +38,7 @@ OperationHubRequests:
     operationHubId : Id OperationHub
     requestType : RequestType
     driverId: Id Person
-    registrationNo: Text
+    registrationNo: EncryptedHashedField e Text
     requestStatus: RequestStatus
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity

@@ -7,7 +7,6 @@ imports:
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
-  EncryptedHashedField: Kernel.External.Encryption
   BaseUrl: Kernel.Types.Common
   VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking

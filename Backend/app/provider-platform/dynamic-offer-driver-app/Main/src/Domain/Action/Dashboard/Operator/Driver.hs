@@ -10,7 +10,7 @@ import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
 import qualified Environment
 import Kernel.Beam.Functions (runInReplica)
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -50,8 +50,10 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
       to = fromMaybe now mbTo
       mbOperationHubId = cast @Common.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
-  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbRegistrationNo
-  pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {requests = map castHubRequests reqList}
+  mbRegistrationNoHash <- mapM getDbHash mbRegistrationNo
+  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbRegistrationNoHash
+  operationHubDriverRequests <- mapM buildOperationHubDriverRequest reqList
+  pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {requests = operationHubDriverRequests}
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
 postDriverOperatorRespondHubRequest merchantShortId opCity req = do
@@ -70,9 +72,10 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
         let language = fromMaybe merchantOpCity.language person.language
         driverDocuments <- SStatus.fetchDriverDocuments personId merchantOpCity transporterConfig language
         vehicleDocumentsUnverified <- SStatus.fetchVehicleDocuments personId merchantOpCity transporterConfig language
+        registrationNo <- decrypt opHubReq.registrationNo
         vehicleDoc <-
-          find (\doc -> doc.registrationNo == req.registrationNo) vehicleDocumentsUnverified
-            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> req.registrationNo)
+          find (\doc -> doc.registrationNo == registrationNo) vehicleDocumentsUnverified
+            & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> registrationNo)
         let makeSelfieAadhaarPanMandatory = Nothing
         allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerified merchantOpCity.id vehicleDoc makeSelfieAadhaarPanMandatory
         allDriverDocsVerified <- SStatus.checkAllDriverDocsVerified merchantOpCity.id driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
@@ -86,17 +89,19 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = do
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 
-castHubRequests :: OperationHubRequests -> API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-castHubRequests OperationHubRequests {..} =
-  API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-    { driverId = driverId.getId,
-      id = id.getId,
-      operationHubId = cast @DOH.OperationHub @Common.OperationHub operationHubId,
-      registrationNo,
-      requestStatus = castReqStatus requestStatus,
-      requestTime = createdAt,
-      requestType = castReqType requestType
-    }
+buildOperationHubDriverRequest :: EncFlow m r => OperationHubRequests -> m API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
+buildOperationHubDriverRequest OperationHubRequests {..} = do
+  registrationNoDec <- decrypt registrationNo
+  pure $
+    API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
+      { driverId = driverId.getId,
+        id = id.getId,
+        operationHubId = cast @DOH.OperationHub @Common.OperationHub operationHubId,
+        registrationNo = registrationNoDec,
+        requestStatus = castReqStatus requestStatus,
+        requestTime = createdAt,
+        requestType = castReqType requestType
+      }
 
 castReqStatusToDomain :: API.Types.ProviderPlatform.Operator.Driver.RequestStatus -> RequestStatus
 castReqStatusToDomain = \case

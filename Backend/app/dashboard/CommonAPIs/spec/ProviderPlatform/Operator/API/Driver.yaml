@@ -49,7 +49,6 @@ types:
     requestTime: UTCTime
   RespondHubRequest:
     status: RequestStatus
-    registrationNo: Text
     operationHubRequestId: Text
     operatorId: Text
     remarks: Text

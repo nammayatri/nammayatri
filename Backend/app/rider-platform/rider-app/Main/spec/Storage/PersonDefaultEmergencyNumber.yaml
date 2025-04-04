@@ -1,6 +1,5 @@
 imports:
   Person: Domain.Types.Person
-  EncryptedHashedField: Kernel.External.Encryption
   Merchant: Domain.Types.Merchant
   RideShareOptions: Domain.Types.Person
 

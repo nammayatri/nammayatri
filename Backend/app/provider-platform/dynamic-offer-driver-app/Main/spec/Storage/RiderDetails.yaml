@@ -1,7 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  EncryptedHashedField: Kernel.External.Encryption
   DriverReferral: Domain.Types.DriverReferral
   Person: Domain.Types.Person
   HighPrecMoney: Kernel.Types.Common

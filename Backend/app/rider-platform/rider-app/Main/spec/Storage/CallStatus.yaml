@@ -3,7 +3,6 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Ride: Domain.Types.Ride
   CallService: Kernel.External.Call.Types
-  EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
 
 

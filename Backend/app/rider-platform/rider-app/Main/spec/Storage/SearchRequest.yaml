@@ -19,7 +19,6 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   PaymentMethodId: Kernel.External.Payment.Interface.Types
-  EncryptedHashedField: Kernel.External.Encryption
   DeliveryInitiation: BecknV2.OnDemand.Enums
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption

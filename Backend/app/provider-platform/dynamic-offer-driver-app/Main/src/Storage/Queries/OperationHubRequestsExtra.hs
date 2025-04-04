@@ -32,9 +32,9 @@ findAllRequestsInRange ::
   Maybe RequestType ->
   Maybe Text ->
   Maybe (Id DOH.OperationHub) ->
-  Maybe Text ->
+  Maybe DbHash ->
   m [OperationHubRequests]
-findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbDriverId mbOperationHubId mbRegistrationNo = do
+findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbDriverId mbOperationHubId mbRegistrationNoHash = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -51,7 +51,7 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqStatus -> operationHubRequests.requestStatus B.==?. B.val_ reqStatus) mbReqStatus
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberHash
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubId -> operationHubRequests.operationHubId B.==?. B.val_ operationHubId.getId) mbOperationHubId
-                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> operationHubRequests.registrationNo B.==?. B.val_ registrationNo) mbRegistrationNo
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNoHash -> operationHubRequests.registrationNoHash B.==?. B.val_ registrationNoHash) mbRegistrationNoHash
                 )
                 do
                   operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)

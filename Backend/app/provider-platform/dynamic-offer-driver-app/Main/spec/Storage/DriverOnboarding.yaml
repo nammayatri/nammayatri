@@ -4,7 +4,6 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
-  EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   VehicleVariant: Domain.Types.VehicleVariant
   VehicleCategory: Domain.Types.VehicleCategory

@@ -7,6 +7,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.OperationHubRequests
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
@@ -19,7 +20,8 @@ data OperationHubRequestsT f = OperationHubRequestsT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     operationHubId :: B.C f Kernel.Prelude.Text,
     operatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    registrationNo :: B.C f Kernel.Prelude.Text,
+    registrationNoEncrypted :: B.C f Kernel.Prelude.Text,
+    registrationNoHash :: B.C f Kernel.External.Encryption.DbHash,
     remarks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     requestStatus :: B.C f Domain.Types.OperationHubRequests.RequestStatus,
     requestType :: B.C f Domain.Types.OperationHubRequests.RequestType,
