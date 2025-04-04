@@ -36,6 +36,8 @@ DailyStats:
     totalRideTime: Seconds
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    numDriversOnboarded: Int
+    numFleetsOnboarded: Int
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -48,6 +50,8 @@ DailyStats:
     tipAmount: Maybe HighPrecMoney
     cancellationCharges: Maybe HighPrecMoney
     totalRideTime: Maybe Seconds
+    numDriversOnboarded: Maybe Int
+    numFleetsOnboarded: Maybe Int
 
   beamFields:
     totalEarnings:
@@ -69,6 +73,8 @@ DailyStats:
     tipAmount: Kernel.Prelude.fromMaybe 0|I
     cancellationCharges: Kernel.Prelude.fromMaybe 0|I
     totalRideTime: Kernel.Prelude.fromMaybe 0|I
+    numDriversOnboarded: Kernel.Prelude.fromMaybe 0|I
+    numFleetsOnboarded: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
@@ -85,6 +91,8 @@ DailyStats:
     tipAmount: Kernel.Prelude.Just|I
     cancellationCharges: Kernel.Prelude.Just|I
     totalRideTime: Kernel.Prelude.Just|I
+    numDriversOnboarded: Kernel.Prelude.Just|I
+    numFleetsOnboarded: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -136,6 +144,18 @@ DailyStats:
       kvFunction: updateOneWithKV
       params: [payoutOrderId, payoutStatus]
       where: id
+
+    updateNumDriversOnboardedByDriverId:
+      kvFunction: updateOneWithKV
+      params: [numDriversOnboarded]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateNumFleetsOnboardedByDriverId:
+      kvFunction: updateOneWithKV
+      params: [numFleetsOnboarded]
+      where:
+        and: [driverId, merchantLocalDate]
 
   extraOperations:
     - EXTRA_QUERY_FILE

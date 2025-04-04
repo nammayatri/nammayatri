@@ -130,6 +130,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     freeTrialDays :: Kernel.Prelude.Int,
+    generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
