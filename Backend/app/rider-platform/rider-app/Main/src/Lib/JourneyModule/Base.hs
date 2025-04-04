@@ -927,6 +927,7 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         journeyId = journeyLeg.journeyId,
         mode = newMode,
         routeDetails = [],
+        serviceTypes = Nothing,
         sequenceNumber = journeyLeg.sequenceNumber,
         startLocation = startLocation,
         toArrivalTime = Nothing,

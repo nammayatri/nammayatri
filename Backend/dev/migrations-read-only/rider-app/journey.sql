@@ -70,3 +70,12 @@ ALTER TABLE atlas_app.journey ADD COLUMN recent_journal_id character varying(36)
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey ADD COLUMN recent_location_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

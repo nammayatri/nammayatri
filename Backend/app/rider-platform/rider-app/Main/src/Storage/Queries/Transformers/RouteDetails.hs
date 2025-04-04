@@ -1,5 +1,6 @@
 module Storage.Queries.Transformers.RouteDetails where
 
+import Data.List (sortOn)
 import qualified Domain.Types.JourneyRouteDetails as JRD
 import qualified Domain.Types.RouteDetails as RD
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -9,7 +10,8 @@ import Lib.JourneyLeg.Types
 
 getTransformedRouteDetails :: [RD.RouteDetails] -> [MultiModalRouteDetails]
 getTransformedRouteDetails routeDetails = do
-  map transformRouteDetails routeDetails
+  let sortedRouteDetails = sortOn (.subLegOrder) routeDetails
+  map transformRouteDetails sortedRouteDetails
   where
     transformRouteDetails :: RD.RouteDetails -> MultiModalRouteDetails
     transformRouteDetails rd =
@@ -74,7 +76,8 @@ getAgencyDetails routeDetails =
 
 getTransformedJourneyRouteDetails :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
 getTransformedJourneyRouteDetails routeDetails = do
-  map transformJourneyRouteDetails routeDetails
+  let sortedRouteDetails = sortOn (\rd -> rd.subLegOrder) routeDetails
+  map transformJourneyRouteDetails sortedRouteDetails
   where
     transformJourneyRouteDetails :: JRD.JourneyRouteDetails -> MultiModalJourneyRouteDetails
     transformJourneyRouteDetails rd =
@@ -93,7 +96,8 @@ getTransformedJourneyRouteDetails routeDetails = do
 
 getTransformedJourneyRouteDetailsT :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
 getTransformedJourneyRouteDetailsT routeDetails = do
-  map transformJourneyRouteDetails routeDetails
+  let sortedRouteDetails = sortOn (\rd -> rd.subLegOrder) routeDetails
+  map transformJourneyRouteDetails sortedRouteDetails
   where
     transformJourneyRouteDetails :: JRD.JourneyRouteDetails -> MultiModalJourneyRouteDetails
     transformJourneyRouteDetails rd =

@@ -901,6 +901,7 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = leg.toStopDetails,
+        serviceTypes = Just $ leg.serviceTypes <&> castTextToServiceTierType,
         estimatedMinFare = fare <&> (.estimatedMinFare),
         estimatedMaxFare = fare <&> (.estimatedMaxFare),
         merchantId = Just merchantId,
@@ -911,6 +912,21 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         isDeleted = Just False,
         isSkipped = Just False
       }
+
+castTextToServiceTierType :: Text -> Spec.ServiceTierType
+castTextToServiceTierType "ORDINARY" = Spec.ORDINARY
+castTextToServiceTierType "AC" = Spec.AC
+castTextToServiceTierType "NON_AC" = Spec.NON_AC
+castTextToServiceTierType "EXPRESS" = Spec.EXPRESS
+castTextToServiceTierType "SPECIAL" = Spec.SPECIAL
+castTextToServiceTierType "EXECUTIVE" = Spec.EXECUTIVE
+castTextToServiceTierType "O" = Spec.ORDINARY -- Mappings for tummoc data of chennai
+castTextToServiceTierType "Z" = Spec.AC
+castTextToServiceTierType "OS" = Spec.NON_AC
+castTextToServiceTierType "X" = Spec.EXPRESS
+castTextToServiceTierType "XS" = Spec.SPECIAL
+castTextToServiceTierType "S" = Spec.EXECUTIVE
+castTextToServiceTierType _ = Spec.ORDINARY
 
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney
 sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney

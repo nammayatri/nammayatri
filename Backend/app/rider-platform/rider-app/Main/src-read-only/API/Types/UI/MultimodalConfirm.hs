@@ -6,6 +6,7 @@ import qualified API.Types.UI.FRFSTicketService
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
@@ -129,6 +130,10 @@ data RateMultiModelTravelModes = RateMultiModelTravelModes {isExperienceGood :: 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, latLong :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SwitchFRFSTierReq = SwitchFRFSTierReq {quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

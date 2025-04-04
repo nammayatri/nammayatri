@@ -67,8 +67,8 @@ discoverySearch merchant bapConfig req = do
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
-search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig = do
+search :: FRFSSearchFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> [Spec.ServiceTierType] -> m ()
+search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig availableVehicleTypes = do
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
@@ -80,7 +80,7 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
         void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
     _ -> do
       fork "FRFS External SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
+        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails availableVehicleTypes
         processOnSearch onSearchReq
   where
     processOnSearch :: FRFSSearchFlow m r => DOnSearch.DOnSearch -> m ()

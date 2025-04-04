@@ -35,8 +35,8 @@ import Tools.Error
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
 getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails serviceTypes = do
   quotes <- buildQuotes routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -57,11 +57,19 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     -- Build Multiple Service Tier Quotes For Non Transit Routes
     buildQuotes [routeDetail] = buildMultipleNonTransitRouteQuotes routeDetail
     -- Build Single Quote For Transit Routes
-    buildQuotes routesDetail@(_ : _) =
-      buildSingleTransitRouteQuote routesDetail
-        >>= \case
-          Just quote -> return [quote]
-          Nothing -> return []
+    buildQuotes routeDetails_@(_ : _) = do
+      case searchReq.vehicleType of
+        Spec.BUS -> do
+          buildSingleTransitRouteQuote routeDetails_
+            >>= \case
+              Just quote -> return [quote]
+              Nothing -> return []
+        _ -> do
+          -- In case of metro fares of all exchanges are calculated together
+          let mbRouteDetail = mergeFFRFSRouteDetails routeDetails_
+          case mbRouteDetail of
+            Just routeDetail -> buildMultipleNonTransitRouteQuotes routeDetail
+            Nothing -> return []
     buildQuotes [] = return []
 
     buildMultipleNonTransitRouteQuotes FRFSRouteDetails {..} = do
@@ -174,6 +182,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
       endStation <- QStation.findByStationCode routeInfo.endStopCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
       stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
       fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code startStation.code endStation.code vehicleType
+      let filteredFares = if null serviceTypes then fares else filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` serviceTypes) fares
       return $
         map
           ( \FRFSFare {..} ->
@@ -200,7 +209,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                       ..
                     }
           )
-          fares
+          filteredFares
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 
