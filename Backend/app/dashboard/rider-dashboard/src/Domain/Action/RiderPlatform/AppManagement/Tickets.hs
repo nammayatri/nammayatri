@@ -10,6 +10,8 @@ module Domain.Action.RiderPlatform.AppManagement.Tickets
     postTicketsTicketdashboardLoginAuth,
     postTicketsTicketdashboardLoginVerify,
     getTicketsTicketdashboardAgreement,
+    getTicketsTicketdashboardUserInfo,
+    getTicketsTicketdashboardFile,
   )
 where
 
@@ -19,7 +21,10 @@ import qualified "rider-app" API.Types.UI.TicketService
 import qualified Data.Time.Calendar
 import qualified "lib-dashboard" Domain.Action.Dashboard.Person as DP
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
+import Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding (getDashboardAccessType)
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "rider-app" Domain.Types.MerchantOnboarding
+import qualified "rider-app" Domain.Types.MerchantOnboarding as DMO
 import qualified "lib-dashboard" Domain.Types.Person.Type as PT
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DTServer
@@ -179,3 +184,19 @@ getTicketsTicketdashboardAgreement :: (Kernel.Types.Id.ShortId Domain.Types.Merc
 getTicketsTicketdashboardAgreement merchantShortId opCity apiTokenInfo templateName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardAgreement) templateName
+
+getTicketsTicketdashboardUserInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardUserInfo)
+getTicketsTicketdashboardUserInfo merchantShortId opCity apiTokenInfo requestorId' _ _ = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  let userId = fromMaybe apiTokenInfo.personId.getId requestorId'
+  userRole <- getDashboardAccessType userId
+  requestorRole <- getDashboardAccessType requestorId
+  unless (userId == requestorId || requestorRole `elem` [DMO.TICKET_DASHBOARD_ADMIN]) $
+    throwError $ InternalError "Operation not permitted"
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardUserInfo) (pure userId) (pure userRole) (pure requestorRole)
+
+getTicketsTicketdashboardFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
+getTicketsTicketdashboardFile merchantShortId opCity apiTokenInfo fileId requestorId requestorRole = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardFile) fileId requestorId requestorRole

@@ -15,12 +15,21 @@ data StepHandler = StepHandler
     validateAndProcess :: Id MOS.MerchantOnboardingStep -> Value -> Flow StepHandlerResult
   }
 
+data DashboardSideHandlerName = SET_ROLE_TICKET_DASHBOARD_MERCHANT deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DashboardSideHandler = DashboardSideHandler
+  { handlerName :: DashboardSideHandlerName,
+    metadata :: [(Text, Text)]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data StepHandlerResult = StepHandlerResult
   { success :: Bool,
     message :: Maybe Text,
-    nextSteps :: [Text]
+    nextSteps :: [Text],
+    dashboardSideHandler :: Maybe DashboardSideHandler
   }
-  deriving (Generic, Show)
+  deriving (Generic)
 
 newtype HandlerRegistry = HandlerRegistry
   { handlers :: Map.Map (MO.OnboardingType, Text) StepHandler

@@ -13,10 +13,12 @@ module Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
     merchantOnboadingListAll,
     merchantOnboardingStepList,
     merchantOnboardingGetFile,
+    getDashboardAccessType,
   )
 where
 
 import qualified API.Client.RiderPlatform.AppManagement
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding as AppMO
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified Dashboard.Common
 import Data.Aeson
@@ -24,6 +26,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.MerchantOnboarding
 import qualified "rider-app" Domain.Types.MerchantOnboarding as MO
+import qualified "rider-app" Domain.Types.MerchantOnboarding.Handler as DH
 import qualified Domain.Types.MerchantOnboardingStep
 import qualified "lib-dashboard" Domain.Types.Person
 import qualified "lib-dashboard" Domain.Types.Role
@@ -39,6 +42,7 @@ import qualified SharedLogic.Transaction
 import "lib-dashboard" Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
+import qualified "lib-dashboard" Storage.Queries.Role as QR
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -46,7 +50,8 @@ import "lib-dashboard" Tools.Error
 getDashboardAccessType :: (BeamFlow m r, EncFlow m r) => Kernel.Prelude.Text -> m Domain.Types.MerchantOnboarding.RequestorRole
 getDashboardAccessType personId = do
   person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
-  accessType <- person.dashboardAccessType & fromMaybeM (InvalidRequest "Person does not have proper access")
+  role <- QR.findById person.roleId >>= fromMaybeM (InvalidRequest "Role is not assigned for this user")
+  let accessType = role.dashboardAccessType
   case accessType of
     Domain.Types.Role.TICKET_DASHBOARD_USER -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_USER
     Domain.Types.Role.TICKET_DASHBOARD_MERCHANT -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_MERCHANT
@@ -102,8 +107,8 @@ merchantOnboardingStepApprove merchantShortId opCity apiTokenInfo stepId _ _ req
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
   resp <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingStepApprove) stepId (Just requestorId) (Just requestorRole) req
-  -- TODO: Handler logic goes here --
-  return resp
+  whenJust resp.handler dashboardSideHandler
+  return $ resp {AppMO.handler = Nothing}
 
 merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe MO.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
 merchantOnboardingStepUploadFile merchantShortId opCity apiTokenInfo stepId payloadKey _ _ req = do
@@ -142,3 +147,14 @@ merchantOnboardingGetFile merchantShortId opCity apiTokenInfo onboardingId fileI
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.merchantOnboardingDSL.merchantOnboardingGetFile) onboardingId fileId (Just requestorId) (Just requestorRole)
+
+dashboardSideHandler :: DH.DashboardSideHandler -> Environment.Flow ()
+dashboardSideHandler handler = case handler.handlerName of
+  DH.SET_ROLE_TICKET_DASHBOARD_MERCHANT -> do
+    personId <- getMetadataValue "rid" & fromMaybeM (InternalError "Dashboard Handler failed")
+    person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
+    role <- QR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
+    QP.updatePersonRole person.id role.id
+  where
+    getMetadataValue :: Text -> Maybe Text
+    getMetadataValue key = snd <$> find (\(k, _) -> k == key) handler.metadata

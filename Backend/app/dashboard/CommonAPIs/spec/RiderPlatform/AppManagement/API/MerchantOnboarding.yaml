@@ -11,10 +11,12 @@ imports:
   File: Dashboard.Common
   FileType: AWS.S3
   FilePath: Kernel.Prelude
+  DashboardSideHandler: Domain.Types.MerchantOnboarding.Handler
 
 importPackageOverrides:
   Domain.Types.MerchantOnboarding: "rider-app"
   Domain.Types.MerchantOnboardingStep: "rider-app"
+  Domain.Types.MerchantOnboarding.Handler: "rider-app"
 
 
 
@@ -169,8 +171,7 @@ apis:
 types:
   ApproveResponse:
     - success: Bool
-    - handlerName: Maybe Text
-    - metadata: Maybe Value
+    - handler: Maybe DashboardSideHandler
   UploadFileRequest:
     - file: FilePath
     - reqContentType: Text

@@ -10,6 +10,7 @@ import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified "this" Domain.Types.MerchantOnboarding
+import qualified "this" Domain.Types.MerchantOnboarding.Handler
 import qualified "this" Domain.Types.MerchantOnboardingStep
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -22,7 +23,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data ApproveResponse = ApproveResponse {success :: Kernel.Prelude.Bool, handlerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, metadata :: Kernel.Prelude.Maybe Data.Aeson.Value}
+data ApproveResponse = ApproveResponse {success :: Kernel.Prelude.Bool, handler :: Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.Handler.DashboardSideHandler}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

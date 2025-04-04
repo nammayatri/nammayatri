@@ -150,6 +150,7 @@ library
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
+      Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
@@ -236,6 +237,7 @@ library
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialZoneQuote
       Domain.Action.UI.Support
+      Domain.Action.UI.TicketDashboard
       Domain.Action.UI.TicketService
       Domain.Action.UI.TrackRoute
       Domain.Action.UI.TriggerFCM

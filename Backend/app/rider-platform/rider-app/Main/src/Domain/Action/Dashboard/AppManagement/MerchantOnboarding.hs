@@ -263,17 +263,18 @@ merchantOnboardingStepApprove merchantShortId opCity stepId requestorId _mbReque
   unless (step.status == DMOS.SUBMITTED && step.isApprovalRequired) $
     throwError $ InvalidRequest "Step is not pending approval"
   approveReq :: StepApproveRequest <- fromjson payload
-  case Map.lookup (onboarding.onboardingType, step.stepNameIdentifier <> "-APPROVAL-HANDLER") Handlers.handlerRegistry.handlers of
+  dashboardSideHandler <- case Map.lookup (onboarding.onboardingType, step.stepNameIdentifier <> "-APPROVAL-HANDLER") Handlers.handlerRegistry.handlers of
     Nothing -> do
       updateStepStatus DMOS.COMPLETED step.id
       updateStepRemarks approveReq.remarks step.id
+      return Nothing
     Just handler -> do
       res <- handler.validateAndProcess (Kernel.Types.Id.Id stepId) payload
       unless res.success $
         throwError $ InvalidRequest $ fromMaybe "Step processing failed" res.message
-      pure ()
+      pure res.dashboardSideHandler
   _ <- getStepsAndUpdate onboarding.id
-  return $ API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse {success = True, handlerName = Nothing, metadata = Nothing}
+  return $ API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse {success = True, handler = dashboardSideHandler}
 
 merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
 merchantOnboardingStepUploadFile _merchantShortId opCity stepId payloadKey requestorId _mbRequestorRole req = do

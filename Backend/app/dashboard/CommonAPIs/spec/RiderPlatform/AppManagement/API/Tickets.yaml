@@ -10,6 +10,10 @@ imports:
   TicketBookingService: Domain.Types.TicketBookingService
   TicketPlace: Domain.Types.TicketPlace
   TicketBooking: Domain.Types.TicketBooking
+  BankAccountType: Domain.Types.TicketMerchantDetails
+  ContactDetails: Domain.Types.TicketMerchantDetails
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
 
 importPackageOverrides:
   API.Types.UI.TicketService: "rider-app"
@@ -17,6 +21,8 @@ importPackageOverrides:
   Domain.Types.TicketBookingService: "rider-app"
   Domain.Types.TicketPlace: "rider-app"
   Domain.Types.TicketBooking: "rider-app"
+  Domain.Types.TicketMerchantDetails: "rider-app"
+  Domain.Types.MerchantOnboarding: "rider-app"
 
 module: Tickets
 apiPrefix: ""
@@ -117,6 +123,26 @@ apis:
         templateName: Text
       response:
         type: TicketDashboardAgreementTemplateResp
+  - GET:
+      endpoint: /ticketdashboard/user/info
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - userRole: RequestorRole
+        - requestorRole: RequestorRole
+      response:
+        type: TicketDashboardUserInfo
+  - GET:
+      endpoint: /ticketdashboard/file/{fileId}
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        fileId: Text
+      response:
+        type: GetFileResponse
+
 
 
 types:
@@ -140,3 +166,21 @@ types:
     - authToken: Maybe Text
   TicketDashboardAgreementTemplateResp:
     - template: Text
+  TicketDashboardUserInfo:
+    - firstName: Maybe Text
+    - lastName: Maybe Text
+    - role: RequestorRole
+    - registeredNumber: Text
+    - agreementLetter: Maybe Text
+    - bankAccountNumber: Maybe Text
+    - bankAccountType: Maybe BankAccountType
+    - bankBeneficiaryName: Maybe Text
+    - bankIfsc: Maybe Text
+    - contactDetails: Maybe ContactDetails
+    - docCancelledCheque: Maybe Text
+    - docPan: Maybe Text
+    - gstin: Maybe Text
+    - orgAddress: Maybe Text
+    - orgName: Maybe Text
+    - pan: Maybe Text
+    - state: Maybe Text
