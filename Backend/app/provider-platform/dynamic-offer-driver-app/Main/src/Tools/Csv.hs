@@ -30,6 +30,9 @@ cleanCSVField :: forall m. (MonadThrow m, Log m) => Int -> Text -> Text -> m Tex
 cleanCSVField idx fieldValue fieldName =
   cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
+cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
+cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
+
 readMaybeCSVField :: forall a. Read a => Int -> Text -> Text -> Maybe a
 readMaybeCSVField _ fieldValue _ = cleanField fieldValue >>= readMaybe . T.unpack
 
