@@ -1704,3 +1704,21 @@ instance IsHTTPError OperationHubError where
     OperationHubDoesNotExist _ -> E400
 
 instance IsAPIError OperationHubError
+
+data TripAlertRequestError
+  = TripAlertRequestNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TripAlertRequestError
+
+instance IsBaseError TripAlertRequestError where
+  toMessage = \case
+    TripAlertRequestNotFound tripAlertRequestId -> Just $ "Trip alert request with id \"" <> show tripAlertRequestId <> "\" not found."
+
+instance IsHTTPError TripAlertRequestError where
+  toErrorCode = \case
+    TripAlertRequestNotFound _ -> "TRIP_ALERT_REQUEST_NOT_FOUND"
+  toHttpCode = \case
+    TripAlertRequestNotFound _ -> E404
+
+instance IsAPIError TripAlertRequestError

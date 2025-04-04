@@ -1155,6 +1155,8 @@ types:
     - approvalRequestId: Text
     - routeCode: Text
     - driverId: Text
+    - tripTransactionId: Text
+    - isViolated: Bool
   DriverRequestDetailsT:
     - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
     - title: Text
@@ -1164,6 +1166,8 @@ types:
     - approvalRequestId: Text
     - routeCode: Text
     - driverId: Text
+    - tripTransactionId: Text
+    - isViolated: Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   RequestRespondReq:

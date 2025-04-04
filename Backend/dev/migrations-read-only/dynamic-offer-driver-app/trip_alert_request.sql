@@ -6,6 +6,7 @@ ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN created_at time
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN driver_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN fleet_owner_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN is_violated boolean NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.trip_alert_request ADD COLUMN route_code text NOT NULL;

@@ -13,26 +13,27 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TripAlertRequestT f = TripAlertRequestT
-  { alertRequestId :: (B.C f Data.Text.Text),
-    alertRequestType :: (B.C f Domain.Types.Alert.AlertRequestType.AlertRequestType),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Data.Text.Text),
-    fleetOwnerId :: (B.C f Data.Text.Text),
-    id :: (B.C f Data.Text.Text),
-    merchantId :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    routeCode :: (B.C f Data.Text.Text),
-    tripTransactionId :: (B.C f Data.Text.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { alertRequestId :: B.C f Data.Text.Text,
+    alertRequestType :: B.C f Domain.Types.Alert.AlertRequestType.AlertRequestType,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Data.Text.Text,
+    fleetOwnerId :: B.C f Data.Text.Text,
+    id :: B.C f Data.Text.Text,
+    isViolated :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    routeCode :: B.C f Data.Text.Text,
+    tripTransactionId :: B.C f Data.Text.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table TripAlertRequestT where
-  data PrimaryKey TripAlertRequestT f = TripAlertRequestId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
-  primaryKey = TripAlertRequestId . id
+  data PrimaryKey TripAlertRequestT f = TripAlertRequestId (B.C f Data.Text.Text) (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
+  primaryKey = TripAlertRequestId <$> alertRequestId <*> id
 
 type TripAlertRequest = TripAlertRequestT Identity
 
-$(enableKVPG (''TripAlertRequestT) [('id)] [[('driverId)]])
+$(enableKVPG ''TripAlertRequestT ['alertRequestId, 'id] [['driverId]])
 
-$(mkTableInstances (''TripAlertRequestT) "trip_alert_request")
+$(mkTableInstances ''TripAlertRequestT "trip_alert_request")

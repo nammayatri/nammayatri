@@ -204,17 +204,19 @@ getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo 
     mapM
       ( \tripAlertRequest -> do
           alertRequest <- QAR.findByPrimaryKey tripAlertRequest.alertRequestId >>= fromMaybeM (DriverRequestNotFound tripAlertRequest.alertRequestId.getId)
-          buildDriverRequestListItem tripAlertRequest.driverId tripAlertRequest.routeCode alertRequest
+          buildDriverRequestListItem tripAlertRequest.tripTransactionId tripAlertRequest.driverId tripAlertRequest.routeCode tripAlertRequest.isViolated alertRequest
       )
       tripAlertRequests
   pure $ Common.DriverRequestResp driverRequestList
   where
-    buildDriverRequestListItem driverId routeCode DTR.AlertRequest {..} = do
+    buildDriverRequestListItem tripTransactionId driverId routeCode isViolated DTR.AlertRequest {..} = do
       pure $
         Common.DriverRequestDetails
           { raisedAt = createdAt,
             approvalRequestId = id.getId,
             driverId = driverId.getId,
+            tripTransactionId = tripTransactionId.getId,
+            isViolated = isViolated,
             status = Just status,
             ..
           }
