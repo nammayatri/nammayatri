@@ -37,3 +37,11 @@ data ONDCBecknConfig = ONDCBecknConfig
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+data CRISConfig = CRISConfig
+  { baseUrl :: BaseUrl,
+    clientKey :: Text,
+    clientSecret :: Text
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
