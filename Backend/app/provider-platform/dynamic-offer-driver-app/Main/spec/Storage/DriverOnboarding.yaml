@@ -160,9 +160,6 @@ DriverLicense:
       kvFunction: updateWithKV
       params: [verificationStatus]
       where: documentImageId1
-    findByImageId:
-      kvFunction: findOneWithKV
-      where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
 
