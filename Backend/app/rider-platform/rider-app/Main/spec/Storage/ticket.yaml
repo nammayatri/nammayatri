@@ -193,6 +193,7 @@ BusinessHour:
     id: Id BusinessHour
     btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
     categoryId: "[Id ServiceCategory]"
+    bookingClosingTime : Maybe TimeOfDay
   types:
     BusinessHourType:
       enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
