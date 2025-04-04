@@ -21,8 +21,6 @@ data MerchantD (s :: UsageSafety) = Merchant
     enabled :: Kernel.Prelude.Bool,
     fromTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     gatewayAndRegistryPriorityList :: [Domain.Types.GatewayAndRegistryService],
-    generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     geoHashPrecisionValue :: Kernel.Prelude.Int,
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,
     gstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -61,7 +59,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED deriving (Eq, Ord, Show
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 
@@ -71,6 +69,6 @@ instance FromJSON (MerchantD 'Safe)
 
 instance ToJSON (MerchantD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
 
-$(mkHttpInstancesForEnum (''Status))
+$(mkHttpInstancesForEnum ''Status)

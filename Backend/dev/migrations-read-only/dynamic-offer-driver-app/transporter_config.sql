@@ -388,6 +388,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_dynamic_pric
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN generate_referral_code_for_operator boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN generate_referral_code_for_fleet boolean  default false;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_doc_size_in_mb integer ;
 
 
