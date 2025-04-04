@@ -274,6 +274,9 @@ JourneyLeg:
     isDeleted: Maybe Bool
     isSkipped: Maybe Bool
 
+  sqlType:
+    serviceTypes: text[]
+
   beamFields:
     distance:
       distance: Maybe HighPrecDistance
