@@ -82,6 +82,8 @@ import Screens.TicketBookingFlow.BusTrackingScreen.Transformer
 import RemoteConfig.Utils as RCU
 import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
+import Accessor (_code)
+import Data.Lens ((^.))
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState = 
@@ -197,7 +199,7 @@ verticalLineView :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Mb
 verticalLineView push idTag showOnlyBullet vehicles =  
   relativeLayout
     [ height MATCH_PARENT
-    , width $ V 20
+    , width $ V 22
     , clipChildren false
     , visibility $ boolToVisibility showOnlyBullet
     , background Color.white900 
@@ -221,10 +223,10 @@ verticalLineView push idTag showOnlyBullet vehicles =
   busMarkerView percent = do
     let
       lineViewBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag idTag
-      lineViewHeight = max 32 (HU.getDefaultPixelSize lineViewBounds.height) 
+      lineViewHeight = max 36 (HU.getDefaultPixelSize lineViewBounds.height) 
       totalDistance = 50.0
       currentDistance = 5.0
-      marginTop = min 12 (DI.round (percent * (DI.toNumber lineViewHeight))) 
+      marginTop = min 0 (DI.round (percent * (DI.toNumber lineViewHeight))) 
     linearLayout 
       [height MATCH_PARENT
       , width MATCH_PARENT
@@ -232,7 +234,7 @@ verticalLineView push idTag showOnlyBullet vehicles =
       ]
       [ imageView
         [ width MATCH_PARENT
-        , height $ V 20
+        , height $ V 26
         , margin $ MarginTop $ marginTop
         , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_bus_marker_with_arrow"
         ]
@@ -434,7 +436,8 @@ busStopsView push state = do
         [ journeyLegTitleView true (Mb.maybe "" (\(API.FRFSStationAPI item) -> item.name) (DA.head state.data.stopsList)) state
         , linearLayout 
           [ width MATCH_PARENT
-          , height WRAP_CONTENT 
+          , height WRAP_CONTENT
+          , gravity CENTER 
           ] 
           [ stopListView push state true
           , stopListView push state false 
@@ -452,6 +455,8 @@ stopListView push state showOnlyBullet =
       , orientation VERTICAL
       , id $ EHC.getNewIDWithTag $ "stopListView"  <> if showOnlyBullet then "onlyBullet" else ""
       , margin $ MarginHorizontal 0 16
+      -- , layoutGravity "center_horizontal"
+      -- , gravity CENTER
       ]
         <> if showOnlyBullet then
             [ width $ V 20 ]
@@ -477,14 +482,19 @@ stopListView push state showOnlyBullet =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) (findNextBusDistance index)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
+        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
   where
-  stopMarginTop = if state.props.showRouteDetailsTab then 32 else 12
+  stopMarginTop = if state.props.showRouteDetailsTab then 36 else 12
   
   stops = if DA.length state.data.stopsList <= 2 then [] else DA.slice 1 (DA.length state.data.stopsList - 1) state.data.stopsList
 
   -- findNextBusETA index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelTime)) (stops DA.!! (index - 1))
+
+  -- findETADistance stop = 
+  --   if (Mb.isJust $ state.data.nearestStopFromCurrentLoc <#> (\(API.FRFSStationAPI nearestStop) -> nearestStop.code == stop.code))
+  --     then state.props.minimumEtaDistance
+  --     else Mb.Nothing
 
   findNextBusDistance index =
     Mb.maybe 
@@ -553,18 +563,19 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
     , orientation VERTICAL
     ]
     [ linearLayout
-        [ height $ if stopType == SOURCE_STOP && index /=0 && Mb.isJust etaDistance then WRAP_CONTENT else V 32
+        [ height $ if index /=0 && checkPreviousStopIsSource && Mb.isJust etaDistance then WRAP_CONTENT else V 36
         , width MATCH_PARENT
         , visibility $ boolToVisibility $ index /= 0
         ]
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
-        , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId)
+        -- , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId)
+        , if (index /=0 && checkPreviousStopIsSource && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId))
             then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance
             else 
               MP.noView
         ]
     , linearLayout
-        [ height $ V 32
+        [ height $ V 36
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         ]
@@ -601,6 +612,11 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
   where
     totalHeight = if (Mb.isJust $ findStopInVehicleData (API.FRFSStationAPI stop) state) then 72 else 40
     imageDimension = if stopType == NORMAL_STOP then 8 else 16
+    checkPreviousStopIsSource =
+      case state.data.stopsList DA.!! (index - 1) of
+        Mb.Just (API.FRFSStationAPI prevStop) ->
+          (getStopType prevStop.code (index - 1) state) == SOURCE_STOP
+        _ -> false
 
 separatorView :: forall w. String -> Margin -> PrestoDOM (Effect Unit) w
 separatorView color' margin' =
@@ -637,20 +653,40 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStop
   linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
   , width  MATCH_PARENT
-  , orientation HORIZONTAL
+  , orientation VERTICAL
   , stroke $ "1," <> Color.grey900
   , padding $ Padding 8 8 8 8
   , cornerRadius 12.0
   , visibility $ boolToVisibility $ Mb.isJust mbNextStopDistance && not state.props.individualBusTracking
   
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
-  [ textView
-    $ [ text $ "Next bus is " <> (JB.fromMetersToKm (Mb.fromMaybe 0 mbNextStopDistance)) <> "away"
+  [ linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation HORIZONTAL
+    , visibility $ boolToVisibility $ Mb.isNothing state.data.rideType
+    , margin $ MarginBottom 4
+    ]
+    [ imageView
+      [ height $ V 16
+      , width $ V 16
+      , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_blue_location"
+      , margin $ Margin 6 2 0 0
+      ]
+    , textView
+      $ [ text "Nearest Stop"
+        , margin $ MarginLeft 4
+        , color Color.blue900
+        ]
+      <> FontStyle.body1 CTA.TypoGraphy
+    ]
+  , textView
+    $ [ text $ "Next bus is " <> (JB.fromMetersToKm (Mb.fromMaybe 0 mbNextStopDistance)) <> " away"
       , margin $ MarginLeft 8
       , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking
       ]
     <> FontStyle.body1 CTA.TypoGraphy
-  , linearLayout [weight 1.0] []
+  -- , linearLayout [weight 1.0] []
   -- This was dummy code to show the time in the UI, should be properly handled as per backend response
   -- , textView
   --   $ [ text $  extractTimeInHHMMA $ Mb.maybe (EHC.getCurrentUTC "") (\item ->  Mb.fromMaybe (EHC.getCurrentUTC "") (show <$> item.mbNextStopTravelDistance)) $ findStopInVehicleData (API.FRFSStationAPI stop) state

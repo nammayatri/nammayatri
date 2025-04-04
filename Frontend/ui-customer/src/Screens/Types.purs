@@ -3346,7 +3346,8 @@ type BusTrackingScreenData = {
   stationResponse :: Maybe (Array FRFSStationAPI),
   routeShortName :: String,
   routePts :: Locations,
-  previousLatLonsOfVehicle :: DM.Map String ({position :: API.LatLong, index :: Int})
+  previousLatLonsOfVehicle :: DM.Map String ({position :: API.LatLong, index :: Int}),
+  nearestStopFromCurrentLoc :: Maybe FRFSStationAPI
 }
 
 type VehicleData = 
@@ -3364,6 +3365,7 @@ type VehicleData =
   , updatedAt :: String
   , timestamp :: String
   , nearestWaypointConfig :: NearestWaypointConfig
+  , etaDistance :: Maybe Number
   }
 
 type BusTrackingScreenProps = {
@@ -3379,7 +3381,10 @@ type BusTrackingScreenProps = {
   userAndBuslocationMatchCount :: Int,
   vehicleTrackingId :: Maybe String,
   previousScreen :: PreviousScreenForTracking,
-  destinationSequenceNumber :: Maybe Int
+  destinationSequenceNumber :: Maybe Int,
+  currentLat :: Number,
+  currentLon :: Number,
+  minimumEtaDistance :: Maybe Int
 }
 
 data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen

@@ -54,7 +54,7 @@ import Presto.Core.Types.Language.Flow (Flow)
 import Types.App (GlobalState(..), defaultGlobalState)
 import Common.Types.App as CTA
 import Data.Lens ((^.))
-import Accessor (_lat, _lon, _stopPoint)
+import Accessor (_lat, _lon, _stopPoint, _sequenceNum)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
@@ -65,7 +65,7 @@ import Data.Either
 import Data.Map as DM
 import Data.Newtype (unwrap)
 import Data.Tuple as DT
-import Data.Foldable (foldM)
+import Data.Foldable (foldM, minimum)
 import Engineering.Helpers.RippleCircles as EHR
 import Effect.Uncurried (runEffectFn1)
 import Foreign.Class (encode)
@@ -145,7 +145,10 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
         )
         { outputMap: DM.empty, previousStop: Mb.Nothing }
         filteredResp
-  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse }, props { showShimmer = false, destinationSequenceNumber = destinationStationSeq } }
+    
+    -- Nearest stop calculation from Current Location
+    nearestStopFromCurrentLoc = getNearestStopFromLatLong (API.LatLong {lat : state.props.currentLat, lon: state.props.currentLon}) filteredResp
+  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse, nearestStopFromCurrentLoc = nearestStopFromCurrentLoc}, props { showShimmer = false, destinationSequenceNumber = destinationStationSeq } }
     [ do
         void $ launchAff $ EHC.flowRunner defaultGlobalState
           $ do
@@ -220,6 +223,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
             { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData, previousLatLonsOfVehicle = storePrevLatLonsOfVehicle trackingData}
             , props
               { busNearSourceData = DT.snd finalMap
+              , minimumEtaDistance = calculateMinETADistance trackingData
               }
             }
           [ do
@@ -241,6 +245,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
         DM.empty
         trackingData
     
+    extractTrackingInfo :: API.VehicleInfo -> Array ST.VehicleData
     extractTrackingInfo (API.VehicleInfo item) = do
       let
         (API.VehicleInfoForRoute m) = item.vehicleInfo
@@ -251,27 +256,47 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
         currentWaypoint = API.LatLong { lat: lat, lon: lon }
         wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
         nearestWaypointConfig = calculateNearestWaypoint currentWaypoint state.data.routePts.points wmbFlowConfig.maxSnappingOnRouteDistance
+        (Tuple pickupPoint mbSequenceNum) = fetchPickupPoint (API.VehicleInfo item) state.data.sourceStation
 
       case filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig, (filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item)) of
         false, _ -> []
         _, false -> []
         true, true ->
-
-          [ { vehicleId: item.vehicleId
+          let 
+            -- Proper Checking to see if the bus has moved backward in route then not counting that as a valid location
+            vehicleLatLong =
+              ( case (DM.lookup item.vehicleId state.data.previousLatLonsOfVehicle) of 
+                  Mb.Just previousVehicleData ->
+                    let distanceBtwnCurrentAndPrevLocations = haversineDistance previousVehicleData.position nearestWaypointConfig.vehicleLocationOnRoute
+                        currentLatLonBeforePrevIndex = nearestWaypointConfig.index >= previousVehicleData.index
+                        _ = spy "Distance Between Current and Previous Locations" $ Tuple item.vehicleId distanceBtwnCurrentAndPrevLocations
+                        _ = spy "Current Lat Lon Before Previous Index" $ Tuple item.vehicleId currentLatLonBeforePrevIndex
+                        _ = spy "Current NearestWaypoint" $ Tuple item.vehicleId nearestWaypointConfig
+                        _ = spy "Previous NearestWaypoint" $ Tuple item.vehicleId previousVehicleData
+                    in 
+                      if ((not currentLatLonBeforePrevIndex) || distanceBtwnCurrentAndPrevLocations >= wmbFlowConfig.maxDeviatedDistanceInMeters)
+                        then previousVehicleData.position
+                        else nearestWaypointConfig.vehicleLocationOnRoute
+                  Mb.Nothing -> nearestWaypointConfig.vehicleLocationOnRoute
+              )
+          in 
+            [ { vehicleId: item.vehicleId
             , updatedAt: nextStop.updatedAt
             , createdAt: nextStop.createdAt
             , timestamp: m.timestamp
             , nextStop: nextStop.stopCode
-            , nextStopDistance: haversineDistance nearestWaypointConfig.vehicleLocationOnRoute nextStop.stopPoint
-            , vehicleLat: nearestWaypointConfig.vehicleLocationOnRoute ^._lat
-            , vehicleLon: nearestWaypointConfig.vehicleLocationOnRoute ^._lon
+            , nextStopDistance: haversineDistance vehicleLatLong nextStop.stopPoint
+            , vehicleLat: vehicleLatLong ^._lat
+            , vehicleLon: vehicleLatLong ^._lon
             , nextStopLat: nextStopPosition.lat
             , nextStopLon: nextStopPosition.lon
             , nextStopTravelTime: item.nextStopTravelTime
             , nextStopSequence: nextStop.sequenceNum
             , nextStopTravelDistance: item.nextStopTravelDistance
             , nearestWaypointConfig: nearestWaypointConfig
+            , etaDistance: if nextStop.sequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
             } ]
+    
     
     filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig =
       let (API.VehicleInfoForRoute m) = item.vehicleInfo
@@ -285,15 +310,22 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
     filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) =
       -- Deviation Filter Logic for Bus Vehicles
       ((nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters) || wmbFlowConfig.showAllDeviatedBus)
-      && 
-      ( case (DM.lookup item.vehicleId state.data.previousLatLonsOfVehicle) of -- Proper Checking with too close and erroneous data pointing towards the back of the route
-          Mb.Just previousVehicleData ->
-            let distanceBtwnCurrentAndPrevLocations = haversineDistance previousVehicleData.position nearestWaypointConfig.vehicleLocationOnRoute
-                currentLatLonBeforePrevIndex = nearestWaypointConfig.index > previousVehicleData.index
-            in not $ currentLatLonBeforePrevIndex && distanceBtwnCurrentAndPrevLocations < wmbFlowConfig.maxDeviatedDistanceInMeters
-          Mb.Nothing -> true
-      )
     
+    fetchPickupPoint :: API.VehicleInfo -> Mb.Maybe ST.Station -> Tuple API.LatLong (Mb.Maybe Int)
+    fetchPickupPoint (API.VehicleInfo item) mbSourceStation =
+      let 
+        pickupPoint =
+            case mbSourceStation of
+              Mb.Just sourceStation -> DA.find (\(API.FRFSStationAPI item) -> item.code == sourceStation.stationCode) state.data.stopsList
+              Mb.Nothing -> state.data.nearestStopFromCurrentLoc
+        pickupLat = Mb.maybe state.props.srcLat (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lat) pickupPoint
+        pickupLon = Mb.maybe state.props.srcLon (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lon) pickupPoint
+      in Tuple (API.LatLong { lat: pickupLat, lon: pickupLon }) (Mb.maybe Mb.Nothing (\(API.FRFSStationAPI item) -> item.sequenceNum) pickupPoint)
+        -- Mb.Nothing -> 
+        --   let nearestStopFromCurrentLoc = state.data.nearestStopFromCurrentLoc
+        --       nearestStopLat = Mb.maybe state.props.srcLat (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lat) nearestStopFromCurrentLoc
+        --       nearestStopLon = Mb.maybe state.props.srcLon (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lon) nearestStopFromCurrentLoc
+        --   in Tuple $ API.LatLong { lat: nearestStopLat, lon: nearestStopLon }
 
 eval (CurrentLocationCallBack lat lon _) state = case state.props.busNearSourceData of
     Mb.Just location -> do
@@ -375,9 +407,9 @@ drawDriverRoute resp state = do
       lon = Mb.fromMaybe 0.0 item.lon
       markerId = item.code
       pointertype = getStopType item.code index state
-      size = getStopMarkerSize pointertype
-    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType, primaryText = item.name } lat lon size 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-    when (DA.elem pointertype [SOURCE_STOP, DESTINATION_STOP]) $ EHC.liftFlow $ runEffectFn1 
+      size = getStopMarkerSize pointertype state.data.rideType index
+    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size } lat lon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
+    when (DA.elem pointertype [SOURCE_STOP, DESTINATION_STOP] && (state.data.rideType == Mb.Just ST.STOP || index /= 0)) $ EHC.liftFlow $ runEffectFn1 
       EHR.upsertMarkerLabel 
         { id: item.code <> "label"
         , title: item.name
@@ -488,3 +520,7 @@ userBoardedActions state vehicles vehicle = do
 --   if (distance <= 10) then
 --     (if towardsDrop then (getString AT_DROP) else (getString AT_PICKUP))
 --   else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((DI.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
+
+calculateMinETADistance :: Array ST.VehicleData -> Mb.Maybe Int
+calculateMinETADistance trackingData =
+  minimum $ DA.mapMaybe (\item -> item.etaDistance <#> DI.floor) trackingData
