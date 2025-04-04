@@ -292,3 +292,6 @@ homeScreen = do
     GoToBusTicketBookingFlow state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
       App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN state)
+    GoToSearchLocationScreenForBusRoutes state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_FOR_BUS_ROUTES state)
