@@ -20,6 +20,7 @@ import Tools.Error
 data ViolationDetectionReq = ViolationDetectionReq
   { rideId :: Id DRide.Ride,
     driverId :: Id DP.Person,
+    isViolated :: Bool,
     detectionData :: DetectionData
   }
   deriving (Generic, FromJSON, ToJSON, Show, Read)
@@ -29,7 +30,6 @@ data DetectionData
   | StoppedDetection StoppedDetectionData
   | SkippedWaitingStopDetection SkippedWaitingStopDetectionData
   | MissedStopDetection MissedStopDetectionData
-  | WrongStartStopDetection WrongStartStopDetectionData
   | RouteDeviationDetection RouteDeviationDetectionData
   deriving (Show, Eq, Ord, Read, Generic)
 
@@ -75,8 +75,6 @@ instance FromJSON DetectionData where
           )
       <|> ( MissedStopDetection <$> obj .: "missedStop"
           )
-      <|> ( WrongStartStopDetection <$> obj .: "wrongStartStop"
-          )
       <|> ( RouteDeviationDetection <$> obj .: "routeDeviation"
           )
 
@@ -90,8 +88,6 @@ instance ToJSON DetectionData where
       object ["skippedWaitingStop" .= data']
     MissedStopDetection data' ->
       object ["missedStop" .= data']
-    WrongStartStopDetection data' ->
-      object ["wrongStartStop" .= data']
     RouteDeviationDetection data' ->
       object ["routeDeviation" .= data']
 
@@ -102,7 +98,7 @@ violationDetection ViolationDetectionReq {..} = do
   let driverName = driver.firstName <> " " <> (fromMaybe "" driver.lastName)
   driverMobileNumber <- mapM decrypt driver.mobileNumber
   (requestTitle, requestBody, requestData) <- getAlertRequestData driverName driverMobileNumber detectionData
-  void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData tripTransaction
+  void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
   pure Success
   where
     getAlertRequestData :: Text -> Maybe Text -> DetectionData -> Flow (Text, Text, AlertRequestData)
@@ -126,11 +122,6 @@ violationDetection ViolationDetectionReq {..} = do
         let requestTitle = "Missed Stop"
         let requestBody = "Missed Stop Detected"
         let requestData = MissedStop MissedStopData {..}
-        return (requestTitle, requestBody, requestData)
-      WrongStartStopDetection WrongStartStopDetectionData {..} -> do
-        let requestTitle = "Wrong Start Stop"
-        let requestBody = "Wrong Start Stop Detected"
-        let requestData = WrongStartStop WrongStartStopData {..}
         return (requestTitle, requestBody, requestData)
       RouteDeviationDetection RouteDeviationDetectionData {..} -> do
         let requestTitle = "Route Deviation"

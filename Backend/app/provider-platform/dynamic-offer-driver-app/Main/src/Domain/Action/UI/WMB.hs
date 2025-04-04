@@ -160,7 +160,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId DVehCategory.BUS True
-  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo req.location
+  tripTransaction <- WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location
   pure $
     TripTransactionDetails
       { tripTransactionId = tripTransaction.id,
@@ -228,8 +228,8 @@ postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
   WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-  (_, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  void $ WMB.startTripTransaction tripTransaction route closestStop (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
+  (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
+  void $ WMB.startTripTransaction tripTransaction route closestStop sourceStopInfo (LatLong req.location.lat req.location.lon) destinationStopInfo.point True
   pure Success
 
 postWmbTripEnd ::
@@ -279,7 +279,7 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
             createAlertRequest driverId fleetDriverAssociation.fleetOwnerId requestTitle requestBody requestData tripTransaction
         )
         >>= \case
-          Right driverReq -> return $ TripEndResp {requestId = Just driverReq.id.getId, result = WAITING_FOR_ADMIN_APPROVAL}
+          Right alertRequestId -> return $ TripEndResp {requestId = Just alertRequestId.getId, result = WAITING_FOR_ADMIN_APPROVAL}
           Left _ -> throwError (InternalError "Process for Trip End is Already Ongoing, Please try again!")
     else do
       void $ endOngoingTripTransaction fleetConfig tripTransaction req.location DriverDirect False
@@ -349,17 +349,17 @@ postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId re
   whenJust tripTransaction.endRideApprovalRequestId $ \endRideAlertRequestId -> do
     alertRequest <- QAR.findByPrimaryKey endRideAlertRequestId
     when ((alertRequest <&> (.status)) == Just AWAITING_APPROVAL) $ throwError EndRideRequestAlreadyPresent
-  alertRequest <- createAlertRequest tripTransaction.driverId fleetDriverAssociation.fleetOwnerId req.title req.body req.requestData tripTransaction
+  alertRequestId <- createAlertRequest tripTransaction.driverId fleetDriverAssociation.fleetOwnerId req.title req.body req.requestData tripTransaction
   let maybeAppId = (HM.lookup FleetAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping -- currently only for END_RIDE
   whenJust transporterConfig.fleetAlertThreshold $ \threshold -> do
     let triggerFleetAlertTs = secondsToNominalDiffTime threshold
     createJobIn @_ @'FleetAlert (Just merchantId) (Just merchantOperatingCityId) triggerFleetAlertTs $
       FleetAlertJobData
         { fleetOwnerId = Id fleetDriverAssociation.fleetOwnerId,
-          entityId = alertRequest.id,
+          entityId = alertRequestId,
           appletId = maybeAppId
         }
-  pure $ AlertReqResp {requestId = alertRequest.id.getId}
+  pure $ AlertReqResp {requestId = alertRequestId.getId}
 
 postFleetConsent ::
   ( ( Maybe (Id Person),
@@ -387,11 +387,11 @@ postFleetConsent (mbDriverId, _, merchantOperatingCityId) = do
 driverRequestLockKey :: Text -> Text
 driverRequestLockKey reqId = "Driver:Request:Id-" <> reqId
 
-createAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow AlertRequest
+createAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow (Id AlertRequest)
 createAlertRequest driverId requesteeId title body requestData tripTransaction = do
-  alertRequest <- triggerAlertRequest driverId requesteeId title body requestData tripTransaction
-  QTT.updateEndRideApprovalRequestId (Just alertRequest.id) tripTransaction.id
-  pure alertRequest
+  alertRequestId <- triggerAlertRequest driverId requesteeId title body requestData True tripTransaction
+  QTT.updateEndRideApprovalRequestId (Just alertRequestId) tripTransaction.id
+  pure alertRequestId
 
 buildRouteInfo :: Route -> RouteInfo
 buildRouteInfo Route {..} = RouteInfo {..}
