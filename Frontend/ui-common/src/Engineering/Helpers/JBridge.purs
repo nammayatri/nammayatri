@@ -693,6 +693,7 @@ type MarkerConfig = {
   , anchorV :: Number
   , anchorU :: Number
   , actionImage :: ActionImageConfig
+  , zIndex :: Number
 }
 
 dummyMarkerEdgeInsets :: EdgeInsets
@@ -734,6 +735,7 @@ defaultMarkerConfig = {
   , useDestPoints : true
   , usePosition : false
   , actionImage : defaultActionImageConfig
+  , zIndex : 0.0
 }
 
 type CircleConfig = {
@@ -1116,6 +1118,7 @@ updateMarkerOnRouteConfig = {
   , locationName : ""
   , srcMarker : defaultMarkerConfig
   , vehicleRotationFromPrevLatLon : 0.0
+  , srcHeaderArrowMarker : defaultMarkerConfig
 }
 
 type UpdateMarkerOnRouteConfig = {
@@ -1125,6 +1128,7 @@ type UpdateMarkerOnRouteConfig = {
   , locationName :: String
   , srcMarker :: MarkerConfig
   , vehicleRotationFromPrevLatLon :: Number
+  , srcHeaderArrowMarker :: MarkerConfig 
 }
 
 foreign import checkMarkerAvailable :: EffectFn1 String Boolean

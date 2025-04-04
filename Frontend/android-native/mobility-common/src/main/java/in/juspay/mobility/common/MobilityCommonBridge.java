@@ -380,6 +380,7 @@ public class MobilityCommonBridge extends HyperBridge {
         int labelMaxLines = 1;
         int labelTextSize = 11;        
         float rotation = 0;
+        float zIndex = 0;
         int markerIconSize = 160;
         AnimationType animationType = AnimationType.NONE;
         int animationDuration = 0;
@@ -410,6 +411,7 @@ public class MobilityCommonBridge extends HyperBridge {
             this.labelActionImage.image = labelActionImage;
         }
         public void setRotation(float rotation) { this.rotation = rotation; }
+        public void setZIndex(float zIndex) { this.zIndex = zIndex; }
         public void setMarkerId(String markerId) { this.markerId = markerId; }
         public void setMarkerAnimation(AnimationType animationType, int animationDuration) {
             this.animationType = animationType;
@@ -1970,10 +1972,12 @@ public class MobilityCommonBridge extends HyperBridge {
                 String pointerIcon = mConfig.optString("pointerIcon", "");
                 String rotation = mConfig.optString("rotation", "0");
                 String purescriptId = config.optString("purescriptId", "");
+                float zIndex = (float) mConfig.optDouble("zIndex", 0);
                 MarkerConfig markerConfig = new MarkerConfig();
                 markerConfig.setMarkerId(markerId);
                 markerConfig.setPointer(pointerIcon);
                 markerConfig.setRotation(Float.parseFloat(rotation));
+                markerConfig.setZIndex(zIndex);
                 String lat = config.optString("lat", "9.9");
                 String lng = config.optString("lng", "9.9");
                 int markerSize = config.optInt("markerSize", 160);
@@ -1997,6 +2001,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 String imageName = markerConfig.pointerIcon;
                 float rotation = markerConfig.rotation;
                 float alpha = (markerConfig.animationType == AnimationType.FADE_IN) ? 0 : 1;
+                float zIndex = markerConfig.zIndex;
                 System.out.println("marker ids" + title);
                 if (lat != null && lng != null) {
                     double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
@@ -2011,6 +2016,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerObject.hideInfoWindow();
                         markerObject.getPosition();
                         markerObject.setAlpha(alpha);
+                        markerObject.setZIndex(zIndex);
                         Log.i(MAPS, "Marker position updated for " + title);
                     } else {
                         MarkerOptions markerOptionsObj = makeMarkerObject(imageName, latitude, longitude, markerSize, anchorV, anchorV1);
@@ -2024,6 +2030,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 markerObject.hideInfoWindow();
                                 markerObject.setRotation(rotation);
                                 markerObject.setAlpha(alpha);
+                                markerObject.setZIndex(zIndex);
                             }
                             if (title.equals(CURRENT_LOCATION)) {
                                 userPositionMarker = markerObject;

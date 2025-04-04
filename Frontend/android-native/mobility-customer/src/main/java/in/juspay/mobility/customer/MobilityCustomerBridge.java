@@ -637,8 +637,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
                 String eta = payload.optString("eta", "");
                 JSONObject srcMarker = payload.getJSONObject("srcMarker");
+                JSONObject srcHeaderArrowMarker = payload.getJSONObject("srcHeaderArrowMarker");
                 String vehicleMarkerId = srcMarker.optString("markerId", "");
+                String srcHeaderArrowMarkerId = srcHeaderArrowMarker.optString("markerId", "");
                 Marker marker = (Marker) markers.get(vehicleMarkerId);
+                Marker markerHeaderArrow = (Marker) markers.get(srcHeaderArrowMarkerId);
 //                boolean autoZoom = payload.optBoolean("autoZoom", true);
     //            String json = payload.optString("json", "");
     //            JSONObject jsonObject = new JSONObject(json);
@@ -656,24 +659,31 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         try {
                             float v = animation.getAnimatedFraction();
                             LatLng newPosition = SphericalUtil.interpolate(startPosition, currentLatLng, v);
-//                            float rotation = bearingBetweenLocations(startPosition, currentLatLng);
-//                            if (rotation > 1.0){
-//                                MarkerConfig markerConfig = new MarkerConfig();
-////                                markerConfig.locationName(infoLabelText);
-//                                markerConfig.setRotation(rotation);
-////                                markerConfig.setMarkerIconSize(160);
-//                                marker.setRotation(0.0f);
-////                                double previousWaypointObj = payload.optDouble("vehicleRotationFromPrevLatLon", 0.0);
-////                                marker.setRotation((float) previousWaypointObj);
-//                                marker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(srcMarkerPointerIcon, false, MarkerType.NORMAL_MARKER_V2, markerConfig)));
-//                            }
                             marker.setPosition(newPosition);
+                            if (markerHeaderArrow != null){
+                                String srcHeaderArrowMarkerIcon = srcHeaderArrowMarker.optString("pointerIcon", "");
+                                float rotation = bearingBetweenLocations(startPosition, currentLatLng);
+                                if (rotation > 1.0){
+                                    MarkerConfig markerConfig = new MarkerConfig();
+    //                                markerConfig.locationName(infoLabelText);
+                                    markerConfig.setRotation(rotation);
+    //                                markerConfig.setMarkerIconSize(160);
+                                    markerHeaderArrow.setRotation(0.0f);
+    //                                double previousWaypointObj = payload.optDouble("vehicleRotationFromPrevLatLon", 0.0);
+    //                                marker.setRotation((float) previousWaypointObj);
+                                    markerHeaderArrow.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(srcHeaderArrowMarkerIcon, false, MarkerType.NORMAL_MARKER_V2, markerConfig)));
+                                }
+
+                                markerHeaderArrow.setPosition(newPosition);
+                                markerHeaderArrow.setAnchor(0.5f, 0.5f);
+                                markers.put(srcHeaderArrowMarkerIcon, markerHeaderArrow);
+                            }
                             marker.setAnchor(0.5f, 0.5f);
 //                            Bitmap smallMarker = constructBitmap(markerSize, title);
 //                            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(smallMarker));
                             markers.put(srcMarkerPointerIcon, marker);
 //                            if (marker.getRotation() == 0.0f) {
-////                                double previousWaypointObj = payload.optDouble("vehicleRotationFromPrevLatLon", 0.0);
+// //                                double previousWaypointObj = payload.optDouble("vehicleRotationFromPrevLatLon", 0.0);
 //                                marker.setRotation(rotation);
 //                            }
                         } catch (Exception e) {
