@@ -1,0 +1,25 @@
+imports:
+
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Seconds: Kernel.Types.Time
+
+MultiModalConfigs:
+  tableName: multi_modal_configs
+
+  fields:
+    id: Id MultiModalConfigs
+    busFilterTimeBufferInSeconds: Seconds
+    enableBusFiltering: Maybe Bool
+    nearbyDriverSearchRadius: Maybe Double
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+
+  excludedFields: [merchantId]
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
