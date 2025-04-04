@@ -19,6 +19,7 @@ import qualified Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MultiModalConfigs as MultiModalConfigs
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
@@ -62,6 +63,7 @@ import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as QMultiModalConfigs
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Booking as QBooking
@@ -80,13 +82,13 @@ import qualified Tools.MultiModal as TMultiModal
 
 filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> m [MultiModalRoute]
 filterTransitRoutes routes mocid = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocid.getId)
-  if riderConfig.enableBusFiltering == Just True
-    then filterM filterBusRoutes routes
+  multiModalConfigs <- QMultiModalConfigs.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (MultiModalConfigsNotFound mocid.getId)
+  if multiModalConfigs.enableBusFiltering == Just True
+    then filterM (filterBusRoutes multiModalConfigs) routes
     else return routes
   where
-    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalRoute -> m Bool
-    filterBusRoutes route = do
+    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalConfigs.MultiModalConfigs -> MultiModalRoute -> m Bool
+    filterBusRoutes MultiModalConfigs.MultiModalConfigs {..} route = do
       let legs = route.legs
           busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
       if null busLegs
@@ -95,7 +97,7 @@ filterTransitRoutes routes mocid = do
           busLegsValid <- forM busLegs $ \leg -> do
             case (leg.fromDepartureTime, leg.fromStopDetails >>= (.stopCode), leg.fromStopDetails >>= (.gtfsId)) of
               (Just departureTime, Just stopCode, Just routeId) -> do
-                let buffer = 300 -- TODO: MOVE TO CONFIG.
+                let buffer = fromIntegral $ busFilterTimeBufferInSeconds.getSeconds
                 let departureTimeWithBuffer = buffer `addUTCTime` departureTime
                 routeWithBuses <- CQMMB.getRoutesBuses routeId
 

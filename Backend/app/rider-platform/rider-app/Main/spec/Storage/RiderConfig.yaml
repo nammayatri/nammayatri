@@ -94,9 +94,7 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Int
     variantListForNearByReq: "Maybe [VehicleVariant]"
     nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
-    nearbyDriverSearchRadius: Maybe Double
     isDeviceIdCheckDisabled: Maybe Bool
-    enableBusFiltering: Maybe Bool
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
     fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
     blockedUntilInMins : Maybe Minutes

@@ -246,6 +246,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_inter_city_search_locat
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_booking_allowed boolean ;
 
 

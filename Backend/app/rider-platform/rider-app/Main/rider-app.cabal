@@ -391,6 +391,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
       Storage.CachedQueries.Merchant.MultiModalBus
+      Storage.CachedQueries.Merchant.MultiModalConfigs
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
@@ -693,6 +694,7 @@ library
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
+      Domain.Types.MultiModalConfigs
       Domain.Types.MultimodalPreferences
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
@@ -820,6 +822,7 @@ library
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
+      Storage.Beam.MultiModalConfigs
       Storage.Beam.MultimodalPreferences
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
@@ -948,6 +951,7 @@ library
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
+      Storage.Queries.MultiModalConfigs
       Storage.Queries.MultimodalPreferences
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent

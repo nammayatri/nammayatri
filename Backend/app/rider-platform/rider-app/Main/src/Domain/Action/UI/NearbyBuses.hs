@@ -21,7 +21,7 @@ import Kernel.Utils.Common
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.Merchant.MultiModalConfigs as CQMMB
 import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as QRecentLocation
@@ -42,9 +42,9 @@ postNearbyBusBooking ::
 postNearbyBusBooking (mbPersonId, merchantId) req = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound "No person found")
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  multiModalConfigs <- CQMMB.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (MultiModalConfigsNotFound person.merchantOperatingCityId.getId)
 
-  let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
+  let radius :: Double = fromMaybe 0.5 multiModalConfigs.nearbyDriverSearchRadius --TODO: To be moved to config.
 
   -- Convert ByteString to Text after geo search
   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLat req.userLon) (Hedis.ByRadius radius "km")
