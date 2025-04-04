@@ -43,6 +43,7 @@ getConfigJSON = \case
     Sms.DigoEngageSmsConfig cfg -> toJSON cfg
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> toJSON cfg
+    Whatsapp.TataCommunicationsConfig cfg -> toJSON cfg
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig cfg -> toJSON cfg
     Verification.FaceVerificationConfig cfg -> toJSON cfg
@@ -105,6 +106,7 @@ getServiceName = \case
     Sms.DigoEngageSmsConfig _ -> Domain.SmsService Sms.DigoEngage
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> Domain.WhatsappService Whatsapp.GupShup
+    Whatsapp.TataCommunicationsConfig _ -> Domain.WhatsappService Whatsapp.TataCommunications
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig _ -> Domain.VerificationService Verification.Idfy
     Verification.FaceVerificationConfig _ -> Domain.VerificationService Verification.InternalScripts
@@ -165,6 +167,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> eitherValue configJSON
   Domain.SmsService Sms.DigoEngage -> Domain.SmsServiceConfig . Sms.DigoEngageSmsConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> eitherValue configJSON
+  Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.GovtData -> Right $ Domain.VerificationServiceConfig Verification.GovtDataConfig

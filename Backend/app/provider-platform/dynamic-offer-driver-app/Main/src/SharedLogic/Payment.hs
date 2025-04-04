@@ -269,13 +269,7 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
             Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
               { sendTo = phoneNumber,
                 templateId = merchantMessage.templateId,
-                var1 = amount,
-                var2 = Nothing,
-                var3 = Nothing,
-                var4 = Nothing,
-                var5 = Nothing,
-                var6 = Nothing,
-                var7 = Nothing,
+                variables = [amount], -- Accepts at most 7 variables using GupShup
                 ctaButtonUrl = Just webPaymentLink,
                 containsUrlButton = Just merchantMessage.containsUrlButton
               }
