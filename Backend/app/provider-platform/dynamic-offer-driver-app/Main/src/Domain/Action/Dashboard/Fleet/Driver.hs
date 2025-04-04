@@ -69,9 +69,11 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
-import qualified Domain.Types.ApprovalRequest as DTR
+import qualified Domain.Types.Alert as DTA
+import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverLocation as DDL
+import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
@@ -114,7 +116,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
-import qualified Storage.Queries.ApprovalRequest as QDR
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
@@ -132,6 +134,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -187,47 +190,44 @@ getDriverFleetGetDriverRequests ::
   Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
-  Maybe Common.RequestStatus ->
+  Maybe DTA.AlertRequestType ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Flow Common.DriverRequestResp
-getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset = do
+getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let status_ = case mbStatus of
-        Nothing -> Nothing
-        Just status -> Just $ castReqStatus status
-  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo status_ mbLimit mbOffset
-  let driverRequestList = map buildDriverRequestListItem driverRequests
+  tripAlertRequests <-
+    case mbBadgeName of
+      Just badgeName -> do
+        mbBadge <- QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName
+        case mbBadge of
+          Just badge -> B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId (Just badge.id) mbRouteCode mbLimit mbOffset
+          Nothing -> pure []
+      Nothing -> B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId Nothing mbRouteCode mbLimit mbOffset
+  driverRequestList <-
+    mapM
+      ( \tripAlertRequest -> do
+          alertRequest <- QAR.findByPrimaryKey tripAlertRequest.alertRequestId >>= fromMaybeM (DriverRequestNotFound tripAlertRequest.alertRequestId.getId)
+          buildDriverRequestListItem tripAlertRequest.tripTransactionId tripAlertRequest.driverId tripAlertRequest.routeCode tripAlertRequest.isViolated alertRequest
+      )
+      tripAlertRequests
   pure $ Common.DriverRequestResp driverRequestList
   where
-    buildDriverRequestListItem DTR.ApprovalRequest {..} =
-      Common.DriverRequestDetails
-        { raisedAt = createdAt,
-          requestData = castCommonReqData requestData,
-          status = castStatusToCommon (Just status),
-          approvalRequestId = id.getId,
-          ..
-        }
-
-castCommonReqData :: DTR.ApprovalRequestData -> Common.ApprovalRequestData
-castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = Id tripTransactionId, ..}
-castCommonReqData (DTR.OverSpeeding DTR.OverSpeedingData {..}) = Common.OverSpeeding $ Common.OverSpeedingData {..}
-
-castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
-castReqStatus = \case
-  Common.AWAITING_APPROVAL -> DTR.AWAITING_APPROVAL
-  Common.ACCEPTED -> DTR.ACCEPTED
-  Common.REJECTED -> DTR.REJECTED
-  Common.REVOKED -> DTR.REVOKED
-
-castStatusToCommon :: Maybe DTR.RequestStatus -> Maybe Common.RequestStatus
-castStatusToCommon = \case
-  Just DTR.AWAITING_APPROVAL -> Just Common.AWAITING_APPROVAL
-  Just DTR.ACCEPTED -> Just Common.ACCEPTED
-  Just DTR.REJECTED -> Just Common.REJECTED
-  Just DTR.REVOKED -> Just Common.REVOKED
-  _ -> Nothing
+    buildDriverRequestListItem tripTransactionId driverId routeCode isViolated DTR.AlertRequest {..} = do
+      pure $
+        Common.DriverRequestDetails
+          { raisedAt = createdAt,
+            approvalRequestId = id.getId,
+            driverId = driverId.getId,
+            tripTransactionId = tripTransactionId.getId,
+            isViolated = isViolated,
+            status = Just status,
+            ..
+          }
 
 ---------------------------------------------------------------------
 postDriverFleetRespondDriverRequest ::
@@ -240,16 +240,16 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
+    driverRequest <- B.runInReplica $ QAR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
     driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
-      DTR.AWAITING_APPROVAL -> QDR.updateStatusWithReason (castReqStatus req.status) (Just req.reason) (Id req.approvalRequestId)
+      DTA.AWAITING_APPROVAL -> QAR.updateStatusWithReason req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
-      Common.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTR.REJECTED, reason = Just req.reason}
-      Common.ACCEPTED -> do
+      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTA.REJECTED, reason = Just req.reason}
+      DTA.ACCEPTED -> do
         case driverRequest.requestData of
-          DTR.EndRide DTR.EndRideData {..} -> do
+          DTA.EndRide DTA.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
             tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
             void $ WMB.endOngoingTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval False
@@ -262,12 +262,9 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       cs $
         unwords
           [ "Sorry, your request for",
-            (show $ getRequestType req_.requestData) <> " has been rejected",
+            (show $ DTA.castAlertRequestDataToRequestType req_.requestData) <> " has been rejected",
             "Check the app for more details."
           ]
-    getRequestType = \case
-      DTR.EndRide _ -> DTR.EndRideApproval
-      DTR.OverSpeeding _ -> DTR.OverSpeedingAlert
 
 ---------------------------------------------------------------------
 postDriverFleetAddRCWithoutDriver ::
@@ -1336,15 +1333,13 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
-  badgeName <-
+  mbBadge <-
     case req.badgeName of
       Just badgeName -> do
         badge <- WMB.validateBadgeAssignment (cast req.driverId) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badgeName
         WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId badge
-        return badge.badgeName
-      Nothing -> do
-        driver <- QP.findById (Id req.driverId.getId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
-        return driver.firstName
+        return $ Just badge
+      Nothing -> pure Nothing
   try @_ @SomeException
     ( do
         vehicleRC <- WMB.validateVehicleAssignment (cast req.driverId) req.vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
@@ -1356,15 +1351,15 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
         _ <- WMB.unlinkFleetBadgeFromDriver (cast req.driverId)
         throwError (InternalError $ "Something went wrong while linking vehicle to driver. Error: " <> (T.pack $ displayException err))
       Right vehicleRC -> do
-        createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC badgeName req.trips
+        createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC mbBadge req.trips
         pure Success
 
-createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Text -> [Common.TripDetails] -> Flow ()
-createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC badgeName trips = do
+createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
+createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC mbBadge trips = do
   allTransactions <-
     foldM
       ( \accTransactions trip -> do
-          transactions <- makeTripTransactions trip badgeName
+          transactions <- makeTripTransactions trip
           return $ accTransactions <> transactions
       )
       []
@@ -1379,8 +1374,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
           WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
-    makeTripTransactions :: Common.TripDetails -> Text -> Flow [DTT.TripTransaction]
-    makeTripTransactions trip driverName = do
+    makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
+    makeTripTransactions trip = do
       route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
       (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
       case (trip.roundTrip, route.roundRouteCode) of
@@ -1392,17 +1387,17 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           foldM
             ( \accTransactions freqIdx -> do
                 let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode driverName
+                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode
                 pure $ accTransactions <> [tripTransaction]
             )
             []
             [0 .. (2 * roundTrip.frequency) -1]
         (_, _) -> do
-          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code driverName
+          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Maybe Text -> Text -> Text -> Flow DTT.TripTransaction
-    mkTransaction routeCode roundRouteCode endStopCode driverName = do
+    mkTransaction :: Text -> Maybe Text -> Text -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode = do
       transactionId <- generateGUID
       now <- getCurrentTime
       vehicleNumber <- decrypt vehicleRC.certificateNumber
@@ -1432,7 +1427,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             endRideApprovalRequestId = Nothing,
             createdAt = now,
             updatedAt = now,
-            driverName = (Just driverName),
+            driverName = mbBadge <&> (.badgeName),
+            fleetBadgeId = mbBadge <&> (.id),
             ..
           }
 
@@ -1552,7 +1548,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
                   ( do
                       WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId vehicleNumber vehicleRC
                       whenJust mbBadge $ \badge -> WMB.linkFleetBadgeToDriver (cast driver.id) merchant.id merchantOpCity.id fleetOwnerId badge
-                      createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC (maybe driver.firstName (.badgeName) mbBadge) tripPlannerRequests
+                      createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC mbBadge tripPlannerRequests
                   )
                   >>= \case
                     Left err -> do
