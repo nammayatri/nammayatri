@@ -347,6 +347,7 @@ library
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.VoipCallStatus
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -468,7 +469,6 @@ library
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.UiRiderConfigExtra
-      Storage.Queries.VoipCallStatusExtra
       Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
@@ -806,7 +806,6 @@ library
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
-      Storage.Beam.VoipCallStatus
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
@@ -922,7 +921,6 @@ library
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.UiRiderConfig
-      Storage.Queries.OrphanInstances.VoipCallStatus
       Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
@@ -973,7 +971,6 @@ library
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
-      Storage.Queries.VoipCallStatus
       Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:

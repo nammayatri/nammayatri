@@ -29,6 +29,6 @@ data VoipReq = VoipReq
     networkType :: Data.Text.Text,
     networkQuality :: Data.Text.Text,
     merchantId :: Kernel.Types.Id.Id VST.Merchant,
-    merchantCity :: Data.Text.Text
+    merchantCity :: Kernel.Types.Id.Id VST.MerchantOperatingCity
   }
   deriving (Eq, Generic, Show, ToJSON, FromJSON, ToSchema)

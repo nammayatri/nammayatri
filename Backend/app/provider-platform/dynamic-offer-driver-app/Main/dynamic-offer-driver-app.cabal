@@ -417,6 +417,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.VoipCallStatus
       Storage.Beam.Webhook
       Storage.Beam.Yudhishthira
       Storage.Cac.DriverIntelligentPoolConfig
@@ -619,7 +620,6 @@ library
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.VendorFeeExtra
-      Storage.Queries.VoipCallStatusExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -989,7 +989,6 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.VendorFee
       Storage.Beam.VendorSplitDetails
-      Storage.Beam.VoipCallStatus
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
@@ -1146,7 +1145,6 @@ library
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.VendorFee
       Storage.Queries.OrphanInstances.VendorSplitDetails
-      Storage.Queries.OrphanInstances.VoipCallStatus
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
@@ -1193,7 +1191,6 @@ library
       Storage.Queries.VehicleServiceTier
       Storage.Queries.VendorFee
       Storage.Queries.VendorSplitDetails
-      Storage.Queries.VoipCallStatus
       Storage.Queries.Volunteer
       Storage.Queries.WhiteListOrg
   other-modules:

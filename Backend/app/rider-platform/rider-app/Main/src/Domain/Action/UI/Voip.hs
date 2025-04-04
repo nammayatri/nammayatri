@@ -8,7 +8,6 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DMC
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.VoipCallStatus as VCS
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
@@ -17,9 +16,14 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.GuidLike
 import qualified Kernel.Types.Id
+import qualified Lib.Utils.Storage.Beam.BeamFlow
+import qualified Lib.Utils.Storage.Queries.VoipCallStatusExtra as QVoip
+import qualified Lib.Utils.Types.VoipCallStatus as VCS
 import Servant
-import qualified Storage.Queries.VoipCallStatusExtra as QVoip
+-- import Lib.Utils.Storage.Beam.VoipCallStatus ()
+import Storage.Beam.VoipCallStatus ()
 import Tools.Auth
+import Tools.Beam.UtilsTH (HasSchemaName)
 import Utils.Common.Voip.Types.VoipApiType as Voip
 
 postCallVoip ::
@@ -42,7 +46,7 @@ postCallVoip (_pid, _) req = do
             VCS.networkType = req.networkType,
             VCS.networkQuality = req.networkQuality,
             VCS.merchantId = Kernel.Types.Id.cast req.merchantId,
-            VCS.merchantCity = req.merchantCity,
+            VCS.merchantCity = Kernel.Types.Id.cast req.merchantCity,
             VCS.createdAt = now,
             VCS.updatedAt = now
           }

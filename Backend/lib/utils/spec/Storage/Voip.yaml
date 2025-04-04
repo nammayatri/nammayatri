@@ -1,10 +1,10 @@
 imports:
-  Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Utils.Common.Voip.Types.VoipStorageType
+  MerchantOperatingCity: Utils.Common.Voip.Types.VoipStorageType
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   CallService: Kernel.External.Call.Types
-  Ride: Domain.Types.Ride
+  Ride: Utils.Common.Voip.Types.VoipStorageType
   VoipStatus: Utils.Common.Voip.Types.VoipStorageType
 
 VoipCallStatus:
@@ -19,13 +19,16 @@ VoipCallStatus:
     networkType: Text
     networkQuality: Text
     merchantId : Id Merchant
-    merchantCity: Text
+    merchantCity: Id MerchantOperatingCity
     createdAt: UTCTime
     updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
-    rideId: "!SecondaryKey"
+    # rideId: "!SecondaryKey"
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Utils.Storage.Beam.BeamFlow.BeamFlow m r)"
 
   queries:
     updateByCallId:

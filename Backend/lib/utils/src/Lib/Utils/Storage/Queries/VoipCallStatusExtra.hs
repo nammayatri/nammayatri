@@ -1,20 +1,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.VoipCallStatusExtra where
+module Lib.Utils.Storage.Queries.VoipCallStatusExtra where
 
-import Domain.Types.VoipCallStatus
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Sequelize as Se
-import qualified Storage.Beam.VoipCallStatus as BeamVCS
-import Storage.Queries.OrphanInstances.VoipCallStatus
+import Lib.Utils.Storage.Beam.BeamFlow
+import qualified Lib.Utils.Storage.Beam.VoipCallStatus as BeamVCS
+import Lib.Utils.Storage.Queries.OrphanInstances.VoipCallStatus
+import Lib.Utils.Types.VoipCallStatus
+import Sequelize as Se
 
--- Upsert function for VoipCallStatus
-upsert :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => VoipCallStatus -> m ()
+upsert :: (BeamFlow m r) => VoipCallStatus -> m ()
 upsert voipCallStatus = do
   let callId = voipCallStatus.callId
   if callId /= Just ""

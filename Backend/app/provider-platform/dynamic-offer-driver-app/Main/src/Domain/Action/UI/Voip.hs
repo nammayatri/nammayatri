@@ -3,21 +3,27 @@
 module Domain.Action.UI.Voip (postCallVoip) where
 
 -- import qualified API.Types.UI.Voip as Voip
+
+-- import qualified Lib.Utils.Storage.Beam.VoipCallStatus as BeamVCS
+
+import qualified Control.Monad.IO.Class as M
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import Domain.Types.Ride as Ride
-import qualified Domain.Types.VoipCallStatus as VCS
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
-import Kernel.Types.GuidLike
 import qualified Kernel.Types.Id
+import Lib.Utils.Storage.Beam.BeamFlow ()
+import qualified Lib.Utils.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Utils.Storage.Queries.VoipCallStatusExtra as QVoip
+import qualified Lib.Utils.Types.VoipCallStatus as VCS
 import Servant
-import qualified Storage.Queries.VoipCallStatusExtra as QVoip
+import Storage.Beam.VoipCallStatus ()
 import Tools.Auth
 import Utils.Common.Voip.Types.VoipApiType as Voip
 
@@ -42,7 +48,7 @@ postCallVoip (_pid, _mid, _mcid) req = do
             VCS.networkType = req.networkType,
             VCS.networkQuality = req.networkQuality,
             VCS.merchantId = Kernel.Types.Id.cast req.merchantId,
-            VCS.merchantCity = req.merchantCity,
+            VCS.merchantCity = Kernel.Types.Id.cast req.merchantCity,
             VCS.createdAt = now,
             VCS.updatedAt = now
           }

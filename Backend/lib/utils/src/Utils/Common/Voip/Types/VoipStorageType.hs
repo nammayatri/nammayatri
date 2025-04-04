@@ -17,9 +17,12 @@ data Ride
 
 data Merchant
 
+data MerchantOperatingCity
+
 data VoipStatus
   = CALL_IS_PLACED
   | CALL_RINGING
+  | CALL_NOT_RINGING
   | CALL_MISSED
   | CALL_CANCELLED
   | CALL_DECLINED_DUE_TO_BUSY_ON_PSTN
