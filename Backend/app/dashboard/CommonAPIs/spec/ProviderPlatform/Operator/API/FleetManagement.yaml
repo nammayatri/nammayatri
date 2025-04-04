@@ -1,0 +1,40 @@
+imports:
+  Person: Dashboard.Common
+
+module: FleetManagement
+apiPrefix: operator
+
+apis:
+  - GET: # ListFleetsAPI
+      endpoint: /fleets
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - verified: Bool
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[FleetInfo]"
+      helperApi:
+        - GET:
+            endpoint: /fleets
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - verified: Bool
+              - limit: Int
+              - offset: Int
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: "[FleetInfo]"
+
+types:
+  FleetInfo:
+    - id: Id Person
+    - name: Text
+    - isActive: Bool
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - vehicleCount: Int
+    - verified: Bool

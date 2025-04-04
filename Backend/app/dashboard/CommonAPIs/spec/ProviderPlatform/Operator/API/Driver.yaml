@@ -1,5 +1,6 @@
 imports:
   OperationHub: Dashboard.Common
+  Driver: Dashboard.Common
 
 module: Driver
 
@@ -29,6 +30,30 @@ apis:
       response:
         type: APISuccess
 
+  - GET: # ListDriversAPI
+      endpoint: /operator/list
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - verified: Bool
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[DriverInfo]"
+      helperApi:
+        - GET:
+            endpoint: /operator/list
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - verified: Bool
+              - limit: Int
+              - offset: Int
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: "[DriverInfo]"
+
 types:
   RequestStatus:
     enum: "PENDING,APPROVED,REJECTED"
@@ -54,3 +79,13 @@ types:
     operatorId: Text
     remarks: Text
     derive: "'HideSecrets"
+  DriverInfo:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Text
+    - isActive: Bool
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - vehicle: Maybe Text
+    - verified: Bool
