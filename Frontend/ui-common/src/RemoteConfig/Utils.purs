@@ -339,7 +339,14 @@ defaultEstimateOfferConfig :: Types.EstimateOfferConfig
 defaultEstimateOfferConfig = {
   conditions : [],
   enableAllVariant : false,
-  translations : empty
+  translations : empty,
+  enableInfoIcon : false,
+  iconImage : "",
+  infoPopUp : {
+    title : empty,
+    subTitle : empty,
+    ctaText : empty
+  }
 }
 
 getEstimateOfferConfig :: String -> Types.EstimateOfferConfig
