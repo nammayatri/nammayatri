@@ -96,7 +96,7 @@ data DocumentType
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentsListResponse = DocumentsListResponse
-  { driverLicense :: [Kernel.Prelude.Text],
+  { driverLicense :: [[Kernel.Prelude.Text]],
     vehicleRegistrationCertificate :: [Kernel.Prelude.Text],
     driverLicenseDetails :: [DLDetails],
     vehicleRegistrationCertificateDetails :: [RCDetails],
