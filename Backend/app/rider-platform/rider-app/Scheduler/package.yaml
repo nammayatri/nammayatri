@@ -126,7 +126,7 @@ library:
     - mobility-core
     - beckn-spec
     - sessionizer-metrics
-
+    - external
 executables:
   rider-app-scheduler-exe:
     main: Main.hs

@@ -1,0 +1,1 @@
+update atlas_app.rider_config set frfs_status_delay = 300;
