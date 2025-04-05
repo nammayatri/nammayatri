@@ -983,6 +983,10 @@ FRFSVehicleServiceTier:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByProviderCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [providerCode, merchantOperatingCityId]
 
 RouteTripMapping:
   tableName: route_trip_mapping
