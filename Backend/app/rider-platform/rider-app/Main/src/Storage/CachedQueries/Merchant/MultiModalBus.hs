@@ -1,5 +1,6 @@
 module Storage.CachedQueries.Merchant.MultiModalBus
   ( BusStopETA (..),
+    FullBusData (..),
     BusData (..),
     RouteWithBuses (..),
     getRoutesBuses,

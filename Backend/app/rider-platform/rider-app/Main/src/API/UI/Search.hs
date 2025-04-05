@@ -53,6 +53,7 @@ import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import EulerHS.Prelude (sort)
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
@@ -251,20 +252,13 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         route'' <- maybeM (pure Nothing) (\config -> QRoute.findByRouteCode routeCode config.id) (pure integratedBPPConfig)
 
         -- Find the best bus with ETAs for our route
+        let busesWithBothStops = filter hasBothStops fullBusData.buses
         let mbBestBus =
               listToMaybe
-                ( sortOn getBestBusScore $
-                    filter hasBothStops fullBusData.buses
+                ( sortOn getBestBusScore busesWithBothStops
                 )
                 >>= \bus -> Just (bus.vehicleNumber, bus.busData)
               where
-                hasBothStops bus =
-                  case (originStopCode, destinationStopCode) of
-                    (Just origCode, Just destCode) ->
-                      any (\eta -> eta.stopId == origCode) (fromMaybe [] bus.busData.eta_data)
-                        && any (\eta -> eta.stopId == destCode) (fromMaybe [] bus.busData.eta_data)
-                    _ -> True
-
                 defaultLargeTimeDiff :: NominalDiffTime
                 defaultLargeTimeDiff = realToFrac (1000000 :: Double)
 
@@ -278,6 +272,19 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                           abs (diffUTCTime origTime searchRequest.startTime) -- Sort by closest arrival time
                         _ -> defaultLargeTimeDiff
                     _ -> defaultLargeTimeDiff
+
+        let busFrequency =
+              case (originStopCode, destinationStopCode) of
+                (Just origCode, Just _) ->
+                  let allBusArrivalTimes =
+                        sort $
+                          mapMaybe
+                            (\bus -> listToMaybe [eta.arrivalTime | eta <- fromMaybe [] bus.busData.eta_data, eta.stopId == origCode])
+                            busesWithBothStops
+                   in case allBusArrivalTimes of
+                        (time1 : time2 : _) -> Just $ Seconds $ round $ diffUTCTime time2 time1
+                        _ -> Nothing
+                _ -> Nothing
 
         let originStopTime = case (mbBestBus, originStopCode) of
               (Just (_, busData), Just origCode) ->
@@ -312,7 +319,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                           longName = Just route'.longName,
                           shortName = Just route'.shortName,
                           color = route'.color,
-                          frequency = Nothing,
+                          frequency = busFrequency,
                           fromStopDetails =
                             Just $
                               MultiModalTypes.MultiModalStopDetails
@@ -422,6 +429,14 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
     getStopName :: Text -> [CQMultiModal.BusStopETA] -> Maybe Text
     getStopName stopId eta_data =
       listToMaybe [eta.stopName | eta <- eta_data, eta.stopId == stopId]
+
+    hasBothStops :: CQMultiModal.FullBusData -> Bool
+    hasBothStops bus =
+      case (searchRequest.originStopCode, searchRequest.destinationStopCode) of
+        (Just origCode, Just destCode) ->
+          any (\eta -> eta.stopId == origCode) (fromMaybe [] bus.busData.eta_data)
+            && any (\eta -> eta.stopId == destCode) (fromMaybe [] bus.busData.eta_data)
+        _ -> True
 
     sortRoutesByDuration :: [DQuote.JourneyData] -> [DQuote.JourneyData]
     sortRoutesByDuration = sortBy (\j1 j2 -> fromMaybe LT (compare <$> j1.duration <*> j2.duration))
