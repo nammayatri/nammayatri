@@ -892,7 +892,7 @@ instanceExceptionWithParent 'HTTPException ''FRFSSearchError
 
 instance IsBaseError FRFSSearchError where
   toMessage = \case
-    FRFSSearchNotFound lockKey -> Just $ "FRFS Search with searchId:- " <> lockKey <> " not found."
+    FRFSSearchNotFound searchId -> Just $ "FRFS Search with searchId:- " <> searchId <> " not found."
 
 instance IsHTTPError FRFSSearchError where
   toErrorCode = \case
@@ -902,3 +902,22 @@ instance IsHTTPError FRFSSearchError where
     FRFSSearchNotFound _ -> E500
 
 instance IsAPIError FRFSSearchError
+
+data FRFSSBookingError
+  = FRFSBookingNotMadeThroughPartnerOrg Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSSBookingError
+
+instance IsBaseError FRFSSBookingError where
+  toMessage = \case
+    FRFSBookingNotMadeThroughPartnerOrg bookingId -> Just $ "This booking is not made by partnerOrg. TicketBookingId :- " <> bookingId
+
+instance IsHTTPError FRFSSBookingError where
+  toErrorCode = \case
+    FRFSBookingNotMadeThroughPartnerOrg _ -> "BOOKING_NOT_MADE_THROUGH_PARTNERORG"
+
+  toHttpCode = \case
+    FRFSBookingNotMadeThroughPartnerOrg _ -> E500
+
+instance IsAPIError FRFSSBookingError
