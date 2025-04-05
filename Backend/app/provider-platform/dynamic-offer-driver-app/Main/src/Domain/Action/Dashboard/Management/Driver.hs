@@ -116,6 +116,7 @@ import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
@@ -611,7 +612,7 @@ getDriverClearStuckOnRide merchantShortId _ dbSyncTime = do
     mapM
       ( \dI -> do
           updateOnRideStatusWithAdvancedRideCheck (cast dI.driverInfo.driverId) (Just dI.ride)
-          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing Nothing
+          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (dI.ride.fromLocation.lat) (dI.ride.fromLocation.lon)}))
           return (cast dI.driverInfo.driverId)
       )
       driverInfosAndRideDetails
