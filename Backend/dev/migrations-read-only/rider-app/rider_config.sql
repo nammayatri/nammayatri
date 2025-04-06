@@ -242,3 +242,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_bus_filtering boolean ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_rentals_config json ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_inter_city_search_locations json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_booking_allowed boolean ;

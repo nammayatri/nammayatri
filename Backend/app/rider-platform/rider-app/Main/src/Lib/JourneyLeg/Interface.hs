@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Interface where
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
@@ -26,12 +27,13 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 getFare ::
   JL.GetFareFlow m r =>
+  Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
   m (Maybe JL.GetFareResponse)
-getFare merchantId merchantOperatingCityId leg = \case
+getFare riderId merchantId merchantOperatingCityId leg = \case
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq

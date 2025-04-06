@@ -1,27 +1,23 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
 
--- import qualified Crypto.Cipher.AES as AES
--- import qualified Crypto.Cipher.Types as CT
--- import qualified Crypto.Error as CE
+import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson
--- import qualified Data.ByteString as BS
--- import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
--- import qualified Data.Text.Lazy as TL
--- import qualified Data.Text.Lazy.Encoding as TLE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant.API
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 
 data EncryptedResponse = EncryptedResponse
   { responseCode :: Text,
@@ -30,36 +26,17 @@ data EncryptedResponse = EncryptedResponse
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data CRISFareRequest = CRISFareRequest
-  { -- | mandatory
-    tpAccountId :: Int,
-    -- | mandatory
-    mobileNo :: Int,
-    -- | mandatory
+  { mobileNo :: Text,
     imeiNo :: Text,
-    -- | mandatory (Already Shared)
-    appCode :: Text,
-    -- | mandatory
     appSession :: Text,
-    -- | mandatory
     sourceCode :: Text,
-    -- | "1 blank space"
     changeOver :: Text,
-    -- | mandatory
-    destCode :: Text,
-    -- | mandatory
-    ticketType :: Text,
-    -- | mandatory
-    sourceZone :: Text,
     -- | "1 blank space"
+    destCode :: Text,
+    ticketType :: Text,
     via :: Text,
-    -- New fields
     trainType :: Maybe Text,
-    routeId :: Int,
-    clusterId :: Int,
-    suburbanFlag :: Int,
-    comboFlag :: Int,
-    cacheFlag :: Int,
-    modeOfBook :: Int
+    routeId :: Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
@@ -97,32 +74,32 @@ data CRISFareResponse = CRISFareResponse
 data RouteFareDetails = RouteFareDetails
   { routeId :: Int,
     fareDtlsList :: [FareDetails],
-    maximumValuesList :: [MaximumValues],
-    allowedValuesList :: [AllowedValues]
+    maximumValuesList :: Maybe [MaximumValues],
+    allowedValuesList :: Maybe [AllowedValues]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data FareDetails = FareDetails
   { ticketFare :: Text,
-    distance :: Int,
-    ticketTypeCode :: Text,
-    trainTypeCode :: Text,
-    classCode :: Text
+    distance :: Maybe Int,
+    ticketTypeCode :: Maybe Text,
+    trainTypeCode :: Maybe Text,
+    classCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data MaximumValues = MaximumValues
-  { item :: Text,
-    value :: Text
+  { item :: Maybe Text,
+    value :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data AllowedValues = AllowedValues
-  { ticketTypeCode :: Text,
-    ticketTypeName :: Text,
-    trainTypeCode :: Text,
-    trainTypeDescription :: Text,
-    classCode :: Text
+  { ticketTypeCode :: Maybe Text,
+    ticketTypeName :: Maybe Text,
+    trainTypeCode :: Maybe Text,
+    trainTypeDescription :: Maybe Text,
+    classCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -140,23 +117,27 @@ getRouteFare ::
   ) =>
   CRISConfig ->
   CRISFareRequest ->
-  m CRISFareResponse
+  m [FRFSUtils.FRFSFare]
 getRouteFare config request = do
   logInfo $ "Request object: " <> show request
-
+  let clusterId :: Int = -1
+      suburbanFlag :: Int = 0
+      comboFlag :: Int = 0
+      cacheFlag :: Int = 0
+      modeOfBook :: Int = 2
   let jsonStr =
         "{"
           <> "\"tpAccountId\":\""
-          <> show (tpAccountId request)
+          <> show config.tpAccountId
           <> "\","
           <> "\"mobileNo\":\""
-          <> show (mobileNo request)
+          <> mobileNo request
           <> "\","
           <> "\"imeiNo\":\""
           <> imeiNo request
           <> "\","
           <> "\"appCode\":\""
-          <> appCode request
+          <> config.appCode
           <> "\","
           <> "\"appSession\":\""
           <> appSession request
@@ -174,7 +155,7 @@ getRouteFare config request = do
           <> ticketType request
           <> "\","
           <> "\"sourceZone\":\""
-          <> sourceZone request
+          <> config.sourceZone
           <> "\","
           <> "\"via\":\""
           <> via request
@@ -183,68 +164,84 @@ getRouteFare config request = do
           <> maybe "null" (\t -> "\"" <> t <> "\"") (trainType request)
           <> ","
           <> "\"routeId\":"
-          <> show (request.routeId)
+          <> request.routeId
           <> ","
           <> "\"clusterId\":"
-          <> show (clusterId request)
+          <> show clusterId
           <> ","
           <> "\"suburbanFlag\":"
-          <> show (suburbanFlag request)
+          <> show suburbanFlag
           <> ","
           <> "\"comboFlag\":"
-          <> show (comboFlag request)
+          <> show comboFlag
           <> ","
           <> "\"cacheFlag\":"
-          <> show (cacheFlag request)
+          <> show cacheFlag
           <> ","
           <> "\"modeOfBook\":"
-          <> show (modeOfBook request)
+          <> show modeOfBook
           <> "}"
 
-  payload <- encryptPayload jsonStr config
+  clientKey <- decrypt config.clientKey
+  payload <- encryptPayload jsonStr clientKey
 
   encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
 
   logInfo $ "Encrypted response: " <> show encryptedResponse
 
   -- Fix the encoding chain
-  case eitherDecode (encode encryptedResponse) of
+  decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
     Left err -> throwError (InternalError $ "Failed to parse encrypted response: " <> T.pack (show err))
     Right encResp -> do
       logInfo $ "Got response code: " <> responseCode encResp
       logInfo $ "Encrypted response data length: " <> show (T.length $ responseData encResp)
 
-      case decryptResponseData (responseData encResp) config of
+      case decryptResponseData (responseData encResp) clientKey of
         Left err -> throwError (InternalError $ "Failed to decrypt response: " <> T.pack err)
         Right decryptedJson -> do
           logInfo $ "Decrypted JSON: " <> decryptedJson
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
             Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
             Right fareResponse -> pure fareResponse
+  let fare = find (\f -> show f.routeId == request.routeId) decryptedResponse.routeFareDetailsList
+  logInfo $ "FRFS Subway Fare: " <> show fare
+  let mbFareAmount = fare >>= (listToMaybe . (.fareDtlsList)) <&> (.ticketFare) >>= (readMaybe @HighPrecMoney . T.unpack)
+  fareAmount <- mbFareAmount & fromMaybeM (InternalError "Failed to parse fare amount")
+  return $
+    [ FRFSUtils.FRFSFare
+        { price =
+            Price
+              { amountInt = round fareAmount,
+                amount = fareAmount,
+                currency = INR
+              },
+          discounts = [],
+          vehicleServiceTier =
+            FRFSUtils.FRFSVehicleServiceTier
+              { serviceTierType = Spec.ORDINARY,
+                serviceTierProviderCode = "ORDINARY",
+                serviceTierShortName = "ORDINARY",
+                serviceTierDescription = "ORDINARY",
+                serviceTierLongName = "ORDINARY"
+              }
+        }
+    ]
   where
     eulerClientFn payload token =
       let client = ET.client routeFareAPI
        in client (Just $ "Bearer " <> token) (Just "application/json") payload
 
-sampleRequest :: CRISFareRequest
-sampleRequest =
-  CRISFareRequest
-    { tpAccountId = 3700001,
-      mobileNo = 9962013253,
-      imeiNo = "ed409d8d764c04f7",
-      appCode = "CUMTA",
-      appSession = "10",
-      sourceCode = "PER",
-      changeOver = " ",
-      destCode = "TBM",
-      ticketType = "J",
-      sourceZone = "SR",
-      via = " ",
-      trainType = Nothing,
-      routeId = 0,
-      clusterId = -1,
-      suburbanFlag = 0,
-      comboFlag = 0,
-      cacheFlag = 0,
-      modeOfBook = 2
-    }
+-- sampleRequest :: CRISFareRequest
+-- sampleRequest =
+--   CRISFareRequest
+--     { mobileNo = 9962013253,
+--       imeiNo = "ed409d8d764c04f7",
+--       appSession = "10",
+--       sourceCode = "PER",
+--       changeOver = " ",
+--       destCode = "TBM",
+--       ticketType = "J",
+--       via = " ",
+--       trainType = Nothing,
+--       routeId = 0
+--     }

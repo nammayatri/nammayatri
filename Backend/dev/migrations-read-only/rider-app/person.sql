@@ -159,3 +159,18 @@ ALTER TABLE atlas_app.person ADD COLUMN juspay_customer_payment_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN live_activity_token text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN imei_number_hash bytea ;
+ALTER TABLE atlas_app.person ADD COLUMN imei_number_encrypted character varying(255) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

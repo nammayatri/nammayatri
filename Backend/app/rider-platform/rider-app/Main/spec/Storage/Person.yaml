@@ -47,6 +47,7 @@ Person:
     identifierType : IdentifierType
     email : Maybe (EncryptedHashedField e Text)
     mobileNumber : Maybe (EncryptedHashedField e Text)
+    imeiNumber : Maybe (EncryptedHashedField e Text)
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
     identifier : Maybe Text
@@ -125,6 +126,9 @@ Person:
     mobileNumber:
       mobileNumberEncrypted: Maybe Text
       mobileNumberHash: Maybe DbHash
+    imeiNumber :
+      imeiNumberEncrypted: Maybe Text
+      imeiNumberHash: Maybe DbHash
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
@@ -157,6 +161,7 @@ Person:
     currentCity: Kernel.Prelude.snd updateMerchantOpIdAndCity|E
     email: EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash|E
     mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
+    imeiNumber: EncryptedHashed <$> (Encrypted <$> imeiNumberEncrypted) <*> imeiNumberHash|E
     blockedAt: Data.Time.localTimeToUTC Data.Time.utc <$> blockedAt|E
     falseSafetyAlarmCount: fromMaybe 0 falseSafetyAlarmCount|E
     rating: Just $ fromIntegral totalRatingScore / fromIntegral totalRatings|E
@@ -175,6 +180,8 @@ Person:
     emailHash: (email <&> (.hash))|E
     mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
     mobileNumberHash: (mobileNumber <&> (.hash))|E
+    imeiNumberEncrypted: (imeiNumber <&> unEncrypted . (.encrypted))|E
+    imeiNumberHash: (imeiNumber <&> (.hash))|E
     merchantOperatingCityId: (Kernel.Prelude.Just . Kernel.Types.Id.getId)|I
     falseSafetyAlarmCount: (Just falseSafetyAlarmCount)|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
@@ -205,6 +212,8 @@ Person:
     identifierType: character varying(255)
     mobileNumberEncrypted: character varying(255)
     mobileNumberHash: bytea
+    imeiNumberEncrypted: character varying(255)
+    imeiNumberHash: bytea
     mobileCountryCode: character varying(255)
     identifier: character varying(255)
     rating: character varying(255)
@@ -340,6 +349,11 @@ Person:
     updateLiveActivityToken:
       kvFunction: updateWithKV
       params: [liveActivityToken]
+      where: id
+
+    updateImeiNumber:
+      kvFunction: updateWithKV
+      params: [imeiNumber]
       where: id
 
   extraOperations:

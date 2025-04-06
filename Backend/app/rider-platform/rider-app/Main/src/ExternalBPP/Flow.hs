@@ -32,7 +32,7 @@ import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
 import Tools.Error
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
 getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m DOnSearch
@@ -139,7 +139,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
 
     mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> [DStation] -> m [DQuote]
     mkSingleRouteQuote vehicleType routeInfo stations = do
-      fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode vehicleType
+      fares <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode vehicleType
       let filteredFares = if null serviceTypes then fares else filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` serviceTypes) fares
       return $
         map

@@ -20,6 +20,4 @@ instance IsHTTPError CRISError where
   toErrorCode _ = "CRIS_ERROR"
   toHttpCode _ = E500
 
--- toMessage = (.errorMessage)
-
 instance IsAPIError CRISError

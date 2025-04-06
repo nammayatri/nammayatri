@@ -1,8 +1,6 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
   ( encryptPayload,
     decryptResponseData,
-    pkcs7Pad,
-    pkcs7Unpad,
   )
 where
 
@@ -11,12 +9,17 @@ import qualified Crypto.Cipher.Types as CT
 import qualified Crypto.Error as CE
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
--- import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import EulerHS.Prelude
--- import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Utils.Common
+
+cipherInit :: Text -> Either String AES.AES256
+cipherInit clientKey = do
+  let keyBS = TE.encodeUtf8 clientKey
+  case CT.cipherInit keyBS :: CE.CryptoFailable AES.AES256 of
+    CE.CryptoPassed a -> Right a
+    CE.CryptoFailed err -> Left $ "Cipher initialization failed: " <> show err
 
 -- Add PKCS7 padding function
 pkcs7Pad :: ByteString -> ByteString
@@ -43,33 +46,25 @@ pkcs7Unpad bs
           else Nothing
 
 -- Function to encrypt the request payload
-encryptPayload :: (MonadFlow m) => Text -> CRISConfig -> m Text
-encryptPayload jsonStr config = do
-  let keyBS = TE.encodeUtf8 config.clientKey
-
+encryptPayload :: (MonadFlow m) => Text -> Text -> m Text
+encryptPayload jsonStr clientKey = do
   logInfo $ "Exact JSON before encryption: " <> jsonStr
+  let eitherCipher = cipherInit clientKey
+  case eitherCipher of
+    Left err -> throwError $ InternalError (show err)
+    Right cipher -> do
+      let plaintext = TE.encodeUtf8 jsonStr
+          paddedPlaintext = pkcs7Pad plaintext
+          encrypted = CT.ecbEncrypt cipher paddedPlaintext
+          encryptedBase64 = decodeUtf8 $ B64.encode encrypted
 
-  let plaintext = TE.encodeUtf8 jsonStr
-      paddedPlaintext = pkcs7Pad plaintext
-      cipher = case CT.cipherInit keyBS :: CE.CryptoFailable AES.AES256 of
-        CE.CryptoPassed a -> a
-        CE.CryptoFailed err -> error $ "Cipher initialization failed: " <> show err
-
-      encrypted = CT.ecbEncrypt cipher paddedPlaintext
-      encryptedBase64 = decodeUtf8 $ B64.encode encrypted
-
-  logInfo $ "Encrypted Payload: " <> encryptedBase64
-  pure encryptedBase64
+      logInfo $ "Encrypted Payload: " <> encryptedBase64
+      pure encryptedBase64
 
 -- Function to decrypt response data
-decryptResponseData :: Text -> CRISConfig -> Either String Text
-decryptResponseData encryptedText config = do
-  let keyBS = TE.encodeUtf8 config.clientKey
-  cipher <- case CT.cipherInit keyBS :: CE.CryptoFailable AES.AES256 of
-    CE.CryptoPassed a -> Right a
-    CE.CryptoFailed err -> Left $ "Cipher initialization failed: " <> show err
-
-  -- Decode base64
+decryptResponseData :: Text -> Text -> Either String Text
+decryptResponseData encryptedText clientKey = do
+  cipher <- cipherInit clientKey
   decodedData <- case B64.decode $ encodeUtf8 encryptedText of
     Right d -> Right d
     Left err -> Left $ "Base64 decode failed: " <> show err

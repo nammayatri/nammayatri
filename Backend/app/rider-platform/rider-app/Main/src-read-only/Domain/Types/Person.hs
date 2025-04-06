@@ -60,6 +60,7 @@ data PersonE e = Person
     id :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     identifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     identifierType :: Domain.Types.Person.IdentifierType,
+    imeiNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     informPoliceSos :: Kernel.Prelude.Bool,
     isNew :: Kernel.Prelude.Bool,
     isValidRating :: Kernel.Prelude.Bool,
@@ -106,6 +107,7 @@ instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (entity, salt) = do
     email_ <- encryptItem $ (,salt) <$> email entity
+    imeiNumber_ <- encryptItem $ (,salt) <$> imeiNumber entity
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber entity
     pure
       Person
@@ -146,6 +148,7 @@ instance EncryptedItem Person where
           id = id entity,
           identifier = identifier entity,
           identifierType = identifierType entity,
+          imeiNumber = imeiNumber_,
           informPoliceSos = informPoliceSos entity,
           isNew = isNew entity,
           isValidRating = isValidRating entity,
@@ -184,6 +187,7 @@ instance EncryptedItem Person where
         }
   decryptItem entity = do
     email_ <- fmap fst <$> decryptItem (email entity)
+    imeiNumber_ <- fmap fst <$> decryptItem (imeiNumber entity)
     mobileNumber_ <- fmap fst <$> decryptItem (mobileNumber entity)
     pure
       ( Person
@@ -224,6 +228,7 @@ instance EncryptedItem Person where
             id = id entity,
             identifier = identifier entity,
             identifierType = identifierType entity,
+            imeiNumber = imeiNumber_,
             informPoliceSos = informPoliceSos entity,
             isNew = isNew entity,
             isValidRating = isValidRating entity,

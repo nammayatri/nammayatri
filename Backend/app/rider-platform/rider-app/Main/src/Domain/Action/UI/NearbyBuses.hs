@@ -75,7 +75,7 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
                 stopMapping <- Kernel.Prelude.listToMaybe <$> QRouteStopMapping.findByStopCode (fromMaybe "" recentLoc.stopCode) integratedBPPConfig.id
                 if isJust stopMapping
                   then do
-                    getFares <- Kernel.Prelude.listToMaybe <$> FRFSUtils.getFares (Just riderId) Spe.BUS integratedBPPConfig.id merchantId person.merchantOperatingCityId (fromMaybe "" recentLoc.routeCode) (fromMaybe "" recentLoc.fromStopCode) (fromMaybe "" recentLoc.stopCode)
+                    getFares <- Kernel.Prelude.listToMaybe <$> FRFSUtils.getFares riderId Spe.BUS integratedBPPConfig.id merchantId person.merchantOperatingCityId (fromMaybe "" recentLoc.routeCode) (fromMaybe "" recentLoc.fromStopCode) (fromMaybe "" recentLoc.stopCode)
                     -- need to validate this.
                     if isNothing getFares
                       then

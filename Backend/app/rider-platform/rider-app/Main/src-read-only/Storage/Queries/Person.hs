@@ -8,6 +8,7 @@ import qualified Data.Time
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
@@ -186,6 +187,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.identifier identifier,
       Se.Set Beam.identifierType identifierType,
+      Se.Set Beam.imeiNumberEncrypted (imeiNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.imeiNumberHash (imeiNumber <&> (.hash)),
       Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,

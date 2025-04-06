@@ -76,5 +76,6 @@ data MetroLegRequestGetFareData = MetroLegRequestGetFareData
     endLocation :: LatLngV2,
     routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
-    merchantOpCity :: DMOC.MerchantOperatingCity
+    merchantOpCity :: DMOC.MerchantOperatingCity,
+    riderId :: Id DPerson.Person
   }

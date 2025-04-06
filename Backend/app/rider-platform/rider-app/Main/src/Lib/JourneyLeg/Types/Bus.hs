@@ -67,6 +67,7 @@ data BusLegRequestGetFareData = BusLegRequestGetFareData
     routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
     serviceTypes :: [Spec.ServiceTierType],
+    riderId :: Id DPerson.Person,
     merchantOpCity :: DMOC.MerchantOperatingCity
   }
 

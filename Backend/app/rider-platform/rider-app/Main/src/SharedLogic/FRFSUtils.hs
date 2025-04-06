@@ -244,8 +244,8 @@ data FRFSFare = FRFSFare
     vehicleServiceTier :: FRFSVehicleServiceTier
   }
 
-getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe (Id DP.Person) -> Spec.VehicleCategory -> Id IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFares mbRiderId vehicleType integratedBPPConfigId merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
+getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
   currentTime <- getCurrentTime
   fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfigId
   let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
@@ -275,10 +275,7 @@ getFares mbRiderId vehicleType integratedBPPConfigId merchantId merchantOperatin
                     amount = stageFare.amount,
                     currency = stageFare.currency
                   }
-        discountsWithEligibility <-
-          case mbRiderId of
-            Just riderId -> getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
-            Nothing -> pure []
+        discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
         return $
           FRFSFare
             { price = price,

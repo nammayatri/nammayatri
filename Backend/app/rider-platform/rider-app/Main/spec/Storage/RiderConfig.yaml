@@ -30,6 +30,7 @@ RiderConfig:
     merchantOperatingCityId: Id MerchantOperatingCity
     enableLocalPoliceSupport: Bool
     metroBookingAllowed: Maybe Bool
+    suburbanBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int

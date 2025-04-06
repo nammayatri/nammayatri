@@ -1,13 +1,10 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.Auth where
 
--- import Data.ByteString.Base64 (encode)
--- import qualified Data.ByteString.Char8 as BS
--- import qualified Data.Text as T
--- import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError)
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse
@@ -42,7 +39,8 @@ resetAuthToken ::
   CRISConfig ->
   m Text
 resetAuthToken config = do
-  let basicAuth = "Basic " <> (config.clientSecret)
+  clientSecret <- decrypt config.clientSecret
+  let basicAuth = "Basic " <> clientSecret
   tokenRes <-
     callAPI config.baseUrl (ET.client authAPI (Just basicAuth) (Just "application/x-www-form-urlencoded") [("grant_type", "client_credentials")]) "authCRIS" authAPI
       >>= fromEitherM (ExternalAPICallError (Just "CRIS_AUTH_API") config.baseUrl)

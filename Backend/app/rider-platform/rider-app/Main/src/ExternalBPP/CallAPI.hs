@@ -169,7 +169,7 @@ verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encrypte
       (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
       DOnStatus.onStatus merchant' booking' verificationOnStatusReq
 
-getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> DIBC.PlatformType -> m [FRFSUtils.FRFSFare]
+getFares :: (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> DIBC.PlatformType -> m [FRFSUtils.FRFSFare]
 getFares riderId merchant merchantOperatingCity bapConfig routeCode startStationCode endStationCode vehicleCategory platformType = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| platformType ||+ "")
   Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig routeCode startStationCode endStationCode vehicleCategory

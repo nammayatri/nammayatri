@@ -293,8 +293,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
           QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
       pure newStatuses
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m (Maybe JT.GetFareResponse)
-getFare merchant merchantOperatingCity vehicleCategory routeDetails serviceTypes = do
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m (Maybe JT.GetFareResponse)
+getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails serviceTypes = do
   QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
     >>= \case
       Just bapConfig -> do
@@ -304,7 +304,7 @@ getFare merchant merchantOperatingCity vehicleCategory routeDetails serviceTypes
                 mapM
                   ( \FRFSRouteDetails {..} ->
                       case routeCode of
-                        Just routeCode' -> CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig routeCode' startStationCode endStationCode vehicleCategory DIBC.MULTIMODAL
+                        Just routeCode' -> CallExternalBPP.getFares riderId merchant merchantOperatingCity bapConfig routeCode' startStationCode endStationCode vehicleCategory DIBC.MULTIMODAL
                         Nothing -> return []
                   )
                   routeDetails
@@ -315,7 +315,7 @@ getFare merchant merchantOperatingCity vehicleCategory routeDetails serviceTypes
                   Just routeDetail -> do
                     case routeDetail.routeCode of
                       Just routeCode' -> do
-                        fares <- CallExternalBPP.getFares Nothing merchant merchantOperatingCity bapConfig routeCode' routeDetail.startStationCode routeDetail.endStationCode vehicleCategory DIBC.MULTIMODAL
+                        fares <- CallExternalBPP.getFares riderId merchant merchantOperatingCity bapConfig routeCode' routeDetail.startStationCode routeDetail.endStationCode vehicleCategory DIBC.MULTIMODAL
                         return [fares]
                       Nothing -> return []
                   Nothing -> return []

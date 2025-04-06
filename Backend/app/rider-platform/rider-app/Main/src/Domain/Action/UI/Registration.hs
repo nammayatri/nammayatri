@@ -457,7 +457,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         liveActivityToken = Nothing,
         dateOfBirth = Nothing,
         profilePicture = Nothing,
-        verificationChannel = Nothing
+        verificationChannel = Nothing,
+        imeiNumber = Nothing -- TODO: take it from the request
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
