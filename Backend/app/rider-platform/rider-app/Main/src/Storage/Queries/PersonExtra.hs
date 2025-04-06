@@ -62,6 +62,9 @@ findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
     Nothing
     <&> listToMaybe
 
+findByMobileNumberAndMerchantAndRole :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
+findByMobileNumberAndMerchantAndRole mobileNumberHash (Id merchantId) role = findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In role]]
+
 updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
   when

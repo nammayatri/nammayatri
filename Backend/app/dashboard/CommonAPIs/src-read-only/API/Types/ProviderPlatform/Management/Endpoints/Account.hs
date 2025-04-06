@@ -28,6 +28,10 @@ data DashboardAccessType
   | MERCHANT_MAKER
   | MERCHANT_SERVER
   | DASHBOARD_OPERATOR
+  | TICKET_DASHBOARD_USER
+  | TICKET_DASHBOARD_MERCHANT
+  | TICKET_DASHBOARD_ADMIN
+  | TICKET_DASHBOARD_APPROVER
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
