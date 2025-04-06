@@ -129,5 +129,25 @@ verifyDashboardAccess requiredAccessType personId = do
       if role.dashboardAccessType == DRole.DASHBOARD_OPERATOR
         then pure person.id
         else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_USER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_MERCHANT -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_ADMIN -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_APPROVER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
     DRole.DASHBOARD_USER ->
       pure person.id

@@ -61,6 +61,7 @@ dependencies:
   - base >= 4.7 && < 5
   - mobility-core
   - beckn-spec
+  - beckn-services
   - bytestring
   - record-dot-preprocessor
   - record-hasfield

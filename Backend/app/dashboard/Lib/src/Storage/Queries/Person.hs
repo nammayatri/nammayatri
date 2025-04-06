@@ -99,6 +99,26 @@ findByMobileNumber mobileNumber mobileCountryCode = do
   mobileDbHash <- getDbHash mobileNumber
   findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]]
 
+findByMobileNumberAndRoleId ::
+  (BeamFlow m r, EncFlow m r) =>
+  Text ->
+  Text ->
+  Id Role ->
+  m (Maybe Person)
+findByMobileNumberAndRoleId mobileNumber mobileCountryCode roleId = do
+  mobileDbHash <- getDbHash mobileNumber
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.Eq $ getId roleId]]
+
+findByMobileNumberAndRoleIds ::
+  (BeamFlow m r, EncFlow m r) =>
+  Text ->
+  Text ->
+  [Id Role] ->
+  m (Maybe Person)
+findByMobileNumberAndRoleIds mobileNumber mobileCountryCode roleIds = do
+  mobileDbHash <- getDbHash mobileNumber
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.In $ getId <$> roleIds]]
+
 updatePersonVerifiedStatus :: BeamFlow m r => Id Person -> Bool -> m ()
 updatePersonVerifiedStatus personId verified = do
   now <- getCurrentTime

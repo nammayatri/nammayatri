@@ -29,6 +29,7 @@ library
       API
       API.RiderPlatform
       App
+      Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.IssueManagement.Issue
       Domain.Action.RiderPlatform.IssueManagement.IssueList
@@ -53,6 +54,7 @@ library
       Domain.Action.RiderPlatform.RideBooking.Select
       Storage.Beam.CommonInstances
       API.Action.RiderPlatform.AppManagement
+      API.Action.RiderPlatform.AppManagement.MerchantOnboarding
       API.Action.RiderPlatform.AppManagement.Tickets
       API.Action.RiderPlatform.IssueManagement
       API.Action.RiderPlatform.IssueManagement.Issue
@@ -125,6 +127,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -199,6 +202,7 @@ executable rider-dashboard-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers

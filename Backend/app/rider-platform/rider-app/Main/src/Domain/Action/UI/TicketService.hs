@@ -1,5 +1,7 @@
 module Domain.Action.UI.TicketService where
 
+import qualified API.Types.Dashboard.AppManagement.Tickets
+import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import API.Types.UI.TicketService
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -10,9 +12,11 @@ import qualified Data.Text as Data.Text
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Domain.Types.Person
@@ -31,16 +35,18 @@ import qualified Domain.Types.TicketService as Domain.Types.TicketService
 import qualified Environment as Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Payment.Interface.Types as Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.Prelude as Kernel.Prelude
+import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.APISuccess as Kernel.Types.APISuccess
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
@@ -49,6 +55,8 @@ import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.BusinessHour as QBH
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as PersonExtra
@@ -1235,3 +1243,167 @@ tryInstantBooking personId tscs = do
           case blockRes of
             BlockFailed _ -> return LockBookingFailed
             BlockSuccess _ -> tryLockBooking personId tscs
+
+postTicketDashboardRegister :: Domain.Types.Merchant.Merchant -> API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+postTicketDashboardRegister merchant req = do
+  mobileNumberHash <- getDbHash req.mobileNumber
+  personOpt <- QP.findByMobileNumberAndMerchantAndRole mobileNumberHash merchant.id [Domain.Types.Person.TICKET_DASHBOARD_USER]
+  case personOpt of
+    Just person ->
+      return $
+        API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+          { success = True,
+            message = Just "User was already registered on app side!",
+            id = Just person.id.getId
+          }
+    Nothing -> do
+      let key = makeMobileNumberOtpKey (req.mobileCountryCode <> req.mobileNumber)
+      verificationOtp <- Redis.safeGet key >>= fromMaybeM (InvalidRequest "OTP expired")
+      unless (verificationOtp == req.otp) $ throwError $ InvalidRequest "Invalid OTP"
+      let authReq =
+            Registration.AuthReq
+              { mobileNumber = Just req.mobileNumber,
+                mobileCountryCode = Just req.mobileCountryCode,
+                identifierType = Just Domain.Types.Person.MOBILENUMBER,
+                merchantId = merchant.shortId,
+                deviceToken = Nothing,
+                notificationToken = Nothing,
+                whatsappNotificationEnroll = Nothing,
+                firstName = Just req.firstName,
+                middleName = Nothing,
+                lastName = Just req.lastName,
+                email = req.email,
+                language = Nothing,
+                gender = Nothing,
+                otpChannel = Nothing,
+                registrationLat = Nothing,
+                registrationLon = Nothing,
+                enableOtpLessRide = Nothing,
+                allowBlockedUserLogin = Nothing
+              }
+      merchantOperatingCityId <-
+        CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+          >>= fmap (.id)
+            . fromMaybeM
+              ( MerchantOperatingCityNotFound $
+                  "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
+              )
+      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant merchant.defaultCity merchantOperatingCityId Nothing
+      QP.create (person {Domain.Types.Person.role = Domain.Types.Person.TICKET_DASHBOARD_USER})
+      return $
+        API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+          { success = True,
+            message = Just "User registered successfully!",
+            id = Just person.id.getId
+          }
+
+postTicketDashboardLoginAuth :: Domain.Types.Merchant.Merchant -> Tickets.TicketDashboardLoginReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketDashboardLoginAuth merchant req = do
+  mobileNumberHash <- getDbHash req.mobileNumber
+  person <- QP.findByMobileNumberAndMerchantAndRole mobileNumberHash merchant.id [Domain.Types.Person.TICKET_DASHBOARD_USER] >>= fromMaybeM (InvalidRequest "Mobile number not registered")
+  checkSlidingWindowLimit (authHitsCountKey person)
+  smsCfg <- asks (.smsCfg)
+  merchantOperatingCityId <-
+    CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+      >>= fmap (.id)
+        . fromMaybeM
+          ( MerchantOperatingCityNotFound $
+              "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
+          )
+  let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      countryCode = req.mobileCountryCode
+      phoneNumber = countryCode <> req.mobileNumber
+  if not person.blocked
+    then do
+      otp <- maybe generateOTPCode return useFakeOtpM
+      whenNothing_ useFakeOtpM $ do
+        let otpHash = smsCfg.credConfig.otpHash
+        let otpCode = otp
+        withLogTag ("personId_" <> person.id.getId) $ do
+          buildSmsRes <-
+            MessageBuilder.buildSendOTPMessage
+              merchantOperatingCityId
+              MessageBuilder.BuildSendOTPMessageReq
+                { otp = otpCode,
+                  hash = otpHash
+                }
+          Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsRes phoneNumber)
+            >>= Sms.checkSmsResult
+      let key = makeMobileNumberOtpKey phoneNumber
+      Redis.setExp key otp 300
+      return Success
+    else throwError $ InvalidRequest "User is blocked"
+
+makeMobileNumberOtpKey :: Text -> Text
+makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber
+
+authHitsCountKey :: Domain.Types.Person.Person -> Text
+authHitsCountKey person = "BAP:Registration:auth" <> person.id.getId <> ":hitsCount"
+
+verifyHitsCountKey :: Domain.Types.Person.Person -> Text
+verifyHitsCountKey person = "BAP:Registration:verify:" <> person.id.getId <> ":hitsCount"
+
+postTicketDashboardLoginVerify :: Domain.Types.Merchant.Merchant -> Tickets.TicketDashboardLoginReq -> Environment.Flow Tickets.TicketDashboardLoginResp
+postTicketDashboardLoginVerify merchant req = do
+  mobileNumberHash <- getDbHash req.mobileNumber
+  person <- QP.findByMobileNumberAndMerchantAndRole mobileNumberHash merchant.id [Domain.Types.Person.TICKET_DASHBOARD_USER] >>= fromMaybeM (InvalidRequest "Invalid mobile number")
+  checkSlidingWindowLimit (verifyHitsCountKey person)
+  let key = makeMobileNumberOtpKey (req.mobileCountryCode <> req.mobileNumber)
+  reqOtp <- req.otp & fromMaybeM (InvalidRequest "OTP required")
+  otp <- Redis.safeGet key >>= fromMaybeM (InvalidRequest "OTP expired")
+  unless (otp == reqOtp) $ throwError $ InvalidRequest "Invalid OTP"
+  return $ Tickets.TicketDashboardLoginResp {authToken = Nothing}
+
+getTicketDashboardAgreement :: Domain.Types.Merchant.Merchant -> Text -> Environment.Flow API.Types.Dashboard.AppManagement.Tickets.TicketDashboardAgreementTemplateResp
+getTicketDashboardAgreement merchant templateName = do
+  messageKey <- getMessageKey templateName
+  merchantOperatingCityId <-
+    CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+      >>= fmap (.id)
+        . fromMaybeM
+          ( MerchantOperatingCityNotFound $
+              "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
+          )
+  merchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey Nothing >>= fromMaybeM (InvalidRequest "Template not found")
+  return $ Tickets.TicketDashboardAgreementTemplateResp {template = merchantMessage.message}
+  where
+    getMessageKey = \case
+      "TICKET_MERCHANT_AGREEMENT_TEMPLATE" -> pure $ DMM.TICKET_MERCHANT_AGREEMENT_TEMPLATE
+      _ -> throwError $ InvalidRequest "Invalid template name"
+
+sendverifyotpHitsCountKey :: Text -> Text
+sendverifyotpHitsCountKey mobileNumber = "BAP:Registration:sendverifyotp:" <> mobileNumber
+
+postTicketDashboardSendVerifyOtp :: Domain.Types.Merchant.Merchant -> Tickets.SendVerifyOtpReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketDashboardSendVerifyOtp merchant req = do
+  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  let key = makeMobileNumberOtpKey phoneNumber
+  checkSlidingWindowLimit $ sendverifyotpHitsCountKey phoneNumber
+  mbOtp :: Maybe Text <- Redis.get key
+  case mbOtp of
+    Just _ -> throwError $ InvalidRequest "OTP already sent, please try again after 5 minutes"
+    Nothing -> do
+      smsCfg <- asks (.smsCfg)
+      merchantOperatingCityId <-
+        CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+          >>= fmap (.id)
+            . fromMaybeM
+              ( MerchantOperatingCityNotFound $
+                  "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
+              )
+      let useFakeOtpM = (show <$> useFakeSms smsCfg)
+      otp <- maybe generateOTPCode return useFakeOtpM
+      whenNothing_ useFakeOtpM $ do
+        let otpHash = smsCfg.credConfig.otpHash
+            otpCode = otp
+        withLogTag ("mobileNumber_" <> phoneNumber) $ do
+          buildSmsRes <-
+            MessageBuilder.buildSendOTPMessage
+              merchantOperatingCityId
+              MessageBuilder.BuildSendOTPMessageReq
+                { otp = otpCode,
+                  hash = otpHash
+                }
+          Sms.sendSMS merchant.id merchantOperatingCityId (buildSmsRes phoneNumber) >>= Sms.checkSmsResult
+      Redis.setExp key otp 300
+  return Success
