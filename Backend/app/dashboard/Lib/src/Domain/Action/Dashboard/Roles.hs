@@ -28,10 +28,11 @@ import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
-import Tools.Error (RoleError (..))
+import Tools.Error (GenericError (..), RoleError (..))
 
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
+    dashboardAccessType :: Maybe DRole.DashboardAccessType,
     description :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -57,6 +58,8 @@ createRole ::
 createRole _ req = do
   mbExistingRole <- QRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
+  when (req.dashboardAccessType == Just DRole.DASHBOARD_ADMIN) $
+    throwError (InvalidRequest "Admin role couldn't be created")
   role <- buildRole req
   QRole.create role
   pure $ DRole.mkRoleAPIEntity role
@@ -72,7 +75,7 @@ buildRole req = do
     DRole.Role
       { id = uid,
         name = req.name,
-        dashboardAccessType = DRole.DASHBOARD_USER,
+        dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
         description = req.description,
         createdAt = now,
         updatedAt = now
