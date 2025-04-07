@@ -128,3 +128,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_congestion_charg
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_type text ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_quantity integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN coins_rewarded_on_gold_tier_ride integer ;
