@@ -29,6 +29,7 @@ library
       API
       API.RiderPlatform
       App
+      Domain.Action.RiderPlatform.AppManagement.Customer
       Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.IssueManagement.Issue
@@ -54,6 +55,7 @@ library
       Domain.Action.RiderPlatform.RideBooking.Select
       Storage.Beam.CommonInstances
       API.Action.RiderPlatform.AppManagement
+      API.Action.RiderPlatform.AppManagement.Customer
       API.Action.RiderPlatform.AppManagement.MerchantOnboarding
       API.Action.RiderPlatform.AppManagement.Tickets
       API.Action.RiderPlatform.IssueManagement
