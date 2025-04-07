@@ -325,14 +325,16 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails serv
               logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory
               return Nothing
             Right farePerRouteAcrossVehicleServiceTiers -> do
-              let farePerRoute = catMaybes (selectCorrectFare <$> farePerRouteAcrossVehicleServiceTiers)
-              if length farePerRoute /= length farePerRouteAcrossVehicleServiceTiers
+              let minFarePerRoute = catMaybes (selectMinFare <$> farePerRouteAcrossVehicleServiceTiers)
+              let maxFarePerRoute = catMaybes (selectMaxFare <$> farePerRouteAcrossVehicleServiceTiers)
+              if length minFarePerRoute /= length farePerRouteAcrossVehicleServiceTiers
                 then do
                   logError $ "Not Getting Fares for All Transit Routes for Vehicle Category : " <> show vehicleCategory
                   return Nothing
                 else do
-                  let totalFare = sum $ map ((.getHighPrecMoney) . (.amount) . (.price)) farePerRoute
-                  return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = totalFare}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = totalFare}})
+                  let minFare = sum $ map ((.getHighPrecMoney) . (.amount) . (.price)) minFarePerRoute
+                  let maxFare = sum $ map ((.getHighPrecMoney) . (.amount) . (.price)) maxFarePerRoute
+                  return (Just $ JT.GetFareResponse {estimatedMinFare = HighPrecMoney {getHighPrecMoney = minFare}, estimatedMaxFare = HighPrecMoney {getHighPrecMoney = maxFare}})
             Left err -> do
               logError $ "Exception Occured in Get Fare for Vehicle Category : " <> show vehicleCategory <> ", Error : " <> show err
               return Nothing
@@ -340,13 +342,21 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails serv
         logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
         return Nothing
   where
-    selectCorrectFare :: [FRFSFare] -> Maybe FRFSFare
-    selectCorrectFare fares = do
+    filterFares :: [FRFSFare] -> [FRFSFare]
+    filterFares fares = do
       let sortedFares = sortOn (\fare -> fare.price.amount.getHighPrecMoney) fares
       let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` serviceTypes) sortedFares
       if null filteredFares
-        then listToMaybe sortedFares
-        else listToMaybe filteredFares
+        then sortedFares
+        else filteredFares
+
+    selectMinFare :: [FRFSFare] -> Maybe FRFSFare
+    selectMinFare [] = Nothing
+    selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (filterFares fares)
+
+    selectMaxFare :: [FRFSFare] -> Maybe FRFSFare
+    selectMaxFare [] = Nothing
+    selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (filterFares fares)
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
 getInfo searchId fallbackFare distance duration = do

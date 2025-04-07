@@ -1,11 +1,11 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.MerchantOperatingCity
 import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
@@ -15,9 +15,11 @@ import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 
 data EncryptedResponse = EncryptedResponse
   { responseCode :: Text,
@@ -113,12 +115,14 @@ getRouteFare ::
   ( CoreMetrics m,
     MonadFlow m,
     CacheFlow m r,
+    EsqDBFlow m r,
     EncFlow m r
   ) =>
   CRISConfig ->
+  Id MerchantOperatingCity ->
   CRISFareRequest ->
   m [FRFSUtils.FRFSFare]
-getRouteFare config request = do
+getRouteFare config merchantOperatingCityId request = do
   logInfo $ "Request object: " <> show request
   let clusterId :: Int = -1
       suburbanFlag :: Int = 0
@@ -203,12 +207,17 @@ getRouteFare config request = do
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
             Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
             Right fareResponse -> pure fareResponse
-  let fare = listToMaybe decryptedResponse.routeFareDetailsList
-  logInfo $ "FRFS Subway Fare: " <> show fare
-  let mbFareAmount = fare >>= (listToMaybe . (.fareDtlsList)) <&> (.ticketFare) >>= (readMaybe @HighPrecMoney . T.unpack)
-  fareAmount <- mbFareAmount & fromMaybeM (InternalError "Failed to parse fare amount")
-  return $
-    [ FRFSUtils.FRFSFare
+  let firstRouteFareDetails = listToMaybe decryptedResponse.routeFareDetailsList
+  logInfo $ "FRFS Subway Fare: " <> show firstRouteFareDetails
+  let fares = maybe [] (.fareDtlsList) firstRouteFareDetails
+  fares `forM` \fare -> do
+    let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.ticketFare
+    fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.ticketFare)
+    classCode <- fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
+    serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
+    serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)
+    return $
+      FRFSUtils.FRFSFare
         { price =
             Price
               { amountInt = round fareAmount,
@@ -218,14 +227,13 @@ getRouteFare config request = do
           discounts = [],
           vehicleServiceTier =
             FRFSUtils.FRFSVehicleServiceTier
-              { serviceTierType = Spec.ORDINARY,
-                serviceTierProviderCode = "ORDINARY",
-                serviceTierShortName = "ORDINARY",
-                serviceTierDescription = "ORDINARY",
-                serviceTierLongName = "ORDINARY"
+              { serviceTierType = serviceTier._type,
+                serviceTierProviderCode = serviceTier.providerCode,
+                serviceTierShortName = serviceTier.shortName,
+                serviceTierDescription = serviceTier.description,
+                serviceTierLongName = serviceTier.longName
               }
         }
-    ]
   where
     eulerClientFn payload token =
       let client = ET.client routeFareAPI
