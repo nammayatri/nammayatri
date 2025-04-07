@@ -203,7 +203,7 @@ getRouteFare config request = do
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
             Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
             Right fareResponse -> pure fareResponse
-  let fare = find (\f -> show f.routeId == request.routeId) decryptedResponse.routeFareDetailsList
+  let fare = listToMaybe decryptedResponse.routeFareDetailsList
   logInfo $ "FRFS Subway Fare: " <> show fare
   let mbFareAmount = fare >>= (listToMaybe . (.fareDtlsList)) <&> (.ticketFare) >>= (readMaybe @HighPrecMoney . T.unpack)
   fareAmount <- mbFareAmount & fromMaybeM (InternalError "Failed to parse fare amount")
