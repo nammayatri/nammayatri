@@ -90,6 +90,7 @@ Booking:
     isReferredRide: Maybe Bool
     isSafetyPlus : Bool
     configInExperimentVersions: "[ConfigVersionMap]"
+    coinsRewardedOnGoldTierRide: Maybe Int
 
   excludedFields:
     - merchantId

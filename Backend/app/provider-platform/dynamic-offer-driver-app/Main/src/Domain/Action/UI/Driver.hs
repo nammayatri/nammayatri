@@ -1401,7 +1401,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             backendConfigVersion = Nothing,
             backendAppVersion = Just deploymentVersion.getDeploymentVersion,
             merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
-            vehicleServiceTierName = sd.vehicleServiceTierName
+            vehicleServiceTierName = sd.vehicleServiceTierName,
+            coinsRewardedOnGoldTierRide = sd.coinsRewardedOnGoldTierRide
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

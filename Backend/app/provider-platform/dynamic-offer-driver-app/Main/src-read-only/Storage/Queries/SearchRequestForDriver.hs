@@ -72,6 +72,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
+      Se.Set Beam.coinsRewardedOnGoldTierRide coinsRewardedOnGoldTierRide,
       Se.Set Beam.conditionalCharges (Kernel.Prelude.Just $ Kernel.Prelude.show conditionalCharges),
       Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),

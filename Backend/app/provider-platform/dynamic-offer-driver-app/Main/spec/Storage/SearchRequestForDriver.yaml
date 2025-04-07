@@ -106,6 +106,7 @@ SearchRequestForDriver:
     parcelQuantity: Maybe Int
     driverTagScore: Maybe Value
     conditionalCharges: "[ConditionalChargesCategories]"
+    coinsRewardedOnGoldTierRide: Maybe Int
 
   beamType:
     clientBundleVersion: Maybe Text
