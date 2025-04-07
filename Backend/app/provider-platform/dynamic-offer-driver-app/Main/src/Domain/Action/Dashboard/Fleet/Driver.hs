@@ -66,6 +66,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
@@ -120,6 +121,7 @@ import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
@@ -128,6 +130,7 @@ import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
@@ -152,28 +155,122 @@ postDriverFleetAddVehicle ::
   Text ->
   Text ->
   Maybe Text ->
+  Maybe Text ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId mbMobileCountryCode req = do
+postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode req = do
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
-  driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
-  let merchantId = driver.merchantId
-  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
+  entityDetails <- QPerson.findByMobileNumberAndMerchantAndRoles mobileCountryCode phoneNumberHash merchant.id [DP.DRIVER, DP.FLEET_OWNER] >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+  let merchantId = entityDetails.merchantId
+  unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
+  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation merchant.id merchantOpCityId requestorId mbFleetOwnerId entityDetails
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
-  case isFleetDriver of
-    Nothing -> throwError (DriverNotInFleet driver.id.getId fleetOwnerId)
-    Just fleetDriver -> do
-      unless fleetDriver.isActive $ throwError (DriverNotActiveInFleet driver.id.getId fleetDriver.id.getId)
-  Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-  void $ DCommon.runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
-  logTagInfo "dashboard -> addVehicle : " (show driver.id)
-  pure Success
+  case (getEntityData.role, getMbFleetOwnerId) of
+    (DP.DRIVER, Nothing) -> do
+      -- DCO case
+      whenJust rc $ \rcert -> checkRCAssociationForDriver getEntityData.id rcert
+      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
+      pure Success
+    (_, Just fleetOwnerId) -> do
+      -- fleet and fleetDriver case
+      whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
+      Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
+      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      let logTag = case getEntityData.role of
+            DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
+            DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
+            _ -> "dashboard -> addVehicleUnderUnknown"
+      logTagInfo logTag (show getEntityData.id)
+      pure Success
+    _ -> throwError (InvalidRequest "Invalid Data")
+
+checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Flow ()
+checkRCAssociationForDriver driverId vehicleRC = do
+  when (isJust vehicleRC.fleetOwnerId) $ throwError VehicleBelongsToFleet
+  activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
+  let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
+  forM_ rcAssociatedDriverIds $ \linkDriverId -> do
+    when (linkDriverId /= driverId) $ throwError VehicleAlreadyLinkedToAnotherDriver
+
+checkEnitiesAssociationValidation :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe Text -> DP.Person -> Flow (DP.Person, Maybe Text)
+checkEnitiesAssociationValidation merchantId merchantOpCityId requestorId mbFleetOwnerId entityDetails = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+
+  case requestedPerson.role of
+    -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
+    DP.FLEET_OWNER -> do
+      -- fleetOwnerId <- PFD.getFleetOwnerId requestorId mbFleetOwnerId -- getting Error but have to do ??
+      fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure val else throwError AccessDenied) mbFleetOwnerId -- Have to discuss
+      handleFleetOwnerFlow fleetOwnerId
+
+    -- Operator should add vehcile under DCO (Driver who independent from fleet), Fleet, FleetDriver (Driver who has active association with fleet)
+    DP.OPERATOR -> do
+      case mbFleetOwnerId of
+        Nothing -> handleOperatorToDriverAndFleet requestedPerson entityDetails
+        Just fleetOwnerId -> do
+          validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+          handleFleetOwnerFlow fleetOwnerId
+    _ -> throwError (InvalidRequesterRole $ show requestedPerson.role)
+  where
+    handleFleetOwnerFlow :: Text -> Flow (DP.Person, Maybe Text)
+    handleFleetOwnerFlow fleetOwnerId =
+      case entityDetails.role of
+        DP.FLEET_OWNER -> do
+          -- Under Fleet
+          unless (fleetOwnerId == entityDetails.id.getId) $
+            throwError (InvalidFleetOwner fleetOwnerId)
+          pure (entityDetails, Just fleetOwnerId)
+        DP.DRIVER -> do
+          -- Under FleetDriver
+          validateFleetDriverAssociation fleetOwnerId entityDetails
+          pure (entityDetails, Just fleetOwnerId)
+        _ -> throwError (InvalidRoleForVehicleAdd $ show entityDetails.role)
+
+    handleOperatorToDriverAndFleet :: DP.Person -> DP.Person -> Flow (DP.Person, Maybe Text)
+    handleOperatorToDriverAndFleet operatorPerson targetPerson = do
+      case targetPerson.role of
+        DP.DRIVER -> do
+          -- Under DCO
+          verifyAndAssociateDriver targetPerson.id operatorPerson.id.getId
+          pure (targetPerson, Nothing)
+        DP.FLEET_OWNER -> do
+          -- Under Fleet
+          validateOperatorToFleetAssoc operatorPerson.id.getId targetPerson.id.getId
+          pure (targetPerson, Just targetPerson.id.getId)
+        _ -> throwError (InvalidRoleForVehicleAdd $ show targetPerson.role)
+
+    -- TODO: We should add notify logic in this function. Have to discuss
+    verifyAndAssociateDriver :: Id DP.Person -> Text -> Flow ()
+    verifyAndAssociateDriver driverId operatorId = do
+      isFleetAssociated <- FDV.findByDriverId driverId True
+      when (isJust isFleetAssociated) $
+        throwError $ DriverHasActiveLink driverId.getId
+
+      isOperatorAssociated <- DOV.findByDriverId driverId True
+      case isOperatorAssociated of
+        Just associateData ->
+          when (associateData.operatorId /= operatorId) $
+            throwError $ DriverHasActiveLink driverId.getId
+        Nothing -> do
+          driverOperatorAssData <- DOR.makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId (convertTextToUTC (Just "2099-12-12"))
+          DOV.create driverOperatorAssData
+
+    validateOperatorToFleetAssoc :: Text -> Text -> Flow ()
+    validateOperatorToFleetAssoc operatorId fleetOwnerId = do
+      isAssociated <- FOV.findByFleetIdAndOperatorId fleetOwnerId operatorId True
+      when (isNothing isAssociated) $
+        throwError (FleetNotActiveInOperator fleetOwnerId operatorId)
+
+    validateFleetDriverAssociation :: Text -> DP.Person -> Flow ()
+    validateFleetDriverAssociation fleetOwnerId driverPerson = do
+      isAssociated <- FDV.findByDriverIdAndFleetOwnerId driverPerson.id fleetOwnerId True
+      when (isNothing isAssociated) $
+        throwError (DriverNotActiveInFleet driverPerson.id.getId fleetOwnerId)
 
 checkRCAssociationForFleet :: Text -> VehicleRegistrationCertificate -> Flow ()
 checkRCAssociationForFleet fleetOwnerId vehicleRC = do

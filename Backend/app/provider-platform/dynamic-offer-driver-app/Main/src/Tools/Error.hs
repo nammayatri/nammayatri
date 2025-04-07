@@ -1565,6 +1565,13 @@ data WMBErrors
   | FleetBadgeNotFound Text
   | FleetBadgeAlreadyLinked Text
   | AlreadyOnActiveTripWithAnotherBadge Text
+  | VehicleBelongsToFleet
+  | InvalidRequesterRole Text
+  | InvalidRoleForVehicleAdd Text
+  | DriverHasActiveLink Text
+  | FleetNotActiveInOperator Text Text
+  | VehicleAlreadyLinkedToAnotherDriver
+  | InvalidFleetOwner Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1607,6 +1614,15 @@ instance IsBaseError WMBErrors where
     FleetBadgeNotFound badgeName -> Just $ "Fleet Badge Name Not Found : " <> badgeName
     FleetBadgeAlreadyLinked driverId -> Just $ "Fleet Badge already linked to driver id : " <> driverId
     AlreadyOnActiveTripWithAnotherBadge driverName -> Just $ "Driver is already on an Active trip with another badge : " <> driverName
+    VehicleBelongsToFleet -> Just "Vehicle already belongs to a fleet."
+    InvalidRequesterRole role -> Just $ "Requester has invalid role: " <> show role
+    InvalidRoleForVehicleAdd role -> Just $ "Invalid role for adding vehicle: " <> show role
+    DriverHasActiveLink driverId ->
+      Just $ "Driver: " <> driverId <> " already has active association."
+    FleetNotActiveInOperator fleetOwnerId operatorId ->
+      Just $ "FleetOwner: " <> fleetOwnerId <> " is not active under operator: " <> operatorId
+    VehicleAlreadyLinkedToAnotherDriver -> Just "Vehicle is already linked to another driver"
+    InvalidFleetOwner fleetOwnerId -> Just $ "FleetOwner: " <> fleetOwnerId <> " is not valid."
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1646,6 +1662,13 @@ instance IsHTTPError WMBErrors where
     FleetBadgeNotFound _ -> "FLEET_BADGE_NOT_FOUND"
     FleetBadgeAlreadyLinked _ -> "FLEET_BADGE_ALREADY_LINKED"
     AlreadyOnActiveTripWithAnotherBadge _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_BADGE"
+    VehicleBelongsToFleet -> "VEHICLE_BELONGS_TO_FLEET"
+    InvalidRequesterRole _ -> "INVALID_REQUESTER_ROLE"
+    InvalidRoleForVehicleAdd _ -> "INVALID_ROLE_FOR_VEHICLE_ADD"
+    DriverHasActiveLink _ -> "DRIVER_HAS_ACTIVE_LINK"
+    FleetNotActiveInOperator _ _ -> "FLEET_NOT_ACTIVE_IN_OPERATOR"
+    VehicleAlreadyLinkedToAnotherDriver -> "VEHICLE_ALREADY_LINKED_TO_ANOTHER_DRIVER"
+    InvalidFleetOwner _ -> "INVALID_FLEET_OWNER"
 
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
@@ -1684,6 +1707,13 @@ instance IsHTTPError WMBErrors where
     FleetBadgeNotFound _ -> E400
     FleetBadgeAlreadyLinked _ -> E400
     AlreadyOnActiveTripWithAnotherBadge _ -> E400
+    VehicleBelongsToFleet -> E400
+    InvalidRequesterRole _ -> E400
+    InvalidRoleForVehicleAdd _ -> E400
+    DriverHasActiveLink _ -> E400
+    FleetNotActiveInOperator _ _ -> E400
+    VehicleAlreadyLinkedToAnotherDriver -> E400
+    InvalidFleetOwner _ -> E400
 
 instance IsAPIError WMBErrors
 
