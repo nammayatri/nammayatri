@@ -48,8 +48,6 @@ instance IsHTTPError LocationServiceabilityError where
 
 instance IsAPIError LocationServiceabilityError
 
-instanceExceptionWithParent 'HTTPException ''LocationServiceabilityError
-
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
@@ -1552,7 +1550,7 @@ data WMBErrors
   | TripTransactionNotFound Text
   | EndRideRequestAlreadyPresent
   | RideNotEligibleForEnding
-  | ApprovalRequestIdNotFound Text
+  | AlertRequestIdNotFound Text
   | NoActiveFleetAssociated Text
   | FleetConfigNotFound Text
   | InactiveFleetDriverAssociationNotFound Text
@@ -1565,6 +1563,8 @@ data WMBErrors
   | AlreadyOnActiveTripWithAnotherVehicle Text
   | AlreadyOnActiveTrip
   | FleetBadgeNotFound Text
+  | FleetBadgeAlreadyLinked Text
+  | AlreadyOnActiveTripWithAnotherBadge Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1593,7 +1593,7 @@ instance IsBaseError WMBErrors where
     TripTransactionNotFound id -> Just $ "Trip transaction not found for :" <> id
     EndRideRequestAlreadyPresent -> Just "EndRide request already present"
     RideNotEligibleForEnding -> Just "Ride Not Eligible For Ending"
-    ApprovalRequestIdNotFound id -> Just $ "Approval Request Id not found" <> id
+    AlertRequestIdNotFound id -> Just $ "Alert Request Id not found" <> id
     NoActiveFleetAssociated id -> Just $ "No Active Fleet Associated for driver :" <> id
     FleetConfigNotFound id -> Just $ "Fleet Config Info not found for owner id : " <> id
     InactiveFleetDriverAssociationNotFound id -> Just $ "Inactive Fleet Driver Association Not Found for driver : " <> id
@@ -1605,6 +1605,8 @@ instance IsBaseError WMBErrors where
     VehicleRouteMappingBlocked -> Just "Vehicle Route Mapping is blocked, unblock and try again."
     AlreadyOnActiveTrip -> Just "Driver is already on an Active trip."
     FleetBadgeNotFound badgeName -> Just $ "Fleet Badge Name Not Found : " <> badgeName
+    FleetBadgeAlreadyLinked driverId -> Just $ "Fleet Badge already linked to driver id : " <> driverId
+    AlreadyOnActiveTripWithAnotherBadge driverName -> Just $ "Driver is already on an Active trip with another badge : " <> driverName
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1630,7 +1632,7 @@ instance IsHTTPError WMBErrors where
     TripTransactionNotFound _ -> "INVALID_TRIP_TRANSACTION_ID"
     EndRideRequestAlreadyPresent -> "END_RIDE_REQUEST_ALREADY_PRESENT"
     RideNotEligibleForEnding -> "RIDE_NOT_ELIGIBLE_FOR_ENDING"
-    ApprovalRequestIdNotFound _ -> "APPROVAL_REQUEST_ID_NOT_FOUND"
+    AlertRequestIdNotFound _ -> "ALERT_REQUEST_ID_NOT_FOUND"
     NoActiveFleetAssociated _ -> "NO_ACTIVE_FLEET_ASSOCIATED"
     FleetConfigNotFound _ -> "FLEET_CONFIG_NOT_FOUND"
     InactiveFleetDriverAssociationNotFound _ -> "INACTIVE_FLEET_DRIVER_ASSOCIATION_NOT_FOUND"
@@ -1642,6 +1644,8 @@ instance IsHTTPError WMBErrors where
     VehicleRouteMappingBlocked -> "VEHICLE_ROUTE_MAPPING_BLOCKED"
     AlreadyOnActiveTrip -> "ALREADY_ON_ACTIVE_TRIP"
     FleetBadgeNotFound _ -> "FLEET_BADGE_NOT_FOUND"
+    FleetBadgeAlreadyLinked _ -> "FLEET_BADGE_ALREADY_LINKED"
+    AlreadyOnActiveTripWithAnotherBadge _ -> "ALREADY_ON_ACTIVE_TRIP_WITH_ANOTHER_BADGE"
 
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
@@ -1666,7 +1670,7 @@ instance IsHTTPError WMBErrors where
     TripTransactionNotFound _ -> E400
     EndRideRequestAlreadyPresent -> E400
     RideNotEligibleForEnding -> E400
-    ApprovalRequestIdNotFound _ -> E404
+    AlertRequestIdNotFound _ -> E404
     NoActiveFleetAssociated _ -> E400
     FleetConfigNotFound _ -> E404
     InactiveFleetDriverAssociationNotFound _ -> E404
@@ -1678,5 +1682,43 @@ instance IsHTTPError WMBErrors where
     VehicleRouteMappingBlocked -> E400
     AlreadyOnActiveTrip -> E400
     FleetBadgeNotFound _ -> E400
+    FleetBadgeAlreadyLinked _ -> E400
+    AlreadyOnActiveTripWithAnotherBadge _ -> E400
 
 instance IsAPIError WMBErrors
+
+newtype OperationHubError
+  = OperationHubDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OperationHubError
+
+instance IsBaseError OperationHubError where
+  toMessage = \case
+    OperationHubDoesNotExist operationHubId -> Just $ "No operation hub matches passed data \"" <> show operationHubId <> "\" not exist."
+
+instance IsHTTPError OperationHubError where
+  toErrorCode = \case
+    OperationHubDoesNotExist _ -> "OPERATION_HUB_DOES_NOT_EXIST"
+  toHttpCode = \case
+    OperationHubDoesNotExist _ -> E400
+
+instance IsAPIError OperationHubError
+
+data TripAlertRequestError
+  = TripAlertRequestNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TripAlertRequestError
+
+instance IsBaseError TripAlertRequestError where
+  toMessage = \case
+    TripAlertRequestNotFound tripAlertRequestId -> Just $ "Trip alert request with id \"" <> show tripAlertRequestId <> "\" not found."
+
+instance IsHTTPError TripAlertRequestError where
+  toErrorCode = \case
+    TripAlertRequestNotFound _ -> "TRIP_ALERT_REQUEST_NOT_FOUND"
+  toHttpCode = \case
+    TripAlertRequestNotFound _ -> E404
+
+instance IsAPIError TripAlertRequestError

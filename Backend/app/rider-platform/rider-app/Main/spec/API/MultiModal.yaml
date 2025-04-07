@@ -21,6 +21,7 @@ imports:
   BookingUpdateRequest: Domain.Types.BookingUpdateRequest
   RouteStopMapping: Domain.Types.RouteStopMapping
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
+  FRFSQuote: Domain.Types.FRFSQuote
 
 module: MultimodalConfirm
 
@@ -95,6 +96,9 @@ types:
   SwitchTaxiReq:
     estimateId: Id Estimate
 
+  SwitchFRFSTierReq:
+    quoteId: Id FRFSQuote
+
   JourneyBookingPaymentStatus:
     journeyId: Id Journey
     paymentOrder: Maybe PaymentOrder
@@ -123,6 +127,32 @@ types:
     journeyLegOrder: Int
     skipBooking: Bool
     ticketQuantity: Maybe Int
+
+  TransportRoute:
+    cd: Text
+    sN: Text
+    lN: Text
+    vt: Text
+    clr: Maybe Text
+
+  TransportStation:
+    cd: Text
+    nm: Text
+    lt: Double
+    ln: Double
+    vt: Text
+    ad: Maybe Text
+
+  TransportRouteStopMapping:
+    rc: Text
+    sc: Text
+    sn: Int
+
+  PublicTransportData:
+    rs: [TransportRoute]
+    ss: [TransportStation]
+    rsm: [TransportRouteStopMapping]
+    ptcv: Text
 
 apis:
   - POST:
@@ -231,6 +261,16 @@ apis:
         type: JourneyInfoResp
 
   - POST:
+      endpoint: multimodal/{journeyId}/order/{legOrder}/switchFRFSTier
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: SwitchFRFSTierReq
+      response:
+        type: JourneyInfoResp
+
+  - POST:
       endpoint: multimodal/{journeyId}/journeyFeedback
       params:
         journeyId: Id Journey
@@ -258,9 +298,16 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  - GET:
+  - POST:
       endpoint: multimodal/transitOptions/lite
       request:
         type: MultimodalTransitOptionsReq
       response:
         type: MultimodalTransitOptionsResp
+
+  - GET:
+      endpoint: /publicTransport/data
+      query:
+        publicTransportConfigVersion: Text
+      response:
+        type: PublicTransportData

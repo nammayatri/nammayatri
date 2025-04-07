@@ -194,7 +194,7 @@ referralView state push =
           , hint $ getString ENTER_REFERRAL_CODE_
           , hintColor Color.black600
           , alpha if state.data.isReferred == Verified then 0.4 else 1.0
-          , pattern "[a-zA-Z0-9. ]*,9"
+          , pattern "[a-zA-Z0-9]*,9"
           , inputType if state.data.isReferred == Verified then Disabled else TypeText
           , id $ EHC.getNewIDWithTag "ReferralEditText"
           , accessibility ENABLE

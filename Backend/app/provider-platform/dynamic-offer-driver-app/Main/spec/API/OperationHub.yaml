@@ -10,7 +10,8 @@ module: OperationHub
 types:
   DriverOperationHubRequest:
     requestType: RequestType
-    operationHubId: Text
+    operationHubId: Id OperationHub
+    registrationNo: Text
 apis:
   - GET:
       endpoint: /operation/getAllHubs

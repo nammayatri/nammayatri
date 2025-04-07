@@ -39,6 +39,10 @@ findByDashboardAccessType :: BeamFlow m r => Role.DashboardAccessType -> m (Mayb
 findByDashboardAccessType dashboardAccessType =
   findOneWithKV [Se.Is BeamR.dashboardAccessType $ Se.Eq dashboardAccessType]
 
+findAllInDashboardAccessType :: BeamFlow m r => [Role.DashboardAccessType] -> m [Role]
+findAllInDashboardAccessType dashboardAccessTypes =
+  findAllWithKV [Se.Is BeamR.dashboardAccessType $ Se.In dashboardAccessTypes]
+
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Role]
 findAllByLimitOffset mbLimit mbOffset = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit

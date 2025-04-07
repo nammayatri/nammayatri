@@ -462,14 +462,16 @@ screen initialState =
         (\push -> do 
             case initialState.data.profile of
               Just (GetProfileRes profile) -> do
-                let totalEarningPending = fromMaybe 0 $ fromNumber ((fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid))
-                if ((fromMaybe 0.0 profile.referredByEarnings) > 0.0) && (fromMaybe false profile.hasTakenValidRide) && totalEarningPending > 0 && isNothing profile.payoutVpa && itsBeenOneDay "COLLECT_EARNINGS" then
-                  push $ AddVPA $ totalEarningPending
-                else do
-                  let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
-                  if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
-                    then push $ TakeFirstRide
-                    else pure unit
+                if (fromMaybe false profile.isPayoutEnabled) then do
+                  let totalEarningPending = fromMaybe 0 $ fromNumber ((fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid))
+                  if ((fromMaybe 0.0 profile.referredByEarnings) > 0.0) && (fromMaybe false profile.hasTakenValidRide) && totalEarningPending > 0 && isNothing profile.payoutVpa && itsBeenOneDay "COLLECT_EARNINGS" then
+                    push $ AddVPA $ totalEarningPending
+                  else do
+                    let hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
+                    if (not hasTakenRide) && isJust profile.referralCode && itsBeenOneDay "TAKE_FIRST_REFERRAL_RIDE" 
+                      then push $ TakeFirstRide
+                      else pure unit
+                  else pure unit
               Nothing -> pure unit
             pure $ pure unit)
       ]
@@ -1492,7 +1494,7 @@ settingSideBarView push state =
     , width MATCH_PARENT
     , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED && not (state.props.isPopUp /= NoPopUp) then DISABLE else DISABLE_DESCENDANT
     ]
-    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config}) ]
+    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config, isPayoutEnabled = maybe false (\(GetProfileRes resp) -> fromMaybe false resp.isPayoutEnabled) state.data.profile}) ]
 
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
@@ -3973,10 +3975,12 @@ pickupLocationView push state =
   let applyReferral = not $ state.props.isReferred
       referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
       youGet = fromMaybe 0.0 referralPayoutConfig.youGet
-      {isPayoutEnabled, totalEarningPending} = 
+      theyGet = fromMaybe 0.0 referralPayoutConfig.theyGet
+      hasTakenRide = (getValueFromCache (show REFERRAL_STATUS) (JB.getKeyInSharedPrefKeys)) == "HAS_TAKEN_RIDE"
+      {isPayoutEnabled, totalEarningPending, takeFirstRide} = 
           case state.data.profile of 
-            Nothing -> {isPayoutEnabled : false, totalEarningPending: 0.0 }
-            Just (GetProfileRes profile) -> {isPayoutEnabled : fromMaybe false profile.isPayoutEnabled, totalEarningPending: (fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid)}
+            Nothing -> {takeFirstRide:false,  isPayoutEnabled : false, totalEarningPending: 0.0 }
+            Just (GetProfileRes profile) -> {takeFirstRide: (not hasTakenRide) && isJust profile.referralCode , isPayoutEnabled : fromMaybe false profile.isPayoutEnabled, totalEarningPending: (fromMaybe 0.0 profile.referralEarnings) + (fromMaybe 0.0 profile.referredByEarnings) - (fromMaybe 0.0 profile.referralAmountPaid)}
       showEarnNow = if isPayoutEnabled then youGet > 0.0 && totalEarningPending == 0.0 else false 
       showCollect = if isPayoutEnabled then totalEarningPending > 0.0 else false
   in 
@@ -4062,14 +4066,14 @@ pickupLocationView push state =
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity RIGHT
-              , visibility $ boolToVisibility state.data.config.feature.enableReferral
+              , visibility $ boolToVisibility (state.data.config.feature.enableReferral)
               ][ linearLayout
                  [ width WRAP_CONTENT
                  , height WRAP_CONTENT
                  , cornerRadius 24.0
                  , background Color.blue600
                  , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
-                 , visibility $ boolToVisibility $ applyReferral || not isPayoutEnabled
+                 , visibility $ boolToVisibility $ (applyReferral || not isPayoutEnabled) && not hasTakenRide
                  ][ textView $
                     [ text $ if applyReferral then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
                     , color Color.blue900
@@ -4082,8 +4086,8 @@ pickupLocationView push state =
                     , height WRAP_CONTENT
                     , cornerRadius 24.0
                     , background if showCollect then Color.blue900 else Color.blue600
-                    , onClick push $ const ReferralPayout
-                    , visibility $ boolToVisibility $ (not applyReferral) && (showEarnNow ||  showCollect)
+                    , onClick push $ const $ if showCollect then ReferralPayout else if takeFirstRide then WhereToClick else ReferralPayout
+                    , visibility $ boolToVisibility $ (isPayoutEnabled) && (not applyReferral) && (showEarnNow ||  showCollect) 
                     , padding $ Padding 10 8 10 8
                     , gravity CENTER
                     ][ imageView
@@ -4093,7 +4097,7 @@ pickupLocationView push state =
                         , padding $ PaddingRight 4
                         ]
                       , textView $
-                        [ text $ getString $ if showCollect then COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
+                        [ text $ if showCollect then getString $ COLLECT_ (show $ fromMaybe 0 $ fromNumber totalEarningPending) else if takeFirstRide then getString $ TAKE_A_RIDE__CLAIM_50 (show $ fromMaybe 0 $ fromNumber theyGet) else getString $ INVITE_AND_EARN_ (show $ fromMaybe 0 $ fromNumber youGet)
                         , color if showCollect then Color.white900 else Color.blue900
                         , gravity CENTER
                         ] <> FontStyle.body4 TypoGraphy

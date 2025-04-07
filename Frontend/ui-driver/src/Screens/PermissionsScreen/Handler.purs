@@ -35,6 +35,7 @@ permissions = do
         GoBack -> App.BackT $ pure App.GoBack
         GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN
         LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_FROM_PERMISSIONS_SCREEN
+        FcmNotification notificationType notificationBody -> App.BackT $ App.BackPoint <$> pure (FCM_NOTIFICATION_PERMISSION notificationType notificationBody) 
         GoToRegisteration updatedState -> do
           modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ GO_TO_REGISTERATION_SCREEN updatedState)

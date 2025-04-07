@@ -838,7 +838,8 @@ data TicketConfigCSVRow = TicketConfigCSVRow
     cancellationType :: Text,
     cancellationTime :: Text,
     cancellationFee :: Text,
-    vendorSplitDetails :: Text
+    vendorSplitDetails :: Text,
+    businessBookingClosingTime :: Text
   }
   deriving (Show)
 
@@ -891,6 +892,7 @@ instance FromNamedRecord TicketConfigCSVRow where
       <*> r .: "cancellation_time"
       <*> r .: "cancellation_fee"
       <*> r .: "vendor_split_details"
+      <*> r .: "booking_closing_time"
 
 postMerchantTicketConfigUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTicketConfigReq -> Flow Common.UpsertTicketConfigResp
 postMerchantTicketConfigUpsert merchantShortId opCity request = do
@@ -1097,6 +1099,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
         _ -> do
           bhSlotTime :: TimeOfDay <- readCSVField idx row.businessHourSlotTime "Business hour slot time"
           return (Slot bhSlotTime, Id (show bhSlotTime <> separator <> ticketServiceId))
+      let bookingClosingTime :: Maybe TimeOfDay = readMaybeCSVField idx row.businessBookingClosingTime "Booking closing Time"
       let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, ..}
 
       --------------- Service Category ------------------------------------------------

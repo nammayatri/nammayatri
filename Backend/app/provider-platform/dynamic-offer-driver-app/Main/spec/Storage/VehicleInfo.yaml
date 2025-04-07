@@ -1,0 +1,22 @@
+imports:
+  VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
+
+VehicleInfo:
+  tableName: vehicle_info
+  fields:
+    rcId: Id VehicleRegistrationCertificate
+    questionId: Text
+    question: Text
+    answer: Text
+  constraints:
+    rcId: PrimaryKey
+    questionId: PrimaryKey
+  queries:
+    findAllByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
+    deleteAllByRcId:
+      kvFunction: deleteWithKV
+      where: rcId
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

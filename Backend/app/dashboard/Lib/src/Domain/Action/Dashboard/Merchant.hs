@@ -137,7 +137,8 @@ buildMerchant req = do
         website = Just req.website,
         authToken = Just encryptedAuthToken,
         enabled = Just True,
-        createdAt = now
+        createdAt = now,
+        requireAdminApprovalForFleetOnboarding = Just False
       }
 
 changeMerchantEnableState ::
@@ -219,5 +220,7 @@ buildPersonCreateReq req role = do
         verified = Nothing,
         receiveNotification = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing
       }

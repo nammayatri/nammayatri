@@ -86,6 +86,7 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    ltsRedis :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
@@ -162,7 +163,8 @@ data AppCfg = AppCfg
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic, FromDhall)
 
@@ -208,6 +210,7 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -259,7 +262,8 @@ data AppEnv = AppEnv
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
-    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic)
 
@@ -311,6 +315,7 @@ buildAppEnv cfg@AppCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
+  ltsHedisEnv <- connectHedis ltsRedis identity
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

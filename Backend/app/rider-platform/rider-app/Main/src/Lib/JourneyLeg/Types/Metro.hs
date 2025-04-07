@@ -9,6 +9,7 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RecentLocation as DRecentLocation
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -20,7 +21,8 @@ data MetroLegRequestSearchData = MetroLegRequestSearchData
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     city :: Context.City,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    recentLocationId :: Maybe (Id DRecentLocation.RecentLocation)
   }
 
 data MetroLegRequestUpdateData = MetroLegRequestUpdateData
@@ -74,5 +76,6 @@ data MetroLegRequestGetFareData = MetroLegRequestGetFareData
     endLocation :: LatLngV2,
     routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
-    merchantOpCity :: DMOC.MerchantOperatingCity
+    merchantOpCity :: DMOC.MerchantOperatingCity,
+    riderId :: Id DPerson.Person
   }

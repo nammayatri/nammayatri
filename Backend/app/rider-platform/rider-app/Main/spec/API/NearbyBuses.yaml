@@ -1,0 +1,51 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  Text: Data.Text
+  Id: Kernel.Types.Id
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  RideStatus: Domain.Types.RideStatus
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  Price: Kernel.Types.Price
+
+module: NearbyBuses
+
+types:
+  NearbyBus:
+      vehicleNumber: Maybe Text
+      routeCode: Text
+      currentLocation: LatLong
+      nextStop: Maybe Text
+      distance: Maybe Double
+      serviceType: Maybe Text
+      eta: Maybe UTCTime
+      capacity: Maybe Int
+      occupancy: Maybe Int
+
+  RecentRide:
+      fromStopCode: Text
+      toStopCode: Text
+      fromStopName: Text
+      toStopName: Text
+      fare: Price
+      routeCode: Maybe Text
+
+
+  NearbyBusesRequest:
+      userLat: Double
+      userLon: Double
+      platformType: PlatformType
+      requireRecentRide: Bool
+
+  NearbyBusesResponse:
+      nearbyBuses: [NearbyBus]
+      recentRides: [RecentRide]
+
+apis:
+  - POST:
+      endpoint: /nearbyBusBooking
+      auth: TokenAuth
+      request:
+        type: NearbyBusesRequest
+      response:
+        type: NearbyBusesResponse

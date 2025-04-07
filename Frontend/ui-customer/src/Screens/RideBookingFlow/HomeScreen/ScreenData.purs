@@ -114,6 +114,7 @@ initData = let
       , isBtnActive : false
       }
     , rideDistance : "--"
+    , actualEstimateDistnace : 0
     , rideDuration : "--"
     , newEstimatedDistance : Nothing
     , newEstimatedFare : Nothing
@@ -212,6 +213,7 @@ initData = let
     , requestorPartyRoles : Nothing
     , boostSearchEstimate : CV.config
     , cancellationRate : Nothing
+    , enquiryBannerStage : Just ST.QuestionStage
     },
     props: {
       rideRequestFlow : false
@@ -434,6 +436,7 @@ initData = let
     , showBoostSearch : false
     , busClicked : false
     , ticketServiceType : API.METRO
+    , enquiryBannerUndoTimer : Nothing
   }
 }
 
@@ -594,6 +597,7 @@ dummySettingBar = {
   , appConfig : getAppConfig appConfig
   , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
   , hasCompletedSafetySetup : false
+  , isPayoutEnabled : false
 }
 
 dummyAddress :: Address

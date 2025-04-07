@@ -5,14 +5,19 @@ import API.Types.UI.WMB
 import Data.List (sortBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import Domain.Types.Alert
+import Domain.Types.AlertRequest
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
+import Domain.Types.FleetBadge
+import Domain.Types.FleetBadgeAssociation
 import Domain.Types.FleetConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
+import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleRouteMapping
@@ -21,27 +26,31 @@ import Domain.Utils
 import Environment
 import qualified EulerHS.Prelude as EHS
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
+import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetBadge as QFB
+import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTS
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
-import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
@@ -113,8 +122,8 @@ buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCo
       isFirstBatchTrip = isFirstBatchTrip
     }
 
-assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> LatLong -> Flow TripTransaction
-assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber destinationStopInfo currentLocation = do
+assignAndStartTripTransaction :: FleetConfig -> Id Merchant -> Id MerchantOperatingCity -> Id Person -> Route -> VehicleRouteMapping -> Text -> StopInfo -> StopInfo -> LatLong -> Flow TripTransaction
+assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber startStopInfo destinationStopInfo currentLocation = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey driverId TRIP_ASSIGNED <> tripTransactionKey driverId IN_PROGRESS)
     60
@@ -122,19 +131,20 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
         tripTransactionId <- generateGUID
         now <- getCurrentTime
         closestStop <- findClosestStop route.code currentLocation >>= fromMaybeM (StopNotFound)
-        vehicleRegistrationCertificate <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber False
+        vrc <- validateVehicleAssignment driverId vehicleNumber merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId
+        _ <- linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber vrc
         driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vehicleRegistrationCertificate (Just driver.firstName)
+        let tripTransaction = buildTripTransaction tripTransactionId destinationStopInfo.code now closestStop vrc (Just driver.firstName)
         -- TODO :: Handle Transaction Failure
         QTT.create tripTransaction
         assignTripTransaction tripTransaction route False currentLocation destinationStopInfo.point False
-        startTripTransaction tripTransaction route closestStop currentLocation destinationStopInfo.point True
+        startTripTransaction tripTransaction route closestStop startStopInfo currentLocation destinationStopInfo.point True
     )
     >>= \case
       Right tripTransaction -> return tripTransaction
       Left _ -> throwError (InternalError "Process for Trip Assignment & Start is Already Ongoing, Please try again!")
   where
-    buildTripTransaction tripTransactionId endStopCode now closestStop vehicleRegistrationCertificate firstName =
+    buildTripTransaction tripTransactionId endStopCode now closestStop vrc firstName =
       TripTransaction
         { allowEndingMidRoute = fleetConfig.allowEndingMidRoute,
           deviationCount = 0,
@@ -142,6 +152,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           endLocation = Nothing,
           fleetOwnerId = vehicleRouteMapping.fleetOwnerId,
           id = tripTransactionId,
+          fleetBadgeId = Nothing,
           isCurrentlyDeviated = False,
           routeCode = route.code,
           roundRouteCode = route.roundRouteCode,
@@ -149,7 +160,7 @@ assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId dri
           startLocation = (Just currentLocation),
           startedNearStopCode = (Just closestStop.stopCode),
           tripCode = (Just closestStop.tripCode),
-          vehicleServiceTierType = maybe BUS_NON_AC DVehVariant.castVariantToServiceTier vehicleRegistrationCertificate.vehicleVariant,
+          vehicleServiceTierType = maybe BUS_NON_AC DVehVariant.castVariantToServiceTier vrc.vehicleVariant,
           merchantId = merchantId,
           merchantOperatingCityId = merchantOperatingCityId,
           createdAt = now,
@@ -183,14 +194,15 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
               then do
                 whenJust tripTransaction.roundRouteCode $ \roundRouteCode -> do
                   route <- QR.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound roundRouteCode)
-                  (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
+                  (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
                   vehicleNumberHash <- getDbHash tripTransaction.vehicleNumber
                   vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash roundRouteCode >>= fromMaybeM (VehicleRouteMappingNotFound tripTransaction.vehicleNumber roundRouteCode)
                   when (not vehicleRouteMapping.blocked) $ do
-                    void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber destinationStopInfo currentLocation
+                    void $ assignAndStartTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber sourceStopInfo destinationStopInfo currentLocation
               else do
                 QDI.updateOnRide False tripTransaction.driverId
                 unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
+                unlinkFleetBadgeFromDriver tripTransaction.driverId
     )
     >>= \case
       Right _ -> return ()
@@ -226,6 +238,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                           Nothing -> do
                             QDI.updateOnRide False tripTransaction.driverId
                             unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
+                            unlinkFleetBadgeFromDriver tripTransaction.driverId
                     IN_PROGRESS -> endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource True
                     _ -> pure ()
                 else do
@@ -268,8 +281,8 @@ assignTripTransaction tripTransaction route isFirstBatchTrip currentLocation des
       Right _ -> return ()
       Left _ -> throwError (InternalError "Process for Trip Assignment is Already Ongoing, Please try again!")
 
-startTripTransaction :: TripTransaction -> Route -> StopData -> LatLong -> LatLong -> Bool -> Flow TripTransaction
-startTripTransaction tripTransaction route closestStop currentLocation destination notify = do
+startTripTransaction :: TripTransaction -> Route -> StopData -> StopInfo -> LatLong -> LatLong -> Bool -> Flow TripTransaction
+startTripTransaction tripTransaction route closestStop sourceStopInfo currentLocation destination notify = do
   Hedis.whenWithLockRedisAndReturnValue
     (tripTransactionKey tripTransaction.driverId IN_PROGRESS)
     60
@@ -283,20 +296,31 @@ startTripTransaction tripTransaction route closestStop currentLocation destinati
         QTT.updateOnStart tripStartTransaction.tripCode tripStartTransaction.startedNearStopCode tripStartTransaction.startLocation tripStartTransaction.status tripStartTransaction.tripStartTime tripStartTransaction.id
         when notify $ do
           TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+        fork "Check Wrong Start Stop" $ checkWrongStartStop tripStartTransaction
         return tripStartTransaction
     )
     >>= \case
       Right tripStartTransaction -> return tripStartTransaction
       Left _ -> throwError (InternalError "Process for Trip Start is Already Ongoing, Please try again!")
+  where
+    checkWrongStartStop :: TripTransaction -> Flow ()
+    checkWrongStartStop tripStartTransaction = do
+      unless (Just sourceStopInfo.code == tripStartTransaction.startedNearStopCode) $ do
+        driver <- QP.findById tripStartTransaction.driverId >>= fromMaybeM (PersonNotFound tripStartTransaction.driverId.getId)
+        mobileNumber <- mapM decrypt driver.mobileNumber
+        let requestData =
+              WrongStartStop
+                WrongStartStopData
+                  { driverMobileNumber = mobileNumber,
+                    driverName = fromMaybe driver.firstName tripStartTransaction.driverName,
+                    location = currentLocation,
+                    stopName = sourceStopInfo.name,
+                    distance = Just $ distanceBetweenInMeters currentLocation sourceStopInfo.point
+                  }
+        void $ triggerAlertRequest tripStartTransaction.driverId tripStartTransaction.fleetOwnerId.getId "Trip started from wrong start stop!" "Your trip has started from wrong start stop!" requestData True tripTransaction
 
--- TODO :: Unlink Fleet Badge Driver to be Figured Out, If Required
-linkFleetBadgeToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow ()
-linkFleetBadgeToDriver driverId _merchantId _merchantOperatingCityId fleetOwnerId badgeName = do
-  void $ QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName >>= fromMaybeM (FleetBadgeNotFound badgeName)
-  QP.updatePersonName driverId badgeName
-
-linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> FleetConfig -> Text -> Text -> Bool -> Flow VehicleRegistrationCertificate
-linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig fleetOwnerId vehicleNumber isForceAssign = do
+validateVehicleAssignment :: Id Person -> Text -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow (VehicleRegistrationCertificate)
+validateVehicleAssignment driverId vehicleNumber _ _ fleetOwnerId = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
@@ -304,45 +328,115 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId fleetConfig flee
     >>= \case
       Nothing -> pure ()
       Just tripTransaction ->
-        if tripTransaction.vehicleNumber /= vehicleNumber && isForceAssign
-          then forceCancelAllActiveTripTransaction driverId
-          else unless (tripTransaction.vehicleNumber == vehicleNumber) $ throwError (AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber)
+        if tripTransaction.vehicleNumber /= vehicleNumber
+          then throwError $ AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber
+          else pure ()
   QV.findByRegistrationNo vehicleNumber >>= \case
     Just vehicle -> do
-      when (vehicle.driverId /= driverId && isForceAssign == False) $ throwError (VehicleLinkedToAnotherDriver vehicleNumber)
-      if vehicle.driverId /= driverId && isForceAssign
-        then forceCancelAllActiveTripTransaction vehicle.driverId
-        else pure ()
+      when (vehicle.driverId /= driverId) $ throwError (VehicleLinkedToAnotherDriver vehicleNumber)
+      pure ()
     Nothing -> pure ()
-  tryLinkinRC vehicleRC
   return vehicleRC
+
+validateBadgeAssignment :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow (FleetBadge)
+validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId badgeName = do
+  findNextActiveTripTransaction driverId
+    >>= \case
+      Nothing -> pure ()
+      Just tripTransaction ->
+        whenJust tripTransaction.driverName $ \driverName ->
+          when (driverName /= badgeName) $ throwError (AlreadyOnActiveTripWithAnotherBadge driverName)
+  badge <-
+    QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName
+      >>= \case
+        Just a -> return a
+        Nothing -> createNewBadge
+  driverBadge <- QFBA.findActiveFleetBadgeAssociationById badge.id
+  case driverBadge of
+    Just dBadge -> when (dBadge.driverId.getId /= driverId.getId) $ throwError (FleetBadgeAlreadyLinked dBadge.driverId.getId)
+    Nothing -> pure ()
+  return badge
   where
-    forceCancelAllActiveTripTransaction vehicleDriverId = do
-      tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus (Just 10) vehicleDriverId
-      if null tripTransactions
-        then pure ()
-        else do
-          currentLocation <- getDriverCurrentLocation vehicleDriverId
-          _ <- mapM (\tripTransaction -> cancelTripTransaction fleetConfig tripTransaction currentLocation ForceDashboard) tripTransactions
-          logDebug $ "Force Cancelled " <> show (length tripTransactions) <> " active trips for driver " <> show vehicleDriverId
-          forceCancelAllActiveTripTransaction vehicleDriverId
-    tryLinkinRC vehicleRC = do
+    createNewBadge = do
+      now <- getCurrentTime
+      badgeId <- generateGUID
+      let newBadge = buildNewBadge badgeId now
+      QFB.create newBadge
+      pure newBadge
+
+    buildNewBadge badgeId now =
+      FleetBadge
+        { badgeName = badgeName,
+          createdAt = now,
+          fleetOwnerId = Id fleetOwnerId,
+          id = Id badgeId,
+          merchantId = merchantId,
+          merchantOperatingCityId = merchantOperatingCityId,
+          updatedAt = now
+        }
+
+-- TODO :: Unlink Fleet Badge Driver to be Figured Out, If Required
+linkFleetBadgeToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> FleetBadge -> Flow ()
+linkFleetBadgeToDriver driverId _ _ fleetOwnerId badge = do
+  createBadgeAssociation -- Upsert the badge association
+  QP.updatePersonName driverId badge.badgeName
+  where
+    createBadgeAssociation = do
+      now <- getCurrentTime
+      fleetBadgeId <- generateGUID
+      let fleetBadgeAssoc = buildBadgeAssociation fleetBadgeId now
+      QFBA.createBadgeAssociationIfNotExists fleetBadgeAssoc
+
+    buildBadgeAssociation fleetBadgeId now =
+      FleetBadgeAssociation
+        { associatedOn = Just now,
+          associatedTill = convertTextToUTC (Just "2099-12-12"),
+          badgeId = badge.id,
+          createdAt = now,
+          driverId = driverId,
+          fleetOwnerId = fleetOwnerId,
+          id = Id fleetBadgeId,
+          isActive = True,
+          updatedAt = now
+        }
+
+linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> FleetConfig -> Text -> Text -> VehicleRegistrationCertificate -> Flow ()
+linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumber vehicleRC = do
+  tryLinkinRC
+  where
+    tryLinkinRC = do
       now <- getCurrentTime
       mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id driverId
       case mRCAssociation of
         Just assoc -> do
           when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
-            createRCAssociation vehicleRC
-        Nothing -> createRCAssociation vehicleRC
+            createRCAssociation
+        Nothing -> createRCAssociation
       let rcStatusReq =
             DomainRC.RCStatusReq
               { rcNo = vehicleNumber,
                 isActivate = True
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
-    createRCAssociation vehicleRC = do
+    createRCAssociation = do
       driverRCAssoc <- makeRCAssociation merchantId merchantOperatingCityId driverId vehicleRC.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
+
+-- forceCancelAllActiveTripTransaction vehicleDriverId = do
+--   tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus (Just 10) vehicleDriverId
+--   if null tripTransactions
+--     then pure ()
+--     else do
+--       currentLocation <- getDriverCurrentLocation vehicleDriverId
+--       _ <- mapM (\tripTransaction -> cancelTripTransaction fleetConfig tripTransaction currentLocation ForceDashboard) tripTransactions
+--       logDebug $ "Force Cancelled " <> show (length tripTransactions) <> " active trips for driver " <> show vehicleDriverId
+--       forceCancelAllActiveTripTransaction vehicleDriverId
+
+unlinkFleetBadgeFromDriver :: Id Person -> Flow ()
+unlinkFleetBadgeFromDriver driverId = do
+  QFBA.endAssociationForDriver driverId
+
+-- QP.updatePersonName driverId "Driver"
 
 unlinkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Flow ()
 unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber = do
@@ -406,3 +500,51 @@ tripTransactionKey driverId = \case
   COMPLETED -> "WMB:TCO:" <> driverId.getId
   CANCELLED -> "WMB:TCA:" <> driverId.getId
   PAUSED -> "WMB:TP:" <> driverId.getId
+
+triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id AlertRequest)
+triggerAlertRequest driverId requesteeId title body requestData isViolated tripTransaction = do
+  let alertRequestType = castAlertRequestDataToRequestType requestData
+  if isViolated
+    then do
+      alertRequestId <- generateGUID
+      now <- getCurrentTime
+      let alertRequest =
+            AlertRequest
+              { id = alertRequestId,
+                requestorId = driverId,
+                requestorType = DriverGenerated,
+                requesteeId = Id requesteeId,
+                requesteeType = FleetOwner,
+                requestType = castAlertRequestDataToRequestType requestData,
+                reason = Nothing,
+                status = AWAITING_APPROVAL,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = tripTransaction.merchantId,
+                merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
+                ..
+              }
+      QAR.create alertRequest
+      tripAlertRequestId <- generateGUID
+      QTAR.create $
+        TripAlertRequest
+          { id = tripAlertRequestId,
+            alertRequestId = alertRequestId,
+            tripTransactionId = tripTransaction.id,
+            driverId = driverId,
+            fleetOwnerId = Id requesteeId,
+            fleetBadgeId = tripTransaction.fleetBadgeId,
+            routeCode = tripTransaction.routeCode,
+            alertRequestType = alertRequestType,
+            isViolated = isViolated,
+            createdAt = now,
+            updatedAt = now,
+            merchantId = tripTransaction.merchantId,
+            merchantOperatingCityId = tripTransaction.merchantOperatingCityId
+          }
+      TN.notifyWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId requestData
+      pure alertRequest.id
+    else do
+      tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)
+      QTAR.updateIsViolated False tripAlertRequest.id
+      pure tripAlertRequest.alertRequestId

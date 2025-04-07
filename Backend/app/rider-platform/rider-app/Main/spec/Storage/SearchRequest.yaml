@@ -29,6 +29,7 @@ imports:
   DriverIdentifier: Domain.Types.RefereeLink
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  RecentLocation: Domain.Types.RecentLocation
 
 SearchRequest:
   tableName: search_request
@@ -37,6 +38,7 @@ SearchRequest:
 
   fields:
     id: Id SearchRequest
+    recentLocationId: Maybe (Id RecentLocation)
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
@@ -80,7 +82,11 @@ SearchRequest:
     journeyLegInfo: Maybe JourneySearchData
     driverIdentifier: Maybe DriverIdentifier
     hasMultimodalSearch: Maybe Bool
+    routeCode: Maybe Text
+    originStopCode: Maybe Text
+    destinationStopCode: Maybe Text
     configInExperimentVersions: "[ConfigVersionMap]"
+
 
   default:
     hasMultimodalSearch: "false"
@@ -90,7 +96,7 @@ SearchRequest:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
     RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity, Ambulance, Delivery"
+      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport"
       derive: "HttpInstance"
 
   beamType:

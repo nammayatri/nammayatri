@@ -50,6 +50,17 @@ let hcfg =
       , connectReadOnly = True
       }
 
+let ltsRedis =
+      { connectHost = "localhost"
+      , connectPort = 6379
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -280,6 +291,8 @@ let riderClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
+
 let dashboardClickhouseCfg = riderClickhouseCfg
 
 in  { esqDBCfg
@@ -289,6 +302,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = False
+    , ltsRedis
     , cutOffHedisCluster = False
     , cutOffNonCriticalHedisCluster = True
     , smsCfg = smsConfig
@@ -370,4 +384,5 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , nearByDriverAPIRateLimitOptions
     }

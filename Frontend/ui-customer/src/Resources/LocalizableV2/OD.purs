@@ -1787,4 +1787,5 @@ getOd = Keymap {
     , youve_earned_50_for_taking_your_first_ride: \a ->"ଆପଣ ଆପଣଙ୍କର ପ୍ରଥମ ଯାତ୍ରା ନେଇଥିବାରେ ₹" <> a <> " ଅର୍ଜନ କରିଛନ୍ତି!"
     , get_50_referral_benefit_for_your_first_ride: \a ->"ଆପଣଙ୍କ ପ୍ରଥମ ଯାତ୍ରା ପାଇଁ ₹" <> a <> " ପରାମର୍ଶ ଲାଭ ପାଆନ୍ତୁ!"
     , take_a_ride_now: "ଏବେ ଏକ ଯାତ୍ରା କରନ୍ତୁ"
+    , take_a_ride__claim_50: \a ->  "ଏକ ଯାତ୍ରା କରନ୍ତୁ ଏବଂ ₹" <> a <> " ପାଆନ୍ତୁ"
 }

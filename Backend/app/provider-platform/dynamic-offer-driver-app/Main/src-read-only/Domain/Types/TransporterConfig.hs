@@ -45,6 +45,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     badDebtTimeThreshold :: Kernel.Prelude.Int,
     bankErrorExpiry :: Kernel.Prelude.NominalDiffTime,
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
+    bulkWaiveOffLimit :: Kernel.Prelude.Int,
     cacheOfferListByDriverId :: Kernel.Prelude.Bool,
     cachedDevicesOSForSearchRequest :: [Kernel.Types.Version.DeviceType],
     canAddCancellationFee :: Kernel.Prelude.Bool,
@@ -129,6 +130,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     freeTrialDays :: Kernel.Prelude.Int,
+    generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
@@ -143,6 +146,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mandateExecutionRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateNotificationRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateValidity :: Kernel.Prelude.Int,
+    maxAllowedDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxPayoutReferralForADay :: Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,
@@ -222,7 +226,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   }
   deriving (Generic, Show, Eq)
 
-data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -244,7 +248,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     taxi :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,
@@ -265,7 +269,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     taxi :: Kernel.Types.Common.Kilometers,
     taxiplus :: Kernel.Types.Common.Kilometers
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateThresholdDaily :: Kernel.Prelude.Int,
@@ -279,10 +283,10 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
     weeklyMinRidesforNudging :: Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data DemandHotspotsConfig = DemandHotspotsConfig
   { analysisDurationMinutes :: Kernel.Prelude.Int,
@@ -291,12 +295,12 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     precisionOfGeohash :: Kernel.Prelude.Int,
     resultDurationMinutes :: Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
 
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
-type TransporterConfig = TransporterConfigD 'Safe
+type TransporterConfig = TransporterConfigD ('Safe)
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 

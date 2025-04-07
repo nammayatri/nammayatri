@@ -12,16 +12,25 @@ imports:
   ServiceTierType : Domain.Types.ServiceTierType
   RentalsConfig: Domain.Types.RentalsIntercityCache
   IntercitySearchLocation: Domain.Types.RentalsIntercityCache
+  VehicleVariant: Domain.Types.VehicleVariant
 
 RiderConfig:
+  types:
+    RingBucketCfg:
+      derive: "Eq"
+      radiusInMeters: Meters
+      vehVariant: VehicleVariant
+      size: Int
+
   tableName: rider_config
 
-  derives: "Show, Generic, ToJSON, FromJSON,Eq"
+  derives: "Show, Generic, ToJSON, FromJSON, Eq"
 
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     enableLocalPoliceSupport: Bool
     metroBookingAllowed: Maybe Bool
+    suburbanBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int
@@ -81,6 +90,13 @@ RiderConfig:
     intercitySearchLocations : "Maybe [IntercitySearchLocation]"
     payoutReferralThresholdPerDay: Int
     payoutReferralThresholdPerMonth: Int
+    variantListForNearByReq: "Maybe [VehicleVariant]"
+    nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
+    nearbyDriverSearchRadius: Maybe Double
+    isDeviceIdCheckDisabled: Maybe Bool
+    enableBusFiltering: Maybe Bool
+    fareCacheRentalsConfig: "Maybe [RentalsConfig]"
+    fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -107,6 +123,10 @@ RiderConfig:
     isFirstReferredRideEnabled: Maybe Bool
     payoutReferralThresholdPerDay: Maybe Int
     payoutReferralThresholdPerMonth: Maybe Int
+    variantListForNearByReq: Maybe [Text]
+    nearByDriverRingBucketCfg: Maybe Value
+    fareCacheRentalsConfig : Maybe Value
+    fareCacheInterCitySearchLocations : Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -140,6 +160,10 @@ RiderConfig:
     isFirstReferredRideEnabled: fromMaybe False isFirstReferredRideEnabled|E
     payoutReferralThresholdPerDay: fromMaybe 5 payoutReferralThresholdPerDay|E
     payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -166,6 +190,10 @@ RiderConfig:
     isFirstReferredRideEnabled: Just isFirstReferredRideEnabled|E
     payoutReferralThresholdPerDay: Just payoutReferralThresholdPerDay|E
     payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -220,6 +248,10 @@ RiderConfig:
     excludedVehicleVariants: text []
     rentalsConfig: text []
     intercitySearchLocations : text []
+    variantListForNearByReq: text []
+    nearByDriverRingBucketCfg: "json"
+    fareCacheRentalsConfig : "json"
+    fareCacheInterCitySearchLocations : "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

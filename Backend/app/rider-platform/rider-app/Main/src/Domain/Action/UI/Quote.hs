@@ -24,6 +24,8 @@ module Domain.Action.UI.Quote
     mkQuoteBreakupAPIEntity,
     QuoteAPIEntity (..),
     QuoteBreakupAPIEntity (..),
+    JourneyData (..),
+    getJourneys,
   )
 where
 
@@ -277,7 +279,7 @@ getQuotes searchRequestId mbAllowMultiple = do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
     whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
-  journeyData <- getJourneys searchRequest
+  journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
@@ -381,9 +383,9 @@ sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare.amount)
   sortBy sortFunc resultList
 
-getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m (Maybe [JourneyData])
-getJourneys searchRequest = do
-  case searchRequest.hasMultimodalSearch of
+getJourneys :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> Maybe Bool -> m (Maybe [JourneyData])
+getJourneys searchRequest hasMultimodalSearch = do
+  case hasMultimodalSearch of
     Just True -> do
       allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
       journeyData <-

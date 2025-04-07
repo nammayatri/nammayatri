@@ -8,3 +8,13 @@ ALTER TABLE atlas_app.business_hour ADD COLUMN merchant_operating_city_id charac
 ALTER TABLE atlas_app.business_hour ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.business_hour ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.business_hour ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.business_hour ADD COLUMN booking_closing_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.business_hour ALTER COLUMN booking_closing_time TYPE time without time zone;

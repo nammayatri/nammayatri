@@ -4,10 +4,12 @@ import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
 import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
+import qualified Domain.Types.IntegratedBPPConfig as DIBPC
 import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -45,7 +47,7 @@ data SearchRes = SearchRes
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -101,7 +103,21 @@ data OneWaySearchReq = OneWaySearchReq
     sessionToken :: Maybe Text,
     placeNameSource :: Maybe Text,
     driverIdentifier :: Maybe DRL.DriverIdentifier,
-    isMeterRideSearch :: Maybe Bool
+    isMeterRideSearch :: Maybe Bool,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    platformType :: Maybe DIBPC.PlatformType
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PublicTransportSearchReq = PublicTransportSearchReq
+  { origin :: SearchReqLocation,
+    destination :: Maybe SearchReqLocation,
+    originStopCode :: Text,
+    destinationStopCode :: Text,
+    startTime :: Maybe UTCTime,
+    routeCode :: Text,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -116,7 +132,8 @@ data RentalSearchReq = RentalSearchReq
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
-    placeNameSource :: Maybe Text
+    placeNameSource :: Maybe Text,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -133,7 +150,9 @@ data InterCitySearchReq = InterCitySearchReq
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
-    placeNameSource :: Maybe Text
+    placeNameSource :: Maybe Text,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -160,7 +179,12 @@ data SearchDetails = SearchDetails
     fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,
-    driverIdentifier_ :: Maybe DRL.DriverIdentifier
+    driverIdentifier_ :: Maybe DRL.DriverIdentifier,
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    routeCode :: Maybe Text,
+    destinationStopCode :: Maybe Text,
+    originStopCode :: Maybe Text,
+    platformType :: Maybe DIBPC.PlatformType
   }
   deriving (Generic, Show)
 

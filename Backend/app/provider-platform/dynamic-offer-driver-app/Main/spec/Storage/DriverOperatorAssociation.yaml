@@ -24,6 +24,10 @@ DriverOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [driverId, isActive]
+    findByDriverIdAndOperatorId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, operatorId, isActive]
 
   sqlType:
     id: text

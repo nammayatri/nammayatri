@@ -192,8 +192,8 @@ triggerOTPBT payload = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-            void $ lift $ lift $ EHU.showToast $ (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else void $ lift $ lift $ EHU.showToast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            void $ lift $ lift $ liftFlow $ EHU.showToast $ (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ liftFlow $ EHU.showToast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         void $ lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
@@ -231,8 +231,8 @@ resendOTPBT token = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
-            void $ lift $ lift $ EHU.showToast  (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            void $ lift $ lift $ liftFlow $ EHU.showToast  (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ liftFlow $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 
@@ -247,14 +247,14 @@ verifyTokenBT payload token = do
         let errResp = errorPayload.response
         let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
-            void $ lift $ lift $ EHU.showToast  (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
+            void $ lift $ lift $ liftFlow $ EHU.showToast  (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}})
                 void $ lift $ lift $ EHU.toggleLoader false
-                void $ lift $ lift $ EHU.showToast  "INVALID_AUTH_DATA"
+                void $ lift $ lift $ liftFlow $ EHU.showToast  "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-                void $ lift $ lift $ EHU.showToast  (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
-            else void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                void $ lift $ lift $ liftFlow $ EHU.showToast  (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else void $ lift $ lift $ liftFlow $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 -- verifyTokenBT :: VerifyTokenReq -> String -> FlowBT String VerifyTokenResp
@@ -339,7 +339,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     withAPIResultBT (EP.placeDetails id) identity errorHandler (lift $ lift $ callAPI headers (PlaceDetailsReq id))
     where
     errorHandler errorPayload  = do
-        void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+        void $ lift $ lift $ liftFlow $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         _ <- lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
@@ -370,7 +370,7 @@ rideSearchBT payload = do
                             400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING
                             400, _, _ -> codeMessage
                             _,_,_ -> getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-            void $ lift $ lift $ EHU.showToast  message
+            void $ lift $ lift $ liftFlow $ EHU.showToast  message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             void $ lift $ lift $ EHU.toggleLoader false
@@ -491,10 +491,10 @@ selectEstimateBT payload estimateId = do
                 codeMessage = decodeError errResp.errorMessage "errorCode"
                 userMessage = decodeError errResp.errorMessage "errorMessage"
             case errorPayload.code, codeMessage, userMessage of
-                400, "SEARCH_REQUEST_EXPIRED", _ -> void $ lift $ lift $ EHU.showToast  (getString ESTIMATES_EXPIRY_ERROR)
-                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> void $ lift $ lift $ EHU.showToast  (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
-                400, _, _ -> void $ lift $ lift $ EHU.showToast  codeMessage
-                _, _, _ -> void $ lift $ lift $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                400, "SEARCH_REQUEST_EXPIRED", _ -> void $ lift $ lift $ liftFlow $ EHU.showToast  (getString ESTIMATES_EXPIRY_ERROR)
+                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> void $ lift $ lift $ liftFlow $ EHU.showToast  (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
+                400, _, _ -> void $ lift $ lift $ liftFlow $ EHU.showToast  codeMessage
+                _, _, _ -> void $ lift $ lift $ liftFlow $ EHU.showToast  (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
@@ -1123,8 +1123,8 @@ bookTicketsBT payload placeId = do
             codeMessage = decodeError errResp.errorMessage "errorCode"
             userMessage = decodeError errResp.errorMessage "errorMessage"
         case errorPayload.code, codeMessage, userMessage of
-            400, "INVALID_REQUEST", errMsg -> void $ lift $ lift $ EHU.showToast errMsg
-            _, _, errMsg -> void $ lift $ lift $ EHU.showToast errMsg
+            400, "INVALID_REQUEST", errMsg -> void $ lift $ lift $ liftFlow $ EHU.showToast errMsg
+            _, _, errMsg -> void $ lift $ lift $ liftFlow $ EHU.showToast errMsg
         BackT $ pure GoBack
 
 mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
@@ -1677,7 +1677,6 @@ confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   where
     unwrapResponse x = x
 
-
 ---------------------------------------- confirmMetroQuoteV2 ---------------------------------------------
 verifyVpa :: String -> Flow GlobalState (Either ErrorResponse VerifyVPAResp)
 verifyVpa vpa = do
@@ -1698,4 +1697,16 @@ getPayoutHistory vpa = do
   headers <- getHeaders "" false
   withAPIResult (EP.payoutHistory "") unwrapResponse $ callAPI headers (PayoutHistoryReq "")
   where
+    unwrapResponse x = x
+
+---------------------------------------- deletePerson ---------------------------------------------
+deletePerson :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+deletePerson reason = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deletePerson "") unwrapResponse $ callAPI headers $ makeReq reason
+  where
+    makeReq :: String -> DeletePersonReq
+    makeReq reason = DeletePersonReq {
+      reasonToDelete : reason
+    }
     unwrapResponse x = x

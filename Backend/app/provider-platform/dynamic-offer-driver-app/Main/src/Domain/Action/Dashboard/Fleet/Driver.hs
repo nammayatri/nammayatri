@@ -70,9 +70,11 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
-import qualified Domain.Types.ApprovalRequest as DTR
+import qualified Domain.Types.Alert as DTA
+import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverLocation as DDL
+import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
@@ -115,13 +117,14 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
-import qualified Storage.Queries.ApprovalRequest as QDR
+import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.FleetBadge as QFB
+import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
@@ -132,6 +135,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
+import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -187,47 +191,44 @@ getDriverFleetGetDriverRequests ::
   Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
-  Maybe Common.RequestStatus ->
+  Maybe DTA.AlertRequestType ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Flow Common.DriverRequestResp
-getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbStatus mbLimit mbOffset = do
+getDriverFleetGetDriverRequests merchantShortId opCity fleetOwnerId mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let status_ = case mbStatus of
-        Nothing -> Nothing
-        Just status -> Just $ castReqStatus status
-  driverRequests <- B.runInReplica $ QDR.findDriverRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo status_ mbLimit mbOffset
-  let driverRequestList = map buildDriverRequestListItem driverRequests
+  tripAlertRequests <-
+    case mbBadgeName of
+      Just badgeName -> do
+        mbBadge <- QFB.findOneBadgeByNameAndFleetOwnerId (Id fleetOwnerId) badgeName
+        case mbBadge of
+          Just badge -> B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId (Just badge.id) mbRouteCode mbLimit mbOffset
+          Nothing -> pure []
+      Nothing -> B.runInReplica $ QTAR.findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mbAlertRequestType mbDriverId Nothing mbRouteCode mbLimit mbOffset
+  driverRequestList <-
+    mapM
+      ( \tripAlertRequest -> do
+          alertRequest <- QAR.findByPrimaryKey tripAlertRequest.alertRequestId >>= fromMaybeM (DriverRequestNotFound tripAlertRequest.alertRequestId.getId)
+          buildDriverRequestListItem tripAlertRequest.tripTransactionId tripAlertRequest.driverId tripAlertRequest.routeCode tripAlertRequest.isViolated alertRequest
+      )
+      tripAlertRequests
   pure $ Common.DriverRequestResp driverRequestList
   where
-    buildDriverRequestListItem DTR.ApprovalRequest {..} =
-      Common.DriverRequestDetails
-        { raisedAt = createdAt,
-          requestData = castCommonReqData requestData,
-          status = castStatusToCommon (Just status),
-          approvalRequestId = id.getId,
-          ..
-        }
-
-castCommonReqData :: DTR.ApprovalRequestData -> Common.ApprovalRequestData
-castCommonReqData (DTR.EndRide DTR.EndRideData {..}) = Common.EndRide $ Common.EndRideData {Common.tripTransactionId = Id tripTransactionId, ..}
-castCommonReqData (DTR.OverSpeeding DTR.OverSpeedingData {..}) = Common.OverSpeeding $ Common.OverSpeedingData {..}
-
-castReqStatus :: Common.RequestStatus -> DTR.RequestStatus
-castReqStatus = \case
-  Common.AWAITING_APPROVAL -> DTR.AWAITING_APPROVAL
-  Common.ACCEPTED -> DTR.ACCEPTED
-  Common.REJECTED -> DTR.REJECTED
-  Common.REVOKED -> DTR.REVOKED
-
-castStatusToCommon :: Maybe DTR.RequestStatus -> Maybe Common.RequestStatus
-castStatusToCommon = \case
-  Just DTR.AWAITING_APPROVAL -> Just Common.AWAITING_APPROVAL
-  Just DTR.ACCEPTED -> Just Common.ACCEPTED
-  Just DTR.REJECTED -> Just Common.REJECTED
-  Just DTR.REVOKED -> Just Common.REVOKED
-  _ -> Nothing
+    buildDriverRequestListItem tripTransactionId driverId routeCode isViolated DTR.AlertRequest {..} = do
+      pure $
+        Common.DriverRequestDetails
+          { raisedAt = createdAt,
+            approvalRequestId = id.getId,
+            driverId = driverId.getId,
+            tripTransactionId = tripTransactionId.getId,
+            isViolated = isViolated,
+            status = Just status,
+            ..
+          }
 
 ---------------------------------------------------------------------
 postDriverFleetRespondDriverRequest ::
@@ -240,16 +241,16 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
   Redis.whenWithLockRedis (DWMB.driverRequestLockKey req.approvalRequestId) 60 $ do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-    driverRequest <- B.runInReplica $ QDR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
+    driverRequest <- B.runInReplica $ QAR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
     driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
-      DTR.AWAITING_APPROVAL -> QDR.updateStatusWithReason (castReqStatus req.status) (Just req.reason) (Id req.approvalRequestId)
+      DTA.AWAITING_APPROVAL -> QAR.updateStatusWithReason req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
     void $ case req.status of
-      Common.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTR.REJECTED, reason = Just req.reason}
-      Common.ACCEPTED -> do
+      DTA.REJECTED -> Notification.requestRejectionNotification merchantOpCityId notificationTitle (message driverRequest) driver driver.deviceToken driverRequest{status = DTA.REJECTED, reason = Just req.reason}
+      DTA.ACCEPTED -> do
         case driverRequest.requestData of
-          DTR.EndRide DTR.EndRideData {..} -> do
+          DTA.EndRide DTA.EndRideData {..} -> do
             fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
             tripTransaction <- QTT.findByTransactionId (Id tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId)
             void $ WMB.endOngoingTripTransaction fleetConfig tripTransaction (LatLong lat lon) DriverOnApproval False
@@ -262,12 +263,9 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
       cs $
         unwords
           [ "Sorry, your request for",
-            (show $ getRequestType req_.requestData) <> " has been rejected",
+            (show $ DTA.castAlertRequestDataToRequestType req_.requestData) <> " has been rejected",
             "Check the app for more details."
           ]
-    getRequestType = \case
-      DTR.EndRide _ -> DTR.EndRideApproval
-      DTR.OverSpeeding _ -> DTR.OverSpeedingAlert
 
 ---------------------------------------------------------------------
 postDriverFleetAddRCWithoutDriver ::
@@ -319,7 +317,7 @@ getDriverFleetGetAllVehicle merchantShortId _ fleetOwnerId mbLimit mbOffset mbRe
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
   mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
-  vehicleList <- RCQuery.findAllByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
+  vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerId mbRegNumberString mbRegNumberStringHash
   vehicles <- traverse convertToVehicleAPIEntity vehicleList
   return $ Common.ListVehicleRes vehicles
 
@@ -351,7 +349,7 @@ getDriverFleetGetAllDriver ::
 getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  mbMobileNumberHash <- mapM getDbHash mbMobileNumber
+  mbMobileNumberHash <- mapM getDbHash (mbSearchString <|> mbMobileNumber)
   logDebug $ "mobile number hash: " <> show mbMobileNumberHash <> " param-string: " <> show mbMobileNumber
   pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberHash mbName mbSearchString (Just True) Nothing
   fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
@@ -596,7 +594,7 @@ getDriverFleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbL
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
   merchant <- findMerchantByShortId _merchantShortId
-  listOfAllRc <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing
+  listOfAllRc <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   res <- forM listOfAllRc $ \rc -> do
     rcNo <- decrypt rc.certificateNumber
     (totalEarning, distanceTravelled, totalRides, cancelledRides, duration) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
@@ -633,8 +631,8 @@ calculateTimeDifference diffTime = Common.TotalDuration {..}
     minutes :: Int
     minutes = floor (remainingSeconds / 60)
 
-getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Flow [VehicleRegistrationCertificate]
-getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId mbSearchString = do
+getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [VehicleRegistrationCertificate]
+getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId mbSearchString statusAwareVehicleNo = do
   let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
       offset = fromIntegral $ fromMaybe 0 mbOffset
   case mbVehicleNo of
@@ -642,13 +640,13 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
     Nothing -> do
       case mbStatus of
         -- This Status is Associated with Driver and
-        Just Common.Active -> RCQuery.findAllActiveRCForFleet fleetOwnerId merchantId mbSearchString
-        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId mbSearchString
+        Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
+        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
-        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId mbSearchString
-        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId mbSearchString
-        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId mbSearchString
-        Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId mbSearchString
+        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId
 
 castFleetVehicleStatus :: Maybe Common.FleetVehicleStatus -> Documents.VerificationStatus
 castFleetVehicleStatus = \case
@@ -741,7 +739,7 @@ getDriverFleetDriverVehicleAssociation ::
 getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbCountryCode mbPhoneNo mbVehicleNo mbStatus mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   listOfAllDrivers <- getListOfDrivers mbCountryCode mbPhoneNo fleetOwnerId merchant.id Nothing mbLimit mbOffset Nothing Nothing Nothing
-  listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing
+  listOfAllVehicle <- getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset Nothing merchant.id Nothing Nothing
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
   let summary = Common.Summary {totalCount = 10000, count = length filteredItems}
@@ -789,7 +787,7 @@ getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe 
 getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString = do
   let limit = min 10 $ fromMaybe 5 mbLimit
       offset = fromMaybe 0 mbOffset
-  mobileNumberHash <- mapM getDbHash mbDriverPhNo
+  mobileNumberHash <- mapM getDbHash (mbSearchString <|> mbDriverPhNo)
   let mode = castDashboardDriverStatus <$> mbMode
   pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
   let (fleetDriverAssociation, _) = unzip pairs
@@ -909,10 +907,11 @@ getDriverFleetVehicleAssociation ::
   Maybe UTCTime ->
   Maybe Common.FleetVehicleStatus ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DrivertoVehicleAssociationRes
-getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString = do
+getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo = do
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString
+  listOfAllVehicle <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset mbStatus merchant.id mbSearchString mbStatusAwareVehicleNo
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems, summary = summary}
@@ -938,7 +937,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
             latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now ------- when there is not any active association then i will find out the latest association  (vehicle is in inActive state)
             case latestAssociation of
               Just latestAssoc -> getFleetDriverInfo latestAssoc.driverId False
-              Nothing -> pure (Nothing, Nothing, Nothing, Nothing, False, False, Nothing) -------- when vehicle is unAssigned
+              Nothing -> pure (Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing) -------- when vehicle is unAssigned
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
@@ -954,8 +953,8 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
               Common.DriveVehicleAssociationListItem
                 { vehicleNo = Just decryptedVehicleRC,
                   status = Just $ castDriverStatus driverStatus,
-                  isDriverOnRide = (Just isDriverOnRide),
-                  isDriverOnPickup = (Just isDriverOnPickup),
+                  isDriverOnRide = isDriverOnRide,
+                  isDriverOnPickup = isDriverOnPickup,
                   isDriverActive = isDriverActive,
                   earning = snd stats,
                   completedRides = fst stats,
@@ -966,24 +965,27 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
                 }
         pure ls
 
-getFleetDriverInfo :: Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Bool, Bool, Maybe Text)
+getFleetDriverInfo :: Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text)
 getFleetDriverInfo driverId isDriver = do
-  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverInfo' <- QDriverInfo.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
-  mode <-
-    if isDriver
-      then return (driverInfo'.mode)
-      else return Nothing
-  (isDriverOnPickup, isDriverOnRide, routeCode) <-
-    if driverInfo'.onRide
-      then do
-        case currentTripTransaction of
-          Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
-          Nothing -> return (False, False, Nothing)
-      else return (False, False, Nothing)
-  mobileNumber <- mapM decrypt driver.mobileNumber
-  return (Just driver.firstName, Just driver.id.getId, mobileNumber, mode, isDriverOnPickup, isDriverOnRide, routeCode)
+  mbDriver <- QPerson.findById driverId
+  mbDriverInfo' <- QDriverInfo.findById driverId
+  case (mbDriverInfo', mbDriver) of
+    (Just driverInfo', Just driver) -> do
+      currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
+      mode <-
+        if isDriver
+          then return (driverInfo'.mode)
+          else return Nothing
+      (isDriverOnPickup, isDriverOnRide, routeCode) <-
+        if driverInfo'.onRide
+          then do
+            case currentTripTransaction of
+              Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
+              Nothing -> return (False, False, Nothing)
+          else return (False, False, Nothing)
+      mobileNumber <- mapM decrypt driver.mobileNumber
+      return (Just driver.firstName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode)
+    (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
 ---------------------------------------------------------------------
 postDriverFleetVehicleDriverRcStatus ::
@@ -1207,7 +1209,14 @@ getDriverFleetGetAllBadge merchantShortId opCity fleetOwnerId limit offset mbSea
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (toInteger <$> limit) (toInteger <$> offset) merchantOpCity.id fleetOwnerId
-  return $ Common.FleetBadgeRes $ map (\badge -> Common.FleetBadgesAPIEntity badge.badgeName) fleetBadgesByOwner
+  fleetBadgeInfos <-
+    mapM
+      ( \badge -> do
+          driverBadgeAssociation <- QFBA.findActiveFleetBadgeAssociationById badge.id
+          pure $ Common.FleetBadgesAPIEntity badge.badgeName (isJust driverBadgeAssociation)
+      )
+      fleetBadgesByOwner
+  return $ Common.FleetBadgeRes {..}
 
 ---------------------------------------------------------------------
 getDriverFleetRoutes ::
@@ -1332,18 +1341,33 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
-  vehicleRC <- WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber (fromMaybe False req.isForceAssign)
-  void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName
-  createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC req.trips
-  pure Success
+  mbBadge <-
+    case req.badgeName of
+      Just badgeName -> do
+        badge <- WMB.validateBadgeAssignment (cast req.driverId) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badgeName
+        WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId badge
+        return $ Just badge
+      Nothing -> pure Nothing
+  try @_ @SomeException
+    ( do
+        vehicleRC <- WMB.validateVehicleAssignment (cast req.driverId) req.vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
+        WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber vehicleRC
+        return vehicleRC
+    )
+    >>= \case
+      Left err -> do
+        _ <- WMB.unlinkFleetBadgeFromDriver (cast req.driverId)
+        throwError (InternalError $ "Something went wrong while linking vehicle to driver. Error: " <> (T.pack $ displayException err))
+      Right vehicleRC -> do
+        createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC mbBadge req.trips
+        pure Success
 
-createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> [Common.TripDetails] -> Flow ()
-createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC trips = do
-  driver <- QP.findById (Id driverId.getId) >>= fromMaybeM (PersonNotFound driverId.getId)
+createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
+createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC mbBadge trips = do
   allTransactions <-
     foldM
       ( \accTransactions trip -> do
-          transactions <- makeTripTransactions trip driver.firstName
+          transactions <- makeTripTransactions trip
           return $ accTransactions <> transactions
       )
       []
@@ -1358,8 +1382,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
           WMB.assignTripTransaction tripTransaction route True routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
-    makeTripTransactions :: Common.TripDetails -> Text -> Flow [DTT.TripTransaction]
-    makeTripTransactions trip driverName = do
+    makeTripTransactions :: Common.TripDetails -> Flow [DTT.TripTransaction]
+    makeTripTransactions trip = do
       route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
       (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
       case (trip.roundTrip, route.roundRouteCode) of
@@ -1371,17 +1395,17 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
           foldM
             ( \accTransactions freqIdx -> do
                 let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode driverName
+                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode
                 pure $ accTransactions <> [tripTransaction]
             )
             []
             [0 .. (2 * roundTrip.frequency) -1]
         (_, _) -> do
-          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code driverName
+          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Maybe Text -> Text -> Text -> Flow DTT.TripTransaction
-    mkTransaction routeCode roundRouteCode endStopCode driverName = do
+    mkTransaction :: Text -> Maybe Text -> Text -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode = do
       transactionId <- generateGUID
       now <- getCurrentTime
       vehicleNumber <- decrypt vehicleRC.certificateNumber
@@ -1411,7 +1435,8 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             endRideApprovalRequestId = Nothing,
             createdAt = now,
             updatedAt = now,
-            driverName = (Just driverName),
+            driverName = mbBadge <&> (.badgeName),
+            fleetBadgeId = mbBadge <&> (.id),
             ..
           }
 
@@ -1456,14 +1481,16 @@ data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
   { driverId :: Text,
     vehicleNumber :: Text,
     routeCode :: Text,
-    roundTripFreq :: Text
+    roundTripFreq :: Text,
+    badgeName :: Maybe Text
   }
 
 data DriverBusRouteDetails = DriverBusRouteDetails
   { driverPhoneNo :: Text,
     vehicleNumber :: Text,
     routeCode :: Text,
-    roundTripFreq :: Maybe Int
+    roundTripFreq :: Maybe Int,
+    badgeName :: Maybe Text
     -- forceAssign :: Bool
   }
 
@@ -1474,6 +1501,7 @@ instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
       <*> r .: "vehicle_number"
       <*> r .: "route_code"
       <*> r .: "round_trip_freq"
+      <*> (Just <$> r .: "badge_name" <|> pure Nothing)
 
 -- <*> r .: "force_assign"
 
@@ -1506,25 +1534,37 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
               Just driver -> do
                 let vehicleNumber = driverGroup.vehicleNumber
                     tripPlannerRequests = map makeTripPlannerReq ([driverGroup] <> driverGroups)
-                return (driver, driverGroup.driverPhoneNo, vehicleNumber, tripPlannerRequests)
+                return (driver, driverGroup.driverPhoneNo, driverGroup.badgeName, vehicleNumber, tripPlannerRequests)
       )
       groupedDetails
 
   unprocessedEntities <-
     foldlM
-      ( \unprocessedEntities (driver, driverMobileNumber, vehicleNumber, tripPlannerRequests) -> do
+      ( \unprocessedEntities (driver, driverMobileNumber, mbBadgeName, vehicleNumber, tripPlannerRequests) -> do
           try @_ @SomeException
-            ( WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetOwnerId vehicleNumber False -- TODO :: Make this dynamic by adding the force_assign field in CSV.
-            -- void $ mapM (WMB.linkFleetBadgeToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId) req.badgeName -- TODO :: Capture Badge Name from CSV
+            ( do
+                vehicleRC <- WMB.validateVehicleAssignment (cast driver.id) vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
+                badge <-
+                  case mbBadgeName of
+                    Just badgeName -> do
+                      badge <- WMB.validateBadgeAssignment (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badgeName
+                      return $ Just badge
+                    Nothing -> return Nothing
+                return (vehicleRC, badge)
             )
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to link vehicle to the Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
-              Right vehicleRC -> do
+              Right (vehicleRC, mbBadge) -> do
                 try @_ @SomeException
-                  (createTripTransactions merchant.id merchantOpCity.id fleetOwnerId (cast driver.id) vehicleRC tripPlannerRequests)
+                  ( do
+                      WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber vehicleRC
+                      whenJust mbBadge $ \badge -> WMB.linkFleetBadgeToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId badge
+                      createTripTransactions merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId (cast driver.id) vehicleRC mbBadge tripPlannerRequests
+                  )
                   >>= \case
                     Left err -> do
-                      WMB.unlinkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id vehicleNumber
+                      void $ WMB.unlinkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id vehicleNumber
+                      void $ WMB.unlinkFleetBadgeFromDriver (cast driver.id)
                       return $ unprocessedEntities <> ["Unable to create Trip Transactions for Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
                     Right _ -> return unprocessedEntities
       )
@@ -1544,7 +1584,11 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
       vehicleNumber <- cleanCSVField idx row.vehicleNumber "Vehicle number"
       routeCode <- cleanCSVField idx row.routeCode "Route code"
       let roundTripFreq = readMaybeCSVField idx row.roundTripFreq "Round trip freq"
-      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq
+      badgeName <-
+        case row.badgeName of
+          Just badgeName -> Just <$> cleanCSVField idx badgeName "Badge name"
+          Nothing -> pure Nothing
+      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq badgeName
 
     cleanCSVField :: Int -> Text -> Text -> Flow Text
     cleanCSVField idx fieldValue fieldName =

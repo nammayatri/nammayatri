@@ -82,7 +82,7 @@ type API =
     :<|> "driver" :> "referral" :> "details"
       :> TokenAuth
       :> ReqBody '[JSON] DriverOnboarding.ReferralReq
-      :> Post '[JSON] DriverOnboarding.DriverReferralDetailsRes
+      :> Get '[JSON] DriverOnboarding.DriverReferralDetailsRes
     :<|> "rc"
       :> ( "setStatus"
              :> TokenAuth

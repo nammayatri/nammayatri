@@ -91,6 +91,7 @@ data DocumentType
   | VehicleFrontInterior
   | VehicleBackInterior
   | Odometer
+  | InspectionHub
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -220,7 +221,8 @@ data RCDetails = RCDetails
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    createdAt :: Kernel.Prelude.UTCTime
+    createdAt :: Kernel.Prelude.UTCTime,
+    failedRules :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

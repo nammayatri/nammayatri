@@ -17,17 +17,23 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalFeedback,
     getMultimodalUserPreferences,
     postMultimodalUserPreferences,
-    getMultimodalTransitOptionsLite,
+    postMultimodalTransitOptionsLite,
+    postMultimodalOrderSwitchFRFSTier,
+    getPublicTransportData,
   )
 where
 
 import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
 import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
@@ -35,7 +41,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -48,8 +54,10 @@ import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
+import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
+import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
@@ -57,8 +65,12 @@ import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
+import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Station as QStation
 import Tools.Error
+
+-- import  Domain.Types.Location as DTL (Location(..))
 
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -169,6 +181,24 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
+  updatedLegs <- JM.getAllLegsInfo journeyId
+  generateJourneyInfoResponse journey updatedLegs now
+
+postMultimodalOrderSwitchFRFSTier ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalOrderSwitchFRFSTier (_, _) journeyId legOrder req = do
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId
+  now <- getCurrentTime
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs now
 
@@ -361,6 +391,7 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
             }
     SQJFB.create mkJourneyfeedbackForm
     JM.updateJourneyStatus journey Domain.Types.Journey.COMPLETED
+
   let mkJourneyLegsFeedback feedbackEntry =
         JLFB.JourneyLegsFeedbacks
           { isExperienceGood = feedbackEntry.isExperienceGood,
@@ -476,15 +507,91 @@ postMultimodalUserPreferences (mbPersonId, merchantId) multimodalUserPreferences
       QMP.create newPreferences
   pure Kernel.Types.APISuccess.Success
 
-getMultimodalTransitOptionsLite ::
+postMultimodalTransitOptionsLite ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
   )
-getMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
+postMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   userPreferences <- getMultimodalUserPreferences (mbPersonId, merchantId)
   JM.getMultiModalTransitOptions userPreferences merchantId personCityInfo.merchantOperatingCityId req
+
+getPublicTransportData ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
+  )
+getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+  integratedBPPConfigs <-
+    catMaybes
+      <$> forM
+        vehicleTypes
+        ( \vType ->
+            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
+        )
+
+  let fetchData bppConfig = do
+        stations <- QStation.findAllByBppConfigId bppConfig.id
+        routes <- QRoute.findAllByBppConfigId bppConfig.id
+        -- routeStops <- QRouteStopMapping.findAllByBppConfigId bppConfig.id
+        pure
+          ApiTypes.PublicTransportData
+            { ss =
+                mapMaybe
+                  ( \s -> case (s.lat, s.lon) of
+                      (Just lat, Just lon) ->
+                        Just
+                          ApiTypes.TransportStation
+                            { cd = s.code,
+                              nm = s.name,
+                              lt = lat,
+                              ln = lon,
+                              ad = s.address,
+                              vt = show s.vehicleType
+                            }
+                      _ -> Nothing
+                  )
+                  stations,
+              rs =
+                map
+                  ( \r ->
+                      ApiTypes.TransportRoute
+                        { cd = r.code,
+                          sN = r.shortName,
+                          lN = r.longName,
+                          vt = show r.vehicleType,
+                          clr = r.color
+                        }
+                  )
+                  routes,
+              rsm = [],
+              -- map
+              --   ( \rs ->
+              --       ApiTypes.TransportRouteStopMapping
+              --         { rc = rs.routeCode,
+              --           sc = rs.stopCode,
+              --           sn = rs.sequenceNum
+              --         }
+              --   )
+              --   routeStops,
+              ptcv = bppConfig.id.getId
+            }
+
+  transportDataList <- mapM fetchData integratedBPPConfigs
+  let transportData =
+        ApiTypes.PublicTransportData
+          { ss = concatMap (.ss) transportDataList,
+            rs = concatMap (.rs) transportDataList,
+            rsm = concatMap (.rsm) transportDataList,
+            ptcv = T.intercalate (T.pack "#") $ map (.ptcv) transportDataList
+          }
+  return transportData

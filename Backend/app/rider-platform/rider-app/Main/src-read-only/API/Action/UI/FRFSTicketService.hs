@@ -68,15 +68,6 @@ type API =
            [API.Types.UI.FRFSTicketService.FRFSStationAPI]
       :<|> TokenAuth
       :> "frfs"
-      :> "transitStops"
-      :> QueryParam
-           "platformType"
-           Domain.Types.IntegratedBPPConfig.PlatformType
-      :> Get
-           '[JSON]
-           API.Types.UI.FRFSTicketService.FRFSTransitStopsCache
-      :<|> TokenAuth
-      :> "frfs"
       :> "route"
       :> Capture
            "routeCode"
@@ -108,6 +99,16 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "discovery"
+      :> "search"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "frfs"
       :> "search"
@@ -279,7 +280,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsTransitStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
+handler = getFrfsRoutes :<|> getFrfsStations :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> getFrfsConfig :<|> getFrfsAutocomplete
 
 getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -308,15 +309,6 @@ getFrfsStations ::
   )
 getFrfsStations a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
-getFrfsTransitStops ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
-    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTransitStopsCache
-  )
-getFrfsTransitStops a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsTransitStops (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
-
 getFrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -339,6 +331,15 @@ postFrfsSearch ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
 postFrfsSearch a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postFrfsDiscoverySearch ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFrfsDiscoverySearch a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsDiscoverySearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getFrfsSearchQuote ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

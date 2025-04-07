@@ -41,6 +41,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderConfig as DRC
@@ -92,6 +93,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Constants
@@ -677,6 +679,61 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
+
+  let toLocation = case booking.bookingDetails of
+        DRB.OneWayDetails details -> Just details.toLocation
+        DRB.RentalDetails _ -> Nothing
+        DRB.DriverOfferDetails details -> Just details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.InterCityDetails details -> Just details.toLocation
+        DRB.AmbulanceDetails details -> Just details.toLocation
+        DRB.DeliveryDetails details -> Just details.toLocation
+        DRB.MeterRideDetails details -> details.toLocation
+
+  if (isJust booking.recentLocationId)
+    then SQRL.increaceFrequencyById (fromJust booking.recentLocationId)
+    else do
+      let address' = case toLocation of
+            Nothing -> Nothing
+            Just loc -> case loc of
+              locationData ->
+                Just $
+                  mconcat
+                    [ fromMaybe "" locationData.address.building,
+                      ", ",
+                      fromMaybe "" locationData.address.street,
+                      ", ",
+                      fromMaybe "" locationData.address.city,
+                      ", ",
+                      fromMaybe "" locationData.address.state,
+                      ", ",
+                      fromMaybe "" locationData.address.country
+                    ]
+
+      uuid <- generateGUID
+      let recentLocation =
+            DTRL.RecentLocation
+              { DTRL.address = address',
+                DTRL.createdAt = now,
+                DTRL.entityType = DTRL.TAXI,
+                DTRL.frequency = 1,
+                DTRL.fromStopCode = Nothing,
+                DTRL.fromStopName = Nothing,
+                DTRL.id = uuid,
+                -- Fix ambiguous lat/lon field access with proper field selection
+                DTRL.lat = maybe 0.0 (\loc -> loc.lat) toLocation,
+                DTRL.lon = maybe 0.0 (\loc -> loc.lon) toLocation,
+                DTRL.merchantOperatingCityId = booking.merchantOperatingCityId,
+                DTRL.riderId = booking.riderId,
+                DTRL.routeCode = Nothing,
+                DTRL.routeId = Nothing,
+                DTRL.stopCode = Nothing,
+                DTRL.stopLat = Nothing,
+                DTRL.stopLon = Nothing,
+                DTRL.updatedAt = now
+              }
+      SQRL.create recentLocation
+
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
   --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -1092,8 +1149,9 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
         dailyPayoutCount_ <- Redis.get dailyPayoutCountKey
         let dailyPayoutCount = fromMaybe 0 dailyPayoutCount_ -- for referredBy customer
             isDeviceIdValid = (length personsWithSameDeviceId == 1) -- deviceId of new customer should be unique
+            deviceIdCheck = fromMaybe False riderConfig.isDeviceIdCheckDisabled || isDeviceIdValid
             isConsideredForPayout = maybe False (\referredAt -> referredAt >= riderConfig.payoutReferralStartDate) person_.referredAt
-            payoutProgramThresholdChecks = (dailyPayoutCount <= riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations <= riderConfig.payoutReferralThresholdPerMonth) && isDeviceIdValid
+            payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (referredByPersonStats.validActivations < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
         when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
@@ -1110,9 +1168,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             case isReferredByPerson of
               True -> do
                 QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
-                expirationPeriodForDay <- getExpirationSeconds riderConfig.timeDiffFromUtc
-                let dailyPayoutCountKey = getDailyPayoutCountKey person.id.getId
-                Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
+                setPayoutCountForReferree person.id.getId dailyPayoutCount
               False -> QPersonStats.updateReferredByEarningsPayoutStatus (Just DPS.Processing) person.id
             phoneNo <- mapM decrypt person.mobileNumber
             emailId <- mapM decrypt person.email
@@ -1126,6 +1182,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             void $ try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
         Nothing ->
           when isReferredByPerson $ do
+            setPayoutCountForReferree person.id.getId dailyPayoutCount
             QPersonStats.updateEarningsAndActivations (referredByPersonStats.referralEarnings + amount) (referredByPersonStats.backlogPayoutAmount + amount) (referredByPersonStats.validActivations + 1) person.id
 
     getPersonStats personId = do
@@ -1171,6 +1228,11 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
           nextLocalMidnight = UTCTime (addDays 1 (utctDay localTime)) 0
           secondsUntilExpiration = round $ diffUTCTime nextLocalMidnight localTime
       pure secondsUntilExpiration
+
+    setPayoutCountForReferree personId dailyPayoutCount = do
+      expirationPeriodForDay <- getExpirationSeconds riderConfig.timeDiffFromUtc
+      let dailyPayoutCountKey = getDailyPayoutCountKey personId
+      Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId

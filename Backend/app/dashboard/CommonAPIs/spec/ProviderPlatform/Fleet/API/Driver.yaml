@@ -98,7 +98,10 @@ apis:
       query:
         - mbFrom: UTCTime
         - mbTo: UTCTime
-        - mbStatus: RequestStatus
+        - mbRequestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+        - mbRouteCode: Text
+        - mbDriverId: Text
+        - mbBadgeName: Text
         - mbLimit: Int
         - mbOffset: Int
       response:
@@ -114,7 +117,10 @@ apis:
             query:
               - from: UTCTime
               - to: UTCTime
-              - status: RequestStatus
+              - requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+              - routeCode: Text
+              - driverId: Text
+              - badgeName: Text
               - limit: Int
               - offset: Int
             response:
@@ -475,6 +481,7 @@ apis:
         - to: UTCTime
         - status: FleetVehicleStatus
         - mbSearchString: Text
+        - statusAwareVehicleNo: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -494,6 +501,7 @@ apis:
               - to: UTCTime
               - status: FleetVehicleStatus
               - mbSearchString: Text
+              - statusAwareVehicleNo: Text
             response:
               type: DrivertoVehicleAssociationRes
 
@@ -902,7 +910,6 @@ types:
     - driverId: Id Driver
     - badgeName: Maybe Text
     - vehicleNumber: Text
-    - isForceAssign: Maybe Bool
     - trips: [TripDetails]
     - derive: "'HideSecrets"
   FleetOwnerListRes:
@@ -952,6 +959,7 @@ types:
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
     - vehicleTags: Maybe [Text]
+    - fuelType: Maybe Text
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType
@@ -980,10 +988,11 @@ types:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntityT]
   FleetBadgesAPIEntity:
-    - recordType: NewType
     - badgeName: Text
+    - isActive: Bool
   FleetBadgesAPIEntityT:
     - badgeName: Text
+    - isActive: Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   FleetListDriverResT:
@@ -1139,44 +1148,32 @@ types:
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
-  RequestStatus:
-    - enum: "ACCEPTED, REJECTED, AWAITING_APPROVAL, REVOKED"
-    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
-  RequestType:
-    - enum: "END_RIDE, OVERSPEEDING"
-  ApprovalRequestData:
-    - enum: "EndRide EndRideData, OverSpeeding OverSpeedingData"
-  EndRideData:
-    - lat: Double
-    - lon: Double
-    - tripTransactionId: Id TripTransaction
-    - tripCode: Maybe Text
-    - driverName: Text
-    - driverMobileNumber: Maybe Text
-    - vehicleRegistrationNumber: Text
-    - derive: "Eq,Ord,Read"
-  OverSpeedingData:
-    - speed: Double
-    - location: LatLong
-    - derive: "Eq,Ord,Read"
   DriverRequestDetails:
-    - requestData: ApprovalRequestData
+    - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
     - title: Text
     - body: Text
     - raisedAt: UTCTime
-    - status: Maybe RequestStatus
+    - status: Maybe Domain.Types.Alert.AlertRequestStatus
     - approvalRequestId: Text
+    - routeCode: Text
+    - driverId: Text
+    - tripTransactionId: Text
+    - isViolated: Bool
   DriverRequestDetailsT:
-    - requestData: ApprovalRequestData
+    - requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
     - title: Text
     - body: Text
     - raisedAt: UTCTime
-    - status: Maybe RequestStatus
+    - status: Maybe Domain.Types.Alert.AlertRequestStatus
     - approvalRequestId: Text
+    - routeCode: Text
+    - driverId: Text
+    - tripTransactionId: Text
+    - isViolated: Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
   RequestRespondReq:
-    - status: RequestStatus
+    - status: Domain.Types.Alert.AlertRequestStatus
     - approvalRequestId: Text
     - reason: Text
     - derive: "'HideSecrets"

@@ -27,32 +27,32 @@ import Kernel.Utils.Common
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
 createOrder = runWithServiceConfigAndName Payment.createOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
-orderStatus = runWithServiceConfigAndName Payment.orderStatus
+orderStatus = runWithUnWrap Payment.orderStatus
 
 offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OfferListReq -> m Payment.OfferListResp
-offerList = runWithServiceConfigAndName Payment.offerList
+offerList = runWithUnWrap Payment.offerList
 
 offerApply :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
-offerApply = runWithServiceConfigAndName Payment.offerApply
+offerApply = runWithUnWrap Payment.offerApply
 
 mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
-mandateRevoke = runWithServiceConfigAndName Payment.mandateRevoke
+mandateRevoke = runWithUnWrap Payment.mandateRevoke
 
 mandateNotification :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateNotificationReq -> m Payment.MandateNotificationRes
-mandateNotification = runWithServiceConfigAndName Payment.mandateNotification
+mandateNotification = runWithUnWrap Payment.mandateNotification
 
 mandateNotificationStatus :: (ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.NotificationStatusReq -> m Payment.NotificationStatusResp
-mandateNotificationStatus = runWithServiceConfigAndName Payment.mandateNotificationStatus
+mandateNotificationStatus = runWithUnWrap Payment.mandateNotificationStatus
 
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
-mandateExecution = runWithServiceConfigAndName Payment.mandateExecution
+mandateExecution = runWithUnWrap Payment.mandateExecution
 
 verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
-verifyVpa = runWithServiceConfigAndName Payment.verifyVPA
+verifyVpa = runWithUnWrap Payment.verifyVPA
 
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
@@ -60,17 +60,21 @@ runWithServiceConfigAndName ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DMSC.ServiceName ->
-  req ->
-  m resp
-runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName req = do
+  m (req -> m resp, Maybe Text)
+runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName = do
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity serviceName merchantOperatingCity
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig vsc -> func vsc req
-    DMSC.RentalPaymentServiceConfig vsc -> func vsc req
-    DMSC.CautioPaymentServiceConfig vsc -> func vsc req
+    DMSC.PaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
+    DMSC.RentalPaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
+    DMSC.CautioPaymentServiceConfig vsc -> return (func vsc, getPclient vsc)
     _ -> throwError $ InternalError "Unknown Service Config"
+  where
+    getPclient vsc = do
+      case vsc of
+        Payment.JuspayConfig config -> config.pseudoClientId
+        _ -> Nothing
 
 createIndividualConnectAccount ::
   ServiceFlow m r =>
@@ -112,3 +116,15 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   case orgPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"
+
+runWithUnWrap ::
+  ServiceFlow m r =>
+  (Payment.PaymentServiceConfig -> req -> m resp) ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DMSC.ServiceName ->
+  req ->
+  m resp
+runWithUnWrap func merchantId merchantOperatingCity serviceName req = do
+  (call, _) <- runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName
+  call req

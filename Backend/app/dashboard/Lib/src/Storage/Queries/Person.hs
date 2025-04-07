@@ -15,6 +15,7 @@
 
 module Storage.Queries.Person where
 
+import API.Types.ProviderPlatform.Management.Endpoints.Account (FleetOwnerStatus (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Database.Beam as B
@@ -97,6 +98,26 @@ findByMobileNumber ::
 findByMobileNumber mobileNumber mobileCountryCode = do
   mobileDbHash <- getDbHash mobileNumber
   findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]]
+
+findByMobileNumberAndRoleId ::
+  (BeamFlow m r, EncFlow m r) =>
+  Text ->
+  Text ->
+  Id Role ->
+  m (Maybe Person)
+findByMobileNumberAndRoleId mobileNumber mobileCountryCode roleId = do
+  mobileDbHash <- getDbHash mobileNumber
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.Eq $ getId roleId]]
+
+findByMobileNumberAndRoleIds ::
+  (BeamFlow m r, EncFlow m r) =>
+  Text ->
+  Text ->
+  [Id Role] ->
+  m (Maybe Person)
+findByMobileNumberAndRoleIds mobileNumber mobileCountryCode roleIds = do
+  mobileDbHash <- getDbHash mobileNumber
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.In $ getId <$> roleIds]]
 
 updatePersonVerifiedStatus :: BeamFlow m r => Id Person -> Bool -> m ()
 updatePersonVerifiedStatus personId verified = do
@@ -271,3 +292,48 @@ instance ToTType' BeamP.Person Person.Person where
         mobileNumberHash = mobileNumber.hash,
         ..
       }
+
+findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset ::
+  (BeamFlow m r, EncFlow m r) =>
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe FleetOwnerStatus ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Person]
+findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset = do
+  mbMobileNumberDbHash <- traverse getDbHash mbMobileNumber
+  findAllWithOptionsDb
+    [ Se.And
+        ( [ Se.Or
+              [ Se.Is BeamP.verified $ Se.Eq (Just False),
+                Se.Is BeamP.verified $ Se.Eq Nothing
+              ]
+          ]
+            <> [Se.Is BeamP.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate]
+            <> [Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate]
+            <> [Se.Is BeamP.mobileNumberHash $ Se.Eq (fromJust mbMobileNumberDbHash) | isJust mbMobileNumber]
+            <> [Se.Is BeamP.verified $ checkStatus | isJust mbStatus]
+        )
+    ]
+    (Se.Asc BeamP.createdAt)
+    (Just . min 10 . fromMaybe 5 $ mbLimit)
+    (Just $ fromMaybe 0 mbOffset)
+  where
+    checkStatus =
+      case mbStatus of
+        Just Rejected -> Se.Eq (Just False)
+        _ -> Se.Not $ Se.Eq (Just False)
+
+softDeletePerson :: BeamFlow m r => Id Person -> Maybe Text -> m ()
+softDeletePerson personId mbReason = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.verified $ Just False,
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.rejectionReason mbReason,
+      Se.Set BeamP.rejectedAt $ Just now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]

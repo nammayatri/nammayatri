@@ -3,6 +3,7 @@
 
 module Storage.Beam.JourneyLeg where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -33,6 +34,7 @@ data JourneyLegT f = JourneyLegT
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
     sequenceNumber :: B.C f Kernel.Prelude.Int,
+    serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
     toArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

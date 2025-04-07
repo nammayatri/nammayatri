@@ -19,7 +19,7 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
-import qualified Domain.Types.ApprovalRequest as DTR
+import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Merchant as DM
@@ -168,7 +168,7 @@ type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
 
 data FleetAlertJobData = FleetAlertJobData
   { fleetOwnerId :: Id DP.Driver,
-    entityId :: Id DTR.ApprovalRequest,
+    entityId :: Id DAR.AlertRequest,
     appletId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

@@ -19,6 +19,7 @@ data OperationHubRequestsT f = OperationHubRequestsT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     operationHubId :: B.C f Kernel.Prelude.Text,
     operatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    registrationNo :: B.C f Kernel.Prelude.Text,
     remarks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     requestStatus :: B.C f Domain.Types.OperationHubRequests.RequestStatus,
     requestType :: B.C f Domain.Types.OperationHubRequests.RequestType,

@@ -18,6 +18,7 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -32,6 +33,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Distance
@@ -60,7 +62,9 @@ import qualified Sequelize as Se
 import SharedLogic.Search
 import qualified Storage.Beam.JourneyLeg as BJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -69,12 +73,47 @@ import qualified Storage.Queries.Journey as JQ
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
+
+filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> m [MultiModalRoute]
+filterTransitRoutes routes mocid = do
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocid.getId)
+  if riderConfig.enableBusFiltering == Just True
+    then filterM filterBusRoutes routes
+    else return routes
+  where
+    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalRoute -> m Bool
+    filterBusRoutes route = do
+      let legs = route.legs
+          busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
+      if null busLegs
+        then return True
+        else do
+          busLegsValid <- forM busLegs $ \leg -> do
+            case (leg.fromDepartureTime, leg.fromStopDetails >>= (.stopCode), leg.fromStopDetails >>= (.gtfsId)) of
+              (Just departureTime, Just stopCode, Just routeId) -> do
+                let buffer = 300 -- TODO: MOVE TO CONFIG.
+                let departureTimeWithBuffer = buffer `addUTCTime` departureTime
+                routeWithBuses <- CQMMB.getRoutesBuses routeId
+
+                -- Check if the bus has an ETA for this stop
+                return $
+                  any
+                    ( \bus -> do
+                        -- vehicleRouteMapping <- QVehicleRouteMapping.findByVehicleNumber bus.vehicleNo
+                        let busStopETA = find (\eta -> eta.stopId == stopCode) (fromMaybe [] bus.busData.eta_data)
+                        case busStopETA of
+                          Just eta -> eta.arrivalTime > departureTimeWithBuffer
+                          Nothing -> False
+                    )
+                    routeWithBuses.buses
+              _ -> return False
+
+          return (all (\x -> x) busLegsValid)
 
 init ::
   JL.GetFareFlow m r =>
@@ -87,7 +126,7 @@ init journeyReq = do
     mapWithIndex
       ( \idx leg -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
-          mbTotalLegFare <- JLI.getFare journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode
+          mbTotalLegFare <- JLI.getFare journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode
           if riderConfig.multimodalTesting
             then do
               journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance mbTotalLegFare
@@ -103,7 +142,8 @@ init journeyReq = do
   if not riderConfig.multimodalTesting && (any isNothing mbTotalFares)
     then do return Nothing
     else do
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance
+      searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance (searchReq.recentLocationId)
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -210,7 +250,7 @@ getMultiModalTransitOptions ::
   APITypes.MultimodalTransitOptionsReq ->
   m APITypes.MultimodalTransitOptionsResp
 getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId req = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   -- let permissibleModesToUse = fromMaybe [] riderConfig.permissibleModes
   let permissibleModesToUse =
         if null userPreferences.allowedTransitModes
@@ -482,6 +522,7 @@ addMetroLeg parentSearchReq journeyLeg = do
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
+            recentLocationId = parentSearchReq.recentLocationId,
             city,
             journeyLeg
           }
@@ -502,6 +543,7 @@ addSubwayLeg parentSearchReq journeyLeg = do
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
+            recentLocationId = parentSearchReq.recentLocationId,
             city,
             journeyLeg
           }
@@ -522,6 +564,7 @@ addBusLeg parentSearchReq journeyLeg = do
           { quantity = 1,
             personId = parentSearchReq.riderId,
             merchantId = parentSearchReq.merchantId,
+            recentLocationId = parentSearchReq.recentLocationId,
             city,
             journeyLeg
           }
@@ -884,6 +927,7 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         journeyId = journeyLeg.journeyId,
         mode = newMode,
         routeDetails = [],
+        serviceTypes = Nothing,
         sequenceNumber = journeyLeg.sequenceNumber,
         startLocation = startLocation,
         toArrivalTime = Nothing,
@@ -1015,6 +1059,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
           routeDetails = [],
+          serviceTypes = [],
           agency = Nothing,
           fromArrivalTime = Just startTime,
           fromDepartureTime = Just startTime,
@@ -1146,7 +1191,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
             }
       let distance = convertMetersToDistance Meter distResp.distance
       let multiModalLeg = mkMultiModalLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
-      estimatedFare <- JLI.getFare currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
+      estimatedFare <- JLI.getFare journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
       return $
         APITypes.ExtendLegGetFareResp
           { totalFare = estimatedFare,
@@ -1210,6 +1255,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
           routeDetails = [],
+          serviceTypes = [],
           agency = Nothing,
           fromArrivalTime = Nothing,
           fromDepartureTime = Nothing,

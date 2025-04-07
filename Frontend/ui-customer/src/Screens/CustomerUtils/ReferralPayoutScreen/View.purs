@@ -118,6 +118,7 @@ view push state =
           , width MATCH_PARENT
           , orientation VERTICAL
           , background Colors.white900
+          , padding $ PaddingVertical (EHC.safeMarginTop) (EHC.safeMarginBottom)
           ]
           [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
           , linearLayout
@@ -131,7 +132,6 @@ view push state =
                   [ if state.props.isEarnings then Tuple "earningsView" $ earningsView push state else Tuple "shareAndEarnView" $ shareAndEarnView push state ]
               ]
           ]
-      , referralFaqsView push state
       ]
     <> (if state.props.showShareAppQr then [ referralQrView push state ] else [])
     <> (if state.props.showUpiSuccess then [ upiAddedSuccessfully push state ] else [])
@@ -295,13 +295,14 @@ transactionView push state =
                                             [ weight 1.0
                                             , height WRAP_CONTENT
                                             , gravity CENTER
-                                            ][textView
-                                            $ [ text $ item.orderId
-                                              , color Colors.black900
-                                              , singleLine true
-                                              , ellipsize true
-                                              ]
-                                            <> FontStyle.body1 TypoGraphy
+                                            ]
+                                            [ textView
+                                                $ [ text $ item.orderId
+                                                  , color Colors.black900
+                                                  , singleLine true
+                                                  , ellipsize true
+                                                  ]
+                                                <> FontStyle.body1 TypoGraphy
                                             ]
                                         , linearLayout
                                             [ width WRAP_CONTENT
@@ -538,22 +539,30 @@ referralDescriptionView push state =
 
 haveQuestionView :: forall w. (Action -> Effect Unit) -> ST.ReferralPayoutScreenState -> PrestoDOM (Effect Unit) w
 haveQuestionView push state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    ]
-    [ textView
-        $ [ text $ getString HAVE_QUESTIONS
-          , color Colors.blue800
-          , weight 2.0
-          , onClick push $ const ShowReferralFAQ
-          , rippleColor Colors.rippleShade
-          , cornerRadius 24.0
-          , padding $ PaddingLeft 5
-          , gravity LEFT
-          ]
-        <> FontStyle.subHeading2 TypoGraphy
-    ]
+  let
+    referralPayoutConfig = RemoteConfig.getReferralPayoutConfig (getValueToLocalStore CUSTOMER_LOCATION)
+  in
+    linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ]
+      [ textView
+          $ [ text $ getString HAVE_QUESTIONS
+            , color Colors.blue800
+            , weight 2.0
+            , onClick
+                ( \action -> do
+                    void $ JB.openUrlInApp referralPayoutConfig.termsLink
+                    pure unit
+                )
+                $ const NoAction
+            , rippleColor Colors.rippleShade
+            , cornerRadius 24.0
+            , padding $ PaddingLeft 5
+            , gravity LEFT
+            ]
+          <> FontStyle.subHeading2 TypoGraphy
+      ]
 
 referralFaqsView :: forall w. (Action -> Effect Unit) -> ST.ReferralPayoutScreenState -> PrestoDOM (Effect Unit) w
 referralFaqsView push state =
@@ -704,7 +713,7 @@ referralQrView push state =
           , width MATCH_PARENT
           , background Colors.blackLessTrans
           , gravity CENTER
-          , padding $ Padding 24 24 24 24
+          , padding $ Padding 24 (EHC.safeMarginTop) 24 (EHC.safeMarginBottom)
           ]
           [ PrestoAnim.animationSet
               [ PrestoAnim.Animation
@@ -783,7 +792,7 @@ collectEarningView push state =
       , background Colors.blue600
       , padding $ Padding 16 16 16 16
       , gravity CENTER
-      , visibility $ boolToVisibility $ state.data.referreeCode /= "" && (isJust state.data.existingVpa || isPayoutPending)
+      , visibility $ boolToVisibility $ (isJust state.data.existingVpa || isPayoutPending)
       ]
       [ textView
           $ [ text if isPayoutPending then getString YAY_YOU_HAVE_REFERRAL_EARNINGS else getString YOUR_EARNINGS_N_ <> show totalEarning
@@ -856,7 +865,7 @@ upiAddedSuccessfully push state =
       , width MATCH_PARENT
       , background Colors.blackLessTrans
       , gravity CENTER
-      , padding $ Padding 24 24 24 24
+      , padding $ Padding 24 (EHC.safeMarginTop) 24 (EHC.safeMarginBottom)
       , onClick push $ const (DonePrimaryButtonAC PrimaryButton.OnClick)
       ]
       [ linearLayout

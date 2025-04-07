@@ -37,3 +37,14 @@ data ONDCBecknConfig = ONDCBecknConfig
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+data CRISConfig = CRISConfig
+  { baseUrl :: BaseUrl,
+    clientKey :: EncryptedField 'AsEncrypted Text,
+    clientSecret :: EncryptedField 'AsEncrypted Text,
+    appCode :: Text,
+    tpAccountId :: Int,
+    sourceZone :: Text
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)

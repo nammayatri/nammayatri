@@ -214,3 +214,36 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN excluded_vehicle_variants text [] 
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_month integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN payout_referral_threshold_per_day integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN variant_list_for_near_by_req text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN near_by_driver_ring_bucket_cfg json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_driver_search_radius double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN is_device_id_check_disabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_bus_filtering boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_rentals_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN fare_cache_inter_city_search_locations json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_booking_allowed boolean ;

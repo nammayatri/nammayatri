@@ -1,9 +1,6 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.MeterRideInternal (postAddDestination, getGetCustomerInfo) where
 
 import qualified API.Types.UI.MeterRideInternal
-import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import Domain.Types
 import Domain.Types.Location
@@ -11,24 +8,20 @@ import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
-import Servant hiding (throwError)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 import Tools.Error
 
 postAddDestination ::

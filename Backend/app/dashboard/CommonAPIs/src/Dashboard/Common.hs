@@ -72,7 +72,13 @@ data TripTransaction
 
 data CoinsConfig
 
+data Person
+
+data Role
+
 data Operator
+
+data OperationHub
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
@@ -185,6 +191,11 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL | DASHCAM_RENTAL_CAUTIO
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ServiceNames)
+
+data WaiveOffMode = WITH_OFFER | WITHOUT_OFFER | NO_WAIVE_OFF
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''WaiveOffMode)
 
 newtype TransactionLogId = TransactionLogId Text
   deriving stock (Generic)

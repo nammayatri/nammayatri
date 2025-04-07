@@ -168,7 +168,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
             vehicleSeatBelts = rc.vehicleSeatBelts,
             createdAt = rc.createdAt,
             dateOfRegistration = rc.dateOfRegistration,
-            vehicleModelYear = rc.vehicleModelYear
+            vehicleModelYear = rc.vehicleModelYear,
+            failedRules = rc.failedRules
           }
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
@@ -213,6 +214,7 @@ mapDocumentType Common.VehicleBackInterior = Domain.VehicleBackInterior
 mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
 mapDocumentType Common.VehicleRight = Domain.VehicleRight
 mapDocumentType Common.Odometer = Domain.Odometer
+mapDocumentType Common.InspectionHub = Domain.InspectionHub
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

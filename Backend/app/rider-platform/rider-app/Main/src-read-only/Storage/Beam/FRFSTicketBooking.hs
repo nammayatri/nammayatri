@@ -58,6 +58,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     providerName :: B.C f Kernel.Prelude.Text,
     quantity :: B.C f Kernel.Prelude.Int,
     quoteId :: B.C f Kernel.Prelude.Text,
+    recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     riderId :: B.C f Kernel.Prelude.Text,
     routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

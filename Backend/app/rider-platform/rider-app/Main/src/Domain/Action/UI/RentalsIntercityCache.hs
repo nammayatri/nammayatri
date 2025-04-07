@@ -46,8 +46,8 @@ rentalsIntercityCache personId merchantId req = do
       specialLocationId = fmap (.id) checkForServiceable.specialLocation
       cityCenterLatLong = Just $ LatLong {lat = merchantOperatingCity.lat, lon = merchantOperatingCity.long}
       excludedVehicleVariants = riderConfig.excludedVehicleVariants
-      rentalsConfig = riderConfig.rentalsConfig
-      interCitySearchLocations = riderConfig.intercitySearchLocations
+      rentalsConfig = riderConfig.fareCacheRentalsConfig
+      interCitySearchLocations = riderConfig.fareCacheInterCitySearchLocations
   interCityResp <-
     case checkForSpecialLocation of
       True -> do
@@ -117,14 +117,13 @@ buildMininumIntercityFareArray req mbSourceLatLong merchant merchanOperatingCity
     mapM
       ( \destinationItem -> do
           let destinationLatLon = fromMaybe sourceLatLong destinationItem.destination
-              destinationCity = fromMaybe merchant.defaultCity destinationItem.destinationCity
               calculateFareReq =
                 CallBPPInternal.CalculateFareReq
                   { pickupLatLong = LatLong {lat = sourceLatLong.lat, lon = sourceLatLong.lon},
                     dropLatLong = Just $ LatLong {lat = destinationLatLon.lat, lon = destinationLatLon.lon},
                     mbDistance = Nothing,
                     mbDuration = Nothing,
-                    mbTripCategory = Just $ DTC.InterCity DTC.OneWayOnDemandStaticOffer (Just $ show destinationCity)
+                    mbTripCategory = Just $ DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing
                   }
           fareData <- CallBPPInternal.getFare merchant merchanOperatingCity calculateFareReq
           let estimatedFares = fareData.estimatedFares

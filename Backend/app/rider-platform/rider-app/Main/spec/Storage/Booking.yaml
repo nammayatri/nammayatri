@@ -36,6 +36,7 @@ imports:
   Journey: Domain.Types.Journey
   ParcelType: Domain.Types.ParcelDetails
   JourneyLegStatus: Lib.JourneyLeg.Types
+  RecentLocation: Domain.Types.RecentLocation
 
 BookingLocation:
   tableName: booking_location
@@ -240,6 +241,7 @@ Booking:
     journeyId: Maybe (Id Journey)
     journeyLegStatus: Maybe JourneyLegStatus
     preferSafetyPlus: Bool
+    recentLocationId: Maybe (Id RecentLocation)
 
   beamFields:
     estimatedDistance:

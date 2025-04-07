@@ -5,12 +5,14 @@ module Storage.Queries.OperationHubRequestsExtra where
 
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
+import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
@@ -19,8 +21,20 @@ import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.OperationHubRequests ()
 
 -- Extra code goes here --
-findAllRequestsInRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UTCTime -> UTCTime -> Int -> Int -> Maybe DbHash -> Maybe RequestStatus -> Maybe RequestType -> Maybe Text -> m [OperationHubRequests]
-findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbDriverId = do
+findAllRequestsInRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  Maybe DbHash ->
+  Maybe RequestStatus ->
+  Maybe RequestType ->
+  Maybe Text ->
+  Maybe (Id DOH.OperationHub) ->
+  Maybe Text ->
+  m [OperationHubRequests]
+findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbDriverId mbOperationHubId mbRegistrationNo = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -36,6 +50,8 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqType -> operationHubRequests.requestType B.==?. B.val_ reqType) mbReqType
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqStatus -> operationHubRequests.requestStatus B.==?. B.val_ reqStatus) mbReqStatus
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberHash
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubId -> operationHubRequests.operationHubId B.==?. B.val_ operationHubId.getId) mbOperationHubId
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> operationHubRequests.registrationNo B.==?. B.val_ registrationNo) mbRegistrationNo
                 )
                 do
                   operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)

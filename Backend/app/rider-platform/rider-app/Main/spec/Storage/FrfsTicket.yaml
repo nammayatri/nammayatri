@@ -33,6 +33,7 @@ imports:
   StationType: Domain.Types.StationType
   MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
 
 FRFSSearch:
   tableName: frfs_search
@@ -54,6 +55,7 @@ FRFSSearch:
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    recentLocationId: Maybe (Id RecentLocation)
 
   beamFields:
     journeyLegInfo:
@@ -178,6 +180,10 @@ Station:
       kvFunction: findAllWithOptionsKV
       where:
         and: [vehicleType, integratedBppConfigId]
+    findAllByBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
     findById:
       kvFunction: findOneWithKV
       where: id
@@ -320,6 +326,7 @@ FRFSTicketBooking:
     isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    recentLocationId: Maybe (Id RecentLocation)
 
   default:
     customerCancelled: "false"
@@ -741,6 +748,10 @@ Route:
       kvFunction: findAllWithOptionsKV
       where:
         and: [vehicleType, integratedBppConfigId]
+    findAllByBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
     findByRouteCodes:
       kvFunction: findAllWithKV
       where:
@@ -783,19 +794,25 @@ RouteStopMapping:
   constraints:
     routeCode: PrimaryKey
     stopCode: PrimaryKey
+    sequenceNum: PrimaryKey
+    integratedBppConfigId: PrimaryKey
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
     findByRouteCodeAndStopCode:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where:
         and: [routeCode, stopCode, integratedBppConfigId]
     findByStopCode:
       kvFunction: findAllWithKV
       where:
         and: [stopCode, integratedBppConfigId]
+    findAllByBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
     findByStopCodes:
       kvFunction: findAllWithKV
       where:
@@ -966,6 +983,10 @@ FRFSVehicleServiceTier:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByProviderCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [providerCode, merchantOperatingCityId]
 
 RouteTripMapping:
   tableName: route_trip_mapping

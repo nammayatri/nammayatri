@@ -35,6 +35,7 @@ let stop_detection_config =
       , max_eligible_stop_speed_threshold = 2
       , radius_threshold_meters = 25
       , min_points_within_radius_threshold = 5
+      , enable_onride_stop_detection = False
       }
 
 in  { logger_cfg
@@ -80,4 +81,8 @@ in  { logger_cfg
     , trigger_fcm_callback_url =
         "http://127.0.0.1:8016/internal/driverInactiveFCM"
     , apns_url = "https://api.sandbox.push.apple.com:443"
+    , pickup_notification_threshold = 40.0
+    , arriving_notification_threshold = 100.0
+    , trigger_fcm_callback_url_bap =
+        "http://127.0.0.1:8013/internal/driverArrivalNotification"
     }

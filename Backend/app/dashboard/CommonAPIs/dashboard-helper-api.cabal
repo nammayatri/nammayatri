@@ -54,6 +54,7 @@ library
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
       API.Types.ProviderPlatform.Fleet.Onboarding
       API.Types.ProviderPlatform.Management
+      API.Types.ProviderPlatform.Management.Account
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.CoinsConfig
       API.Types.ProviderPlatform.Management.Driver
@@ -61,6 +62,7 @@ library
       API.Types.ProviderPlatform.Management.DriverGoHome
       API.Types.ProviderPlatform.Management.DriverReferral
       API.Types.ProviderPlatform.Management.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
       API.Types.ProviderPlatform.Management.Endpoints.Driver
@@ -76,6 +78,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
@@ -84,6 +87,7 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.VehicleInfo
       API.Types.ProviderPlatform.Operator
       API.Types.ProviderPlatform.Operator.Driver
       API.Types.ProviderPlatform.Operator.Endpoints.Driver

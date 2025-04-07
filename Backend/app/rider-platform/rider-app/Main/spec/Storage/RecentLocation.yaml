@@ -1,0 +1,46 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  LatLong: Kernel.External.Maps.Types
+
+RecentLocation:
+  tableName: recent_location
+
+  types:
+    EntityType:
+      enum: "MULTIMODAL, BUS, METRO, TAXI"
+
+
+  fields:
+    id : Id RecentLocation
+    riderId : Id Person
+    frequency : Int
+    entityType: EntityType
+    address: Maybe Text
+    stopLat: Maybe Double
+    stopLon: Maybe Double
+    routeCode: Maybe Text
+    stopCode: Maybe Text
+    fromStopCode: Maybe Text
+    fromStopName: Maybe Text
+    routeId: Maybe Text
+    lat: Double
+    lon: Double
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+  excludedFields: [ merchantId, merchantOperatingCityId]
+  queries:
+    findAllRecentLocationsForPerson:
+      kvFunction: findAllWithDb
+      where: riderId

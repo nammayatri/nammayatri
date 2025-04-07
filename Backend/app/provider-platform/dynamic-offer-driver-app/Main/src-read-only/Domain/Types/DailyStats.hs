@@ -26,6 +26,8 @@ data DailyStats = DailyStats
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantLocalDate :: Data.Time.Calendar.Day,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    numDriversOnboarded :: Kernel.Prelude.Int,
+    numFleetsOnboarded :: Kernel.Prelude.Int,
     numRides :: Kernel.Prelude.Int,
     payoutOrderId :: Kernel.Prelude.Maybe Data.Text.Text,
     payoutOrderStatus :: Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,

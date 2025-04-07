@@ -33,11 +33,13 @@ data RouteStopMappingT f = RouteStopMappingT
   deriving (Generic, B.Beamable)
 
 instance B.Table RouteStopMappingT where
-  data PrimaryKey RouteStopMappingT f = RouteStopMappingId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = RouteStopMappingId <$> routeCode <*> stopCode
+  data PrimaryKey RouteStopMappingT f
+    = RouteStopMappingId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Int) (B.C f Kernel.Prelude.Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = RouteStopMappingId <$> integratedBppConfigId <*> routeCode <*> sequenceNum <*> stopCode
 
 type RouteStopMapping = RouteStopMappingT Identity
 
-$(enableKVPG ''RouteStopMappingT ['routeCode, 'stopCode] [])
+$(enableKVPG ''RouteStopMappingT ['integratedBppConfigId, 'routeCode, 'sequenceNum, 'stopCode] [])
 
 $(mkTableInstances ''RouteStopMappingT "route_stop_mapping")

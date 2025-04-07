@@ -247,7 +247,14 @@ defaultLocationUpdateServiceConfig = {
   rideGFrequencyWithFrequentUpdates : "50000",
   rideTFrequency : "20000",
   stage : "default",
-  rideGFrequencyWithoutFrequentUpdates : "50000"
+  rideGFrequencyWithoutFrequentUpdates : "50000",
+  freshnessThreshold : "5",
+  updateInterval : "10",
+  batchInterval : "10",
+  batchSize : "10",
+  maxBatchAge : "10",
+  locationRequestInterval : "10",
+  locationRequestIntervalWithFrequentUpdates : "10"
 }
 
 type TripBasedLocationUpdateServiceConfig = {

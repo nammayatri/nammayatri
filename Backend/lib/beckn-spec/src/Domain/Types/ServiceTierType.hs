@@ -57,6 +57,9 @@ data ServiceTierType
   | EV_AUTO_RICKSHAW
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
+allServiceTiersTypes :: [ServiceTierType]
+allServiceTiersTypes = [minBound .. maxBound]
+
 $(mkHttpInstancesForEnum ''ServiceTierType)
 
 instance CH.ClickhouseValue ServiceTierType

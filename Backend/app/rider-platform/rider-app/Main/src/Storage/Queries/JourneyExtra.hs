@@ -5,6 +5,7 @@ module Storage.Queries.JourneyExtra where
 
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -42,3 +43,16 @@ findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToD
       (Just limit')
       (Just offset')
   pure journeys
+
+findAllByRiderIdAndStatusAndMOCId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> DJ.JourneyStatus -> Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> m [DJ.Journey]
+findAllByRiderIdAndStatusAndMOCId (Kernel.Types.Id.Id personId) status (Kernel.Types.Id.Id mocId) = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq personId,
+          Se.Is Beam.status $ Se.Eq $ Just status,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just mocId)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 10)
+    Nothing

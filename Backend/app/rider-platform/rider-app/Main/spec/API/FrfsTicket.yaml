@@ -25,15 +25,20 @@ imports:
   JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
   PlatformType: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
 
 module: FRFSTicketService
 types:
+  FRFSDiscoverySearchAPIReq:
+    city: City
+    vehicleType: VehicleCategory
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
     routeCode: Maybe Text
     quantity: Int
     journeySearchData: Maybe JourneySearchData
+    recentLocationId: Maybe (Id RecentLocation)
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -145,15 +150,6 @@ types:
     towards: Maybe Text
     derive: "Show"
 
-  FRFSTransitStop:
-    stopName: Text
-    stopType: Maybe Text
-    lat: Double
-    lon: Double
-
-  FRFSTransitStopsCache:
-    stops: [FRFSTransitStop]
-
   FRFSCanCancelStatus:
     cancellationCharges: Maybe HighPrecMoney
     refundAmount: Maybe HighPrecMoney
@@ -231,14 +227,6 @@ apis:
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
-  - GET:
-      endpoint: /frfs/transitStops
-      auth: TokenAuth
-      query:
-        platformType: PlatformType
-      response:
-        type: "API.Types.UI.FRFSTicketService.FRFSTransitStopsCache"
-
   # GET metro/bus route details for the merchant city
   - GET:
       endpoint: /frfs/route/{routeCode}
@@ -265,6 +253,15 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+
+  # Discovery Search for finding metro/bus providers for a given city
+  - POST:
+      endpoint: /frfs/discovery/search
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   # Get quotes for metro/bus tickets
   - GET:

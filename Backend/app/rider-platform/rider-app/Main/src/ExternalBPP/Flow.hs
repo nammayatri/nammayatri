@@ -1,7 +1,7 @@
 module ExternalBPP.Flow where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (intersect, nubBy, sortOn)
+import Data.List (sortOn)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
@@ -32,11 +32,11 @@ import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
 import Tools.Error
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
 getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails serviceTypes = do
   quotes <- buildQuotes routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -54,17 +54,13 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
         bppDelayedInterest = Nothing
       }
   where
-    -- Build Multiple Service Tier Quotes For Non Transit Routes
-    buildQuotes [routeDetail] = buildMultipleNonTransitRouteQuotes routeDetail
-    -- Build Single Quote For Transit Routes
-    buildQuotes routesDetail@(_ : _) =
-      buildSingleTransitRouteQuote routesDetail
-        >>= \case
-          Just quote -> return [quote]
-          Nothing -> return []
+    -- Build Single Transit Route Quote
+    buildQuotes [routeDetail] = buildSingleTransitRouteQuote routeDetail
+    -- Build Multiple Transit Routes Quotes
+    buildQuotes routeDetails_@(_ : _) = buildMultipleNonTransitRouteQuotes routeDetails_
     buildQuotes [] = return []
 
-    buildMultipleNonTransitRouteQuotes FRFSRouteDetails {..} = do
+    buildSingleTransitRouteQuote FRFSRouteDetails {..} = do
       case routeCode of
         Just routeCode' -> do
           route <- QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
@@ -77,103 +73,74 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                     endStopCode = endStationCode,
                     travelTime = Nothing
                   }
-          mkSingleRouteQuote searchReq.vehicleType routeInfo
+          stations <- buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode integratedBPPConfig.id START END
+          mkSingleRouteQuote searchReq.vehicleType routeInfo stations
         Nothing -> do
           routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
           quotes <-
             mapM
               ( \routeInfo -> do
-                  mkSingleRouteQuote searchReq.vehicleType routeInfo
+                  stations <- buildStations routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode integratedBPPConfig.id START END
+                  mkSingleRouteQuote searchReq.vehicleType routeInfo stations
               )
               routesInfo
           return $ concat quotes
 
-    buildSingleTransitRouteQuote routesDetail = do
-      routeStationsAndDiscounts' <-
+    buildMultipleNonTransitRouteQuotes routesDetails = do
+      let lastStopIndex = length routesDetails - 1
+      stationsArray <- do
         mapWithIndexM
-          ( \idx FRFSRouteDetails {..} -> do
-              case routeCode of
+          ( \idx routeDetail -> do
+              case routeDetail.routeCode of
                 Just routeCode' -> do
-                  fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity integratedBPPConfig routeCode' startStationCode endStationCode searchReq.vehicleType
-                  case listToMaybe fares of
-                    Just fare -> do
-                      fromStation <- QStation.findByStationCode startStationCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound startStationCode)
-                      toStation <- QStation.findByStationCode endStationCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound endStationCode)
-                      route <- QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
-                      stops <- QRouteStopMapping.findByRouteCode route.code integratedBPPConfig.id
-                      stations <- mkStations fromStation toStation stops & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
-                      return $
-                        Just $
-                          ( fare.discounts,
-                            DRouteStation
-                              { routeCode = route.code,
-                                routeLongName = route.longName,
-                                routeShortName = route.shortName,
-                                routeStartPoint = route.startPoint,
-                                routeEndPoint = route.endPoint,
-                                routeStations = stations,
-                                routeTravelTime = Nothing,
-                                routeServiceTier = Just $ mkDVehicleServiceTier fare.vehicleServiceTier,
-                                routePrice = fare.price,
-                                routeSequenceNum = Just $ idx + 1,
-                                routeColor = Nothing
-                              }
-                          )
-                    Nothing -> return Nothing
-                Nothing -> return Nothing
+                  let startStopType = if idx == 0 then START else TRANSIT
+                  let endStopType = if idx == lastStopIndex then END else TRANSIT
+                  stations <- buildStations routeCode' routeDetail.startStationCode routeDetail.endStationCode integratedBPPConfig.id startStopType endStopType
+                  return stations
+                Nothing -> return []
           )
-          routesDetail
-      let routeStationsAndDiscounts = catMaybes routeStationsAndDiscounts'
-      if length routeStationsAndDiscounts /= length routesDetail
-        then return Nothing
-        else do
-          let routeStations = snd <$> routeStationsAndDiscounts
-              discounts = findCommonDiscountsByCode (fst <$> routeStationsAndDiscounts)
-              stations =
-                case getFirstAndLastStation routeStations of
-                  Just (startStation, endStation) -> [startStation] ++ [endStation]
-                  Nothing -> []
-          return $
-            Just $
-              DQuote
-                { bppItemId = CallAPI.getProviderName integratedBPPConfig,
-                  _type = DFRFSQuote.SingleJourney,
-                  routeStations = routeStations,
-                  stations,
-                  discounts = map mkDDiscount discounts,
-                  vehicleType = searchReq.vehicleType,
-                  price =
-                    Price
-                      { amount = sum $ map ((.amount) . (.routePrice)) routeStations,
-                        amountInt = sum $ map ((.amountInt) . (.routePrice)) routeStations,
-                        currency = INR
-                      }
-                }
+          routesDetails
+      let stations = concat stationsArray
+      let routeDetail = mergeFFRFSRouteDetails routesDetails
+      case (routeDetail, routeDetail >>= (.routeCode)) of
+        (Just routeDetail', Just routeCode') -> do
+          route <- QRoute.findByRouteCode routeCode' integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode')
+          let routeInfo =
+                RouteStopInfo
+                  { route,
+                    totalStops = Nothing,
+                    stops = Nothing,
+                    startStopCode = routeDetail'.startStationCode,
+                    endStopCode = routeDetail'.endStationCode,
+                    travelTime = Nothing
+                  }
+          mkSingleRouteQuote searchReq.vehicleType routeInfo stations
+        _ -> return []
 
-    findCommonDiscountsByCode :: [[FRFSDiscount]] -> [FRFSDiscount]
-    findCommonDiscountsByCode discounts =
-      let commonDiscountCodes = foldr intersect (map (.code) $ concat discounts) (map (map (.code)) discounts)
-       in nubBy (\a b -> a.code == b.code) $ filter (\discount -> discount.code `elem` commonDiscountCodes) (concat discounts)
+    buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Id IntegratedBPPConfig -> StationType -> StationType -> m [DStation]
+    buildStations routeCode startStationCode endStationCode integratedBPPConfigId startStopType endStopType = do
+      fromStation <- QStation.findByStationCode startStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound startStationCode)
+      toStation <- QStation.findByStationCode endStationCode integratedBPPConfigId >>= fromMaybeM (StationNotFound endStationCode)
+      stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfigId
+      stations <- mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
+      return stations
 
-    mkStations :: Station -> Station -> [RouteStopMapping] -> Maybe [DStation]
-    mkStations fromStation toStation stops =
+    mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
+    mkStations fromStation toStation stops startStopType endStopType =
       ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
         <&> \(startStop, endStop) ->
           do
-            let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) START (Just startStop.sequenceNum) Nothing
-                endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) END (Just endStop.sequenceNum) Nothing
+            let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) startStopType (Just startStop.sequenceNum) Nothing
+                endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) endStopType (Just endStop.sequenceNum) Nothing
                 intermediateStations =
                   (sortOn (.sequenceNum) $ filter (\stop -> stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum < endStop.sequenceNum) stops)
                     <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
             [startStation] ++ intermediateStations ++ [endStation]
 
-    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> m [DQuote]
-    mkSingleRouteQuote vehicleType routeInfo = do
-      stops <- QRouteStopMapping.findByRouteCode routeInfo.route.code integratedBPPConfig.id
-      startStation <- QStation.findByStationCode routeInfo.startStopCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ routeInfo.startStopCode <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-      endStation <- QStation.findByStationCode routeInfo.endStopCode integratedBPPConfig.id >>= fromMaybeM (StationNotFound $ routeInfo.endStopCode <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-      stations <- mkStations startStation endStation stops & fromMaybeM (StationsNotFound startStation.id.getId endStation.id.getId)
-      fares <- CallAPI.getFares (Just searchReq.riderId) merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code startStation.code endStation.code vehicleType
+    mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Spec.VehicleCategory -> RouteStopInfo -> [DStation] -> m [DQuote]
+    mkSingleRouteQuote vehicleType routeInfo stations = do
+      fares <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode vehicleType
+      let filteredFares = if null serviceTypes then fares else filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` serviceTypes) fares
       return $
         map
           ( \FRFSFare {..} ->
@@ -200,15 +167,11 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                       ..
                     }
           )
-          fares
+          filteredFares
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 
     mkDDiscount FRFSDiscount {..} = DDiscount {..}
-
-    getFirstAndLastStation routeStations =
-      (,) <$> (listToMaybe =<< ((.routeStations) <$> listToMaybe routeStations))
-        <*> (listToMaybe =<< (reverse . (.routeStations) <$> listToMaybe (reverse routeStations)))
 
     mapWithIndexM f xs = zipWithM f [0 ..] xs
 

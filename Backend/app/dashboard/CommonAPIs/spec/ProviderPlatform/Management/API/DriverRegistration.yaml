@@ -156,6 +156,7 @@ types:
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - createdAt: UTCTime
+    - failedRules: [Text]
   DocumentsListResponse:
     - driverLicense: [Text]
     - vehicleRegistrationCertificate: [Text]
@@ -169,7 +170,6 @@ types:
     - vehicleInspectionForm: [Text]
     - vehiclePermit: [Text]
     - vehiclePUC: [Text]
-    # TODO(Rupak): add vehiclePermit and vehiclePUC
     - vehicleFront: [Text]
     - vehicleBack: [Text]
     - vehicleRight: [Text]
@@ -185,7 +185,7 @@ types:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
   DocumentType:
-    - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, Odometer"
+    - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, Odometer, InspectionHub"
   UploadDocumentReq:
     - imageBase64: Text
     - imageType: DocumentType

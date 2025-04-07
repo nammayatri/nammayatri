@@ -22,6 +22,23 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
+
+if (window.JOS.self != "in.mobility.core") {
+  window.JOS.emitEventOriginal = window.JOS.emitEvent;
+  window.JOS.emitEvent = (_parent, _event, payload) => {
+    return () => {
+      window.JOS.emitEventOriginal(_parent)(_event)(payload)()();
+    }
+  }
+}
+
+// if (window.__OS === "IOS") {
+//   window.JOS.originalEmitEvent = window.JOS.emitEvent;
+//   window.JOS.emitEvent = (parent,_event,payload) => {
+//     window.JOS.originalEmitEvent(parent)(_event)(payload)()();
+//   }
+// }
+
 const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds", "addToLogList"])
 
 if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
@@ -243,7 +260,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
     getPureScript();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
-    JBridge.initiateLocationServiceClient()
+    // JBridge.initiateLocationServiceClient()
     console.warn("Process called");
     const jpConsumingBackpress = {
       event: "jp_consuming_backpress",
@@ -445,21 +462,30 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
   }
 }
 
-console.error("Calling action DUI_READY");
-if (window.JBridge.emptyCallbackQueue)
-  window.JBridge.emptyCallbackQueue()
-JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
-  action: "DUI_READY",
-  event: "initiate",
-  service: JOS.self
-}), "");
+if (window.__OS === "IOS" && typeof window.JOS != "undefined" && window.JOS.addEventListener) {
+  window.JOS.addEventListener("onEvent'")();
+  window.JOS.addEventListener("onEvent")();
+  window.JOS.addEventListener("onMerchantEvent")();
+  if (window.JBridge.emptyCallbackQueue)
+    window.JBridge.emptyCallbackQueue()
+  JOS.emitEvent("java","onEvent",JSON.stringify({ action: "DUI_READY", service : JOS.self }))();
+} else {
+  console.error("Calling action DUI_READY");
+  if (window.JBridge.emptyCallbackQueue)
+    window.JBridge.emptyCallbackQueue()
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+      action: "DUI_READY",
+      event: "initiate",
+      service: JOS.self
+    }), "");
 
-eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
+    eval(window.JBridge.loadFileInDUI("v1-tracker.jsa"));
 
 
-window.JOS.tracker = window.getTrackerModule.Main.initTracker()
-window.tracker =  window.JOS.tracker
+    window.JOS.tracker = window.getTrackerModule.Main.initTracker()
+    window.tracker =  window.JOS.tracker
 
+}
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 const JOSFlags = window.JOS.getJOSflags()

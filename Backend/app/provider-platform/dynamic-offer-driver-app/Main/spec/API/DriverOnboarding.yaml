@@ -133,8 +133,6 @@ types:
     callbackResponse : Maybe Text
     failureReason : Maybe Text
 
-
-
 apis:
   - GET:
       endpoint: /onboarding/configs
@@ -148,6 +146,7 @@ apis:
       endpoint: /driver/rateCard
       query:
         vehicleServiceTier: ServiceTierType
+        tripCategory: TripCategory
         distance: Meters
         durationInMin: Minutes
       auth: TokenAuth PROVIDER_TYPE

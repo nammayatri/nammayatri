@@ -10,6 +10,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
@@ -27,6 +28,7 @@ import com.google.android.play.core.splitinstall.SplitInstallRequest;
 import com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener;
 import com.google.android.play.core.splitinstall.model.SplitInstallErrorCode;
 import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.json.JSONException;
@@ -48,9 +50,9 @@ public class Utils {
                 String token = innerPayload.getString("param1");
                 String cbIdentifier = jsonObject.getString("action");
                 boolean installOnly = innerPayload.getString("param2").equals("true");
-                if (sharedPref != null &&
-                        (sharedPref.getString("GLSDK_INSTALLED", "false").equals("true") || sharedPref.getBoolean("GLSDK_INSTALLED", false)) &&
-                        !installOnly){
+                boolean sdkInstalled = booleanStrWithFallback(sharedPref, "GLSDK_INSTALLED").equals("true") || getBooleanWithFallback(sharedPref, "GLSDK_INSTALLED");
+
+                if (sdkInstalled && !installOnly){
                     Intent intent = new Intent();
                     intent.putExtra("token", token);
                     intent.putExtra("cbIdentifier", cbIdentifier);
@@ -59,8 +61,11 @@ public class Utils {
                 }else {
                     initGlSdk(cbIdentifier,token, installOnly, context, activityResultLauncher, sharedPref);
                 }
+            } else {
+                FirebaseAnalytics.getInstance(context).logEvent("gullak_init_failed", new Bundle());
             }
         } catch (Exception exception) {
+            FirebaseAnalytics.getInstance(context).logEvent("gullak_init_exception", new Bundle());
             FirebaseCrashlytics.getInstance().recordException(exception);
             exception.printStackTrace();
         }
@@ -152,7 +157,11 @@ public class Utils {
                             break;
 
                         case SplitInstallSessionStatus.INSTALLED:
-                            if (sharedPref!= null) sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
+                            if (sharedPref!= null) {
+                                sharedPref.edit().putString("GLSDK_INSTALLED", "true").apply();
+                                sharedPref.edit().putString("GLSDK_INSTALLED_V2", "true").apply();
+
+                            }
                             if (!installOnly){
                                 Intent intent = new Intent();
                                 intent.putExtra("token", token);
@@ -209,5 +218,21 @@ public class Utils {
                 return score >= scoreThreshold;
             }
         });  
+    }
+
+    private static boolean getBooleanWithFallback (SharedPreferences sharedPref, String key) {
+        try {
+            return sharedPref.getBoolean(key, false);
+        }catch (Exception e){
+            return false;
+        }
+    }
+
+    private static String booleanStrWithFallback(SharedPreferences sharedPref, String key){
+        try {
+            return sharedPref.getString(key, "false");
+        }catch (Exception e){
+            return "false";
+        }
     }
 }

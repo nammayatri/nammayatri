@@ -67,11 +67,11 @@ type Gate = {
   images :: Array PickupInstructions
 }
 
-type PickupInstructions = 
+type PickupInstructions =
   { image :: String
   , title :: String
   }
-  
+
 newtype FamousDestination = FamousDestination {
   name :: String,
   address :: String,
@@ -192,4 +192,34 @@ type ReferralPayoutConfig = {
   enable :: Maybe Boolean,
   coverImage :: Maybe String,
   termsLink :: String
+}
+
+type VehicleEnquiryBannerConfigs = {
+  auto :: Maybe EnquiryBannerConfigs
+, car :: Maybe EnquiryBannerConfigs
+, ambulance :: Maybe EnquiryBannerConfigs
+, bike :: Maybe EnquiryBannerConfigs
+}
+
+type EnquiryBannerConfigs = {
+  question :: Maybe EnquiryBannerConfig
+, firstBtnBanner :: Maybe EnquiryBannerConfig
+, secondBtnBanner :: Maybe EnquiryBannerConfig
+, categoryId :: String
+, optionId :: Maybe String
+}
+
+type EnquiryBannerConfig = {
+  title :: String
+, background :: String
+, color :: String
+, button1 :: Maybe EnquiryBannerButtonConfig
+, button2 :: Maybe EnquiryBannerButtonConfig
+, image :: String
+}
+
+type EnquiryBannerButtonConfig = {
+  title :: String
+, background :: String
+, color :: String
 }

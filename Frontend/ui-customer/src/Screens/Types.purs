@@ -777,6 +777,7 @@ type HomeScreenStateData =
   , selectedLocationListItem :: Maybe LocationListItemState
   , saveFavouriteCard :: SaveFavouriteCardState
   , rideDistance :: String
+  , actualEstimateDistnace :: Int 
   , rideDuration :: String
   , showPreferences :: Boolean
   , previousCurrentLocations:: PreviousCurrentLocations
@@ -852,7 +853,12 @@ type HomeScreenStateData =
   , boostSearchEstimate :: ChooseVehicle.Config
   , cancellationRate :: Maybe Number
   , profile :: Maybe GetProfileRes
+  , enquiryBannerStage :: Maybe EnquiryBannerStage
 }
+
+data EnquiryBannerStage = QuestionStage | FirstBtnClickStage | SecondBtnClickStage
+derive instance genericEnquiryBannerStage :: Generic EnquiryBannerStage _
+instance eqEnquiryBannerStage :: Eq EnquiryBannerStage where eq = genericEq
 
 type UpcomingRideDetails = {
   bookingId :: String,
@@ -1164,6 +1170,7 @@ type HomeScreenStateProps =
   , bookAmbulanceModal :: Boolean
   , firstTimeAmbulanceSearch :: Boolean
   , searchType :: Maybe String
+  , enquiryBannerUndoTimer :: Maybe Int
   }
 
 type EditedLocation = {
@@ -1643,7 +1650,7 @@ type SavedLocationScreenData =
   , config :: AppConfig
   , logField :: Object Foreign
   , favouriteDriversList :: Array FavouriteDriverListItemState
-  , current :: Favourites 
+  , current :: Favourites
   , driverNo :: String
   , driverName :: String
   , driverId :: Maybe String

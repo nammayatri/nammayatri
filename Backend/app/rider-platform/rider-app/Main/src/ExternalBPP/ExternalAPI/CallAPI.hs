@@ -21,14 +21,17 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.Order as CMRLOrder
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus as CMRLPassengerViewStatus
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 getProviderName :: IntegratedBPPConfig -> Text
@@ -38,9 +41,10 @@ getProviderName integrationBPPConfig =
     EBIX _ -> "Kolkata Buses"
     DIRECT _ -> "Direct Multimodal Services"
     Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
+    CRIS _ -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Maybe (Id Person) -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
-getFares mbRiderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
   case integrationBPPConfig.providerConfig of
     CMRL config' ->
       CMRLFareByOriginDest.getFareByOriginDest config' $
@@ -50,8 +54,50 @@ getFares mbRiderId merchant merchanOperatingCity integrationBPPConfig routeCode 
             destination = endStopCode,
             ticketType = "SJT"
           }
-    EBIX _ -> FRFSUtils.getFares mbRiderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    DIRECT _ -> FRFSUtils.getFares mbRiderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig.id merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    CRIS config' -> do
+      person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+      mbMobileNumber <- decrypt `mapM` person.mobileNumber
+      mbImeiNumber <- decrypt `mapM` person.imeiNumber
+      sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
+      let request =
+            CRISRouteFare.CRISFareRequest
+              { mobileNo = fromMaybe "9999999999" mbMobileNumber,
+                imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+                appSession = sessionId,
+                sourceCode = startStopCode,
+                changeOver = " ", -- TODO: Make it dynamic
+                destCode = endStopCode,
+                ticketType = "J", -- TODO: Make it dynamic
+                via = " ", -- TODO: Make it dynamic
+                trainType = Nothing,
+                routeId = routeCode
+              }
+      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' request
+      case resp of
+        Left err -> do
+          logError $ "Error while calling CRIS API: " <> show err
+          return $ -- Fallback to 0 fare
+            [ FRFSUtils.FRFSFare
+                { price =
+                    Price
+                      { amountInt = 0,
+                        amount = 0,
+                        currency = INR
+                      },
+                  discounts = [],
+                  vehicleServiceTier =
+                    FRFSUtils.FRFSVehicleServiceTier
+                      { serviceTierType = Spec.ORDINARY,
+                        serviceTierProviderCode = "ORDINARY",
+                        serviceTierShortName = "ORDINARY",
+                        serviceTierDescription = "ORDINARY",
+                        serviceTierLongName = "ORDINARY"
+                      }
+                }
+            ]
+        Right fares -> return fares
     _ -> throwError $ InternalError "Unimplemented!"
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
