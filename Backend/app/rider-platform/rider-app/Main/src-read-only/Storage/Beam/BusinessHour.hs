@@ -12,7 +12,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BusinessHourT f = BusinessHourT
-  { btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
+  { bookingClosingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
+    btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
     categoryId :: B.C f [Kernel.Prelude.Text],
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
