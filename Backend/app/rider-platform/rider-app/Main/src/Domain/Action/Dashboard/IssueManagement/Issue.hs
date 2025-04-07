@@ -13,13 +13,13 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueOptionCreate,
     postIssueOptionUpdate,
     postIssueMessageUpsert,
+    postIssueKaptureCreate,
   )
 where
 
 import qualified API.Types.RiderPlatform.IssueManagement.Issue
 import qualified API.UI.Issue as AUI
 import qualified Data.Aeson
-import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -27,6 +27,7 @@ import qualified IssueManagement.Common
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DIssue
+import qualified IssueManagement.Domain.Action.UI.Issue as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
@@ -36,16 +37,8 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 
-dashboardIssueHandle :: DIssue.ServiceHandle Environment.Flow
-dashboardIssueHandle =
-  DIssue.ServiceHandle
-    { findPersonById = AUI.castPersonById,
-      findByMerchantShortIdAndCity = AUI.castMOCityByMerchantShortIdAndCity,
-      findMerchantConfig = AUI.buildMerchantConfig,
-      mbSendUnattendedTicketAlert = Just Sos.sendUnattendedSosTicketAlert,
-      findRideByRideShortId = AUI.castRideByRideShortId,
-      findByMobileNumberAndMerchantId = AUI.castPersonByMobileNumberAndMerchant
-    }
+dashboardIssueHandle :: DAI.ServiceHandle Environment.Flow
+dashboardIssueHandle = AUI.customerIssueHandle
 
 getIssueCategoryList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -186,3 +179,16 @@ postIssueMessageUpsert ::
   Environment.Flow IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes
 postIssueMessageUpsert (Kernel.Types.Id.ShortId merchantShortId) city req =
   DIssue.upsertIssueMessage (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+
+postIssueKaptureCreate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.IssueReportReqV2 ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueKaptureCreate (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.createIssueReportV2
+    (Kernel.Types.Id.ShortId merchantShortId)
+    city
+    req
+    dashboardIssueHandle
+    Common.CUSTOMER

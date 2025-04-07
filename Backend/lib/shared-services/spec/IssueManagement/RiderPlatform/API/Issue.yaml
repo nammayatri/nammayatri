@@ -37,6 +37,7 @@ imports:
   UpdateIssueOptionReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageRes: IssueManagement.Common.Dashboard.Issue
+  IssueReportReqV2: IssueManagement.Common.Dashboard.Issue
 
 module: Issue
 apiPrefix: issueV2
@@ -206,6 +207,16 @@ apis:
       migrate:
         endpoint: IssueAPI UpsertIssueMessageEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
+  - POST: # CreateIssueReportV2API
+      endpoint: /kapture/create
+      auth: ApiAuthV2
+      request:
+        type: IssueReportReqV2
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: IssueAPI CreateIssueReportV2Endpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE CREATE_ISSUE_REPORT_V2
 
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}

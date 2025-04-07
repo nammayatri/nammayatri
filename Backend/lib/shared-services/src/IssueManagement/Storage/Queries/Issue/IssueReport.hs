@@ -26,7 +26,7 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
           catMaybes
             [ fmap (Is BeamIR.status . Eq) mbStatus,
               fmap (Is BeamIR.assignee . Eq . Just) mbAssignee,
-              fmap (Is BeamIR.categoryId . Eq . getId) mbCategoryId,
+              fmap (Is BeamIR.categoryId . Eq . Just . getId) mbCategoryId,
               fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
               fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId
             ]
@@ -123,7 +123,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             driverId = Id <$> driverId,
             rideId = Id <$> rideId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
-            categoryId = Id categoryId,
+            categoryId = Id <$> categoryId,
             optionId = Id <$> optionId,
             mediaFiles = Id <$> mediaFiles,
             createdAt = T.localTimeToUTC T.utc createdAt,
@@ -146,7 +146,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.description = description,
         BeamIR.assignee = assignee,
         BeamIR.status = status,
-        BeamIR.categoryId = getId categoryId,
+        BeamIR.categoryId = getId <$> categoryId,
         BeamIR.optionId = getId <$> optionId,
         BeamIR.deleted = deleted,
         BeamIR.mediaFiles = getId <$> mediaFiles,
