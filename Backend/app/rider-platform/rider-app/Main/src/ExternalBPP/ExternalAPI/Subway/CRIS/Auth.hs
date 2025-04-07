@@ -86,5 +86,5 @@ callCRISAPI config proxy clientFn description = do
         description
         proxy
   case eitherResp of
-    Left _ -> throwError $ InternalError "Error while calling CRIS API"
+    Left err -> throwError $ InternalError $ "Error while calling CRIS API" <> (show err)
     Right res -> return res
