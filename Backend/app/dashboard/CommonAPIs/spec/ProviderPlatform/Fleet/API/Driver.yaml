@@ -79,13 +79,14 @@ apis:
       validation: API.Types.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
       helperApi:
         - POST:
-            endpoint: /{mobileNo}/{fleetOwnerId}/fleet/addVehicle
+            endpoint: /{mobileNo}/{requestorId}/fleet/addVehicle # get requestorId from apiToken
             auth: ApiAuthV2
             params:
               mobileNo: Text
-              fleetOwnerId: Text
+              requestorId: Text
             query:
               - mobileCountryCode: Text
+              - fleetOwnerId : Text
             request:
               type: AddVehicleReq
             response:
