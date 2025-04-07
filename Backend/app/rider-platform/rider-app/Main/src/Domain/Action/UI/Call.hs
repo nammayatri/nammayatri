@@ -194,7 +194,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
           updateCallStatus callStatus.id newCallStatus Nothing callAttemptStatus callDuration
           throwError CallStatusDoesNotExist
         else updateCallStatus callStatus.id newCallStatus Nothing callAttemptStatus callDuration
-  DCE.sendCallDataToKafka (Just "EXOTEL") callStatus.rideId (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
+  DCE.sendCallDataToKafka (Just "EXOTEL") callStatus.rideId (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing Nothing Nothing
   return Ack
   where
     updateCallStatus id callStatus url callAttemptStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus callAttemptStatus id
@@ -238,7 +238,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
         return (riderMobileNumber, ride, "DRIVER", Nothing)
 
   QCallStatus.updateCallStatusInformation (Just merchantId.getId) (Just exophone.callService) dtmfNumberUsed id
-  DCE.sendCallDataToKafka (Just "EXOTEL") (Just ride.id) (Just callType) (Just callSid) Nothing System (Just to)
+  DCE.sendCallDataToKafka (Just "EXOTEL") (Just ride.id) (Just callType) (Just callSid) Nothing System (Just to) Nothing Nothing
 
   return resNumber
   where
