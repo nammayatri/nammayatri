@@ -44,9 +44,11 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment
+import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -57,6 +59,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.Coins.CoinsConfig as CoinsConfig (fetchCoinConfigByFunctionAndMerchant)
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
@@ -112,8 +115,20 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
+  coinsRewardedOnGoldTierRideRequest <-
+    if isContainsGoldTierTag searchReq.customerNammaTags
+      then
+        CoinsConfig.fetchCoinConfigByFunctionAndMerchant
+          DCT.GoldTierRideCompleted
+          searchReq.providerId
+          searchReq.merchantOperatingCityId
+          >>= \maybeCoinsConfig ->
+            pure (maybeCoinsConfig >>= (\config -> Just config.coins))
+      else pure Nothing
+  logInfo $ "Coins rewarded on gold tier ride request: " <> show coinsRewardedOnGoldTierRideRequest
+
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinsRewardedOnGoldTierRideRequest) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -197,9 +212,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       UTCTime ->
       DTR.TransporterConfig ->
       Maybe (Id RiderDetails) ->
+      Maybe Int ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinsRewardedOnGoldTierRideRequest dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -283,9 +299,16 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 isFavourite = isFavourite,
                 parcelType = searchReq.parcelType,
                 parcelQuantity = searchReq.parcelQuantity,
+                coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRideRequest,
                 ..
               }
       pure searchRequestForDriver
+
+    isContainsGoldTierTag :: Maybe [Lib.Yudhishthira.Types.TagNameValue] -> Bool
+    isContainsGoldTierTag customerNammaTags =
+      case customerNammaTags of
+        Just tags -> any (\tag -> tag == TagNameValue "CustomerTier#Gold") tags
+        Nothing -> False
 
 buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
 buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do

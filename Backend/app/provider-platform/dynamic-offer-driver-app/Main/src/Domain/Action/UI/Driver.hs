@@ -493,7 +493,8 @@ data BookingAPIEntity = BookingAPIEntity
     roundTrip :: Maybe Bool,
     returnTime :: Maybe UTCTime,
     distanceToPickup :: Maybe Meters,
-    isScheduled :: Bool
+    isScheduled :: Bool,
+    coinsRewardedOnGoldTierRide :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1394,7 +1395,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             backendConfigVersion = Nothing,
             backendAppVersion = Just deploymentVersion.getDeploymentVersion,
             merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
-            vehicleServiceTierName = sd.vehicleServiceTierName
+            vehicleServiceTierName = sd.vehicleServiceTierName,
+            coinsRewardedOnGoldTierRide = sd.coinsRewardedOnGoldTierRide
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

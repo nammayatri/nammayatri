@@ -103,7 +103,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     roundTrip :: Maybe Bool,
     middleStopCount :: Int,
     parcelType :: Maybe DParcel.ParcelType,
-    parcelQuantity :: Maybe Int
+    parcelQuantity :: Maybe Int,
+    coinsRewardedOnGoldTierRide :: Maybe Int
   }
   deriving (Generic, ToSchema, Show)
 
@@ -175,6 +176,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           parcelType = nearbyReq.parcelType,
           parcelQuantity = nearbyReq.parcelQuantity,
+          coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
           ..
         }
   where
