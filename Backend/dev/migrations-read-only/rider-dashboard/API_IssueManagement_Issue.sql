@@ -71,3 +71,14 @@ UPDATE atlas_bap_dashboard.transaction
 
 -- {"api":"PostIssueMessageUpsert","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_UPSERT' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'ISSUE' AND T1.user_action_type = 'UPSERT_ISSUE_MESSAGE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostIssueKaptureCreate","migration":"endpoint","param":"IssueAPI CreateIssueReportV2Endpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_KAPTURE_CREATE'
+  WHERE endpoint = 'IssueAPI CreateIssueReportV2Endpoint';
+
+-- {"api":"PostIssueKaptureCreate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT ISSUE CREATE_ISSUE_REPORT_V2","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_KAPTURE_CREATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'ISSUE' AND T1.user_action_type = 'CREATE_ISSUE_REPORT_V2' ) ON CONFLICT DO NOTHING;

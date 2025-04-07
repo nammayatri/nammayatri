@@ -22,7 +22,7 @@ data IssueReport = IssueReport
     description :: Text,
     assignee :: Maybe Text,
     status :: IssueStatus,
-    categoryId :: Id D.IssueCategory,
+    categoryId :: Maybe (Id D.IssueCategory),
     optionId :: Maybe (Id D.IssueOption),
     deleted :: Bool,
     mediaFiles :: [Id D.MediaFile],

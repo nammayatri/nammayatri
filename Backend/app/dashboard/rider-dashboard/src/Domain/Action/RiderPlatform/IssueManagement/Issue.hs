@@ -14,6 +14,7 @@ module Domain.Action.RiderPlatform.IssueManagement.Issue
     postIssueOptionCreate,
     postIssueOptionUpdate,
     postIssueMessageUpsert,
+    postIssueKaptureCreate,
   )
 where
 
@@ -318,3 +319,9 @@ postIssueMessageUpsert merchantShortId opCity apiTokenInfo req = do
       opCity
       (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.issueDSL.postIssueMessageUpsert))
       req
+
+postIssueKaptureCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.IssueReportReqV2 -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueKaptureCreate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueKaptureCreate) req)

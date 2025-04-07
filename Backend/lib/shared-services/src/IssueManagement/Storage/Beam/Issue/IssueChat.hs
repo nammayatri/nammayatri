@@ -12,46 +12,34 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module IssueManagement.Storage.Beam.Issue.IssueReport where
+module IssueManagement.Storage.Beam.Issue.IssueChat where
 
 import Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified IssueManagement.Common as Domain
 import IssueManagement.Tools.UtilsTH
 
-data IssueReportT f = IssueReportT
+data IssueChatT f = IssueChatT
   { id :: B.C f Text,
-    shortId :: B.C f (Maybe Text),
-    driverId :: B.C f (Maybe Text),
+    ticketId :: B.C f Text,
+    chats :: B.C f [Text],
+    mediaFiles :: B.C f [Text],
     personId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
-    merchantOperatingCityId :: B.C f (Maybe Text),
-    description :: B.C f Text,
-    assignee :: B.C f (Maybe Text),
-    status :: B.C f Domain.IssueStatus,
-    categoryId :: B.C f (Maybe Text),
-    optionId :: B.C f (Maybe Text),
-    deleted :: B.C f Bool,
-    mediaFiles :: B.C f [Text],
-    ticketId :: B.C f (Maybe Text),
+    issueReportId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
-    updatedAt :: B.C f Time.LocalTime,
-    chats :: B.C f [Domain.Chat],
-    merchantId :: B.C f (Maybe Text),
-    becknIssueId :: B.C f (Maybe Text),
-    reopenedCount :: B.C f (Maybe Int)
+    updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table IssueReportT where
-  data PrimaryKey IssueReportT f
+instance B.Table IssueChatT where
+  data PrimaryKey IssueChatT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type IssueReport = IssueReportT Identity
+type IssueChat = IssueChatT Identity
 
-$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId]])
+$(enableKVPG ''IssueChatT ['id] [['personId], ['issueReportId]])
 
-$(mkTableInstancesGenericSchema ''IssueReportT "issue_report")
+$(mkTableInstancesGenericSchema ''IssueChatT "issue_chat")
