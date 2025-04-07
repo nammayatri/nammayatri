@@ -232,7 +232,6 @@ window.onMerchantEvent = function (_event, globalPayload) {
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
-    JBridge.initiateLocationServiceClient()
     console.warn("Process called");
     try {
       const clientPaylod = window.__payload.payload;
