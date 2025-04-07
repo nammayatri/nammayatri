@@ -31,7 +31,7 @@ import qualified Text.Show (show)
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
-  | EndRide {isDisabled :: Bool, ride :: Ride, metroRideType :: DCoins.MetroRideType}
+  | EndRide {isDisabled :: Bool, coinsRewardedOnGoldTierRide :: Maybe Int, ride :: Ride, metroRideType :: DCoins.MetroRideType}
   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
   | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral

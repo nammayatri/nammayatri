@@ -157,6 +157,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           conditionalCharges = [],
           isSafetyPlus = False,
           safetyPlusCharges = Nothing,
+          coinsRewardedOnGoldTierRide = Nothing,
           ..
         }
 

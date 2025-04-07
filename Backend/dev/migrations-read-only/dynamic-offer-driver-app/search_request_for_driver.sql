@@ -188,3 +188,13 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_safet
 
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_category text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN coins_rewarded_on_gold_tier_ride integer ;
+
+
+------- SQL updates -------
+

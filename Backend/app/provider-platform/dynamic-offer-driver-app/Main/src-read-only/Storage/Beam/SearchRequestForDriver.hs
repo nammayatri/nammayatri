@@ -37,6 +37,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    coinsRewardedOnGoldTierRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     conditionalCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Data.Time.LocalTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),

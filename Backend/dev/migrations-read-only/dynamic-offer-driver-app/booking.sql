@@ -135,3 +135,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN parcel_quantity integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_safety_plus boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN coins_rewarded_on_gold_tier_ride integer ;

@@ -25,6 +25,7 @@ data BookingT f = BookingT
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
     bapUri :: B.C f Kernel.Prelude.Text,
+    coinsRewardedOnGoldTierRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
