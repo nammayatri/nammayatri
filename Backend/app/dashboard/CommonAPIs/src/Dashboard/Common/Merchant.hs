@@ -295,7 +295,8 @@ buildSmsServiceConfig = \case
     username' <- encrypt gusername
     password' <- encrypt gpassword
     templateId' <- encrypt templateId
-    pure . SMS.GupShupConfig $ SMS.GupShupCfg {userName = username', password = password', templateId = templateId', ..}
+    entityId' <- encrypt entityId
+    pure . SMS.GupShupConfig $ SMS.GupShupCfg {userName = username', password = password', entityId = entityId', templateId = templateId', ..}
 
 instance ToJSON SmsServiceConfigUpdateReq where
   toJSON = genericToJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
@@ -347,6 +348,7 @@ data GupShupCfgUpdateReq = GupShupCfgUpdateReq
   { gusername :: Text,
     gpassword :: Text,
     url :: BaseUrl,
+    entityId :: Text,
     templateId :: Text
   }
   deriving stock (Show, Generic)
