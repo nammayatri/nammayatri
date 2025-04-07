@@ -34,6 +34,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Types.Common.HighPrecMoney,

@@ -30,6 +30,7 @@ data Booking = Booking
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Text,
+    coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -88,6 +88,7 @@ Booking:
     parcelQuantity: Maybe Int
     initiatedAs: Maybe TripParty
     isReferredRide: Maybe Bool
+    coinsRewardedOnGoldTierRide: Maybe Int
 
   excludedFields:
     - merchantId
