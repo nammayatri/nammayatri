@@ -1139,3 +1139,5 @@ type MakerPositionConfig =
   { latitude :: Number
   , longitude :: Number
   }
+
+foreign import scrollToChildInScrollView :: forall action. EffectFn2 String String Unit

@@ -67,7 +67,7 @@ import Data.Newtype (unwrap)
 import Data.Tuple as DT
 import Data.Foldable (foldM, minimum)
 import Engineering.Helpers.RippleCircles as EHR
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Foreign.Class (encode)
 import Storage (setValueToLocalStore)
 import Data.Argonaut.Core as AC
@@ -120,6 +120,7 @@ eval (MapReady _ _ _) state =
               case state.data.stationResponse of
                 (Mb.Just stations) -> drawDriverRoute stations state
                 _ -> pure unit
+              EHC.liftFlow $ runEffectFn2 JB.scrollToChildInScrollView (EHC.getNewIDWithTag "busStopsView") (EHC.getNewIDWithTag ("verticalLineView1false17"))
         pure NoAction
     ]
 
@@ -153,8 +154,8 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
         void $ launchAff $ EHC.flowRunner defaultGlobalState
           $ do
               when state.props.gotMapReady $ drawDriverRoute metroResponse state
+              EHC.liftFlow $ runEffectFn2 JB.scrollToChildInScrollView (EHC.getNewIDWithTag "busStopsView") (EHC.getNewIDWithTag ("verticalLineView1false17"))
               -- drawDriverRouteMock mockRoute
-              
               pure unit
         pure NoAction
     ]
@@ -230,6 +231,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
                     when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
+                    EHC.liftFlow $ runEffectFn2 JB.scrollToChildInScrollView (EHC.getNewIDWithTag "busStopsView") (EHC.getNewIDWithTag ("verticalLineView1false17"))
               case DT.snd finalMap of
                 Mb.Just pt -> do
                   void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
@@ -269,10 +271,6 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
                   Mb.Just previousVehicleData ->
                     let distanceBtwnCurrentAndPrevLocations = haversineDistance previousVehicleData.position nearestWaypointConfig.vehicleLocationOnRoute
                         currentLatLonBeforePrevIndex = nearestWaypointConfig.index >= previousVehicleData.index
-                        _ = spy "Distance Between Current and Previous Locations" $ Tuple item.vehicleId distanceBtwnCurrentAndPrevLocations
-                        _ = spy "Current Lat Lon Before Previous Index" $ Tuple item.vehicleId currentLatLonBeforePrevIndex
-                        _ = spy "Current NearestWaypoint" $ Tuple item.vehicleId nearestWaypointConfig
-                        _ = spy "Previous NearestWaypoint" $ Tuple item.vehicleId previousVehicleData
                     in 
                       if ((not currentLatLonBeforePrevIndex) || distanceBtwnCurrentAndPrevLocations >= wmbFlowConfig.maxDeviatedDistanceInMeters)
                         then previousVehicleData.position

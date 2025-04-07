@@ -3103,3 +3103,9 @@ export const getMarkerPosition = (markerId) => {
     return JSON.parse(window.JBridge.getMarkerPosition(JSON.stringify({markerId : markerId})));
   }
 }
+
+export const scrollToChildInScrollView = (scrollViewId, childViewId) => {
+  if (window.JBridge.scrollToChildInScrollView) {
+    return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId}));
+  }
+} 

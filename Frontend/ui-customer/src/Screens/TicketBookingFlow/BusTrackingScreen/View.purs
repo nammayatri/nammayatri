@@ -84,6 +84,7 @@ import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
 import Accessor (_code)
 import Data.Lens ((^.))
+import Effect.Uncurried (runEffectFn2)
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState = 
@@ -419,6 +420,7 @@ busStopsView push state = do
     [ height $ V scrollViewHeight
     , width MATCH_PARENT      
     , nestedScrollView true
+    , id $ EHC.getNewIDWithTag "busStopsView"
     ]
     [ 
       relativeLayout
