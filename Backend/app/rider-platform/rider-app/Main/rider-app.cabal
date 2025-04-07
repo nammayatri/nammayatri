@@ -148,6 +148,7 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.AppManagement.Customer
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
@@ -523,6 +524,7 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Tickets
       API.Action.Dashboard.IssueManagement
@@ -573,6 +575,8 @@ library
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
       API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.Customer
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.MerchantOnboarding

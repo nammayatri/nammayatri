@@ -1,0 +1,27 @@
+imports:
+  Customer: Dashboard.Common
+  SosReq: API.Types.UI.Sos
+  SosRes: API.Types.UI.Sos
+  Person: Domain.Types.Person
+
+importPackageOverrides:
+  API.Types.UI.Sos: "rider-app"
+  Domain.Types.Person: "rider-app"
+
+module: Customer
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /{customerId}/sos/create
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: SosReq
+      response:
+        type: SosRes
+      migrate:
+        endpoint: SosAPI CreateSosEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_SOS
