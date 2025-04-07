@@ -25,6 +25,7 @@ import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
@@ -59,7 +60,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
       mbMobileNumber <- decrypt `mapM` person.mobileNumber
       mbImeiNumber <- decrypt `mapM` person.imeiNumber
-      sessionId <- generateGUID -- TODO: Fix it later
+      sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
       let request =
             CRISRouteFare.CRISFareRequest
               { mobileNo = fromMaybe "9999999999" mbMobileNumber,
@@ -68,7 +69,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                 sourceCode = startStopCode,
                 changeOver = " ", -- TODO: Make it dynamic
                 destCode = endStopCode,
-                ticketType = "SJT", -- TODO: Make it dynamic
+                ticketType = "J", -- TODO: Make it dynamic
                 via = " ", -- TODO: Make it dynamic
                 trainType = Nothing,
                 routeId = routeCode

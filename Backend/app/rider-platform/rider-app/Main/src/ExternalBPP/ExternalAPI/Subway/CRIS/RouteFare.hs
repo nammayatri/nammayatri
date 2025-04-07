@@ -28,7 +28,7 @@ data EncryptedResponse = EncryptedResponse
 data CRISFareRequest = CRISFareRequest
   { mobileNo :: Text,
     imeiNo :: Text,
-    appSession :: Text,
+    appSession :: Int,
     sourceCode :: Text,
     changeOver :: Text,
     -- | "1 blank space"
@@ -140,7 +140,7 @@ getRouteFare config request = do
           <> config.appCode
           <> "\","
           <> "\"appSession\":\""
-          <> appSession request
+          <> show (appSession request)
           <> "\","
           <> "\"sourceCode\":\""
           <> sourceCode request
