@@ -43,6 +43,7 @@ import Engineering.Helpers.Utils (terminateLoader)
 import Mobility.Prelude (boolToInvisibility, boolToVisibility)
 import JBridge as JB
 import Effect.Uncurried (runEffectFn2)
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
@@ -290,6 +291,7 @@ explanationContentView :: forall w. (Action -> Effect Unit) -> EmergencyContacts
 explanationContentView push state =
   let
     contactsLength = length state.data.selectedContacts
+    _ = spy "contactsLength" $ contactsLength
   in
     linearLayout
       [ height MATCH_PARENT
@@ -363,6 +365,9 @@ addContactsButtonView push state =
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
 emergencyContactsListView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 emergencyContactsListView push state =
+ let 
+    _ = spy "selectedContacts---->" $ state.data.selectedContacts
+  in
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -400,6 +405,7 @@ dropDownWithHeaderView push state contact =
 emergencyContactListItem :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> NewContacts -> Int -> PrestoDOM (Effect Unit) w
 emergencyContactListItem push state contact index =
   let
+    _ = spy "localStageOn" $ getValueToLocalStore LOCAL_STAGE
     userColor = case index of
       0 -> Color.yellow900
       1 -> Color.blue800

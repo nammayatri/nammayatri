@@ -454,7 +454,7 @@ handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS"
   handleExternalLocations mBGlobalPayload
-  case mBGlobalPayload of
+  case spy "GlobalPayload" mBGlobalPayload of
     Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
       Just screen -> case screen of
         "rides" -> hideSplashAndCallFlow myRidesScreenFlow
@@ -493,6 +493,8 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
         "waitingFordriver" -> hideSplashAndCallFlow $ currentFlowStatus false
+        "addManually" ->  hideSplashAndCallFlow $ hybridFlow screen
+        "chooseFromContacts" -> hideSplashAndCallFlow $ hybridFlow screen
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -753,6 +755,49 @@ hybridFlow flow = do
                   }
             )
       activateSafetyScreenFlow
+    "addManually" -> do 
+       modifyScreenState $ EmergencyContactsScreenStateType (\_ -> EmergencyContactsScreenData.initData { props { showAddContactOptions = true , addContactsManually = true , saveEmergencyContacts = true} })
+       emergencyScreenFlow
+    "chooseFromContacts" -> do 
+        (GlobalState globalState) <- getState
+        let state  = globalState.emergencyContactsScreen
+        modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state{ props { showAddContactOptions = true ,  saveEmergencyContacts = true , getDefaultContacts = true  } })
+        selectContactsFlow (\contacts -> do
+              let validSelectedContacts =
+                    ( mapWithIndex
+                        ( \index contact ->
+                            if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
+                              contact { number = DS.drop ((DS.length contact.number) - 10) contact.number, priority = boolToInt $ index /= 0 }
+                            else
+                              contact { priority = boolToInt $ index /= 0 }
+                        )
+                        contacts
+                    )
+              void $ pure $ hideKeyboardOnNavigation true
+              let updatedState = EmergencyContactsScreenData.initData { data { editedText = "", selectedContacts = getDefaultPriorityList validSelectedContacts }, props { showContactList = false } }
+              updateEmergencyContacts updatedState false
+              pure unit
+            ) state.data.selectedContacts 3
+        emergencyScreenFlow
+      where
+        updateEmergencyContacts :: ST.EmergencyContactsScreenState -> Boolean -> FlowBT String Unit
+        updateEmergencyContacts state shouldGoToSafetyScreen = do
+          let newHomeScreenStage homescreenState = if homescreenState.props.currentStage == ChatWithDriver then homescreenState.props.stageBeforeChatScreen else homescreenState.props.currentStage
+          void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
+          when (not shouldGoToSafetyScreen)
+            $ if state.props.showInfoPopUp then do
+                void $ lift $ lift $ showToast (getString STR.CONTACT_REMOVED_SUCCESSFULLY)
+              else
+                void $ lift $ lift $ showToast $  getString STR.TRUSTED_CONTACS_ADDED_SUCCESSFULLY
+          let contactsCount = length state.data.selectedContacts
+          if contactsCount < 1
+            then
+              modifyScreenState $ EmergencyContactsScreenStateType (\_ -> EmergencyContactsScreenData.initData{props { fromNewSafetyFlow= true, saveEmergencyContacts = true  } })
+            else do
+              modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false , saveEmergencyContacts = true , showAddContactOptions = true } })
+              modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
+              modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
     _ -> pure unit
 
 
@@ -3809,7 +3854,7 @@ emergencyScreenFlow = do
           updateEmergencyContacts updatedState false
           pure unit
         ) state.data.selectedContacts 3
-      emergencyScreenFlow
+      -- emergencyScreenFlow
   where
     updateEmergencyContacts :: ST.EmergencyContactsScreenState -> Boolean -> FlowBT String Unit
     updateEmergencyContacts state shouldGoToSafetyScreen = do

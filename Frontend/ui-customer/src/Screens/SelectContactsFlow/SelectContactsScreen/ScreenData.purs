@@ -31,7 +31,7 @@ initData =
       contactSelectionLimit : 3
     },
     props : {
-      showContacts : false
+      showContacts : true
     }
   }
 

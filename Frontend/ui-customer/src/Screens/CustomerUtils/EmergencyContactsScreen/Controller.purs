@@ -148,8 +148,22 @@ eval (PrimaryButtonActionControll PrimaryButton.OnClick) state =
     updateAndExit newState $ PostContacts newState false 
   else if null state.data.selectedContacts then
     continueWithCmd state [ pure ShowAddContactsOptions ]
-  else if state.props.getDefaultContacts then
-    updateAndExit state $ UpdateDefaultContacts state
+  else if state.props.getDefaultContacts then do
+    if isParentView FunctionCall
+      then do 
+        let mBPayload = getGlobalPayload Constants.globalPayload
+        case mBPayload of
+          Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
+            Just screen -> do 
+              let x = spy "here 2" screen
+              if MP.startsWith "emergencycontactscreen" screen || MP.startsWith "addManually" screen || MP.startsWith "chooseFromContacts" screen then do
+                void $ pure $ emitTerminateApp Nothing true
+                continue state
+              else continue state
+            _ -> continue state
+                 
+          Nothing -> handleBackPress state
+     else  updateAndExit state $ UpdateDefaultContacts state
   else
     updateAndExit state $ PostContactsSafety state true
 
@@ -189,20 +203,25 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { showInfoPopUp = false } }
 
 eval BackPressed state = do
+  void  $ pure $ spy "here 4" "" 
   if isParentView FunctionCall
     then do 
       let mBPayload = getGlobalPayload Constants.globalPayload
       case mBPayload of
         Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
           Just screen -> do 
-            if MP.startsWith "emergencycontactscreen" screen then do
+            let x = spy "here 2" screen
+            if MP.startsWith "emergencycontactscreen" screen || MP.startsWith "addManually" screen || MP.startsWith "chooseFromContacts" screen then do
               void $ pure $ emitTerminateApp Nothing true
               continue state
-              else 
+              else do
+                void  $ pure $ spy "here 3" "" 
                 handleBackPress state
           _ -> handleBackPress state
         Nothing -> handleBackPress state
-    else handleBackPress state
+    else do
+     void  $ pure $ spy "here 5" ""
+     handleBackPress state
 
   
 
