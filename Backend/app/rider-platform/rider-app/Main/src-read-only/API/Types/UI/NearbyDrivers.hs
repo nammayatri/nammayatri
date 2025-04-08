@@ -29,7 +29,7 @@ data NearByDriversBucket = NearByDriversBucket {driverInfo :: [DriverInfo], radi
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyDriverReq = NearbyDriverReq {location :: Kernel.External.Maps.Types.LatLong, radius :: Kernel.Types.Distance.Meters}
+data NearbyDriverReq = NearbyDriverReq {location :: Kernel.External.Maps.Types.LatLong, radius :: Kernel.Types.Distance.Meters, vehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

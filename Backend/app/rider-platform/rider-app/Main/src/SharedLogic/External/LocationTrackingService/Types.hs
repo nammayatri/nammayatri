@@ -35,6 +35,7 @@ data Stop = Stop
   { name :: Text,
     coordinate :: LatLong,
     stopCode :: Text,
+    stopIdx :: Int,
     distanceToUpcomingIntermediateStop :: Int,
     durationToUpcomingIntermediateStop :: Int
   }
@@ -44,7 +45,7 @@ data UpcomingStop = UpcomingStop
   { stop :: Stop,
     eta :: UTCTime,
     status :: UpcomingStopStatus,
-    delta :: Double
+    delta :: Maybe Double
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

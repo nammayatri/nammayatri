@@ -70,7 +70,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   let reqCity = cityRes.currentCity.city
   moc <- CQMOC.findByMerchantIdAndCity merchantId reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchantId.getId <> "city:" <> show reqCity)
   riderConfig <- CQRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  variantListForNearByReq <- riderConfig.variantListForNearByReq & fromMaybeM (RiderConfigFieldIsEmpty "variantListForNearByReq" moc.id.getId)
+  variantListForNearByReq <- (req.vehicleVariants <|> riderConfig.variantListForNearByReq) & fromMaybeM (RiderConfigFieldIsEmpty "variantListForNearByReq" moc.id.getId)
   ringBucketCfg' <- riderConfig.nearByDriverRingBucketCfg & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg" moc.id.getId)
   let sortedRingBucketCfgs = sortOn (.radiusInMeters) ringBucketCfg'
   maxRadiusBucket <- safeLast sortedRingBucketCfgs & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg list is empty" moc.id.getId)
