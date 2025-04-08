@@ -148,11 +148,10 @@ getDriverRateCard ::
     ) ->
     Kernel.Prelude.Maybe Meters ->
     Kernel.Prelude.Maybe Minutes ->
-    Kernel.Prelude.Maybe Domain.Types.Common.TripCategory ->
     Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType ->
     Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDuration mbTripCategoryQuery mbServiceTierType = do
+getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDuration mbServiceTierType = do
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
   let mbDistance = reqDistance
       mbDuration = reqDuration
@@ -171,7 +170,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
       else pure (Nothing, Nothing, Nothing)
   let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
   let mbServiceTierType' = mbServiceTierType <|> mbVehicleServiceType
-  let tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) (mbTripCategoryQuery <|> mbTripCategory)
+  let tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) mbTripCategory
   case mbServiceTierType' of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
@@ -355,7 +354,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
           )
           False
           driverVehicleServiceTierTypes
-      canSwitchToIntraCity' = any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
+      canSwitchToIntraCity' = (any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes) && (canSwitchToInterCity' || canSwitchToRental')
 
   return $
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
@@ -419,7 +418,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           driverVehicleServiceTierTypes
 
       canSwitchToIntraCity' =
-        if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
+        if (any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes) && (canSwitchToInterCity' || canSwitchToRental')
           then fromMaybe driverInfo.canSwitchToIntraCity canSwitchToIntraCity
           else True
 
