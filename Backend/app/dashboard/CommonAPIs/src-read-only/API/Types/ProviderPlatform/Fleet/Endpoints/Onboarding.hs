@@ -12,6 +12,7 @@ import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -107,7 +108,17 @@ data VehicleDocumentItem = VehicleDocumentItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("onboarding" :> (GetOnboardingDocumentConfigsHelper :<|> GetOnboardingRegisterStatusHelper))
+data VerifyReq = VerifyReq {driverId :: Kernel.Prelude.Text, identifierNumber :: Kernel.Prelude.Text, imageId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VerifyType
+  = VERIFY_PAN
+  | VERIFY_GST
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+type API = ("onboarding" :> (GetOnboardingDocumentConfigsHelper :<|> GetOnboardingRegisterStatusHelper :<|> PostOnboardingVerify))
 
 type GetOnboardingDocumentConfigs =
   ( "document" :> "configs" :> QueryParam "makeSelfieAadhaarPanMandatory" Kernel.Prelude.Bool :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
@@ -158,22 +169,28 @@ type GetOnboardingRegisterStatusHelper =
            StatusRes
   )
 
+type PostOnboardingVerify = ("verify" :> Capture "verifyType" VerifyType :> ReqBody '[JSON] VerifyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data OnboardingAPIs = OnboardingAPIs
   { getOnboardingDocumentConfigs :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Role -> EulerHS.Types.EulerClient DocumentVerificationConfigList,
-    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes
+    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes,
+    postOnboardingVerify :: VerifyType -> VerifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkOnboardingAPIs :: (Client EulerHS.Types.EulerClient API -> OnboardingAPIs)
 mkOnboardingAPIs onboardingClient = (OnboardingAPIs {..})
   where
-    getOnboardingDocumentConfigs :<|> getOnboardingRegisterStatus = onboardingClient
+    getOnboardingDocumentConfigs :<|> getOnboardingRegisterStatus :<|> postOnboardingVerify = onboardingClient
 
 data OnboardingUserActionType
   = GET_ONBOARDING_DOCUMENT_CONFIGS
   | GET_ONBOARDING_REGISTER_STATUS
+  | POST_ONBOARDING_VERIFY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(mkHttpInstancesForEnum ''Role)
+
+$(mkHttpInstancesForEnum ''VerifyType)
 
 $(Data.Singletons.TH.genSingletons [''OnboardingUserActionType])

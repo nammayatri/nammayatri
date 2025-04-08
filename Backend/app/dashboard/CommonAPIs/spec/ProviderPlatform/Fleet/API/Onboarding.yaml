@@ -5,6 +5,7 @@ imports:
   DLDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   RCDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   Driver: Dashboard.Common
+  APISuccess: Kernel.Types.APISuccess
 
 module: Onboarding
 
@@ -53,7 +54,23 @@ apis:
               - providePrefillDetails: Bool
             response:
               type: StatusRes
+  - POST:
+      endpoint: /verify/{verifyType}
+      auth: ApiAuthV2
+      params:
+        verifyType: VerifyType
+      request:
+        type: VerifyReq
+      response:
+        type: APISuccess
 types:
+  VerifyReq:
+    driverId: Text
+    imageId: Text
+    identifierNumber: Text
+  VerifyType:
+    enum: "VERIFY_PAN,VERIFY_GST"
+    derive: "HttpInstance"
   Role:
     enum: "NORMAL_FLEET, BUSINESS_FLEET"
     derive: "HttpInstance"

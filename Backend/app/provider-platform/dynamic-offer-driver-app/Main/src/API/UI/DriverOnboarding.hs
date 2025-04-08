@@ -45,6 +45,14 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
              :> Post '[JSON] DriverOnboarding.DriverRCRes
+           :<|> "pan"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverPanReq
+             :> Post '[JSON] DriverOnboarding.DriverPanRes
+           :<|> "gstin"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverGstinReq
+             :> Post '[JSON] DriverOnboarding.DriverGstinRes
            :<|> "status"
              :> TokenAuth
              :> QueryParam "makeSelfieAadhaarPanMandatory" Bool
@@ -101,6 +109,8 @@ handler :: FlowServer API
 handler =
   ( verifyDL
       :<|> verifyRC
+      :<|> verifyPan
+      :<|> verifyGstin
       :<|> statusHandler
       :<|> validateImage
       :<|> validateImageFile
@@ -120,6 +130,12 @@ verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverO
 
 verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req
+
+verifyPan :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverPanReq -> FlowHandler DriverOnboarding.DriverPanRes
+verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyPan False Nothing (personId, merchantId, merchantOpCityId) req
+
+verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
+verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyGstin False Nothing (personId, merchantId, merchantOpCityId) req
 
 statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> FlowHandler DriverOnboarding.StatusRes
 statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData onboardingVehicleCategory
