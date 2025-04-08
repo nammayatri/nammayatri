@@ -48,20 +48,21 @@ rentalsIntercityCache personId merchantId req = do
       excludedVehicleVariants = riderConfig.excludedVehicleVariants
       rentalsConfig = riderConfig.fareCacheRentalsConfig
       interCitySearchLocations = riderConfig.fareCacheInterCitySearchLocations
+      driverOfferMerchantOperatingCityId = merchantOperatingCity.driverOfferMerchantOperatingCityId
   interCityResp <-
     case checkForSpecialLocation of
       True -> do
         Redis.safeGet (mkSpecialLocationRedisKey specialLocationId ":interCity") >>= \case
           Just resp -> pure resp
           Nothing -> do
-            interCityFareResp <- buildMininumIntercityFareArray req (Just req.currentLatLong) merchant merchantOperatingCity.city excludedVehicleVariants interCitySearchLocations
+            interCityFareResp <- buildMininumIntercityFareArray req (Just req.currentLatLong) merchant merchantOperatingCity.city excludedVehicleVariants interCitySearchLocations driverOfferMerchantOperatingCityId
             Redis.setExp (mkSpecialLocationRedisKey specialLocationId ":interCity") interCityFareResp 3600 -- 1 hour
             pure interCityFareResp
       False -> do
         Redis.safeGet (mkLocationRedisKey req.currentCity ":interCity") >>= \case
           Just resp -> pure resp
           Nothing -> do
-            interCityFareResp <- buildMininumIntercityFareArray req cityCenterLatLong merchant merchantOperatingCity.city excludedVehicleVariants interCitySearchLocations
+            interCityFareResp <- buildMininumIntercityFareArray req cityCenterLatLong merchant merchantOperatingCity.city excludedVehicleVariants interCitySearchLocations driverOfferMerchantOperatingCityId
             Redis.setExp (mkLocationRedisKey req.currentCity ":interCity") interCityFareResp 3600 -- 1 hour
             pure interCityFareResp
   rentalsResp <- case checkForSpecialLocation of
@@ -73,7 +74,7 @@ rentalsIntercityCache personId merchantId req = do
           Redis.setExp (mkSpecialLocationRedisKey specialLocationId ":rentals") rentalsAPIResp 3600 -- 1 hour
           pure rentalsAPIResp
     False -> do
-      Redis.safeGet (mkLocationRedisKey req.currentCity ":interCity") >>= \case
+      Redis.safeGet (mkLocationRedisKey req.currentCity ":rentals") >>= \case
         Just resp -> pure resp
         Nothing -> do
           rentalsAPIResp <- buildMininumRentalsFareArray req cityCenterLatLong merchant merchantOperatingCity.city excludedVehicleVariants rentalsConfig
@@ -108,8 +109,9 @@ buildMininumIntercityFareArray ::
   City.City ->
   Maybe [ServiceTierType.ServiceTierType] ->
   Maybe [IntercitySearchLocation] ->
+  Maybe Text ->
   m (Maybe [IntercitySearchResp])
-buildMininumIntercityFareArray req mbSourceLatLong merchant merchanOperatingCity mbExcludedVariants mbInterCitySearchLocations = do
+buildMininumIntercityFareArray req mbSourceLatLong merchant merchanOperatingCity mbExcludedVariants mbInterCitySearchLocations driverOfferMerchantOperatingCityId = do
   let interCitySearchLocations_ = fromMaybe [] mbInterCitySearchLocations
       sourceLatLong = fromMaybe req.currentLatLong mbSourceLatLong
       excludedVehicleVariants = fromMaybe [] mbExcludedVariants
@@ -121,9 +123,9 @@ buildMininumIntercityFareArray req mbSourceLatLong merchant merchanOperatingCity
                 CallBPPInternal.CalculateFareReq
                   { pickupLatLong = LatLong {lat = sourceLatLong.lat, lon = sourceLatLong.lon},
                     dropLatLong = Just $ LatLong {lat = destinationLatLon.lat, lon = destinationLatLon.lon},
-                    mbDistance = Nothing,
-                    mbDuration = Nothing,
-                    mbTripCategory = Just $ DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing
+                    mbDistance = destinationItem.destinationDistance,
+                    mbDuration = destinationItem.destinationDuration,
+                    mbTripCategory = Just $ DTC.InterCity DTC.OneWayOnDemandStaticOffer driverOfferMerchantOperatingCityId
                   }
           fareData <- CallBPPInternal.getFare merchant merchanOperatingCity calculateFareReq
           let estimatedFares = fareData.estimatedFares
