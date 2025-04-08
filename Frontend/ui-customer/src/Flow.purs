@@ -494,6 +494,9 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
         "waitingFordriver" -> hideSplashAndCallFlow $ currentFlowStatus false
+        "addContacts" -> do
+          modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{  emergencyContactsList = emergencyContactScreen.data.emergencyContactsList },props { showDropDown = false, fromNewSafetyFlow= true, saveEmergencyContacts = true } })
+          hideSplashAndCallFlow $ emergencyScreenFlow 
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
