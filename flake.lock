@@ -3603,6 +3603,7 @@
       "original": {
         "owner": "nammayatri",
         "repo": "shared-kernel",
+        "rev": "e5467adf515b919bda4940917778939686ea4f25",
         "type": "github"
       }
     },

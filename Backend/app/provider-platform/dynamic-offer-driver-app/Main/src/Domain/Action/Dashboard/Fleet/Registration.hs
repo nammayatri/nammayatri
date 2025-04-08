@@ -20,6 +20,7 @@ import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
@@ -127,6 +128,7 @@ fleetOwnerRegister req = do
     whenJust req.gstCertificateImage $ \gstImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing}
       image <- Image.validateImage True (req.personId, person.merchantId, person.merchantOperatingCityId) req'
+      void $ DVRC.verifyGstin True (Nothing) (req.personId, person.merchantId, person.merchantOperatingCityId) (DVRC.DriverGstinReq {gstin = fromMaybe "" req.gstNumber, imageId = gstImage, driverId = req.personId.getId})
       QFOI.updateGstImage req.gstNumber (Just image.imageId.getId) req.personId
   fork "Uploading Business License Image" $ do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do

@@ -527,6 +527,7 @@ MerchantServiceUsageConfig:
     driverBackgroundVerificationService: DriverBackgroundVerificationService
     aadhaarVerificationService: AadhaarVerificationService
     faceVerificationService: VerificationService
+    panVerificationService: Maybe VerificationService
     issueTicketService: IssueTicketService
     rectifyDistantPointsFailure: MapsService
     getExophone: CallService
@@ -578,6 +579,7 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: text
     aadhaarVerificationService: character varying(30)
     faceVerificationService: character varying(30)
+    panVerificationService: character varying(30)
     issueTicketService: character varying(30)
     getExophone: character varying(255)
     snapToRoadProvidersList: "text[]"
@@ -603,6 +605,7 @@ MerchantServiceUsageConfig:
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"
     llmChatCompletion: "'AzureOpenAI'"
+    panVerificationService: "'HyperVerge'"
 
   queries:
     findByMerchantOpCityId:
