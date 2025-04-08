@@ -1615,17 +1615,15 @@ eval (TimeUpdate time lat lng errorCode) state = do
         case nearestZone of
           Just zone -> do
             if state.props.specialZoneProps.currentGeoHash /= geoHash then do
-              void $ launchAff $ flowRunner defaultGlobalState $ do
-                push <- liftFlow $ getPushFn Nothing "HomeScreen"
-                _ <- pure $ JB.exitLocateOnMap ""
-                let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame" }, enableMapClickListener = true }
+                push <- getPushFn Nothing "HomeScreen"
+                let _ = JB.exitLocateOnMap ""
+                void $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame" }, enableMapClickListener = true }
                 pure unit
-              pure unit
             else pure unit
-            checkPermissionAndUpdateDriverMarker false
+            -- animateCamera driverLat driverLong zoomLevel "ZOOM"
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
-            checkPermissionAndUpdateDriverMarker true
+            animateCamera driverLat driverLong zoomLevel "ZOOM"
       else if state.props.currentStage == ST.RideStarted && (not $ Array.null state.data.activeRide.stops) then void $ launchAff $ flowRunner defaultGlobalState $ updateRouteOnMap newState driverLat driverLong
       else pure unit
 

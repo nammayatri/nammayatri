@@ -39,6 +39,8 @@ import in.juspay.mobility.app.callbacks.CallBack;
 public class Utils {
 
     private static final String UTILS = "UTILS";
+    public static final String DRIVER_STATUS = "DRIVER_STATUS_N";
+    public static final String DRIVER_STATUS_OFFLINE = "Offline";
 
 
     public static void minimizeApp(Context context) {
