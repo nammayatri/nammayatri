@@ -45,7 +45,9 @@ data IntercitySearchLocation = IntercitySearchLocation
   { destination :: Maybe LatLong,
     destinationCity :: Maybe Text,
     destinationCityBannerImageUrl :: Maybe Text,
-    destinationCityButtonImageUrl :: Maybe Text
+    destinationCityButtonImageUrl :: Maybe Text,
+    destinationDistance :: Maybe Meters,
+    destinationDuration :: Maybe Seconds
   }
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
