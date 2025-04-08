@@ -7,7 +7,6 @@ import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Driver
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.DriverRegistration
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Maps
-import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.MeterRide
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Ride
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -22,7 +21,6 @@ data RideBookingAPIs = RideBookingAPIs
   { driverDSL :: API.Types.Dashboard.RideBooking.Driver.DriverAPIs,
     driverRegistrationDSL :: API.Types.Dashboard.RideBooking.DriverRegistration.DriverRegistrationAPIs,
     mapsDSL :: API.Types.Dashboard.RideBooking.Maps.MapsAPIs,
-    meterRideDSL :: API.Types.Dashboard.RideBooking.MeterRide.MeterRideAPIs,
     rideDSL :: API.Types.Dashboard.RideBooking.Ride.RideAPIs,
     volunteerDSL :: API.Types.Dashboard.RideBooking.Volunteer.VolunteerAPIs
   }
@@ -32,12 +30,11 @@ mkRideBookingAPIs merchantId city token = do
   let driverDSL = API.Types.Dashboard.RideBooking.Driver.mkDriverAPIs driverClientDSL
   let driverRegistrationDSL = API.Types.Dashboard.RideBooking.DriverRegistration.mkDriverRegistrationAPIs driverRegistrationClientDSL
   let mapsDSL = API.Types.Dashboard.RideBooking.Maps.mkMapsAPIs mapsClientDSL
-  let meterRideDSL = API.Types.Dashboard.RideBooking.MeterRide.mkMeterRideAPIs meterRideClientDSL
   let rideDSL = API.Types.Dashboard.RideBooking.Ride.mkRideAPIs rideClientDSL
   let volunteerDSL = API.Types.Dashboard.RideBooking.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (RideBookingAPIs {..})
   where
-    driverClientDSL :<|> driverRegistrationClientDSL :<|> mapsClientDSL :<|> meterRideClientDSL :<|> rideClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.RideBookingDSLAPI) merchantId city token
+    driverClientDSL :<|> driverRegistrationClientDSL :<|> mapsClientDSL :<|> rideClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.RideBookingDSLAPI) merchantId city token
 
 callRideBookingAPI ::
   forall m r b c.
