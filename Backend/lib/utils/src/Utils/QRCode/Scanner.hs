@@ -52,7 +52,7 @@ scanQRCode imgBytes = do
       -- If output is empty, no QR code was found
       if null output
         then pure Nothing
-        else pure $ Just $ T.strip $ TE.decodeUtf8 $ BL.toStrict $ fromString output
+        else pure $ Just $ T.strip $ T.replace "QR-Code:" "" $ TE.decodeUtf8 $ BL.toStrict $ fromString output
     Right (_, _, err) -> do
       Prelude.putStrLn $ "Error code returned from command: " <> show err
       pure Nothing
