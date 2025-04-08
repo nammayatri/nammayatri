@@ -702,6 +702,53 @@ DriverPanCard:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+DriverGstin:
+  fields:
+    id: Id DriverGstin
+    driverId: Id Person
+    documentImageId1: Id Image
+    documentImageId2: Maybe (Id Image)
+    dateOfLiability: Maybe UTCTime
+    driverName: Maybe Text
+    gstin: EncryptedHashedField e Text
+    verificationStatus: VerificationStatus
+    address: Maybe Text
+    constitutionOfBusiness: Maybe Text
+    isProvisional: Maybe Bool
+    legalName: Maybe Text
+    tradeName: Maybe Text
+    typeOfRegistration: Maybe Text
+    validFrom: Maybe UTCTime
+    validUpto: Maybe UTCTime
+    verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    gstin: "!SecondaryKey" # forcing to be a secondary key
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId1
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId1
+
 DriverBankAccount:
   tableName: driver_bank_account
   fields:

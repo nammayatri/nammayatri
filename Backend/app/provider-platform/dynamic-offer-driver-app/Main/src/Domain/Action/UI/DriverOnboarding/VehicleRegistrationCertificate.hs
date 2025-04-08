@@ -16,9 +16,15 @@
 module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   ( DriverRCReq (..),
     DriverRCRes,
+    DriverPanReq (..),
+    DriverPanRes,
+    DriverGstinReq (..),
+    DriverGstinRes,
     RCStatusReq (..),
     RCValidationReq (..),
     verifyRC,
+    verifyPan,
+    verifyGstin,
     onVerifyRC,
     convertUTCTimetoDate,
     deactivateCurrentRC,
@@ -44,9 +50,12 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day)
+import Data.Time.Format
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -78,7 +87,9 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverPanCard as DPQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -121,6 +132,24 @@ data DriverRCReq = DriverRCReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type DriverRCRes = APISuccess
+
+data DriverPanReq = DriverPanReq
+  { panNumber :: Text,
+    imageId :: Text, --Image,
+    driverId :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+type DriverPanRes = APISuccess
+
+data DriverGstinReq = DriverGstinReq
+  { gstin :: Text,
+    imageId :: Text, --Image,
+    driverId :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+type DriverGstinRes = APISuccess
 
 data LinkedRC = LinkedRC
   { rcDetails :: VehicleRegistrationCertificateAPIEntity,
@@ -250,6 +279,176 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           grossVehicleWeight = Nothing,
           unladdenWeight = Nothing
         }
+
+verifyPan ::
+  Bool ->
+  Maybe DM.Merchant ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DriverPanReq ->
+  Flow DriverPanRes
+verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  blocked <- case person.role of
+    Person.FLEET_OWNER -> do
+      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+    _ -> do
+      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+  when blocked $ throwError AccountBlocked
+  whenJust mbMerchant $ \merchant -> do
+    unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  mdriverPanInformation <- DPQuery.findByDriverId person.id
+  case mdriverPanInformation of
+    Just driverPanInformation -> do
+      let verificationStatus = driverPanInformation.verificationStatus
+      when (verificationStatus == Documents.VALID) $ throwError PanAlreadyLinked
+      image1 <- getImage req.imageId
+      resp <-
+        Verification.extractPanImage person.merchantId merchantOpCityId $
+          Verification.ExtractImageReq {image1, image2 = Nothing, driverId = person.id.getId}
+      case resp.extractedPan of
+        Just extractedPan -> do
+          let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+          unless (extractedPanNo == Just req.panNumber) $
+            throwImageError (Id req.imageId) $ ImageDocumentNumberMismatch (maybe "null" maskText extractedPanNo) (maybe "null" maskText (Just req.panNumber))
+          DPQuery.updateVerificationStatus Documents.VALID person.id
+        Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
+    Nothing -> do
+      image1 <- getImage req.imageId
+      resp <-
+        Verification.extractPanImage person.merchantId merchantOpCityId $
+          Verification.ExtractImageReq {image1, image2 = Nothing, driverId = person.id.getId}
+      case resp.extractedPan of
+        Just extractedPan -> do
+          let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+          unless (extractedPanNo == Just req.panNumber) $
+            throwImageError (Id req.imageId) $ ImageDocumentNumberMismatch (maybe "null" maskText extractedPanNo) (maybe "null" maskText (Just req.panNumber))
+          panNoEnc <- encrypt req.panNumber
+          now <- getCurrentTime
+          uuid <- generateGUID
+          DPQuery.create $
+            DPan.DriverPanCard
+              { panCardNumber = panNoEnc,
+                documentImageId1 = Id req.imageId,
+                driverId = person.id,
+                id = uuid,
+                verificationStatus = Documents.VALID,
+                merchantId = Just person.merchantId,
+                merchantOperatingCityId = Just merchantOpCityId,
+                createdAt = now,
+                updatedAt = now,
+                consent = True,
+                docType = castTextToDomainType extractedPan.pan_type,
+                consentTimestamp = now,
+                documentImageId2 = Nothing,
+                driverDob = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack =<< (extractedPan.date_of_birth),
+                driverName = Just person.firstName,
+                driverNameOnGovtDB = extractedPan.name_on_card,
+                failedRules = [],
+                verifiedBy = pure $ if isDashboard then DPan.DASHBOARD else DPan.FRONTEND_SDK
+              }
+        Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
+  return Success
+  where
+    getImage :: Text -> Flow Text
+    getImage imageId_ = do
+      imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_)
+      unless (imageMetadata.imageType == ODC.PanCard) $
+        throwError (ImageInvalidType (show ODC.PanCard) (show imageMetadata.imageType))
+      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+        S3.get $ T.unpack imageMetadata.s3Path
+    castTextToDomainType :: Maybe Text -> Maybe DPan.PanType
+    castTextToDomainType panType = case panType of
+      Just "Individual" -> Just DPan.INDIVIDUAL
+      Just _ -> Just DPan.BUSINESS
+      Nothing -> Nothing
+
+verifyGstin ::
+  Bool ->
+  Maybe DM.Merchant ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DriverGstinReq ->
+  Flow DriverPanRes
+verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  blocked <- case person.role of
+    Person.FLEET_OWNER -> do
+      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+    _ -> do
+      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound personId.getId)
+      return res.blocked
+  when blocked $ throwError AccountBlocked
+  whenJust mbMerchant $ \merchant -> do
+    unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  mdriverGstInformation <- DGQuery.findByDriverId person.id
+  case mdriverGstInformation of
+    Just driverGstInformation -> do
+      let verificationStatus = driverGstInformation.verificationStatus
+      when (verificationStatus == Documents.VALID) $ throwError GstAlreadyLinked
+      image1 <- getImage req.imageId
+      resp <-
+        Verification.extractGSTImage person.merchantId merchantOpCityId $
+          Verification.ExtractImageReq {image1, image2 = Nothing, driverId = person.id.getId}
+      case resp.extractedGST of
+        Just extractedGST -> do
+          let extractedGstNo = removeSpaceAndDash <$> extractedGST.gstin
+          unless (extractedGstNo == Just req.gstin) $
+            throwImageError (Id req.imageId) $ ImageDocumentNumberMismatch (maybe "null" maskText extractedGstNo) (maybe "null" maskText (Just req.gstin))
+          DGQuery.updateVerificationStatus Documents.VALID person.id
+        Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
+    Nothing -> do
+      image1 <- getImage req.imageId
+      resp <-
+        Verification.extractGSTImage person.merchantId merchantOpCityId $
+          Verification.ExtractImageReq {image1, image2 = Nothing, driverId = person.id.getId}
+      case resp.extractedGST of
+        Just extractedGST -> do
+          let extractedGstin = removeSpaceAndDash <$> extractedGST.gstin
+          unless (extractedGstin == Just req.gstin) $
+            throwImageError (Id req.imageId) $ ImageDocumentNumberMismatch (maybe "null" maskText extractedGstin) (maybe "null" maskText (Just req.gstin))
+          gstinEnc <- encrypt req.gstin
+          now <- getCurrentTime
+          uuid <- generateGUID
+          DGQuery.create $
+            DGst.DriverGstin
+              { documentImageId1 = Id req.imageId,
+                driverId = person.id,
+                id = uuid,
+                verificationStatus = Documents.VALID,
+                merchantId = Just person.merchantId,
+                merchantOperatingCityId = Just merchantOpCityId,
+                createdAt = now,
+                address = extractedGST.address,
+                constitutionOfBusiness = extractedGST.constitution_of_business,
+                updatedAt = now,
+                documentImageId2 = Nothing,
+                dateOfLiability = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack =<< (extractedGST.date_of_liability),
+                driverName = Just person.firstName,
+                gstin = gstinEnc,
+                isProvisional = extractedGST.is_provisional,
+                legalName = extractedGST.legal_name,
+                tradeName = extractedGST.trade_name,
+                typeOfRegistration = extractedGST.type_of_registration,
+                validFrom = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack =<< (extractedGST.valid_from),
+                validUpto = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack =<< (extractedGST.valid_upto),
+                verifiedBy = pure $ if isDashboard then DPan.DASHBOARD else DPan.FRONTEND_SDK
+              }
+        Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
+  return Success
+  where
+    getImage :: Text -> Flow Text
+    getImage imageId_ = do
+      imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_)
+      unless (imageMetadata.imageType == ODC.GSTCertificate) $
+        throwError (ImageInvalidType (show ODC.GSTCertificate) (show imageMetadata.imageType))
+      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+        S3.get $ T.unpack imageMetadata.s3Path
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do

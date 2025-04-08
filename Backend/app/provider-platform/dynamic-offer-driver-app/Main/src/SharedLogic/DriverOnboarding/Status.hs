@@ -52,6 +52,7 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
+import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
@@ -479,6 +480,9 @@ getProcessedDriverDocuments docType driverId _merchantId merchantOpCityId useHVS
     DVC.PanCard -> do
       mbPanCard <- QDPC.findByDriverId driverId
       return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing)
+    DVC.GSTCertificate -> do
+      mbGSTCertificate <- QDGST.findByDriverId driverId
+      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, Nothing, Nothing)
     DVC.BackgroundVerification -> do
       mbBackgroundVerification <- BVQuery.findByDriverId driverId
       if (mbBackgroundVerification <&> (.reportStatus)) == Just Documents.VALID
@@ -585,6 +589,7 @@ getInProgressDriverDocuments docType driverId onboardingTryLimit merchantId merc
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
     DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated DDVC.AadhaarCard driverId
     DDVC.PanCard -> checkIfImageUploadedOrInvalidated DDVC.PanCard driverId
+    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated DDVC.GSTCertificate driverId
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       mbImages <- IQuery.findRecentLatestByPersonIdAndImageType driverId DDVC.ProfilePhoto

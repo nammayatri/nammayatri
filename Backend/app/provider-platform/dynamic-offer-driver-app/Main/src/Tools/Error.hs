@@ -1208,6 +1208,7 @@ data DriverOnboardingError
   | InvalidImageType Text Text
   | ImageNotFoundForWorkflowId Text
   | PanAlreadyLinked
+  | GstAlreadyLinked
   | RCNotLinkedWithFleet
   | RCAssociationNotFound
   | DriverSSNNotFound Text
@@ -1262,6 +1263,7 @@ instance IsBaseError DriverOnboardingError where
     InvalidImageType svcName imageType -> Just $ "Invalid image type from svc : " <> svcName <> ". Value : " <> imageType
     ImageNotFoundForWorkflowId workflowId -> Just $ "Image not found for workflowId : " <> workflowId
     PanAlreadyLinked -> Just "PAN already linked with driver."
+    GstAlreadyLinked -> Just "GST already linked with driver."
     RCNotLinkedWithFleet -> Just "Vehicle Registration Certificate is not linked with Fleet."
     RCAssociationNotFound -> Just "RC association not found."
     DriverSSNNotFound id_ -> Just $ "Driver SSN not found for driverId \"" <> id_ <> "\"."
@@ -1315,6 +1317,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidImageType _ _ -> "INVALID_IMAGE_TYPE"
     ImageNotFoundForWorkflowId _ -> "IMAGE_NOT_FOUND_FOR_WORKFLOW_ID"
     PanAlreadyLinked -> "PAN_ALREADY_LINKED"
+    GstAlreadyLinked -> "GST_ALREADY_LINKED"
     RCNotLinkedWithFleet -> "RC_NOT_LINKED_WITH_FLEET"
     RCAssociationNotFound -> "RC_ASSOCIATION_NOT_FOUND"
     DriverSSNNotFound _ -> "DRIVER_SSN_NOT_FOUND"
@@ -1366,6 +1369,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidImageType _ _ -> E400
     ImageNotFoundForWorkflowId _ -> E400
     PanAlreadyLinked -> E400
+    GstAlreadyLinked -> E400
     RCNotLinkedWithFleet -> E400
     RCAssociationNotFound -> E400
     DriverSSNNotFound _ -> E400

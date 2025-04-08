@@ -799,6 +799,7 @@ library
       Domain.Types.DriverBlockTransactions
       Domain.Types.DriverFee
       Domain.Types.DriverGoHomeRequest
+      Domain.Types.DriverGstin
       Domain.Types.DriverGullakAssociation
       Domain.Types.DriverHomeLocation
       Domain.Types.DriverInformation
@@ -942,6 +943,7 @@ library
       Storage.Beam.DriverBlockTransactions
       Storage.Beam.DriverFee
       Storage.Beam.DriverGoHomeRequest
+      Storage.Beam.DriverGstin
       Storage.Beam.DriverGullakAssociation
       Storage.Beam.DriverHomeLocation
       Storage.Beam.DriverInformation
@@ -1088,6 +1090,7 @@ library
       Storage.Queries.DriverBlockTransactions
       Storage.Queries.DriverFee
       Storage.Queries.DriverGoHomeRequest
+      Storage.Queries.DriverGstin
       Storage.Queries.DriverGullakAssociation
       Storage.Queries.DriverHomeLocation
       Storage.Queries.DriverInformation

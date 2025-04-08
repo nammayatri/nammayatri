@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.Fleet.Onboarding
   ( getOnboardingDocumentConfigs,
     getOnboardingRegisterStatus,
     castStatusRes,
+    postOnboardingVerify,
   )
 where
 
@@ -9,6 +10,7 @@ import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -17,6 +19,7 @@ import qualified Environment
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
+import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
@@ -89,6 +92,20 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   mDL <- DLQuery.findByDriverId (Id personId)
   let multipleRC = Nothing
   castStatusRes <$> SStatus.statusHandler' (Id personId) merchantOpCity transporterConfig makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True)
+
+postOnboardingVerify ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  CommonOnboarding.VerifyType ->
+  CommonOnboarding.VerifyReq ->
+  Environment.Flow APISuccess
+postOnboardingVerify merchantShortId opCity reqType req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  _transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  case reqType of
+    CommonOnboarding.VERIFY_PAN -> DVRC.verifyPan True (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId})
+    CommonOnboarding.VERIFY_GST -> DVRC.verifyGstin True (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverGstinReq {gstin = req.identifierNumber, imageId = req.imageId, driverId = req.driverId})
 
 castStatusRes :: SStatus.StatusRes' -> CommonOnboarding.StatusRes
 castStatusRes SStatus.StatusRes' {..} =
