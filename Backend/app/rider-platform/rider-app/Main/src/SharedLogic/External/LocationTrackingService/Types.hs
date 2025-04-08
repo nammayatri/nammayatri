@@ -20,6 +20,7 @@ import Data.Time
 import qualified Domain.Types.VehicleVariant as VV
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Types.Id
@@ -33,7 +34,6 @@ data UpcomingStopStatus = Reached | Upcoming deriving (Generic, FromJSON, ToJSON
 data Stop = Stop
   { name :: Text,
     coordinate :: LatLong,
-    stopIdx :: Int,
     stopCode :: Text,
     distanceToUpcomingIntermediateStop :: Int,
     durationToUpcomingIntermediateStop :: Int
@@ -43,7 +43,7 @@ data Stop = Stop
 data UpcomingStop = UpcomingStop
   { stop :: Stop,
     eta :: UTCTime,
-    status :: Text,
+    status :: UpcomingStopStatus,
     delta :: Double
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

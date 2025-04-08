@@ -35,9 +35,9 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbVehicleType = do
         { vehicleId = fromMaybe "" vehicleId,
           nextStop = nextStop,
           nextStopTravelTime = nextStopTravelTime,
-          nextStopTravelDistance = fromMaybe 0 nextStopTravelDistance,
+          nextStopTravelDistance = nextStopTravelDistance,
           upcomingStops = upcomingStops,
           delay = delay,
-          vehicleInfo = maybe (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkVehicleInfo vehicleInfo
+          vehicleInfo = maybe (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkVehicleInfo vehicleInfo
         }
     mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}

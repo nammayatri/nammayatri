@@ -8,6 +8,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Servant
+import qualified SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.FRFSUtils
 import Tools.Auth
 
@@ -17,8 +18,8 @@ data TrackingResp = TrackingResp {vehicleTrackingInfo :: [VehicleInfo]}
 
 data VehicleInfo = VehicleInfo
   { delay :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    nextStop :: Domain.Types.RouteStopMapping.RouteStopMapping,
-    nextStopTravelDistance :: Kernel.Types.Common.Meters,
+    nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
+    nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
     vehicleId :: Kernel.Prelude.Text,
@@ -35,7 +36,8 @@ data VehicleInfoForRoute = VehicleInfoForRoute
     startDate :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    upcomingStops :: Kernel.Prelude.Maybe [SharedLogic.External.LocationTrackingService.Types.UpcomingStop]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

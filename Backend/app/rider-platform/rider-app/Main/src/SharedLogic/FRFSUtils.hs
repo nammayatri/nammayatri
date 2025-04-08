@@ -320,7 +320,7 @@ data VehicleTracking = VehicleTracking
   { nextStop :: Maybe RouteStopMapping.RouteStopMapping,
     nextStopTravelTime :: Maybe Seconds,
     nextStopTravelDistance :: Maybe Meters,
-    upcomingStops :: Maybe [UpcomingStop],
+    upcomingStops :: [UpcomingStop],
     vehicleId :: Maybe Text,
     vehicleInfo :: Maybe VehicleInfo,
     delay :: Maybe Seconds
@@ -415,27 +415,29 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
                   (next : rest) -> next {actualTravelTime = actualTime} : rest
             let vehicleTracking =
                   VehicleTracking
-                    { nextStopTravelDistance = Just $ highPrecMetersToMeters nextStopTravelDistance,
-                      upcomingStops = Just updatedUpcomingStopsEntries,
+                    { nextStop = Just nextStop,
+                      nextStopTravelDistance = Just $ highPrecMetersToMeters nextStopTravelDistance,
+                      upcomingStops = updatedUpcomingStopsEntries,
                       vehicleId = Just vehicleId,
                       vehicleInfo = Just vehicleInfo,
                       ..
                     }
             updatedVehicleTracking <- updateVehicleTrackingFromCache vehicleId vehicleTracking
             pure updatedVehicleTracking
-        else
-          ( \(vehicleId, vehicleInfo) ->
-              VehicleTracking
-                { nextStop = Nothing,
-                  nextStopTravelTime = Nothing,
-                  nextStopTravelDistance = Nothing,
-                  upcomingStops = Nothing,
-                  vehicleId = Just vehicleId,
-                  vehicleInfo = Just vehicleInfo,
-                  delay = Nothing
-                }
-          )
-            <$> vehicleTrackingInfo
+        else do
+          return $
+            ( \(vehicleId, vehicleInfo) ->
+                VehicleTracking
+                  { nextStop = Nothing,
+                    nextStopTravelTime = Nothing,
+                    nextStopTravelDistance = Nothing,
+                    upcomingStops = [],
+                    vehicleId = Just vehicleId,
+                    vehicleInfo = Just vehicleInfo,
+                    delay = Nothing
+                  }
+            )
+              <$> vehicleTrackingInfo
     _ -> do
       route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
       routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
@@ -467,10 +469,10 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
         logDebug $ "Next stop: " <> show nextStop
         let vehicleTracking =
               VehicleTracking
-                { nextStop = nextStop,
+                { nextStop = Just nextStop,
                   nextStopTravelTime = Nothing,
                   nextStopTravelDistance = Nothing,
-                  upcomingStops = Just [],
+                  upcomingStops = [],
                   vehicleId = Nothing,
                   vehicleInfo = Nothing,
                   delay = Nothing
@@ -478,14 +480,14 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
         pure vehicleTracking
   where
     updateVehicleTrackingFromCache vehicleId vehicleTracking = do
-      mbCachedVehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
+      mbCachedVehicleTracking :: Maybe VehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
       updatedTracking <- case mbCachedVehicleTracking of
         Just cachedVehicleTracking -> do
           logDebug $ "Vehicle tracking cache hit for vehicleId " <> show vehicleId <> " routeCode " <> show routeCode <> " cachedVehicleTracking " <> show cachedVehicleTracking
           let cachedStopMap =
                 Map.fromList
                   [ (RouteStopMapping.stopCode (stop cachedStop), estimatedTravelTime cachedStop)
-                    | cachedStop <- upcomingStops cachedVehicleTracking
+                    | cachedStop <- cachedVehicleTracking.upcomingStops
                   ]
               updatedUpcomingStops =
                 map
@@ -494,9 +496,9 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
                         Just cachedEstimatedTime -> newStop {estimatedTravelTime = cachedEstimatedTime}
                         Nothing -> newStop
                   )
-                  (upcomingStops vehicleTracking)
-              finalDelay = maybe cachedVehicleTracking.delay (\_ -> vehicleTracking.delay) vehicleTracking.delay
-          pure $ vehicleTracking {upcomingStops = updatedUpcomingStops, delay = finalDelay}
+                  (vehicleTracking.upcomingStops)
+              finalDelay = maybe (fromMaybe (Seconds 0) cachedVehicleTracking.delay) (\_ -> fromMaybe (Seconds 0) vehicleTracking.delay) vehicleTracking.delay
+          pure $ vehicleTracking {upcomingStops = updatedUpcomingStops, delay = Just finalDelay}
         Nothing -> pure vehicleTracking
       Redis.set (mkVehicleTrackingKey vehicleId routeCode) updatedTracking
       pure updatedTracking

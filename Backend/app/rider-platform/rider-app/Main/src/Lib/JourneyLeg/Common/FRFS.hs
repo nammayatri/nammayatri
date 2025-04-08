@@ -84,8 +84,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
                 { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
                   userPosition,
                   vehiclePosition = vehiclePosition,
-                  nextStop = nextStopDetails <&> (.nextStop),
-                  nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
+                  nextStop = join (nextStopDetails <&> (.nextStop)),
+                  nextStopTravelTime = join (nextStopDetails <&> (.nextStopTravelTime)),
                   nextStopTravelDistance = join (nextStopDetails <&> (.nextStopTravelDistance)),
                   legOrder = journeyLegOrder,
                   subLegOrder = 1,
@@ -112,7 +112,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                     { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
                       userPosition,
                       vehiclePosition = vehiclePosition,
-                      nextStop = nextStopDetails <&> (.nextStop),
+                      nextStop = join (nextStopDetails <&> (.nextStop)),
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       legOrder = journeyLegOrder,
@@ -148,7 +148,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                 { status = newStatus,
                   userPosition,
                   vehiclePosition = vehiclePosition,
-                  nextStop = nextStopDetails <&> (.nextStop),
+                  nextStop = join (nextStopDetails <&> (.nextStop)),
                   nextStopTravelTime = nextStopDetails >>= (.nextStopTravelTime),
                   nextStopTravelDistance = join (nextStopDetails <&> (.nextStopTravelDistance)),
                   legOrder = journeyLegInfo.journeyLegOrder,
@@ -184,7 +184,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                     { status = newStatus,
                       userPosition,
                       vehiclePosition = vehiclePosition,
-                      nextStop = nextStopDetails <&> (.nextStop),
+                      nextStop = join (nextStopDetails <&> (.nextStop)),
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       legOrder = journeyLegInfo.journeyLegOrder,
@@ -227,9 +227,9 @@ getState mode searchId riderLastPoints isLastCompleted = do
                         mbStartStation = find (\station -> station.stationType == Just START) routeStations.stations
                         upcomingNearestVehicles =
                           sortBy
-                            (comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStop.sequenceNum) <> comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStopTravelDistance))
+                            (comparing (\(vehicleTrack, _, _) -> maybe 0 (.sequenceNum) vehicleTrack.nextStop) <> comparing (\(vehicleTrack, _, _) -> vehicleTrack.nextStopTravelDistance))
                             $ filter
-                              (\(vehicleTrack, _, _) -> maybe False (\startStation -> maybe False (\stationSequenceNum -> vehicleTrack.nextStop.sequenceNum <= stationSequenceNum) startStation.sequenceNum) mbStartStation)
+                              (\(vehicleTrack, _, _) -> maybe False (\startStation -> maybe False (\stationSequenceNum -> maybe False (\nextStop -> nextStop.sequenceNum <= stationSequenceNum) vehicleTrack.nextStop) startStation.sequenceNum) mbStartStation)
                               vehicleTrackingWithLatLong
                     pure ((\(vehicleTrack, lat, lon) -> (vehicleTrack, LatLong {..})) <$> listToMaybe upcomingNearestVehicles)
                   else
