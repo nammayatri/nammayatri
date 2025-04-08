@@ -1838,6 +1838,13 @@ public class LocationUpdateServiceV2 extends Service {
                             rateLimitTimeInSeconds = Long.parseLong(rateLimitStr); // Update local variable
                             Log.d(TAG_CONFIG, "Rate limiting time updated to " + rateLimitTimeInSeconds + " seconds");
                             break;
+                        case Utils.DRIVER_STATUS:
+                            String driverStatus = prefs.getString(key, Utils.DRIVER_STATUS_OFFLINE);
+                            if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+                                stopWidgetService();
+                                stopSelf();
+                            }
+                            break;
                     }
                 }
             } catch (Exception e) {

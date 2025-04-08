@@ -2824,7 +2824,7 @@ checkBgLocation push action state bgLocPopupShown = do
   andv <- liftFlow $ JB.getAndroidVersion
   bgp <- liftFlow $ JB.isBackgroundLocationEnabled unit
   let onRide = (DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer])
-  if not bgLocPopupShown && andv >= 14 && not bgp && not onRide then doAff do liftEffect $ push $ action
+  if not bgLocPopupShown && andv >= 10 && not bgp && not onRide then doAff do liftEffect $ push $ action
   else pure unit
 
 computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
