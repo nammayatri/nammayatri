@@ -218,9 +218,9 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
     continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
     atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
 
-    recalcDistanceBatches' isFirstCall snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do
+    recalcDistanceBatches' snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do
       batchLeft <- continueCondition
-      if (batchLeft && not isMeterRide) || (batchLeft && isMeterRide && isFirstCall)
+      if batchLeft
         then do
           (dist, newReferencePoint, startPatching, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId
           let googleCalled = Google `elem` servicesUsed
@@ -232,14 +232,14 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
               updDistance = bool dist (distanceTravelled + dist) (startPatching || startPatchingDistance)
           if snapCallFailed
             then pure (SnapToRoadState distanceTravelled distanceTravelledOutSideDropThreshold' (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop (startPatching || startPatchingDistance) newReferencePoint, snapCallFailed)
-            else recalcDistanceBatches' False (SnapToRoadState updDistance distanceTravelledOutSideDropThreshold' (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop (startPatching || startPatchingDistance) newReferencePoint) snapCallFailed
+            else recalcDistanceBatches' (SnapToRoadState updDistance distanceTravelledOutSideDropThreshold' (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop (startPatching || startPatchingDistance) newReferencePoint) snapCallFailed
         else pure (snapToRoad', snapToRoadCallFailed)
 
     processSnapToRoadCall = do
       prevSnapToRoadState :: SnapToRoadState <-
         Redis.safeGet (onRideSnapToRoadStateKey driverId)
           <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just passedThroughDrop) False Nothing)
-      (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' True prevSnapToRoadState False
+      (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False
       when snapToRoadCallFailed $ do
         updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
         throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
