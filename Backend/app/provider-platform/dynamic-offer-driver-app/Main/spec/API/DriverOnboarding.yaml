@@ -144,7 +144,6 @@ apis:
       endpoint: /driver/rateCard
       query:
         vehicleServiceTier: ServiceTierType
-        tripCategory: TripCategory
         distance: Meters
         durationInMin: Minutes
       auth: TokenAuth PROVIDER_TYPE
