@@ -462,7 +462,7 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
   }
 }
 
-if (window.__OS === "IOS" && typeof window.JOS != "undefined" && window.JOS.addEventListener) {
+if ((window.__OS === "IOS" || window.JOS.self !== "in.mobility.core") && typeof window.JOS != "undefined" && window.JOS.addEventListener) {
   window.JOS.addEventListener("onEvent'")();
   window.JOS.addEventListener("onEvent")();
   window.JOS.addEventListener("onMerchantEvent")();
