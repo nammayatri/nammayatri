@@ -479,7 +479,6 @@ view push state =
           void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ HS.hideLoaderFlow
           _ <- push action
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
-          _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
           _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") ((enableCurrentLocation state) && perfConfig.mapRecenter) "satellite" (17.0) 0.0 0.0 push ShowMap
           _ <- push $ UpdateSpecialZoneList
           pure unit
