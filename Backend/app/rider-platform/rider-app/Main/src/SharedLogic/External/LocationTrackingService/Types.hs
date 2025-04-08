@@ -28,6 +28,26 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data UpcomingStopStatus = Reached | Upcoming deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data Stop = Stop
+  { name :: Text,
+    coordinate :: LatLong,
+    stopIdx :: Int,
+    stopCode :: Text,
+    distanceToUpcomingIntermediateStop :: Int,
+    durationToUpcomingIntermediateStop :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data UpcomingStop = UpcomingStop
+  { stop :: Stop,
+    eta :: UTCTime,
+    status :: Text,
+    delta :: Double
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data VehicleInfo = VehicleInfo
   { startTime :: Maybe UTCTime,
     scheduleRelationship :: Maybe Text,
@@ -35,7 +55,8 @@ data VehicleInfo = VehicleInfo
     latitude :: Double,
     longitude :: Double,
     speed :: Maybe Double,
-    timestamp :: Maybe Text
+    timestamp :: Maybe Text,
+    upcomingStops :: Maybe [UpcomingStop]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

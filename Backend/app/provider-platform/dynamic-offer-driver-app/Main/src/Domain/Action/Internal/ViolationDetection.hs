@@ -67,15 +67,15 @@ data RouteDeviationDetectionData = RouteDeviationDetectionData
 
 instance FromJSON DetectionData where
   parseJSON = withObject "DetectionData" $ \obj ->
-    ( OverSpeedingDetection <$> obj .: "overSpeeding"
+    ( OverSpeedingDetection <$> obj .: "overSpeedingDetection"
     )
-      <|> ( StoppedDetection <$> obj .: "stopped"
+      <|> ( StoppedDetection <$> obj .: "stoppedDetection"
           )
-      <|> ( SkippedWaitingStopDetection <$> obj .: "skippedWaitingStop"
+      <|> ( SkippedWaitingStopDetection <$> obj .: "skippedWaitingStopDetection"
           )
-      <|> ( MissedStopDetection <$> obj .: "missedStop"
+      <|> ( MissedStopDetection <$> obj .: "missedStopDetection"
           )
-      <|> ( RouteDeviationDetection <$> obj .: "routeDeviation"
+      <|> ( RouteDeviationDetection <$> obj .: "routeDeviationDetection"
           )
 
 instance ToJSON DetectionData where
