@@ -490,6 +490,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "tripDetail" -> hideSplashAndCallFlow $ hybridFlow screen
         "addHome" -> addFavLocFlow SearchLocationScreenData.initData "HOME_TAG"
         "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
+        "addFav" -> addFavLocFlow SearchLocationScreenData.initData "OTHER_TAG"
         "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "ticketing" ->  hideSplashAndCallFlow $ hybridFlow screen
         "waitingFordriver" -> hideSplashAndCallFlow $ currentFlowStatus false
