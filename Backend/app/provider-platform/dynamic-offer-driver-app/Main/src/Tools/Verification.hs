@@ -19,6 +19,8 @@ module Tools.Verification
     validateImage,
     extractRCImage,
     extractDLImage,
+    extractPanImage,
+    extractGSTImage,
     validateFaceImage,
     verifySdkResp,
     getTask,
@@ -33,6 +35,8 @@ import Domain.Types.MerchantServiceUsageConfig
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Verification as Reexport hiding
   ( extractDLImage,
+    extractGSTImage,
+    extractPanImage,
     extractRCImage,
     getTask,
     searchAgent,
@@ -110,6 +114,22 @@ extractRCImage ::
   ExtractRCImageReq ->
   m ExtractRCImageResp
 extractRCImage = runWithServiceConfig Verification.extractRCImage (.verificationService)
+
+extractPanImage ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ExtractPanImage ->
+  m ExtractedPanImageResp
+extractPanImage = runWithServiceConfig Verification.extractPanImage (.verificationService)
+
+extractGSTImage ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ExtractGSTImage ->
+  m ExtractedGSTImageResp
+extractGSTImage = runWithServiceConfig Verification.extractGSTImage (.verificationService)
 
 extractDLImage ::
   ServiceFlow m r =>

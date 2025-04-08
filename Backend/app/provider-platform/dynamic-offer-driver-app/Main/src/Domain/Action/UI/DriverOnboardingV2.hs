@@ -38,6 +38,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -45,11 +46,13 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.VehicleServiceTier
+import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -557,9 +560,11 @@ postDriverRegisterPancard ::
 postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when (isJust req.validationStatus) $ checkIfGenuineReq req
-  getImage req.imageId1 personId ------- Just checking whether the image exists or not
-  let verificationStatus = maybe Documents.PENDING Image.convertValidationStatusToVerificationStatus req.validationStatus
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let panVerificationService = fromMaybe VI.Idfy merchantServiceUsageConfig.panVerificationService
+
   mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
   whenJust mbPanInfo $ \panInfo -> do
     when (panInfo.driverId /= personId) $ do
@@ -571,16 +576,40 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
+  verificationStatus <- case panVerificationService of
+    VI.HyperVerge -> do
+      void $ checkIfGenuineReq req
+      pure Documents.VALID
+    VI.Idfy -> do
+      image1 <- getImage req.imageId1
+      resp <-
+        Verification.extractPanImage person.merchantId merchantOpCityId $
+          Verification.ExtractImageReq
+            { image1 = image1,
+              image2 = Nothing,
+              driverId = person.id.getId
+            }
+      logDebug $ show resp
+      case resp.extractedPan of
+        Just extractedPan -> do
+          let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+          unless (extractedPanNo == Just req.panNumber) $
+            throwError $ InvalidRequest "Inavlid Image, pan number not matching."
+          pure Documents.VALID
+        Nothing -> throwError $ InvalidRequest "Invalid PAN image"
+    _ -> throwError $ InvalidRequest "ServiceConfig not supported"
+
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   return Success
   where
-    getImage :: Kernel.Types.Id.Id Image.Image -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow ()
-    getImage imageId personId = do
+    getImage :: Id Image.Image -> Flow Text
+    getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
-      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
+      unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) (show imageMetadata.imageType))
-
+      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+        S3.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m ()
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)

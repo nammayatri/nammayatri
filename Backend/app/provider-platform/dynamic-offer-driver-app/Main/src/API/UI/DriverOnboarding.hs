@@ -45,6 +45,14 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
              :> Post '[JSON] DriverOnboarding.DriverRCRes
+           :<|> "pan"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverPanReq
+             :> Post '[JSON] DriverOnboarding.DriverPanRes
+           :<|> "gstin"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.DriverGstinReq
+             :> Post '[JSON] DriverOnboarding.DriverGstinRes
            :<|> "status"
              :> TokenAuth
              :> QueryParam "makeSelfieAadhaarPanMandatory" Bool
@@ -103,6 +111,8 @@ handler :: FlowServer API
 handler =
   ( verifyDL
       :<|> verifyRC
+      :<|> verifyPan
+      :<|> verifyGstin
       :<|> statusHandler
       :<|> validateImage
       :<|> validateImageFile
@@ -125,6 +135,12 @@ verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Dri
 
 statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
 statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData onboardingVehicleCategory useHVSdkForDL
+
+verifyPan :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverPanReq -> FlowHandler DriverOnboarding.DriverPanRes
+verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyPan False Nothing (personId, merchantId, merchantOpCityId) req
+
+verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
+verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyGstin False Nothing (personId, merchantId, merchantOpCityId) req
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
