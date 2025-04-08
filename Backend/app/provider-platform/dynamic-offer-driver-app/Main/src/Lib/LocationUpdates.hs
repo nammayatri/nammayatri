@@ -239,7 +239,6 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize 
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize) -- keeping batch size of 98 by default for bulk location updates to trigger snapToRoad
-      98
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
