@@ -55,7 +55,8 @@ data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq
     adminFirstName :: Text,
     adminLastName :: Text,
     adminMobileCountryCode :: Text,
-    adminMobileNumber :: Text
+    adminMobileNumber :: Text,
+    dashboardType :: Maybe SP.DashboardType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -222,5 +223,6 @@ buildPersonCreateReq req role = do
         createdAt = now,
         updatedAt = now,
         rejectionReason = Nothing,
-        rejectedAt = Nothing
+        rejectedAt = Nothing,
+        dashboardType = fromMaybe SP.DEFAULT_DASHBOARD req.dashboardType
       }

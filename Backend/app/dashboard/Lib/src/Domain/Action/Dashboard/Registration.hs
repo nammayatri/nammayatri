@@ -357,7 +357,8 @@ buildFleetOwner req mbPersonId roleId dashboardAccessType = do
         updatedAt = now,
         verified = Nothing,
         rejectionReason = Nothing,
-        rejectedAt = Nothing
+        rejectedAt = Nothing,
+        dashboardType = DEFAULT_DASHBOARD
       }
 
 validateFleetOwner :: Validate FleetRegisterReq
