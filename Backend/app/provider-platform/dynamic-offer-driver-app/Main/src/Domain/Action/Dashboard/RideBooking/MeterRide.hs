@@ -31,8 +31,6 @@ import Tools.Auth
 getMeterRidePrice :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.Flow API.Types.UI.PriceBreakup.MeterRidePriceRes)
 getMeterRidePrice _merchantShortId _opCity rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  let tripStartTime = ride.tripStartTime
-  let rideStatus = ride.status
   let driverId = ride.driverId
   merchantId <- fromMaybeM (RideNotFound rideId.getId) ride.merchantId
   let merchantOpCityId = ride.merchantOperatingCityId
@@ -42,6 +40,6 @@ getMeterRidePrice _merchantShortId _opCity rideId = do
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstimate -> do
-        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstimate.minFare, distance = traveledDistance, tripStartTime = tripStartTime, status = Just rideStatus}
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstimate.minFare, distance = traveledDistance}
     )
     mbMeterRideEstimate
