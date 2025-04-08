@@ -317,7 +317,7 @@ getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingC
             }
 
 data VehicleTracking = VehicleTracking
-  { nextStop :: RouteStopMapping.RouteStopMapping,
+  { nextStop :: Maybe RouteStopMapping.RouteStopMapping,
     nextStopTravelTime :: Maybe Seconds,
     nextStopTravelDistance :: Maybe Meters,
     upcomingStops :: [UpcomingStop],
@@ -345,7 +345,8 @@ data VehicleInfo = VehicleInfo
     startDate :: Maybe Text,
     startTime :: Maybe UTCTime,
     timestamp :: Maybe Text,
-    tripId :: Maybe Text
+    tripId :: Maybe Text,
+    upcomingStops :: Maybe [LT.UpcomingStop]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -358,68 +359,85 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
   case vehicleType of
     Spec.BUS -> do
       vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
-      let vehicleInfoWithLatLong :: [(Text, VehicleInfo, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) vehicleTrackingInfo
-      routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
-      let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
-          stopPairs = pairWithNext sortedStops
-      stopPairsWithWaypoints <- getStopPairsWithWaypoints stopPairs
-      let segmentDistances = [(stopPair, (sum $ zipWith distanceBetweenInMeters waypoints (tail waypoints), duration)) | (stopPair, (waypoints, duration)) <- stopPairsWithWaypoints]
-          segmentDistancesMap = Map.fromList segmentDistances
-      forM vehicleInfoWithLatLong $ \(vehicleId, vehicleInfo, vehicleLat, vehicleLon) -> do
-        minDistancesWithWaypoints <-
-          forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
-            let (groupedWaypoints, _) =
-                  foldr
-                    ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
-                        let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
-                            subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
-                         in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
+      if any (\(_, vInfo) -> isNothing vInfo.upcomingStops) vehicleTrackingInfo && not (null vehicleTrackingInfo)
+        then do
+          let vehicleInfoWithLatLong :: [(Text, VehicleInfo, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) vehicleTrackingInfo
+          routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
+          let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
+              stopPairs = pairWithNext sortedStops
+          stopPairsWithWaypoints <- getStopPairsWithWaypoints stopPairs
+          let segmentDistances = [(stopPair, (sum $ zipWith distanceBetweenInMeters waypoints (tail waypoints), duration)) | (stopPair, (waypoints, duration)) <- stopPairsWithWaypoints]
+              segmentDistancesMap = Map.fromList segmentDistances
+          forM vehicleInfoWithLatLong $ \(vehicleId, vehicleInfo, vehicleLat, vehicleLon) -> do
+            minDistancesWithWaypoints <-
+              forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
+                let (groupedWaypoints, _) =
+                      foldr
+                        ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
+                            let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
+                                subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
+                             in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
+                        )
+                        ([], waypoints)
+                        waypoints
+                let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
+                pure (minDistanceFromVehicle, nextStop)
+            let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
+                nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
+                upcomingStopsList = dropWhile (/= nextStop) sortedStops
+                upcomingStopPairs = pairWithNext upcomingStopsList
+
+                (segmentDistancesForUpcoming, segmentDurationsForUpcoming :: [Maybe Seconds]) = unzip $ map (\pair -> fromMaybe (HighPrecMeters 0, Nothing) (Map.lookup pair segmentDistancesMap)) upcomingStopPairs
+                mbNextStopTravelTime = listToMaybe segmentDurationsForUpcoming
+                nextStopTravelTime = fromMaybe (computeFromSpeed nextStopTravelDistance <$> vehicleInfo.speed) mbNextStopTravelTime
+
+                cumulativeDistances = scanl (+) nextStopTravelDistance segmentDistancesForUpcoming
+
+            now <- getCurrentTime
+            logDebug $ "Next stop: " <> show nextStop <> ", nextStopTravelDistance: " <> show (highPrecMetersToMeters nextStopTravelDistance) <> ", vehicleId: " <> show vehicleId
+            let (actualTime, delay) = calculateTimes now (highPrecMetersToMeters nextStopTravelDistance) nextStopTravelTime vehicleInfo.startTime
+            logDebug $ "Actual travel time: " <> show actualTime <> ", delay: " <> show delay <> ", vehicleId: " <> show vehicleId
+            let upcomingStopsEntries =
+                  zipWith3
+                    ( \stop cumulativeDist duration -> do
+                        UpcomingStop
+                          { stop = stop,
+                            estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac (max 1.0 speed))) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
+                            actualTravelTime = Nothing,
+                            distance = highPrecMetersToMeters cumulativeDist
+                          }
                     )
-                    ([], waypoints)
-                    waypoints
-            let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
-            pure (minDistanceFromVehicle, nextStop)
-        let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
-            nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
-            upcomingStopsList = dropWhile (/= nextStop) sortedStops
-            upcomingStopPairs = pairWithNext upcomingStopsList
-
-            (segmentDistancesForUpcoming, segmentDurationsForUpcoming :: [Maybe Seconds]) = unzip $ map (\pair -> fromMaybe (HighPrecMeters 0, Nothing) (Map.lookup pair segmentDistancesMap)) upcomingStopPairs
-            mbNextStopTravelTime = listToMaybe segmentDurationsForUpcoming
-            nextStopTravelTime = fromMaybe (computeFromSpeed nextStopTravelDistance <$> vehicleInfo.speed) mbNextStopTravelTime
-
-            cumulativeDistances = scanl (+) nextStopTravelDistance segmentDistancesForUpcoming
-
-        now <- getCurrentTime
-        logDebug $ "Next stop: " <> show nextStop <> ", nextStopTravelDistance: " <> show (highPrecMetersToMeters nextStopTravelDistance) <> ", vehicleId: " <> show vehicleId
-        let (actualTime, delay) = calculateTimes now (highPrecMetersToMeters nextStopTravelDistance) nextStopTravelTime vehicleInfo.startTime
-        logDebug $ "Actual travel time: " <> show actualTime <> ", delay: " <> show delay <> ", vehicleId: " <> show vehicleId
-        let upcomingStopsEntries =
-              zipWith3
-                ( \stop cumulativeDist duration -> do
-                    UpcomingStop
-                      { stop = stop,
-                        estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac (max 1.0 speed))) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
-                        actualTravelTime = Nothing,
-                        distance = highPrecMetersToMeters cumulativeDist
-                      }
-                )
-                upcomingStopsList
-                cumulativeDistances
-                segmentDurationsForUpcoming
-            updatedUpcomingStopsEntries = case upcomingStopsEntries of
-              [] -> []
-              (next : rest) -> next {actualTravelTime = actualTime} : rest
-        let vehicleTracking =
-              VehicleTracking
-                { nextStopTravelDistance = Just $ highPrecMetersToMeters nextStopTravelDistance,
-                  upcomingStops = updatedUpcomingStopsEntries,
-                  vehicleId = Just vehicleId,
-                  vehicleInfo = Just vehicleInfo,
-                  ..
-                }
-        updatedVehicleTracking <- updateVehicleTrackingFromCache vehicleId vehicleTracking
-        pure updatedVehicleTracking
+                    upcomingStopsList
+                    cumulativeDistances
+                    segmentDurationsForUpcoming
+                updatedUpcomingStopsEntries = case upcomingStopsEntries of
+                  [] -> []
+                  (next : rest) -> next {actualTravelTime = actualTime} : rest
+            let vehicleTracking =
+                  VehicleTracking
+                    { nextStop = Just nextStop,
+                      nextStopTravelDistance = Just $ highPrecMetersToMeters nextStopTravelDistance,
+                      upcomingStops = updatedUpcomingStopsEntries,
+                      vehicleId = Just vehicleId,
+                      vehicleInfo = Just vehicleInfo,
+                      ..
+                    }
+            updatedVehicleTracking <- updateVehicleTrackingFromCache vehicleId vehicleTracking
+            pure updatedVehicleTracking
+        else do
+          return $
+            ( \(vehicleId, vehicleInfo) ->
+                VehicleTracking
+                  { nextStop = Nothing,
+                    nextStopTravelTime = Nothing,
+                    nextStopTravelDistance = Nothing,
+                    upcomingStops = [],
+                    vehicleId = Just vehicleId,
+                    vehicleInfo = Just vehicleInfo,
+                    delay = Nothing
+                  }
+            )
+              <$> vehicleTrackingInfo
     _ -> do
       route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
       routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
@@ -451,7 +469,7 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
         logDebug $ "Next stop: " <> show nextStop
         let vehicleTracking =
               VehicleTracking
-                { nextStop = nextStop,
+                { nextStop = Just nextStop,
                   nextStopTravelTime = Nothing,
                   nextStopTravelDistance = Nothing,
                   upcomingStops = [],
@@ -462,14 +480,14 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
         pure vehicleTracking
   where
     updateVehicleTrackingFromCache vehicleId vehicleTracking = do
-      mbCachedVehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
+      mbCachedVehicleTracking :: Maybe VehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
       updatedTracking <- case mbCachedVehicleTracking of
         Just cachedVehicleTracking -> do
           logDebug $ "Vehicle tracking cache hit for vehicleId " <> show vehicleId <> " routeCode " <> show routeCode <> " cachedVehicleTracking " <> show cachedVehicleTracking
           let cachedStopMap =
                 Map.fromList
                   [ (RouteStopMapping.stopCode (stop cachedStop), estimatedTravelTime cachedStop)
-                    | cachedStop <- upcomingStops cachedVehicleTracking
+                    | cachedStop <- cachedVehicleTracking.upcomingStops
                   ]
               updatedUpcomingStops =
                 map
@@ -478,9 +496,9 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
                         Just cachedEstimatedTime -> newStop {estimatedTravelTime = cachedEstimatedTime}
                         Nothing -> newStop
                   )
-                  (upcomingStops vehicleTracking)
-              finalDelay = maybe cachedVehicleTracking.delay (\_ -> vehicleTracking.delay) vehicleTracking.delay
-          pure $ vehicleTracking {upcomingStops = updatedUpcomingStops, delay = finalDelay}
+                  (vehicleTracking.upcomingStops)
+              finalDelay = maybe (fromMaybe (Seconds 0) cachedVehicleTracking.delay) (\_ -> fromMaybe (Seconds 0) vehicleTracking.delay) vehicleTracking.delay
+          pure $ vehicleTracking {upcomingStops = updatedUpcomingStops, delay = Just finalDelay}
         Nothing -> pure vehicleTracking
       Redis.set (mkVehicleTrackingKey vehicleId routeCode) updatedTracking
       pure updatedTracking
@@ -555,7 +573,8 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
                           <$> vehicleInfo.vehicleInfo.startTime,
                       startTime = vehicleInfo.vehicleInfo.startTime,
                       timestamp = vehicleInfo.vehicleInfo.timestamp,
-                      tripId = vehicleInfo.vehicleInfo.tripId
+                      tripId = vehicleInfo.vehicleInfo.tripId,
+                      upcomingStops = vehicleInfo.vehicleInfo.upcomingStops
                     }
                 )
             )
