@@ -759,7 +759,7 @@ getSubwayLegRouteInfo journeyRouteDetails = do
             journeyStatus = journeyRouteDetail.journeyStatus,
             lineColor = journeyRouteDetail.lineColor,
             lineColorCode = journeyRouteDetail.lineColorCode,
-            trainNumber = Nothing,
+            trainNumber = Just route.shortName,
             frequency = journeyRouteDetail.frequency
           }
 
