@@ -64,6 +64,8 @@ getMeterRidePrice ::
 getMeterRidePrice (Nothing, _, _) rideId = throwError . InternalError $ "PersonId is requried while fetching meter ride fare: " <> rideId.getId
 getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  let tripStartTime = ride.tripStartTime
+  let rideStatus = ride.status
   traveledDistance <-
     if ride.status `elem` [Domain.Types.Ride.COMPLETED, Domain.Types.Ride.CANCELLED]
       then do
@@ -78,6 +80,6 @@ getMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId = do
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstiamte -> do
-        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = traveledDistance}
+        return $ API.Types.UI.PriceBreakup.MeterRidePriceRes {fare = meterRideEstiamte.minFare, distance = traveledDistance, tripStartTime = tripStartTime, status = Just rideStatus}
     )
     mbMeterRideEstimate

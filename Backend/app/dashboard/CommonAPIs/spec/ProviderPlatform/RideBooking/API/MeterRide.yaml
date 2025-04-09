@@ -1,0 +1,19 @@
+imports:
+  Ride: Domain.Types.Ride
+  MeterRidePriceRes : API.Types.UI.PriceBreakup
+
+importPackageOverrides:
+  Domain.Types.Ride: "dynamic-offer-driver-app"
+  API.Types.UI.PriceBreakup: "dynamic-offer-driver-app"
+
+module: MeterRide
+
+apis:
+  - GET:
+      endpoint: /price/
+      auth: NoAuth
+      mandatoryQuery:
+        rideId: Id Ride
+      response:
+        type: MeterRidePriceRes
+types: {}
