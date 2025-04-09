@@ -540,7 +540,7 @@ public class MainActivity extends AppCompatActivity {
         initiateHvLauncher();
         if (isClassAvailable("com.facebook.soloader.SoLoader")) SoLoader.init(this, false);
         initiateRSIntegration();
-        String isAlwaysOnDisplay = "";
+        String isAlwaysOnDisplay = "{}";
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
         String okHttpConfig = "{}";
         try{
@@ -559,12 +559,12 @@ public class MainActivity extends AppCompatActivity {
             MobilityServiceHolder.getInstance(context).initiate(context);
         }
 
-        if (isAlwaysOnDisplay != null) {
+        if (isAlwaysOnDisplay != null && MERCHANT_TYPE.equals("DRIVER")) {
             try {
                 if (sharedPref != null) {
                     JSONObject config = new JSONObject(isAlwaysOnDisplay);
                     String city = sharedPref.getString("DRIVER_LOCATION", "__failed");
-                    if (config.optBoolean(city, false)) {
+                    if (config.optBoolean(city, true)) {
                         System.out.println("config.optBoolean(city, false) -> "+ config.optBoolean(city, false));
                         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     }
@@ -572,12 +572,9 @@ public class MainActivity extends AppCompatActivity {
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 }
             } catch (Exception e) {
-
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
-        } else {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
-
         if(isPerfEnabledCustomer){
             String appName = getApplicationContext().getResources().getString(R.string.app_type);
             if(appName.equals("driver")){
