@@ -1,5 +1,5 @@
 WITH MerchantMessages AS (
-  SELECT T1.merchant_id, 'CANCEL_FRFS_TICKET_OTP_PARTNERORG', '{#otp#} is your OTP to cancel your metro ticket.
+  SELECT T1.merchant_id, 'PARTNER_ORG_FRFS_TICKET_CANCEL_OTP', '{#otp#} is your OTP to cancel your metro ticket.
 .  -Namma Yatri', T1.id ,'NMYTRI'
   FROM atlas_app.merchant_operating_city AS T1
 )
