@@ -348,7 +348,7 @@ ticketImageView state push =
             [ width $ V 24
             , height $ V 24
             , imageWithFallback $ getRightButtonForSlider state.props.activeListItem.ticketServiceName state.props.rightButtonDisable
-            , visibility $ if state.props.rightButtonDisable then INVISIBLE else GONE
+            , visibility $ if state.props.rightButtonDisable then INVISIBLE else VISIBLE
             ]
           ]
       ]
