@@ -11,6 +11,7 @@ types:
   NearbyDriverReq:
     location: LatLong
     radius: Meters
+    vehicleVariants: Maybe [VehicleVariant]
 
   NearbyDriverRes:
     serviceTierTypeToVehicleVariant: Value # ServiceTierType -> VehicleVariant

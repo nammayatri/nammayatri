@@ -382,7 +382,7 @@ createReq :: DPC.PayoutConfig -> Text -> Text -> Id Dashboard.Common.Driver -> H
 createReq payoutConfig vpa uid driverId amount = do
   person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   phoneNo <- mapM decrypt person.mobileNumber
-  pure $ Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email person.id.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType
+  pure $ Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email person.id.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
 
 getPayoutOrderStatus :: (Id Dashboard.Common.Driver, Id Domain.Types.Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> PO.PayoutOrder -> DPC.PayoutConfig -> Environment.Flow Juspay.PayoutOrderStatusResp
 getPayoutOrderStatus (driverId, merchantId, merchantOpCityId) payoutOrder payoutConfig = do

@@ -67,29 +67,29 @@ data RouteDeviationDetectionData = RouteDeviationDetectionData
 
 instance FromJSON DetectionData where
   parseJSON = withObject "DetectionData" $ \obj ->
-    ( OverSpeedingDetection <$> obj .: "overSpeeding"
+    ( OverSpeedingDetection <$> obj .: "overSpeedingDetection"
     )
-      <|> ( StoppedDetection <$> obj .: "stopped"
+      <|> ( StoppedDetection <$> obj .: "stoppedDetection"
           )
-      <|> ( SkippedWaitingStopDetection <$> obj .: "skippedWaitingStop"
+      <|> ( SkippedWaitingStopDetection <$> obj .: "skippedWaitingStopDetection"
           )
-      <|> ( MissedStopDetection <$> obj .: "missedStop"
+      <|> ( MissedStopDetection <$> obj .: "missedStopDetection"
           )
-      <|> ( RouteDeviationDetection <$> obj .: "routeDeviation"
+      <|> ( RouteDeviationDetection <$> obj .: "routeDeviationDetection"
           )
 
 instance ToJSON DetectionData where
   toJSON = \case
     OverSpeedingDetection data' ->
-      object ["overSpeeding" .= data']
+      object ["overSpeedingDetection" .= data']
     StoppedDetection data' ->
-      object ["stopped" .= data']
+      object ["stoppedDetection" .= data']
     SkippedWaitingStopDetection data' ->
-      object ["skippedWaitingStop" .= data']
+      object ["skippedWaitingStopDetection" .= data']
     MissedStopDetection data' ->
-      object ["missedStop" .= data']
+      object ["missedStopDetection" .= data']
     RouteDeviationDetection data' ->
-      object ["routeDeviation" .= data']
+      object ["routeDeviationDetection" .= data']
 
 violationDetection :: ViolationDetectionReq -> Flow APISuccess
 violationDetection ViolationDetectionReq {..} = do

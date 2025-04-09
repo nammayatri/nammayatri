@@ -70,7 +70,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     generateAboutMe person driverStats req' = do
       gptGenProfile <- try $ genAboutMeWithAI person driverStats req'
       either
-        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been with Nammayatri since " <> (joinedNY person.createdAt) <> ". " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
+        (\(err :: SomeException) -> logError ("Error occurred: " <> show err) *> pure (hometownDetails req'.hometown <> "I have been part of this platform since " <> (joinedNY person.createdAt) <> ". " <> writeDriverStats driverStats <> genAspirations req'.aspirations))
         pure
         gptGenProfile
 

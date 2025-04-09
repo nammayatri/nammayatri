@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -22,6 +24,7 @@ import qualified Database.Beam as B
 import Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantAccess as MerchantAccess
 import Domain.Types.Person as Person
+import qualified Domain.Types.Person.Type as DPT
 import Domain.Types.Role as Role
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -48,13 +51,23 @@ findById ::
   m (Maybe Person)
 findById personId = findOneWithKV [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
+findByEmailWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, EncFlow m r, DPT.KnownDashboardType t) =>
+  Text ->
+  m (Maybe Person)
+findByEmailWithType email = do
+  emailDbHash <- getDbHash (T.toLower email)
+  findOneWithKV
+    [ Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash,
+      Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))
+    ]
+
 findByEmail ::
   (BeamFlow m r, EncFlow m r) =>
   Text ->
   m (Maybe Person)
-findByEmail email = do
-  emailDbHash <- getDbHash (T.toLower email)
-  findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash]
+findByEmail = findByEmailWithType @'DPT.DefaultDashboard
 
 findAllByIds ::
   BeamFlow m r =>
@@ -68,36 +81,90 @@ findAllByIdsAndReceiveNotification ::
   m [Person]
 findAllByIdsAndReceiveNotification personIds = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In $ getId <$> personIds, Se.Or [Se.Is BeamP.receiveNotification $ Se.Eq $ Just True, Se.Is BeamP.receiveNotification $ Se.Eq Nothing]]]
 
+findAllByRoleWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, DPT.KnownDashboardType t) =>
+  Id Role ->
+  m [Person]
+findAllByRoleWithType roleId =
+  findAllWithKV
+    [ Se.Is BeamP.roleId $ Se.Eq $ getId roleId,
+      Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))
+    ]
+
 findAllByRole ::
   BeamFlow m r =>
   Id Role ->
   m [Person]
-findAllByRole roleId = findAllWithKV [Se.Is BeamP.roleId $ Se.Eq $ getId roleId]
+findAllByRole roleId = findAllByRoleWithType @'DPT.DefaultDashboard roleId
+
+findAllByRoleAndReciveNotificationWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, DPT.KnownDashboardType t) =>
+  Id Role ->
+  m [Person]
+findAllByRoleAndReciveNotificationWithType roleId = findAllWithKV [Se.And [Se.Is BeamP.roleId $ Se.Eq $ getId roleId, Se.Or [Se.Is BeamP.receiveNotification $ Se.Eq $ Just True, Se.Is BeamP.receiveNotification $ Se.Eq Nothing], Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))]]
 
 findAllByRoleAndReciveNotification ::
   BeamFlow m r =>
   Id Role ->
   m [Person]
-findAllByRoleAndReciveNotification roleId = findAllWithKV [Se.And [Se.Is BeamP.roleId $ Se.Eq $ getId roleId, Se.Or [Se.Is BeamP.receiveNotification $ Se.Eq $ Just True, Se.Is BeamP.receiveNotification $ Se.Eq Nothing]]]
+findAllByRoleAndReciveNotification roleId = findAllByRoleAndReciveNotificationWithType @'DPT.DefaultDashboard roleId
+
+findByEmailAndPasswordWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, EncFlow m r, DPT.KnownDashboardType t) =>
+  Text ->
+  Text ->
+  m (Maybe Person)
+findByEmailAndPasswordWithType email password = do
+  emailDbHash <- getDbHash (T.toLower email)
+  passwordDbHash <- getDbHash password
+  findOneWithKV
+    [ Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash,
+      Se.Is BeamP.passwordHash $ Se.Eq $ Just passwordDbHash,
+      Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))
+    ]
 
 findByEmailAndPassword ::
   (BeamFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
-findByEmailAndPassword email password = do
-  emailDbHash <- getDbHash (T.toLower email)
-  passwordDbHash <- getDbHash password
-  findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash, Se.Is BeamP.passwordHash $ Se.Eq $ Just passwordDbHash]]
+findByEmailAndPassword = findByEmailAndPasswordWithType @'DPT.DefaultDashboard
+
+findByMobileNumberWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, EncFlow m r, DPT.KnownDashboardType t) =>
+  Text ->
+  Text ->
+  m (Maybe Person)
+findByMobileNumberWithType mobileNumber mobileCountryCode = do
+  mobileDbHash <- getDbHash mobileNumber
+  findOneWithKV
+    [ Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash,
+      Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode,
+      Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))
+    ]
 
 findByMobileNumber ::
+  forall m r.
   (BeamFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
-findByMobileNumber mobileNumber mobileCountryCode = do
+findByMobileNumber = findByMobileNumberWithType @'DPT.DefaultDashboard
+
+findByMobileNumberAndRoleIdWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, EncFlow m r, DPT.KnownDashboardType t) =>
+  Text ->
+  Text ->
+  Id Role ->
+  m (Maybe Person)
+findByMobileNumberAndRoleIdWithType mobileNumber mobileCountryCode roleId = do
   mobileDbHash <- getDbHash mobileNumber
-  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]]
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.Eq $ getId roleId, Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))]]
 
 findByMobileNumberAndRoleId ::
   (BeamFlow m r, EncFlow m r) =>
@@ -105,9 +172,18 @@ findByMobileNumberAndRoleId ::
   Text ->
   Id Role ->
   m (Maybe Person)
-findByMobileNumberAndRoleId mobileNumber mobileCountryCode roleId = do
+findByMobileNumberAndRoleId mobileNumber mobileCountryCode roleId = findByMobileNumberAndRoleIdWithType @'DPT.DefaultDashboard mobileNumber mobileCountryCode roleId
+
+findByMobileNumberAndRoleIdsWithType ::
+  forall (t :: DPT.DashboardTypeTag) m r.
+  (BeamFlow m r, EncFlow m r, DPT.KnownDashboardType t) =>
+  Text ->
+  Text ->
+  [Id Role] ->
+  m (Maybe Person)
+findByMobileNumberAndRoleIdsWithType mobileNumber mobileCountryCode roleIds = do
   mobileDbHash <- getDbHash mobileNumber
-  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.Eq $ getId roleId]]
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.In $ getId <$> roleIds, Se.Is BeamP.dashboardType $ Se.Eq (DPT.dashboardTypeVal (Proxy @t))]]
 
 findByMobileNumberAndRoleIds ::
   (BeamFlow m r, EncFlow m r) =>
@@ -115,9 +191,7 @@ findByMobileNumberAndRoleIds ::
   Text ->
   [Id Role] ->
   m (Maybe Person)
-findByMobileNumberAndRoleIds mobileNumber mobileCountryCode roleIds = do
-  mobileDbHash <- getDbHash mobileNumber
-  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode, Se.Is BeamP.roleId $ Se.In $ getId <$> roleIds]]
+findByMobileNumberAndRoleIds mobileNumber mobileCountryCode roleIds = findByMobileNumberAndRoleIdsWithType @'DPT.DefaultDashboard mobileNumber mobileCountryCode roleIds
 
 updatePersonVerifiedStatus :: BeamFlow m r => Id Person -> Bool -> m ()
 updatePersonVerifiedStatus personId verified = do
@@ -278,6 +352,7 @@ instance FromTType' BeamP.Person Person.Person where
               (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
               _ -> Nothing,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            dashboardType = dashboardType,
             ..
           }
 
@@ -290,6 +365,7 @@ instance ToTType' BeamP.Person Person.Person where
         emailHash = email <&> (.hash),
         mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber.hash,
+        dashboardType = dashboardType,
         ..
       }
 
@@ -315,6 +391,7 @@ findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbT
             <> [Se.Is BeamP.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate]
             <> [Se.Is BeamP.mobileNumberHash $ Se.Eq (fromJust mbMobileNumberDbHash) | isJust mbMobileNumber]
             <> [Se.Is BeamP.verified $ checkStatus | isJust mbStatus]
+            <> [Se.Is BeamP.dashboardType $ Se.Eq DPT.DEFAULT_DASHBOARD]
         )
     ]
     (Se.Asc BeamP.createdAt)

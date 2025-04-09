@@ -74,7 +74,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                 trainType = Nothing,
                 routeId = routeCode
               }
-      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' request
+      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err

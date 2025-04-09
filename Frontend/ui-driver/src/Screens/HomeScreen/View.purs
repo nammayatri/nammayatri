@@ -479,7 +479,6 @@ view push state =
           void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ HS.hideLoaderFlow
           _ <- push action
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
-          _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
           _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") ((enableCurrentLocation state) && perfConfig.mapRecenter) "satellite" (17.0) 0.0 0.0 push ShowMap
           _ <- push $ UpdateSpecialZoneList
           pure unit
@@ -2825,7 +2824,7 @@ checkBgLocation push action state bgLocPopupShown = do
   andv <- liftFlow $ JB.getAndroidVersion
   bgp <- liftFlow $ JB.isBackgroundLocationEnabled unit
   let onRide = (DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer])
-  if not bgLocPopupShown && andv >= 14 && not bgp && not onRide then doAff do liftEffect $ push $ action
+  if not bgLocPopupShown && andv >= 10 && not bgp && not onRide then doAff do liftEffect $ push $ action
   else pure unit
 
 computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit

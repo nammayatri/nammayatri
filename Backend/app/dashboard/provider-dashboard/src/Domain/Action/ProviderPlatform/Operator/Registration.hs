@@ -4,6 +4,7 @@ import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Registration as Common
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Person as PT
 import qualified Domain.Types.Person.Type as DP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.Transaction as DT
@@ -83,7 +84,8 @@ buildOperator req operatorId role = do
         updatedAt = now,
         verified = Just True,
         rejectionReason = Nothing,
-        rejectedAt = Nothing
+        rejectedAt = Nothing,
+        dashboardType = PT.DEFAULT_DASHBOARD
       }
 
 validateOperator :: Validate Common.OperatorRegisterReq

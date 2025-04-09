@@ -169,7 +169,8 @@ onSearch onSearchReq validatedReq = do
       CachedQuote.cacheByFRFSCachedQuoteKey key CachedQuote.FRFSCachedQuote {CachedQuote.price = quote.price, CachedQuote.stationsJson = quote.stationsJson}
 
 filterQuotes :: [Quote.FRFSQuote] -> Maybe Quote.FRFSQuote
-filterQuotes quotes = listToMaybe quotes
+filterQuotes [] = Nothing
+filterQuotes quotes = Just $ minimumBy (\quote1 quote2 -> compare quote1.price.amount.getHighPrecMoney quote2.price.amount.getHighPrecMoney) quotes
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do

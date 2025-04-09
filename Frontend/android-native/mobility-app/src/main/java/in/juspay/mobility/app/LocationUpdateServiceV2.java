@@ -77,8 +77,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -189,7 +187,7 @@ public class LocationUpdateServiceV2 extends Service {
     // Connectivity monitoring
     private BroadcastReceiver internetBroadcastReceiver;
     // Timers for periodic updates
-    private Timer locationHeartbeatTimer;
+    private ScheduledExecutorService locationHeartbeatScheduler;
     private int locationFreshnessThresholdMinutes = 5; // Default timeout for considering location stale
     private Location lastCachedLocation;
     private int locationRequestInterval = 10; // Default interval in seconds
@@ -265,6 +263,7 @@ public class LocationUpdateServiceV2 extends Service {
         // Check token validity before proceeding
         if (!checkRegistrationTokenExistence()) {
             Log.w(TAG, "Registration token missing, stopping service");
+            stopWidgetService();
             stopSelf();
             return;
         }
@@ -305,9 +304,7 @@ public class LocationUpdateServiceV2 extends Service {
      * The message queue is responsible for handling location data storage and processing.
      */
     private void initializeMessageQueue() {
-        HandlerThread messageThread = new HandlerThread("LocationMessageQueue");
-        messageThread.start();
-        messageQueue = new MessageQueue(messageThread.getLooper());
+        messageQueue = new MessageQueue(Looper.getMainLooper());
         Log.d(TAG, "Message queue initialized");
     }
 
@@ -318,10 +315,6 @@ public class LocationUpdateServiceV2 extends Service {
     private void initializeLocationComponents() {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         cancellationTokenSource = new CancellationTokenSource();
-
-        // Create a dedicated thread for location callbacks
-        locationHandlerThread = new HandlerThread("LocationCallbackThread");
-        locationHandlerThread.start();
 
         Log.d(TAG, "Location components initialized");
     }
@@ -575,7 +568,7 @@ public class LocationUpdateServiceV2 extends Service {
             fusedLocationProviderClient.requestLocationUpdates(
                     locationRequest,
                     locationCallback,
-                    locationHandlerThread.getLooper()
+                    Looper.getMainLooper()
             );
             isLocationUpdating = true;
             Log.i(TAG_LOCATION, "Location updates started successfully");
@@ -816,6 +809,15 @@ public class LocationUpdateServiceV2 extends Service {
             return;
         }
 
+        // Check driver status before proceeding
+        String driverStatus = getValueFromStorage(Utils.DRIVER_STATUS);
+        if (driverStatus == null || driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+            Log.i(TAG, "Driver status is Offline, stopping services");
+            stopWidgetService();
+            stopSelf();
+            return;
+        }
+
         // Acquire wake lock for network operation
         PowerManager.WakeLock wakeLock = acquireTemporaryWakeLock("SendBatchToServer", wakeLockTimeoutMs);
 
@@ -872,6 +874,22 @@ public class LocationUpdateServiceV2 extends Service {
         } finally {
             // Release wake lock after operation
             releaseWakeLockIfHeld(wakeLock);
+        }
+    }
+
+    /**
+     * Stops the widget service if it's running.
+     */
+    private void stopWidgetService() {
+        try {
+            if (isServiceRunning(context, WidgetService.class.getName())) {
+                Intent widgetService = new Intent(context, WidgetService.class);
+                context.stopService(widgetService);
+                Log.i(TAG, "Stopped widget service");
+            }
+        } catch (Exception e) {
+            Log.e(TAG_ERROR, "Error stopping widget service", e);
+            FirebaseCrashlytics.getInstance().recordException(e);
         }
     }
 
@@ -1088,6 +1106,7 @@ public class LocationUpdateServiceV2 extends Service {
                 if (errorCode.equals("INVALID_TOKEN") || errorCode.equals("TOKEN_EXPIRED")) {
                     Log.w(TAG_API, "Invalid token detected: " + errorCode);
                     updateStorage("REGISTERATION_TOKEN", "__failed");
+                    stopWidgetService();
                     stopSelf();
                 }
             }
@@ -1184,6 +1203,7 @@ public class LocationUpdateServiceV2 extends Service {
                 if (!status) {
                     updateStorage("DRIVER_STATUS", "__failed");
                     showAlertNotification();
+                    stopWidgetService();
                     stopSelf();
                 }
             } catch (Exception e) {
@@ -1509,21 +1529,21 @@ public class LocationUpdateServiceV2 extends Service {
      * Starts a timer to periodically check and send location updates even when the device hasn't moved.
      */
     private void startLocationHeartbeatTimer() {
-        if (locationHeartbeatTimer != null) {
-            locationHeartbeatTimer.cancel();
+        if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
+            locationHeartbeatScheduler.shutdown();
         }
 
-        locationHeartbeatTimer = new Timer("LocationHeartbeatTimer");
+        locationHeartbeatScheduler = Executors.newScheduledThreadPool(2);
         int heartbeatIntervalMillis = locationUpdateInterval * 1000;
 
-        locationHeartbeatTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                checkAndSendLocationHeartbeat();
-            }
-        }, heartbeatIntervalMillis, heartbeatIntervalMillis);
+        locationHeartbeatScheduler.scheduleWithFixedDelay(
+                this::checkAndSendLocationHeartbeat,
+            heartbeatIntervalMillis,
+            heartbeatIntervalMillis,
+            TimeUnit.MILLISECONDS
+        );
 
-        Log.d(TAG_TIMER, "Started location heartbeat timer with interval: " +
+        Log.d(TAG_TIMER, "Started location heartbeat scheduler with interval: " +
                 locationUpdateInterval + "s");
     }
 
@@ -1531,8 +1551,8 @@ public class LocationUpdateServiceV2 extends Service {
      * Restarts the location heartbeat timer with current settings.
      */
     private void restartLocationHeartbeatTimer() {
-        if (locationHeartbeatTimer != null) {
-            locationHeartbeatTimer.cancel();
+        if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
+            locationHeartbeatScheduler.shutdown();
         }
         startLocationHeartbeatTimer();
     }
@@ -1541,9 +1561,9 @@ public class LocationUpdateServiceV2 extends Service {
      * Stops the location heartbeat timer.
      */
     private void stopLocationHeartbeatTimer() {
-        if (locationHeartbeatTimer != null) {
-            locationHeartbeatTimer.cancel();
-            locationHeartbeatTimer = null;
+        if (locationHeartbeatScheduler != null && !locationHeartbeatScheduler.isShutdown()) {
+            locationHeartbeatScheduler.shutdown();
+            locationHeartbeatScheduler = null;
         }
     }
 
@@ -1723,6 +1743,7 @@ public class LocationUpdateServiceV2 extends Service {
                             String token = prefs.getString(REGISTRATION_TOKEN_KEY, null);
                             if (token == null || token.equals("__failed") || token.equals("null")) {
                                 Log.w(TAG, "Registration token is invalid or missing, stopping location service");
+                                stopWidgetService();
                                 stopSelf();
                                 return; // Return early as service is being stopped
                             }
@@ -1817,6 +1838,13 @@ public class LocationUpdateServiceV2 extends Service {
                             rateLimitTimeInSeconds = Long.parseLong(rateLimitStr); // Update local variable
                             Log.d(TAG_CONFIG, "Rate limiting time updated to " + rateLimitTimeInSeconds + " seconds");
                             break;
+                        case Utils.DRIVER_STATUS:
+                            String driverStatus = prefs.getString(key, Utils.DRIVER_STATUS_OFFLINE);
+                            if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+                                stopWidgetService();
+                                stopSelf();
+                            }
+                            break;
                     }
                 }
             } catch (Exception e) {
@@ -1838,6 +1866,7 @@ public class LocationUpdateServiceV2 extends Service {
         String token = sharedPrefs.getString(REGISTRATION_TOKEN_KEY, null);
         if (token == null || token.equals("__failed") || token.equals("null")) {
             Log.w(TAG, "Registration token is invalid or missing on service start, stopping location service");
+            stopWidgetService();
             stopSelf();
         }
     }

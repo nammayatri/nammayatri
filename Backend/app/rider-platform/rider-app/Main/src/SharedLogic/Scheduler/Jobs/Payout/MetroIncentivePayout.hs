@@ -50,7 +50,8 @@ sendCustomerRefund ::
     MonadFlow m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Job 'MetroIncentivePayout ->
   m ExecutionResult
@@ -96,7 +97,8 @@ callPayout ::
     MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -119,7 +121,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
             emailId <- mapM decrypt person.email
             let amount = fromMaybe 0 booking.eventDiscountAmount
                 entityName = DLP.METRO_BOOKING_CASHBACK
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType
+                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType True
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let serviceName = DEMSC.PayoutService PT.Juspay
                 createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName

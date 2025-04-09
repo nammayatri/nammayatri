@@ -103,7 +103,7 @@ postTicketsTicketdashboardRegister merchantShortId opCity req = do
   ticketDashboardRoleIds <-
     ((.id) <$>) <$> QRole.findAllInDashboardAccessType [DRole.TICKET_DASHBOARD_USER, DRole.TICKET_DASHBOARD_MERCHANT, DRole.TICKET_DASHBOARD_ADMIN, DRole.TICKET_DASHBOARD_APPROVER]
   when (null ticketDashboardRoleIds) $ throwError $ InternalError "No ticket dashboard roles found"
-  unlessM (isNothing <$> QP.findByMobileNumberAndRoleIds req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds) $
+  unlessM (isNothing <$> QP.findByMobileNumberAndRoleIdsWithType @'PT.TicketDashboard req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds) $
     throwError (InvalidRequest "Phone already registered")
   res <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardRegister) req
   registerTicketDashboard req res.id
@@ -148,7 +148,8 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
         updatedAt = now,
         verified = Nothing,
         rejectionReason = Nothing,
-        rejectedAt = Nothing
+        rejectedAt = Nothing,
+        dashboardType = PT.TICKET_DASHBOARD
       }
 
 registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) => API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Maybe Text -> m API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
@@ -179,7 +180,7 @@ postTicketsTicketdashboardLoginVerify merchantShortId opCity req = do
   ticketDashboardRoleIds <-
     ((.id) <$>) <$> QRole.findAllInDashboardAccessType [DRole.TICKET_DASHBOARD_USER, DRole.TICKET_DASHBOARD_MERCHANT, DRole.TICKET_DASHBOARD_ADMIN, DRole.TICKET_DASHBOARD_APPROVER]
   when (null ticketDashboardRoleIds) $ throwError $ InternalError "No ticket dashboard roles found"
-  person <- QP.findByMobileNumberAndRoleIds req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
+  person <- QP.findByMobileNumberAndRoleIdsWithType @'PT.TicketDashboard req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _ <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardLoginVerify) req
   token <- DR.generateToken person.id merchant.id merchant.defaultOperatingCity

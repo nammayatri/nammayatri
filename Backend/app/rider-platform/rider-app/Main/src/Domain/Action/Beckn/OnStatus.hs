@@ -185,7 +185,8 @@ onStatus ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "storeRidesTimeLimit" r Int,
     HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   ValidatedOnStatusReq ->
   m ()
