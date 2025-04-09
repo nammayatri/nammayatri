@@ -34,6 +34,8 @@ imports:
   MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
+  ServiceTierType: BecknV2.FRFS.Enums
+  DayOfWeek: Data.Time
 
 FRFSSearch:
   tableName: frfs_search
@@ -1008,3 +1010,48 @@ RouteTripMapping:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
+
+RouteStopTimeTable:
+  tableName: route_stop_time_table
+  fields:
+    tripId: Id RouteStopTimeTable
+    routeCode: Text
+    stopCode: Text
+    timeOfDeparture: TimeOfDay
+    timeOfArrival: TimeOfDay
+    serviceTierType: ServiceTierType
+    integratedBppConfigId: Id IntegratedBPPConfig
+  constraints:
+    tripId: PrimaryKey
+    integratedBppConfigId : PrimaryKey
+  queries:
+    findByRouteCodeAndStopCode:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [ routeCode]
+          - eq: [stopCode, integratedBppConfigId]
+
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [routeCode]
+          - eq: [integratedBppConfigId]
+
+RouteStopCalender:
+  tableName: route_stop_calender
+  fields:
+    tripId: Id RouteStopTimeTable
+    serviceability: [DayOfWeek]
+    integratedBppConfigId: Id IntegratedBPPConfig
+  constraints:
+    tripId: PrimaryKey
+    integratedBppConfigId: PrimaryKey
+  queries:
+    findByTripIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [tripId]
+          - integratedBppConfigId
