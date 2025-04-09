@@ -108,7 +108,7 @@ findNextEligibleTripTransactionByDriverIdStatus driverId status = do
     [] -> pure Nothing
 
 isNonTerminalTripStatus :: TripStatus -> Bool
-isNonTerminalTripStatus status = any (\status' -> status' == status) [TRIP_ASSIGNED, IN_PROGRESS]
+isNonTerminalTripStatus status = any (\status' -> status' == status) [TRIP_ASSIGNED, IN_PROGRESS, UPCOMING]
 
 buildTripAssignedData :: Id TripTransaction -> ServiceTierType -> Text -> Text -> Text -> (Maybe Text) -> Bool -> TN.WMBTripAssignedData
 buildTripAssignedData tripTransactionId vehicleServiceTier vehicleNumber routeCode shortName roundRouteCode isFirstBatchTrip =
@@ -500,6 +500,7 @@ tripTransactionKey driverId = \case
   COMPLETED -> "WMB:TCO:" <> driverId.getId
   CANCELLED -> "WMB:TCA:" <> driverId.getId
   PAUSED -> "WMB:TP:" <> driverId.getId
+  UPCOMING -> "WMB:TU:" <> driverId.getId
 
 triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id AlertRequest)
 triggerAlertRequest driverId requesteeId title body requestData isViolated tripTransaction = do
