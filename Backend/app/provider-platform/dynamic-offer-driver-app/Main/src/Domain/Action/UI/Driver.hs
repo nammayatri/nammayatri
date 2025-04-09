@@ -495,7 +495,8 @@ data BookingAPIEntity = BookingAPIEntity
     roundTrip :: Maybe Bool,
     returnTime :: Maybe UTCTime,
     distanceToPickup :: Maybe Meters,
-    isScheduled :: Bool
+    isScheduled :: Bool,
+    coinsRewardedOnGoldTierRide :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

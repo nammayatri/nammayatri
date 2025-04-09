@@ -237,7 +237,6 @@ handler merchantId req validatedReq = do
             parcelType = searchRequest.parcelType,
             parcelQuantity = searchRequest.parcelQuantity,
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
-            coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
