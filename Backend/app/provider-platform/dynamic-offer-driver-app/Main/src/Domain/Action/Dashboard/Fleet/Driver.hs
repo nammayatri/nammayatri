@@ -884,7 +884,13 @@ getListOfDrivers :: Maybe Text -> Maybe Text -> Text -> Id DM.Merchant -> Maybe 
 getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString = do
   let limit = min 10 $ fromMaybe 5 mbLimit
       offset = fromMaybe 0 mbOffset
-  mobileNumberHash <- mapM getDbHash (mbSearchString <|> mbDriverPhNo)
+
+  mobileNumberHash <- case mbSearchString of
+    Just _ -> pure Nothing
+    Nothing -> case mbDriverPhNo of
+      Just phNo -> Just <$> getDbHash phNo
+      Nothing -> pure Nothing
+
   let mode = castDashboardDriverStatus <$> mbMode
   pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
   let (fleetDriverAssociation, _) = unzip pairs

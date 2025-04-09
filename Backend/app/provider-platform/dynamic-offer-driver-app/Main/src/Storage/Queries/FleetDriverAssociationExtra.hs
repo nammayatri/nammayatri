@@ -11,7 +11,7 @@ import Domain.Types.VehicleCategory
 import Domain.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (DbHash)
+import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
@@ -70,6 +70,7 @@ findAllActiveDriverByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r,
 findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive (Just mode) = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
+  encryptedMobileNumberHash <- mapM getDbHash mbSearchString
 
   res <-
     L.runDB dbConf $
@@ -85,9 +86,10 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                         B.&&?. driverInformation.mode B.==?. B.val_ (Just mode)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                         B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` (B.val_ ("%" <> toLower name <> "%")))) mbSearchString
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                                )
                   )
                   do
@@ -103,6 +105,7 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
 findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive Nothing = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
+  encryptedMobileNumberHash <- mapM getDbHash mbSearchString
 
   res <-
     L.runDB dbConf $
@@ -117,9 +120,10 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberSearch
                         B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
                         B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbSearchString
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                                )
                   )
                   do
