@@ -20,6 +20,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalTransitOptionsLite,
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
+    getMultimodalOrderGetBusTierOptions,
   )
 where
 
@@ -595,3 +596,12 @@ getPublicTransportData (mbPersonId, _merchantId) _mbConfigVersion = do
             ptcv = T.intercalate (T.pack "#") $ map (.ptcv) transportDataList
           }
   return transportData
+
+getMultimodalOrderGetBusTierOptions ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Int ->
+  Environment.Flow ApiTypes.LegServiceTierOptionsResp
+getMultimodalOrderGetBusTierOptions (_mbPersonId, _merchantId) _ _ = throwError (InvalidRequest "Not implemented yet")

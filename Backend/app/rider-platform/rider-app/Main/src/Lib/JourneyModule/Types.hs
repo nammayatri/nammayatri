@@ -326,7 +326,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     tickets :: Maybe [Text],
     routeName :: Maybe Text,
     providerName :: Maybe Text,
-    avaialbleServiceTiers :: [LegServiceTier],
+    otherValidRouteShortNames :: [Text],
     frequency :: Maybe Seconds
   }
   deriving stock (Show, Generic)
@@ -337,7 +337,8 @@ data LegServiceTier = LegServiceTier
     serviceTierType :: Spec.ServiceTierType,
     serviceTierDescription :: Text,
     fare :: PriceAPIEntity,
-    quoteId :: Id DFRFSQuote.FRFSQuote
+    quoteId :: Id DFRFSQuote.FRFSQuote,
+    otherValidRouteShortNames :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -696,7 +697,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   providerName = Just booking.providerName,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
-                  avaialbleServiceTiers = [] -- TODO: add available service tiers once we option to upgrade service tier
+                  otherValidRouteShortNames = []
                 }
         Spec.SUBWAY -> do
           return $
@@ -835,22 +836,6 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
           route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
-          quotes <- QFRFSQuote.findAllBySearchId id
-          let availableServiceTiers =
-                mapMaybe
-                  ( \quote -> do
-                      let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-                      let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-                      mbServiceTier <&> \serviceTier -> do
-                        LegServiceTier
-                          { fare = mkPriceAPIEntity quote.price,
-                            quoteId = quote.id,
-                            serviceTierName = serviceTier.shortName,
-                            serviceTierType = serviceTier._type,
-                            serviceTierDescription = serviceTier.description
-                          }
-                  )
-                  quotes
           return $
             Bus $
               BusLegExtraInfo
@@ -861,7 +846,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   providerName = Nothing,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails,
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails,
-                  avaialbleServiceTiers = availableServiceTiers
+                  otherValidRouteShortNames = []
                 }
         Spec.SUBWAY -> do
           quotes <- QFRFSQuote.findAllBySearchId id
@@ -876,7 +861,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                             quoteId = quote.id,
                             serviceTierName = serviceTier.shortName,
                             serviceTierType = serviceTier._type,
-                            serviceTierDescription = serviceTier.description
+                            serviceTierDescription = serviceTier.description,
+                            otherValidRouteShortNames = []
                           }
                   )
                   quotes

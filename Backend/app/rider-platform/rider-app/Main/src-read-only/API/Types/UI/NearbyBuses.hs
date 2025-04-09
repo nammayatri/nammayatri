@@ -2,6 +2,7 @@
 
 module API.Types.UI.NearbyBuses where
 
+import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.IntegratedBPPConfig
@@ -31,6 +32,14 @@ data NearbyBusesRequest = NearbyBusesRequest {platformType :: Domain.Types.Integ
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [NearbyBus], recentRides :: [RecentRide]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data NextBusDetailsResponse = NextBusDetailsResponse
+  { busArrivalDuration :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    busArrivalFrequency :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    serviceType :: BecknV2.FRFS.Enums.ServiceTierType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

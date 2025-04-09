@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.NearbyBuses
 import qualified Control.Lens
+import qualified Data.Text
 import qualified Domain.Action.UI.NearbyBuses as Domain.Action.UI.NearbyBuses
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -21,10 +22,22 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "nearbyBusBooking" :> ReqBody ('[JSON]) API.Types.UI.NearbyBuses.NearbyBusesRequest :> Post ('[JSON]) API.Types.UI.NearbyBuses.NearbyBusesResponse)
+type API =
+  ( TokenAuth :> "nearbyBusBooking" :> ReqBody '[JSON] API.Types.UI.NearbyBuses.NearbyBusesRequest
+      :> Post
+           '[JSON]
+           API.Types.UI.NearbyBuses.NearbyBusesResponse
+      :<|> TokenAuth
+      :> "nextBusDetails"
+      :> Capture "routeCode" Data.Text.Text
+      :> QueryParam "stopCode" Data.Text.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.NearbyBuses.NextBusDetailsResponse
+  )
 
 handler :: Environment.FlowServer API
-handler = postNearbyBusBooking
+handler = postNearbyBusBooking :<|> getNextBusDetails
 
 postNearbyBusBooking ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -34,3 +47,13 @@ postNearbyBusBooking ::
     Environment.FlowHandler API.Types.UI.NearbyBuses.NearbyBusesResponse
   )
 postNearbyBusBooking a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.postNearbyBusBooking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getNextBusDetails ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Environment.FlowHandler API.Types.UI.NearbyBuses.NextBusDetailsResponse
+  )
+getNextBusDetails a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextBusDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

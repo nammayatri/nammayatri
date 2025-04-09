@@ -1,4 +1,4 @@
-module Domain.Action.UI.NearbyBuses (postNearbyBusBooking) where
+module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextBusDetails) where
 
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
@@ -16,8 +16,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
-import Kernel.Utils.Logging
+import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
@@ -72,26 +71,26 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
             integratedBPPConfig' <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.BUS req.platformType
             case integratedBPPConfig' of
               Just integratedBPPConfig -> do
-                stopMapping <- Kernel.Prelude.listToMaybe <$> QRouteStopMapping.findByStopCode (fromMaybe "" recentLoc.stopCode) integratedBPPConfig.id
-                if isJust stopMapping
-                  then do
+                mbStopMapping <- Kernel.Prelude.listToMaybe <$> QRouteStopMapping.findByStopCode (fromMaybe "" recentLoc.stopCode) integratedBPPConfig.id
+                case mbStopMapping of
+                  Just stopMapping -> do
                     getFares <- Kernel.Prelude.listToMaybe <$> FRFSUtils.getFares riderId Spe.BUS integratedBPPConfig.id merchantId person.merchantOperatingCityId (fromMaybe "" recentLoc.routeCode) (fromMaybe "" recentLoc.fromStopCode) (fromMaybe "" recentLoc.stopCode)
                     -- need to validate this.
-                    if isNothing getFares
-                      then
+                    case getFares of
+                      Just fares ->
                         return $
                           [ -- Return a single element list instead of Just
                             API.Types.UI.NearbyBuses.RecentRide
-                              { fare = (Kernel.Prelude.fromJust getFares).price,
+                              { fare = fares.price,
                                 fromStopCode = fromMaybe "" recentLoc.fromStopCode,
                                 fromStopName = fromMaybe "" recentLoc.fromStopName,
                                 routeCode = recentLoc.routeCode,
-                                toStopName = (Kernel.Prelude.fromJust stopMapping).stopName,
+                                toStopName = stopMapping.stopName,
                                 toStopCode = fromMaybe "" recentLoc.stopCode -- Using same stop as placeholder
                               }
                           ]
-                      else return []
-                  else return []
+                      Nothing -> return []
+                  Nothing -> return []
               Nothing -> return []
           else return []
       _ -> return []
@@ -135,3 +134,17 @@ postNearbyBusBooking (mbPersonId, merchantId) req = do
 
   -- Return the complete response
   return $ API.Types.UI.NearbyBuses.NearbyBusesResponse (concat nearbyBuses) recentRides
+
+getNextBusDetails ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Text ->
+    Kernel.Prelude.Maybe Text ->
+    Environment.Flow API.Types.UI.NearbyBuses.NextBusDetailsResponse
+  )
+getNextBusDetails _ _ _ = throwError $ InvalidRequest "Not implemented yet"
+
+-- Implement the logic for getting next bus details here
+-- You can use the provided parameters to fetch the required data
+-- and return an appropriate response.

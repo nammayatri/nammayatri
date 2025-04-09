@@ -84,6 +84,10 @@ data JourneyStatusResp = JourneyStatusResp {journeyPaymentStatus :: Kernel.Prelu
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.JourneyModule.Types.LegServiceTier]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LegStatus = LegStatus
   { legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,

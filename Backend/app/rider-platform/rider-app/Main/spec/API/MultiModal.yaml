@@ -22,6 +22,7 @@ imports:
   RouteStopMapping: Domain.Types.RouteStopMapping
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
+  LegServiceTier: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -127,6 +128,9 @@ types:
     journeyLegOrder: Int
     skipBooking: Bool
     ticketQuantity: Maybe Int
+
+  LegServiceTierOptionsResp:
+    options: [LegServiceTier]
 
   TransportRoute:
     cd: Text
@@ -311,3 +315,11 @@ apis:
         publicTransportConfigVersion: Text
       response:
         type: PublicTransportData
+
+  - GET:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/getBusTierOptions
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: LegServiceTierOptionsResp
