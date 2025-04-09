@@ -337,6 +337,7 @@ in  { esqDBCfg
     , hostName = "localhost"
     , nwAddress = "http://localhost:8016/beckn"
     , selfUIUrl = "http://localhost:8016/ui/"
+    , selfBaseUrl = "http://localhost:8016/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config

@@ -2612,7 +2612,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
 
     calcPercentage percentage = (percentage * fee') / 100.0
 
-verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
+verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
 verifyVpaStatus (personId, _, opCityId) = do
   void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound

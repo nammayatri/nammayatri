@@ -312,6 +312,7 @@ in  { esqDBCfg
     , hostName = "localhost"
     , nwAddress = "http://localhost:8013/beckn/cab/v1"
     , selfUIUrl = "http://localhost:8013/v2/"
+    , selfBaseUrl = "http://localhost:8013/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config

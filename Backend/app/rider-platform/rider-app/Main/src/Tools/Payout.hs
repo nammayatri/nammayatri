@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 
-createPayoutOrder :: (ServiceFlow m r, HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payout.CreatePayoutOrderReq -> m Payout.CreatePayoutOrderResp
+createPayoutOrder :: (ServiceFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payout.CreatePayoutOrderReq -> m Payout.CreatePayoutOrderResp
 createPayoutOrder = runWithServiceConfigAndName Payout.createPayoutOrder
 
 payoutOrderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Payout.PayoutOrderStatusReq -> m Payout.PayoutOrderStatusResp

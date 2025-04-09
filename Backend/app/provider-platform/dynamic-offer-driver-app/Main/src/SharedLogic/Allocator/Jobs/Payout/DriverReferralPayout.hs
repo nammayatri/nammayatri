@@ -65,7 +65,7 @@ sendDriverReferralPayoutJobData ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   Job 'DriverReferralPayout ->
   m ExecutionResult
@@ -133,7 +133,7 @@ callPayout ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   DS.DailyStats ->
   DI.DriverInformation ->

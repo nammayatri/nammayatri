@@ -97,7 +97,7 @@ data HandlerEnv = HandlerEnv
     passettoContext :: PassettoContext,
     serviceClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
-    selfUIUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl
   }
   deriving (Generic)
 

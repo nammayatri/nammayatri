@@ -104,7 +104,7 @@ processBacklogReferralPayout ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   Id Person.Person ->
   Text ->

@@ -221,7 +221,7 @@ casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
-processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
+processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
