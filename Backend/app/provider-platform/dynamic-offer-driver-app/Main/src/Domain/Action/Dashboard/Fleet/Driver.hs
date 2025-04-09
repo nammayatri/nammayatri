@@ -957,7 +957,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
         (isDriverOnPickup, isDriverOnRide, routeCode) <-
           if driverInfo'.onRide
             then do
-              currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
+              currentTripTransaction <- WMB.findNextActiveTripTransaction fleetOwnerId driver.id
               case currentTripTransaction of
                 Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
                 Nothing -> return (False, False, Nothing)
@@ -1029,11 +1029,11 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
           Nothing -> return (0, 0) ------------ when we are not including stats then we will return 0
         rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
         (driverName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode) <- case rcActiveAssociation of
-          Just activeAssociation -> getFleetDriverInfo activeAssociation.driverId False ------- when vehicle is in active state
+          Just activeAssociation -> getFleetDriverInfo fleetOwnerId activeAssociation.driverId False ------- when vehicle is in active state
           Nothing -> do
             latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now ------- when there is not any active association then i will find out the latest association  (vehicle is in inActive state)
             case latestAssociation of
-              Just latestAssoc -> getFleetDriverInfo latestAssoc.driverId False
+              Just latestAssoc -> getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
               Nothing -> pure (Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing) -------- when vehicle is unAssigned
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
@@ -1062,13 +1062,13 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
                 }
         pure ls
 
-getFleetDriverInfo :: Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text)
-getFleetDriverInfo driverId isDriver = do
+getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text)
+getFleetDriverInfo fleetOwnerId driverId isDriver = do
   mbDriver <- QPerson.findById driverId
   mbDriverInfo' <- QDriverInfo.findById driverId
   case (mbDriverInfo', mbDriver) of
     (Just driverInfo', Just driver) -> do
-      currentTripTransaction <- WMB.findNextActiveTripTransaction driver.id
+      currentTripTransaction <- WMB.findNextActiveTripTransaction fleetOwnerId driver.id
       mode <-
         if isDriver
           then return (driverInfo'.mode)
@@ -1469,7 +1469,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
       )
       []
       trips
-  WMB.findNextActiveTripTransaction (cast driverId)
+  WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
     >>= \case
       Just _ -> QTT.createMany allTransactions
       Nothing -> do
@@ -1549,10 +1549,10 @@ getDriverFleetTripTransactions ::
   Int ->
   Int ->
   Flow Common.TripTransactionResp
-getDriverFleetTripTransactions merchantShortId opCity _ driverId mbFrom mbTo mbVehicleNumber limit offset = do
+getDriverFleetTripTransactions merchantShortId opCity fleetOwnerId driverId mbFrom mbTo mbVehicleNumber limit offset = do
   merchant <- findMerchantByShortId merchantShortId
   _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Just limit) (Just offset) (cast driverId) mbFrom mbTo mbVehicleNumber
+  tripTransactions <- QTT.findAllTripTransactionByDriverIdWithinCreationRange (Id fleetOwnerId) (Just limit) (Just offset) (cast driverId) mbFrom mbTo mbVehicleNumber
   let trips = map buildTripTransactionDetails tripTransactions
       summary = Common.Summary {totalCount = 10000, count = length trips}
   pure Common.TripTransactionResp {trips = trips, totalTrips = length tripTransactions, summary = summary}

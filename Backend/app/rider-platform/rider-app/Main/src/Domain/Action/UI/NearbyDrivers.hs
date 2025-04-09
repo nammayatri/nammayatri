@@ -142,8 +142,14 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
           applicableServiceTierTypes = Map.findWithDefault [] driverLoc.vehicleType vvToSttMapping,
           distance = distanceInMeters,
           driverId = driverLoc.driverId.getId,
-          bearing = driverLoc.bear
+          bearing = driverLoc.bear,
+          rideDetails = (\rideDetails -> ND.RideDetails {rideId = rideDetails.rideId, rideInfo = buildRideInfo <$> rideDetails.rideInfo}) <$> driverLoc.rideDetails
         }
+
+    buildRideInfo :: LTSTypes.RideInfo -> ND.RideInfo
+    buildRideInfo = \case
+      LTSTypes.Bus LTSTypes.BusRideInfo {..} -> ND.Bus ND.BusRideInfo {..}
+      LTSTypes.Car LTSTypes.CarRideInfo {..} -> ND.Car ND.CarRideInfo {..}
 
     bucketForRadius :: [RingBucketCfg] -> DV.VehicleVariant -> Meters -> Maybe RingBucketCfg
     bucketForRadius sortedRingBucketCfgs vehVariant radius = do

@@ -109,6 +109,68 @@ data NearByDriverRes = NearByDriverRes
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bear :: Maybe Int,
-    vehicleType :: VV.VehicleVariant
+    vehicleType :: VV.VehicleVariant,
+    rideDetails :: Maybe RideDetails
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+
+data RideDetails = RideDetails
+  { rideId :: Text,
+    rideInfo :: Maybe RideInfo
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data BusRideInfo = BusRideInfo
+  { routeCode :: Text,
+    busNumber :: Text,
+    destination :: LatLong,
+    routeLongName :: Maybe Text,
+    driverName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data CarRideInfo = CarRideInfo
+  { pickupLocation :: LatLong
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo
+  deriving (Show, Eq, Generic, ToSchema)
+
+instance FromJSON RideInfo where
+  parseJSON = withObject "RideInfo" $ \obj ->
+    ( Bus
+        <$> ( obj .: "bus" >>= \busObj ->
+                BusRideInfo <$> busObj .: "routeCode"
+                  <*> busObj .: "busNumber"
+                  <*> busObj .: "destination"
+                  <*> busObj .:? "routeLongName"
+                  <*> busObj .:? "driverName"
+            )
+    )
+      <|> ( Car
+              <$> ( obj .: "car" >>= \carObj ->
+                      CarRideInfo <$> carObj .: "pickupLocation"
+                  )
+          )
+
+instance ToJSON RideInfo where
+  toJSON = \case
+    Bus (BusRideInfo routeCode busNumber destination routeLongName driverName) ->
+      object
+        [ "bus"
+            .= object
+              [ "routeCode" .= routeCode,
+                "busNumber" .= busNumber,
+                "destination" .= destination,
+                "routeLongName" .= routeLongName,
+                "driverName" .= driverName
+              ]
+        ]
+    Car (CarRideInfo pickupLocation) ->
+      object
+        [ "car"
+            .= object
+              [ "pickupLocation" .= pickupLocation
+              ]
+        ]
