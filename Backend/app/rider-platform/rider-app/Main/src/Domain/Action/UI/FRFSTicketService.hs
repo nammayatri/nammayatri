@@ -59,9 +59,11 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
-import SharedLogic.FRFSUtils
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.FRFSUtils as Utils
+import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -97,7 +99,7 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory _vehicleType ||+ "Platform Type:" +|| DIBC.APPLICATION ||+ "")
   case (mbStartStationCode, mbEndStationCode) of
     (Just startStationCode, Just endStationCode) -> do
-      routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
+      routesInfo <- Utils.getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
       return $
         map
           ( \routeInfo ->
@@ -655,6 +657,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
+  waitingForOnConfirmKeyExists <- Utils.getWaitingForOnConfirmKey
   when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && booking'.validTill < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
@@ -688,15 +691,31 @@ frfsBookingStatus (personId, merchantId_) booking' = do
       let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.CONFIRMING -> do
-      if booking.validTill < now
+      if isJust waitingForOnConfirmKeyExists
         then do
-          void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-          void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-          buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
-        else do
-          buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
+          counter <- Utils.setStatusPollCounterKey
+          if (counter > 10 || booking.validTill < now)
+            then do
+              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              Utils.deleteWaitingForOnConfirmKey
+              Utils.deleteStatusPollCounterKey
+              createJobIn @_ @'CallFRFSStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) 0 CallFRFSStatusJobData {bookingId = booking.id, platformType = platformType', bapConfig = bapConfig}
+              buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
+            else do
+              buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
+        else
+          if booking.validTill < now
+            then do
+              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
+            else do
+              buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
+      Utils.deleteStatusPollCounterKey
       void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking platformType'
       buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
@@ -780,6 +799,7 @@ frfsBookingStatus (personId, merchantId_) booking' = do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
       let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing, transactionId = Nothing}
+      Utils.deleteStatusPollCounterKey
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
@@ -953,7 +973,7 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
   unless (ticketBooking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest "Cancellation during incorrect status")
   -- tickets <- QFRFSTicket.findAllByTicketBookingId ticketBooking.id
   -- unless (all (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets) $ throwError (InvalidRequest "Cancellation during incorrect status")
-  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL ticketBooking platformType'
+  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL ticketBooking platformType' False
   return APISuccess.Success
 
 getFrfsBookingCanCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
@@ -983,7 +1003,7 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
-  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType'
+  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType' False
   return APISuccess.Success
 
 getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus

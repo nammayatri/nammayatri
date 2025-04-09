@@ -46,6 +46,7 @@ data RiderConfig = RiderConfig
     fareCacheInterCitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     fareCacheRentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
+    frfsStatusDelay :: Kernel.Prelude.NominalDiffTime,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],

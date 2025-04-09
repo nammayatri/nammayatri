@@ -20,7 +20,7 @@ import BecknV2.FRFS.Utils
 import Data.Aeson
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
-import Data.HashMap.Strict
+import Data.HashMap.Strict hiding (null)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
@@ -50,6 +50,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import SharedLogic.FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -92,7 +93,7 @@ validateRequest DOrder {..} platformType = do
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
-      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking platformType
+      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking platformType True
       throwM $ InvalidRequest "Booking expired, initated cancel request"
     else return (merchant, booking)
 
@@ -109,35 +110,40 @@ onConfirmFailure bapConfig ticketBooking = do
         <&> (.platformType)
     Nothing -> do
       pure DIBC.APPLICATION
-  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType'
+  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking platformType' True
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
-  let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
-  let discountedTickets = fromMaybe 0 booking.discountedTickets
-  tickets <- createTickets booking dOrder.tickets discountedTickets
-  void $ QTicket.createMany tickets
-  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
-  person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  mRiderNumber <- mapM ENC.decrypt person.mobileNumber
-  buildReconTable merchant booking dOrder tickets mRiderNumber
-  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
-  void $ CQP.clearPSCache booking.riderId
-  whenJust booking.partnerOrgId $ \pOrgId -> do
-    walletPOCfg <- do
-      pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
-      DPOC.getWalletClassNameConfig pOrgCfg.config
-    let mbClassName = lookup booking.merchantOperatingCityId.getId walletPOCfg.className
-    whenJust mbClassName $ \className -> do
-      fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
-        let serviceName = DEMSC.WalletService GW.GoogleWallet
-        let mId = booking'.merchantId
-        let mocId' = booking'.merchantOperatingCityId
-        serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-        transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className
-        url <- mkGoogleWalletLink serviceAccount transitObjects'
-        void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+  when (booking'.status /= Booking.CONFIRMED) $ do
+    let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
+    let discountedTickets = fromMaybe 0 booking.discountedTickets
+    existingTickets <- QTicket.findAllByTicketBookingId booking.id
+    when (null existingTickets) $ do
+      tickets <- createTickets booking dOrder.tickets discountedTickets
+      void $ QTicket.createMany tickets
+    void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+    person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    mRiderNumber <- mapM ENC.decrypt person.mobileNumber
+    buildReconTable merchant booking dOrder existingTickets mRiderNumber
+    void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
+    void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
+    void $ CQP.clearPSCache booking.riderId
+    deleteWaitingForOnConfirmKey
+    whenJust booking.partnerOrgId $ \pOrgId -> do
+      walletPOCfg <- do
+        pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
+        DPOC.getWalletClassNameConfig pOrgCfg.config
+      let mbClassName = lookup booking.merchantOperatingCityId.getId walletPOCfg.className
+      whenJust mbClassName $ \className -> do
+        when (isNothing booking.googleWalletJWTUrl) $ do
+          fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
+            let serviceName = DEMSC.WalletService GW.GoogleWallet
+            let mId = booking'.merchantId
+            let mocId' = booking'.merchantOperatingCityId
+            serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+            transitObjects' <- createTransitObjects pOrgId booking' existingTickets person serviceAccount className
+            url <- mkGoogleWalletLink serviceAccount transitObjects'
+            void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
   where
     sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
