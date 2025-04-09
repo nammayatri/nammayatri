@@ -36,7 +36,15 @@ getMeterRidePrice _merchantShortId _opCity rideId = do
   let driverId = ride.driverId
   merchantId <- fromMaybeM (RideNotFound rideId.getId) ride.merchantId
   let merchantOpCityId = ride.merchantOperatingCityId
-  traveledDistance <- LU.getTravelledDistance driverId
+  traveledDistance <-
+    if ride.status `elem` [Domain.Types.Ride.COMPLETED, Domain.Types.Ride.CANCELLED]
+      then do
+        pure ride.traveledDistance
+      else do
+        prevSnapToRoadState :: LU.SnapToRoadState <-
+          Redis.safeGet (LU.onRideSnapToRoadStateKey driverId)
+            <&> fromMaybe (LU.SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
+        pure prevSnapToRoadState.distanceTravelled
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide)
   let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
   maybe
