@@ -905,7 +905,7 @@ types:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
   TripStatus:
-    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
+    - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
