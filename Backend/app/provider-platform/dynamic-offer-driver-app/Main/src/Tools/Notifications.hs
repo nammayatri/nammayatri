@@ -1378,3 +1378,24 @@ sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToke
     title = FCM.FCMNotificationTitle notificationTitle
     body =
       FCMNotificationBody message
+
+sendDriverEKDLiveFCM ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  m ()
+sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language = do
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    mbDeviceToken
+    language
+    Nothing
+    (createFCMReq "EKD_LIVE_CALL_FEEDBACK" driverId.getId FCM.Person identity)
+    (pure ())
+    []
+    Nothing
