@@ -267,21 +267,22 @@ checkEnitiesAssociationValidation merchantId merchantOpCityId requestorId mbFlee
           driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId (convertTextToUTC (Just "2099-12-12"))
           DOV.create driverOperatorAssData
 
-    validateOperatorToFleetAssoc :: Text -> Text -> Flow ()
-    validateOperatorToFleetAssoc operatorId fleetOwnerId = do
-      isAssociated <- FOV.findByFleetIdAndOperatorId fleetOwnerId operatorId True
-      when (isNothing isAssociated) $
-        throwError (FleetNotActiveInOperator fleetOwnerId operatorId)
+validateOperatorToFleetAssoc :: Text -> Text -> Flow ()
+validateOperatorToFleetAssoc operatorId fleetOwnerId = do
+  isAssociated <- FOV.findByFleetIdAndOperatorId fleetOwnerId operatorId True
+  when (isNothing isAssociated) $
+    throwError (FleetNotActiveInOperator fleetOwnerId operatorId)
 
-    validateFleetDriverAssociation :: Text -> DP.Person -> Flow ()
-    validateFleetDriverAssociation fleetOwnerId driverPerson = do
-      isAssociated <- FDV.findByDriverIdAndFleetOwnerId driverPerson.id fleetOwnerId True
-      when (isNothing isAssociated) $
-        throwError (DriverNotActiveInFleet driverPerson.id.getId fleetOwnerId)
+validateFleetDriverAssociation :: Text -> DP.Person -> Flow ()
+validateFleetDriverAssociation fleetOwnerId driverPerson = do
+  isAssociated <- FDV.findByDriverIdAndFleetOwnerId driverPerson.id fleetOwnerId True
+  when (isNothing isAssociated) $
+    throwError (DriverNotActiveInFleet driverPerson.id.getId fleetOwnerId)
 
 checkRCAssociationForFleet :: Text -> VehicleRegistrationCertificate -> Flow ()
 checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   when (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+  -- is this necessary things to check ??
   activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
   let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
   forM_ rcAssociatedDriverIds $ \driverId -> do
@@ -1336,9 +1337,11 @@ postDriverFleetLinkRCWithDriver ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
-postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
+postDriverFleetLinkRCWithDriver merchantShortId opCity requestorId mbFleetOwnerId req = do
+  fleetOwnerId <- checkAssociationBetweenFleetAndOperator
   DCommon.checkFleetOwnerVerification fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -1350,17 +1353,42 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
   unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
-  case isFleetDriver of
-    Nothing -> throwError DriverNotPartOfFleet
-    Just fleetDriver -> do
-      unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
-  now <- getCurrentTime
-  mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId driver.id rc.id now
-  when (isNothing mbAssoc) $ do
-    driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id (convertTextToUTC (Just "2099-12-12"))
+  validateFleetDriverAssociation fleetOwnerId driver
+  isValidAssociation <- checkValidRCAssociationForDriver driver.id rc
+  when (not isValidAssociation) $ do
+    driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id True (convertTextToUTC (Just "2099-12-12"))
     QRCAssociation.create driverRCAssoc
   return Success
+  where
+    checkValidRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Flow Bool
+    checkValidRCAssociationForDriver driverId vehicleRC = do
+      activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
+      if null activeAssociationsOfRC
+        then return False
+        else do
+          let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
+          forM_ rcAssociatedDriverIds $ \linkDriverId -> do
+            when (linkDriverId /= driverId) $
+              throwError VehicleAlreadyLinkedToAnotherDriver
+          return True
+
+    checkAssociationBetweenFleetAndOperator :: Flow Text
+    checkAssociationBetweenFleetAndOperator = do
+      requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+
+      case requestedPerson.role of
+        DP.OPERATOR -> do
+          case mbFleetOwnerId of
+            Nothing -> throwError $ InvalidRequest "Operator cannot be mapped DCO with vehicles."
+            Just fleetOwnerId -> do
+              validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
+              pure fleetOwnerId
+        DP.FLEET_OWNER ->
+          maybe
+            (pure requestorId)
+            (\val -> if requestorId == val then pure val else throwError AccessDenied)
+            mbFleetOwnerId -- have to discuss (we must use getFleetOwnerId defined in dashboard side for backward campatibale) ??
+        _ -> throwError $ InvalidRequest "Invalid Data"
 
 ---------------------------------------------------------------------
 postDriverDashboardFleetWmbTripEnd ::

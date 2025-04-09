@@ -790,10 +790,12 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LINK_RC_WITH_DRIVER
       helperApi:
         - POST:
-            endpoint: /fleet/linkRCWithDriver/{fleetOwnerId}
+            endpoint: /fleet/linkRCWithDriver/{requestorId}
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
+            query:
+             - fleetOwnerId: Text
             request:
               type: LinkRCWithDriverForFleetReq
             response:

@@ -710,7 +710,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   FRCAssoc.create fleetRCAssoc
               mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
               when (isNothing mbAssoc) $ do
-                driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+                driverRCAssoc <- makeRCAssociation person.merchantId person.merchantOperatingCityId person.id rc.id False (convertTextToUTC (Just "2099-12-12"))
                 DAQuery.create driverRCAssoc
               -- update vehicle details too if exists
               mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber

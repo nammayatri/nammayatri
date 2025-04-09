@@ -575,7 +575,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   whenJust mbRC $ \rc -> do
     mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
     when (isNothing mbAssoc) $ do
-      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId rc.id (convertTextToUTC (Just "2099-12-12"))
+      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId rc.id False (convertTextToUTC (Just "2099-12-12"))
       QRCAssociation.create driverRCAssoc
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
@@ -589,7 +589,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       RCQuery.upsert newRC
       mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
       when (isNothing mbAssoc) $ do
-        driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
+        driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id False (convertTextToUTC (Just "2099-12-12"))
         QRCAssociation.create driverRCAssoc
 
       fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
