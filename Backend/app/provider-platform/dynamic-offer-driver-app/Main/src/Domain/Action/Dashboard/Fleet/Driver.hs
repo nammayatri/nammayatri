@@ -84,6 +84,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
@@ -114,6 +115,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
@@ -171,12 +173,12 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   entityDetails <- QPerson.findByMobileNumberAndMerchantAndRoles mobileCountryCode phoneNumberHash merchant.id [DP.DRIVER, DP.FLEET_OWNER] >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   let merchantId = entityDetails.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
-  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation merchant.id merchantOpCityId requestorId mbFleetOwnerId entityDetails
+  (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails
   rc <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
-      whenJust rc $ \rcert -> checkRCAssociationForDriver getEntityData.id rcert
+      whenJust rc $ \rcert -> void $ checkRCAssociationForDriver getEntityData.id rcert True
       void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
@@ -193,22 +195,28 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
       pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
 
-checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Flow ()
-checkRCAssociationForDriver driverId vehicleRC = do
-  when (isJust vehicleRC.fleetOwnerId) $ throwError VehicleBelongsToFleet
-  activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
-  let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
-  forM_ rcAssociatedDriverIds $ \linkDriverId -> do
-    when (linkDriverId /= driverId) $ throwError VehicleAlreadyLinkedToAnotherDriver
+checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Bool -> Flow Bool
+checkRCAssociationForDriver driverId vehicleRC checkFleet = do
+  when (isJust vehicleRC.fleetOwnerId && checkFleet) $ throwError VehicleBelongsToFleet
+  now <- getCurrentTime
+  allAssociations <- DRCAE.findActiveAssociationsForDriverOrRC driverId vehicleRC.id now
+  let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
+      rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId) allAssociations
+      driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id) allAssociations
+  if (isJust exactMatch)
+    then return True
+    else do
+      unless (null rcAssociations) $ throwError VehicleAlreadyLinkedToAnotherDriver
+      unless (null driverAssociations) $ throwError DriverAlreadyLinkedToAnotherVehicle
+      return False
 
-checkEnitiesAssociationValidation :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe Text -> DP.Person -> Flow (DP.Person, Maybe Text)
-checkEnitiesAssociationValidation merchantId merchantOpCityId requestorId mbFleetOwnerId entityDetails = do
+checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Flow (DP.Person, Maybe Text)
+checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails = do
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
 
   case requestedPerson.role of
     -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
     DP.FLEET_OWNER -> do
-      -- fleetOwnerId <- PFD.getFleetOwnerId requestorId mbFleetOwnerId -- getting Error but have to do ??
       fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure val else throwError AccessDenied) mbFleetOwnerId -- Have to discuss
       handleFleetOwnerFlow fleetOwnerId
 
@@ -260,21 +268,19 @@ checkEnitiesAssociationValidation merchantId merchantOpCityId requestorId mbFlee
         Just associateData ->
           when (associateData.operatorId /= operatorId) $
             throwError $ DriverHasActiveLink driverId.getId
-        Nothing -> do
-          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId driverId operatorId (convertTextToUTC (Just "2099-12-12"))
-          DOV.create driverOperatorAssData
+        Nothing -> throwError $ InvalidRequest "Driver has no active link with any entity"
 
-    validateOperatorToFleetAssoc :: Text -> Text -> Flow ()
-    validateOperatorToFleetAssoc operatorId fleetOwnerId = do
-      isAssociated <- FOV.findByFleetIdAndOperatorId fleetOwnerId operatorId True
-      when (isNothing isAssociated) $
-        throwError (FleetNotActiveInOperator fleetOwnerId operatorId)
+validateOperatorToFleetAssoc :: Text -> Text -> Flow ()
+validateOperatorToFleetAssoc operatorId fleetOwnerId = do
+  isAssociated <- FOV.findByFleetIdAndOperatorId fleetOwnerId operatorId True
+  when (isNothing isAssociated) $
+    throwError (FleetNotActiveInOperator fleetOwnerId operatorId)
 
-    validateFleetDriverAssociation :: Text -> DP.Person -> Flow ()
-    validateFleetDriverAssociation fleetOwnerId driverPerson = do
-      isAssociated <- FDV.findByDriverIdAndFleetOwnerId driverPerson.id fleetOwnerId True
-      when (isNothing isAssociated) $
-        throwError (DriverNotActiveInFleet driverPerson.id.getId fleetOwnerId)
+validateFleetDriverAssociation :: Text -> DP.Person -> Flow ()
+validateFleetDriverAssociation fleetOwnerId driverPerson = do
+  isAssociated <- FDV.findByDriverIdAndFleetOwnerId driverPerson.id fleetOwnerId True
+  when (isNothing isAssociated) $
+    throwError (DriverNotActiveInFleet driverPerson.id.getId fleetOwnerId)
 
 checkRCAssociationForFleet :: Text -> VehicleRegistrationCertificate -> Flow ()
 checkRCAssociationForFleet fleetOwnerId vehicleRC = do
@@ -546,61 +552,134 @@ postDriverFleetAddVehicles ::
 postDriverFleetAddVehicles merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  fleetOwnerId <- case req.fleetOwnerId of
-    Nothing -> throwError FleetOwnerIdRequired
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  requestorId <- case req.requestorId of
+    Nothing -> throwError $ FleetOwnerOrOperatorIdRequired
     Just id -> pure id
-  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   rcReq <-
-    Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route]) req.file $
+    Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text) req.file $
       parseVehicleInfo merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
-  unprocessedVehicleRouteMappingEntities <-
-    foldlM
-      ( \unprocessedEntities (registerRcReq, vehicleNumberHash, routes) -> do
-          unprocessedVehicleRouteMapping <-
-            mapM
-              ( \route -> do
-                  VRM.findOneMapping vehicleNumberHash route.code
-                    >>= \case
-                      Just vehicleRouteMapping ->
-                        if not vehicleRouteMapping.blocked && vehicleRouteMapping.fleetOwnerId.getId /= fleetOwnerId
-                          then pure $ Just ("Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> "is linked to another fleet, please delink and try again.")
-                          else do
-                            try @_ @SomeException
-                              (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
-                              >>= \case
-                                Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
-                                Right _ -> pure Nothing
-                      Nothing -> do
-                        try @_ @SomeException
-                          (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
+  case requestedPerson.role of
+    DP.FLEET_OWNER -> do
+      fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure requestorId else throwError AccessDenied) req.fleetOwnerId
+      DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
+      unprocessedVehicleRouteMappingEntities <- case transporterConfig.requireRouteMappingInVehicle of
+        False -> do
+          pure []
+        True -> do
+          foldlM
+            ( \unprocessedEntities (registerRcReq, vehicleNumberHash, routes, _, _, _) -> do
+                unprocessedVehicleRouteMapping <-
+                  mapM
+                    ( \route -> do
+                        VRM.findOneMapping vehicleNumberHash route.code
                           >>= \case
-                            Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
-                            Right _ -> pure Nothing
-              )
-              routes
-          return $ unprocessedEntities <> catMaybes unprocessedVehicleRouteMapping
-      )
-      []
-      rcReq
+                            Just vehicleRouteMapping ->
+                              if not vehicleRouteMapping.blocked && vehicleRouteMapping.fleetOwnerId.getId /= fleetOwnerId
+                                then pure $ Just ("Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> "is linked to another fleet, please delink and try again.")
+                                else do
+                                  try @_ @SomeException
+                                    (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
+                                    >>= \case
+                                      Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
+                                      Right _ -> pure Nothing
+                            Nothing -> do
+                              try @_ @SomeException
+                                (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
+                                >>= \case
+                                  Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
+                                  Right _ -> pure Nothing
+                    )
+                    routes
+                return $ unprocessedEntities <> catMaybes unprocessedVehicleRouteMapping
+            )
+            []
+            rcReq
 
-  unprocessedRCAdditionEntities <-
-    foldlM
-      ( \unprocessedEntities (registerRcReq, _, _) -> do
-          try @_ @SomeException
-            (postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId registerRcReq)
-            >>= \case
-              Left err -> return $ unprocessedEntities <> ["Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): " <> (T.pack $ displayException err)]
-              Right _ -> return unprocessedEntities
-      )
-      []
-      rcReq
-  pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedVehicleRouteMappingEntities <> unprocessedRCAdditionEntities}
+      unprocessedRCAdditionEntities <-
+        foldlM
+          ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
+              decryptedMobileNumber <- mapM decrypt requestedPerson.mobileNumber
+              case decryptedMobileNumber of
+                Just mobileNumber -> do
+                  currProcessEntity <- case (mbFleetNo, mbDriverNo) of
+                    (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing -- Add vehicles under requested Fleet
+                    (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) -- Map driver <-> vehicle under requested fleet
+                    (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
+                  case currProcessEntity of
+                    Left err -> return $ unprocessedEntities <> [err]
+                    Right _ -> return unprocessedEntities
+                Nothing -> return $ unprocessedEntities <> ["Person do not have a mobile number " <> requestedPerson.id.getId]
+          )
+          []
+          rcReq
+      pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedVehicleRouteMappingEntities <> unprocessedRCAdditionEntities}
+    DP.OPERATOR -> do
+      unprocessedRCAdditionEntities <-
+        foldlM
+          ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
+              currProcessEntity <- case (mbFleetNo, mbDriverNo) of
+                (Nothing, Nothing) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
+                (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) -- Add vehicles under Fleet
+                (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing -- Add vehicles under DCO
+                (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) -- Map driver <-> vehicle under fleer
+              case currProcessEntity of
+                Left err -> return $ unprocessedEntities <> [err]
+                Right _ -> return unprocessedEntities
+          )
+          []
+          rcReq
+      pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedRCAdditionEntities}
+    _ -> throwError $ InvalidRequest "Invalid Data"
   where
-    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, DbHash, [DRoute.Route])
+    handleAddVehicleWithTry ::
+      DM.Merchant ->
+      DTC.TransporterConfig ->
+      Maybe Text ->
+      Text ->
+      Common.RegisterRCReq ->
+      Text ->
+      Maybe Text ->
+      Flow (Either Text ())
+    handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo = do
+      result <- try @_ @SomeException $ do
+        when transporterConfig.enableExistingVehicleInBulkUpload $
+          isVehicleAlreadyAssociatedWithFleetOrDriver registerRcReq.vehicleRegistrationCertNumber
+
+        mbFleetOwnerId <- case mbFleetNo of
+          Just fleetNo -> do
+            phoneHash <- getDbHash fleetNo
+            let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbCountryCode
+            QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneHash merchant.id DP.FLEET_OWNER >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
+          Nothing -> pure Nothing
+
+        let addVehicleReq = convertToAddVehicleReq registerRcReq
+
+        postDriverFleetAddVehicle merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode addVehicleReq
+
+      case result of
+        Left e -> return $ Left $ "Error: " <> T.pack (displayException e)
+        Right _ -> return $ Right ()
+
+    isVehicleAlreadyAssociatedWithFleetOrDriver :: Text -> Flow () -- checking vehicle present in the system or not
+    isVehicleAlreadyAssociatedWithFleetOrDriver vehicleNo = do
+      rc <- RCQuery.findLastVehicleRCWrapper vehicleNo
+      case rc of
+        Nothing -> throwError $ VehicleDoesNotExist vehicleNo
+        Just rcert -> do
+          case rcert.verificationStatus of
+            Documents.VALID -> pure ()
+            _ -> throwError $ VehicleNotVerified vehicleNo
+
+    parseVehicleInfo :: DMOC.MerchantOperatingCity -> Int -> VehicleDetailsCSVRow -> Flow (Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text)
     parseVehicleInfo moc idx row = do
       let airConditioned :: (Maybe Bool) = Csv.readMaybeCSVField idx row.airConditioned "Air Conditioned"
           mbRouteCodes :: Maybe [Text] = Csv.readMaybeCSVField idx row.routeCodes "Route Codes"
+          mbFleetPhoneNo :: Maybe Text = Csv.readMaybeCSVField idx row.fleetPhoneNo "Fleet Phone Number"
+          mbDriverPhoneNo :: Maybe Text = Csv.readMaybeCSVField idx row.driverPhoneNo "Driver Phone Number"
+          mbCountryCode :: Maybe Text = Csv.readMaybeCSVField idx row.countryCode "Country Code"
       vehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.vehicleCategory "Vehicle Category"
       vehicleRegistrationCertNumber <- Csv.cleanCSVField idx row.registrationNo "Registration No"
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
@@ -608,7 +687,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         case mbRouteCodes of
           Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
           Nothing -> pure []
-      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, vehicleCategory = Just vehicleCategory, ..}, vehicleNumberHash, routes)
+      pure (Common.RegisterRCReq {dateOfRegistration = Nothing, multipleRC = Nothing, oxygen = Nothing, ventilator = Nothing, operatingCity = show moc.city, imageId = Id "bulkVehicleUpload", vehicleDetails = Nothing, vehicleCategory = Just vehicleCategory, ..}, vehicleNumberHash, routes, mbCountryCode, mbFleetPhoneNo, mbDriverPhoneNo)
 
     buildVehicleRouteMapping fleetOwnerId merchantId merchantOperatingCityId vehicleRegistrationNumber route = do
       now <- getCurrentTime
@@ -628,7 +707,10 @@ data VehicleDetailsCSVRow = VehicleDetailsCSVRow
   { registrationNo :: Text,
     airConditioned :: Text,
     routeCodes :: Text,
-    vehicleCategory :: Text
+    vehicleCategory :: Text,
+    fleetPhoneNo :: Text, -- Added new field
+    driverPhoneNo :: Text, -- Added new field
+    countryCode :: Text -- Added new field
   }
   deriving (Show)
 
@@ -639,6 +721,9 @@ instance FromNamedRecord VehicleDetailsCSVRow where
       <*> r .: "air_conditioned"
       <*> r .: "route_codes"
       <*> r .: "vehicle_category"
+      <*> r .: "fleet_phone_no" -- Added new field
+      <*> r .: "driver_phone_no" -- Added new field
+      <*> r .: "country_code" -- Added new field
 
 ---------------------------------------------------------------------
 postDriverFleetRemoveDriver ::
@@ -1336,9 +1421,11 @@ postDriverFleetLinkRCWithDriver ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
-postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
+postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorId req = do
+  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -1350,14 +1437,9 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
   unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
-  isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
-  case isFleetDriver of
-    Nothing -> throwError DriverNotPartOfFleet
-    Just fleetDriver -> do
-      unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
-  now <- getCurrentTime
-  mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId driver.id rc.id now
-  when (isNothing mbAssoc) $ do
+  validateFleetDriverAssociation fleetOwnerId driver
+  isValidAssociation <- checkRCAssociationForDriver driver.id rc False
+  when (not isValidAssociation) $ do
     driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id (convertTextToUTC (Just "2099-12-12"))
     QRCAssociation.create driverRCAssoc
   return Success
@@ -2038,3 +2120,27 @@ getDriverFleetAccessList _ _ = throwError $ InternalError "Unimplemented!"
 
 postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Bool -> Flow APISuccess
 postDriverFleetAccessSelect _ _ _ _ _ = throwError $ InternalError "Unimplemented!"
+
+-- Helper function to convert RegisterRCReq to AddVehicleReq
+convertToAddVehicleReq :: Common.RegisterRCReq -> Common.AddVehicleReq
+convertToAddVehicleReq rcReq =
+  Common.AddVehicleReq
+    { registrationNo = rcReq.vehicleRegistrationCertNumber,
+      vehicleClass = "",
+      capacity = Nothing,
+      colour = maybe "" (.vehicleColour) rcReq.vehicleDetails,
+      energyType = Nothing,
+      model = maybe "" (.vehicleModel) rcReq.vehicleDetails,
+      make = maybe "" (.vehicleManufacturer) rcReq.vehicleDetails,
+      airConditioned = rcReq.airConditioned,
+      driverName = Nothing,
+      imageId = Just rcReq.imageId,
+      vehicleCategory = rcReq.vehicleCategory,
+      oxygen = rcReq.oxygen,
+      ventilator = rcReq.ventilator,
+      dateOfRegistration = rcReq.dateOfRegistration,
+      mYManufacturing = Nothing,
+      vehicleModelYear = Nothing,
+      vehicleTags = Nothing,
+      fuelType = Nothing
+    }

@@ -1021,6 +1021,9 @@ TransporterConfig:
     maxAllowedDocSizeInMB: Maybe Int
     bulkWaiveOffLimit : Int
     rcExpiryChecks : Maybe Bool
+    requireRouteMappingInVehicle: Bool
+    enableExistingVehicleInBulkUpload: Bool
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1076,6 +1079,8 @@ TransporterConfig:
     dynamicReferralCodeValidForMinutes: Maybe Integer
     dynamicReferralCodeEnabled: Maybe Bool
     bulkWaiveOffLimit : Maybe Int
+    requireRouteMappingInVehicle: Maybe Bool
+    enableExistingVehicleInBulkUpload: Maybe Bool
 
   beamFields:
     fcmConfig:
@@ -1141,6 +1146,9 @@ TransporterConfig:
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
+    requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
+    enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
+
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1211,6 +1219,9 @@ TransporterConfig:
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities:  maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities|E
     bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
+    requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
+    enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
+
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1403,6 +1414,8 @@ TransporterConfig:
     enableOverchargingBlocker: "false"
     generateReferralCodeForFleet: "false"
     generateReferralCodeForOperator: "false"
+    requireRouteMappingInVehicle: "true"
+    enableExistingVehicleInBulkUpload: "false"
 
   excludedDefaultQueries:
     - findByPrimaryKey
