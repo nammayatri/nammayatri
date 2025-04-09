@@ -102,15 +102,15 @@ getQARWithDistance time vehicleCategory distance radius location = do
   let demandKey = mkDemandVehicleCategoryWithDistanceBin time vehicleCategory (Just distance)
       timeN_1 = addUTCTime (-900) time --------Previous time bucket
       demandKeyN_1 = mkDemandVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
-  demandDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKey (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
-  demandDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKeyN_1 (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
+  demandDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
+  demandDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
   let demandData = demandDataN ++ demandDataN_1
   if length demandData > 4
     then do
       let acceptanceKey = mkAcceptanceVehicleCategoryWithDistanceBin time vehicleCategory (Just distance)
           acceptanceKeyN_1 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
-      acceptanceDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKey (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
-      acceptanceDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKeyN_1 (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
+      acceptanceDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
+      acceptanceDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
       let acceptanceData = acceptanceDataN ++ acceptanceDataN_1
       return $ Just $ fromIntegral (length acceptanceData) / fromIntegral (length demandData)
     else return Nothing
@@ -130,15 +130,15 @@ getQARVehicleCategory time vehicleCategory radius location = do
   let demandKey = mkDemandVehicleCategory time vehicleCategory
       timeN_1 = addUTCTime (-900) time --------Previous time bucket
       demandKeyN_1 = mkDemandVehicleCategory timeN_1 vehicleCategory
-  demandDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKey (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
-  demandDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKeyN_1 (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
+  demandDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
+  demandDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
   let demandData = demandDataN ++ demandDataN_1
   if length demandData > 4
     then do
       let acceptanceKey = mkAcceptanceVehicleCategory time vehicleCategory
           acceptanceKeyN_1 = mkAcceptanceVehicleCategory timeN_1 vehicleCategory
-      acceptanceDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKey (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
-      acceptanceDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKeyN_1 (Hedis.FromLonLat location.lat location.lon) (Hedis.ByRadius radius "km")
+      acceptanceDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
+      acceptanceDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
       let acceptanceData = acceptanceDataN ++ acceptanceDataN_1
       return $ Just $ fromIntegral (length acceptanceData) / fromIntegral (length demandData)
     else return Nothing
