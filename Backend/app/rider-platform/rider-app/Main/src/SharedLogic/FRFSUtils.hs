@@ -18,7 +18,6 @@ import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Aeson as A
-import Data.ByteString.Lazy (fromStrict)
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
@@ -43,6 +42,7 @@ import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
 import EulerHS.Prelude (comparing, (+||), (||+))
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -441,43 +441,46 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
     _ -> do
       route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
       routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
-      let waypointsForRoute =
-            fromMaybe [] $
-              route.polyline
-                >>= decode @[LatLong] . fromStrict . encodeUtf8
 
-      let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
-          stopPairs = pairWithNext sortedStops
-      stopPairsWithWaypoints <- getStopPairsWithWaypointsForMetroAndSubway stopPairs waypointsForRoute
-      let riderPosition = maybe [] (\latLong -> [(latLong.lat, latLong.lon)]) mbRiderPosition
-      forM riderPosition $ \(vehicleLat, vehicleLon) -> do
-        minDistancesWithWaypoints <-
-          forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
-            let (groupedWaypoints, _) =
-                  foldr
-                    ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
-                        let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
-                            subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
-                         in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
-                    )
-                    ([], waypoints)
-                    waypoints
-            let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
-            pure (minDistanceFromVehicle, nextStop)
-        let ((_, _), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
+      let waypointsForRoute' = case route.polyline of
+            Just polyline -> Just $ KEPP.decode polyline
+            Nothing -> Nothing
 
-        logDebug $ "Next stop: " <> show nextStop
-        let vehicleTracking =
-              VehicleTracking
-                { nextStop = Just nextStop,
-                  nextStopTravelTime = Nothing,
-                  nextStopTravelDistance = Nothing,
-                  upcomingStops = [],
-                  vehicleId = Nothing,
-                  vehicleInfo = Nothing,
-                  delay = Nothing
-                }
-        pure vehicleTracking
+      case waypointsForRoute' of
+        Just waypointsForRoute -> do
+          let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
+              stopPairs = pairWithNext sortedStops
+          stopPairsWithWaypoints <- getStopPairsWithWaypointsForMetroAndSubway stopPairs waypointsForRoute
+          let riderPosition = maybe [] (\latLong -> [(latLong.lat, latLong.lon)]) mbRiderPosition
+          forM riderPosition $ \(vehicleLat, vehicleLon) -> do
+            minDistancesWithWaypoints <-
+              forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
+                let (groupedWaypoints, _) =
+                      foldr
+                        ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
+                            let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
+                                subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
+                             in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
+                        )
+                        ([], waypoints)
+                        waypoints
+                let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
+                pure (minDistanceFromVehicle, nextStop)
+            let ((_, _), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
+
+            logDebug $ "Next stop: " <> show nextStop
+            let vehicleTracking =
+                  VehicleTracking
+                    { nextStop = Just nextStop,
+                      nextStopTravelTime = Nothing,
+                      nextStopTravelDistance = Nothing,
+                      upcomingStops = [],
+                      vehicleId = Nothing,
+                      vehicleInfo = Nothing,
+                      delay = Nothing
+                    }
+            pure vehicleTracking
+        Nothing -> pure []
   where
     updateVehicleTrackingFromCache vehicleId vehicleTracking = do
       mbCachedVehicleTracking :: Maybe VehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
@@ -533,10 +536,12 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
       let nearestToNextStop = findNearestWaypoint nextStopPoint waypoints
       case (nearestToCurStop, nearestToNextStop) of
         (Just wpA, Just wpB) ->
-          Just $ takeWhile (/= wpB) $ dropWhile (/= wpA) waypoints
-        _ -> Just [] -- Instead of Nothing, return an empty list
+          Just $ takeUntil wpB $ dropWhile (/= wpA) waypoints
+        _ -> Just []
     findNearestWaypoint point waypoints =
       listToMaybe $ sortBy (comparing $ distanceBetweenInMeters point) waypoints
+
+    takeUntil y = foldr (\x acc -> x : if x == y then [] else acc) []
 
     getVehicleInfo integratedBPPConfig = do
       vehicleInfoByRouteCode :: [(Text, VehicleInfo)] <- do
