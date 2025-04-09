@@ -406,3 +406,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bulk_waive_off_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_expiry_checks boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN require_route_mapping_in_vehicle boolean  default true;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_existing_vehicle_in_bulk_upload boolean  default false;
