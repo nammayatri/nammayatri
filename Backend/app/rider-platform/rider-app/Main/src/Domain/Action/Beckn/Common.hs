@@ -604,7 +604,7 @@ rideCompletedReqHandler ::
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -1129,7 +1129,7 @@ customerReferralPayout ::
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   DRide.Ride ->
   Maybe Bool ->

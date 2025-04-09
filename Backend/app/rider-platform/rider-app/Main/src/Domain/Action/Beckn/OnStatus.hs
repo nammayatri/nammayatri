@@ -186,7 +186,7 @@ onStatus ::
     HasField "storeRidesTimeLimit" r Int,
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   ValidatedOnStatusReq ->
   m ()

@@ -114,7 +114,7 @@ data HandlerEnv = HandlerEnv
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
     broadcastMessageTopic :: KafkaTopic,
-    selfUIUrl :: BaseUrl
+    selfBaseUrl :: BaseUrl
   }
   deriving (Generic)
 

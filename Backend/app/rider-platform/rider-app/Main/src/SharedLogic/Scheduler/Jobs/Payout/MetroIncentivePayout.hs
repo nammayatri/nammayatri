@@ -51,7 +51,7 @@ sendCustomerRefund ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   Job 'MetroIncentivePayout ->
   m ExecutionResult
@@ -98,7 +98,7 @@ callPayout ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
