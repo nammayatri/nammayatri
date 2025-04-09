@@ -75,7 +75,7 @@ TripTransaction:
 
   constraints:
     id: PrimaryKey
-    driverId: SecondaryKey
+    driverId: "!SecondaryKey"
 
   beamFields:
     startLocation:
@@ -109,9 +109,6 @@ TripTransaction:
       params:
         [tripCode, startedNearStopCode, startLocation, status, tripStartTime]
       where: id
-    findAllTripTransactionByDriverId:
-      kvFunction: findAllWithKV
-      where: driverId
     updateOnEnd:
       kvFunction: updateOneWithKV
       params: [status, endLocation, tripEndTime, tripTerminationSource]

@@ -448,25 +448,11 @@ data TrackDriverLocation = TrackDriverLocation {driverId :: Kernel.Types.Id.Id D
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TrackDriverLocationT = TrackDriverLocationT
-  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
-    point :: Kernel.External.Maps.Types.LatLong,
-    lastUpdatedAt :: Kernel.Prelude.UTCTime,
-    fleetOwnerId :: Kernel.Prelude.Text,
-    fleetOwnerName :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 newtype TrackDriverLocationsReq = TrackDriverLocationsReq {driverIds :: [Kernel.Types.Id.Id Dashboard.Common.Driver]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype TrackDriverLocationsRes = TrackDriverLocationsRes {driverLocations :: [TrackDriverLocation]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype TrackDriverLocationsResT = TrackDriverLocationsResT {driverLocations :: [TrackDriverLocationT]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -713,6 +699,7 @@ type GetDriverFleetGetAllVehicle =
       :> QueryParam
            "mbRegNumberString"
            Kernel.Prelude.Text
+      :> QueryParam "mbFleetOwnerId" Kernel.Prelude.Text
       :> Get '[JSON] ListVehicleResT
   )
 
@@ -731,7 +718,12 @@ type GetDriverFleetGetAllDriver =
            "mbMobileNumberString"
            Kernel.Prelude.Text
       :> QueryParam "mbNameString" Kernel.Prelude.Text
-      :> QueryParam "mbSearchString" Kernel.Prelude.Text
+      :> QueryParam
+           "mbSearchString"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbFleetOwnerId"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            FleetListDriverResT
@@ -759,6 +751,7 @@ type GetDriverFleetGetAllBadge =
       :> QueryParam
            "mbSearchString"
            Kernel.Prelude.Text
+      :> QueryParam "mbFleetOwnerId" Kernel.Prelude.Text
       :> Get '[JSON] FleetBadgeResT
   )
 
@@ -1152,11 +1145,16 @@ type PostDriverFleetDriverVerifyJoiningOtpHelper =
 
 type GetDriverFleetRoutes =
   ( "fleet" :> "routes" :> QueryParam "mbCurrentLocation" Kernel.External.Maps.Types.LatLong :> QueryParam "mbSearchString" Kernel.Prelude.Text
+      :> QueryParam
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> MandatoryQueryParam "limit" Kernel.Prelude.Int
       :> MandatoryQueryParam
-           "limit"
+           "offset"
            Kernel.Prelude.Int
-      :> MandatoryQueryParam "offset" Kernel.Prelude.Int
-      :> Get '[JSON] RouteAPIResp
+      :> Get
+           '[JSON]
+           RouteAPIResp
   )
 
 type GetDriverFleetRoutesHelper =
@@ -1173,7 +1171,12 @@ type GetDriverFleetRoutesHelper =
            RouteAPIResp
   )
 
-type GetDriverFleetPossibleRoutes = ("fleet" :> "possibleRoutes" :> MandatoryQueryParam "startStopCode" Kernel.Prelude.Text :> Get '[JSON] RouteAPIResp)
+type GetDriverFleetPossibleRoutes =
+  ( "fleet" :> "possibleRoutes" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> MandatoryQueryParam "startStopCode" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           RouteAPIResp
+  )
 
 type GetDriverFleetPossibleRoutesHelper =
   ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "possibleRoutes" :> MandatoryQueryParam "startStopCode" Kernel.Prelude.Text
@@ -1199,6 +1202,9 @@ type GetDriverFleetTripTransactions =
       :> QueryParam "mbTo" Kernel.Prelude.UTCTime
       :> QueryParam
            "mbVehicleNumber"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "fleetOwnerId"
            Kernel.Prelude.Text
       :> MandatoryQueryParam
            "limit"
@@ -1300,7 +1306,12 @@ type PostDriverDashboardFleetWmbTripEndHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverFleetWmbRouteDetails = ("fleet" :> "wmb" :> "route" :> Capture "routeCode" Kernel.Prelude.Text :> "details" :> Get '[JSON] RouteDetails)
+type GetDriverFleetWmbRouteDetails =
+  ( "fleet" :> "wmb" :> "route" :> Capture "routeCode" Kernel.Prelude.Text :> "details" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           RouteDetails
+  )
 
 type GetDriverFleetWmbRouteDetailsHelper =
   ( "fleet" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> "wmb" :> "route" :> Capture "routeCode" Kernel.Prelude.Text :> "details"
@@ -1313,7 +1324,13 @@ type PostDriverFleetGetNearbyDrivers = ("fleet" :> "getNearbyDrivers" :> ReqBody
 
 type PostDriverFleetGetNearbyDriversHelper = ("fleet" :> "getNearbyDrivers" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> ReqBody '[JSON] NearbyDriverReq :> Post '[JSON] NearbyDriverResp)
 
-type PostDriverDashboardFleetTrackDriver = ("dashboard" :> "fleet" :> "track" :> "driver" :> ReqBody '[JSON] TrackDriverLocationsReq :> Post '[JSON] TrackDriverLocationsResT)
+type PostDriverDashboardFleetTrackDriver =
+  ( "dashboard" :> "fleet" :> "track" :> "driver" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           TrackDriverLocationsReq
+      :> Post '[JSON] TrackDriverLocationsRes
+  )
 
 type PostDriverDashboardFleetTrackDriverHelper =
   ( "dashboard" :> "fleet" :> "track" :> "driver" :> Capture "fleetOwnerId" Kernel.Prelude.Text

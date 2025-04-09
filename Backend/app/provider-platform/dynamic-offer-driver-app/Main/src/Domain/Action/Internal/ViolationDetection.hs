@@ -23,7 +23,7 @@ data ViolationDetectionReq = ViolationDetectionReq
     isViolated :: Bool,
     detectionData :: DetectionData
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema)
 
 data DetectionData
   = OverSpeedingDetection OverSpeedingDetectionData
@@ -31,7 +31,7 @@ data DetectionData
   | SkippedWaitingStopDetection SkippedWaitingStopDetectionData
   | MissedStopDetection MissedStopDetectionData
   | RouteDeviationDetection RouteDeviationDetectionData
-  deriving (Show, Eq, Ord, Read, Generic)
+  deriving (Show, Eq, Ord, Read, Generic, ToSchema)
 
 data OverSpeedingDetectionData = OverSpeedingDetectionData {location :: LatLong, speed :: Double}
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

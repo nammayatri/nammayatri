@@ -178,6 +178,7 @@ apis:
         - mblimit: Int
         - mboffset: Int
         - mbRegNumberString: Text
+        - mbFleetOwnerId: Text
       response:
         type: ListVehicleResT
       migrate:
@@ -204,6 +205,7 @@ apis:
         - mbMobileNumberString: Text
         - mbNameString: Text
         - mbSearchString: Text
+        - mbFleetOwnerId: Text
       response:
         type: FleetListDriverResT
       migrate:
@@ -230,6 +232,7 @@ apis:
         - mblimit: Int
         - mboffset: Int
         - mbSearchString: Text
+        - mbFleetOwnerId: Text
       response:
         type: FleetBadgeResT
       migrate:
@@ -623,6 +626,7 @@ apis:
       query:
         - mbCurrentLocation: LatLong
         - mbSearchString: Text
+        - fleetOwnerId: Text
       mandatoryQuery:
         - limit: Int
         - offset: Int
@@ -650,6 +654,8 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         startStopCode: Text
+      query:
+        fleetOwnerId: Text
       response:
         type: RouteAPIResp
       migrate:
@@ -699,6 +705,7 @@ apis:
         - mbFrom: UTCTime
         - mbTo: UTCTime
         - mbVehicleNumber: Text
+        - fleetOwnerId: Text
       response:
         type: TripTransactionRespT
       migrate:
@@ -804,6 +811,8 @@ apis:
   - GET: # Retrieve the route details
       endpoint: /fleet/wmb/route/{routeCode}/details
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       params:
         routeCode: Text
       response:
@@ -839,10 +848,12 @@ apis:
   - POST:
       endpoint: /dashboard/fleet/track/driver
       auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
       request:
         type: TrackDriverLocationsReq
       response:
-        type: TrackDriverLocationsResT
+        type: TrackDriverLocationsRes
       helperApi:
         - POST:
             endpoint: /dashboard/fleet/track/driver/{fleetOwnerId}
@@ -887,18 +898,9 @@ types:
     - driverId: Id Driver
     - point: LatLong
     - lastUpdatedAt: UTCTime
-  TrackDriverLocationT:
-    - driverId: Id Driver
-    - point: LatLong
-    - lastUpdatedAt: UTCTime
-    - fleetOwnerId: Text
-    - fleetOwnerName: Text
   TrackDriverLocationsRes:
     - recordType: NewType
     - driverLocations: [TrackDriverLocation]
-  TrackDriverLocationsResT:
-    - recordType: NewType
-    - driverLocations: [TrackDriverLocationT]
   TripStatus:
     - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"

@@ -30,6 +30,24 @@ types:
     distance: Meters
     driverId: Text
     bearing: Maybe Int
+    rideDetails: Maybe RideDetails
+
+  RideDetails:
+    rideId: Text
+    rideInfo: Maybe RideInfo
+
+  RideInfo:
+    enum: "Bus BusRideInfo | Car CarRideInfo"
+
+  BusRideInfo:
+    routeCode: Text
+    busNumber: Text
+    destination: LatLong
+    routeLongName: Maybe Text
+    driverName: Maybe Text
+
+  CarRideInfo:
+    pickupLocation: LatLong
 
 apis:
   - POST:

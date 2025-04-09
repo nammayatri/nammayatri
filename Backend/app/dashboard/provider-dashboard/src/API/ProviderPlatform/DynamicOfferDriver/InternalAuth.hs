@@ -60,7 +60,7 @@ internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
   unless (apiKey == Just internalAuthAPIKey) $ do
     throwError $ InvalidRequest "Invalid API key"
   (personId, _, _) <- Auth.verifyPerson (fromMaybe "" token)
-  fleetOwnerIds <- getFleetOwnerIds personId.getId
+  fleetOwnerIds <- getFleetOwnerIds personId.getId Nothing
   case fleetOwnerIds of
     [] -> throwError $ InternalError "No Fleet Member Association Found"
     fleetOwner@(fleetOwnerId, _) : fleetOwners ->

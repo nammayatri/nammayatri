@@ -14,13 +14,28 @@ import qualified Kernel.Types.Distance
 import Servant
 import Tools.Auth
 
+data BusRideInfo = BusRideInfo
+  { busNumber :: Data.Text.Text,
+    destination :: Kernel.External.Maps.Types.LatLong,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    routeCode :: Data.Text.Text,
+    routeLongName :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CarRideInfo = CarRideInfo {pickupLocation :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverInfo = DriverInfo
   { applicableServiceTierTypes :: [Domain.Types.ServiceTierType.ServiceTierType],
     bearing :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distance :: Kernel.Types.Distance.Meters,
     driverId :: Data.Text.Text,
     lat :: Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Double
+    lon :: Kernel.Prelude.Double,
+    rideDetails :: Kernel.Prelude.Maybe RideDetails
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -34,5 +49,15 @@ data NearbyDriverReq = NearbyDriverReq {location :: Kernel.External.Maps.Types.L
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NearbyDriverRes = NearbyDriverRes {buckets :: [NearByDriversBucket], serviceTierTypeToVehicleVariant :: Data.Aeson.Value, variantLevelDriverCount :: Data.Aeson.Value}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideDetails = RideDetails {rideId :: Data.Text.Text, rideInfo :: Kernel.Prelude.Maybe RideInfo}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideInfo
+  = Bus BusRideInfo
+  | Car CarRideInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
