@@ -67,7 +67,11 @@ busTicketBookingScreen initialState =
   { initialState
   , view
   , name: "BusTicketBookingScreen"
-  , globalEvents: [getTicketBookingListEvent]
+  , globalEvents: [(\push -> do
+      getTicketBookingListEvent push -- Calling TicketBookingList API to show all previous tickets being booked
+      -- getNearbyDriversEvent push -- Calling NearbyDrivers API to show all nearby drivers
+      pure $ pure unit
+  )]
   , eval:
       \action state -> do
         let _ = spy "BusTicketBookingScreen action " action
@@ -80,8 +84,8 @@ busTicketBookingScreen initialState =
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
           (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType) (Just "5") (Just "0")
           lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
-        pure $ pure unit
-      else pure $ pure unit
+        pure unit
+      else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 view push state =

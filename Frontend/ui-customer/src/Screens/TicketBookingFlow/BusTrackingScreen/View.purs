@@ -84,7 +84,8 @@ import Common.RemoteConfig.Utils as RU
 import Common.Types.App as CT
 import Accessor (_code)
 import Data.Lens ((^.))
-import Effect.Uncurried (runEffectFn2)
+import Effect.Uncurried (runEffectFn3)
+import Animation (fadeInWithDelay)
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState = 
@@ -227,7 +228,7 @@ verticalLineView push idTag showOnlyBullet vehicles =
       lineViewHeight = max 36 (HU.getDefaultPixelSize lineViewBounds.height) 
       totalDistance = 50.0
       currentDistance = 5.0
-      marginTop = min 0 (DI.round (percent * (DI.toNumber lineViewHeight))) 
+      marginTop = min 2 (DI.round (percent * (DI.toNumber lineViewHeight))) 
     linearLayout 
       [height MATCH_PARENT
       , width MATCH_PARENT
@@ -652,7 +653,8 @@ busLocationTracking duration id state push = do
 
 showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
 showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStopDistance =
-  linearLayout
+  PrestoAnim.animationSet [fadeInWithDelay 0 true]
+  $ linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
   , width  MATCH_PARENT
   , orientation VERTICAL
@@ -660,7 +662,14 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStop
   , padding $ Padding 8 8 8 8
   , cornerRadius 12.0
   , visibility $ boolToVisibility $ Mb.isJust mbNextStopDistance && not state.props.individualBusTracking
-  
+  , onAnimationEnd 
+      ( \_ ->
+          runEffectFn3 JB.scrollToChildInScrollView 
+            (EHC.getNewIDWithTag "busStopsView") 
+            (EHC.getNewIDWithTag ("verticalLineView1false17")) 
+            (show $ Mb.maybe 0 (\(API.FRFSStationAPI stop) -> (Mb.fromMaybe 0 stop.sequenceNum) - 1) state.data.nearestStopFromCurrentLoc)
+      )
+      (const NoAction)
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
   [ linearLayout
     [ height WRAP_CONTENT
@@ -723,8 +732,7 @@ shimmerView state =
     , background Color.transparent
     , visibility $ boolToVisibility state.props.showShimmer
     ] 
-    [ 
-      linearLayout
+    [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL

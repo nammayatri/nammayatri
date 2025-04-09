@@ -3104,8 +3104,8 @@ export const getMarkerPosition = (markerId) => {
   }
 }
 
-export const scrollToChildInScrollView = (scrollViewId, childViewId) => {
+export const scrollToChildInScrollView = (scrollViewId, childViewId, index) => {
   if (window.JBridge.scrollToChildInScrollView) {
-    return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId}));
+    return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId, index : index}));
   }
 } 

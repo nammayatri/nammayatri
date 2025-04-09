@@ -67,7 +67,7 @@ import Data.Newtype (unwrap)
 import Data.Tuple as DT
 import Data.Foldable (foldM, minimum)
 import Engineering.Helpers.RippleCircles as EHR
-import Effect.Uncurried (runEffectFn1, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn3)
 import Foreign.Class (encode)
 import Storage (setValueToLocalStore)
 import Data.Argonaut.Core as AC
@@ -120,14 +120,13 @@ eval (MapReady _ _ _) state =
               case state.data.stationResponse of
                 (Mb.Just stations) -> drawDriverRoute stations state
                 _ -> pure unit
-              EHC.liftFlow $ runEffectFn2 JB.scrollToChildInScrollView (EHC.getNewIDWithTag "busStopsView") (EHC.getNewIDWithTag ("verticalLineView1false17"))
         pure NoAction
     ]
 
 eval ToggleStops state = do
   continue state { props { expandStopsView = not state.props.expandStopsView } }
 
-eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
+eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
   let
     filteredResp = case state.data.destinationStation, DS.null state.data.bookingId of
       Mb.Just dest, false -> do
@@ -148,17 +147,17 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
         filteredResp
     
     -- Nearest stop calculation from Current Location
-    nearestStopFromCurrentLoc = getNearestStopFromLatLong (API.LatLong {lat : state.props.currentLat, lon: state.props.currentLon}) filteredResp
-  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse, nearestStopFromCurrentLoc = nearestStopFromCurrentLoc}, props { showShimmer = false, destinationSequenceNumber = destinationStationSeq } }
-    [ do
-        void $ launchAff $ EHC.flowRunner defaultGlobalState
-          $ do
-              when state.props.gotMapReady $ drawDriverRoute metroResponse state
-              EHC.liftFlow $ runEffectFn2 JB.scrollToChildInScrollView (EHC.getNewIDWithTag "busStopsView") (EHC.getNewIDWithTag ("verticalLineView1false17"))
-              -- drawDriverRouteMock mockRoute
-              pure unit
-        pure NoAction
-    ]
+    nearestStopFromCurrentLoc = 
+      getNearestStopFromLatLong (API.LatLong {lat : state.props.currentLat, lon: state.props.currentLon}) filteredResp
+  
+  in continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse, nearestStopFromCurrentLoc = nearestStopFromCurrentLoc}, props { showShimmer = false, destinationSequenceNumber = destinationStationSeq } }
+      [ do
+          void $ launchAff $ EHC.flowRunner defaultGlobalState
+            $ do
+                when state.props.gotMapReady $ drawDriverRoute metroResponse state
+                pure unit
+          pure NoAction
+      ]
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = exit $ GoToSearchLocation state
 
@@ -231,7 +230,6 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
                     when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
-                    EHC.liftFlow $ runEffectFn2 JB.scrollToChildInScrollView (EHC.getNewIDWithTag "busStopsView") (EHC.getNewIDWithTag ("verticalLineView1false17"))
               case DT.snd finalMap of
                 Mb.Just pt -> do
                   void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"

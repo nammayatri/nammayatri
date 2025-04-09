@@ -368,3 +368,6 @@ frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> ro
 
 confirmMetroQuoteV2 :: String -> String
 confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId <> "/confirm"
+
+postNearbyDrivers :: String -> String
+postNearbyDrivers _ = (getBaseUrl "62") <> "/nearbyDrivers"

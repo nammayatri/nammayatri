@@ -3633,12 +3633,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 int dash = mapRouteConfigObject.optInt("dashUnit", 1);
                 PATTERN_POLYLINE_DASHED_WITH_GAP = Arrays.asList(new Dash(dash), new Gap(gap));
             }
-            // If traffic density is available, adjust the color accordingly.
-            if (mapRouteConfigObject.has("trafficDensity")) {
-                int trafficDensity = mapRouteConfigObject.optInt("trafficDensity", 0);
-                // Adjust the color toward red for higher traffic densities.
-                color = adjustColorForTraffic(color, trafficDensity);
-            }
             // Add glow effect by using multiple polylines
             if (!isOverLine && gMap != null) {
                 PolylineOptions glowOptions = new PolylineOptions()
@@ -4903,16 +4897,17 @@ public class MobilityCommonBridge extends HyperBridge {
                 JSONObject configObj = new JSONObject(config);
                 String scrollViewId = configObj.optString("scrollViewId", "");
                 String childViewId = configObj.optString("childViewId", "");
+                String index = configObj.optString("index", "");
                 // Find the ScrollView and the child view
                 ScrollView scrollView = activity.findViewById(Integer.parseInt(scrollViewId));
                 View childView = activity.findViewById(Integer.parseInt(childViewId));
 
                 if (scrollView != null && childView != null) {
                     // Calculate the y-coordinate to scroll to
-                    int scrollY = 1; // childView.getTop();
+                    int scrollY = (200 * Integer.parseInt(index)) - 150;// childView.getTop();
                     int scrollX = childView.getLeft();
                     // Scroll to the child view
-                    scrollView.scrollTo(scrollX, scrollY);
+                    scrollView.smoothScrollTo(scrollX, scrollY);
                 }
             }
         } catch (JSONException err) {

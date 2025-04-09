@@ -4362,8 +4362,24 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
     latitude :: Maybe Number,
     longitude :: Maybe Number,
     speed :: Maybe Number,
-    timestamp :: String
+    timestamp :: String,
+    upcomingStops :: Maybe (Array UpcomingStop)
 }
+
+newtype Stop = Stop
+  { name :: String,
+    coordinate :: LatLong,
+    stopCode :: String,
+    distanceToUpcomingIntermediateStop :: Int,
+    durationToUpcomingIntermediateStop :: Int
+  }
+
+newtype UpcomingStop = UpcomingStop
+  { stop :: Stop,
+    eta :: String,
+    status :: String,
+    delta :: Number
+  }
 
 newtype RouteStopMapping = RouteStopMapping { 
     routeCode :: String,
@@ -4398,6 +4414,20 @@ instance standardVehicleInfo :: StandardEncode VehicleInfo where
 instance showVehicleInfo :: Show VehicleInfo where show = genericShow
 instance decodeVehicleInfo :: Decode VehicleInfo where decode = defaultDecode
 instance encodeVehicleInfo :: Encode VehicleInfo where encode = defaultEncode
+
+derive instance genericStop :: Generic Stop _
+instance standardStop :: StandardEncode Stop where
+    standardEncode (Stop body) = standardEncode body
+instance showStop :: Show Stop where show = genericShow
+instance decodeStop :: Decode Stop where decode = defaultDecode
+instance encodeStop :: Encode Stop where encode = defaultEncode
+
+derive instance genericUpcomingStop :: Generic UpcomingStop _
+instance standardUpcomingStop :: StandardEncode UpcomingStop where
+    standardEncode (UpcomingStop body) = standardEncode body
+instance showUpcomingStop :: Show UpcomingStop where show = genericShow
+instance decodeUpcomingStop :: Decode UpcomingStop where decode = defaultDecode
+instance encodeUpcomingStop :: Encode UpcomingStop where encode = defaultEncode
 
 derive instance genericRouteStopMapping :: Generic RouteStopMapping _
 instance standardRouteStopMapping :: StandardEncode RouteStopMapping where
@@ -4584,3 +4614,57 @@ instance standardDiscountItem :: StandardEncode FRFSDiscountReq where
 instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
 instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
 instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
+
+ --------------------------------------------------- getNearbyDrivers in Customer for Global Bus Tracking ----------------------------------------------------
+
+newtype NearbyDriverReq = NearbyDriverReq {
+  location :: LatLong,
+  radius :: Number,
+  vehicleVariants :: Maybe (Array String)
+}
+
+newtype NearbyDriverRes = NearbyDriverRes {
+  serviceTierTypeToVehicleVariant :: String,
+  variantLevelDriverCount :: String,
+  buckets :: Array NearByDriversBucket
+}
+
+newtype NearByDriversBucket = NearByDriversBucket {
+  radius :: Number,
+  variant :: String,
+  driverInfo :: Array DriverInfo
+}
+
+newtype DriverInfo = DriverInfo 
+  { lat :: Number,
+    lon :: Number,
+    applicableServiceTierTypes :: Array String,
+    distance :: Number,
+    driverId :: String,
+    bearing :: Maybe Int
+  }
+
+-- instance makeNearbyDriverReq :: RestEndpoint NearbyDriverReq where
+--  makeRequest reqBody@(NearbyDriverReq reqBody) headers = defaultMakeRequestWithoutLogs POST (EP.postNearbyDrivers "") headers reqBody Nothing
+--  encodeRequest req = standardEncode req
+
+derive instance genericNearbyDriverRes :: Generic NearbyDriverRes _
+instance standardNearbyDriverRes :: StandardEncode NearbyDriverRes where
+    standardEncode (NearbyDriverRes body) = standardEncode body
+instance showNearbyDriverRes :: Show NearbyDriverRes where show = genericShow
+instance decodeNearbyDriverRes :: Decode NearbyDriverRes where decode = defaultDecode
+instance encodeNearbyDriverRes :: Encode NearbyDriverRes where encode = defaultEncode
+
+derive instance genericNearByDriversBucket :: Generic NearByDriversBucket _
+instance standardNearByDriversBucket :: StandardEncode NearByDriversBucket where
+    standardEncode (NearByDriversBucket body) = standardEncode body
+instance showNearByDriversBucket :: Show NearByDriversBucket where show = genericShow
+instance decodeNearByDriversBucket :: Decode NearByDriversBucket where decode = defaultDecode
+instance encodeNearByDriversBucket :: Encode NearByDriversBucket where encode = defaultEncode
+
+derive instance genericDriverInfo :: Generic DriverInfo _
+instance standardDriverInfo :: StandardEncode DriverInfo where
+    standardEncode (DriverInfo body) = standardEncode body
+instance showDriverInfo :: Show DriverInfo where show = genericShow
+instance decodeDriverInfo :: Decode DriverInfo where decode = defaultDecode
+instance encodeDriverInfo :: Encode DriverInfo where encode = defaultEncode

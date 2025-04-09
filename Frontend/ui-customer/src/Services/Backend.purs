@@ -1664,3 +1664,11 @@ confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
   where
     unwrapResponse x = x
+
+---------------------------------------- nearbyDrivers ---------------------------------------------
+nearbyDrivers :: String -> FRFSQuoteConfirmReq -> Flow GlobalState (Either ErrorResponse FRFSTicketBookingStatusAPIRes)
+nearbyDrivers quoteId confirmQuoteReqV2Body = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.postNearbyDrivers quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
+  where
+    unwrapResponse x = x
