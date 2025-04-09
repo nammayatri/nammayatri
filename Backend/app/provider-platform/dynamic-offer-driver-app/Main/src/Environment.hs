@@ -20,6 +20,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
+import Domain.Types.External.LiveEKD
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
@@ -148,7 +149,8 @@ data AppCfg = AppCfg
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    vocalyticsCnfg :: VocalyticsCnfg
   }
   deriving (Generic, FromDhall)
 
@@ -249,7 +251,8 @@ data AppEnv = AppEnv
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    vocalyticsCnfg :: VocalyticsCnfg
   }
   deriving (Generic)
 

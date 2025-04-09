@@ -55,6 +55,10 @@ CallStatus:
       kvFunction: updateWithKV
       params: [dtmfNumberUsed, merchantId, callService]
       where: id
+    
+    findByCallId:
+      kvFunction: findOneWithKV
+      where: callId
 
   extraOperations:
     - EXTRA_QUERY_FILE

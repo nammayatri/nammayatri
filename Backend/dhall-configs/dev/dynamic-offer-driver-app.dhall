@@ -287,6 +287,8 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
+
 let cacConfig =
       { host = "http://localhost:8080"
       , interval = 10
@@ -414,4 +416,5 @@ in  { esqDBCfg
     , nyGatewayUrl = common.nyGatewayUrl
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , urlShortnerConfig = common.urlShortnerConfig
+    , vocalyticsCnfg = VocaliticsConfig
     }
