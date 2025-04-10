@@ -229,8 +229,9 @@ mapIllustrationView push state =
         , orientation VERTICAL
         , gravity CENTER
         , visibility $ boolToVisibility $ (DA.null $ getAllBusTickets state) && (isJust state.data.ticketDetailsState)
+        , margin $ Margin 16 16 16 0
         ][ imageView
-            [ height WRAP_CONTENT
+            [ height $ V 350
             , width MATCH_PARENT
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_ticket_illustration"
             ]
@@ -257,7 +258,7 @@ searchRouteButton push state =
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ Margin 16 24 16 20
+    , margin $ Margin 16 16 16 0
     , background Color.black900
     , padding buttonPadding
     , onClick push $ const SearchButtonClick
@@ -287,7 +288,7 @@ recentTicketsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ Margin 16 0 16 16
+  , margin $ Margin 16 16 16 16
   , orientation VERTICAL
   , visibility $ boolToVisibility $ isJust state.data.ticketDetailsState
   ]

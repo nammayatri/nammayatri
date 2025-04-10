@@ -4719,7 +4719,7 @@ metroTicketBookingFlow = do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = ConfirmMetroQuote } })
       metroTicketPaymentFlow orderResp bookingId
     GO_TO_SEARCH_SCREEN state -> do 
-      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing} })
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen = (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing} })
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
     EDIT_TICKET_BOOKING_STOPS state -> do
       modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{ props { actionType = BusStopSelectionAction
@@ -7582,7 +7582,7 @@ busTrackingScreenFlow = do
       void $ pure $ removeAllMarkers ""
       void $ pure $ removeAllPolylines ""
       modifyScreenState $ BusTrackingScreenStateType (\_ -> BusTrackingScreenData.initData)
-      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLon }, data {fromScreen =(Screen.getScreen Screen.HOME_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLon }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
       searchLocationFlow
     _ -> busTrackingScreenFlow
 
