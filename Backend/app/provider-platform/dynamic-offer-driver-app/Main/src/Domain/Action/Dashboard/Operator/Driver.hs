@@ -1,4 +1,10 @@
-module Domain.Action.Dashboard.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest, opsHubRequestLockKey) where
+module Domain.Action.Dashboard.Operator.Driver
+  ( getDriverOperatorFetchHubRequests,
+    postDriverOperatorRespondHubRequest,
+    opsHubRequestLockKey,
+    getDriverOperatorList,
+  )
+where
 
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified Dashboard.Common as Common
@@ -10,7 +16,7 @@ import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
 import qualified Environment
 import Kernel.Beam.Functions (runInReplica)
-import Kernel.External.Encryption (getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -22,10 +28,13 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverInformationExtra as QDI
+import Storage.Queries.DriverOperatorAssociationExtra (findAllByOperatorIdWithLimitOffset)
 import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.OperationHubRequestsExtra as SQOH
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Error (DriverInformationError (DriverInfoNotFound))
 
 getDriverOperatorFetchHubRequests ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -119,3 +128,43 @@ castReqType :: RequestType -> API.Types.ProviderPlatform.Operator.Driver.Request
 castReqType = \case
   ONBOARDING_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.ONBOARDING_INSPECTION
   REGULAR_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.REGULAR_INSPECTION
+
+getDriverOperatorList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Text ->
+  Environment.Flow [API.Types.ProviderPlatform.Operator.Driver.DriverInfo]
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbVerified mbLimit mbOffset requestorId = do
+  driverOperatorAssociationLs <-
+    findAllByOperatorIdWithLimitOffset requestorId mbIsActive mbLimit mbOffset
+  mapM createDriverInfo driverOperatorAssociationLs
+  where
+    createDriverInfo drvOpAsn = do
+      let driverId = drvOpAsn.driverId
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      decryptedMobileNumber <-
+        mapM decrypt person.mobileNumber
+          >>= fromMaybeM
+            ( InvalidRequest $
+                "Person do not have a mobile number " <> person.id.getId
+            )
+      mblinkedVehicle <- QVehicle.findById driverId
+      driverInformation <-
+        QDI.findByIdAndVerified driverId mbVerified
+          >>= fromMaybeM DriverInfoNotFound
+      pure $
+        API.Types.ProviderPlatform.Operator.Driver.DriverInfo
+          { driverId = cast drvOpAsn.driverId,
+            firstName = person.firstName,
+            middleName = person.middleName,
+            lastName = person.lastName,
+            isActive = drvOpAsn.isActive,
+            mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
+            mobileNumber = decryptedMobileNumber,
+            vehicle = (.model) <$> mblinkedVehicle,
+            verified = driverInformation.verified
+          }
