@@ -5698,5 +5698,39 @@ public class MobilityCommonBridge extends HyperBridge {
             });
         }
     }
+
+//    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
+//    protected Bitmap getMarkerForBusRouteId(String routeId) {
+//        Context context = bridgeComponents.getContext();
+//        @SuppressLint("InflateParams")
+//
+////        String textColor = markerConfig.theme.equals(Theme.DARK) ? "#FFFFFF" : "#454545";
+////        String backgroundColor = markerConfig.theme.equals(Theme.DARK) ? "#454545" : "#FFFFFF";
+//        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(context.getResources().getLayout(context.getResources().getIdentifier("marker_code_layout", "layout", context.getPackageName())), null);
+//        try {
+////            setMarkerBackground(backgroundColor, customMarkerView);
+////            setMarkerText(textColor, customMarkerView, markerConfig);
+////            setMarkerlabelImage(markerConfig.labelImage, customMarkerView);
+////            setMarkerPointerImage(pointerImage, isInvisiblePointer, markerType, customMarkerView, markerConfig);
+////            setMarkerActionImage(markerConfig.markerActionImage, markerConfig.primaryText, customMarkerView);
+////            setLabelImageAction(customMarkerView, markerConfig.labelActionImage);
+//            setRouteCodeInsideMarkerLabel(routeId)
+//        } catch (Exception e) {
+//            Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
+//        }
+//        LinearLayout main_label_layout = customMarkerView.findViewById(R.id.main_label_layout);
+//        if(main_label_layout != null && !markerConfig.labelActionImage.image.equals("")) main_label_layout.setPadding(main_label_layout.getPaddingLeft(), main_label_layout.getPaddingTop(), 2, main_label_layout.getPaddingBottom());
+//        customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+//        customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
+//        customMarkerView.buildDrawingCache();
+//        Bitmap returnedBitmap = Bitmap.createBitmap(customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+//        Canvas canvas = new Canvas(returnedBitmap);
+//        canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC_IN);
+//        Drawable drawable = customMarkerView.getBackground();
+//        if (drawable != null)
+//            drawable.draw(canvas);
+//        customMarkerView.draw(canvas);
+//        return returnedBitmap;
+//    }
 }
 

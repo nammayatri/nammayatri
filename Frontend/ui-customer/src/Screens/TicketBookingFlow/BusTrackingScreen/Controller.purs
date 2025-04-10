@@ -279,6 +279,7 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
                         else nearestWaypointConfig.vehicleLocationOnRoute
                   Mb.Nothing -> nearestWaypointConfig.vehicleLocationOnRoute
               )
+            _ = spy "codex-upcomingStop" $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
             -- Proper calculation of eta from Upcoming Stops
             upcomingStop = DA.find (\(API.UpcomingStop upcomingStop) ->
                 let (API.Stop stop) = upcomingStop.stop
@@ -305,18 +306,18 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
             } ]
     
     
-    filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig = true
-      -- let (API.VehicleInfoForRoute m) = item.vehicleInfo
-      --     -- Show Bus numbers whose rides haven't been ended even though last LTS update is > 30 mins ago
-      --     -- _ = spy "Vehicle Time Diff" $ Tuple item.vehicleId timeDiff 
-      --     timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
-      -- in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec) && checkCurrentBusIsOnboarded state item.vehicleId
+    filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig =
+      let (API.VehicleInfoForRoute m) = item.vehicleInfo
+          -- Show Bus numbers whose rides haven't been ended even though last LTS update is > 30 mins ago
+          -- _ = spy "Vehicle Time Diff" $ Tuple item.vehicleId timeDiff 
+          timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
+      in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec) && checkCurrentBusIsOnboarded state item.vehicleId
 
     checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
 
-    filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) = true
+    filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) =
       -- Deviation Filter Logic for Bus Vehicles
-      -- ((nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters) || wmbFlowConfig.showAllDeviatedBus)
+      ((nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters) || wmbFlowConfig.showAllDeviatedBus)
     
     fetchPickupPoint :: API.VehicleInfo -> Mb.Maybe API.FRFSStationAPI -> Tuple API.LatLong (Mb.Maybe Int)
     fetchPickupPoint (API.VehicleInfo item) pickupStop =
