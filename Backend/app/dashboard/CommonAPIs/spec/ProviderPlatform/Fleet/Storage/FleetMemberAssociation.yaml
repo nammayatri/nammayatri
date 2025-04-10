@@ -30,7 +30,7 @@ FleetMemberAssociation:
         and: [fleetMemberId, fleetOwnerId]
 
     updateFleetMembersActiveStatus:
-      kvFunction: updateOneWithKV
+      kvFunction: updateWithKV
       params: [enabled]
       where:
         and:

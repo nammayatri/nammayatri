@@ -138,9 +138,9 @@ verifyFleetOwnerAccess :: Text -> Text -> Flow Text
 verifyFleetOwnerAccess fleetMemberId accessedFleetOwnerId = do
   fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
   (fleetOwnerId, _) <- find (\(fleetOwnerId, _) -> fleetOwnerId == accessedFleetOwnerId) fleetOwnerIds & fromMaybeM AccessDenied
-  let otherFleetOwnerIds = filter (\fleetOwnerId' -> fleetOwnerId' /= accessedFleetOwnerId) $ map fst fleetOwnerIds
-  when (not $ null otherFleetOwnerIds) $
-    FMA.updateFleetMembersActiveStatus False fleetMemberId otherFleetOwnerIds
+  -- let otherFleetOwnerIds = filter (\fleetOwnerId' -> fleetOwnerId' /= accessedFleetOwnerId) $ map fst fleetOwnerIds
+  -- when (not $ null otherFleetOwnerIds) $
+  --   FMA.updateFleetMembersActiveStatus False fleetMemberId otherFleetOwnerIds
   return fleetOwnerId
 
 ------------------------------------- Fleet Owners Access Control --------------------------------------
