@@ -1,5 +1,7 @@
 imports:
   OperationHub: Dashboard.Common
+  Driver: Dashboard.Common
+  StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 
 module: Driver
 
@@ -36,6 +38,28 @@ apis:
         type: DriverOperationHubRequest
       response:
         type: APISuccess
+  - GET: # ListDriversAPI
+      endpoint: /operator/list
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[DriverInfo]"
+      helperApi:
+        - GET:
+            endpoint: /operator/list
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - limit: Int
+              - offset: Int
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: "[DriverInfo]"
+
 types:
   DriverOperationHubRequest:
     requestType: RequestType
@@ -68,3 +92,13 @@ types:
     operatorId: Text
     remarks: Text
     derive: "'HideSecrets"
+  DriverInfo:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - isActive: Bool
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - vehicle: Maybe Text
+    - documents: StatusRes

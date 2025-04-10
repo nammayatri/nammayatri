@@ -91,7 +91,9 @@ library
       API.Types.ProviderPlatform.Operator
       API.Types.ProviderPlatform.Operator.Driver
       API.Types.ProviderPlatform.Operator.Endpoints.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
       API.Types.ProviderPlatform.Operator.Endpoints.Registration
+      API.Types.ProviderPlatform.Operator.FleetManagement
       API.Types.ProviderPlatform.Operator.Registration
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking

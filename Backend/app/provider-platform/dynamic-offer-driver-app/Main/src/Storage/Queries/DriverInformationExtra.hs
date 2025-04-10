@@ -388,3 +388,15 @@ updateServicesEnabled driverIds services = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.In driverIds)]
+
+findByIdAndVerified ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person.Driver ->
+  Maybe Bool ->
+  m (Maybe DriverInformation)
+findByIdAndVerified (Id driverInformationId) mbVerified =
+  findOneWithKV
+    [ Se.And $
+        [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
+          <> [Se.Is BeamDI.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
+    ]
