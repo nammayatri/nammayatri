@@ -3367,6 +3367,8 @@ type VehicleData =
   , timestamp :: String
   , nearestWaypointConfig :: NearestWaypointConfig
   , etaDistance :: Maybe Number
+  , eta :: Maybe String
+  , delta :: Maybe Number
   }
 
 type BusTrackingScreenProps = {

@@ -54,7 +54,7 @@ import Presto.Core.Types.Language.Flow (Flow)
 import Types.App (GlobalState(..), defaultGlobalState)
 import Common.Types.App as CTA
 import Data.Lens ((^.))
-import Accessor (_lat, _lon, _stopPoint, _sequenceNum)
+import Accessor (_lat, _lon, _stopPoint, _sequenceNum, _stopCode)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
@@ -248,15 +248,19 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
     extractTrackingInfo :: API.VehicleInfo -> Array ST.VehicleData
     extractTrackingInfo (API.VehicleInfo item) = do
       let
-        (API.VehicleInfoForRoute m) = item.vehicleInfo
+        (API.VehicleInfoForRoute vehicleInfoForRoute) = item.vehicleInfo
         (API.RouteStopMapping nextStop) = item.nextStop
-        lat = Mb.fromMaybe 0.0 m.latitude
-        lon = Mb.fromMaybe 0.0 m.longitude
+        lat = Mb.fromMaybe 0.0 vehicleInfoForRoute.latitude
+        lon = Mb.fromMaybe 0.0 vehicleInfoForRoute.longitude
         (API.LatLong nextStopPosition) = nextStop.stopPoint
         currentWaypoint = API.LatLong { lat: lat, lon: lon }
         wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
         nearestWaypointConfig = calculateNearestWaypoint currentWaypoint state.data.routePts.points wmbFlowConfig.maxSnappingOnRouteDistance
-        (Tuple pickupPoint mbSequenceNum) = fetchPickupPoint (API.VehicleInfo item) state.data.sourceStation
+        mbPickupStop = 
+          case state.data.sourceStation of
+            Mb.Just sourceStation -> DA.find (\(API.FRFSStationAPI item) -> item.code == sourceStation.stationCode) state.data.stopsList
+            Mb.Nothing -> state.data.nearestStopFromCurrentLoc
+        (Tuple pickupPoint mbSequenceNum) = fetchPickupPoint (API.VehicleInfo item) mbPickupStop
 
       case filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig, (filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item)) of
         false, _ -> []
@@ -275,11 +279,16 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
                         else nearestWaypointConfig.vehicleLocationOnRoute
                   Mb.Nothing -> nearestWaypointConfig.vehicleLocationOnRoute
               )
+            -- Proper calculation of eta from Upcoming Stops
+            upcomingStop = DA.find (\(API.UpcomingStop upcomingStop) ->
+                let (API.Stop stop) = upcomingStop.stop
+                in (mbPickupStop <#> (\(API.FRFSStationAPI frfsStop) -> frfsStop.code)) == (Mb.Just $ stop.stopCode)
+              ) $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
           in 
             [ { vehicleId: item.vehicleId
             , updatedAt: nextStop.updatedAt
             , createdAt: nextStop.createdAt
-            , timestamp: m.timestamp
+            , timestamp: vehicleInfoForRoute.timestamp
             , nextStop: nextStop.stopCode
             , nextStopDistance: haversineDistance vehicleLatLong nextStop.stopPoint
             , vehicleLat: vehicleLatLong ^._lat
@@ -291,32 +300,30 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
             , nextStopTravelDistance: item.nextStopTravelDistance
             , nearestWaypointConfig: nearestWaypointConfig
             , etaDistance: if nextStop.sequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
+            , eta: spy "codex-eta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.eta)
+            , delta : spy "codex-delta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.delta)
             } ]
     
     
-    filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig =
-      let (API.VehicleInfoForRoute m) = item.vehicleInfo
-          -- Show Bus numbers whose rides haven't been ended even though last LTS update is > 30 mins ago
-          -- _ = spy "Vehicle Time Diff" $ Tuple item.vehicleId timeDiff 
-          timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
-      in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec) && checkCurrentBusIsOnboarded state item.vehicleId
+    filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig = true
+      -- let (API.VehicleInfoForRoute m) = item.vehicleInfo
+      --     -- Show Bus numbers whose rides haven't been ended even though last LTS update is > 30 mins ago
+      --     -- _ = spy "Vehicle Time Diff" $ Tuple item.vehicleId timeDiff 
+      --     timeDiff = EHC.compareUTCDate (EHC.getCurrentUTC "") m.timestamp
+      -- in (timeDiff < wmbFlowConfig.maxAllowedTimeDiffInLTSinSec) && checkCurrentBusIsOnboarded state item.vehicleId
 
     checkCurrentBusIsOnboarded state vehicleId = (DA.null extractBusOnboardingInfo || (not state.props.individualBusTracking) || (Mb.isJust $ DA.find (\busInfo -> busInfo.vehicleId == vehicleId) extractBusOnboardingInfo))
 
-    filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) =
+    filterSnappedWaypoint nearestWaypointConfig wmbFlowConfig (API.VehicleInfo item) = true
       -- Deviation Filter Logic for Bus Vehicles
-      ((nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters) || wmbFlowConfig.showAllDeviatedBus)
+      -- ((nearestWaypointConfig.deviationDistance < wmbFlowConfig.maxDeviatedDistanceInMeters) || wmbFlowConfig.showAllDeviatedBus)
     
-    fetchPickupPoint :: API.VehicleInfo -> Mb.Maybe ST.Station -> Tuple API.LatLong (Mb.Maybe Int)
-    fetchPickupPoint (API.VehicleInfo item) mbSourceStation =
+    fetchPickupPoint :: API.VehicleInfo -> Mb.Maybe API.FRFSStationAPI -> Tuple API.LatLong (Mb.Maybe Int)
+    fetchPickupPoint (API.VehicleInfo item) pickupStop =
       let 
-        pickupPoint =
-            case mbSourceStation of
-              Mb.Just sourceStation -> DA.find (\(API.FRFSStationAPI item) -> item.code == sourceStation.stationCode) state.data.stopsList
-              Mb.Nothing -> state.data.nearestStopFromCurrentLoc
-        pickupLat = Mb.maybe state.props.srcLat (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lat) pickupPoint
-        pickupLon = Mb.maybe state.props.srcLon (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lon) pickupPoint
-      in Tuple (API.LatLong { lat: pickupLat, lon: pickupLon }) (Mb.maybe Mb.Nothing (\(API.FRFSStationAPI item) -> item.sequenceNum) pickupPoint)
+        pickupLat = Mb.maybe state.props.srcLat (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lat) pickupStop
+        pickupLon = Mb.maybe state.props.srcLon (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lon) pickupStop
+      in Tuple (API.LatLong { lat: pickupLat, lon: pickupLon }) (Mb.maybe Mb.Nothing (\(API.FRFSStationAPI item) -> item.sequenceNum) pickupStop)
         -- Mb.Nothing -> 
         --   let nearestStopFromCurrentLoc = state.data.nearestStopFromCurrentLoc
         --       nearestStopLat = Mb.maybe state.props.srcLat (\(API.FRFSStationAPI item) -> Mb.fromMaybe state.props.srcLat item.lat) nearestStopFromCurrentLoc

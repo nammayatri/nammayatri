@@ -425,3 +425,6 @@ _sequenceNum = lens (unwrap >>> _.sequenceNum) (\oldRec newVal -> wrap ((unwrap 
 
 _code :: forall a b c. Newtype a { code :: b | c } => Lens' a b
 _code = lens (unwrap >>> _.code) (\oldRec newVal -> wrap ((unwrap oldRec) { code = newVal }))
+
+_stopCode :: forall a b c. Newtype a { stopCode :: b | c } => Lens' a b
+_stopCode = lens (unwrap >>> _.stopCode) (\oldRec newVal -> wrap ((unwrap oldRec) { stopCode = newVal }))
