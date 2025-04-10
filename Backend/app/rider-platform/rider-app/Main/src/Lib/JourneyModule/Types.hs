@@ -327,7 +327,6 @@ data BusLegExtraInfo = BusLegExtraInfo
     tickets :: Maybe [Text],
     routeName :: Maybe Text,
     providerName :: Maybe Text,
-    otherValidRouteShortNames :: [Text],
     frequency :: Maybe Seconds
   }
   deriving stock (Show, Generic)
@@ -338,8 +337,7 @@ data LegServiceTier = LegServiceTier
     serviceTierType :: Spec.ServiceTierType,
     serviceTierDescription :: Text,
     fare :: PriceAPIEntity,
-    quoteId :: Id DFRFSQuote.FRFSQuote,
-    otherValidRouteShortNames :: [Text]
+    quoteId :: Id DFRFSQuote.FRFSQuote
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -697,8 +695,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   tickets = Just qrDataList,
                   providerName = Just booking.providerName,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
-                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
-                  otherValidRouteShortNames = []
+                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails'
                 }
         Spec.SUBWAY -> do
           return $
@@ -846,8 +843,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   tickets = Nothing,
                   providerName = Nothing,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails,
-                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails,
-                  otherValidRouteShortNames = []
+                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
                 }
         Spec.SUBWAY -> do
           quotes <- QFRFSQuote.findAllBySearchId id
@@ -862,8 +858,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                             quoteId = quote.id,
                             serviceTierName = serviceTier.shortName,
                             serviceTierType = serviceTier._type,
-                            serviceTierDescription = serviceTier.description,
-                            otherValidRouteShortNames = []
+                            serviceTierDescription = serviceTier.description
                           }
                   )
                   quotes

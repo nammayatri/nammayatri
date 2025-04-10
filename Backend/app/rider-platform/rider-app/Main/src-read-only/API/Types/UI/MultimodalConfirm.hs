@@ -22,6 +22,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.Types
+import qualified Lib.JourneyModule.Utils
 import Servant
 import Tools.Auth
 
@@ -84,7 +85,7 @@ data JourneyStatusResp = JourneyStatusResp {journeyPaymentStatus :: Kernel.Prelu
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.JourneyModule.Types.LegServiceTier]}
+data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.JourneyModule.Utils.AvailableRoutesByTier]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

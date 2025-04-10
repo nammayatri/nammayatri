@@ -55,6 +55,7 @@ import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
+import qualified Lib.JourneyModule.Utils as JLU
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
@@ -70,8 +71,6 @@ import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
-
--- import  Domain.Types.Location as DTL (Location(..))
 
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -604,4 +603,18 @@ getMultimodalOrderGetBusTierOptions ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
   Environment.Flow ApiTypes.LegServiceTierOptionsResp
-getMultimodalOrderGetBusTierOptions (_mbPersonId, _merchantId) _ _ = throwError (InvalidRequest "Not implemented yet")
+getMultimodalOrderGetBusTierOptions (mbPersonId, _merchantId) journeyId legOrder = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  legs <- JM.getJourneyLegs journeyId
+  now <- getCurrentTime
+  journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
+  let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
+  let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
+  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
+    (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
+      availableRoutesByTier <- JLU.findPossibleRoutes fromStopCode toStopCode now integratedBPPConfig.id
+      return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
+    _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}

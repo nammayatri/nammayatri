@@ -22,7 +22,7 @@ imports:
   RouteStopMapping: Domain.Types.RouteStopMapping
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
-  LegServiceTier: Lib.JourneyModule.Types
+  AvailableRoutesByTier: Lib.JourneyModule.Utils
 
 module: MultimodalConfirm
 
@@ -130,7 +130,7 @@ types:
     ticketQuantity: Maybe Int
 
   LegServiceTierOptionsResp:
-    options: [LegServiceTier]
+    options: "[AvailableRoutesByTier]"
 
   TransportRoute:
     cd: Text
