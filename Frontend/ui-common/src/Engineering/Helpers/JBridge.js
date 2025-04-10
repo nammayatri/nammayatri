@@ -2434,7 +2434,7 @@ export const voipDialer = function (rideId, isDriver, phoneNum, isMissed, cb, ac
 export const isSignedCallInitialized = function () {
   if (JBridge.isSignedCallInitialized) {
     return JBridge.isSignedCallInitialized();
-  } 
+  }
   return false;
 };
 
@@ -2452,7 +2452,7 @@ export const initSignedCall = function (rideId) {
         isDriver: isDriver,
         exoPhone: exoPhone
       });
-    
+
       if (JBridge.initSignedCall) {
         return JBridge.initSignedCall(config);
       }
@@ -2463,7 +2463,7 @@ export const initSignedCall = function (rideId) {
 export const destroySignedCall = function () {
   if (JBridge.destroySignedCall) {
     return window.JBridge.destroySignedCall();
-  } 
+  }
 };
 
 export const getLocationNameV2 = function (lat, lon) {
@@ -3242,5 +3242,22 @@ export const setupVoiceRecognitionView = function(id) {
         console.log("Error in setupVoiceRecognitionView", err);
       }
     }
+  }
+}
+
+export const startOpenMeterActivity = (cb) => {
+  return () => {
+    const callback = () => {
+      const timeTaken = Date.now() - window.onPauseTime;
+      console.log("timeTaken", timeTaken);
+      if (timeTaken > 500) {
+        cb()();
+        window.onResumeListeners = window.onResumeListeners.filter(item => {
+          return item !== callback;
+        })
+      }
+    }
+    window.onResumeListeners.push(callback);
+    JBridge.startOpenMeterActivity("callback");
   }
 }

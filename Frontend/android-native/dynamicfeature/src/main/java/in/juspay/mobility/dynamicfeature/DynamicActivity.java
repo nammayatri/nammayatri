@@ -54,40 +54,13 @@ public class DynamicActivity extends AppCompatActivity {
         }
     }
 
-    public static ReactNativeHost createReactNativeHost(Application app) {
-        return new DefaultReactNativeHost(app) {
-            @Override
-            public boolean getUseDeveloperSupport() {
-                return BuildConfig.DEBUG;
-            }
-
-
-            @Override
-            protected List<ReactPackage> getPackages() {
-                @SuppressWarnings("UnnecessaryLocalVariable")
-                List<ReactPackage> packages = new PackageList(this).getPackages();
-                packages.add(new MyEventPackage());
-                return packages;
-            }
-
-
-            @Override
-            protected String getJSMainModuleName() {
-                return "index";
-            }
-
-
-            @Override
-            protected boolean isNewArchEnabled() {
-                return false;
-            }
-
-
-            @Override
-            protected Boolean isHermesEnabled() {
-                return false;
-            }
-        };
+    public  static  List<ReactPackage>  getPackages(Application application){
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        List<ReactPackage> packages = new PackageList(application).getPackages();
+        packages.add(new MyEventPackage());
+        return packages;
     }
+
+
 
 }

@@ -48,6 +48,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
@@ -107,6 +108,7 @@ import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 
+@Keep
 public class MobilityDriverBridge extends MobilityCommonBridge {
 
     private static final String LOG_TAG = "MobilityDriverBridge";
