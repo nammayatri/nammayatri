@@ -2474,7 +2474,7 @@ offlineNavigationLinks push state =
     ]
     where
       navLinksArray = [
-        {title : getString NAMMA_METER, icon : "ny_ic_open_meter_icon", action : GotoMeterRideScreen, color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
+        {title : "Open Meter", icon : "ny_ic_open_meter_icon", action : GotoMeterRideScreen, color : Color.black800, background : Color.white900, stroke : "1," <> Color.grey900},
         {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction, color : Color.black900, background : Color.white900, stroke : "1," <> Color.black600},
