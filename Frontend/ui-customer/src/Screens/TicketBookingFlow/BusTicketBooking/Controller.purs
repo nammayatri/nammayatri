@@ -22,6 +22,7 @@ import Components.PopUpModal.Controller as PopUpModalController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
+import Screens.TicketBookingFlow.BusTicketBooking.ScreenData as BusTicketBookingScreenData
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer (metroTicketListApiToMyTicketsTransformer)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -47,6 +48,9 @@ import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons as EHC
 import Effect (Effect)
 import Effect.Uncurried (runEffectFn4)
+import Data.Lens ((^.))
+import Accessor (_lat, _lon)
+import Data.Foldable (for_)
 
 
 instance showAction :: Show Action where
@@ -71,6 +75,7 @@ data Action
   | MapReady String String String
   | UpdateCurrentLocation String String
   | RecenterCurrentLocation
+  | NearbyDriverRespAC API.NearbyDriverRes
 
 data ScreenOutput
   = GoToHomeScreen ST.BusTicketBookingState
@@ -136,6 +141,34 @@ eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
 eval RecenterCurrentLocation state = do
   recenterCurrentLocation state
+
+eval (NearbyDriverRespAC (API.NearbyDriverRes resp)) state =
+  let newState = state{data{busDetailsArray = DA.concatMap transformNearByDriversBucketResp resp.buckets}}
+  in continueWithCmd newState [do
+    showAllMarkersOnMap newState.data.busDetailsArray
+    pure NoAction
+  ]
+  where
+    showAllMarkersOnMap busDetailsArray = do
+      for_ busDetailsArray \busDetails -> do
+        case busDetails.routeCode of
+          Just routeCode -> showMarkerOnMap routeCode busDetails.lat busDetails.lon
+          Nothing -> pure unit
+
+    transformNearByDriversBucketResp (API.NearByDriversBucket nearByDriversBucket) = 
+      map filterOutLatLongFromDriverInfo nearByDriversBucket.driverInfo
+
+    filterOutLatLongFromDriverInfo (API.DriverInfo driverInfo) =
+      { lat: driverInfo.lat, lon: driverInfo.lon, routeCode: filterBusOnlyRouteCode driverInfo.rideDetails}
+
+    filterBusOnlyRouteCode mbRideDetails = 
+      case mbRideDetails of
+        Just (API.RideDetails rideDetails) -> 
+          case rideDetails.rideInfo of
+            Just (API.Bus (API.BusRideInfo busRideInfo)) -> Just busRideInfo.routeCode
+            _ -> Nothing
+        _ -> Nothing
+
 
 eval _ state = continue state
 

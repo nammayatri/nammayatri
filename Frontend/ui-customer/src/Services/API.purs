@@ -4624,29 +4624,57 @@ newtype NearbyDriverReq = NearbyDriverReq {
 }
 
 newtype NearbyDriverRes = NearbyDriverRes {
-  serviceTierTypeToVehicleVariant :: String,
-  variantLevelDriverCount :: String,
+  -- serviceTierTypeToVehicleVariant :: String,
+  -- variantLevelDriverCount :: String,
   buckets :: Array NearByDriversBucket
 }
 
 newtype NearByDriversBucket = NearByDriversBucket {
-  radius :: Number,
-  variant :: String,
+  -- radius :: Number,
+  -- variant :: String,
   driverInfo :: Array DriverInfo
 }
 
 newtype DriverInfo = DriverInfo 
   { lat :: Number,
     lon :: Number,
-    applicableServiceTierTypes :: Array String,
-    distance :: Number,
-    driverId :: String,
-    bearing :: Maybe Int
+    -- applicableServiceTierTypes :: Array String,
+    -- distance :: Number,
+    -- driverId :: String,
+    -- bearing :: Maybe Int,
+    rideDetails :: Maybe RideDetails
   }
 
--- instance makeNearbyDriverReq :: RestEndpoint NearbyDriverReq where
---  makeRequest reqBody@(NearbyDriverReq reqBody) headers = defaultMakeRequestWithoutLogs POST (EP.postNearbyDrivers "") headers reqBody Nothing
---  encodeRequest req = standardEncode req
+newtype RideDetails = RideDetails {
+  rideId :: String,
+  rideInfo :: Maybe RideInfo
+}
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo
+
+
+newtype BusRideInfo = BusRideInfo {
+  routeCode :: String,
+  busNumber :: String
+  -- destination :: LatLong,
+  -- routeLongName :: Maybe String,
+  -- driverName :: Maybe String
+}
+
+newtype CarRideInfo = CarRideInfo {
+  pickupLocation :: LatLong
+}
+
+instance makeNearbyDriverReq :: RestEndpoint NearbyDriverReq where
+ makeRequest reqBody@(NearbyDriverReq rqBody) headers = defaultMakeRequestWithoutLogs POST (EP.postNearbyDrivers "") headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericNearbyDriverReq :: Generic NearbyDriverReq _
+instance standardNearbyDriverReq :: StandardEncode NearbyDriverReq where
+    standardEncode (NearbyDriverReq body) = standardEncode body
+instance showNearbyDriverReq :: Show NearbyDriverReq where show = genericShow
+instance decodeNearbyDriverReq :: Decode NearbyDriverReq where decode = defaultDecode
+instance encodeNearbyDriverReq :: Encode NearbyDriverReq where encode = defaultEncode
 
 derive instance genericNearbyDriverRes :: Generic NearbyDriverRes _
 instance standardNearbyDriverRes :: StandardEncode NearbyDriverRes where
@@ -4668,3 +4696,36 @@ instance standardDriverInfo :: StandardEncode DriverInfo where
 instance showDriverInfo :: Show DriverInfo where show = genericShow
 instance decodeDriverInfo :: Decode DriverInfo where decode = defaultDecode
 instance encodeDriverInfo :: Encode DriverInfo where encode = defaultEncode
+
+derive instance genericRideDetails :: Generic RideDetails _
+instance standardRideDetails :: StandardEncode RideDetails where
+    standardEncode (RideDetails body) = standardEncode body
+instance showRideDetails :: Show RideDetails where show = genericShow
+instance decodeRideDetails :: Decode RideDetails where decode = defaultDecode
+instance encodeRideDetails :: Encode RideDetails where encode = defaultEncode
+
+derive instance genericBusRideInfo :: Generic BusRideInfo _
+instance standardBusRideInfo :: StandardEncode BusRideInfo where
+    standardEncode (BusRideInfo body) = standardEncode body
+instance showBusRideInfo :: Show BusRideInfo where show = genericShow
+instance decodeBusRideInfo :: Decode BusRideInfo where decode = defaultDecode
+instance encodeBusRideInfo :: Encode BusRideInfo where encode = defaultEncode
+
+derive instance genericCarRideInfo :: Generic CarRideInfo _
+instance standardCarRideInfo :: StandardEncode CarRideInfo where
+    standardEncode (CarRideInfo body) = standardEncode body
+instance showCarRideInfo :: Show CarRideInfo where show = genericShow
+instance decodeCarRideInfo :: Decode CarRideInfo where decode = defaultDecode
+instance encodeCarRideInfo :: Encode CarRideInfo where encode = defaultEncode
+
+derive instance genericRideInfo :: Generic RideInfo _
+instance standardEncodeRideInfo :: StandardEncode RideInfo where
+  standardEncode (Bus body) = standardEncode body
+  standardEncode (Car body) = standardEncode body
+instance showRideInfo :: Show RideInfo where show = genericShow
+instance decodeRideInfo :: Decode RideInfo
+  where
+    decode body = (Bus <$> decode body) <|> (Car <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeRideInfo  :: Encode RideInfo where
+  encode (Bus body) = encode body
+  encode (Car body) = encode body
