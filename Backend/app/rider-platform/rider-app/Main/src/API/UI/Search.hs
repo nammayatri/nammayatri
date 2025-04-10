@@ -305,7 +305,13 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
       otpResponse' <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
       otpResponse'' <- MInterface.MultiModalResponse <$> JM.filterTransitRoutes otpResponse'.routes merchantOperatingCityId
       logDebug $ "[Multimodal - OTP Response]" <> show otpResponse''
-      return otpResponse''
+      -- Add default auto leg if no routes are found
+      if null otpResponse''.routes
+        then do
+          case searchRequest.toLocation of
+            Just toLocation -> mkAutoLeg now toLocation
+            Nothing -> return otpResponse''
+        else return otpResponse''
 
   forM_ otpResponse.routes $ \r -> do
     let initReq =
@@ -362,6 +368,60 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
       DMP.FASTEST -> Fastest
       DMP.MINIMUM_TRANSITS -> Minimum_Transits
       _ -> Fastest -- Default case for any other values
+    mkAutoLeg now toLocation = do
+      let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}
+      let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
+      let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
+      let duration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
+      let (_, startTime) = JMU.getISTTimeInfo now
+      let endTime = addUTCTime (secondsToNominalDiffTime duration) startTime
+      let leg =
+            MultiModalTypes.MultiModalLeg
+              { distance = distance,
+                duration = duration,
+                polyline = Polyline {encodedPolyline = ""},
+                mode = MultiModalTypes.Unspecified,
+                startLocation = fromStopLocation,
+                endLocation = toStopLocation,
+                fromStopDetails = Nothing,
+                toStopDetails = Nothing,
+                routeDetails =
+                  [ MultiModalTypes.MultiModalRouteDetails
+                      { gtfsId = Nothing,
+                        longName = Nothing,
+                        shortName = Nothing,
+                        color = Nothing,
+                        frequency = Nothing,
+                        fromStopDetails = Nothing,
+                        toStopDetails = Nothing,
+                        startLocation = fromStopLocation,
+                        endLocation = toStopLocation,
+                        subLegOrder = 0,
+                        fromArrivalTime = Just startTime,
+                        fromDepartureTime = Just startTime,
+                        toArrivalTime = Just endTime,
+                        toDepartureTime = Just endTime
+                      }
+                  ],
+                serviceTypes = [],
+                agency = Nothing,
+                fromArrivalTime = Just startTime,
+                fromDepartureTime = Just startTime,
+                toArrivalTime = Just endTime,
+                toDepartureTime = Just endTime
+              }
+      return $
+        MInterface.MultiModalResponse
+          { routes =
+              [ MultiModalTypes.MultiModalRoute
+                  { distance = distance,
+                    duration = duration,
+                    startTime = Just startTime,
+                    endTime = Just endTime,
+                    legs = [leg]
+                  }
+              ]
+          }
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
