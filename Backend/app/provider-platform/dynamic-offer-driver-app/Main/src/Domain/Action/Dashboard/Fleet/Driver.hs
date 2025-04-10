@@ -741,12 +741,12 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
       case mbStatus of
         -- This Status is Associated with Driver and
         Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
-        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
+        Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId statusAwareVehicleNo
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
-        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
-        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
-        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
-        Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId
+        Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
+        Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
+        Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
+        Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId statusAwareVehicleNo
 
 castFleetVehicleStatus :: Maybe Common.FleetVehicleStatus -> Documents.VerificationStatus
 castFleetVehicleStatus = \case
