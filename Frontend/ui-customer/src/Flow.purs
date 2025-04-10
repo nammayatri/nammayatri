@@ -2621,11 +2621,7 @@ homeScreenFlow = do
         pickupInstructionsScreenFlow
     ADD_VPA_OUT earnings state -> do 
       out <- UI.upiNotVerificationScreen UpiScreenData.initialState{isSkipable = true, title = getString $ STR.YOUVE_EARNED_50_FOR_TAKING_YOUR_FIRST_RIDE (show earnings), subTitle = getString STR.VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS, coverImage  = fetchImage GLOBAL_COMMON_ASSET "ny_ic_green_tick"}
-      case out of
-        Nothing -> do
-          let _ = setValueToCache "COLLECT_EARNINGS" (show $ HU.getTime unit) identity
-          modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false}})
-        Just vpa -> modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUPIPopUp = false, showUpiSuccess = true}, data {existingVpa = Just vpa}})
+      let _ = setValueToCache "COLLECT_EARNINGS" (show $ HU.getTime unit) identity
       homeScreenFlow
     _ -> homeScreenFlow
   
@@ -6567,6 +6563,7 @@ fcmHandler notification state notificationBody= do
       setValueToLocalStore IS_SOS_ACTIVE "false"
       deleteValueFromLocalStore SELECTED_VARIANT
       removeChatService ""
+      setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { sosId = "" } })
       if (state.props.bookingId /= "") then do
         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
