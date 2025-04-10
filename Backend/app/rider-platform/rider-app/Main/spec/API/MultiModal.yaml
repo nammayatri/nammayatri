@@ -131,7 +131,7 @@ types:
     crisData: Maybe CrisData
   CrisData:
     osType: Text
-    osBuildVersion: Int
+    osBuildVersion: Text
     deviceId: Text
     bookAuthCode: Text
 

@@ -45,7 +45,6 @@ data CRISConfig = CRISConfig
     appCode :: Text,
     tpAccountId :: Int,
     sourceZone :: Text,
-    agentAccountId :: Text,
     ticketType :: Text
   }
   deriving stock (Eq, Generic)

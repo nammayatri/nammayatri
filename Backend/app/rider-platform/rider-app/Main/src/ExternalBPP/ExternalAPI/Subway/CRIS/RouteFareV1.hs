@@ -36,18 +36,13 @@ data EncryptedResponse = EncryptedResponse
 
 -- Request type with updated fields
 data CRISFareRequestV1 = CRISFareRequestV1
-  { tpAccountId :: Text, -- Changed to Text as per request format
-    mobileNo :: Text,
+  { mobileNo :: Text,
     imeiNo :: Text,
-    appCode :: Text,
     appSession :: Int,
-    sourceZone :: Text,
     sourceCode :: Text,
     changeOver :: Text,
     destCode :: Text,
-    ticketType :: Text,
-    via :: Text,
-    typeOfBooking :: Int
+    via :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -145,7 +140,7 @@ getRouteFareV1 config merchantOperatingCityId request mbFrfsSearchId = do
           <> destCode request
           <> "\","
           <> "\"ticketType\":\""
-          <> ticketType request
+          <> config.ticketType
           <> "\","
           <> "\"via\":\""
           <> request.via

@@ -12,26 +12,28 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RouteStopTimeTableT f = RouteStopTimeTableT
-  { integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
-    routeCode :: (B.C f Kernel.Prelude.Text),
-    serviceTierType :: (B.C f BecknV2.FRFS.Enums.ServiceTierType),
-    stopCode :: (B.C f Kernel.Prelude.Text),
-    timeOfArrival :: (B.C f Kernel.Prelude.TimeOfDay),
-    timeOfDeparture :: (B.C f Kernel.Prelude.TimeOfDay),
-    tripId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { integratedBppConfigId :: B.C f Kernel.Prelude.Text,
+    routeCode :: B.C f Kernel.Prelude.Text,
+    serviceTierType :: B.C f BecknV2.FRFS.Enums.ServiceTierType,
+    stopCode :: B.C f Kernel.Prelude.Text,
+    timeOfArrival :: B.C f Kernel.Prelude.TimeOfDay,
+    timeOfDeparture :: B.C f Kernel.Prelude.TimeOfDay,
+    tripId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table RouteStopTimeTableT where
-  data PrimaryKey RouteStopTimeTableT f = RouteStopTimeTableId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = RouteStopTimeTableId <$> integratedBppConfigId <*> tripId
+  data PrimaryKey RouteStopTimeTableT f
+    = RouteStopTimeTableId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.TimeOfDay) (B.C f Kernel.Prelude.Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = RouteStopTimeTableId <$> integratedBppConfigId <*> stopCode <*> timeOfArrival <*> tripId
 
 type RouteStopTimeTable = RouteStopTimeTableT Identity
 
-$(enableKVPG (''RouteStopTimeTableT) [('integratedBppConfigId), ('tripId)] [])
+$(enableKVPG ''RouteStopTimeTableT ['integratedBppConfigId, 'stopCode, 'timeOfArrival, 'tripId] [])
 
-$(mkTableInstances (''RouteStopTimeTableT) "route_stop_time_table")
+$(mkTableInstances ''RouteStopTimeTableT "route_stop_time_table")

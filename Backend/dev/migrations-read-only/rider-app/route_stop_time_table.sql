@@ -12,3 +12,10 @@ ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN merchant_operating_city_i
 ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route_stop_time_table ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route_stop_time_table ADD PRIMARY KEY ( integrated_bpp_config_id, trip_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_time_table DROP CONSTRAINT route_stop_time_table_pkey;
+ALTER TABLE atlas_app.route_stop_time_table ADD PRIMARY KEY ( integrated_bpp_config_id, stop_code, time_of_arrival, trip_id);

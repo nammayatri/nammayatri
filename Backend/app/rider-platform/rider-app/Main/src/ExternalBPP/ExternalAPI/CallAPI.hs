@@ -71,12 +71,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                 sourceCode = startStopCode,
                 changeOver = " ",
                 destCode = endStopCode,
-                ticketType = config'.ticketType,
-                via = " ",
-                tpAccountId = config'.agentAccountId,
-                appCode = config'.appCode,
-                sourceZone = config'.sourceZone,
-                typeOfBooking = 0
+                via = " "
               }
       resp <- try @_ @SomeException $ CRISRouteFareV1.getRouteFareV1 config' merchanOperatingCity.id request mbFrfsSearchId
       case resp of
@@ -159,18 +154,3 @@ getStationList integrationBPPConfig = do
 
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
-
-getBookJourney ::
-  ( CoreMetrics m,
-    MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r
-  ) =>
-  IntegratedBPPConfig ->
-  CRISBookJourney.CRISBookingRequest ->
-  m CRISBookJourney.CRISBookingResponse
-getBookJourney integrationBPPConfig request = do
-  case integrationBPPConfig.providerConfig of
-    CRIS config' -> CRISBookJourney.getBookJourney config' request
-    _ -> throwError $ InternalError "Unimplemented!"
