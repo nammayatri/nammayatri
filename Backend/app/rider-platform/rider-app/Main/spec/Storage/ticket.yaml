@@ -52,7 +52,7 @@ TicketPlace:
     PlaceType:
       enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
     PlaceStatus:
-      enum: "Active,Inactive,ComingSoon"
+      enum: "Active,Inactive,ComingSoon,Ended"
 
   beamType:
     priority: Maybe Int
