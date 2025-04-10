@@ -226,7 +226,8 @@ addBroadcastMessageToKafka check msg driverId = do
 data BuildSendReceiptMessageReq = BuildSendReceiptMessageReq
   { totalFare :: Text,
     totalDistance :: Text,
-    referralCode :: Text
+    referralCode :: Text,
+    rideShortId :: Text
   }
 
 buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, Text)
@@ -236,9 +237,8 @@ buildSendReceiptMessage merchantOperatingCityId req = do
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_FARE_RECEIPT_MESSAGE))
   let msg =
         merchantMessage.message
-          & T.replace (templateText "totalFare") req.totalFare
-          & T.replace (templateText "totalDistance") req.totalDistance
-          & T.replace (templateText "referralCode") req.referralCode
+          & T.replace (templateText "rideIdAndFare") (req.rideShortId <> " Rs." <> req.totalFare)
+          & T.replace (templateText "referralLink") req.referralCode
 
   pure (merchantMessage.senderHeader, msg)
 

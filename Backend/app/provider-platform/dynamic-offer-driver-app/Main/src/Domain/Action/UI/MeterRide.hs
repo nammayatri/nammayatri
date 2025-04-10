@@ -3,11 +3,9 @@
 module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideShareReceipt) where
 
 import qualified API.Types.UI.MeterRide
-import Data.OpenApi (ToSchema)
 import Data.Time (utctDay)
 import qualified Domain.Action.Internal.DriverReferee as DAIDR
 import qualified Domain.Action.UI.FareCalculator as AUF
-import qualified Domain.Action.UI.Ride as AUR
 import Domain.Types
 import Domain.Types.Location (Location (..), LocationAddress)
 import qualified Domain.Types.LocationMapping as DLM
@@ -23,7 +21,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -36,7 +33,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 import Tools.Utils
@@ -140,7 +136,8 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId r
         MessageBuilder.BuildSendReceiptMessageReq
           { totalFare = show ride.currency <> " " <> show ride.fare,
             totalDistance = show ride.chargeableDistance,
-            referralCode = driverReferral.referralCode.getId
+            referralCode = driverReferral.referralCode.getId,
+            rideShortId = ride.shortId.getShortId
           }
     smsCfg <- asks (.smsCfg)
     let sender = fromMaybe smsCfg.sender mbSender
