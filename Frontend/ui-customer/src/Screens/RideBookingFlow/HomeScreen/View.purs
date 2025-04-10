@@ -3743,7 +3743,7 @@ horizontalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfi
 horizontalServiceView push index service = 
   linearLayout
   [ height $ WRAP_CONTENT
-  , weight 1.0
+  , weight 1.0  
   , orientation VERTICAL
   , gravity CENTER
   , margin $ MarginLeft $ if index == 0 then 0 else 16

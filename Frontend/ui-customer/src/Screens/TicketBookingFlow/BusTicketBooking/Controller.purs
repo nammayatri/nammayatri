@@ -28,6 +28,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Constants.Configs (getPolylineAnimationConfig)
 import Data.Array as DA
 import Data.Maybe( Maybe(..), fromMaybe, maybe, isNothing)
+import Data.Number (fromString, round) as NUM
 import Data.Tuple
 import Debug (spy)
 import Effect.Aff (launchAff)
@@ -40,8 +41,12 @@ import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd,
 import Services.API as API
 import Screens.Types as ST
 import Services.Backend as Remote
-import Storage (KeyStore(..), deleteValueFromLocalStore)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore)
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
+import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.Commons as EHC
+import Effect (Effect)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -62,6 +67,9 @@ data Action
   | TicketPressed API.FRFSTicketBookingStatusAPIRes
   | RepeatRideClicked API.FRFSTicketBookingStatusAPIRes
   | ViewMoreClicked
+  | MapReady String String String
+  | UpdateCurrentLocation String String
+  | RecenterCurrentLocation
 
 data ScreenOutput
   = GoToHomeScreen ST.BusTicketBookingState
@@ -73,6 +81,11 @@ data ScreenOutput
   | GoToMetroTicketDetailsFlow String
   | GoToMetroTicketDetailsScreen API.FRFSTicketBookingStatusAPIRes
 
+updateCurrentLocation :: ST.BusTicketBookingState -> String -> String -> Eval Action  ScreenOutput ST.BusTicketBookingState
+updateCurrentLocation state lat lng = 
+  let updatedState = state { props { srcLat = fromMaybe 0.0 (NUM.fromString lat), srcLong = fromMaybe 0.0 (NUM.fromString lng) } }
+  in continue updatedState
+      
 eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTicketBookingState
 
 eval GoBack state = exit $ GoToHomeScreen state
@@ -107,4 +120,33 @@ eval (RepeatRideClicked ticketApiResp) state =
 eval (ViewMoreClicked) state =
   continue state { props { showAllTickets = not state.props.showAllTickets }}
 
+
+eval (MapReady _ _ _) state = continue state
+
+eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
+
+eval RecenterCurrentLocation state = do
+  recenterCurrentLocation state
+
 eval _ state = continue state
+
+
+showMarkerOnMap :: String -> Number -> Number -> Effect Unit
+showMarkerOnMap markerName lat lng = do
+  let markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+  void $ JB.showMarker markerConfig lat lng 160 0.5 0.9 (EHC.getNewIDWithTag "CustomerHomeScreenMap")
+
+recenterCurrentLocation :: ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTicketBookingState
+recenterCurrentLocation state = continueWithCmd state [ do
+    if state.props.locateOnMap then do
+      _ <- pure $ JB.currentPosition "NO_ZOOM"
+      pure unit
+    else do
+      let markerName = HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+          markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+      _ <- pure $ JB.currentPosition ""
+      void $ showMarkerOnMap (HU.getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME) 9.9 9.9
+      pure unit
+    -- let newState = state{data{source = state.props.currentLocation.place}}
+    pure NoAction
+  ]
