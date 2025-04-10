@@ -22,6 +22,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.Types
+import qualified Lib.JourneyModule.Utils
 import Servant
 import Tools.Auth
 
@@ -81,6 +82,10 @@ data JourneyInfoResp = JourneyInfoResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyStatusResp = JourneyStatusResp {journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI, journeyStatus :: Domain.Types.Journey.JourneyStatus, legs :: [LegStatus]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.JourneyModule.Utils.AvailableRoutesByTier]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -210,3 +210,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN recent_location_id characte
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

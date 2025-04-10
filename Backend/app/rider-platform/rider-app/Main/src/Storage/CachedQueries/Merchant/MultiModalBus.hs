@@ -83,8 +83,6 @@ getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedis
 getRoutesBuses routeId = do
   let key = mkRouteKey routeId
 
-  busDataPairs' :: [(Text, Text)] <- withCrossAppRedisNew $ Hedis.hGetAll key
-  logDebug $ "Got bus data for route busDataPairs " <> routeId <> ": " <> show busDataPairs'
   busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
   logDebug $ "Got bus data for route " <> routeId <> ": " <> show busDataPairs
 

@@ -720,8 +720,10 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteDetails
+      Domain.Types.RouteStopCalender
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
+      Domain.Types.RouteStopTimeTable
       Domain.Types.RouteTripMapping
       Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
@@ -844,8 +846,10 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteDetails
+      Storage.Beam.RouteStopCalender
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
+      Storage.Beam.RouteStopTimeTable
       Storage.Beam.RouteTripMapping
       Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
@@ -1023,8 +1027,10 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteDetails
+      Storage.Queries.RouteStopCalender
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
+      Storage.Queries.RouteStopTimeTable
       Storage.Queries.RouteTripMapping
       Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
