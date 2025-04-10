@@ -144,10 +144,10 @@ public class NotificationUtils {
             final SimpleDateFormat tf1 = new SimpleDateFormat("hh:mm a");
             df1.setTimeZone(TimeZone.getTimeZone("IST"));
             tf1.setTimeZone(TimeZone.getTimeZone("IST"));
-            
+
             String date = df1.format(rideDateTime);
             String time = tf1.format(rideDateTime);
-            
+
             rideStartTime = time;
             rideStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
         }
@@ -155,7 +155,7 @@ public class NotificationUtils {
             rideStartDate = "Today";
             rideStartTime = "now";
             e.printStackTrace();
-            
+
         }
         return new String[]{rideStartDate, rideStartTime};
     }
@@ -492,7 +492,7 @@ public class NotificationUtils {
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.REALLOCATE_PRODUCT)) {
             channelId = notificationType + "_NEW";
-        } 
+        }
         else {
             channelId = GENERAL_NOTIFICATION;
         }
@@ -545,7 +545,7 @@ public class NotificationUtils {
             boolean playSoundForNotification = allowSoundForNotification(notificationType,data,key);
             if(playSoundForNotification){
               mBuilder.setSound(notificationSound);
-            } 
+            }
             System.out.println("Default sound" + notificationSound);
        }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -840,7 +840,7 @@ public class NotificationUtils {
             }
         }
     }
-   
+
     public static boolean fetchUseSilentFCMForForwardBatch(JSONObject payload) {
         boolean isOnRide = payload.optBoolean("isOnRide", false);
         return payload.optBoolean("useSilentFCMForForwardBatch", false) && isOnRide;
@@ -1020,7 +1020,18 @@ public class NotificationUtils {
                     NotificationUtils.showNotification(context, title, body, payload, imageUrl);
                     sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                     sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
-                    startMainActivity(context);
+
+                    System.out.println("openMeterActive "+ openMeterActive);
+                    System.out.println("openMeterActive "+ openMeterActive.isActive());
+
+                    if(openMeterActive != null && openMeterActive.isActive()){
+                        Intent meterAcitvityIntent = new Intent(context,Class.forName("in.juspay.mobility.OpenMeterActivity"));
+                        context.startActivity(meterAcitvityIntent);
+                    }else{
+                        startMainActivity(context);
+                    }
+
+
                     if (merchantType.equals("DRIVER")){
                         // NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                     }
@@ -1080,4 +1091,12 @@ public class NotificationUtils {
             }
         }
     }
+
+    public static OpenMeterActive openMeterActive;
+
+    public interface OpenMeterActive{
+        public  boolean isActive();
+    }
+
+
 }

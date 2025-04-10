@@ -55,6 +55,7 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "web-html"
+  , "console"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
