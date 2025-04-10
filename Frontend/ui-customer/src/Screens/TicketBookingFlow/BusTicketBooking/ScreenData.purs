@@ -28,8 +28,9 @@ initData =
     , ticketDetailsState : Nothing
     }
   , props: {
-    srcLat :  0.0000,
-    srcLong :  0.0000,
-    showAllTickets : false
-  }
+    srcLat :  0.0,
+    srcLong :  0.0,
+    showAllTickets : false,
+    locateOnMap : false
+    } 
   }
