@@ -239,6 +239,22 @@ public class LocationUpdateService extends Service {
         }
     }
 
+    public interface ReactLocationEmitter {
+        void emitter(String payload);
+    }
+
+    public ReactLocationEmitter locationEmitter;
+
+    public void storeReactEmitter(ReactLocationEmitter reactLocationEmitter){
+        locationEmitter = reactLocationEmitter;
+    }
+
+    public void emitReactEvent(String payload) {
+        if(locationEmitter != null){
+            locationEmitter.emitter(payload);
+            storeLocationInFile = true;
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -799,6 +815,9 @@ public class LocationUpdateService extends Service {
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
 
+            if(locationEmitter != null){
+                emitReactEvent(locationPayload.toString());
+            }
 
             Log.d(LOG_TAG, "DriverUpdateLoc Payload Created - " + locationPayload);
             Log.d(LOG_TAG, "DriverUpdateLoc Executor Status - " + executorLocUpdate.isShutdown() + " ExecutorOffFor - " + executorBusy + " delayForGNew - " + delayForGNew);

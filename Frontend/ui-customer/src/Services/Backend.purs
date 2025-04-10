@@ -119,12 +119,12 @@ withAPIResult url f flow = do
   if (isInvalidUrl url) then pure $ Left customError
   else do
     let start = getTime unit
-    resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow    
+    resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
     let end = getTime unit
     void $ pure $ printLog "withAPIResult url" url
     case resp of
         Right res -> do
-            let _ = setKeyInWindow "noInternetCount" 0 
+            let _ = setKeyInWindow "noInternetCount" 0
             void $ pure $ printLog "success resp" res
         Left (err) -> do
             _ <- pure $ toggleBtnLoader "" false
@@ -146,7 +146,7 @@ withAPIResultBT url f errorHandler flow = do
   if (isInvalidUrl url) then errorHandler customError
   else do
     let start = getTime unit
-    resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow    
+    resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
     let end = getTime unit
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of
@@ -382,16 +382,16 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
     let appConfig = CP.getAppConfig CP.appConfig
         searchRequest = ( OneWaySearchReq
                 { "startTime" : Just startTime
-                , "destination" : SearchReqLocation 
-                    { "gps" : LatLong 
-                        { "lat" : dlat 
+                , "destination" : SearchReqLocation
+                    { "gps" : LatLong
+                        { "lat" : dlat
                         , "lon" : dlong
                         }
                     , "address" : validateLocationAddress dlat dlong (LocationAddress desAdd)
                     }
-                , "origin" : SearchReqLocation 
-                    { "gps" : LatLong 
-                        { "lat" : slat 
+                , "origin" : SearchReqLocation
+                    { "gps" : LatLong
+                        { "lat" : slat
                         , "lon" : slong
                         }
                     , "address" : validateLocationAddress slat slong (LocationAddress srcAdd)
@@ -402,30 +402,30 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "sessionToken" : Just sessionToken
                 , "isSpecialLocation" : Just isSpecialLocation
                 , "quotesUnifiedFlow" : Just true
-                , "rideRequestAndRideOtpUnifiedFlow" : if searchActionType == ST.AMBULANCE then Just false else Just true 
+                , "rideRequestAndRideOtpUnifiedFlow" : if searchActionType == ST.AMBULANCE then Just false else Just true
                 }
             )
     in case searchActionType of
-        ST.DELIVERY -> SearchReq 
+        ST.DELIVERY -> SearchReq
             { "contents" : DeliverySearchRequest searchRequest
             , "fareProductType" : "DELIVERY"
             }
-        _ -> SearchReq 
+        _ -> SearchReq
             { "contents" : OneWaySearchRequest searchRequest
             , "fareProductType" : show searchActionType
             }
-            
-    where 
+
+    where
         validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
-        validateLocationAddress lat long address = 
+        validateLocationAddress lat long address =
             let addressValidated = validateAddressHelper address
-            in 
+            in
                 if addressValidated
-                    then address 
+                    then address
                     else fallbackAndFetchAgain lat long
 
         validateAddressHelper :: LocationAddress -> Boolean
-        validateAddressHelper (LocationAddress address) = 
+        validateAddressHelper (LocationAddress address) =
             or
                 [ isNonEmpty address.area
                 , isNonEmpty address.state
@@ -438,11 +438,11 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , isNonEmpty address.ward
                 , isNonEmpty address.placeId
                 ]
-        
+
         fallbackAndFetchAgain :: Number -> Number -> LocationAddress
-        fallbackAndFetchAgain lat long = 
+        fallbackAndFetchAgain lat long =
             let addressFetched = runFn2 JB.getLocationNameV2 lat long
-            in 
+            in
                 if addressFetched /= "NO_LOCATION_FOUND" then
                     LocationAddress $ Constants.encodeAddress addressFetched [] Nothing lat long
                 else do
@@ -473,7 +473,7 @@ rideConfirm quoteId = do
         unwrapResponse (x) = x
 
 addOrEditStop :: String -> StopReq -> Boolean -> Flow GlobalState (Either ErrorResponse APISuccessResp)
-addOrEditStop bookingId req isEdit = do 
+addOrEditStop bookingId req isEdit = do
     headers <- getHeaders "" false
     withAPIResult (EP.addOrEditStop isEdit bookingId) unwrapResponse $ callAPI headers (StopRequest bookingId isEdit req)
     where
@@ -603,7 +603,7 @@ getFavouriteDriverTrips limit offset onlyActive driverNo = do
         withAPIResult (EP.getFavouriteDriverTrips limit offset onlyActive (Just "COMPLETED") Nothing)  unwrapResponse $ callAPI headers (makeUpdateReq limit offset onlyActive (Just "COMPLETED") Nothing driverNo)
     where
         makeUpdateReq :: String -> String -> String -> Maybe String -> Maybe String -> String -> FavouriteDriverTripsReq
-        makeUpdateReq limit offset onlyActive status clientId driverNo = 
+        makeUpdateReq limit offset onlyActive status clientId driverNo =
             FavouriteDriverTripsReq limit offset onlyActive status clientId $ FavouriteDriverTripsBody $ { driverNumber : driverNo }
 
         unwrapResponse (x) = x
@@ -621,12 +621,12 @@ rideBookingList :: String -> String -> String -> Flow GlobalState (Either ErrorR
 rideBookingList limit offset onlyActive = do
     headers <- getHeaders "" true
     let config = stuckRideFilterConfig ""
-    if (config.enable && onlyActive == show true) 
-      then do 
+    if (config.enable && onlyActive == show true)
+      then do
         let lim = fromMaybe 1 $ fromString limit
         resp <- withAPIResult (EP.rideBookingList (if lim < 5 then "5" else "10") offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing Nothing)
         case resp of
-          Right resp -> do 
+          Right resp -> do
             let filteredResp = spy "getFilteredRides" $ getFilteredRides resp lim
             pure $ Right $ filteredResp
           Left err -> pure $ Left err
@@ -636,16 +636,16 @@ rideBookingList limit offset onlyActive = do
         unwrapResponse (x) = x
 
 getFilteredRides :: RideBookingListRes -> Int -> RideBookingListRes
-getFilteredRides (RideBookingListRes resp) lim = 
+getFilteredRides (RideBookingListRes resp) lim =
   let config = stuckRideFilterConfig ""
-  in 
+  in
     RideBookingListRes {
     list : take lim $ filter (\(RideBookingRes resp) ->
       let duration = case resp.returnTime of
                       Nothing -> fromMaybe config.estimatedDurationFallback resp.estimatedDuration
                       Just date -> runFn2 JB.differenceBetweenTwoUTC (fromMaybe resp.createdAt resp.rideScheduledTime) date
       in ((JB.getEpochTime (fromMaybe resp.createdAt resp.rideScheduledTime)) + ((toNumber duration) * 1000.0) + config.buffer) >= JB.getEpochTime (EHC.getCurrentUTC "")) resp.list
-    } 
+    }
 
 rideBookingListWithStatus :: String -> String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse RideBookingListRes)
 rideBookingListWithStatus limit offset status maybeClientId = do
@@ -741,10 +741,10 @@ editProfileRequest firstName middleName lastName emailID gender hasDisability di
     }
 
 mkDisabilityData :: DisabilityT -> String -> Disability
-mkDisabilityData selectedDisability otherDisabilityDescription = 
+mkDisabilityData selectedDisability otherDisabilityDescription =
     Disability{
-      id : selectedDisability.id 
-    , tag : selectedDisability.tag 
+      id : selectedDisability.id
+    , tag : selectedDisability.tag
     , description : case selectedDisability.tag of
         "OTHER" -> otherDisabilityDescription
         _       -> selectedDisability.description
@@ -933,13 +933,13 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
             callDrawRoute route
     where
         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
-        callDrawRoute route = do 
+        callDrawRoute route = do
             case route of
                 Just (Route routes) -> do
                     let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig{anchorV = 1.0} Nothing routeType "LineString" true JB.DEFAULT specialLocation
                     lift $ lift $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                     pure route
-                    
+
                 Nothing -> pure route
 
 type Markers = {
@@ -1096,7 +1096,7 @@ getPersonStatsBT _ = do
     withAPIResultBT (EP.personStats "") (\x -> x) errorHandler (lift $ lift $ callAPI headers PersonStatsReq)
     where
     errorHandler errorPayload = do
-            BackT $ pure GoBack 
+            BackT $ pure GoBack
 
 getTicketPlaceServicesBT :: String -> String-> FlowBT String TicketServicesResponse
 getTicketPlaceServicesBT placeId date= do
@@ -1104,7 +1104,7 @@ getTicketPlaceServicesBT placeId date= do
     withAPIResultBT (EP.ticketPlaceServices placeId date) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketServiceReq placeId date))
     where
     errorHandler errorPayload = do
-            BackT $ pure GoBack 
+            BackT $ pure GoBack
 
 getTicketPlacesBT :: String -> FlowBT String TicketPlaceResponse
 getTicketPlacesBT _ = do
@@ -1112,7 +1112,7 @@ getTicketPlacesBT _ = do
     withAPIResultBT (EP.ticketPlaces "") (\x -> x) errorHandler (lift $ lift $ callAPI headers TicketPlaceReq)
     where
     errorHandler errorPayload = do
-      BackT $ pure GoBack 
+      BackT $ pure GoBack
 
 getTicketPlaces :: String -> Flow GlobalState (Either ErrorResponse TicketPlaceResponse)
 getTicketPlaces _ = do
@@ -1136,8 +1136,8 @@ bookTicketsBT payload placeId = do
         BackT $ pure GoBack
 
 mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
-mkBookingTicketReq ticketBookingScreenData = 
-  TicketBookingReq 
+mkBookingTicketReq ticketBookingScreenData =
+  TicketBookingReq
     { services : createTicketServiceRequest ticketBookingScreenData.servicesInfo,
       visitDate : convertUTCtoISC ticketBookingScreenData.dateOfVisit "YYYY-MM-DD"
     }
@@ -1147,7 +1147,7 @@ mkBookingTicketReq ticketBookingScreenData =
       where
         createPeopleCategoriesRespRequest :: TicketServiceData -> Maybe TicketService
         createPeopleCategoriesRespRequest service =
-            let filteredSelCategories = filter (\category -> category.isSelected ) service.serviceCategories 
+            let filteredSelCategories = filter (\category -> category.isSelected ) service.serviceCategories
                 updateFilteredSCOntheBasisOfPC = updateServiceCategories filteredSelCategories
                 finalCategoires = filter (\sc -> not null sc.peopleCategories) updateFilteredSCOntheBasisOfPC
                 mbbusinessHourId = case service.selectedBHId of
@@ -1156,26 +1156,26 @@ mkBookingTicketReq ticketBookingScreenData =
             in
             case mbbusinessHourId of
                 Nothing -> Nothing
-                Just bhourId -> 
-                    let generatedCatsData = map generateCatData finalCategoires in 
-                    if null generatedCatsData then Nothing 
+                Just bhourId ->
+                    let generatedCatsData = map generateCatData finalCategoires in
+                    if null generatedCatsData then Nothing
                     else Just $
-                            TicketService 
+                            TicketService
                             {   serviceId : service.id,
                                 businessHourId : bhourId,
                                 categories : map generateCatData finalCategoires
                             }
 
-        getBHIdForSelectedTimeIntervals categories = 
-            case (categories !! 0) of 
+        getBHIdForSelectedTimeIntervals categories =
+            case (categories !! 0) of
                 Nothing -> Nothing
                 Just cat -> maybe Nothing (\selTimeInterval -> Just selTimeInterval.bhourId) (getMbTimeInterval cat)
-                
+
         getMbTimeInterval cat = maybe Nothing (\opDay -> opDay.timeIntervals !! 0) cat.validOpDay
-                     
+
         updateServiceCategories serviceCategories = map (\cat -> cat {peopleCategories = filter (\pc -> pc.currentValue > 0) cat.peopleCategories}) serviceCategories
 
-        generateCatData category = 
+        generateCatData category =
           TicketBookingCategory
           {  categoryId : category.categoryId,
              peopleCategories : map (\pc -> TicketBookingPeopleCategory {peopleCategoryId : pc.peopleCategoryId, numberOfUnits : pc.currentValue}) category.peopleCategories
@@ -1187,17 +1187,17 @@ getAllBookingsBT :: BookingStatus ->  FlowBT String GetAllBookingsRes
 getAllBookingsBT status = do
     headers <- getHeaders' "" false
     withAPIResultBT (EP.getAllBookings (show status)) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetAllBookingsReq (show status)))
-    where 
+    where
     errorHandler errorPayload = do
             BackT $ pure GoBack
 
 
 getTicketBookingDetailsBT :: String -> FlowBT String TicketBookingDetails
 getTicketBookingDetailsBT shortId = do
-    headers <- getHeaders' "" false 
+    headers <- getHeaders' "" false
     withAPIResultBT (EP.ticketBookingDetails shortId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetBookingInfoReq shortId))
     where
-    errorHandler errorPayload = do 
+    errorHandler errorPayload = do
             BackT $ pure GoBack
 
 getTicketStatusBT :: String -> FlowBT String GetTicketStatusResp
@@ -1334,7 +1334,7 @@ getFollowRide _ = do
 
 -- getMetroBookingStatus :: String -> FlowBT String GetMetroBookingStatusResp
 getMetroBookingStatus :: String -> Flow GlobalState (Either ErrorResponse GetMetroBookingStatusResp)
-getMetroBookingStatus shortOrderID = do 
+getMetroBookingStatus shortOrderID = do
   headers <- getHeaders "" false
   withAPIResult (EP.getMetroBookingStatus shortOrderID) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq shortOrderID)
   where
@@ -1349,7 +1349,7 @@ getMetroBookingStatusListBT vehicleType limit offset = do
             BackT $ pure GoBack
 
 getMetroBookingStatusList :: String -> Maybe String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetMetroBookingListResp)
-getMetroBookingStatusList vehicleType limit offset = do 
+getMetroBookingStatusList vehicleType limit offset = do
   headers <- getHeaders "" false
   withAPIResult (EP.getMetroBookingList vehicleType limit offset) unwrapResponse $ callAPI headers (GetMetroBookingListReq vehicleType limit offset)
   where
@@ -1377,7 +1377,7 @@ getMetroStationBT vehicleType city routeCode endStationCode location = do
     withAPIResultBT (EP.getMetroStations vehicleType city routeCode endStationCode location) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode endStationCode location)
     where
     errorHandler errorPayload = do
-      BackT $ pure GoBack 
+      BackT $ pure GoBack
 
 getBusRoutesBT :: String -> String -> String -> FlowBT String GetBusRoutesResponse
 getBusRoutesBT city startStationCode endStationCode= do
@@ -1401,12 +1401,12 @@ frfsSearch vehicleType requestBody = do
     withAPIResult (EP.frfsSearch vehicleType) identity $ callAPI headers (FrfsSearchRequest requestBody vehicleType)
 
 busAutoCompleteBT :: String -> String -> String -> Maybe String -> String -> Maybe String -> FlowBT String AutoCompleteResp
-busAutoCompleteBT vehicleType city location input limit offset = do 
+busAutoCompleteBT vehicleType city location input limit offset = do
     headers <- getHeaders' "" false
     withAPIResultBT (EP.busAutoComplete vehicleType city location input limit offset) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ BusAutoCompleteReq vehicleType city location input limit offset)
     where
     errorHandler errorPayload = do
-      BackT $ pure GoBack 
+      BackT $ pure GoBack
 
 
 makeSearchMetroReq :: String -> String -> Int -> Maybe String-> FRFSSearchAPIReq
@@ -1431,7 +1431,7 @@ frfsQuotes searchId = do
   withAPIResult (EP.frfsQuotes searchId) unwrapResponse $ callAPI headers (FrfsQuotesReq searchId)
   where
   unwrapResponse x = x
- 
+
 confirmMetroQuoteBT :: String -> FlowBT String FRFSTicketBookingStatusAPIRes
 confirmMetroQuoteBT quoteId = do
         headers <- getHeaders' "" false
@@ -1525,7 +1525,7 @@ pushSDKEvents = do
     where
         unwrapResponse x = x
 
-  
+
 addStop :: String -> AddStopReq -> FlowBT String APISuccessResp
 addStop bookingId req = (callApiBT (AddStopRequest bookingId req))
 
@@ -1561,14 +1561,14 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq { "contents" : RentalSearchRequest (
                                         RentalSearchReq {
-                                                "stops" : if dlat == 0.0 then Nothing else 
+                                                "stops" : if dlat == 0.0 then Nothing else
                                                     (Just [SearchReqLocation {
                                                            "gps" : LatLong {
                                                                "lat" : dlat ,
                                                                "lon" : dlong
                                                                },
                                                            "address" : (LocationAddress desAdd)
-                                                  }]), 
+                                                  }]),
                                                   "origin" : SearchReqLocation {
                                                    "gps" : LatLong {
                                                                "lat" : slat ,
@@ -1591,7 +1591,7 @@ makeEditLocationRequest rideId srcAddress destAddress =
     EditLocationRequest rideId $ makeEditLocationReq srcAddress destAddress
 
 makeEditLocationReq :: Maybe SearchReqLocation -> Maybe SearchReqLocation -> EditLocationReq
-makeEditLocationReq srcAddress destAddress = 
+makeEditLocationReq srcAddress destAddress =
     EditLocationReq {
         "origin" : srcAddress,
         "destination" : destAddress
@@ -1611,14 +1611,14 @@ makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundT
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq { "contents" : RoundTripSearchRequest (
                                 RoundTripSearchReq {
-                                        "stops" : if dlat == 0.0 then Nothing else 
+                                        "stops" : if dlat == 0.0 then Nothing else
                                             (Just [SearchReqLocation {
                                                     "gps" : LatLong {
                                                         "lat" : dlat ,
                                                         "lon" : dlong
                                                         },
                                                     "address" : (LocationAddress desAdd)
-                                            }]), 
+                                            }]),
                                             "origin" : SearchReqLocation {
                                             "gps" : LatLong {
                                                         "lat" : slat ,
@@ -1718,3 +1718,38 @@ deletePerson reason = do
       reasonToDelete : reason
     }
     unwrapResponse x = x
+
+---------------------------------------- confirmMetroQuoteV2 ---------------------------------------------
+verifyVpa :: String -> Flow GlobalState (Either ErrorResponse VerifyVPAResp)
+verifyVpa vpa = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.verifyVpa vpa) unwrapResponse $ callAPI headers (VerifyVPAReq vpa)
+  where
+    unwrapResponse x = x
+
+updateVpa :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+updateVpa vpa = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.updateVpa "") unwrapResponse $ callAPI headers (UpdateVpaReq {vpa})
+  where
+    unwrapResponse x = x
+
+getPayoutHistory :: String -> Flow GlobalState (Either ErrorResponse PayoutHistoryResp)
+getPayoutHistory vpa = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.payoutHistory "") unwrapResponse $ callAPI headers (PayoutHistoryReq "")
+  where
+    unwrapResponse x = x
+
+---------------------------------------- deletePerson ---------------------------------------------
+deletePerson :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+deletePerson reason = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deletePerson "") unwrapResponse $ callAPI headers $ makeReq reason
+  where
+    makeReq :: String -> DeletePersonReq
+    makeReq reason = DeletePersonReq {
+      reasonToDelete : reason
+    }
+    unwrapResponse x = x
+
