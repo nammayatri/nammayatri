@@ -28,43 +28,31 @@ android {
         dev {
             dimension "mode"
         }
-        nyUser {
+
+        nammaYatri {
             dimension "app"
         }
-        nyDriver {
+
+        manaYatri {
             dimension "app"
         }
-        myUser {
+
+        bridge {
             dimension "app"
         }
-        myDriver {
+
+        yatriSathi {
             dimension "app"
         }
-        bridgeUser {
+
+        yatri {
             dimension "app"
         }
-        bridgeDriver {
+        passCulture {
             dimension "app"
         }
-        ysUser {
-            dimension "app"
-        }
-        ysDriver {
-            dimension "app"
-        }
-        yatriUser {
-            dimension "app"
-        }
-        yatriDriver {
-            dimension "app"
-        }
-        passCulturePartner {
-            dimension "app"
-        }
-        oyUser {
-            dimension "app"
-        }
-        oyDriver {
+
+        odishaYatri {
             dimension "app"
         }
     }
@@ -80,10 +68,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
-    implementation libs.appcompat
-    implementation libs.material
-    implementation libs.activity
-    implementation libs.constraintlayout
+
 
     implementation 'com.google.code.gson:gson:2.8.8'
 
@@ -115,5 +100,4 @@ dependencies {
     implementation "com.facebook.soloader:soloader:0.10.5"
     implementation "com.facebook.react:react-android:0.72.3"
     implementation files('libs/sdk-release.aar') // add prod sdk-release file when uploading to playstore
-    implementation files('libs/android-jsc-r250231.aar')
 }

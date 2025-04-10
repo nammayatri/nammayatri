@@ -10,7 +10,7 @@ import Foreign.Object (fromHomogeneous)
 
 config :: AppConfig
 config =
-  { 
+  {
     logWhitelistConfig: {
       aadhaarVerificationScreenLogWhitelist : [],
       aboutUsScreenLogWhitelist : ["props.demoModePopup", "props.enableConfirmPassword", "props.enableDemoModeCount"],
@@ -158,7 +158,7 @@ config =
   }
   , profileVerification : {
       aadharVerificationRequired : false
-    } 
+    }
   , gotoConfig : {
     enableGoto : false,
     maxGotoLocations : 5}
@@ -169,10 +169,10 @@ config =
       hearingImpairmentVideo : "",
       genericAccessibilityVideo : ""
   }
-  , profile : { 
+  , profile : {
     bookingOptionMenuForTaxi : false,
     showBookingOption : true
-  , checkRCStatusForBookingOption : true 
+  , checkRCStatusForBookingOption : true
   }
   , waitTimeConfig : {
     enableWaitTime : true,
@@ -183,23 +183,23 @@ config =
     straightLineDist : 0.015
   }
   , bottomNavConfig : {
-      home : 
+      home :
         { isVisible : true,
           showNew : false
         },
-      rideHistory : 
+      rideHistory :
         { isVisible : false,
           showNew : false
         },
-      driverEarnings : 
+      driverEarnings :
         { isVisible : true,
           showNew : false
         },
-      subscription : 
+      subscription :
         { isVisible : true,
           showNew : false
         },
-      referral : 
+      referral :
         { isVisible : true,
           showNew : true
         },
@@ -208,7 +208,7 @@ config =
           showNew : false
         }
     }
-  , mapConfig : 
+  , mapConfig :
       { animationDuration : 500
       }
   , unserviceableThreshold : 250.0
@@ -825,7 +825,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {             
+            {
               cityName : "Noida",
               chatFooterBanner: Nothing,
               enableNammaMeter : Nothing,
@@ -989,7 +989,7 @@ config =
               showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
-              uploadRCandDL : true, 
+              uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "",
               registration : {
@@ -1056,7 +1056,7 @@ config =
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
               }
-            }, 
+            },
             {
               cityName : "Kochi",
               chatFooterBanner: Nothing,
@@ -1300,7 +1300,7 @@ defRateCardConfig = {
 }
 
 defaultCityConfig :: CityConfig
-defaultCityConfig = 
+defaultCityConfig =
   case MU.getMerchant CTA.FunctionCall of
     MU.YATRISATHI -> ysDefaultCityConfig
     _ -> allCitiesDefaultCityConfig
@@ -1327,9 +1327,9 @@ allCitiesDefaultCityConfig = {
   showCustomerReferral : false,
   uploadRCandDL : true,
   vehicleNSImg : "",
-  registration : { 
+  registration : {
     callSupport : false,
-    supportWAN : "", 
+    supportWAN : "",
     whatsappSupport : false
   },
   variantSubscriptionConfig : {
@@ -1428,7 +1428,7 @@ defaultStartAudioUrls = {
 }
 
 ysDefaultCityConfig :: CityConfig
-ysDefaultCityConfig = 
+ysDefaultCityConfig =
   allCitiesDefaultCityConfig {
       showSubscriptions = true
     , enableAdvancedBooking = true
@@ -1518,5 +1518,5 @@ ysDefaultCityConfig =
               nonAcCab : defaultStartAudioUrls,
               auto : defaultStartAudioUrls,
               bike : defaultStartAudioUrls
-            } 
+            }
   }

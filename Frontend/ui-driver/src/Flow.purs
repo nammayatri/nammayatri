@@ -2349,9 +2349,9 @@ currentRideFlow activeRideResp isActiveRide = do
         _ -> do
           for_ activeRideResponse.list $ \(RidesInfo ride) -> do
             let isMeterRide = maybe false (\(API.TripCategory tripCategory) -> tripCategory.contents == Just "MeterRide" ) ride.tripCategory
-            if isMeterRide then do
-              modifyScreenState $ MeterRideScreenStateType (\meterRideScreen -> meterRideScreen {props {isMeterRideStarted = true}})
-              meterRideScreenFlow
+            if isMeterRide then  do
+              void $ liftFlowBT $ JB.requestBackgroundLocation unit
+              lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity (cb <<< Right) $> nonCanceler
             else do
               let decodedSource = decodeAddress ride.fromLocation true
                   decodedDestination = (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation
@@ -3051,7 +3051,10 @@ homeScreenFlow = do
               pure unit
         Left err -> pure unit
       void $ lift $ lift $ toggleLoader false
-    GO_TO_METER_RIDE_SCREEN -> meterRideScreenFlow
+    GO_TO_METER_RIDE_SCREEN -> do
+      (GlobalState globalstate) <- getState
+      when (globalstate.homeScreen.props.driverStatusSet == ST.Offline) $ changeDriverStatus ST.Online
+      lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
   homeScreenFlow
 
 handleFcm :: String -> HomeScreenState -> NotificationBody -> FlowBT String Unit
@@ -3100,7 +3103,7 @@ handleFcm notificationType state notificationBody = do
     "USER_FAVOURITE_DRIVER" -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true, title = if DS.null state.data.favPopUp.title then notificationBody.title else (fromMaybe "User" (DA.head (split (Pattern " ") notificationBody.title))) <> ", " <> state.data.favPopUp.title , message = reverseString $ DS.drop 4 (reverseString notificationBody.message)}}})
       homeScreenFlow
-    _                   -> pure unit 
+    _                   -> pure unit
 
 endTheRide :: String -> String -> Maybe String -> Maybe String -> String -> String -> String -> HomeScreenState -> FlowBT String Unit
 endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do

@@ -29,7 +29,7 @@ window.getMerchantConfig = function () {
     "BONUS_EARNED" : "true",
     "clientName" : "Namma Yatri",
     "languageList" : [
-      {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
+      {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"},
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
       {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
       {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"},
@@ -151,11 +151,11 @@ window.getMerchantConfig = function () {
       "enableGoto" : true
     }
     , "bottomNavConfig" : {
-      "subscription" : 
+      "subscription" :
             { "isVisible" : true
             },
-      "referral" : 
-      { 
+      "referral" :
+      {
         "showNew" : true
       }
     }
@@ -305,7 +305,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -397,7 +397,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -491,7 +491,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -536,7 +536,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, 
+        "callDriverInfoPost": false,
         "cityLat" : 17.967432,
         "cityLong" : 79.588875,
         "supportNumber" : "+918069724900",
@@ -585,7 +585,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -629,7 +629,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, 
+        "callDriverInfoPost": false,
         "cityLat" : 13.620298,
         "cityLong" : 79.4323363,
         "supportNumber" : "+918069724900",
@@ -678,7 +678,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -864,7 +864,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -901,6 +901,9 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Chennai",
+        "enableNammaMeter" : {
+          "AUTO_RICKSHAW": true
+        },
         "chatFooterBanner": {
           "enable": true,
           "defaultText" : "Do not demand extra from customer",
@@ -970,7 +973,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1045,7 +1048,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1120,7 +1123,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1270,7 +1273,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1345,7 +1348,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1420,7 +1423,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1495,7 +1498,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1538,7 +1541,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking": false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink": "",
-        "callDriverInfoPost": false, 
+        "callDriverInfoPost": false,
         "cityLat" : 9.931233,
         "cityLong" : 76.267303,
         "supportNumber" : "08069724930",
@@ -1662,7 +1665,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1754,7 +1757,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1846,7 +1849,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -1938,7 +1941,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -2030,7 +2033,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -2122,7 +2125,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -2214,7 +2217,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -2289,7 +2292,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",        
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -2364,7 +2367,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
+        "gstPercentage" :  "18",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -2406,7 +2409,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, 
+        "callDriverInfoPost": false,
         "cityLat" : 10.38336055,
         "cityLong" : 78.80014621,
         "supportNumber" : "08069724899",
@@ -2455,7 +2458,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -2723,7 +2726,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.2376, 
+        "cityLat" : 20.2376,
         "cityLong" : 84.2700,
         "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
@@ -2798,7 +2801,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.2376, 
+        "cityLat" : 20.2376,
         "cityLong" : 84.2700,
         "supportNumber" : "08069724919",
         "languageKey" : "OD_IN",
@@ -2873,7 +2876,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.30378209, 
+        "cityLat" : 20.30378209,
         "cityLong" : 85.82251309,
         "supportNumber" : "08069724914",
         "languageKey" : "OD_IN",
@@ -2948,7 +2951,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.46615822, 
+        "cityLat" : 20.46615822,
         "cityLong" : 85.88302282,
         "supportNumber" : "08069724914",
         "languageKey" : "OD_IN",
@@ -3023,7 +3026,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 19.80495793, 
+        "cityLat" : 19.80495793,
         "cityLong" : 85.82209410,
         "supportNumber" : "08069724914",
         "languageKey" : "KN_IN",
@@ -3090,7 +3093,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      
+
       {
         "cityName" : "Bidar",
         "mapImage" : "ny_ic_location_map",
