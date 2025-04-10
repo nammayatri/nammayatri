@@ -51,6 +51,7 @@ import qualified Domain.Types.Yudhishthira as Y
 import Environment (Flow)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
+import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -270,7 +271,7 @@ endRideHandler ::
   EndRideReq ->
   m EndRideResp
 endRideHandler handle@ServiceHandle {..} rideId req = do
-  rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  rideOld <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
   case req of
@@ -358,7 +359,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         estimatedTollCharges = rideOld.estimatedTollCharges
         estimatedTollNames = rideOld.estimatedTollNames
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
-    advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
+    advanceRide <- runInMasterDbAndRedis $ QRide.getActiveAdvancedRideByDriverId driverId
     tripEndPoints <- do
       let mbAdvanceRideId = (.id) <$> advanceRide
       res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId Nothing
@@ -399,7 +400,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show tripEndPoints'
                   withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
 
-                updRide <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+                updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
                 distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
 
