@@ -5,6 +5,7 @@ import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
 import Data.List (nub)
 import Data.Text.Encoding (decodeUtf8)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
@@ -17,6 +18,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
@@ -140,11 +142,12 @@ getNextBusDetails ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Text ->
-    Kernel.Prelude.Maybe Text ->
-    Environment.Flow API.Types.UI.NearbyBuses.NextBusDetailsResponse
+    Text ->
+    Environment.Flow JourneyUtils.UpcomingTripInfo
   )
-getNextBusDetails _ _ _ = throwError $ InvalidRequest "Not implemented yet"
-
--- Implement the logic for getting next bus details here
--- You can use the provided parameters to fetch the required data
--- and return an appropriate response.
+getNextBusDetails (mbPersonId, _) routeCode stopCode = do
+  riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
+  person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+  now <- getCurrentTime
+  integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" person.merchantOperatingCityId BecknV2.OnDemand.Enums.BUS DIBC.MULTIMODAL >>= fromMaybeM (InternalError "No integrated bpp config found")
+  JourneyUtils.findUpcomingTrips [routeCode] stopCode Nothing now integratedBPPConfig.id

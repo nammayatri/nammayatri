@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByTripIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.RouteStopCalender.RouteStopCalender]))
+  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopCalender.RouteStopCalender])
 findByTripIds tripId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -48,7 +48,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RouteStopCalender.RouteStopCalender {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+    [ Se.Set Beam.serviceability serviceability,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -61,6 +62,7 @@ instance FromTType' Beam.RouteStopCalender Domain.Types.RouteStopCalender.RouteS
       Just
         Domain.Types.RouteStopCalender.RouteStopCalender
           { integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
+            serviceability = serviceability,
             tripId = Kernel.Types.Id.Id tripId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -72,6 +74,7 @@ instance ToTType' Beam.RouteStopCalender Domain.Types.RouteStopCalender.RouteSto
   toTType' (Domain.Types.RouteStopCalender.RouteStopCalender {..}) = do
     Beam.RouteStopCalenderT
       { Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
+        Beam.serviceability = serviceability,
         Beam.tripId = Kernel.Types.Id.getId tripId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

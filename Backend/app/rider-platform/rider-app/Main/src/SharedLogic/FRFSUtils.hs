@@ -19,8 +19,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Domain.Types.AadhaarVerification as DAadhaarVerification
@@ -57,6 +55,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.Beam.Yudhishthira ()
 import Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Station as CQS
 import Storage.Queries.AadhaarVerification as QAV
@@ -351,80 +350,17 @@ data VehicleInfo = VehicleInfo
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Maybe LatLong -> m [VehicleTracking]
-trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platformType mbRiderPosition = do
+trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Maybe LatLong -> m [VehicleTracking]
+trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platformType mbRiderPosition = do
+  now <- getCurrentTime
   integratedBPPConfig <-
     QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
       >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
   case vehicleType of
     Spec.BUS -> do
-      vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
-      if any (\(_, vInfo) -> isNothing vInfo.upcomingStops) vehicleTrackingInfo && not (null vehicleTrackingInfo)
-        then do
-          let vehicleInfoWithLatLong :: [(Text, VehicleInfo, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) vehicleTrackingInfo
-          routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
-          let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
-              stopPairs = pairWithNext sortedStops
-          stopPairsWithWaypoints <- getStopPairsWithWaypoints stopPairs
-          let segmentDistances = [(stopPair, (sum $ zipWith distanceBetweenInMeters waypoints (tail waypoints), duration)) | (stopPair, (waypoints, duration)) <- stopPairsWithWaypoints]
-              segmentDistancesMap = Map.fromList segmentDistances
-          forM vehicleInfoWithLatLong $ \(vehicleId, vehicleInfo, vehicleLat, vehicleLon) -> do
-            minDistancesWithWaypoints <-
-              forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
-                let (groupedWaypoints, _) =
-                      foldr
-                        ( \point (distanceFromVehicleAndSubsequentWaypoints, subsequentWaypointsIncludingCurrentPoint) ->
-                            let distanceFromVehicle = highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLon) point
-                                subsequentWaypointsExcludingCurrentPoint = tail subsequentWaypointsIncludingCurrentPoint
-                             in (distanceFromVehicleAndSubsequentWaypoints <> [(distanceFromVehicle, subsequentWaypointsIncludingCurrentPoint)], subsequentWaypointsExcludingCurrentPoint)
-                        )
-                        ([], waypoints)
-                        waypoints
-                let minDistanceFromVehicle = minimumBy (comparing fst) groupedWaypoints
-                pure (minDistanceFromVehicle, nextStop)
-            let ((_, waypoints), nextStop) = minimumBy (comparing fst) minDistancesWithWaypoints
-                nextStopTravelDistance = foldr (\(currPoint, nextPoint) distance -> distance + distanceBetweenInMeters currPoint nextPoint) (HighPrecMeters 0) (pairWithNext waypoints)
-                upcomingStopsList = dropWhile (/= nextStop) sortedStops
-                upcomingStopPairs = pairWithNext upcomingStopsList
-
-                (segmentDistancesForUpcoming, segmentDurationsForUpcoming :: [Maybe Seconds]) = unzip $ map (\pair -> fromMaybe (HighPrecMeters 0, Nothing) (Map.lookup pair segmentDistancesMap)) upcomingStopPairs
-                mbNextStopTravelTime = listToMaybe segmentDurationsForUpcoming
-                nextStopTravelTime = fromMaybe (computeFromSpeed nextStopTravelDistance <$> vehicleInfo.speed) mbNextStopTravelTime
-
-                cumulativeDistances = scanl (+) nextStopTravelDistance segmentDistancesForUpcoming
-
-            now <- getCurrentTime
-            logDebug $ "Next stop: " <> show nextStop <> ", nextStopTravelDistance: " <> show (highPrecMetersToMeters nextStopTravelDistance) <> ", vehicleId: " <> show vehicleId
-            let (actualTime, delay) = calculateTimes now (highPrecMetersToMeters nextStopTravelDistance) nextStopTravelTime vehicleInfo.startTime
-            logDebug $ "Actual travel time: " <> show actualTime <> ", delay: " <> show delay <> ", vehicleId: " <> show vehicleId
-            let upcomingStopsEntries =
-                  zipWith3
-                    ( \stop cumulativeDist duration -> do
-                        UpcomingStop
-                          { stop = stop,
-                            estimatedTravelTime = if isNothing duration then (\speed -> Seconds $ round (cumulativeDist.getHighPrecMeters / realToFrac (max 1.0 speed))) <$> vehicleInfo.speed else duration, -- This is fallback value incase cached value is not available
-                            actualTravelTime = Nothing,
-                            distance = highPrecMetersToMeters cumulativeDist
-                          }
-                    )
-                    upcomingStopsList
-                    cumulativeDistances
-                    segmentDurationsForUpcoming
-                updatedUpcomingStopsEntries = case upcomingStopsEntries of
-                  [] -> []
-                  (next : rest) -> next {actualTravelTime = actualTime} : rest
-            let vehicleTracking =
-                  VehicleTracking
-                    { nextStop = Just nextStop,
-                      nextStopTravelDistance = Just $ highPrecMetersToMeters nextStopTravelDistance,
-                      upcomingStops = updatedUpcomingStopsEntries,
-                      vehicleId = Just vehicleId,
-                      vehicleInfo = Just vehicleInfo,
-                      ..
-                    }
-            updatedVehicleTracking <- updateVehicleTrackingFromCache vehicleId vehicleTracking
-            pure updatedVehicleTracking
-        else do
+      case platformType of
+        DIBC.APPLICATION -> do
+          vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
           return $
             ( \(vehicleId, vehicleInfo) ->
                 VehicleTracking
@@ -438,6 +374,39 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
                   }
             )
               <$> vehicleTrackingInfo
+        _ -> do
+          nearbyBuses <- CQMMB.getRoutesBuses routeCode -- Add a new logic to get the bus location and ETA, unify it with the existing logic @khuzema
+          logDebug $ "Got bus data for route " <> routeCode <> ": " <> show nearbyBuses
+          nearbyBuses.buses `forM` \bus -> do
+            let busData = bus.busData
+            let sortedEtaData = sortBy (comparing (.stopSeq)) (fromMaybe [] busData.eta_data)
+            let mbNextStop = listToMaybe sortedEtaData
+            mbNextStopMapping <-
+              case mbNextStop of
+                Just nextStop -> listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode routeCode nextStop.stopId integratedBPPConfig.id
+                Nothing -> pure Nothing
+            return $
+              VehicleTracking
+                { nextStop = mbNextStopMapping,
+                  nextStopTravelTime = (\t -> nominalDiffTimeToSeconds $ diffUTCTime t now) <$> (mbNextStop <&> (.arrivalTime)),
+                  nextStopTravelDistance = Nothing,
+                  upcomingStops = [], -- fix it later
+                  vehicleId = Just bus.vehicleNumber,
+                  vehicleInfo =
+                    Just $
+                      VehicleInfo
+                        { latitude = Just busData.latitude,
+                          longitude = Just busData.longitude,
+                          scheduleRelationship = Nothing,
+                          speed = Nothing,
+                          startDate = Nothing,
+                          startTime = Nothing,
+                          timestamp = Nothing,
+                          tripId = Nothing,
+                          upcomingStops = Nothing
+                        },
+                  delay = Nothing
+                }
     _ -> do
       route <- QRoute.findByRouteCode routeCode integratedBPPConfig.id >>= fromMaybeM (RouteNotFound routeCode)
       routeStops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
@@ -482,50 +451,6 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
             pure vehicleTracking
         Nothing -> pure []
   where
-    updateVehicleTrackingFromCache vehicleId vehicleTracking = do
-      mbCachedVehicleTracking :: Maybe VehicleTracking <- Redis.safeGet (mkVehicleTrackingKey vehicleId routeCode)
-      updatedTracking <- case mbCachedVehicleTracking of
-        Just cachedVehicleTracking -> do
-          logDebug $ "Vehicle tracking cache hit for vehicleId " <> show vehicleId <> " routeCode " <> show routeCode <> " cachedVehicleTracking " <> show cachedVehicleTracking
-          let cachedStopMap =
-                Map.fromList
-                  [ (RouteStopMapping.stopCode (stop cachedStop), estimatedTravelTime cachedStop)
-                    | cachedStop <- cachedVehicleTracking.upcomingStops
-                  ]
-              updatedUpcomingStops =
-                map
-                  ( \newStop ->
-                      case Map.lookup (RouteStopMapping.stopCode (stop newStop)) cachedStopMap of
-                        Just cachedEstimatedTime -> newStop {estimatedTravelTime = cachedEstimatedTime}
-                        Nothing -> newStop
-                  )
-                  (vehicleTracking.upcomingStops)
-              finalDelay = maybe (fromMaybe (Seconds 0) cachedVehicleTracking.delay) (\_ -> fromMaybe (Seconds 0) vehicleTracking.delay) vehicleTracking.delay
-          pure $ vehicleTracking {upcomingStops = updatedUpcomingStops, delay = Just finalDelay}
-        Nothing -> pure vehicleTracking
-      Redis.set (mkVehicleTrackingKey vehicleId routeCode) updatedTracking
-      pure updatedTracking
-
-    getStopPairsWithWaypoints stopPairs = do
-      Redis.safeGet (stopPairRoutePointsKey routeCode)
-        >>= \case
-          Just stopPairsWithWaypointAndDuration -> pure stopPairsWithWaypointAndDuration
-          Nothing -> do
-            stopPairsWithWaypointAndDuration <-
-              forM stopPairs $ \(currStop, nextStop) -> do
-                let request =
-                      Maps.GetRoutesReq
-                        { waypoints = NE.fromList [currStop.stopPoint, nextStop.stopPoint],
-                          calcPoints = True,
-                          mode = Just Maps.CAR
-                        }
-                routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
-                reqRouteInfo <- listToMaybe routeInfo & fromMaybeM (RouteNotFound routeCode)
-                let wayPoints = reqRouteInfo.points
-                pure ((currStop, nextStop), (wayPoints, reqRouteInfo.duration :: Maybe Seconds))
-            Redis.set (stopPairRoutePointsKey routeCode) stopPairsWithWaypointAndDuration
-            pure stopPairsWithWaypointAndDuration
-
     getStopPairsWithWaypointsForMetroAndSubway stopPairs waypoints =
       forM stopPairs $ \(currStop, nextStop) -> do
         let waypointsBetweenStops = fromMaybe [] (getWaypointsBetweenStops currStop.stopPoint nextStop.stopPoint waypoints)
@@ -593,22 +518,6 @@ trackVehicles personId merchantId merchantOpCityId vehicleType routeCode platfor
 
     pairWithNext :: [a] -> [(a, a)]
     pairWithNext xs = zip xs (tail xs)
-
-    stopPairRoutePointsKey :: Text -> Text
-    stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
-
-    calculateTimes :: UTCTime -> Meters -> Maybe Seconds -> Maybe UTCTime -> (Maybe Seconds, Maybe Seconds)
-    calculateTimes now nextStopTravelDistance nextStopTravelTime startTime
-      | nextStopTravelDistance > 100 = (Nothing, Nothing)
-      | otherwise =
-        let actualTime = fmap (nominalDiffTimeToSeconds . (`diffUTCTime` now)) startTime
-            delay = liftM2 (\t (Seconds est) -> Seconds (t - est)) (getSeconds <$> actualTime) nextStopTravelTime
-         in (actualTime, delay)
-
-    computeFromSpeed nextStopTravelDistance speed = Seconds $ round (nextStopTravelDistance.getHighPrecMeters / realToFrac (max 1.0 speed))
-
-mkVehicleTrackingKey :: Text -> Text -> Text
-mkVehicleTrackingKey vehicleId routeCode = "FRFS:VehicleTracking:" <> vehicleId <> ":" <> routeCode
 
 getDiscountInfo :: Bool -> Maybe Int -> Maybe Int -> Price -> Int -> Int -> (Maybe Int, Maybe HighPrecMoney)
 getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price quantity ticketsBookedInEvent =

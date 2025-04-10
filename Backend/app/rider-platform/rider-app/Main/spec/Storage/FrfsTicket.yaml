@@ -1043,11 +1043,13 @@ RouteStopCalender:
   tableName: route_stop_calender
   fields:
     tripId: Id RouteStopTimeTable
-    serviceability: [DayOfWeek]
+    serviceability: "[Int]"
     integratedBppConfigId: Id IntegratedBPPConfig
   constraints:
     tripId: PrimaryKey
     integratedBppConfigId: PrimaryKey
+  sqlType:
+    serviceability: integer[]
   queries:
     findByTripIds:
       kvFunction: findAllWithKV

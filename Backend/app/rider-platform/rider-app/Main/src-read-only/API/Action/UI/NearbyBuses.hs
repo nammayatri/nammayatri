@@ -18,6 +18,7 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
@@ -30,10 +31,10 @@ type API =
       :<|> TokenAuth
       :> "nextBusDetails"
       :> Capture "routeCode" Data.Text.Text
-      :> QueryParam "stopCode" Data.Text.Text
+      :> Capture "stopCode" Data.Text.Text
       :> Get
            '[JSON]
-           API.Types.UI.NearbyBuses.NextBusDetailsResponse
+           Lib.JourneyModule.Utils.UpcomingTripInfo
   )
 
 handler :: Environment.FlowServer API
@@ -53,7 +54,7 @@ getNextBusDetails ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Environment.FlowHandler API.Types.UI.NearbyBuses.NextBusDetailsResponse
+    Data.Text.Text ->
+    Environment.FlowHandler Lib.JourneyModule.Utils.UpcomingTripInfo
   )
 getNextBusDetails a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextBusDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

@@ -142,6 +142,7 @@ type GetStateFlow m r c =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasLongDurationRetryCfg r c
   )
 

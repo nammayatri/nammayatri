@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 
 data RouteStopCalender = RouteStopCalender
   { integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    serviceability :: [Kernel.Prelude.Int],
     tripId :: Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
