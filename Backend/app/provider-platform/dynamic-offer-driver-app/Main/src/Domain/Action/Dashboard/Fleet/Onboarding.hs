@@ -1,4 +1,9 @@
-module Domain.Action.Dashboard.Fleet.Onboarding (getOnboardingDocumentConfigs, getOnboardingRegisterStatus) where
+module Domain.Action.Dashboard.Fleet.Onboarding
+  ( getOnboardingDocumentConfigs,
+    getOnboardingRegisterStatus,
+    castStatusRes,
+  )
+where
 
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
