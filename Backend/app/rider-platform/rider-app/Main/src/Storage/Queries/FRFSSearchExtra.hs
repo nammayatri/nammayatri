@@ -69,3 +69,15 @@ updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV
     [Se.Set Beam.isDeleted isDeleted]
     [Se.Is Beam.id (Se.Eq reqId)]
+
+updateSdkTokenById :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> m ()
+updateSdkTokenById (Id reqId) crisSdkToken = do
+  updateOneWithKV
+    [Se.Set Beam.crisSdkToken crisSdkToken]
+    [Se.Is Beam.id (Se.Eq reqId)]
+
+updateEncryptedTicketDataById :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> m ()
+updateEncryptedTicketDataById (Id reqId) crisEncryptedTicketData = do
+  updateOneWithKV
+    [Se.Set Beam.crisEncryptedTicketData crisEncryptedTicketData]
+    [Se.Is Beam.id (Se.Eq reqId)]

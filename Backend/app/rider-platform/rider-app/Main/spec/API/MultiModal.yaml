@@ -128,6 +128,12 @@ types:
     journeyLegOrder: Int
     skipBooking: Bool
     ticketQuantity: Maybe Int
+    crisData: Maybe CrisData
+  CrisData:
+    osType: Text
+    osBuildVersion: Int
+    deviceId: Text
+    bookAuthCode: Text
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"

@@ -26,6 +26,10 @@ import qualified Lib.JourneyModule.Utils
 import Servant
 import Tools.Auth
 
+data CrisData = CrisData {bookAuthCode :: Kernel.Prelude.Text, deviceId :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Int, osType :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -58,7 +62,12 @@ data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [Journe
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyConfirmReqElement = JourneyConfirmReqElement {journeyLegOrder :: Kernel.Prelude.Int, skipBooking :: Kernel.Prelude.Bool, ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+data JourneyConfirmReqElement = JourneyConfirmReqElement
+  { crisData :: Kernel.Prelude.Maybe CrisData,
+    journeyLegOrder :: Kernel.Prelude.Int,
+    skipBooking :: Kernel.Prelude.Bool,
+    ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

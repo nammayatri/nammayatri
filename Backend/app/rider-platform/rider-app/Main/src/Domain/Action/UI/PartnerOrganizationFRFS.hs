@@ -511,6 +511,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             integratedBppConfigId = Just integratedBPPConfig.id,
             journeyRouteDetails = [],
             recentLocationId = Nothing,
+            crisSearchData = Nothing,
             ..
           }
 

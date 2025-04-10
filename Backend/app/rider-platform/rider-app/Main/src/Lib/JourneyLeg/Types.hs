@@ -56,3 +56,13 @@ data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
     toStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data CrisSearchData = CrisSearchData
+  { crisSdkToken :: Maybe Text,
+    crisEncryptedTicketData :: Maybe Text,
+    bookAuthCode :: Maybe Text,
+    deviceId :: Maybe Text,
+    osBuildVersion :: Maybe Int,
+    osType :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
