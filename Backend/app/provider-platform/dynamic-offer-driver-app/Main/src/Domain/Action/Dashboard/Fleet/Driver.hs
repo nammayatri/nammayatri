@@ -446,9 +446,12 @@ getDriverFleetGetAllDriver ::
 getDriverFleetGetAllDriver _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbMobileNumber mbName mbSearchString = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  mbMobileNumberHash <- mapM getDbHash (mbSearchString <|> mbMobileNumber)
-  logDebug $ "mobile number hash: " <> show mbMobileNumberHash <> " param-string: " <> show mbMobileNumber
-  pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mbMobileNumberHash mbName mbSearchString (Just True) Nothing
+  mobileNumberHash <- case mbSearchString of
+    Just _ -> pure Nothing
+    Nothing -> case mbMobileNumber of
+      Just phNo -> Just <$> getDbHash phNo
+      Nothing -> pure Nothing
+  pairs <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset mobileNumberHash mbName mbSearchString (Just True) Nothing
   fleetDriversInfos <- mapM convertToDriverAPIEntity pairs
   return $ Common.FleetListDriverRes fleetDriversInfos
 
