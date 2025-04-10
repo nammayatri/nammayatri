@@ -36,6 +36,7 @@ import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.maps.android.PolyUtil;
@@ -741,6 +742,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
     }
 
+    @JavascriptInterface
     public String getMarkerPosition (String _payload) {
         try {
             JSONObject payload = new JSONObject(_payload);

@@ -3109,3 +3109,9 @@ export const scrollToChildInScrollView = (scrollViewId, childViewId, index) => {
     return window.JBridge.scrollToChildInScrollView(JSON.stringify({scrollViewId: scrollViewId, childViewId : childViewId, index : index}));
   }
 } 
+
+export const showDynamicRouteMarker = (lat, lon, routeId, purescriptId) => {
+  if (window.JBridge.showDynamicRouteMarker) {
+    return window.JBridge.showDynamicRouteMarker(JSON.stringify({lat: lat, lon : lon, routeId : routeId, purescriptId: purescriptId}));
+  }
+}

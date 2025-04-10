@@ -46,6 +46,7 @@ import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons as EHC
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn4)
 
 
 instance showAction :: Show Action where
@@ -121,7 +122,15 @@ eval (ViewMoreClicked) state =
   continue state { props { showAllTickets = not state.props.showAllTickets }}
 
 
-eval (MapReady _ _ _) state = continue state
+eval (MapReady _ _ _) state = 
+  continueWithCmd state [ do
+    -- let markerName = HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+    --     markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+    -- _ <- pure $ JB.currentPosition ""
+    void $ pure $ JB.removeAllMarkers ""
+    void $ runEffectFn4 JB.showDynamicRouteMarker (show state.props.srcLat) (show state.props.srcLong) "AC23A-U" (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
+    pure NoAction
+  ]
 
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
@@ -133,7 +142,7 @@ eval _ state = continue state
 
 showMarkerOnMap :: String -> Number -> Number -> Effect Unit
 showMarkerOnMap markerName lat lng = do
-  let markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
+  let markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName, zIndex = 0.0}
   void $ JB.showMarker markerConfig lat lng 160 0.5 0.9 (EHC.getNewIDWithTag "CustomerHomeScreenMap")
 
 recenterCurrentLocation :: ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTicketBookingState

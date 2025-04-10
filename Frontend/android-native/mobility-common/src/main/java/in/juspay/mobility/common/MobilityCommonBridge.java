@@ -380,7 +380,7 @@ public class MobilityCommonBridge extends HyperBridge {
         String shortTitle = "";
         int labelMaxWidth = 300;
         int labelMaxLines = 1;
-        int labelTextSize = 11;        
+        int labelTextSize = 11;
         float rotation = 0;
         float zIndex = 0;
         int markerIconSize = 160;
@@ -510,7 +510,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
     public Polyline getPolyLine(Boolean isOverlayPolyLine, PolylineDataPoints polylineData)
-    {   
+    {
         if (polylineData != null) { return isOverlayPolyLine ? polylineData.overlayPolylines : polylineData.polyline; }else{ return null; }
     }
     public PolylineDataPoints getPolyLineDataByMapInstance(String mapKey, String polyLineKey)
@@ -2577,7 +2577,7 @@ public class MobilityCommonBridge extends HyperBridge {
         circleRipples.clear();
         groundOverlays.clear();
     }
-    
+
 
 
     private void checkAndAnimatePolyline(final String polyLineKey, final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, final GoogleMap gMap, String gmapKey){
@@ -2744,7 +2744,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     String type = drawRouteEntity.optString("routeType", "DRIVER_LOCATION_UPDATE");
 
                     JSONObject mapRouteConfigObject = drawRouteEntity.optJSONObject("mapRouteConfig");
-                
+
 
                     boolean isActual = drawRouteEntity.optBoolean("isActual", true);
 
@@ -2755,7 +2755,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     PolylineOptions polylineOptions = new PolylineOptions();
                     int color = Color.parseColor(trackColor);
 
-    
+
                     try {
                         if (coordinates.length() <= 1) {
                             JSONObject coordinate = (JSONObject) coordinates.get(0);
@@ -2776,7 +2776,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         double destLat = destCoordinates.getDouble("lat");
                         double destLong = destCoordinates.getDouble("lng");
 
-                        
+
                         if (isActual) {
                             for (int i = coordinates.length() - 1; i >= 0; i--) {
                                 JSONObject coordinate = (JSONObject) coordinates.get(i);
@@ -3331,7 +3331,7 @@ public class MobilityCommonBridge extends HyperBridge {
             layoutParams.height = 55;
             layoutParams.width = 55;
             pointer.setLayoutParams(layoutParams);
-        } 
+        }
         else if ((markerType.equals(MarkerType.STOP_ICON_MARKER) || markerType.equals(MarkerType.NORMAL_MARKER_V2)) && markerSize != 0) {
             ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
             layoutParams.height = markerSize;
@@ -3659,13 +3659,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 // For a solid line or any other style, no pattern is set.
                 break;
         }
-        
+
         // Add the polyline to the map
         Polyline polylineData = (gMap != null) ? gMap.addPolyline(options) : googleMap.addPolyline(options);
-        
+
         // Retrieve polyline data points object and assign the polyline appropriately
         PolylineDataPoints polylineDataPoints = getPolyLineDataByMapInstance(gmapKey, key);
-        if (isOverLine) { 
+        if (isOverLine) {
             polylineDataPoints.setOverlayPolylines(polylineData);
         } else {
             polylineDataPoints.setPolyline(polylineData);
@@ -3907,7 +3907,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 }
             timePickerDialog.show();
-            
+
         });
     }
 
@@ -5699,38 +5699,68 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-//    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
-//    protected Bitmap getMarkerForBusRouteId(String routeId) {
-//        Context context = bridgeComponents.getContext();
-//        @SuppressLint("InflateParams")
-//
-////        String textColor = markerConfig.theme.equals(Theme.DARK) ? "#FFFFFF" : "#454545";
-////        String backgroundColor = markerConfig.theme.equals(Theme.DARK) ? "#454545" : "#FFFFFF";
-//        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(context.getResources().getLayout(context.getResources().getIdentifier("marker_code_layout", "layout", context.getPackageName())), null);
-//        try {
-////            setMarkerBackground(backgroundColor, customMarkerView);
-////            setMarkerText(textColor, customMarkerView, markerConfig);
-////            setMarkerlabelImage(markerConfig.labelImage, customMarkerView);
-////            setMarkerPointerImage(pointerImage, isInvisiblePointer, markerType, customMarkerView, markerConfig);
-////            setMarkerActionImage(markerConfig.markerActionImage, markerConfig.primaryText, customMarkerView);
-////            setLabelImageAction(customMarkerView, markerConfig.labelActionImage);
-//            setRouteCodeInsideMarkerLabel(routeId)
-//        } catch (Exception e) {
-//            Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
-//        }
-//        LinearLayout main_label_layout = customMarkerView.findViewById(R.id.main_label_layout);
-//        if(main_label_layout != null && !markerConfig.labelActionImage.image.equals("")) main_label_layout.setPadding(main_label_layout.getPaddingLeft(), main_label_layout.getPaddingTop(), 2, main_label_layout.getPaddingBottom());
-//        customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-//        customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
-//        customMarkerView.buildDrawingCache();
-//        Bitmap returnedBitmap = Bitmap.createBitmap(customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
-//        Canvas canvas = new Canvas(returnedBitmap);
-//        canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC_IN);
-//        Drawable drawable = customMarkerView.getBackground();
-//        if (drawable != null)
-//            drawable.draw(canvas);
-//        customMarkerView.draw(canvas);
-//        return returnedBitmap;
-//    }
+    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
+    protected Bitmap getMarkerForBusRouteId(String routeId) {
+        Context context = bridgeComponents.getContext();
+        int layoutId = context.getResources().getIdentifier("marker_code_layout", "layout", context.getPackageName());
+        View customMarkerView = LayoutInflater.from(context).inflate(layoutId, null);
+
+        TextView marker_route_id_text = customMarkerView.findViewById(R.id.bus_marker_route_id);
+        if (marker_route_id_text != null) {
+            marker_route_id_text.setText(routeId);
+        }
+
+        customMarkerView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        );
+        customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
+
+        Bitmap returnedBitmap = Bitmap.createBitmap(
+            customMarkerView.getMeasuredWidth(),
+            customMarkerView.getMeasuredHeight(),
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(returnedBitmap);
+        Drawable drawable = customMarkerView.getBackground();
+        if (drawable != null) {
+            drawable.draw(canvas);
+        }
+        customMarkerView.draw(canvas);
+
+        return returnedBitmap;
+    }
+
+
+    @JavascriptInterface
+    public void showDynamicRouteMarker(String _payload) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject config = new JSONObject(_payload);
+                String lat = config.optString("lat", "9.9");
+                String lng = config.optString("lon", "9.9");
+                String purescriptId = config.optString("purescriptId", "");
+
+                GoogleMap gMap = (googleMapInstance.get(purescriptId) != null) ? googleMapInstance.get(purescriptId) : googleMap;
+
+                double latitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lat);
+                double longitude = lng.equals("9.9") ? lastLongitudeValue : Double.parseDouble(lng);
+                LatLng latLngObj = new LatLng(latitude, longitude);
+
+                String routeId = config.optString("routeId", "");
+
+                MarkerOptions markerOptions = new MarkerOptions()
+                        .position(latLngObj)
+                        .anchor(0.5f, 0.5f)
+                        .zIndex(2.0f)
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerForBusRouteId(routeId)));
+                if (gMap != null) {
+                    gMap.addMarker(markerOptions);
+                }
+            } catch (Exception e) {
+                Log.d("Error in showDynamicRouteMarker", e.toString());
+            }
+        });
+    }
 }
 

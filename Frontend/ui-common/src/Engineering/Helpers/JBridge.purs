@@ -1141,3 +1141,5 @@ type MakerPositionConfig =
   }
 
 foreign import scrollToChildInScrollView :: forall action. EffectFn3 String String String Unit
+
+foreign import showDynamicRouteMarker :: forall action . EffectFn4 String String String String Unit

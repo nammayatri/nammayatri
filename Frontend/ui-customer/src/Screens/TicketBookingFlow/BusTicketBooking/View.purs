@@ -488,7 +488,7 @@ mapView' push state =
             , id $ EHC.getNewIDWithTag "BusTicketBookingScreenMap"
             , onAnimationEnd
                 ( \action -> do
-                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" 17.0 state.props.srcLat state.props.srcLong push MapReady
+                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" 12.0 state.props.srcLat state.props.srcLong push MapReady
                     push action
                 )
                 (const NoAction)
