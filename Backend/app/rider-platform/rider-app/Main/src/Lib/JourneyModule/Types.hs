@@ -327,6 +327,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     tickets :: Maybe [Text],
     routeName :: Maybe Text,
     providerName :: Maybe Text,
+    selectedServiceTier :: Maybe LegServiceTier,
     frequency :: Maybe Seconds
   }
   deriving stock (Show, Generic)
@@ -685,7 +686,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
           route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
-
+          mbQuote <- QFRFSQuote.findById booking.quoteId
+          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
           return $
             Bus $
               BusLegExtraInfo
@@ -695,7 +697,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   tickets = Just qrDataList,
                   providerName = Just booking.providerName,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
-                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails'
+                  frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
+                  selectedServiceTier = mbSelectedServiceTier
                 }
         Spec.SUBWAY -> do
           return $
@@ -777,20 +780,20 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
           Spec.SUBWAY -> fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
           _ -> True
   now <- getCurrentTime
-  mbEstimatedFare <-
+  (mbEstimatedFare, mbQuote) <-
     case journeyLegInfo'.pricingId of
       Just quoteId -> do
         mbQuote <- QFRFSQuote.findById (Id quoteId)
-        return $ mkPriceAPIEntity <$> (mbQuote <&> (.price))
+        return $ (mkPriceAPIEntity <$> (mbQuote <&> (.price)), mbQuote)
       Nothing -> do
         if bookingAllowed && not journeyLegInfo'.skipBooking
-          then do return Nothing
-          else return $ mkPriceAPIEntity <$> (mkPrice Nothing <$> fallbackFare)
+          then do return (Nothing, Nothing)
+          else return $ (mkPriceAPIEntity <$> (mkPrice Nothing <$> fallbackFare), Nothing)
 
   metroRouteInfo' <- getMetroLegRouteInfo journeyRouteDetails
   subwayRouteInfo' <- getSubwayLegRouteInfo journeyRouteDetails
 
-  legExtraInfo <- mkLegExtraInfo metroRouteInfo' subwayRouteInfo'
+  legExtraInfo <- mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo'
 
   return $
     LegInfo
@@ -815,7 +818,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
         totalFare = Nothing
       }
   where
-    mkLegExtraInfo metroRouteInfo' subwayRouteInfo' = do
+    mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo' = do
       case vehicleType of
         Spec.METRO -> do
           return $
@@ -834,6 +837,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
           fromStation <- QStation.findById fromStationId' >>= fromMaybeM (InternalError "From Station not found")
           toStation <- QStation.findById toStationId' >>= fromMaybeM (InternalError "To Station not found")
           route <- QRoute.findByRouteId routeId' >>= fromMaybeM (InternalError "Route not found")
+          mbSelectedServiceTier <- maybe (pure Nothing) getServiceTierFromQuote mbQuote
           return $
             Bus $
               BusLegExtraInfo
@@ -842,34 +846,35 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   routeCode = route.code,
                   tickets = Nothing,
                   providerName = Nothing,
+                  selectedServiceTier = mbSelectedServiceTier,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails,
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
                 }
         Spec.SUBWAY -> do
           quotes <- QFRFSQuote.findAllBySearchId id
-          let availableServiceTiers =
-                mapMaybe
-                  ( \quote -> do
-                      let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-                      let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-                      mbServiceTier <&> \serviceTier -> do
-                        LegServiceTier
-                          { fare = mkPriceAPIEntity quote.price,
-                            quoteId = quote.id,
-                            serviceTierName = serviceTier.shortName,
-                            serviceTierType = serviceTier._type,
-                            serviceTierDescription = serviceTier.description
-                          }
-                  )
-                  quotes
+          availableServiceTiers <- mapM getServiceTierFromQuote quotes
           return $
             Subway $
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
-                  availableServiceTiers,
+                  availableServiceTiers = catMaybes availableServiceTiers,
                   tickets = Nothing,
                   providerName = Nothing
                 }
+
+getServiceTierFromQuote :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSQuote.FRFSQuote -> m (Maybe LegServiceTier)
+getServiceTierFromQuote quote = do
+  let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+  let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+  return $
+    mbServiceTier <&> \serviceTier -> do
+      LegServiceTier
+        { fare = mkPriceAPIEntity quote.price,
+          quoteId = quote.id,
+          serviceTierName = serviceTier.shortName,
+          serviceTierType = serviceTier._type,
+          serviceTierDescription = serviceTier.description
+        }
 
 stationToStationAPI :: DTS.Station -> FRFSStationAPI
 stationToStationAPI station =
