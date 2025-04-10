@@ -5,6 +5,7 @@ import Data.List (groupBy, nub, sort, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import Domain.Types.Route
@@ -93,12 +94,25 @@ data UpcomingTripInfo = UpcomingTripInfo
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
+data LegServiceTier = LegServiceTier
+  { serviceTierName :: Text,
+    serviceTierType :: Spec.ServiceTierType,
+    serviceTierDescription :: Text,
+    fare :: PriceAPIEntity,
+    quoteId :: Id DFRFSQuote.FRFSQuote
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 -- | Data structure to represent available routes grouped by service tier
 data AvailableRoutesByTier = AvailableRoutesByTier
   { serviceTier :: Spec.ServiceTierType,
+    serviceTierName :: Maybe Text,
+    serviceTierDescription :: Maybe Text,
+    quoteId :: Maybe (Id DFRFSQuote.FRFSQuote),
     availableRoutes :: [Text],
     nextAvailableBuses :: [Seconds],
-    fare :: Price
+    fare :: PriceAPIEntity
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -147,7 +161,7 @@ calculateStageFare ::
   Text -> -- To stop code
   Spec.ServiceTierType -> -- Service tier type
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
-  m (Maybe Price)
+  m (Maybe PriceAPIEntity)
 calculateStageFare routeCode fromStopCode toStopCode serviceTierType integratedBppConfigId = do
   -- First get the fare policy for this route and service tier
   routeFareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBppConfigId
@@ -192,7 +206,7 @@ calculateStageFare routeCode fromStopCode toStopCode serviceTierType integratedB
                   let mbStageFare = find (\sf -> sf.stage == stagesTraveled) stageFares
 
                   -- Return the price
-                  return $ fmap (\sf -> mkPrice (Just sf.currency) sf.amount) mbStageFare
+                  return $ fmap (\sf -> mkPriceAPIEntity (mkPrice (Just sf.currency) sf.amount)) mbStageFare
                 _ -> return Nothing -- Either of the stops doesn't have a stage mapping
             else return Nothing -- handle it later
 
@@ -205,12 +219,13 @@ findPossibleRoutes ::
     EncFlow m r,
     Monad m
   ) =>
+  Maybe [LegServiceTier] ->
   Text ->
   Text ->
   UTCTime ->
   Id DIntegratedBPPConfig.IntegratedBPPConfig ->
   m [AvailableRoutesByTier]
-findPossibleRoutes fromStopCode toStopCode currentTime integratedBppConfigId = do
+findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfigId = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- QRouteStopMapping.findByStopCode fromStopCode integratedBppConfigId
 
@@ -269,21 +284,35 @@ findPossibleRoutes fromStopCode toStopCode currentTime integratedBppConfigId = d
             | timing <- timingsForTier
           ]
 
-    -- Get fare for this service tier (using any one route as fare is equal for all routes)
-    mbFare <-
-      if null routeCodesForTier
-        then return Nothing
-        else calculateStageFare (head routeCodesForTier) fromStopCode toStopCode serviceTierType integratedBppConfigId
+    logDebug $ "routeShortNames: " <> show routeShortNames
+
+    (mbFare, serviceTierName, serviceTierDescription, quoteId) <- do
+      case mbAvailableServiceTiers of
+        Just availableServiceTiers -> do
+          let availableServiceTier = find (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
+              quoteId = availableServiceTier <&> (.quoteId)
+              serviceTierName = availableServiceTier <&> (.serviceTierName)
+              serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
+              mbFare = availableServiceTier <&> (.fare)
+          return (mbFare, serviceTierName, serviceTierDescription, quoteId)
+        Nothing -> do
+          mbFare <-
+            if null routeCodesForTier
+              then return Nothing
+              else calculateStageFare (head routeCodesForTier) fromStopCode toStopCode serviceTierType integratedBppConfigId
+          return (mbFare, Nothing, Nothing, Nothing)
 
     logDebug $ "mbFare: " <> show mbFare
-    logDebug $ "routeShortNames: " <> show routeShortNames
     return $
       ( \fare ->
           AvailableRoutesByTier
             { serviceTier = serviceTierType,
               availableRoutes = routeShortNames,
               nextAvailableBuses = sort arrivalTimes,
-              fare
+              serviceTierName = serviceTierName,
+              serviceTierDescription = serviceTierDescription,
+              quoteId = quoteId,
+              fare = fare
             }
       )
         <$> mbFare

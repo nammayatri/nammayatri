@@ -59,6 +59,7 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
@@ -615,6 +616,8 @@ getMultimodalOrderGetBusTierOptions (mbPersonId, _merchantId) journeyId legOrder
   mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      availableRoutesByTier <- JLU.findPossibleRoutes fromStopCode toStopCode now integratedBPPConfig.id
+      quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
+      availableServiceTiers <- mapM JMTypes.getServiceTierFromQuote quotes
+      availableRoutesByTier <- JLU.findPossibleRoutes (Just $ catMaybes availableServiceTiers) fromStopCode toStopCode now integratedBPPConfig.id
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}

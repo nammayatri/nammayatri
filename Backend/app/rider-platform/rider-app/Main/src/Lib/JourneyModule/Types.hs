@@ -333,16 +333,6 @@ data BusLegExtraInfo = BusLegExtraInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegServiceTier = LegServiceTier
-  { serviceTierName :: Text,
-    serviceTierType :: Spec.ServiceTierType,
-    serviceTierDescription :: Text,
-    fare :: PriceAPIEntity,
-    quoteId :: Id DFRFSQuote.FRFSQuote
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data UpdateJourneyReq = UpdateJourneyReq
   { fare :: Maybe Price,
     modes :: Maybe [DTrip.MultimodalTravelMode],
@@ -923,7 +913,6 @@ mkJourneyLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Int 
 mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
-  serviceTypes <- mapM (getServiceTypeFromProviderCode merchantOpCityId) leg.serviceTypes
   return $
     DJL.JourneyLeg
       { agency = leg.agency,
@@ -943,7 +932,7 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = leg.toStopDetails,
-        serviceTypes = Just $ serviceTypes,
+        serviceTypes = Nothing,
         estimatedMinFare = fare <&> (.estimatedMinFare),
         estimatedMaxFare = fare <&> (.estimatedMaxFare),
         merchantId = Just merchantId,

@@ -294,8 +294,8 @@ getState mode searchId riderLastPoints isLastCompleted = do
           QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
       pure newStatuses
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> m (Maybe JT.GetFareResponse)
-getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails serviceTypes = do
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> m (Maybe JT.GetFareResponse)
+getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails = do
   QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
     >>= \case
       Just bapConfig -> do
@@ -343,21 +343,16 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails serv
         logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory
         return Nothing
   where
-    filterFares :: [FRFSFare] -> [FRFSFare]
-    filterFares fares = do
-      let sortedFares = sortOn (\fare -> fare.price.amount.getHighPrecMoney) fares
-      let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` serviceTypes) sortedFares
-      if null filteredFares
-        then sortedFares
-        else filteredFares
+    sortedFares :: [FRFSFare] -> [FRFSFare]
+    sortedFares fares = sortOn (\fare -> fare.price.amount.getHighPrecMoney) fares
 
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing
-    selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (filterFares fares)
+    selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (sortedFares fares)
 
     selectMaxFare :: [FRFSFare] -> Maybe FRFSFare
     selectMaxFare [] = Nothing
-    selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (filterFares fares)
+    selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) (sortedFares fares)
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> m JT.LegInfo
 getInfo searchId fallbackFare distance duration = do
@@ -388,7 +383,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData) merchantOpCity integratedBPPConfig
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails merchantOpCity integratedBPPConfig
-  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails DIBC.MULTIMODAL (fromMaybe [] journeyLeg.serviceTypes)
+  res <- FRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just city) vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails DIBC.MULTIMODAL
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData merchantOpCity integratedBPPConfig = do

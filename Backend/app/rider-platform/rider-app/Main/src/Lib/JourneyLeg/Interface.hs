@@ -70,7 +70,6 @@ getFare riderId merchantId merchantOperatingCityId leg = \case
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
       let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
-      serviceTypes <- mapM (JL.getServiceTypeFromProviderCode merchantOperatingCityId) leg.serviceTypes
       if length routeDetails /= length leg.routeDetails
         then do
           logError "Unable to Map Route Details for all Bus Route Sub Legs"
@@ -82,7 +81,6 @@ getFare riderId merchantId merchantOperatingCityId leg = \case
                 BusLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
-                    serviceTypes,
                     ..
                   }
 
