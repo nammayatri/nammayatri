@@ -3,6 +3,7 @@ module ExternalBPP.ExternalAPI.CallAPI where
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types
 import Domain.Types.BecknConfig
+import Domain.Types.FRFSSearch as DFRFSSearch
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
@@ -21,7 +22,8 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.Order as CMRLOrder
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus as CMRLPassengerViewStatus
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
-import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV1 as CRISRouteFareV1
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -43,8 +45,8 @@ getProviderName integrationBPPConfig =
     Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
     CRIS _ -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
-getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> Maybe (Id DFRFSSearch.FRFSSearch) -> m [FRFSUtils.FRFSFare]
+getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory mbFrfsSearchId = do
   case integrationBPPConfig.providerConfig of
     CMRL config' ->
       CMRLFareByOriginDest.getFareByOriginDest config' $
@@ -62,19 +64,21 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       mbImeiNumber <- decrypt `mapM` person.imeiNumber
       sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
       let request =
-            CRISRouteFare.CRISFareRequest
+            CRISRouteFareV1.CRISFareRequestV1
               { mobileNo = fromMaybe "9999999999" mbMobileNumber,
                 imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
                 appSession = sessionId,
                 sourceCode = startStopCode,
-                changeOver = " ", -- TODO: Make it dynamic
+                changeOver = " ",
                 destCode = endStopCode,
-                ticketType = "J", -- TODO: Make it dynamic
-                via = " ", -- TODO: Make it dynamic
-                trainType = Nothing,
-                routeId = routeCode
+                ticketType = config'.ticketType,
+                via = " ",
+                tpAccountId = config'.agentAccountId,
+                appCode = config'.appCode,
+                sourceZone = config'.sourceZone,
+                typeOfBooking = 0
               }
-      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
+      resp <- try @_ @SomeException $ CRISRouteFareV1.getRouteFareV1 config' merchanOperatingCity.id request mbFrfsSearchId
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
@@ -106,6 +110,7 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
     CMRL config' -> CMRLOrder.createOrder config' booking mRiderNumber
     EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig.id qrTtl booking
     DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig.id qrTtl booking
+    CRIS config' -> CRISBookJourney.createOrder config' booking
     _ -> throwError $ InternalError "Unimplemented!"
 
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
@@ -154,3 +159,18 @@ getStationList integrationBPPConfig = do
 
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
+
+getBookJourney ::
+  ( CoreMetrics m,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  IntegratedBPPConfig ->
+  CRISBookJourney.CRISBookingRequest ->
+  m CRISBookJourney.CRISBookingResponse
+getBookJourney integrationBPPConfig request = do
+  case integrationBPPConfig.providerConfig of
+    CRIS config' -> CRISBookJourney.getBookJourney config' request
+    _ -> throwError $ InternalError "Unimplemented!"

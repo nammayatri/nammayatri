@@ -455,6 +455,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) mbCity vehicleType_ FRFSSearchAPI
             journeyRouteDetails = updatedJourneyRouteDetails,
             integratedBppConfigId = Just integratedBPPConfig.id,
             isOnSearchReceived = Nothing,
+            crisSearchData = Nothing,
             ..
           }
   QFRFSSearch.create searchReq

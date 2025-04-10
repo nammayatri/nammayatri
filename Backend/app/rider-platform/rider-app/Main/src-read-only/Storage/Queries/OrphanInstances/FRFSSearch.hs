@@ -22,7 +22,8 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
-          { fromStationId = Kernel.Types.Id.Id fromStationId,
+          { crisSearchData = mkCrisSearchData bookAuthCode crisEncryptedTicketData crisSdkToken deviceId osBuildVersion osType,
+            fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id <$> integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
@@ -46,16 +47,22 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
 instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     Beam.FRFSSearchT
-      { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
+      { Beam.bookAuthCode = crisSearchData >>= (.bookAuthCode),
+        Beam.crisEncryptedTicketData = crisSearchData >>= (.crisEncryptedTicketData),
+        Beam.crisSdkToken = crisSearchData >>= (.crisSdkToken),
+        Beam.deviceId = crisSearchData >>= (.deviceId),
+        Beam.osBuildVersion = crisSearchData >>= (.osBuildVersion),
+        Beam.osType = crisSearchData >>= (.osType),
+        Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId <$> integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
-        Beam.agency = (journeyLegInfo >>= (.agency)),
+        Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
-        Beam.isDeleted = (journeyLegInfo >>= (.isDeleted)),
+        Beam.isDeleted = journeyLegInfo >>= (.isDeleted),
         Beam.journeyId = Kernel.Prelude.fmap (.journeyId) journeyLegInfo,
         Beam.journeyLegOrder = Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo,
-        Beam.pricingId = (journeyLegInfo >>= (.pricingId)),
+        Beam.pricingId = journeyLegInfo >>= (.pricingId),
         Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.journeyLegStatus = journeyLegStatus,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

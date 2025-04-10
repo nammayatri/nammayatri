@@ -81,3 +81,62 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN recent_location_id character varyin
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_search ADD COLUMN cris_sdk_token text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN cris_encrypted_ticket_data text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN os_type text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN os_build_version text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN device_id text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN book_auth_code text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

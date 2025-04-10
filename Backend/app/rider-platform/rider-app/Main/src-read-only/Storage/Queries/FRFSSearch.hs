@@ -51,7 +51,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+    [ Se.Set Beam.bookAuthCode (crisSearchData >>= (.bookAuthCode)),
+      Se.Set Beam.crisEncryptedTicketData (crisSearchData >>= (.crisEncryptedTicketData)),
+      Se.Set Beam.crisSdkToken (crisSearchData >>= (.crisSdkToken)),
+      Se.Set Beam.deviceId (crisSearchData >>= (.deviceId)),
+      Se.Set Beam.osBuildVersion (crisSearchData >>= (.osBuildVersion)),
+      Se.Set Beam.osType (crisSearchData >>= (.osType)),
+      Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId <$> integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
