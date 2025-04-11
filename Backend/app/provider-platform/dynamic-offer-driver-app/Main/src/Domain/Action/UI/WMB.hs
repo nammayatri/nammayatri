@@ -155,7 +155,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
     Just x | x.driverId /= driverId -> throwError (VehicleLinkedToAnotherDriver vehicleNumber)
     _ -> pure ()
   (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route route.code
-  tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus driverId
+  tripTransactions <- QTTE.findAllTripTransactionByDriverIdActiveStatus vehicleRouteMapping.fleetOwnerId (Just 1) driverId
   case tripTransactions of
     [] -> pure ()
     _ -> throwError (InvalidTripStatus "IN_PROGRESS")
@@ -200,7 +200,8 @@ getWmbTripActive ::
   )
 getWmbTripActive (mbDriverId, _, _) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
-  WMB.findNextActiveTripTransaction driverId
+  fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
+  WMB.findNextActiveTripTransaction fleetDriverAssociation.fleetOwnerId driverId
     >>= \case
       Nothing -> pure $ API.Types.UI.WMB.ActiveTripTransaction Nothing
       Just tripTransaction -> do
@@ -218,14 +219,14 @@ postWmbTripStart ::
   )
 postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <-
-    WMB.findNextActiveTripTransaction driverId
+    WMB.findNextActiveTripTransaction fleetDriverAssociation.fleetOwnerId driverId
       >>= \case
         Nothing -> throwError $ TripTransactionNotFound tripTransactionId.getId
         Just tripTransaction -> do
           unless (tripTransactionId == tripTransaction.id && tripTransaction.status == TRIP_ASSIGNED) $ throwError AlreadyOnActiveTrip
           return tripTransaction
-  WMB.checkFleetDriverAssociation tripTransaction.driverId tripTransaction.fleetOwnerId >>= \isAssociated -> unless isAssociated (throwError $ DriverNotLinkedToFleet tripTransaction.driverId.getId)
   closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
   route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
@@ -298,8 +299,9 @@ getWmbTripList ::
   )
 getWmbTripList (mbDriverId, _, _) limit offset status = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   let sortType = if maybe False WMB.isNonTerminalTripStatus status then QTTE.SortAsc else QTTE.SortDesc
-  allTripTransactionDriver <- QTTE.findAllTripTransactionByDriverIdStatus driverId limit offset status sortType
+  allTripTransactionDriver <- QTTE.findAllTripTransactionByDriverIdStatus (Id fleetDriverAssociation.fleetOwnerId) driverId limit offset status sortType
   tripTransactions <- mapM getTripTransactionDetails allTripTransactionDriver
   pure tripTransactions
 

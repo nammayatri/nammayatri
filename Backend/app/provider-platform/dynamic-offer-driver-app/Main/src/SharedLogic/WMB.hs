@@ -103,10 +103,10 @@ getSourceAndDestinationStopInfo route routeCode = do
           ..
         }
 
-findNextEligibleTripTransactionByDriverIdStatus :: Id Person -> TripStatus -> Flow (Maybe TripTransaction)
-findNextEligibleTripTransactionByDriverIdStatus driverId status = do
+findNextEligibleTripTransactionByDriverIdStatus :: Text -> Id Person -> TripStatus -> Flow (Maybe TripTransaction)
+findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId status = do
   let sortType = if isNonTerminalTripStatus status then QTT.SortAsc else QTT.SortDesc
-  QTT.findAllTripTransactionByDriverIdStatus driverId (Just 1) (Just 0) (Just status) sortType >>= \case
+  QTT.findAllTripTransactionByDriverIdStatus (Id fleetOwnerId) driverId (Just 1) (Just 0) (Just status) sortType >>= \case
     (trip : _) -> pure (Just trip)
     [] -> pure Nothing
 
@@ -187,7 +187,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
         void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing
         QTT.updateOnEnd (if isCancelled then CANCELLED else COMPLETED) (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
         TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
-        findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
+        findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
           Just advancedTripTransaction -> do
             route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
             (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
@@ -218,7 +218,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
     60
     ( do
         unless (tripTransaction.status `elem` [IN_PROGRESS, TRIP_ASSIGNED]) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-        findNextActiveTripTransaction tripTransaction.driverId
+        findNextActiveTripTransaction tripTransaction.fleetOwnerId.getId tripTransaction.driverId
           >>= \case
             Nothing -> pure ()
             Just currentTripTransaction -> do
@@ -231,7 +231,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                       QTT.updateOnEnd CANCELLED (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
                       TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId CANCELLED "Ride Cancelled" "Your ride has been Cancelled" EmptyDynamicParam
                       runInMasterDbAndRedis $
-                        findNextEligibleTripTransactionByDriverIdStatus tripTransaction.driverId TRIP_ASSIGNED >>= \case
+                        findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
                           Just advancedTripTransaction -> do
                             route <- QR.findByRouteCode advancedTripTransaction.routeCode >>= fromMaybeM (RouteNotFound advancedTripTransaction.routeCode)
                             (_, destinationStopInfo) <- getSourceAndDestinationStopInfo route advancedTripTransaction.routeCode
@@ -324,7 +324,7 @@ validateVehicleAssignment driverId vehicleNumber _ _ fleetOwnerId = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
-  findNextActiveTripTransaction driverId
+  findNextActiveTripTransaction fleetOwnerId driverId
     >>= \case
       Nothing -> pure ()
       Just tripTransaction ->
@@ -340,7 +340,7 @@ validateVehicleAssignment driverId vehicleNumber _ _ fleetOwnerId = do
 
 validateBadgeAssignment :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> Flow (FleetBadge)
 validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId badgeName = do
-  findNextActiveTripTransaction driverId
+  findNextActiveTripTransaction fleetOwnerId driverId
     >>= \case
       Nothing -> pure ()
       Just tripTransaction ->
@@ -474,10 +474,10 @@ getRouteDetails routeCode = do
   where
     castStops stop = Common.StopInfo stop.name stop.code stop.point
 
-findNextActiveTripTransaction :: Id Person -> Flow (Maybe TripTransaction)
-findNextActiveTripTransaction driverId = do
-  findNextEligibleTripTransactionByDriverIdStatus driverId IN_PROGRESS
-    |<|>| findNextEligibleTripTransactionByDriverIdStatus driverId TRIP_ASSIGNED
+findNextActiveTripTransaction :: Text -> Id Person -> Flow (Maybe TripTransaction)
+findNextActiveTripTransaction fleetOwnerId driverId = do
+  findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId IN_PROGRESS
+    |<|>| findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId TRIP_ASSIGNED
 
 -- Redis Transaction Lock Keys --
 tripTransactionKey :: Id Person -> TripStatus -> Text

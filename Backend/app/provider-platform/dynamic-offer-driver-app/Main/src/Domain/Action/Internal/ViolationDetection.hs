@@ -23,7 +23,7 @@ data ViolationDetectionReq = ViolationDetectionReq
     isViolated :: Bool,
     detectionData :: DetectionData
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema)
 
 data DetectionData
   = OverSpeedingDetection OverSpeedingDetectionData
@@ -31,7 +31,7 @@ data DetectionData
   | SkippedWaitingStopDetection SkippedWaitingStopDetectionData
   | MissedStopDetection MissedStopDetectionData
   | RouteDeviationDetection RouteDeviationDetectionData
-  deriving (Show, Eq, Ord, Read, Generic)
+  deriving (Show, Eq, Ord, Read, Generic, ToSchema)
 
 data OverSpeedingDetectionData = OverSpeedingDetectionData {location :: LatLong, speed :: Double}
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -81,15 +81,15 @@ instance FromJSON DetectionData where
 instance ToJSON DetectionData where
   toJSON = \case
     OverSpeedingDetection data' ->
-      object ["overSpeeding" .= data']
+      object ["overSpeedingDetection" .= data']
     StoppedDetection data' ->
-      object ["stopped" .= data']
+      object ["stoppedDetection" .= data']
     SkippedWaitingStopDetection data' ->
-      object ["skippedWaitingStop" .= data']
+      object ["skippedWaitingStopDetection" .= data']
     MissedStopDetection data' ->
-      object ["missedStop" .= data']
+      object ["missedStopDetection" .= data']
     RouteDeviationDetection data' ->
-      object ["routeDeviation" .= data']
+      object ["routeDeviationDetection" .= data']
 
 violationDetection :: ViolationDetectionReq -> Flow APISuccess
 violationDetection ViolationDetectionReq {..} = do
