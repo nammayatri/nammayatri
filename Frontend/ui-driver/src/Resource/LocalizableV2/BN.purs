@@ -1568,6 +1568,7 @@ getBn =
     , discount_points_upto: (\discountPoints -> "আপনি " <> discountPoints <> " পর্যন্ত ডিসকাউন্ট পয়েন্টের জন্য যোগ্য৷")
     , cannot_detect_pan_card: "প্যান কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
     , cannot_detect_aadhaar: "আধার কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
+    , cannot_detect_dl: "লাইসেন্সের সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
     , document_under_manual_review: "ম্যানুয়াল পর্যালোচনা অধীনে নথি।"
     , document_already_linked_to_another_driver: "ডকুমেন্টটি ইতিমধ্যেই অন্য ড্রাইভারের সাথে লিঙ্ক করা আছে।"
     , document_already_validated: "নথি যাচাই করা হয়েছে।"

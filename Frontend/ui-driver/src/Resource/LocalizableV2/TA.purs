@@ -1568,6 +1568,7 @@ getTa =
     , discount_points_upto: (\discountPoints -> "நீங்கள் " <> discountPoints <> " தள்ளுபடி புள்ளிகள் வரை தகுதியுடையவர்")
     , cannot_detect_pan_card: "பான் கார்டைக் கண்டறிய முடியவில்லை. தயவு செய்து மீண்டும் முயற்சிக்கவும்."
     , cannot_detect_aadhaar: "ஆதார் அட்டையை கண்டறிய முடியவில்லை. தயவு செய்து மீண்டும் முயற்சிக்கவும்."
+    , cannot_detect_dl: "உரிமத்தைக் கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
     , document_already_validated: "ஆவணம் ஏற்கனவே சரிபார்க்கப்பட்டது."
     , document_under_manual_review: "கைமுறை மதிப்பாய்வின் கீழ் ஆவணம்."
     , document_already_linked_to_another_driver: "ஆவணம் ஏற்கனவே மற்றொரு இயக்கியுடன் இணைக்கப்பட்டுள்ளது."

@@ -1609,6 +1609,7 @@ getOd =
     , we_will_nofity_you_when_it_is_available: (\vehicle -> "ଆମେ ଆପଣଙ୍କୁ ସୂଚନା ଦେବୁ ଯେତେବେଳେ " <> vehicle <> " ସମର୍ଥନ ଆପଣଙ୍କ ସହରରେ ଉପଲବ୍ଧ ହେବ")
     , cannot_detect_pan_card: "PAN କାର୍ଡ ଚିହ୍ନଟ କରିପାରିବା ନାହିଁ। ଦୟାକରି ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।"
     , cannot_detect_aadhaar: "ଆଧାର କାର୍ଡ ଚିହ୍ନଟ କରିପାରିବା ନାହିଁ। ଦୟାକରି ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।"
+    , cannot_detect_dl: "ଲାଇସେନ୍ସ ଚିହ୍ନଟ କରିପାରିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
     , db_check_and_name_match_failed: "PAN ସତ୍ୟାପନ ବିଫଳ ହୋଇଛି"
     , add_upi_to_receive_referral_reward: "ରେଫରାଲ ରିୱାର୍ଡ ରାଶି ପାଇବାକୁ UPI ବିବରଣୀ ଯୋଡନ୍ତୁ"
     , do_you_want_to_receive_amount_here: "ଆପଣ ଏହି ଖାତାରେ ରେଫରାଲ ରିୱାର୍ଡ ରାଶି ପାଇବାକୁ ଚାହୁଁଛନ୍ତି କି?"

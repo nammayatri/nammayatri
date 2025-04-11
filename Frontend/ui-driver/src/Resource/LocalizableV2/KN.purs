@@ -1567,6 +1567,7 @@ getKn =
     , gst_with_percentage: (\per -> "ಜಿಎಸ್ಟಿ (" <> per <> "%)")
     , cannot_detect_pan_card: "PAN ಕಾರ್ಡ್ ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
     , cannot_detect_aadhaar: "ಆಧಾರ್ ಕಾರ್ಡ್ ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
+    , cannot_detect_dl: "ಪರವಾನಗಿಯನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
     , document_already_validated: "ಡಾಕ್ಯುಮೆಂಟ್ ಈಗಾಗಲೇ ಮೌಲ್ಯೀಕರಿಸಲಾಗಿದೆ."
     , document_under_manual_review: "ಹಸ್ತಚಾಲಿತ ಪರಿಶೀಲನೆಯಲ್ಲಿ ಡಾಕ್ಯುಮೆಂಟ್."
     , document_already_linked_to_another_driver: "ಡಾಕ್ಯುಮೆಂಟ್ ಈಗಾಗಲೇ ಮತ್ತೊಂದು ಡ್ರೈವರ್‌ಗೆ ಲಿಂಕ್ ಮಾಡಲಾಗಿದೆ."

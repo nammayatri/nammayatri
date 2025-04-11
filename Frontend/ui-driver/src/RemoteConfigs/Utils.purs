@@ -48,32 +48,38 @@ hvConfigs appName = case appName of
     "Namma Yatri Partner" -> {
       selfie_flow_id : "ny-selfie-flow",
       pan_flow_id : "ny-pan-flow",
-      aadhaar_flow_id : "ny-aadhaar-flow"
+      aadhaar_flow_id : "ny-aadhaar-flow",
+      dl_flow_id : Just "ny-dl-flow"
     }
     "Yatri Sathi Driver" -> {
       selfie_flow_id : "yatrisathi-selfie-flow",
       pan_flow_id : "yatrisathi-pan-flow",
-      aadhaar_flow_id : "yatrisathi-aadhaar-flow"
+      aadhaar_flow_id : "yatrisathi-aadhaar-flow",
+      dl_flow_id : Just "yatrisathi-dl-flow"
     }
     "Yatri Driver" -> {
       selfie_flow_id : "yatri-selfie-flow",
       pan_flow_id : "yatri-pan-flow",
-      aadhaar_flow_id : "yatri-aadhaar-flow"
+      aadhaar_flow_id : "yatri-aadhaar-flow",
+      dl_flow_id : Just "yatri-dl-flow"
     }
     "Mana Yatri Partner" -> {
       selfie_flow_id : "manayatri-selfie-flow",
       pan_flow_id : "manayatri-pan-flow",
-      aadhaar_flow_id : "manayatri-aadhaar-flow"
+      aadhaar_flow_id : "manayatri-aadhaar-flow",
+      dl_flow_id : Just "manayatri-dl-flow"
     }
     "Bridge Driver" -> {
       selfie_flow_id : "bridge-selfie-flow",
       pan_flow_id : "bridge-pan-flow",
-      aadhaar_flow_id : "bridge-aadhaar-flow"
+      aadhaar_flow_id : "bridge-aadhaar-flow",
+      dl_flow_id : Just "bridge-dl-flow"
     }
     _ -> {
       selfie_flow_id : "ny-selfie-flow",
       pan_flow_id : "ny-pan-flow",
-      aadhaar_flow_id : "ny-aadhaar-flow"
+      aadhaar_flow_id : "ny-aadhaar-flow",
+      dl_flow_id : Just "ny-dl-flow"
     }
 
 reelsData :: String -> Array ReelItem

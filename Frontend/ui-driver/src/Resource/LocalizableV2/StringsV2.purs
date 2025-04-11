@@ -1663,6 +1663,7 @@ getProxy str = case str of
   DISCOUNT_POINTS_UPTO arg1 -> \a -> (a @~ discount_points_upto) arg1
   CANNOT_DETECT_PAN_CARD -> \a -> a @~ cannot_detect_pan_card
   CANNOT_DETECT_AADHAAR -> \a -> a @~ cannot_detect_aadhaar
+  CANNOT_DETECT_DL -> \a -> a @~ cannot_detect_dl
   DOCUMENT_ALREADY_VALIDATED -> \a -> a @~ document_already_validated
   DOCUMENT_UNDER_MANUAL_REVIEW -> \a -> a @~ document_under_manual_review
   DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER -> \a -> a @~ document_already_linked_to_another_driver

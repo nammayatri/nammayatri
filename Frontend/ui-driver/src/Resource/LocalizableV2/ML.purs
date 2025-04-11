@@ -1568,6 +1568,7 @@ getMl =
     , discount_points_upto: (\discountPoints -> "നിങ്ങൾ " <> discountPoints <> " കിഴിവ് പോയിൻ്റുകൾക്ക് യോഗ്യനാണ്")
     , cannot_detect_pan_card: "പാൻ കാർഡ് കണ്ടെത്താൻ കഴിയുന്നില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
     , cannot_detect_aadhaar: "ആധാർ കാർഡ് കണ്ടെത്താൻ കഴിയുന്നില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+    , cannot_detect_dl: "ലൈസൻസ് കണ്ടെത്താൻ കഴിയുന്നില്ല. വീണ്ടും ശ്രമിക്കുക."
     , document_already_validated: "പ്രമാണം ഇതിനകം സാധൂകരിച്ചിരിക്കുന്നു."
     , document_under_manual_review: "മാനുവൽ അവലോകനത്തിന് കീഴിലുള്ള പ്രമാണം."
     , document_already_linked_to_another_driver: "പ്രമാണം ഇതിനകം മറ്റൊരു ഡ്രൈവറുമായി ലിങ്ക് ചെയ്‌തിരിക്കുന്നു."

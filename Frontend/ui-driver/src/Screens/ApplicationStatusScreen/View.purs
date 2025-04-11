@@ -19,6 +19,7 @@ import Animation as Anim
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
+import Common.RemoteConfig (fetchRemoteConfigString)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -61,7 +62,8 @@ screen initialState screenType =
           void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
             if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit
               else do
-              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+              useHVDlSdkEnabled <- pure $ fetchRemoteConfigString "use_hv_dl_sdk" == "true"
+              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true useHVDlSdkEnabled
               lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
           else pure unit
         if initialState.props.isAlternateMobileNumberExists then do

@@ -1626,6 +1626,7 @@ getEn =
     , we_will_nofity_you_when_it_is_available: (\vehicle -> "We will notify you when " <> vehicle <> " support is available in your city ")
     , cannot_detect_pan_card: "Cannot detect PAN card. Please Try Again."
     , cannot_detect_aadhaar: "Cannot detect Aadhaar Card. Please Try Again."
+    , cannot_detect_dl: "Cannot detect license. Please Try Again."
     , db_check_and_name_match_failed: "Pan verification failed"
     , add_upi_to_receive_referral_reward: "Add UPI detail to receive referral reward amount"
     , do_you_want_to_receive_amount_here: "Do you want to receive referral reward amount in this account?"
