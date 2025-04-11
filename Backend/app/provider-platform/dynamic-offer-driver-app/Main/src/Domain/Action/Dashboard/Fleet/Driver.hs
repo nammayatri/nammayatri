@@ -1688,7 +1688,7 @@ postDriverFleetAddDrivers merchantShortId opCity req = do
       person <-
         QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
           >>= maybe (DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True) return
-      QFDV.findByDriverId person.id True 
+      QFDV.findByDriverId person.id True
         >>= \case
           Just fleetDriverAssociation -> do
             unless (fleetDriverAssociation.driverId == person.id) $ throwError (InvalidRequest "Driver already exists in another fleet")

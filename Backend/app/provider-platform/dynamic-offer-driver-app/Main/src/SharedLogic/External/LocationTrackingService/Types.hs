@@ -42,7 +42,8 @@ data EndRideReq = EndRideReq
     lon :: Double,
     merchantId :: Id DM.Merchant,
     driverId :: Id DP.Person,
-    nextRideId :: Maybe (Id DRide.Ride)
+    nextRideId :: Maybe (Id DRide.Ride),
+    rideInfo :: Maybe RideInfo
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
