@@ -76,6 +76,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import qualified Storage.Queries.FleetMemberAssociation as FMA
+import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -175,6 +176,14 @@ getDriverFleetAccessList merchantShortId opCity apiTokenInfo = do
       fleetOwners
   return $ Common.FleetOwnerListRes {..}
 
+------------------------------------- Helper Functions --------------------------------------
+getRequestorId :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Flow Text
+getRequestorId merchantShortId apiTokenInfo mbFleetOwnerId = do
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  case merchant.hasFleetMemberHierarchy of
+    Just True -> getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
+    _ -> return apiTokenInfo.personId.getId
+
 -------------------------------------------------------------------------------------------------------------
 ----------------------------------- WRITE LAYER (Single Fleet Level) ---------------------------------
 -------------------------------------------------------------------------------------------------------------
@@ -183,8 +192,8 @@ postDriverFleetAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo ->
 postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId req = do
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  -- fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo apiTokenInfo.personId.getId mbFleetOwnerId mbMobileCountryCode req -- apiTokenInfo may contain opertaor or fleet
+  requestorId <- getRequestorId merchantShortId apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId mbMobileCountryCode req -- apiTokenInfo may contain opertaor or fleet
 
 postDriverFleetAddRCWithoutDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Registration.RegisterRCReq -> Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
@@ -237,15 +246,15 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity apiTokenInfo mbAuthId mbF
 postDriverFleetLinkRCWithDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.LinkRCWithDriverForFleetReq -> Flow APISuccess
 postDriverFleetLinkRCWithDriver merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  -- fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLinkRCWithDriver) apiTokenInfo.personId.getId mbFleetOwnerId req
+  requestorId <- getRequestorId merchantShortId apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLinkRCWithDriver) requestorId mbFleetOwnerId req
 
 postDriverFleetAddVehicles :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.CreateVehiclesReq -> Flow Common.APISuccessWithUnprocessedEntities
 postDriverFleetAddVehicles merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddVehicles)) req{fleetOwnerId = Just fleetOwnerId}
+  requestorId <- getRequestorId merchantShortId apiTokenInfo mbFleetOwnerId
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddVehicles)) req{fleetOwnerId = mbFleetOwnerId, requestorId = Just requestorId}
 
 postDriverFleetTripPlanner :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.TripPlannerReq -> Flow APISuccess
 postDriverFleetTripPlanner merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do

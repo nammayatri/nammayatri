@@ -559,8 +559,9 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
   unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
-  let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
-  QPerson.updatePersonRec personId updDriver
+  whenJust req.driverName $ \driverName -> do
+    let updDriver = driver {DP.firstName = driverName} :: DP.Person
+    QPerson.updatePersonRec personId updDriver
 
   -- Validate request --
   rcValidationRules <- findByCityId driver.merchantOperatingCityId

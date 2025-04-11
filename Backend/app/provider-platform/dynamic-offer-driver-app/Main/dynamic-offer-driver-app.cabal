@@ -1388,6 +1388,7 @@ library
     , text-conversions
     , text-format
     , time
+    , transformers
     , unordered-containers
     , utils
     , uuid
@@ -1520,6 +1521,7 @@ executable dynamic-offer-driver-app-exe
     , text-conversions
     , text-format
     , time
+    , transformers
     , unordered-containers
     , uuid
     , vector

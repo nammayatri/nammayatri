@@ -401,3 +401,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_doc
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bulk_waive_off_limit integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN require_route_mapping_in_vehicle boolean  default true;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_existing_vehicle_in_bulk_upload boolean  default false;

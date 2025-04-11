@@ -124,3 +124,41 @@ mapping fleetIdWanted mbLimit mbOffset = do
     fst' (x, _, _) = x
     snd' (_, y, _) = y
     thd' (_, _, z) = z
+
+-- Returns a structured result to facilitate association checks
+findActiveAssociationsForDriverOrRC ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  Id VehicleRegistrationCertificate ->
+  UTCTime ->
+  m [DriverRCAssociation]
+findActiveAssociationsForDriverOrRC (Id driverId) (Id rcId) now = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is BeamDRCA.driverId $ Se.Eq driverId,
+              Se.Is BeamDRCA.rcId $ Se.Eq rcId
+            ],
+          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now,
+          Se.Is BeamDRCA.isRcActive $ Se.Eq True
+        ]
+    ]
+    (Se.Desc BeamDRCA.associatedOn)
+    Nothing
+    Nothing
+
+-- | Find all active drivers linked to a specific RC (where isRcActive = true)
+-- Returns a list of active DriverRCAssociations for the RC
+findOneActiveLinkedByRCId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id VehicleRegistrationCertificate ->
+  UTCTime ->
+  m (Maybe DriverRCAssociation)
+findOneActiveLinkedByRCId (Id rcId) now = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDRCA.rcId $ Se.Eq rcId,
+          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now,
+          Se.Is BeamDRCA.isRcActive $ Se.Eq True
+        ]
+    ]

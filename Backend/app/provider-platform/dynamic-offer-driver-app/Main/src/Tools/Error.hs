@@ -1572,6 +1572,8 @@ data WMBErrors
   | FleetNotActiveInOperator Text Text
   | VehicleAlreadyLinkedToAnotherDriver
   | InvalidFleetOwner Text
+  | DriverAlreadyLinkedToAnotherVehicle
+  | VehicleNotVerified Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1623,6 +1625,8 @@ instance IsBaseError WMBErrors where
       Just $ "FleetOwner: " <> fleetOwnerId <> " is not active under operator: " <> operatorId
     VehicleAlreadyLinkedToAnotherDriver -> Just "Vehicle is already linked to another driver"
     InvalidFleetOwner fleetOwnerId -> Just $ "FleetOwner: " <> fleetOwnerId <> " is not valid."
+    DriverAlreadyLinkedToAnotherVehicle -> Just "Driver is already linked to another vehicle"
+    VehicleNotVerified vehicleNo -> Just $ "Vehicle: " <> vehicleNo <> " is not verified"
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1669,7 +1673,8 @@ instance IsHTTPError WMBErrors where
     FleetNotActiveInOperator _ _ -> "FLEET_NOT_ACTIVE_IN_OPERATOR"
     VehicleAlreadyLinkedToAnotherDriver -> "VEHICLE_ALREADY_LINKED_TO_ANOTHER_DRIVER"
     InvalidFleetOwner _ -> "INVALID_FLEET_OWNER"
-
+    DriverAlreadyLinkedToAnotherVehicle -> "DRIVER_ALREADY_LINKED_TO_ANOTHER_VEHICLE"
+    VehicleNotVerified _ -> "VEHICLE_NOT_VERIFIED"
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
     DriverNotInFleet _ _ -> E400
@@ -1714,6 +1719,8 @@ instance IsHTTPError WMBErrors where
     FleetNotActiveInOperator _ _ -> E400
     VehicleAlreadyLinkedToAnotherDriver -> E400
     InvalidFleetOwner _ -> E400
+    DriverAlreadyLinkedToAnotherVehicle -> E400
+    VehicleNotVerified _ -> E400
 
 instance IsAPIError WMBErrors
 
