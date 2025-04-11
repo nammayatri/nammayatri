@@ -133,7 +133,7 @@ eval (MapReady _ _ _) state =
     --     markerConfig = JB.defaultMarkerConfig{ markerId = markerName, pointerIcon = markerName }
     -- _ <- pure $ JB.currentPosition ""
     void $ pure $ JB.removeAllMarkers ""
-    void $ runEffectFn4 JB.showDynamicRouteMarker (show state.props.srcLat) (show state.props.srcLong) "AC23A-U" (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
+   -- void $ runEffectFn4 JB.showDynamicRouteMarker (show state.props.srcLat) (show state.props.srcLong) "AC23A-U" (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
     pure NoAction
   ]
 
