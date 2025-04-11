@@ -191,10 +191,10 @@ headerView push state =
   , padding $ Padding 18 18 18 18
   ]
   [ imageView
-    [ width $ V 20
-    , height $ V 20
+    [ width $ V 40
+    , height $ V 40
     , onClick push $ const GoBack
-    , padding $ Padding 0 4 0 0
+    , padding $ Padding 4 8 4 4
     , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_left"
     , rippleColor Color.rippleShade
     , margin $ MarginRight 10
@@ -205,6 +205,7 @@ headerView push state =
     , gravity CENTER_VERTICAL
     , singleLine true
     , maxLines 1
+    , textSize $ FontSize.a_18
     ] <> FontStyle.subHeading3 TypoGraphy
   , linearLayout [weight 1.0] [] 
   , linearLayout
@@ -516,7 +517,7 @@ mapView' push state =
             , id $ EHC.getNewIDWithTag "BusTicketBookingScreenMap"
             , onAnimationEnd
                 ( \action -> do
-                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" 12.0 state.props.srcLat state.props.srcLong push MapReady
+                    void $ JB.showMap (EHC.getNewIDWithTag "BusTicketBookingScreenMap") true "satellite" 15.0 state.props.srcLat state.props.srcLong push MapReady
                     push action
                 )
                 (const NoAction)
