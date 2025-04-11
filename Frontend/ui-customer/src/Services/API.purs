@@ -4654,8 +4654,8 @@ data RideInfo = Bus BusRideInfo | Car CarRideInfo
 
 
 newtype BusRideInfo = BusRideInfo {
-  routeCode :: String,
-  busNumber :: String
+  routeCode :: String
+  -- busNumber :: String
   -- destination :: LatLong,
   -- routeLongName :: Maybe String,
   -- driverName :: Maybe String
