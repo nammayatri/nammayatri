@@ -642,10 +642,14 @@ getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId 
         -- This Status is Associated with Driver and
         Just Common.Active -> RCQuery.findAllActiveRCForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo
         Just Common.InActive -> RCQuery.findAllInactiveRCForFleet fleetOwnerId limit offset merchantId
+        -- make changes here for onride and tripassigned
+        Just Common.OnRide -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo (DTT.IN_PROGRESS)
+        Just Common.TripAssigned -> RCQuery.findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId merchantId limit offset mbSearchString statusAwareVehicleNo (DTT.TRIP_ASSIGNED)
         -- This Status is only Associated purely with RCs and Not Associated with any Driver
         Just Common.Valid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
         Just Common.Invalid -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleet fleetOwnerId (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId
+        -- also need to make changes here
         Nothing -> RCQuery.findAllRCByStatusForFleet fleetOwnerId Nothing limit offset merchantId
 
 castFleetVehicleStatus :: Maybe Common.FleetVehicleStatus -> Documents.VerificationStatus
