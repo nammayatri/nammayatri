@@ -36,6 +36,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
+    Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
     Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Knowlarity -> Nothing
@@ -77,6 +78,7 @@ getServiceNameConfigJson = \case
     Sms.TwillioSmsConfig cfg -> (Domain.SmsService Sms.TwillioSms, toJSON cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
+    Whatsapp.TataCommunicationsConfig cfg -> (Domain.WhatsappService Whatsapp.TataCommunications, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
     Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)
