@@ -1184,7 +1184,10 @@ newtype DriverDLReq = DriverDLReq {
   imageId1 :: String,
   imageId2 :: Maybe String,
   dateOfIssue :: Maybe String,
-  vehicleCategory :: Maybe String
+  vehicleCategory :: Maybe String,
+  nameOnCardFromSdk :: Maybe String,
+  requestId :: Maybe String,
+  sdkTransactionId :: Maybe String 
 }
 
 
@@ -1207,7 +1210,8 @@ newtype ValidateImageReq = ValidateImageReq {
   rcNumber :: Maybe String,
   validationStatus :: Maybe ValidationStatus,
   workflowTransactionId :: Maybe String,
-  vehicleCategory :: Maybe String
+  vehicleCategory :: Maybe String,
+  sdkFailureReason :: Maybe String
 }
 
 newtype ValidateImageRes = ValidateImageRes {
@@ -1234,7 +1238,7 @@ instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defau
 
 
 -- DriverRegistrationStatus API request, response types
-data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean
+data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean Boolean
 
 newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
@@ -1262,7 +1266,7 @@ newtype DocumentStatusItem = DocumentStatusItem
   }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq where
-    makeRequest reqBody@(DriverRegistrationStatusReq queryParam) headers = defaultMakeRequestWithoutLogs GET (EP.driverRegistrationStatus queryParam) headers reqBody Nothing
+    makeRequest reqBody@(DriverRegistrationStatusReq queryParam queryParam2) headers = defaultMakeRequestWithoutLogs GET (EP.driverRegistrationStatus queryParam queryParam2) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericVehicleDocumentItem :: Generic VehicleDocumentItem _
@@ -1277,9 +1281,9 @@ instance showDocumentStatusItem :: Show DocumentStatusItem where show = genericS
 instance decodeDocumentStatusItem :: Decode DocumentStatusItem where decode = defaultDecode
 instance encodeDocumentStatusItem  :: Encode DocumentStatusItem where encode = defaultEncode
 
-derive instance genericDriverRegistrationStatusReq :: Generic DriverRegistrationStatusReq _
+derive instance genericDriverRegistrationStatusReq :: Generic DriverRegistrationStatusReq _ 
 instance showDriverRegistrationStatusReq :: Show DriverRegistrationStatusReq where show = genericShow
-instance standardEncodeDriverRegistrationStatusReq :: StandardEncode DriverRegistrationStatusReq where standardEncode (DriverRegistrationStatusReq req) = standardEncode req
+instance standardDriverRegistrationStatusReq :: StandardEncode DriverRegistrationStatusReq where standardEncode req = standardEncode req
 instance decodeDriverRegistrationStatusReq :: Decode DriverRegistrationStatusReq where decode = defaultDecode
 instance encodeDriverRegistrationStatusReq :: Encode DriverRegistrationStatusReq where encode = defaultEncode
 

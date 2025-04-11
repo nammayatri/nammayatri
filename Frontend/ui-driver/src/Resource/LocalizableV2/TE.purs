@@ -1568,6 +1568,7 @@ getTe =
     , discount_points_upto: (\discountPoints -> "మీరు గరిష్టంగా " <> discountPoints <> " తగ్గింపు పాయింట్‌లకు అర్హులు")
     , cannot_detect_pan_card: "PAN కార్డ్‌ని గుర్తించడం సాధ్యం కాదు. దయచేసి మళ్లీ ప్రయత్నించండి."
     , cannot_detect_aadhaar: "ఆధార్ కార్డును గుర్తించడం సాధ్యం కాదు. దయచేసి మళ్లీ ప్రయత్నించండి."
+    , cannot_detect_dl: "లైసెన్స్‌ను గుర్తించలేకపోయాము. దయచేసి మళ్ళీ ప్రయత్నించండి."
     , document_already_validated: "పత్రం ఇప్పటికే ధృవీకరించబడింది."
     , document_under_manual_review: "మాన్యువల్ సమీక్షలో పత్రం."
     , document_already_linked_to_another_driver: "పత్రం ఇప్పటికే మరొక డ్రైవర్‌కి లింక్ చేయబడింది."

@@ -25,7 +25,7 @@ import Data.Lens ((^.))
 import Services.Accessor (_distance_meters)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
-import Data.String (Pattern(..), split) as DS
+import Data.String (Pattern(..), split, joinWith) as DS
 import Data.Array as DA
 import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
@@ -1342,3 +1342,6 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
   void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_INTERVAL locationUpdateServiceConfig.batchInterval
   void $ pure $ Storage.setValueToLocalStore LOCATION_BATCH_SIZE locationUpdateServiceConfig.batchSize
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge
+
+reverseHVDateFormat :: String -> String
+reverseHVDateFormat date = (DS.joinWith "-" $ DA.reverse $ DS.split(DS.Pattern ("-")) date) <> "T00:00:00Z"

@@ -1589,6 +1589,7 @@ newtype Keymap = Keymap {
   , discount_points_upto :: String -> String
   , cannot_detect_pan_card :: String
   , cannot_detect_aadhaar :: String
+  , cannot_detect_dl :: String
   , document_already_validated :: String
   , document_under_manual_review :: String
   , document_already_linked_to_another_driver :: String
@@ -6561,6 +6562,9 @@ cannot_detect_pan_card = a
 
 cannot_detect_aadhaar :: Proxy "cannot_detect_aadhaar"
 cannot_detect_aadhaar = a
+
+cannot_detect_dl :: Proxy "cannot_detect_dl"
+cannot_detect_dl = a
 
 document_already_validated :: Proxy "document_already_validated"
 document_already_validated = a

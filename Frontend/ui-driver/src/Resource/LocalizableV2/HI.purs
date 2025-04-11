@@ -1568,6 +1568,7 @@ getHi =
     , discount_points_upto: (\discountPoints -> "आप " <> discountPoints <> " तक छूट अंक के लिए पात्र हैं")
     , cannot_detect_pan_card: "पैन कार्ड का पता नहीं चल सका। कृपया पुन: प्रयास करें।"
     , cannot_detect_aadhaar: "आधार कार्ड का पता नहीं चल सका. कृपया पुन: प्रयास करें।"
+    , cannot_detect_dl: "लाइसेंस का पता नहीं लगाया जा सका. कृपया पुनः प्रयास करें।"
     , document_already_validated: "दस्तावेज़ पहले से ही मान्य है।"
     , document_under_manual_review: "दस्तावेज़ की मैन्युअल समीक्षा की जा रही है।"
     , document_already_linked_to_another_driver: "दस्तावेज़ पहले से ही किसी अन्य ड्राइवर से जुड़ा हुआ है।"
