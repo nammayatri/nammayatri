@@ -152,7 +152,8 @@ eval (NearbyDriverRespAC (API.NearbyDriverRes resp)) state =
     showAllMarkersOnMap busDetailsArray = do
       for_ busDetailsArray \busDetails -> do
         case busDetails.routeCode of
-          Just routeCode -> showMarkerOnMap routeCode busDetails.lat busDetails.lon
+          Just routeCode -> 
+            void $ runEffectFn4 JB.showDynamicRouteMarker (show busDetails.lat) (show busDetails.lon) routeCode (EHC.getNewIDWithTag "BusTicketBookingScreenMap")
           Nothing -> pure unit
 
     transformNearByDriversBucketResp (API.NearByDriversBucket nearByDriversBucket) = 
