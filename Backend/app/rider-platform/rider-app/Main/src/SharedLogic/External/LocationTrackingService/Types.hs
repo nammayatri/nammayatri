@@ -29,7 +29,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data UpcomingStopStatus = Reached | Upcoming deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+data UpcomingStopStatus = Reached | Upcoming deriving (Generic, FromJSON, ToJSON, ToSchema, Eq, Show)
 
 data Stop = Stop
   { name :: Text,
