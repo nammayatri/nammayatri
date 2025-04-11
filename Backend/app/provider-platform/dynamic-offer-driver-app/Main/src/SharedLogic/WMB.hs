@@ -428,7 +428,7 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
     createRCAssociation = do
-      driverRCAssoc <- makeRCAssociation merchantId merchantOperatingCityId driverId vehicleRC.id False (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      driverRCAssoc <- makeRCAssociation merchantId merchantOperatingCityId driverId vehicleRC.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
 
 -- forceCancelAllActiveTripTransaction vehicleDriverId = do

@@ -552,7 +552,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
               }
       void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
     createRCAssociation driverId rc = do
-      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId driverId rc.id False (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()

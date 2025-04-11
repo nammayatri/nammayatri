@@ -43,7 +43,7 @@ data AddVehicleReq = AddVehicleReq
     model :: Kernel.Prelude.Text,
     make :: Kernel.Prelude.Text,
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    driverName :: Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -74,7 +74,7 @@ data CreateDriversReq = CreateDriversReq {file :: Kernel.Prelude.FilePath, fleet
 instance Kernel.Types.HideSecrets.HideSecrets CreateDriversReq where
   hideSecrets = Kernel.Prelude.identity
 
-data CreateVehiclesReq = CreateVehiclesReq {file :: Kernel.Prelude.FilePath, fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data CreateVehiclesReq = CreateVehiclesReq {file :: Kernel.Prelude.FilePath, fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
