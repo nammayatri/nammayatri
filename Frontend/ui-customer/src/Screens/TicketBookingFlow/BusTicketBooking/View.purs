@@ -28,7 +28,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (launchAff_, launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
@@ -63,6 +63,10 @@ import Helpers.FrfsUtils
 import RemoteConfig.Utils as RCU
 import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM.Elements.Keyed as Keyed
+import Services.API as API
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Data.Function.Uncurried (runFn2, runFn3)
+import LocalStorage.Cache
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -70,8 +74,11 @@ busTicketBookingScreen initialState =
   , view
   , name: "BusTicketBookingScreen"
   , globalEvents: [(\push -> do
-      getTicketBookingListEvent push -- Calling TicketBookingList API to show all previous tickets being booked
-      -- getNearbyDriversEvent push -- Calling NearbyDrivers API to show all nearby drivers
+      void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
+        getTicketBookingListEvent push -- Calling TicketBookingList API to show all previous tickets being booked
+        -- getNearbyDriversEvent 10000.0 0 initialState push
+      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" "true"
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getNearbyDriversEvent 10000.0 0 initialState push
       pure $ pure unit
   )]
   , eval:
@@ -83,11 +90,32 @@ busTicketBookingScreen initialState =
   where
     getTicketBookingListEvent push =
       if (isNothing initialState.data.ticketDetailsState) then do
-        void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType) (Just "5") (Just "0")
-          lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
-        pure unit
+        (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType) (Just "5") (Just "0")
+        lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
       else pure unit
+
+    getNearbyDriversEvent duration id state push = do
+      let busLocationTracking = runFn3 getFromCache "BUS_LOCATION_TRACKING" Nothing Just
+      if (busLocationTracking == Just "true") then do
+        eitherRespOrError <- Remote.postNearbyDrivers $ 
+          API.NearbyDriverReq 
+            { location: API.LatLong 
+                { lat: state.props.srcLat
+                , lon: state.props.srcLong
+                }
+            , vehicleVariants: Just ["BUS_AC", "BUS_NON_AC"]
+            , radius: 1000.0
+            }
+        case eitherRespOrError of
+          Right (API.NearbyDriverRes resp) -> do
+            doAff do liftEffect $ push $ NearbyDriverRespAC $ API.NearbyDriverRes resp
+            void $ delay $ Milliseconds $ duration
+            getNearbyDriversEvent duration id state push
+          Left err -> do
+            void $ delay $ Milliseconds $ duration
+            getNearbyDriversEvent duration id state push
+      else pure unit
+
 
 view :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 view push state =

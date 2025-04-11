@@ -26,6 +26,7 @@ initData =
     , isEmptyRoute : ""
     , ticketServiceType : API.METRO
     , ticketDetailsState : Nothing
+    , busDetailsArray : []
     }
   , props: {
     srcLat :  0.0,

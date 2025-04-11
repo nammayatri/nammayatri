@@ -3311,12 +3311,19 @@ type BusTicketBookingState = {
   props :: BusTicketBookingProps
 }
 
+type BusDetails = {
+  lat :: Number
+  , lon :: Number
+  , routeCode :: Maybe String
+}
+
 type BusTicketBookingData = {
     routeList :: Boolean
   , showRouteOptions :: Boolean
   , isEmptyRoute :: String
   , ticketServiceType :: API.TicketServiceType
   , ticketDetailsState :: Maybe MetroMyTicketsScreenState
+  , busDetailsArray :: Array BusDetails
 }
 
 type BusTicketBookingProps = {
