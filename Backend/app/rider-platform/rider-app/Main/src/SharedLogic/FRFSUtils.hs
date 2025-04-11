@@ -171,7 +171,7 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
           catMaybes $
             map
               ( \stops ->
-                  let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
+                  let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) stops
                       mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stopsSortedBySequenceNumber
                    in find
                         ( \stop ->
