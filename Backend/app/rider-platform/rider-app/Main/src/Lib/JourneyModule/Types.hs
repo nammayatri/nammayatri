@@ -45,6 +45,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Price as KTP
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
@@ -209,7 +210,8 @@ data JourneyInitData = JourneyInitData
     estimatedDuration :: Seconds,
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
-    maximumWalkDistance :: Meters
+    maximumWalkDistance :: Meters,
+    straightLineThreshold :: Meters
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -883,10 +885,10 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId = do
   let journeyLegsCount = length legs
-      modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) legs
+      modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
   now <- getCurrentTime
   return $
     DJ.Journey
@@ -908,9 +910,11 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         updatedAt = now,
         DJ.recentLocationId = mbRecentLocationId -- Fully qualify the field name
       }
+  where
+    straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
-mkJourneyLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> Maybe GetFareResponse -> m DJL.JourneyLeg
-mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance fare = do
+mkJourneyLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> Meters -> Maybe GetFareResponse -> m DJL.JourneyLeg
+mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance straightLineThreshold fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   return $
@@ -924,7 +928,7 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         fromStopDetails = leg.fromStopDetails,
         id = journeyLegId,
         journeyId,
-        mode = convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) maximumWalkDistance,
+        mode = convertMultiModalModeToTripMode leg.mode straightLineDistance (distanceToMeters leg.distance) maximumWalkDistance straightLineThreshold,
         -- polylinePoints = leg.polyline.encodedPolyline,
         routeDetails = leg.routeDetails,
         sequenceNumber = idx,
@@ -943,6 +947,8 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance f
         isDeleted = Just False,
         isSkipped = Just False
       }
+  where
+    straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
 getServiceTypeFromProviderCode :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m Spec.ServiceTierType
 getServiceTypeFromProviderCode merchantOperatingCityId providerCode = do

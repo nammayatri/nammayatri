@@ -40,6 +40,7 @@ import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Bus ()
 import qualified Lib.JourneyLeg.Interface as JLI
@@ -125,15 +126,15 @@ init journeyReq = do
   mbTotalFares <-
     mapWithIndex
       ( \idx leg -> do
-          let travelMode = convertMultiModalModeToTripMode leg.mode (distanceToMeters leg.distance) journeyReq.maximumWalkDistance
+          let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) (distanceToMeters leg.distance) journeyReq.maximumWalkDistance journeyReq.straightLineThreshold
           mbTotalLegFare <- JLI.getFare journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode
           if riderConfig.multimodalTesting
             then do
-              journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance mbTotalLegFare
+              journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare
               QJourneyLeg.create journeyLeg
             else do
               whenJust mbTotalLegFare $ \fare -> do
-                journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance (Just fare)
+                journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (Just fare)
                 QJourneyLeg.create journeyLeg
           return mbTotalLegFare
       )
@@ -143,10 +144,12 @@ init journeyReq = do
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance (searchReq.recentLocationId)
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId)
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
+  where
+    straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = JQ.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
@@ -972,7 +975,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
       let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance (Just fare)
+      journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       startLocationAddress <-
         case currentLeg.legExtraInfo of
           JL.Walk walkLegExtraInfo -> return walkLegExtraInfo.origin.address
@@ -1006,7 +1009,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       now <- getCurrentTime
       let leg = mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance (Just fare)
+      journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs
         QJourneyLeg.create journeyLeg

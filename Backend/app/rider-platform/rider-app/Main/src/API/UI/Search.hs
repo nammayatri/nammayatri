@@ -326,7 +326,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               estimatedDuration = firstRoute.duration,
               startTime = firstRoute.startTime,
               endTime = firstRoute.endTime,
-              maximumWalkDistance = riderConfig.maximumWalkDistance
+              maximumWalkDistance = riderConfig.maximumWalkDistance,
+              straightLineThreshold = riderConfig.straightLineThreshold
             }
     void $ JM.init initReq
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
@@ -367,7 +368,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                   estimatedDuration = r'.duration,
                   startTime = r'.startTime,
                   endTime = r'.endTime,
-                  maximumWalkDistance = riderConfig.maximumWalkDistance
+                  maximumWalkDistance = riderConfig.maximumWalkDistance,
+                  straightLineThreshold = riderConfig.straightLineThreshold
                 }
         JM.init initReq'
       QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
