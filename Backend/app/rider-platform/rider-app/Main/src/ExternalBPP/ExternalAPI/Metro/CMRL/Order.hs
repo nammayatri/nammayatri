@@ -46,6 +46,7 @@ createOrder config booking mRiderNumber = do
       return $
         ProviderTicket
           { ticketNumber = ticketNumber,
+            vehicleNumber = Nothing,
             qrData = qrBytes,
             qrStatus = "UNCLAIMED",
             qrValidity = expiryTime,

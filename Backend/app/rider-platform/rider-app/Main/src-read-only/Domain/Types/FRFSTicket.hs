@@ -25,6 +25,7 @@ data FRFSTicket = FRFSTicket
     qrData :: Kernel.Prelude.Text,
     qrRefreshAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    scannedByVehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,

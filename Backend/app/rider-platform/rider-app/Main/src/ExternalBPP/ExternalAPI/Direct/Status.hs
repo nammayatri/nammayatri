@@ -27,6 +27,7 @@ getTicketStatus config booking = do
                 Just $
                   ProviderTicket
                     { ticketNumber = ticket.ticketNumber,
+                      vehicleNumber = Nothing,
                       qrData,
                       qrValidity = ticket.validTill,
                       description = ticket.description,
