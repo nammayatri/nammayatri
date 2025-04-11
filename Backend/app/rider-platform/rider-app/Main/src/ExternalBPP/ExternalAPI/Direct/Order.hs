@@ -72,6 +72,7 @@ getTicketDetail config integratedBPPConfigId qrTtl booking routeStation = do
   return $
     ProviderTicket
       { ticketNumber,
+        vehicleNumber = Nothing,
         description = Just ticketDescription,
         qrData,
         qrStatus = "UNCLAIMED",

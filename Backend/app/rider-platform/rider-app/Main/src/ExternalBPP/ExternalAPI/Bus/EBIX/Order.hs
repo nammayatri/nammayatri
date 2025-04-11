@@ -56,6 +56,7 @@ instance ToJSON SaveMobTicketRes where
 
 type SaveMobTicketAPI =
   "Api"
+    :> "V2"
     :> "Cons"
     :> "SaveMobTicket"
     :> Header "Authorization" Text
@@ -138,6 +139,7 @@ getTicketDetail config integrationBPPConfigId qrTtl booking routeStation = do
   return $
     ProviderTicket
       { ticketNumber = ticketNumber,
+        vehicleNumber = Nothing,
         qrData,
         qrStatus = "UNCLAIMED",
         qrValidity,

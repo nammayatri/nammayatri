@@ -361,7 +361,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
     tripEndPoints <- do
       let mbAdvanceRideId = (.id) <$> advanceRide
-      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId
+      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId Nothing
       pure $ toList res.loc
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
