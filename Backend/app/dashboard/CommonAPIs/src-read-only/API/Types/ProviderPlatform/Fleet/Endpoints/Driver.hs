@@ -74,7 +74,7 @@ data CreateDriversReq = CreateDriversReq {file :: Kernel.Prelude.FilePath, fleet
 instance Kernel.Types.HideSecrets.HideSecrets CreateDriversReq where
   hideSecrets = Kernel.Prelude.identity
 
-data CreateVehiclesReq = CreateVehiclesReq {file :: Kernel.Prelude.FilePath, fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data CreateVehiclesReq = CreateVehiclesReq {file :: Kernel.Prelude.FilePath, fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

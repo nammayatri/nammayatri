@@ -244,8 +244,8 @@ postDriverFleetAddVehicles :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -
 postDriverFleetAddVehicles merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddVehicles)) req{fleetOwnerId = Just fleetOwnerId}
+  -- fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverFleetAddVehicles)) req{fleetOwnerId = mbFleetOwnerId, requestorId = Just apiTokenInfo.personId.getId}
 
 postDriverFleetTripPlanner :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Common.TripPlannerReq -> Flow APISuccess
 postDriverFleetTripPlanner merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do

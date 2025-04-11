@@ -64,19 +64,25 @@ instance FromMultipart Tmp CreateVehiclesReq where
   fromMultipart form = do
     fileData <- lookupFile "file" form
     let fleetOwnerId = lookupInput "fleetOwnerId" form
+        requestorId = lookupInput "requestorId" form
     pure $
       CreateVehiclesReq
         { file = fdPayload fileData,
           fleetOwnerId = case fleetOwnerId of
+            Left _ -> Nothing
+            Right x -> Just x,
+          requestorId = case requestorId of
             Left _ -> Nothing
             Right x -> Just x
         }
 
 instance ToMultipart Tmp CreateVehiclesReq where
   toMultipart form = do
-    let inputArr = case form.fleetOwnerId of
-          Nothing -> []
-          Just id -> [Input "fleetOwnerId" id]
+    let inputArr =
+          [ ("fleetOwnerId", form.fleetOwnerId),
+            ("requestorId", form.requestorId)
+          ]
+            & mapMaybe (\(k, mv) -> fmap (Input k) mv)
     MultipartData inputArr [FileData "file" (T.pack form.file) "" (form.file)]
 
 -- Vehicle Driver Route mapping --

@@ -1124,6 +1124,7 @@ types:
   CreateVehiclesReq:
     - file: FilePath
     - fleetOwnerId: Maybe Text
+    - requestorId: Maybe Text
     - derive: "'HideSecrets"
   FleetOwnerInfoRes:
     - blocked: Bool
