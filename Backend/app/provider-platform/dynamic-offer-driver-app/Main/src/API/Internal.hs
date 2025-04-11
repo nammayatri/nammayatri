@@ -22,6 +22,7 @@ import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
 import qualified API.Internal.StopDetection as StopDetection
+import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
 import Servant
 import Tools.Auth ()
@@ -46,6 +47,7 @@ type API =
            :<|> StopDetection.API
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
+           :<|> ViolationDetection.API
        )
 
 handler :: FlowServer API
@@ -68,3 +70,4 @@ handler =
     :<|> StopDetection.handler
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
+    :<|> ViolationDetection.handler
