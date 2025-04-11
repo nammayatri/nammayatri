@@ -33,7 +33,8 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     pure $
       Just
         Domain.Types.SearchRequest.SearchRequest
-          { autoAssignEnabled = autoAssignEnabled,
+          { allJourneysLoaded = allJourneysLoaded,
+            autoAssignEnabled = autoAssignEnabled,
             autoAssignEnabledV2 = autoAssignEnabledV2,
             availablePaymentMethods = Kernel.Types.Id.Id <$> availablePaymentMethods,
             backendAppVersion = backendAppVersion,
@@ -87,7 +88,8 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
 instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
   toTType' (Domain.Types.SearchRequest.SearchRequest {..}) = do
     Beam.SearchRequestT
-      { Beam.autoAssignEnabled = autoAssignEnabled,
+      { Beam.allJourneysLoaded = allJourneysLoaded,
+        Beam.autoAssignEnabled = autoAssignEnabled,
         Beam.autoAssignEnabledV2 = autoAssignEnabledV2,
         Beam.availablePaymentMethods = Kernel.Types.Id.getId <$> availablePaymentMethods,
         Beam.backendAppVersion = backendAppVersion,

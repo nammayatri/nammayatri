@@ -20,7 +20,8 @@ import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data SearchRequestT f = SearchRequestT
-  { autoAssignEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+  { allJourneysLoaded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    autoAssignEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoAssignEnabledV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

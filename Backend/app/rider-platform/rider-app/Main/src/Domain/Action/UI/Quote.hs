@@ -203,6 +203,7 @@ data GetQuotesRes = GetQuotesRes
     quotes :: [OfferRes],
     estimates :: [UEstimate.EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity],
+    allJourneysLoaded :: Bool,
     journey :: Maybe [JourneyData]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -292,6 +293,7 @@ getQuotes searchRequestId mbAllowMultiple = do
           quotes = offers,
           estimates,
           paymentMethods = [],
+          allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
           journey = journeyData
         }
 

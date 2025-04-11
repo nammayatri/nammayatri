@@ -589,6 +589,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         isMeterRideSearch = isMeterRide,
         destinationStopCode = destinationStopCode,
         originStopCode = originStopCode,
+        allJourneysLoaded = Just False,
         ..
       }
   where

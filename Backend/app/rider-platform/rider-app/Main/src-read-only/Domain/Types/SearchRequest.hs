@@ -25,7 +25,8 @@ import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data SearchRequest = SearchRequest
-  { autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { allJourneysLoaded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoAssignEnabledV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod],
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

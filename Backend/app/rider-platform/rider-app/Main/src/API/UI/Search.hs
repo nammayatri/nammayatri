@@ -313,21 +313,22 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
             Nothing -> return otpResponse''
         else return otpResponse''
 
-  forM_ otpResponse.routes $ \r -> do
+  let mbFirstRoute = listToMaybe otpResponse.routes
+  whenJust mbFirstRoute $ \firstRoute -> do
     let initReq =
           JMTypes.JourneyInitData
             { parentSearchId = searchRequest.id,
               merchantId = searchRequest.merchantId,
               merchantOperatingCityId,
               personId = searchRequest.riderId,
-              legs = r.legs,
-              estimatedDistance = r.distance,
-              estimatedDuration = r.duration,
-              startTime = r.startTime,
-              endTime = r.endTime,
+              legs = firstRoute.legs,
+              estimatedDistance = firstRoute.distance,
+              estimatedDuration = firstRoute.duration,
+              startTime = firstRoute.startTime,
+              endTime = firstRoute.endTime,
               maximumWalkDistance = riderConfig.maximumWalkDistance
             }
-    JM.init initReq
+    void $ JM.init initReq
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
   journeys <- DQuote.getJourneys searchRequest (Just True)
   let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
@@ -340,6 +341,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
             return $ Just resp
           Nothing -> return Nothing
       else return Nothing
+
+  fork "Rest of the routes InIt" $ processRestOfRoutes otpResponse.routes
   return $
     MultimodalSearchResp
       { searchId = searchRequest.id,
@@ -349,6 +352,26 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         firstJourneyInfo = firstJourneyInfo
       }
   where
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> Flow ()
+    processRestOfRoutes routes = do
+      let restOfRoutes = drop 1 routes
+      forM_ restOfRoutes $ \r' -> do
+        let initReq' =
+              JMTypes.JourneyInitData
+                { parentSearchId = searchRequest.id,
+                  merchantId = searchRequest.merchantId,
+                  merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+                  personId = searchRequest.riderId,
+                  legs = r'.legs,
+                  estimatedDistance = r'.distance,
+                  estimatedDuration = r'.duration,
+                  startTime = r'.startTime,
+                  endTime = r'.endTime,
+                  maximumWalkDistance = riderConfig.maximumWalkDistance
+                }
+        JM.init initReq'
+      QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
+
     extractDest Nothing = throwError $ InvalidRequest "Destination is required for multimodal search"
     extractDest (Just d) = return d
 

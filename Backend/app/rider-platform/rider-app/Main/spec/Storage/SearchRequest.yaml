@@ -86,6 +86,7 @@ SearchRequest:
     originStopCode: Maybe Text
     destinationStopCode: Maybe Text
     configInExperimentVersions: "[ConfigVersionMap]"
+    allJourneysLoaded: Maybe Bool
 
 
   default:
@@ -232,6 +233,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       params: [id, totalRidesCount]
       where: riderId
+
+    updateAllJourneysLoaded:
+      kvFunction: updateOneWithKV
+      params: [allJourneysLoaded]
+      where: id
 
     updateInitiatedBy:
       kvFunction: updateOneWithKV
