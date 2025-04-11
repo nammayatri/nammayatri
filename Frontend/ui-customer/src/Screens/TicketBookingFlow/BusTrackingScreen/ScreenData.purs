@@ -56,10 +56,12 @@ initData =
         , stationResponse : Mb.Nothing
         , routeShortName : ""
         , routePts : {points : []}
+        , previousLatLonsOfVehicle: DM.empty
+        , nearestStopFromCurrentLoc : Mb.Nothing
         }
     , props:
         { showRouteDetailsTab: true
-        , expandStopsView: true
+        , expandStopsView: false
         , verticalLineHeight: 0
         , srcLat: 0.0
         , srcLon: 0.0
@@ -71,6 +73,9 @@ initData =
         , userAndBuslocationMatchCount : 0
         , previousScreen : ST.BusHomeScreen
         , destinationSequenceNumber : Mb.Nothing
+        , currentLat : 0.0
+        , currentLon : 0.0
+        , minimumEtaDistance : Nothing
         }
     }
 

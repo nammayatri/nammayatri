@@ -2896,7 +2896,9 @@ eval (BottomNavBarAction id) state = do
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
     BUS_ -> do
       let updatedState = newState { props { ticketServiceType = API.BUS } }
-      updateAndExit updatedState $ GoToBusTicketBookingFlow state
+      if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
+        then updateAndExit updatedState $ GoToBusTicketBookingFlow state
+        else updateAndExit updatedState $ GoToSearchLocationScreenForBusRoutes state
       -- updateAndExit updatedState $ GoToSearchLocationScreenForRoutes updatedState ST.Src
     MOBILITY -> continue newState 
     _ -> update state 
@@ -3341,7 +3343,10 @@ eval (ServicesOnClick service) state = do
     RC.DELIVERY -> exit $ GoToParcelInstructions state
     RC.BUS -> do
       let newState = updatedState { props { ticketServiceType = API.BUS } }
-      updateAndExit newState $ GoToBusTicketBookingFlow state
+      if (getValueToLocalStore CAN_HAVE_ACTIVE_TICKETS == "true")
+        then updateAndExit newState $ GoToBusTicketBookingFlow state
+        else updateAndExit newState $ GoToSearchLocationScreenForBusRoutes state
+      -- updateAndExit newState $ GoToBusTicketBookingFlow state
     RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.AMBULANCE_SERVICE ->
       let
