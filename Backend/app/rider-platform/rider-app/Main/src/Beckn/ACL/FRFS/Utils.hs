@@ -141,6 +141,7 @@ parseTicket fulfillment = do
   pure $
     Domain.DTicket
       { qrData,
+        vehicleNumber = Nothing,
         validTill,
         bppFulfillmentId = fId,
         ticketNumber,
@@ -344,14 +345,14 @@ encodeToText' = A.decode . A.encode
 
 type TicketNumber = Text
 
-getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus)
+getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus, Maybe Text)
 getTicketStatus booking dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
   ticketStatus <- castTicketStatus dTicket.status booking
   if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
-    then return (dTicket.ticketNumber, Ticket.EXPIRED)
-    else return (dTicket.ticketNumber, ticketStatus)
+    then return (dTicket.ticketNumber, Ticket.EXPIRED, dTicket.vehicleNumber)
+    else return (dTicket.ticketNumber, ticketStatus, dTicket.vehicleNumber)
 
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE

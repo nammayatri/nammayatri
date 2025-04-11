@@ -43,6 +43,7 @@ data DOrder = DOrder
 
 data DTicket = DTicket
   { qrData :: Text,
+    vehicleNumber :: Maybe Text,
     description :: Maybe Text,
     bppFulfillmentId :: Text,
     ticketNumber :: Text,
