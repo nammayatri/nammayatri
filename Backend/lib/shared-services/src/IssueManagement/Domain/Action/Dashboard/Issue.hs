@@ -157,13 +157,12 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
           }
 
     makeIssueReport mocId person = do
-      issueReportId <- generateGUID
+      id <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
       pure $
         DIR.IssueReport
-          { id = issueReportId,
-            shortId = Just shortId,
+          { shortId = Just shortId,
             driverId = if identifier == CUSTOMER then Nothing else Just personId,
             merchantOperatingCityId = Just mocId,
             optionId = Nothing,
@@ -172,7 +171,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             assignee = Nothing,
             status = OPEN,
             deleted = False,
-            ticketId = Nothing,
+            ticketId = Just ticketId,
             createdAt = now,
             updatedAt = now,
             description = "",
