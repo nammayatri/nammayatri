@@ -328,7 +328,8 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else Color.borderColorLight) 
+          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else state.data.config.themeColors.editTextNormalStroke) 
+          , background state.data.config.themeColors.radioInactiveBackground
           , cornerRadius 4.0
           ][  textView
               [ width $ V 20
@@ -344,7 +345,6 @@ vehicleRegistrationNumber state push =
               , weight 1.0
               , cornerRadius 4.0
               , pattern "[0-9a-zA-Z]*,10"
-              , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
               , inputTypeI 4097
@@ -401,7 +401,8 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
-                , stroke ("1," <> Color.borderColorLight) 
+                , stroke ("1," <> state.data.config.themeColors.editTextNormalStroke) 
+                , background state.data.config.themeColors.radioInactiveBackground
                 , cornerRadius 4.0
                 ][  textView
                     [ width $ V 20
@@ -417,7 +418,6 @@ vehicleRegistrationNumber state push =
                     , weight 1.0
                     , cornerRadius 4.0
                     , pattern "[0-9a-zA-Z]*,10"
-                    , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
                     , inputTypeI 4097

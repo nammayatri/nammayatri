@@ -171,7 +171,9 @@ primaryEditTextView state push =
         pattern : Just "[0-9]*,4",
         fontSize : FontSize.a_18,
         letterSpacing : PX if state.data.otp == "" then 0.0 else 5.0,
-        id : (EHC.getNewIDWithTag "EnterOTPScreenEditText")
+        id : (EHC.getNewIDWithTag "EnterOTPScreenEditText"),
+        background : state.data.config.themeColors.radioInactiveBackground,
+        stroke : state.data.config.themeColors.editTextNormalStroke
       })
     , PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig

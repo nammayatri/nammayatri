@@ -27,7 +27,8 @@ type ImageConfig = {
   height :: Length,
   width :: Length,
   visibility :: Visibility,
-  image :: String
+  image :: String,
+  clickable :: Boolean
 }
 
 type TextConfig = {
@@ -43,7 +44,8 @@ config = {
     height : V 25,
     width : V 25,
     visibility : VISIBLE,
-    image : "ny_ic_chevron_left_white"
+    image : "ny_ic_chevron_left_white",
+    clickable : true
   },
   genericHeaderConfig : GenericHeader.config,
   rightButton : {

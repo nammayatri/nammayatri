@@ -133,6 +133,7 @@ type ThemeColors = {
   radioInactiveBackground :: String,
   radioActiveBackground :: String,
   editTextFocusedStroke :: String,
+  editTextNormalStroke :: String,
   mobileNumberScreenHeaderText :: String,
   defaultBackButton :: String,
   highlightedTextColor :: String,
@@ -241,6 +242,7 @@ type Features = {
 , enableAutoReferral :: Boolean
 , enableSpecialPickup :: Boolean
 , enableInterOperability :: Boolean
+, showFaqsWhileOnboarding :: Boolean
 }
  
  -- VV - VechileVerfication

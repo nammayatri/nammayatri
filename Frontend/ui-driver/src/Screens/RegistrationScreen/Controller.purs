@@ -293,6 +293,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continueWithCmd newState [pure $ SupportClick true]
     "change_vehicle" -> continue newState { props { confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state

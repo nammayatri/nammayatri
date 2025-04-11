@@ -1077,6 +1077,7 @@ config =
     radioInactiveBackground : "#FFFFFF",
     radioActiveBackground : "#f4F7FF",
     editTextFocusedStroke : "#e4e4e4",
+    editTextNormalStroke : "#e4e4e4",
     mobileNumberScreenHeaderText : "LETS_GET_YOU_TRIP_READY",
     defaultBackButton : "ny_ic_chevron_left_white",
     highlightedTextColor : "#2194FF",
@@ -1107,6 +1108,7 @@ config =
   , enableAutoReferral : true
   , enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
   , enableInterOperability : true
+  , showFaqsWhileOnboarding : false
   }
   , showCorporateAddress : false
   , engilshInNative: "English"

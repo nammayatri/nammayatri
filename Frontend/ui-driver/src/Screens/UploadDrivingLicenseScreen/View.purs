@@ -446,7 +446,8 @@ dateOfBirth push state =
     , margin (MarginVertical 10 10)
     , padding (Padding 20 16 16 16)
     , cornerRadius 4.0
-    , stroke ("1," <> Color.borderGreyColor)
+    , stroke ("1," <> state.data.config.themeColors.editTextNormalStroke)
+    , background state.data.config.themeColors.radioInactiveBackground
     ][ linearLayout
       [ width MATCH_PARENT
         , height MATCH_PARENT

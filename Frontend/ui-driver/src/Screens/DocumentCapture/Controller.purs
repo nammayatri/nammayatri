@@ -17,7 +17,7 @@ module Screens.DocumentCaptureScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>), (&&), not)
+import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>), (&&), not, show)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -43,6 +43,11 @@ import Common.Types.App
 import Engineering.Helpers.Events as EHE
 import Services.API as API
 import Resource.Constants as Const
+import Storage
+import DecodeUtil 
+import Debug
+import Data.Maybe
+import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -74,6 +79,7 @@ data ScreenOutput = GoBack
                   | SelectLang DocumentCaptureScreenState
                   | ChangeVehicle DocumentCaptureScreenState
                   | UploadVehicleImageAPI DocumentCaptureScreenState
+                  | GoToOnboardingScreen DocumentCaptureScreenState
 
 uploadFileConfig :: UploadFileConfig
 uploadFileConfig = UploadFileConfig {
@@ -85,11 +91,15 @@ uploadFileConfig = UploadFileConfig {
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
-  if state.data.docType == ST.VEHICLE_PHOTOS && not state.props.uploadVehiclePhotos then continue state {props {uploadVehiclePhotos = true}} 
+  if state.data.docType == ST.VEHICLE_PHOTOS && not state.props.uploadVehiclePhotos then do
+    let (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
+    continue state {props {uploadVehiclePhotos = true, numberOfVehicleImagesUploaded = DA.length uploadedImagesUptoNow}} 
   else continueWithCmd state [do
     let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
     void $ liftEffect $ JB.uploadFile uploadFileConfig true
     pure NoAction]
+
+eval (VehicleUploadPrimaryButtonAC PrimaryButtonController.OnClick) state = exit $ GoToOnboardingScreen state
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
 
@@ -142,6 +152,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}

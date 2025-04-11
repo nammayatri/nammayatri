@@ -384,6 +384,33 @@ getProxy str = case str of
   SOMETHING_WENT_WRONG -> \a -> a @~ something_went_wrong
   PICKUP -> \a -> a @~ pickup
   TRIP -> \a -> a @~ trip
+  OPTIONAL_STR -> \a -> a @~ optional_str
+  MY_VEHICLE -> \a -> a @~ my_vehicle
+  APP_PERMISSIONS -> \a -> a @~ app_permissions
+  TRAININGS -> \a -> a @~ trainings
+  VERIFY -> \a -> a @~ verify
+  INVALID_CODE_PLEASE_RE_ENTER -> \a -> a @~ invalid_code_please_re_enter
+  VERIFIED_LINKED_WITH_NAME arg1 -> \a -> (a @~ verified_linked_with_name) arg1
+  VISIT_YOUR_NEAREST_HUB_TO_COMPLETE_A_SHORT_VEHICLE_INSPECTION_TO_START_EARNING_WITH_US -> \a -> a @~ visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us
+  YOU_WILL_BE_CONTACTED_BY_YOUR_SELECTED_HUB_WITHIN_24_HOURS -> \a -> a @~ you_will_be_contacted_by_your_selected_hub_within_24_hours
+  OPERATOR_REFERRAL_CODE_APPLIED -> \a -> a @~ operator_referral_code_applied
+  GOT_AN_OPERATOR_REFERRAL_CODE -> \a -> a @~ got_an_operator_referral_code
+  LOCATE_ON_MAP_STR -> \a -> a @~ locate_on_map
+  CONTACT_NUMBER -> \a -> a @~ contact_number
+  ADDRESS -> \a -> a @~ address
+  VEHICLE_PHOTOS_STR -> \a -> a @~ vehicle_photos
+  OPERATION_HUB_STR -> \a -> a @~ operation_hub
+  TAKE_A_CLEAR_PICTURE_OF_THE_VEHICLE_FROM_THE_SUGGESTED_ANGLES -> \a -> a @~ take_a_clear_picture_of_the_vehicle_from_the_suggested_angles
+  TAKE_A_CLEAR_SELFIE_WITH_YOUR_FACE_INSIDE_THE_MARKED_AREA -> \a -> a @~ take_a_clear_selfie_with_your_face_inside_the_marked_area
+  ENSURE_ONLY_YOUR_VEHICLE_IS_IN_THE_FRAME_WHEN_UPLOADING -> \a -> a @~ ensure_only_your_vehicle_is_in_the_frame_when_uploading
+  ONLY_YOUR_FACE_SHOULD_BE_IN_THE_FRAME_WHEN_UPLOADING_THE_IMAGE -> \a -> a @~ only_your_face_should_be_in_the_frame_when_uploading_the_image
+  FULL_VIEW -> \a -> a @~ full_view
+  AVOID_PEOPLE -> \a -> a @~ avoid_people
+  CROPPED_AREA -> \a -> a @~ cropped_area
+  INSIDE_MARKED_AREA -> \a -> a @~ inside_marked_area
+  NO_CLOSED_EYES -> \a -> a @~ no_closed_eyes
+  MORE_THAN_ONE_FACE -> \a -> a @~ more_than_one_face
+  OUTSIDE_MARKED_AREA -> \a -> a @~ outside_marked_area
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number

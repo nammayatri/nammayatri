@@ -46,3 +46,6 @@ documentCaptureScreen = do
     UploadVehicleImageAPI updatedState -> do
       modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPLOAD_VEHICLE_API updatedState $ Const.transformVehicleImageToDoctype updatedState.props.vehicleTypeImageToUpload)
+    GoToOnboardingScreen updatedState -> do
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GOTO_ONBOARDING_SCREEN updatedState)

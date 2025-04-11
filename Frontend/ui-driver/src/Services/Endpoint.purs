@@ -97,8 +97,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: Boolean -> String
-driverRegistrationStatus queryParam = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam
+driverRegistrationStatus :: Boolean -> Boolean -> String
+driverRegistrationStatus queryParam providePrefillDetails = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> "&providePrefillDetails=" <> show providePrefillDetails
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -106,8 +106,14 @@ validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
 referDriver :: String -> String
 referDriver dummyString = (getBaseUrl "") <> "/driver/referral"
 
-getDriverReferralDetails :: String -> String
-getDriverReferralDetails dummyString = (getBaseUrl "") <> "/driver/referral/details"
+getDriverReferralDetails :: String -> String -> String
+getDriverReferralDetails value role = (getBaseUrl "") <> "/driver/referral/details?value=" <>  value <> "&role=" <> role
+
+getAllHubs :: String -> String
+getAllHubs dummyString = (getBaseUrl "") <> "/operation/getAllHubs"
+
+driverOperationCreateRequest :: String -> String
+driverOperationCreateRequest dummyString = (getBaseUrl "") <> "/operation/createRequest"
 
 getstatsInfo :: String -> String
 getstatsInfo day = (getBaseUrl "") <> "/driver/profile/stats?day="<> day

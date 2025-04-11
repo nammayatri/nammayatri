@@ -51,6 +51,9 @@ registrationV2 = do
     OperatorReferralCode updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFERRAL_CODE_SUBMIT_V2 updatedState)
+    GoToOperationHubScreen updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_OPERATION_HUB_SCREEN updatedState)
     GetReferralDetils updatedState -> do
         modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
         App.BackT $ App.BackPoint <$> (pure $ GET_DRIVER_REFERRAL_DETAILS updatedState)

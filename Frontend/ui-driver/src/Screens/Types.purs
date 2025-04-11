@@ -13,10 +13,11 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types 
+module Screens.Types
   ( module Screens.Types
   , module ReExport
-  ) where
+  )
+  where
 
 import Common.Types.Config
 
@@ -315,7 +316,8 @@ type RegistrationScreenData = {
   accessToken :: String,
   hvTxnId :: Maybe String,
   hvFlowId :: Maybe String,
-  refereeName :: Maybe String
+  refereeName :: Maybe String,
+  vehicleRegistrationCertNumber :: Maybe String
 }
 
 type DocumentStatus = {
@@ -365,13 +367,15 @@ type RegistrationScreenProps = {
   manageVehicleCategory :: Maybe VehicleCategory,
   dontAllowHvRelaunch :: Boolean,
   categoryToStepProgressMap :: Array CategoryToStepMap,
-  selectedDocumentCategory :: Maybe API.DocumentCategory
+  selectedDocumentCategory :: Maybe API.DocumentCategory,
+  vehicleImagesUploaded :: Boolean
 }
 
 type CategoryToStepMap = {
   category :: API.DocumentCategory,
   registrationSteps :: Array StepProgress,
-  completionStatus :: Boolean
+  completionStatus :: StageStatus,
+  showContinueButton :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -392,6 +396,7 @@ data RegisterationStep =
   | VEHICLE_PUC
   | NO_OPTION
   | VEHICLE_PHOTOS
+  | INSPECTION_HUB
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
@@ -434,7 +439,9 @@ type PrimaryEditTextState = {
   text :: String,
   fontSize :: FontSize,
   letterSpacing :: LetterSpacing,
-  id :: String
+  id :: String,
+  background :: String,
+  stroke :: String 
 }
 
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------
@@ -3061,7 +3068,8 @@ type DocumentCaptureScreenProps = {
   confirmChangeVehicle :: Boolean,
   contactSupportModal :: AnimType,
   uploadVehiclePhotos :: Boolean,
-  vehicleTypeImageToUpload :: Maybe API.VehicleImageType
+  vehicleTypeImageToUpload :: Maybe API.VehicleImageType,
+  numberOfVehicleImagesUploaded :: Int
 } 
 
 
@@ -3364,4 +3372,23 @@ type MetroWarriorData = {
   primaryStation :: Maybe API.SpecialLocationWarrior,
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
+}
+
+type OperationHubScreenState = {
+  data :: OperationHubScreenData,
+  props :: OperationHubScreenProps
+}
+
+type OperationHubScreenData = {
+  config :: AppConfig,
+  selectedHub :: Maybe API.OperationHub,
+  operationHubList :: Maybe (Array API.OperationHub),
+  rcNumber :: Maybe String
+}
+
+type OperationHubScreenProps = {
+  menuOptions :: Boolean,
+  contactSupportModal :: AnimType,
+  logoutModalView :: Boolean,
+  showOptions :: Boolean
 }

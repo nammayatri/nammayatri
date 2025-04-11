@@ -32,6 +32,7 @@ import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
+import Data.Array as DA
 import Storage (getValueToLocalStore, KeyStore(..))
 
 primaryButtonConfig :: ST.PermissionsScreenState -> PrimaryButton.Config
@@ -72,7 +73,7 @@ genericHeaderConfig state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
+        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
       , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1

@@ -122,14 +122,16 @@ transformDocText stage =
     ST.FITNESS_CERTIFICATE -> getString FITNESS_CERTIFICATE_STR
     ST.VEHICLE_INSURANCE -> getString VEHICLE_INSURANCE_STR
     ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
-    ST.VEHICLE_PHOTOS -> "Vehicle Photos"
+    ST.VEHICLE_PHOTOS -> getString VEHICLE_PHOTOS_STR
+    ST.INSPECTION_HUB -> getString OPERATION_HUB_STR
     ST.NO_OPTION -> ""
 
-transformStageNameFromTitle :: String -> String
-transformStageNameFromTitle title = 
-  case title of
-        "Vehicle Inspection Form" -> "Vehicle Photos"
-        _ -> title
+transformStageNameFromTitle :: String -> String -> String
+transformStageNameFromTitle title doctype = 
+  case title, doctype of
+        _ , "VehicleInspectionForm" -> getString VEHICLE_PHOTOS_STR
+        _ , "InspectionHub" -> getString OPERATION_HUB_STR
+        _ , _ -> title
 
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
@@ -147,6 +149,7 @@ transformToRegisterationStep doctype =
         "VehicleInsurance" -> ST.VEHICLE_INSURANCE
         "VehiclePUC" -> ST.VEHICLE_PUC
         "VehicleInspectionForm" -> ST.VEHICLE_PHOTOS
+        "InspectionHub" -> ST.INSPECTION_HUB
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
@@ -164,6 +167,7 @@ transformToDoctype step =
     ST.PAN_CARD -> "PanCard"
     ST.GRANT_PERMISSION -> "Permissions"
     ST.VEHICLE_PHOTOS -> "VehiclePhotos"
+    ST.INSPECTION_HUB -> "InspectionHub"
     ST.NO_OPTION -> ""
 
 transformVehicleImageToDoctype :: Maybe VehicleImageType -> String

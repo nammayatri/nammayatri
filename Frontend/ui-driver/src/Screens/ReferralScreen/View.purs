@@ -920,6 +920,8 @@ referralEnrolmentFlow push state =
               , id: (getNewIDWithTag "EnterReferralCodeEditText")
               , fontSize : FontSize.a_18
               , type : "number"
+              , background : state.data.config.themeColors.radioInactiveBackground
+              , stroke : state.data.config.themeColors.editTextNormalStroke
             })
           ]
         , linearLayout
@@ -938,6 +940,8 @@ referralEnrolmentFlow push state =
               , id: (getNewIDWithTag "EnterConfirmReferralCoderEditText")
               , fontSize : FontSize.a_18
               , type : "number"
+              , background : state.data.config.themeColors.radioInactiveBackground
+              , stroke : state.data.config.themeColors.editTextNormalStroke
             })
           ]
         ]

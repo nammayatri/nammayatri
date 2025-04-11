@@ -21,7 +21,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(.
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), not)
+import Prelude ((<>), not, (==))
 import Common.Types.App(LazyCheck(..))
 import Font.Style as FontStyle
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
@@ -35,6 +35,7 @@ import Data.Maybe (isJust, fromMaybe)
 import Components.OptionsMenu as OptionsMenuConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Components.BottomDrawerList as BottomDrawerList
+import Data.Array as DA
 
 
 primaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
@@ -56,6 +57,7 @@ vehicleUploadButtonConfig state = let
         { text = getString CONTINUE } 
         , margin = Margin 16 16 16 16
         , id = "vehicleUploadButton"
+        , isClickable = (state.props.numberOfVehicleImagesUploaded == 7)
       }
   in primaryButtonConfig'
 
@@ -75,7 +77,7 @@ genericHeaderConfig state = let
       }
     , padding = PaddingVertical 5 5
     , textConfig {
-        text = getValueToLocalStore MOBILE_NUMBER_KEY
+        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
       , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
@@ -127,6 +129,7 @@ validateDocModalState state =
 optionsMenuConfig :: ST.DocumentCaptureScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_getting_started_and_faq", textdata : "FAQs", action : "faqs", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},

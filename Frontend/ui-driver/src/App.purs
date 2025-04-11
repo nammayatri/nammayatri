@@ -75,6 +75,7 @@ import Common.Types.App (CategoryListType)
 import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
+import Screens.OperationHubScreen.ScreenData as OperationHubScreenData
 import Screens.DriverCompleteProfileScreen.ScreenData as DriverCompleteProfileScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
@@ -138,6 +139,7 @@ newtype GlobalState = GlobalState {
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
+  , operationHubScreen :: OperationHubScreenState
   , driverCompleteProfileScreen :: DriverCompleteProfileScreenState
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
@@ -201,6 +203,7 @@ defaultGlobalState = GlobalState {
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
+, operationHubScreen : OperationHubScreenData.initData
 , driverCompleteProfileScreen : DriverCompleteProfileScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
@@ -274,6 +277,7 @@ data ScreenType =
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
+  | OperationHubScreenStateType (OperationHubScreenState -> OperationHubScreenState)
   | DriverCompleteProfileScreenStateType (DriverCompleteProfileScreenState -> DriverCompleteProfileScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
@@ -407,6 +411,7 @@ data REGISTRATION_SCREEN_V2_OUTPUT = UPLOAD_DRIVER_LICENSE_V2 RegistrationScreen
                                 | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN_V2 RegistrationScreenState
                                 | REFRESH_REGISTERATION_SCREEN_V2
                                 | REFERRAL_CODE_SUBMIT_V2 RegistrationScreenState
+                                | GO_TO_OPERATION_HUB_SCREEN RegistrationScreenState
                                 | GET_DRIVER_REFERRAL_DETAILS RegistrationScreenState
                                 | DOCUMENT_CAPTURE_FLOW_V2 RegistrationScreenState RegisterationStep
                                 | SELECT_LANG_FROM_REGISTRATION_V2
@@ -632,6 +637,12 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
                                       | UPLOAD_VEHICLE_API DocumentCaptureScreenState String 
+                                      | GOTO_ONBOARDING_SCREEN DocumentCaptureScreenState
+
+data OPERATION_HUB_SCREEN_OUTPUT = GO_BACK
+                                  | CHANGE_LANG_FROM_OPERATION_HUB OperationHubScreenState
+                                  | LOGOUT_FROM_OPERATION_HUB
+                                  | CALL_DRIVER_OPERATION_CREATE_REQUEST_API OperationHubScreenState
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
 

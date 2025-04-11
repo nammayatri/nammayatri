@@ -114,7 +114,7 @@ config = {
     , gravity : LEFT
     , visibility : VISIBLE
     , placeholder : ""
-    , placeholderColor : Color.blueGrey
+    , placeholderColor : Color.darkGrey
     , singleLine : true
     , pattern : Nothing
     , margin : (Margin 20 0 10 0)

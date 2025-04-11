@@ -38,6 +38,7 @@ import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
+import Data.Array as DA
 import Storage ( getValueToLocalStore , KeyStore(..))
 import ConfigProvider
 import Mobility.Prelude
@@ -87,8 +88,9 @@ primaryEditTextConfig state = let
         , color = Color.greyTextColor
         }
       , margin = MarginBottom 15
-      , background = Color.white900
+      , background = state.data.config.themeColors.radioInactiveBackground
       , id = EHC.getNewIDWithTag "EnterDrivingLicenseEditText"
+      , stroke = ("1," <> state.data.config.themeColors.editTextNormalStroke)
       }
     in primaryEditTextConfig'
 
@@ -104,13 +106,14 @@ primaryEditTextConfigReEnterDl state = let
           , capsLock = true
           , color = Color.black800
         }
-      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
+      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then ("1," <> Color.red) else ("1," <> state.data.config.themeColors.editTextNormalStroke
+)
       , topLabel
         { text = getString RE_ENTER_DRIVING_LICENSE_NUMBER
         , color = Color.greyTextColor
         }
       , margin = MarginBottom 15
-      , background = Color.white900
+      , background = state.data.config.themeColors.radioInactiveBackground
       , id = EHC.getNewIDWithTag "ReEnterDrivingLicenseEditText"
       }
     in primaryEditTextConfig'
@@ -195,7 +198,7 @@ genericHeaderConfig state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
+        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
       , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
@@ -209,6 +212,7 @@ genericHeaderConfig state = let
 optionsMenuConfig :: ST.UploadDrivingLicenseState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_getting_started_and_faq", textdata : "FAQs", action : "faqs", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},

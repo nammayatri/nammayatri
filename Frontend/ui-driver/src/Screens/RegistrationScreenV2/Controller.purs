@@ -130,6 +130,7 @@ data ScreenOutput = GoBack
                   | SelectLang RegistrationScreenState
                   | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
                   | GoToAppUpdatePopUpScreen RegistrationScreenState
+                  | GoToOperationHubScreen RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -161,8 +162,10 @@ data Action = BackPressed
             | StoreDataAction String String
             | CallHVFlowAction ST.HyperVergeKycResult
             | InitFlowTxnIdAction
+            | RegistrationAction'
             | RegistrationActionV2 ST.CategoryToStepMap
-            
+            | CategorySpecificContinueButtonAC PrimaryButtonController.Action
+
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
   eq _ _ = true
@@ -179,6 +182,7 @@ eval BackPressed state = do
   else if newState.props.confirmChangeVehicle then continue newState { props { confirmChangeVehicle = false}}
   else if newState.props.contactSupportModal == ST.SHOW then continue newState { props { contactSupportModal = ST.ANIMATING}}
   else if newState.props.manageVehicle then exit $ GoToHomeScreen newState
+  else if Mb.isJust newState.props.selectedDocumentCategory then continue newState { props { selectedDocumentCategory = Mb.Nothing}}
   else do
       void $ pure $ JB.minimizeApp ""
       continue newState 
@@ -200,7 +204,10 @@ eval (RegistrationAction step ) state = do
           VEHICLE_INSURANCE -> exit $ DocCapture state item
           VEHICLE_PUC -> exit $ DocCapture state item
           VEHICLE_PHOTOS -> exit $ DocCapture state item
+          INSPECTION_HUB -> exit $ GoToOperationHubScreen state
           _ -> continue state
+
+eval RegistrationAction' state = exit $ GoToOperationHubScreen state
 
 eval (RegistrationActionV2 categoryItemWithSteps) state = do
     case categoryItemWithSteps.category of
@@ -209,6 +216,7 @@ eval (RegistrationActionV2 categoryItemWithSteps) state = do
         API.TRAINING -> continue state {props {selectedDocumentCategory = Mb.Just categoryItemWithSteps.category}}
         API.DRIVER -> continue state {props {selectedDocumentCategory = Mb.Just categoryItemWithSteps.category}}
         _ -> continue state
+
 
 eval (CallHV workFLowId inputJson) state = 
   continueWithCmd state {props {dontAllowHvRelaunch = true}}
@@ -293,6 +301,8 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
 
 eval Refresh state = updateAndExit state { props { refreshAnimation = true}} RefreshPage
 
+eval (CategorySpecificContinueButtonAC PrimaryButtonController.OnClick) state = updateAndExit state {props {selectedDocumentCategory = Mb.Nothing}} RefreshPage
+
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick)) state = continue state {props{selectedDocumentCategory = Mb.Nothing}}
@@ -306,6 +316,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continueWithCmd newState [pure $ SupportClick true]
     "change_vehicle" -> continue newState { props { confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state

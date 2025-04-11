@@ -479,6 +479,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> continue newState -- exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}

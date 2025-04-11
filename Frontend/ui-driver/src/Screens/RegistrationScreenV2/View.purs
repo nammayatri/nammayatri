@@ -43,6 +43,8 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..),getCityConfig)
 import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
+import Resource.Localizable.StringsV2
+import Resource.Localizable.TypesV2 as LT2
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard)
@@ -71,6 +73,7 @@ import Presto.Core.Types.Language.Flow (Flow, delay)
 import Effect.Aff (Milliseconds(..), launchAff)
 import RemoteConfig as RC
 import Log
+import DecodeUtil
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -105,8 +108,6 @@ view push state =
   let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
       completedStatusCount = length $ filter (\doc -> statusCompOrManual (getStatus doc.stage state))  documentList
       categoryCompletedStatusCount = getCategoryCompletedStatusCount state.props.categoryToStepProgressMap state
-      
-      progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
       variantImage = case state.data.vehicleCategory of
         Just ST.AutoCategory -> "ny_ic_auto_side"
         Just ST.BikeCategory -> "ny_ic_bike_side"
@@ -200,6 +201,14 @@ view push state =
                 , visibility $ boolToVisibility buttonVisibility
                 ]
                 [ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state) ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                , margin $ Margin 16 0 16 16
+                , visibility $ boolToVisibility $ (state.props.selectedDocumentCategory == Just API.DRIVER) || (state.props.selectedDocumentCategory == Just API.VEHICLE)
+                ]
+                [ PrimaryButton.view (push <<< CategorySpecificContinueButtonAC) (continueCategorySpecificButtonConfig state) ]
             -- , linearLayout
             --     [ height WRAP_CONTENT
             --     , width MATCH_PARENT
@@ -297,6 +306,7 @@ categoryListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenSt
 categoryListView push state =
   let registerationSteps = state.data.registerationStepsCabs 
       categories = filterCategories registerationSteps state.props.categoryToStepProgressMap state.data.documentStatusList
+      referralCodeAlreadyApplied = not $ DA.any (_ == (getValueToLocalStore APPLIED_REFERRAL_CODE)) ["__failed", ""]
   in
   scrollView
     [ width MATCH_PARENT
@@ -328,6 +338,7 @@ categoryListView push state =
                     , margin (MarginBottom 20)
                     , gravity CENTER_VERTICAL
                     , onClick push $ const $ EnterReferralCode true
+                    , clickable $ not referralCodeAlreadyApplied
                     ][ linearLayout
                         [ height WRAP_CONTENT
                         , weight 1.0
@@ -335,10 +346,10 @@ categoryListView push state =
                         ][ textView
                             [ height WRAP_CONTENT
                             , color Color.black800
-                            , text $ "Got an operator referral code?"
+                            , text $ if referralCodeAlreadyApplied then (getStringV2 LT2.operator_referral_code_applied) <> ": " <> (getValueToLocalStore APPLIED_REFERRAL_CODE) else (getStringV2 LT2.got_an_operator_referral_code)
                             ]
                         , textView
-                            [ text "Optional"
+                            [ text $ getStringV2 LT2.optional_str
                             , height WRAP_CONTENT
                             , width WRAP_CONTENT
                             , background $ Color.grey300
@@ -346,11 +357,11 @@ categoryListView push state =
                             , padding $ Padding 8 2 8 2
                             , color Color.black900
                             , margin $ MarginLeft 8
+                            , visibility $ boolToVisibility $ not referralCodeAlreadyApplied
                             ]
-
                         ]
                       , imageView
-                        [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_right"
+                        [ imageWithFallback $ fetchImage COMMON_ASSET ( if referralCodeAlreadyApplied then "ny_ic_green_tick" else "ny_ic_chevron_right")
                         , width (V 24)
                         , height (V 24)
                         ]
@@ -372,7 +383,7 @@ categoryListItem push item state =
     , padding $ Padding 12 12 12 12
     , cornerRadius 8.0
     , visibility $ boolToVisibility itemVisibility
-    , stroke $ "1," <> getStrokeColor state item -- Color.black500 -- todo handle stroke acc to status
+    , stroke $ "1," <> getStrokeColor state item
     , background $ getBg state item
     , clickable $ checkClickable state item
     , alpha $ getAlpha item
@@ -382,8 +393,7 @@ categoryListItem push item state =
     ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , background state.data.config.themeColors.onboardingStepImgBg
-        , background if item.completionStatus then Color.greenOpacity10 else Color.white900 -- do a case match for this also for permissions 
+        , background $ getImageBg state item -- do a case match for this also for permissions 
         , padding $ Padding 8 8 8 8
         , cornerRadius 24.0
         , margin (MarginRight 14)
@@ -420,11 +430,15 @@ categoryListItem push item state =
               _ -> ""
       getText category = 
             case category of
-              API.VEHICLE -> "My Vehicle"
+              API.VEHICLE -> getString MY_VEHICLE
               API.DRIVER -> getString MY_PROFILE
-              API.PERMISSION -> "App Permissions"
-              API.TRAINING -> "Tranings"
+              API.PERMISSION -> getString APP_PERMISSIONS
+              API.TRAINING -> getString TRAININGS
               _ -> ""
+      getImageBg state item = 
+        case item.category of
+          API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then Color.white900 else state.data.config.themeColors.onboardingStepImgBg
+          _ -> if item.completionStatus == ST.COMPLETED then Color.white900 else state.data.config.themeColors.onboardingStepImgBg
       getAlpha item = 
         case item.category of
           API.TRAINING -> 0.5
@@ -432,24 +446,24 @@ categoryListItem push item state =
       getBg state item = 
         case item.category of
           API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then Color.greenOpacity10 else Color.white900
-          _ -> if item.completionStatus then Color.greenOpacity10 else Color.white900
+          _ -> getComponentBgColor item.completionStatus
       checkClickable state item = 
         case item.category of
           API.PERMISSION -> not $ state.data.permissionsStatus == ST.COMPLETED
           API.TRAINING -> false
-          _ -> true
+          _ -> not $ item.completionStatus == ST.COMPLETED
       getStatusImg state item = 
         case item.category of
           API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right"
-          _ -> if item.completionStatus then "ny_ic_green_tick" else "ny_ic_chevron_right"
+          _ -> getComponentStatusImg item.completionStatus -- if item.completionStatus == ST.COMPLETED then "ny_ic_green_tick" else "ny_ic_chevron_right"
       getStrokeColor state item = 
         case item.category of
-          API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then Color.green900 else Color.black500
-          _ -> if item.completionStatus then Color.green900 else Color.black500
+          API.PERMISSION -> if state.data.permissionsStatus == ST.COMPLETED then Color.green900 else Color.grey300
+          _ -> getComponentStrokeColor item.completionStatus
 
 categorySpecificList :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 categorySpecificList push state = 
-  let findStepsForCategory = fromMaybe {category: API.NONE, registrationSteps: [], completionStatus: false} $ DA.find (\item -> Just item.category == state.props.selectedDocumentCategory ) state.props.categoryToStepProgressMap
+  let findStepsForCategory = fromMaybe {category: API.NONE, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false} $ DA.find (\item -> Just item.category == state.props.selectedDocumentCategory ) state.props.categoryToStepProgressMap
   in
    scrollView
     [ width MATCH_PARENT
@@ -463,6 +477,7 @@ categorySpecificList push state =
         , orientation VERTICAL
         , weight 1.0
         ][ vehicleSpecificList push state findStepsForCategory.registrationSteps
+        -- , if state.props.selectedDocumentCategory == Just API.VEHICLE then operationhubView push state else lin earLayout[][]
         ]
     ]
 
@@ -492,7 +507,8 @@ listItem push item state =
     , background $ compBg state item
     , clickable $ compClickable state item
     , alpha $ compAlpha state item
-    , onClick push $ const $ (if not state.props.dontAllowHvRelaunch then RegistrationAction item else NoAction)
+    , onClick push $ const $ (if not state.props.dontAllowHvRelaunch then RegistrationAction item else NoAction) 
+    -- , onClick push $ const $ RegistrationAction'
     , margin (MarginBottom 20)
     , gravity CENTER_VERTICAL
     ][  linearLayout
@@ -555,29 +571,20 @@ listItem push item state =
           ST.VEHICLE_INSURANCE -> "ny_ic_insurance"
           ST.VEHICLE_PUC -> "ny_ic_puc"
           ST.VEHICLE_PHOTOS -> "ny_ic_vehicle_scan"
+          ST.INSPECTION_HUB -> "ny_ic_inspection_hub"
           _ -> ""
 
       componentStroke :: ST.RegistrationScreenState -> ST.StepProgress -> String
       componentStroke state item = 
         let strokeWidth = "1,"
-            colour = case getStatus item.stage state of
-                      ST.COMPLETED -> Color.green900
-                      ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
-                      ST.IN_PROGRESS -> Color.yellow900
-                      ST.NOT_STARTED -> Color.black500
-                      ST.FAILED -> Color.red
-                      _ -> Color.black500
+            status = getStatus item.stage state
+            colour = getComponentStrokeColor status
         in strokeWidth <> colour
 
       compBg :: ST.RegistrationScreenState -> ST.StepProgress -> String
       compBg state item = 
-        case getStatus item.stage state of
-          ST.COMPLETED -> Color.greenOpacity10
-          ST.MANUAL_VERIFICATION_REQUIRED ->  Color.greenOpacity10
-          ST.IN_PROGRESS -> Color.yellowOpacity10
-          ST.NOT_STARTED -> Color.white900
-          ST.FAILED -> Color.redOpacity10
-          _ -> Color.white900
+        let status = getStatus item.stage state
+        in getComponentBgColor status
 
       compClickable :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
       compClickable state item = dependentDocAvailable item state && not item.isDisabled && not 
@@ -591,22 +598,47 @@ listItem push item state =
 
       compStatusImg :: ST.RegistrationScreenState -> ST.StepProgress -> String
       compStatusImg state item = 
-        case getStatus item.stage state of
-          ST.COMPLETED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
-          ST.MANUAL_VERIFICATION_REQUIRED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
-          ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
-          ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
-          ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
+        let status = getStatus item.stage state
+        in getComponentStatusImg status
 
       getVerificationMessage :: ST.RegisterationStep -> ST.RegistrationScreenState -> Maybe String
       getVerificationMessage step state = 
         case step of
           GRANT_PERMISSION -> Nothing
+          VEHICLE_PHOTOS -> Nothing
           _ -> let currentDoc = find (\docStatus -> docStatus.docType == step) state.data.documentStatusList
                 in case currentDoc of
                     Just doc -> doc.verificationMessage
                     _ -> Nothing
 
+getComponentStrokeColor :: ST.StageStatus -> String
+getComponentStrokeColor status = 
+  case status of
+    ST.COMPLETED -> Color.green900
+    ST.MANUAL_VERIFICATION_REQUIRED -> Color.green900
+    ST.IN_PROGRESS -> Color.yellow900
+    ST.NOT_STARTED -> Color.grey300
+    ST.FAILED -> Color.red
+    _ -> Color.grey300
+
+getComponentBgColor :: ST.StageStatus -> String
+getComponentBgColor status = 
+  case status of
+    ST.COMPLETED -> Color.greenOpacity10
+    ST.MANUAL_VERIFICATION_REQUIRED ->  Color.greenOpacity10
+    ST.IN_PROGRESS -> Color.yellowOpacity10
+    ST.NOT_STARTED -> Color.white900
+    ST.FAILED -> Color.redOpacity10
+    _ -> Color.white900
+  
+getComponentStatusImg :: ST.StageStatus -> String
+getComponentStatusImg status = 
+  case status of
+    ST.COMPLETED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
+    ST.MANUAL_VERIFICATION_REQUIRED -> fetchImage COMMON_ASSET "ny_ic_green_tick"
+    ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
+    ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
+    ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 popupModal push state =
@@ -673,41 +705,6 @@ refreshView push state =
           , margin $ MarginLeft 4
           ] <> FontStyle.body9 TypoGraphy
       ]
-
--- enterReferralCode :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
--- enterReferralCode push state =
---   let allStepsCompleted = state.props.driverEnabled
---     in linearLayout
---             [ width MATCH_PARENT
---             , height WRAP_CONTENT
---             , orientation HORIZONTAL
---             , stroke $ "1," <> Color.grey900
---             , cornerRadius 4.0
---             , padding $ Padding 10 8 10 8
---             ][  textView $
---                 [ width MATCH_PARENT
---                 , height WRAP_CONTENT
---                 , color if allStepsCompleted then Color.black900 else Color.greyTextColor
---                 , text $ getString if state.props.referralCodeSubmitted then REFERRAL_APPLIED else HAVE_A_REFERRAL_CODE
---                 , weight 1.0
---                 ] <> FontStyle.body3 TypoGraphy
---               , textView $
---                 [ width WRAP_CONTENT
---                 , height WRAP_CONTENT
---                 , text $ getString ENTER_CODE
---                 , margin $ MarginRight 7
---                 , color if allStepsCompleted then Color.darkBlue else Color.primaryBG
---                 , onClick push $ const $ EnterReferralCode allStepsCompleted
---                 , visibility $ boolToVisibility $ not state.props.referralCodeSubmitted
---                 ] <> FontStyle.body3 TypoGraphy
---               , imageView
---                 [ width $ V 20
---                 , height $ V 20 
---                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
---                 , visibility $ boolToVisibility state.props.referralCodeSubmitted
---                 , margin $ MarginRight 7
---                 ]
---               ]
 
 enterReferralCodeModal :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 enterReferralCodeModal push state =
@@ -832,9 +829,13 @@ getStatus step state =
               findStatus = if step `elem` vehicleDoc 
                           then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
                           else find (\docStatus -> docStatus.docType == step) documentStatusArr
-          case findStatus of
-            Nothing -> ST.NOT_STARTED
-            Just docStatus -> docStatus.status
+          case step of 
+            ST.INSPECTION_HUB -> if (getValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS == "true") then ST.COMPLETED else ST.NOT_STARTED
+            ST.VEHICLE_PHOTOS -> if state.props.vehicleImagesUploaded then ST.COMPLETED else ST.NOT_STARTED -- refactor it and get status from backend
+            _ -> do
+                  case findStatus of
+                    Nothing -> ST.NOT_STARTED
+                    Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
@@ -861,32 +862,65 @@ runLogTracking push action = do
   else 
     pure unit
 
-filterCategories :: Array ST.StepProgress -> Array ST.CategoryToStepMap -> Array ST.DocumentStatus -> Array ST.CategoryToStepMap
-filterCategories registrationSteps categoryToStepProgressMap documentList = 
-  map (\item ->
-      let stepsForCategory = filter (\item' -> item'.documentCategory == Just item.category ) registrationSteps
-          completionStatus = getCompletionStatus stepsForCategory documentList
-      in {
-          category : item.category,
-          registrationSteps : stepsForCategory,
-          completionStatus : completionStatus
-        }
+filterCategories :: Array ST.StepProgress -> Array ST.CategoryToStepMap -> Array ST.DocumentStatus -> Array ST.CategoryToStepMap -- refactor for vehicle photos (have added a prop have to utilize that)
+filterCategories registrationSteps categoryToStepProgressMap documentList = do
+  map (\item -> do
+      let stepsForCategory = (filter (\item' -> item'.documentCategory == Just item.category ) registrationSteps)
+          x = getCompletionStatus stepsForCategory documentList
+          operationHubCreated = (getValueToLocalNativeStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS) == "true"
+          (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
+          allVehicleImagesUploaded = DA.length uploadedImagesUptoNow == 7
+          _ = spy "printing x -> " x
+          stepStatus = if item.category == API.VEHICLE then {completionStatus: getUpdatedCompletionStatus operationHubCreated x.completionStatus allVehicleImagesUploaded, showContinueButton: x.showContinueButton && operationHubCreated && allVehicleImagesUploaded} else x
+      {
+        category : item.category,
+        registrationSteps : stepsForCategory,
+        completionStatus : stepStatus.completionStatus,
+        showContinueButton : stepStatus.showContinueButton
+      }
   ) categoryToStepProgressMap
+  where 
+    getUpdatedCompletionStatus operationHubCreated completionStatus allVehicleImagesUploaded = 
+      case completionStatus of 
+        _ | DA.elem completionStatus [ST.COMPLETED, ST.MANUAL_VERIFICATION_REQUIRED] -> if operationHubCreated && allVehicleImagesUploaded then completionStatus else ST.NOT_STARTED
+        _ -> completionStatus
 
-getCompletionStatus :: Array ST.StepProgress -> Array ST.DocumentStatus -> Boolean
+getCompletionStatus :: Array ST.StepProgress -> Array ST.DocumentStatus -> {completionStatus :: ST.StageStatus, showContinueButton :: Boolean}
 getCompletionStatus stepsForCategory documentList =
-  let stagesToSearch = map (\item -> item.stage) stepsForCategory
-      filteredDocumentList = filter (\item -> item.docType `elem`  stagesToSearch ) documentList
+  let stagesToSearch' = map (\item -> item.stage) stepsForCategory
+      stagesToSearch = filter (\item -> item /= ST.VEHICLE_PHOTOS && item /= ST.INSPECTION_HUB) stagesToSearch' -- remove this line after backend sends status correctly for VEHICLE_PHOTOS
+      -- _ = spy "printing stagesToSearch -> " stagesToSearch
+      filteredDocumentList = filter (\item -> item.docType `elem` stagesToSearch ) documentList
+      -- _ = spy "printing filteredDocumentList -> " filteredDocumentList
       completedDocs = filter(\item -> item.status == ST.COMPLETED) filteredDocumentList
+      -- _ = spy "printing completedDocs -> " completedDocs
+      failedDocs = filter(\item -> item.status == ST.FAILED) filteredDocumentList
+      -- _ = spy "printing failedDocs -> " failedDocs
+      notStartedDocs = filter(\item -> item.status == ST.NOT_STARTED) filteredDocumentList
+      -- _ = spy "printing notStartedDocs -> " notStartedDocs
+      inProgressDocs = filter(\item -> item.status == ST.IN_PROGRESS) filteredDocumentList
+      -- _ = spy "printing inProgressDocs -> " inProgressDocs
+      manualVerificationRequiredDocs = filter(\item -> item.status == ST.MANUAL_VERIFICATION_REQUIRED) filteredDocumentList
+      -- _ = spy "printing manualVerificationRequiredDocs -> " manualVerificationRequiredDocs
+      
+      completionStatus = 
+        if (DA.null stagesToSearch) then ST.NOT_STARTED  -- replace stagesToSearch by stepsForCategory after backend handles VEHICLE_PHOTOS  
+          else if not $ DA.null notStartedDocs then ST.NOT_STARTED
+          else if not $ DA.null failedDocs then ST.FAILED
+          else if not $ DA.null inProgressDocs then ST.IN_PROGRESS
+          else if not $ DA.null manualVerificationRequiredDocs then ST.MANUAL_VERIFICATION_REQUIRED
+          else if not $ DA.null completedDocs then ST.COMPLETED
+          else ST.NOT_STARTED
+      showContinueButton = (not DA.null stagesToSearch) && (DA.length stagesToSearch == (DA.length completedDocs + DA.length manualVerificationRequiredDocs))
   in 
-  ((not $ DA.null stepsForCategory) && DA.length stepsForCategory == DA.length completedDocs)
+  {completionStatus : completionStatus, showContinueButton : showContinueButton}
 
 getCategoryCompletedStatusCount :: Array ST.CategoryToStepMap -> ST.RegistrationScreenState -> Int
 getCategoryCompletedStatusCount categoryStepMap state =
   let completedStatusArr = map (\item -> do
                   case item.category of
                     API.PERMISSION -> state.data.permissionsStatus == ST.COMPLETED
-                    _ -> item.completionStatus
+                    _ -> item.completionStatus == ST.COMPLETED
               ) categoryStepMap
   in 
   DA.length $ filter(\x -> x == true) completedStatusArr

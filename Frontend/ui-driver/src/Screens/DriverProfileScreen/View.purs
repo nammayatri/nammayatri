@@ -100,7 +100,7 @@ screen initialState =
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
-                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
                 driverProfileResp <- Remote.fetchDriverProfile false

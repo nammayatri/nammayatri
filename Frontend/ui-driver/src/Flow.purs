@@ -57,7 +57,7 @@ import Data.String.CodeUnits (fromCharArray, toCharArray, splitAt)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
-import DecodeUtil (stringifyJSON)
+import DecodeUtil
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
@@ -129,16 +129,17 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetAllHubsResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
+import Screens.OperationHubScreen.ScreenData
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_V2_OUTPUT(..))
+import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_V2_OUTPUT(..), OPERATION_HUB_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Screens.RegistrationScreenV2.View (filterCategories)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
@@ -742,7 +743,7 @@ onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
   let cc = true 
   case cc of
-    true -> onBoardingFlowV2 ""
+    true -> onBoardingFlowV2 "" -- add v1-config
     _ -> onBoardingFlowV1 ""
 
 onBoardingFlowV1 :: String -> FlowBT String Unit
@@ -753,7 +754,7 @@ onBoardingFlowV1 _ = do
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -1007,13 +1008,16 @@ onBoardingFlowV2 _ = do
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true true
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
+      vehicleRCNumber = maybe Nothing (\(API.RCDetails item) -> Just item.vehicleRegistrationCertNumber) (maybe Nothing (\item -> DA.head item) driverRegistrationResp.vehicleRegistrationCertificateDetails)
+      driverName = maybe Nothing (\(API.DLDetails item) -> item.driverName) (maybe Nothing (\item -> DA.head item) driverRegistrationResp.driverLicenseDetails)
       merchantName = getMerchantName $ getMerchant FunctionCall
   permissions <- checkAllPermissions false config.permissions.locationPermission
   if isNothing allState.globalProps.onBoardingDocs then updateOnboardingDocs registrationState.props.manageVehicle else pure unit
+  if isJust driverName then setValueToLocalStore DRIVER_NAME (fromMaybe "" driverName) else deleteValueFromLocalStore DRIVER_NAME
   GlobalState updatedGs <- getState
   if driverEnabled && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) 
     then do
@@ -1080,7 +1084,8 @@ onBoardingFlowV2 _ = do
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory,
-                      accessToken = token
+                      accessToken = token,
+                      vehicleRegistrationCertNumber = vehicleRCNumber
                   }, props {
                       limitReachedFor = limitReachedFor, 
                       referralCodeSubmitted = referralCodeAdded, 
@@ -1206,10 +1211,10 @@ onBoardingFlowV2 _ = do
       modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data{vehicleCategory = state.data.vehicleCategory}})
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
     REFERRAL_CODE_SUBMIT_V2 state -> do
-      activateReferralCode state state.data.referralCode (Just "DRIVER")
+      activateReferralCode state state.data.referralCode (Just "OPERATOR")
       onBoardingFlow
     GET_DRIVER_REFERRAL_DETAILS state -> do
-      (resp :: (Either ErrorResponse API.DriverReferralDetailsRes)) <- lift $ lift $ Remote.getDriverReferralDetails $ makeReferDriverReq state.data.referralCode (Just "OPERATOR")
+      (resp :: (Either ErrorResponse API.DriverReferralDetailsRes)) <- lift $ lift $ HelpersAPI.callApi $ API.GetReferralDetailsReq state.data.referralCode "OPERATOR"
       case resp of
         Right (API.DriverReferralDetailsRes response) -> modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen {data { refereeName = response.name}})
         Left err -> modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = false}})
@@ -1222,6 +1227,9 @@ onBoardingFlowV2 _ = do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
+    GO_TO_OPERATION_HUB_SCREEN state -> do
+      modifyScreenState $ OperationHubScreenStateType (\operationHubScreen -> operationHubScreen { data { rcNumber = state.data.vehicleRegistrationCertNumber}})
+      operationHubScreenFlow
   where 
     mkStatusList :: DriverRegistrationStatusResp -> Array ST.DocumentStatus
     mkStatusList (DriverRegistrationStatusResp driverRegistrationStatusResp) = 
@@ -1234,7 +1242,7 @@ onBoardingFlowV2 _ = do
     mkRegSteps :: Array API.OnboardingDoc -> Array ST.StepProgress
     mkRegSteps onBoardingDocsArr = 
       map (\(API.OnboardingDoc step) ->
-              { stageName : RC.transformStageNameFromTitle step.title,
+              { stageName : RC.transformStageNameFromTitle step.title step.documentType,
                 stage : RC.transformToRegisterationStep step.documentType,
                 subtext : fromMaybe "" step.description,
                 isMandatory : step.isMandatory,
@@ -1283,6 +1291,27 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
       pure unit
     else pure unit
   else pure unit
+
+operationHubScreenFlow :: FlowBT String Unit
+operationHubScreenFlow = do
+  (GetAllHubsResp getAllHubsResp) <- Remote.getAllHubsBT ""
+  modifyScreenState $ OperationHubScreenStateType (\operationHubScreen -> operationHubScreen { data { operationHubList = if DA.length getAllHubsResp > 0 then Just getAllHubsResp else Nothing}})
+  out <- UI.operationHubScreen
+  case out of
+    CHANGE_LANG_FROM_OPERATION_HUB updatedState -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      selectLanguageFlow
+    LOGOUT_FROM_OPERATION_HUB -> logoutFlow
+    CALL_DRIVER_OPERATION_CREATE_REQUEST_API updatedState -> do
+      if isJust updatedState.data.selectedHub then do
+        let (API.OperationHub hub) = fromMaybe dummyOperationHub updatedState.data.selectedHub
+        (API.ApiSuccessResult resp) <- Remote.driverOperationCreateRequestBT (API.DriverOperationCreateRequestReq {operationHubId : hub.id, registrationNo : fromMaybe "" updatedState.data.rcNumber, requestType : show API.ONBOARDING_INSPECTION})
+        setValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS "true"
+        onBoardingFlow
+      else pure unit
+    _ -> do
+      pure unit
 
 aadhaarVerificationFlow :: FlowBT String Unit
 aadhaarVerificationFlow = do
@@ -1487,7 +1516,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
                 let multiRcStatus  = getStatusValue resp.rcVerificationStatus
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
@@ -2590,7 +2619,7 @@ currentRideFlow activeRideResp isActiveRide = do
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   -- Deprecated case for aadhaar popup shown after HV Integration
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
@@ -4340,6 +4369,10 @@ logoutFlow = do
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
+  deleteValueFromLocalStore APPLIED_REFERRAL_CODE
+  deleteValueFromLocalStore DRIVER_NAME
+  deleteValueFromLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS
+  deleteValueFromLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS
   deleteValueFromLocalStore VEHICLE_CATEGORY
   deleteValueFromLocalStore ENTERED_RC
   deleteValueFromLocalStore GULLAK_TOKEN
@@ -4802,6 +4835,7 @@ activateReferralCode state code role = do
       modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
       setValueToLocalStore REFERRER_URL ""
       setValueToLocalStore REFERRAL_CODE_ADDED "true"
+      setValueToLocalStore APPLIED_REFERRAL_CODE state.data.referralCode
 
 documentcaptureScreenFlow :: FlowBT String Unit 
 documentcaptureScreenFlow = do 
@@ -4828,11 +4862,18 @@ documentcaptureScreenFlow = do
       validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory
       case validateImageResp of
         Right (ValidateImageRes resp) -> do
+          let (uploadedImagesUptoNow :: (Array String)) = fromMaybe [] (decodeForeignAny (parseJSON (getValueToLocalStore VEHICLE_PHOTOS_UPLOAD_STATUS)) Nothing) 
+              newUploadedImagesUptoNow = if imageType /= "" && (DA.elem imageType uploadedImagesUptoNow) then uploadedImagesUptoNow else (uploadedImagesUptoNow <> [imageType])
+          void $ pure $ setValueToLocalNativeStore VEHICLE_PHOTOS_UPLOAD_STATUS $ show newUploadedImagesUptoNow 
+          modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {numberOfVehicleImagesUploaded = DA.length newUploadedImagesUptoNow}}
           void $ pure $ toast $ "Image Uploaded Successfully"
           documentcaptureScreenFlow
         Left error -> do
           modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
           documentcaptureScreenFlow
+    TA.GOTO_ONBOARDING_SCREEN state -> do
+      modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { props {vehicleImagesUploaded = state.props.numberOfVehicleImagesUploaded == 7}})
+      onBoardingFlow
 
 uploadParcelImageFlow :: FlowBT String Unit
 uploadParcelImageFlow = do

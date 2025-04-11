@@ -116,10 +116,11 @@ window.getMerchantConfig = function () {
       "secondaryStrokeColor" : "#A8AEF0",
       "openMapsTextColor" : "#A8AEF0",
       "onboardingHeaderTextColor" : "#0F1114",
-      "onboardingHeaderStroke" : "#171C8FB2",
+      "onboardingHeaderStroke" : "#B2171C8F",
       "radioInactiveBackground" : "#F5F5F5",
       "radioActiveBackground" : "#1F171C8F",
       "editTextFocusedStroke" : "#171C8F",
+      "editTextNormalStroke" : "#F5F5F5",
       "mobileNumberScreenHeaderText" : "WELCOME_LETS_GET_STARTED",
       "defaultBackButton" : "ny_ic_arrow_left_black",
       "highlightedTextColor" : "#171C8F",
@@ -205,6 +206,7 @@ window.getMerchantConfig = function () {
       , "enableGender" : true
       , "enableOtpRide" : false
       , "enableYatriCoins" : false
+      , "showFaqsWhileOnboarding" : true
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"

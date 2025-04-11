@@ -31,7 +31,7 @@ import Data.String as DS
 import Data.Maybe
 import Data.Function.Uncurried (runFn1)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (>), not, show, (*), (+))
+import Prelude (Unit, const, ($), (<<<), (<>), bind, discard, unit, pure, map, (==), (/=), (>), not, show, (*), (+), (/))
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons as EHC
 import Screens.DocumentCaptureScreen.Controller (Action(..), eval, ScreenOutput(..))
@@ -181,15 +181,18 @@ vehicleImageRowView push state index item =
         , height WRAP_CONTENT
         , gravity CENTER
         , margin $ Margin 8 8 8 8
-        , id $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
+        , cornerRadius 8.0
         ]
         [ imageView 
-          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
+          [ width $ V $ ((EHC.screenWidth unit) * 4) / 10
+          , height WRAP_CONTENT
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
+          , id $ EHC.getNewIDWithTag $ "vehicle_image0" <> (show index)
           ]
         ]
       , linearLayout
-        [ height if leftImageBounds.height == 0 then WRAP_CONTENT else (V leftImageBounds.height)
-        , width if leftImageBounds.width == 0 then WRAP_CONTENT else (V leftImageBounds.width)
+        [ height WRAP_CONTENT
+        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
         , background Color.blue600
         , alpha 0.8
         , stroke $ "1," <> Color.blue800
@@ -201,11 +204,12 @@ vehicleImageRowView push state index item =
         [ imageView 
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
           , visibility INVISIBLE
+          , width $ V $ ((EHC.screenWidth unit) * 4) / 10
           ]
         ]
       , linearLayout
         [ height $ V leftImageBounds.height
-        , width $ V leftImageBounds.width
+        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
         , margin $ Margin 8 8 8 8
         , gravity CENTER
         , orientation VERTICAL
@@ -225,7 +229,7 @@ vehicleImageRowView push state index item =
         ]
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ V leftImageBounds.width
+        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
         , gravity RIGHT
         , margin $ MarginLeft 16
         ]
@@ -253,15 +257,17 @@ vehicleImageRowView push state index item =
         , cornerRadius 8.0
         , gravity CENTER
         , margin $ Margin 8 8 0 8
-        , id $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
         ]
         [ imageView 
-          [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.rightImage
+          [ width $ V $ ((EHC.screenWidth unit) * 4) / 10
+          , height WRAP_CONTENT
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET item.rightImage
+          , id $ EHC.getNewIDWithTag $ "vehicle_image1" <> (show index)
           ]
         ]
       , linearLayout
-        [ height if rightImageBounds.height == 0 then WRAP_CONTENT else (V rightImageBounds.height)
-        , width if rightImageBounds.width == 0 then WRAP_CONTENT else (V rightImageBounds.width)
+        [ height WRAP_CONTENT
+        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
         , background Color.blue600
         , alpha 0.8
         , stroke $ "1," <> Color.blue800
@@ -273,11 +279,12 @@ vehicleImageRowView push state index item =
         [ imageView 
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET item.leftImage
           , visibility INVISIBLE
+          , width $ V $ ((EHC.screenWidth unit) * 4) / 10
           ]
         ]
       , linearLayout
         [ height $ V rightImageBounds.height
-        , width $ V rightImageBounds.width
+        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
         , margin $ Margin 8 8 0 8
         , gravity CENTER
         , orientation VERTICAL
@@ -297,7 +304,7 @@ vehicleImageRowView push state index item =
         ]
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ V rightImageBounds.width
+        , width $ V $ ((EHC.screenWidth unit) * 4) / 10
         , gravity RIGHT
         , margin $ MarginLeft 16
         ]
@@ -325,12 +332,12 @@ vehicleImageRowView push state index item =
 howToUpload :: (Action -> Effect Unit) ->  ST.DocumentCaptureScreenState -> forall w . PrestoDOM (Effect Unit) w
 howToUpload push state = 
   let text1 = case state.data.docType of 
-                ST.VEHICLE_PHOTOS -> "Take a clear picture of the vehicle from the suggested angles"
-                ST.PROFILE_PHOTO -> "Take a clear selfie with your face inside the marked area"
+                ST.VEHICLE_PHOTOS -> getString TAKE_A_CLEAR_PICTURE_OF_THE_VEHICLE_FROM_THE_SUGGESTED_ANGLES
+                ST.PROFILE_PHOTO -> getString TAKE_A_CLEAR_PICTURE_OF_THE_VEHICLE_FROM_THE_SUGGESTED_ANGLES
                 _ -> (getVarString CAPTURE_DOC_DESC_1 [Constant.transformDocText state.data.docType])
       text2 = case state.data.docType of 
-                ST.VEHICLE_PHOTOS -> "Ensure only your vehicle is in the frame when uploading" 
-                ST.PROFILE_PHOTO -> "Only your face should be in the frame when uploading the image"
+                ST.VEHICLE_PHOTOS -> getString ENSURE_ONLY_YOUR_VEHICLE_IS_IN_THE_FRAME_WHEN_UPLOADING
+                ST.PROFILE_PHOTO -> getString ONLY_YOUR_FACE_SHOULD_BE_IN_THE_FRAME_WHEN_UPLOADING_THE_IMAGE
                 _ -> (getString ENSURE_ADEQUATE_LIGHT)
       text3 = case state.data.docType of 
                 ST.VEHICLE_PHOTOS -> "" 
@@ -421,8 +428,8 @@ rightWrongItemViewForVehicelePhotos state isRight =
     , padding $ Padding 16 16 0 0
     , gravity CENTER
     ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
-     , rightWrongItemView isRight $ if isRight then "Full View" else "Avoid people"
-     , rightWrongItemView isRight $ if isRight then "" else "Cropped area"
+     , rightWrongItemView isRight $ if isRight then (getString FULL_VIEW) else (getString AVOID_PEOPLE)
+     , rightWrongItemView isRight $ if isRight then "" else getString CROPPED_AREA
     ]
 
 rightWrongItemViewForProfilePhoto :: ST.DocumentCaptureScreenState -> Boolean -> forall w . PrestoDOM (Effect Unit) w
@@ -434,9 +441,9 @@ rightWrongItemViewForProfilePhoto state isRight =
     , padding $ Padding 16 16 0 0
     , gravity CENTER
     ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
-     , rightWrongItemView isRight $ if isRight then "Inside Marked Area" else "No closed eyes"
-     , rightWrongItemView isRight $ if isRight then "" else "More than 1 face"
-     , rightWrongItemView isRight $ if isRight then "" else "Outside Marked Area"
+     , rightWrongItemView isRight $ if isRight then (getString INSIDE_MARKED_AREA) else (getString NO_CLOSED_EYES)
+     , rightWrongItemView isRight $ if isRight then "" else (getString MORE_THAN_ONE_FACE)
+     , rightWrongItemView isRight $ if isRight then "" else (getString OUTSIDE_MARKED_AREA)
     ]
 
 sampleImage :: Boolean -> ST.DocumentCaptureScreenState -> String
@@ -474,4 +481,4 @@ vehicleImageRowItem :: Array {leftImage :: String, leftText :: Maybe API.Vehicle
 vehicleImageRowItem = [ {leftImage : "ic_vehicle_front_view", leftText : Just API.VehicleFront, rightImage : "ic_vehicle_back_view", rightText : Just API.VehicleBack},
                         {leftImage : "ic_vehicle_right_view", leftText : Just API.VehicleRight, rightImage : "ic_vehicle_left_view", rightText : Just API.VehicleLeft},
                         {leftImage : "ic_vehicle_front_interior_view", leftText : Just API.VehicleFrontInterior, rightImage : "ic_vehicle_rear_interior_view", rightText : Just API.VehicleBackInterior},
-                        {leftImage : "ic_vehicle_front_interior_view", leftText : Just API.Odometer_, rightImage : "", rightText : Nothing}]
+                        {leftImage : "ny_ic_odometer", leftText : Just API.Odometer_, rightImage : "", rightText : Nothing}]

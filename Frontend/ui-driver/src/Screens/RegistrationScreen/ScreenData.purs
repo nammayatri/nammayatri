@@ -65,7 +65,8 @@ initData = {
         accessToken : "",
         hvTxnId : Nothing,
         hvFlowId : Nothing,
-        refereeName : Nothing
+        refereeName : Nothing,
+        vehicleRegistrationCertNumber : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -85,7 +86,8 @@ initData = {
         manageVehicle : false,
         manageVehicleCategory : Nothing,
         dontAllowHvRelaunch : false,
-        categoryToStepProgressMap : [{category: API.PERMISSION, registrationSteps: [], completionStatus: false}, {category: API.DRIVER, registrationSteps: [], completionStatus: false}, {category: API.VEHICLE, registrationSteps: [], completionStatus: false}, {category: API.TRAINING, registrationSteps: [], completionStatus: false}],
-        selectedDocumentCategory : Nothing
+        categoryToStepProgressMap : [{category: API.PERMISSION, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false}, {category: API.DRIVER, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false}, {category: API.VEHICLE, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false}, {category: API.TRAINING, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false }],
+        selectedDocumentCategory : Nothing,
+        vehicleImagesUploaded : false
       }
   }

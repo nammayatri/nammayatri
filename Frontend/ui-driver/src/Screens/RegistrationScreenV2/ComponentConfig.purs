@@ -32,7 +32,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage ( getValueToLocalStore , KeyStore(..))
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Prelude ((<), not, ($), (&&), (>=))
+import Prelude ((<), not, ($), (&&), (>=), (<>), (==))
 import Data.Array as DA
 import Data.String as DS
 import Mobility.Prelude
@@ -41,6 +41,8 @@ import Components.OptionsMenu as OptionsMenuConfig
 import PrestoDOM.Types.DomAttributes as PTD
 import Components.BottomDrawerList as BottomDrawerList
 import Services.API as API
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2 as LT2
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -53,22 +55,42 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
+
+continueCategorySpecificButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
+continueCategorySpecificButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig { text = getString CONTINUE}
+      , width = MATCH_PARENT
+      , height = V 48
+      , id = "CategorySpecificContinueButton"
+      , isClickable = if isJust state.props.selectedDocumentCategory then getIsClickable state else false
+      }
+  in primaryButtonConfig'
+
+getIsClickable :: ST.RegistrationScreenState -> Boolean
+getIsClickable state = 
+  let selectedDocumentCategory = fromMaybe API.NONE state.props.selectedDocumentCategory
+      mbStepsForCategory = DA.find (\item -> item.category == selectedDocumentCategory) state.props.categoryToStepProgressMap
+  in maybe false (\item -> item.showContinueButton) mbStepsForCategory
+
 appOnboardingNavBarConfig :: ST.RegistrationScreenState -> AppOnboardingNavBar.Config
 appOnboardingNavBarConfig state = 
   AppOnboardingNavBar.config
   { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ 
         image = state.data.config.themeColors.defaultBackButton,
-        visibility = if isNothing state.props.selectedDocumentCategory then GONE else VISIBLE
+        visibility = if isNothing state.props.selectedDocumentCategory then GONE else VISIBLE,
+        clickable = not $ state.props.menuOptions
     },
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
       color = state.data.config.themeColors.onboardingHeaderTextColor,
       text = case state.props.selectedDocumentCategory of 
-                Just API.VEHICLE -> "My Vehicle"
-                Just API.DRIVER -> "My Profile"
-                Just API.PERMISSION -> "App Permissions"
-                Just API.TRAINING -> "Tranings"
+                Just API.VEHICLE -> getStringV2 LT2.my_vehicle
+                Just API.DRIVER -> getStringV2 LT2.my_profile
+                Just API.PERMISSION -> getStringV2 LT2.app_permissions
+                Just API.TRAINING -> getStringV2 LT2.trainings
                 Just API.NONE -> ""
                 _ -> getString REGISTER_YOUR_CAR
       },
@@ -213,7 +235,7 @@ genericHeaderConfig state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
+        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
       , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
@@ -236,7 +258,7 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
         text = getString ENTER_REFERRAL_CODE
       },
       errorConfig {
-        text = if state.props.isValidReferralCode then "" else "Invalid Code. Please Re-enter",
+        text = if state.props.isValidReferralCode then "" else getStringV2 LT2.invalid_code_please_re_enter,
         visibility = boolToVisibility $ not state.props.isValidReferralCode
       },
       imageConfig {
@@ -249,13 +271,14 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
       },
       modalType = ST.OTP,
       subHeadingConfig {
-        text =  "Verified. Linked with <Operator Name>",
+        text =  getString $ VERIFIED_LINKED_WITH_NAME (fromMaybe "" state.data.refereeName),
         visibility = boolToVisibility $ not $ isNothing state.data.refereeName,
         textStyle = FontStyle.Body1,
-        gravity = CENTER
+        gravity = CENTER,
+        color = Color.green900
       },
       bodyTextConfig {
-        text =  "Enter the 6-digit code shared with you by the onboarding agent during onboarding",
+        text =  " ",
         visibility = VISIBLE,
         gravity = CENTER,
         margin = Margin 12 8 12 8,
@@ -264,12 +287,8 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
       },
       primaryButtonConfig { 
         textConfig
-        { text = if isNothing state.data.refereeName then "Verify" else "Apply"
-        -- , color = state.primaryButtonConfig.textConfig.color
-        -- , buttonInactiveTextColor = state.primaryButtonConfig.textConfig.buttonInactiveTextColor
+        { text = if isNothing state.data.refereeName then getStringV2 LT2.verify else getStringV2 LT2.apply
         }
-        -- , background = state.primaryButtonConfig.background
-        -- , buttonInactiveBackground = state.primaryButtonConfig.buttonInactiveBackground
         , visibility = VISIBLE
         , isClickable = DS.length state.data.referralCode >= 6
       }
@@ -293,6 +312,7 @@ continueButtonConfig state =
 optionsMenuConfig :: ST.RegistrationScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_getting_started_and_faq", textdata : "FAQs", action : "faqs", isVisible :  not state.props.manageVehicle, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle && state.data.config.enableChangeVehicleType, color : Color.black800},

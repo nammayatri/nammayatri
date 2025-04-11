@@ -39,6 +39,7 @@ initData =
         confirmChangeVehicle : false,
         contactSupportModal : ST.HIDE,
         uploadVehiclePhotos : false,
-        vehicleTypeImageToUpload : Nothing
+        vehicleTypeImageToUpload : Nothing,
+        numberOfVehicleImagesUploaded : 0
       }
   }

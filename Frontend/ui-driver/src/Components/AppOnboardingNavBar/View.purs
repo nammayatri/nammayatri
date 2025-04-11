@@ -17,7 +17,7 @@
 module Components.AppOnboardingNavBar.View where
 
 import Prelude (Unit, const, ($), (<>), (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, clickable, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
 import Effect (Effect)
 import Components.AppOnboardingNavBar.Controller (Action(..), Config)
 import Styles.Colors as Color
@@ -53,6 +53,7 @@ view push state =
               , layoutGravity "center_vertical"
               , visibility $ state.prefixImageConfig.visibility
               , onClick push $ const PrefixImgOnClick
+              , clickable $ state.prefixImageConfig.clickable
               ]
             , linearLayout
               [weight 1.0
