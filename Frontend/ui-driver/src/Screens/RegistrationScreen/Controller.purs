@@ -156,7 +156,7 @@ data ScreenOutput = GoBack
                   | ReferralCode RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
-                  | GoToAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
+                  | GoToDlAadhaarPANSelfieUpload RegistrationScreenState ST.HyperVergeKycResult
                   | GoToAppUpdatePopUpScreen RegistrationScreenState
 
 data Action = BackPressed 
@@ -213,9 +213,10 @@ eval BackPressed state = do
 eval (RegistrationAction step ) state = do
        let item = step.stage
            hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs $ JB.getAppName unit)
+           useHVDlSdkEnabled = fetchRemoteConfigString "use_hv_dl_sdk" == "true" -- this flag for globally enabling/disabling dl sdk in one go and also can be used for staggering if required.
            _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepClickEventName item)
        case item of 
-          DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
+          DRIVING_LICENSE_OPTION -> if (state.data.cityConfig.enableHvSdk && useHVDlSdkEnabled && Mb.isJust hvFlowIds.dl_flow_id) then continueWithCmd state [ pure $ CallHV (Mb.fromMaybe "ny-dl-flow" hvFlowIds.dl_flow_id) ""] else exit $ GoToUploadDriverLicense state
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
@@ -426,7 +427,7 @@ eval (StoreDataAction txnId flowId) state = continue state { data { hvFlowId = M
 
 eval InitFlowTxnIdAction state = continue state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}
 
-eval (CallHVFlowAction result) state = exit $ GoToAadhaarPANSelfieUpload (state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}) result
+eval (CallHVFlowAction result) state = exit $ GoToDlAadhaarPANSelfieUpload (state { data { hvFlowId = Mb.Nothing, hvTxnId = Mb.Nothing}}) result
 
 eval _ state = update state
 
@@ -443,6 +444,7 @@ callHvLoggerForDecodeFailure txnId status mbFailureReason fId result = do
        | DS.contains (DSP.Pattern "pan") flowId = Mb.Just "PanCard"
        | DS.contains (DSP.Pattern "aadhaar") flowId = Mb.Just "AadhaarCard"
        | DS.contains (DSP.Pattern "selfie") flowId = Mb.Just "ProfilePhoto"
+       | DS.contains (DSP.Pattern "dl") flowId = Mb.Just "DriverLicense"
        | otherwise = Mb.Nothing
 
 
@@ -452,6 +454,7 @@ getFailureReasonAndDoctype (HyperVergeKycResult result) = do
     Mb.Just (ST.LIVE_SELFIE (ST.LiveSelfie detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "ProfilePhoto")
     Mb.Just (ST.PAN_DETAILS (ST.PanDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "PanCard")
     Mb.Just (ST.AADHAAR_DETAILS (ST.AadhaarCardDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "AadhaarCard")
+    Mb.Just (ST.DL_DETAILS (ST.DriverLicenseDetails detail)) -> Tuple (getErrMsgForHV detail.errorCode) (Mb.Just "DriverLicense")
     _ -> Tuple Mb.Nothing Mb.Nothing
   where
     getErrMsgForHV errCode = case result.status of
@@ -486,6 +489,7 @@ getDefaultAlpha2LanguageCode _ = do
     "TA_IN" -> "ta"
     "TE_IN" -> "te"
     "FR_FR" -> "fr"
+    "OD_IN" -> "or"
     _ -> "en"
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus

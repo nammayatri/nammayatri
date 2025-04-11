@@ -890,16 +890,19 @@ registerDriverDL payload = do
     where
         unwrapResponse (x) = x
 
-makeDriverDLReq :: String -> String -> Maybe String -> String -> String -> Maybe ST.VehicleCategory -> DriverDLReq
-makeDriverDLReq dlNumber dob dateOfIssue imageIdFront imageIdBack category = DriverDLReq
+makeDriverDLReq :: String -> String -> Maybe String -> String -> Maybe String -> Maybe ST.VehicleCategory -> Maybe String -> Maybe String -> Maybe String -> DriverDLReq
+makeDriverDLReq dlNumber dob dateOfIssue imageIdFront mbImageIdBack category nameOnCardFromSdk requestId sdkTransactionId = DriverDLReq
     {
         "driverLicenseNumber": dlNumber,
         "driverDateOfBirth": dob,
         "operatingCity": "BANGALORE",
         "imageId1": imageIdFront,
-        "imageId2" : Nothing,
+        "imageId2" : mbImageIdBack,
         "dateOfIssue" : dateOfIssue,
-        "vehicleCategory" : mkCategory category
+        "vehicleCategory" : mkCategory category,
+        "nameOnCardFromSdk" : nameOnCardFromSdk,
+        "requestId" : requestId,
+        "sdkTransactionId" :  sdkTransactionId
     }
 
 validateImageBT :: ValidateImageReq -> FlowBT String ValidateImageRes
@@ -917,21 +920,22 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe String -> Maybe ST.VehicleCategory -> ValidateImageReq
-makeValidateImageReq image imageType rcNumber status transactionId category = ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe String -> Maybe ST.VehicleCategory -> Maybe String -> ValidateImageReq
+makeValidateImageReq image imageType rcNumber status transactionId category sdkFailureReason = ValidateImageReq
     {
       "image" : image,
       "imageType" : imageType,
       "rcNumber" : rcNumber,
       "validationStatus" : status,
       "workflowTransactionId" : transactionId,
-      "vehicleCategory" : mkCategory category
+      "vehicleCategory" : mkCategory category,
+      "sdkFailureReason" : sdkFailureReason
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
-driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam) = do
+driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam queryParam2) = do
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus queryParam)) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus queryParam queryParam2)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack

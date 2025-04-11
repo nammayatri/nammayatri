@@ -30,7 +30,8 @@ import Common.RemoteConfig.Types as CRT
 type HVConfigs = {
   selfie_flow_id :: String,
   pan_flow_id :: String,
-  aadhaar_flow_id :: String
+  aadhaar_flow_id :: String,
+  dl_flow_id :: Maybe String
 }
 
 data CancellationRateEntity = HOW_TO_REDUCE | WHAT_HAPPENS

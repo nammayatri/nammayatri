@@ -41,9 +41,9 @@ registration = do
     GoToPermissionScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ PERMISSION_SCREEN updatedState)
-    GoToAadhaarPANSelfieUpload updatedState result -> do
+    GoToDlAadhaarPANSelfieUpload updatedState result -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ AADHAAR_PAN_SELFIE_UPLOAD updatedState result)
+      App.BackT $ App.BackPoint <$> (pure $ DL_AADHAAR_PAN_SELFIE_UPLOAD updatedState result)
     LogoutAccount -> App.BackT $ App.BackPoint <$> (pure LOGOUT_FROM_REGISTERATION_SCREEN)
     GoToOnboardSubscription updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ONBOARD_SUBSCRIPTION updatedState)
     GoToHomeScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN updatedState)

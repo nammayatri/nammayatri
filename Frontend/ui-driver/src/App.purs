@@ -156,6 +156,7 @@ newtype GlobalState = GlobalState {
   , meterScreen :: MeterScreenState
   , meterRideScreen :: MeterRideScreenState
   , extraChargeInfoScreen :: ExtraChargeInfoScreenState.ExtraChargeInfoScreenState
+  , useHVDlSdkEnabled :: Boolean
   }
 
 defaultGlobalState :: GlobalState
@@ -222,6 +223,7 @@ defaultGlobalState = GlobalState {
 , meterScreen: MeterScreenData.initData
 , meterRideScreen: MeterRideScreenData.initData
 , extraChargeInfoScreen : ExtraChargeInfoScreenState.initData
+, useHVDlSdkEnabled : false
 }
 
 defaultGlobalProps :: GlobalProps
@@ -414,7 +416,7 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
                                 | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
                                 | SELECT_LANG_FROM_REGISTRATION
-                                | AADHAAR_PAN_SELFIE_UPLOAD RegistrationScreenState HyperVergeKycResult
+                                | DL_AADHAAR_PAN_SELFIE_UPLOAD RegistrationScreenState HyperVergeKycResult
                                 | GO_TO_APP_UPDATE_POPUP_SCREEN RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState
