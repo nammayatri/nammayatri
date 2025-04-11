@@ -180,6 +180,7 @@ data FRFSTicketAPI = FRFSTicketAPI
   { createdAt :: Kernel.Prelude.UTCTime,
     description :: Data.Maybe.Maybe Data.Text.Text,
     qrData :: Data.Text.Text,
+    scannedByVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: Data.Text.Text,
     validTill :: Kernel.Prelude.UTCTime

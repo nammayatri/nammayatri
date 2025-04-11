@@ -27,8 +27,9 @@ instance FromJSON CheckMobTicketsReq where
 instance ToJSON CheckMobTicketsReq where
   toJSON = genericToJSON $ defaultOptions {fieldLabelModifier = camelCaseToScreamingSnakeCase}
 
-newtype Ticket = Ticket
-  { wbId :: Maybe Text
+data Ticket = Ticket
+  { wbId :: Maybe Text,
+    vehRtoNo :: Maybe Text
   }
   deriving (Generic)
 
@@ -88,6 +89,7 @@ getTicketStatus config booking = do
                 Just $
                   ProviderTicket
                     { ticketNumber = ticket.ticketNumber,
+                      vehicleNumber = (listToMaybe ticketStatus._data.ticketDetails) >>= (.vehRtoNo),
                       qrData = ticket.qrData,
                       qrStatus,
                       qrValidity = ticket.validTill,

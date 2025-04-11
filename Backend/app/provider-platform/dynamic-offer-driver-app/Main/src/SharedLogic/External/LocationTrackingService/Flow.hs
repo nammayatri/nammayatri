@@ -53,8 +53,8 @@ rideStart rideId lat lon merchantId driverId rideInfo = do
   logDebug $ "lts rideStart: " <> show rideStartRes
   return rideStartRes
 
-rideEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> m EndRideRes
-rideEnd rideId lat lon merchantId driverId mbNextRideId = do
+rideEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> Maybe RideInfo -> m EndRideRes
+rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   let req =
@@ -63,7 +63,8 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId = do
             lon,
             merchantId,
             driverId,
-            nextRideId = mbNextRideId
+            nextRideId = mbNextRideId,
+            rideInfo = rideInfo
           }
   rideEndRes <-
     callAPI url (EndRideAPI.endRide rideId req) "rideEnd" EndRideAPI.locationTrackingServiceAPI

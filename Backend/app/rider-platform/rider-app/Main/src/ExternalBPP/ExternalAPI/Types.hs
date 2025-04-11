@@ -20,6 +20,7 @@ data TicketPayload = TicketPayload
 
 data ProviderTicket = ProviderTicket
   { ticketNumber :: Text,
+    vehicleNumber :: Maybe Text,
     description :: Maybe Text,
     qrData :: Text,
     qrStatus :: Text,
