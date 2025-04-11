@@ -31,6 +31,7 @@ data TransitObject = TransitObject
     tripId :: Text,
     state :: Text,
     tripType :: Text,
+    customCardTitle :: Name,
     passengerType :: Text,
     passengerNames :: Text,
     validTimeInterval :: TimeInterval,
