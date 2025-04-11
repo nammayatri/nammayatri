@@ -70,6 +70,7 @@ RiderConfig:
     makeMultiModalSearch: Bool
     maximumWalkDistance: Meters
     minimumWalkDistance: Meters
+    straightLineThreshold: Meters
     permissibleModes: "Maybe [GeneralVehicleType]"
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
@@ -112,6 +113,7 @@ RiderConfig:
     makeMultiModalSearch: Maybe Bool
     maximumWalkDistance: Maybe Meters
     minimumWalkDistance: Maybe Meters
+    straightLineThreshold: Maybe Meters
     maxAllowedPublicTransportLegs: Maybe Int
     dynamicLogicUpdatePassword: Maybe Text
     feedbackAlertRatingThreshold: Maybe Int
@@ -149,6 +151,7 @@ RiderConfig:
     makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
     maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
     minimumWalkDistance: fromMaybe (100) minimumWalkDistance|E
+    straightLineThreshold: fromMaybe (300) straightLineThreshold|E
     maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
@@ -179,6 +182,7 @@ RiderConfig:
     makeMultiModalSearch: Just makeMultiModalSearch|E
     maximumWalkDistance: Just maximumWalkDistance|E
     minimumWalkDistance: Just minimumWalkDistance|E
+    straightLineThreshold: Just straightLineThreshold|E
     maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
     feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
@@ -216,6 +220,7 @@ RiderConfig:
     makeMultiModalSearch: "false"
     maximumWalkDistance: "600"
     minimumWalkDistance: "100"
+    straightLineThreshold: "300"
     permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
     maxAllowedPublicTransportLegs: "2"
     postRideSafetyNotificationDelay : "60"
