@@ -164,6 +164,7 @@ library
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Operator.Driver
+      Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
@@ -528,6 +529,7 @@ library
       Storage.Queries.DriverInformationExtra
       Storage.Queries.DriverLicenseExtra
       Storage.Queries.DriverLocation.Internal
+      Storage.Queries.DriverOperatorAssociationExtra
       Storage.Queries.DriverPanCardExtra
       Storage.Queries.DriverPlanExtra
       Storage.Queries.DriverProfileQuestionsExtra
@@ -563,6 +565,8 @@ library
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
       Storage.Queries.FleetDriverAssociationExtra
+      Storage.Queries.FleetOperatorAssociationExtra
+      Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
       Storage.Queries.ImageExtra
@@ -698,6 +702,7 @@ library
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Operator
       API.Action.Dashboard.Operator.Driver
+      API.Action.Dashboard.Operator.FleetManagement
       API.Action.Dashboard.Operator.Registration
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Driver
