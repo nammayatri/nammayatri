@@ -91,7 +91,7 @@ type RouteFareAPI =
   "t" :> "uts.cris.in" :> "tputs" :> "V" :> "get_route_fare_details_v1"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
-    :> ReqBody '[JSON] Text
+    :> ReqBody '[PlainText] Text
     :> Post '[JSON] EncryptedResponse
 
 -- Main function
@@ -110,44 +110,24 @@ getRouteFareV1 ::
 getRouteFareV1 config merchantOperatingCityId request mbFrfsSearchId = do
   logInfo $ "Request object: " <> show request
   let typeOfBooking :: Int = 0
-  let jsonStr =
-        "{"
-          <> "\"tpAccountId\":\""
-          <> show config.tpAccountId
-          <> "\","
-          <> "\"mobileNo\":\""
-          <> mobileNo request
-          <> "\","
-          <> "\"imeiNo\":\""
-          <> imeiNo request
-          <> "\","
-          <> "\"appCode\":\""
-          <> config.appCode
-          <> "\","
-          <> "\"appSession\":\""
-          <> show (appSession request)
-          <> "\","
-          <> "\"sourceZone\":\""
-          <> config.sourceZone
-          <> "\","
-          <> "\"sourceCode\":\""
-          <> sourceCode request
-          <> "\","
-          <> "\"changeOver\":\""
-          <> changeOver request
-          <> "\","
-          <> "\"destCode\":\""
-          <> destCode request
-          <> "\","
-          <> "\"ticketType\":\""
-          <> config.ticketType
-          <> "\","
-          <> "\"via\":\""
-          <> request.via
-          <> "\","
-          <> "\"typeOfBooking\":"
-          <> show typeOfBooking
-          <> "}"
+  let fareRequest =
+        object
+          [ "tpAccountId" .= (config.tpAccountId :: Int), -- Explicitly mark as Int
+            "mobileNo" .= mobileNo request,
+            "imeiNo" .= imeiNo request,
+            "appCode" .= config.appCode,
+            "appSession" .= appSession request,
+            "sourceZone" .= config.sourceZone,
+            "sourceCode" .= sourceCode request,
+            "changeOver" .= changeOver request,
+            "destCode" .= destCode request,
+            "ticketType" .= config.ticketType,
+            "via" .= request.via,
+            "typeOfBooking" .= typeOfBooking
+          ]
+  let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
+
+  logInfo $ "JSON string: " <> jsonStr
 
   clientKey <- decrypt config.clientKey
   payload <- encryptPayload jsonStr clientKey
