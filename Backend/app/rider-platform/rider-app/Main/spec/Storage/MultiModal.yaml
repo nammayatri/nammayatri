@@ -40,6 +40,8 @@ Journey:
     totalLegs: Int
     isPaymentSuccess : Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
+    startLocation: Location
+    endLocation: Maybe Location
 
   beamType:
     status: Maybe JourneyStatus
@@ -51,20 +53,32 @@ Journey:
     estimatedDistance:
       estimatedDistance: HighPrecDistance
       distanceUnit: DistanceUnit
+    startLocation:
+      fromLocationId: Maybe Text
+    endLocation:
+      toLocationId: Maybe Text
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
     status: (fromMaybe Domain.Types.Journey.NEW status)|E
+    startLocation: Storage.Queries.Transformers.MultiModal.getFromLocation id|EM
+    endLocation: Storage.Queries.Transformers.MultiModal.getToLocation id|EM
 
   toTType:
     estimatedDistance: ((.value))|I
     distanceUnit: ((.unit))|I
     status: (Just status)|E
+    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) startLocation))|E
+    toLocationId: (Kernel.Types.Id.getId <$> (endLocation <&> (.id)))|E
 
   constraints:
     id: PrimaryKey
     searchRequestId: "!SecondaryKey"
     riderId: "!SecondaryKey"
+
+  sqlType:
+    toLocationId: character varying(36)
+    fromLocationId: character varying(36)
 
   queries:
     findBySearchId:

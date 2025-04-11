@@ -883,8 +883,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> Location -> Maybe Location -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId searchReqFromLocation searchReqToLocation = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) legs
   now <- getCurrentTime
@@ -906,6 +906,8 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,
+        startLocation = searchReqFromLocation,
+        endLocation = searchReqToLocation,
         DJ.recentLocationId = mbRecentLocationId -- Fully qualify the field name
       }
 

@@ -79,3 +79,10 @@ ALTER TABLE atlas_app.journey ADD COLUMN recent_location_id character varying(36
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN to_location_id text ;
+ALTER TABLE atlas_app.journey ADD COLUMN from_location_id text ;
