@@ -121,6 +121,7 @@ types:
 
   FRFSTicketAPI:
     status: FRFSTicketStatus
+    scannedByVehicleNumber: Maybe Text
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text

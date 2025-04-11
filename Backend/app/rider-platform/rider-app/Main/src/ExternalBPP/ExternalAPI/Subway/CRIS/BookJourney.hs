@@ -277,6 +277,7 @@ createOrder config booking = do
         tickets =
           [ ProviderTicket
               { ticketNumber = bookJourneyResp.ticketNumber,
+                vehicleNumber = Nothing,
                 description = Just bookJourneyResp.journeyComment,
                 qrData = bookJourneyResp.encryptedTicketData,
                 qrStatus = "",

@@ -361,19 +361,28 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
       case platformType of
         DIBC.APPLICATION -> do
           vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
-          return $
-            ( \(vehicleId, vehicleInfo) ->
-                VehicleTracking
-                  { nextStop = Nothing,
-                    nextStopTravelTime = Nothing,
-                    nextStopTravelDistance = Nothing,
-                    upcomingStops = [],
-                    vehicleId = Just vehicleId,
-                    vehicleInfo = Just vehicleInfo,
-                    delay = Nothing
-                  }
+          mapM
+            ( \(vehicleId, vehicleInfo) -> do
+                upcomingStop <-
+                  case vehicleInfo.upcomingStops of
+                    Just upcomingStops -> do
+                      let mbUpcomingStop = find (\upcomingStop -> upcomingStop.status == LT.Upcoming) upcomingStops
+                      case mbUpcomingStop of
+                        Just upcomingStop' -> listToMaybe <$> QRouteStopMapping.findByRouteCodeAndStopCode routeCode upcomingStop'.stop.stopCode integratedBPPConfig.id
+                        Nothing -> return Nothing
+                    Nothing -> return Nothing
+                pure $
+                  VehicleTracking
+                    { nextStop = upcomingStop,
+                      nextStopTravelTime = Nothing,
+                      nextStopTravelDistance = Nothing,
+                      upcomingStops = [],
+                      vehicleId = Just vehicleId,
+                      vehicleInfo = Just vehicleInfo,
+                      delay = Nothing
+                    }
             )
-              <$> vehicleTrackingInfo
+            vehicleTrackingInfo
         _ -> do
           nearbyBuses <- CQMMB.getRoutesBuses routeCode -- Add a new logic to get the bus location and ETA, unify it with the existing logic @khuzema
           logDebug $ "Got bus data for route " <> routeCode <> ": " <> show nearbyBuses
