@@ -1155,6 +1155,8 @@ getRegisterationStepClickEventName step = case step of
   ST.FITNESS_CERTIFICATE -> "fitness_cert_option_clicked"
   ST.VEHICLE_INSURANCE -> "veh_insurance_option_clicked"
   ST.VEHICLE_PUC -> "puc_option_clicked"
+  ST.VEHICLE_PHOTOS -> "vehicle_photos_option_clicked"
+  ST.INSPECTION_HUB -> "inspection_hub_option_clicked"
   ST.NO_OPTION -> ""
 
 getRegisterationStepScreenLoadedEventName :: ST.RegisterationStep -> String
@@ -1170,6 +1172,8 @@ getRegisterationStepScreenLoadedEventName step = case step of
   ST.FITNESS_CERTIFICATE -> "fitness_cert_page_loaded"
   ST.VEHICLE_INSURANCE -> "veh_insurance_page_loaded"
   ST.VEHICLE_PUC -> "puc_page_loaded"
+  ST.VEHICLE_PHOTOS -> "vehicle_photos_uploaded"
+  ST.INSPECTION_HUB -> "inspection_hub_page_loaded"
   ST.NO_OPTION -> ""
 
 getDocUploadEventName :: ST.RegisterationStep -> String
@@ -1185,6 +1189,8 @@ getDocUploadEventName step = case step of
   ST.FITNESS_CERTIFICATE -> "fitness_cert_upload_clicked"
   ST.VEHICLE_INSURANCE -> "veh_insurance_upload_clicked"
   ST.VEHICLE_PUC -> "puc_upload_clicked"
+  ST.VEHICLE_PHOTOS -> "upload_vehicle_photos_clicked"    
+  ST.INSPECTION_HUB -> "inspection_hub_upload_clicked"
   _ -> ""
 
 getRegisterationStepModule :: ST.RegisterationStep -> String
@@ -1200,6 +1206,8 @@ getRegisterationStepModule step = case step of
   ST.FITNESS_CERTIFICATE -> "fitness_cert_page"
   ST.VEHICLE_INSURANCE -> "veh_insurance_page"
   ST.VEHICLE_PUC -> "puc_page"
+  ST.VEHICLE_PHOTOS -> "vehicle_photos_page"
+  ST.INSPECTION_HUB -> "inspection_hub_page"
   ST.NO_OPTION -> ""
 
 getRegisterationStepScreenSource :: ST.RegisterationStep -> String
@@ -1215,6 +1223,8 @@ getRegisterationStepScreenSource step = case step of
   ST.FITNESS_CERTIFICATE -> "FC"
   ST.VEHICLE_INSURANCE -> "VI"
   ST.VEHICLE_PUC -> "PUC"
+  ST.VEHICLE_PHOTOS -> "VEHICLE_PHOTOS"
+  ST.INSPECTION_HUB -> "INSPECTION_HUB"
   ST.NO_OPTION -> ""
 
 getVehicleCategorySelectedEvent :: ST.VehicleCategory -> String

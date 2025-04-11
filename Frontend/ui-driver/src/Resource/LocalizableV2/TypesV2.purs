@@ -323,6 +323,33 @@ newtype Keymap
   , something_went_wrong :: String
   , pickup :: String
   , trip :: String
+  , optional_str :: String
+  , my_vehicle :: String
+  , app_permissions :: String
+  , trainings :: String
+  , verify :: String
+  , invalid_code_please_re_enter :: String
+  , verified_linked_with_name :: String -> String
+  , visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us :: String
+  , you_will_be_contacted_by_your_selected_hub_within_24_hours :: String
+  , operator_referral_code_applied :: String
+  , got_an_operator_referral_code :: String
+  , locate_on_map :: String
+  , contact_number :: String
+  , address :: String
+  , vehicle_photos :: String
+  , operation_hub :: String
+  , take_a_clear_picture_of_the_vehicle_from_the_suggested_angles :: String
+  , take_a_clear_selfie_with_your_face_inside_the_marked_area :: String
+  , ensure_only_your_vehicle_is_in_the_frame_when_uploading :: String
+  , only_your_face_should_be_in_the_frame_when_uploading_the_image :: String
+  , full_view :: String
+  , avoid_people :: String
+  , cropped_area :: String
+  , inside_marked_area :: String
+  , no_closed_eyes :: String
+  , more_than_one_face :: String
+  , outside_marked_area :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -658,6 +685,7 @@ newtype Keymap
   , customer_added_a_stop :: String
   , aadhaar_linking_required_description :: String -> String
   , by_clicking_this_you_will_be_agreeing_to_our_tc :: String
+  , by_clicking_this_you_will_be_agreeing_to_our :: String
   , terms_and_conditions_short :: String
   , otp_sent_to_aadhaar_number :: String
   , enter_six_digit_otp :: String
@@ -1101,6 +1129,7 @@ newtype Keymap
   , subscription_plan_str :: String -> String
   , complete_autopay_later :: String
   , start_earning_in_four_steps :: String
+  , complete_the_steps_to_start_earning :: String
   , complete :: String
   , how_to_upload :: String
   , take_clear_picture_dl :: String
@@ -1119,6 +1148,7 @@ newtype Keymap
   , retake_photo :: String
   , change_city :: String
   , lets_get_you_trip_ready :: String
+  , welcome_lets_get_started :: String
   , got_an_otp :: String
   , driving_license_details :: String
   , vehicle_registration_details :: String
@@ -2728,6 +2758,88 @@ pickup = a
 trip :: Proxy "trip"
 trip = a
 
+optional_str :: Proxy "optional_str"
+optional_str = a
+
+my_vehicle :: Proxy "my_vehicle"
+my_vehicle = a
+
+app_permissions :: Proxy "app_permissions"
+app_permissions = a
+
+trainings :: Proxy "trainings"
+trainings = a
+
+verify :: Proxy "verify"
+verify = a
+
+invalid_code_please_re_enter :: Proxy "invalid_code_please_re_enter"
+invalid_code_please_re_enter = a
+
+visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us :: Proxy "visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us"
+visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us = a
+
+you_will_be_contacted_by_your_selected_hub_within_24_hours :: Proxy "you_will_be_contacted_by_your_selected_hub_within_24_hours"
+you_will_be_contacted_by_your_selected_hub_within_24_hours = a
+
+verified_linked_with_name :: Proxy "verified_linked_with_name"
+verified_linked_with_name = a
+
+operator_referral_code_applied :: Proxy "operator_referral_code_applied"
+operator_referral_code_applied = a
+
+got_an_operator_referral_code :: Proxy "got_an_operator_referral_code"
+got_an_operator_referral_code = a
+
+locate_on_map :: Proxy "locate_on_map"
+locate_on_map = a
+
+contact_number :: Proxy "contact_number"
+contact_number = a
+
+address :: Proxy "address"
+address = a
+
+vehicle_photos :: Proxy "vehicle_photos"
+vehicle_photos = a
+
+operation_hub :: Proxy "operation_hub"
+operation_hub = a
+
+take_a_clear_picture_of_the_vehicle_from_the_suggested_angles :: Proxy "take_a_clear_picture_of_the_vehicle_from_the_suggested_angles"
+take_a_clear_picture_of_the_vehicle_from_the_suggested_angles = a
+
+take_a_clear_selfie_with_your_face_inside_the_marked_area :: Proxy "take_a_clear_selfie_with_your_face_inside_the_marked_area"
+take_a_clear_selfie_with_your_face_inside_the_marked_area = a
+
+ensure_only_your_vehicle_is_in_the_frame_when_uploading :: Proxy "ensure_only_your_vehicle_is_in_the_frame_when_uploading"
+ensure_only_your_vehicle_is_in_the_frame_when_uploading = a
+
+only_your_face_should_be_in_the_frame_when_uploading_the_image :: Proxy "only_your_face_should_be_in_the_frame_when_uploading_the_image"
+only_your_face_should_be_in_the_frame_when_uploading_the_image = a
+
+full_view :: Proxy "full_view"
+full_view = a
+
+avoid_people :: Proxy "avoid_people"
+avoid_people = a
+
+cropped_area :: Proxy "cropped_area"
+cropped_area = a
+
+inside_marked_area ::  Proxy "inside_marked_area"
+inside_marked_area = a
+
+no_closed_eyes :: Proxy "no_closed_eyes"
+no_closed_eyes = a
+
+more_than_one_face :: Proxy "more_than_one_face"
+more_than_one_face = a
+
+outside_marked_area :: Proxy "outside_marked_area"
+outside_marked_area = a
+
+
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a
 
@@ -3732,6 +3844,9 @@ aadhaar_linking_required_description = a
 
 by_clicking_this_you_will_be_agreeing_to_our_tc :: Proxy "by_clicking_this_you_will_be_agreeing_to_our_tc"
 by_clicking_this_you_will_be_agreeing_to_our_tc = a
+
+by_clicking_this_you_will_be_agreeing_to_our :: Proxy "by_clicking_this_you_will_be_agreeing_to_our"
+by_clicking_this_you_will_be_agreeing_to_our = a
 
 terms_and_conditions_short :: Proxy "terms_and_conditions_short"
 terms_and_conditions_short = a
@@ -5062,6 +5177,9 @@ complete_autopay_later = a
 start_earning_in_four_steps :: Proxy "start_earning_in_four_steps"
 start_earning_in_four_steps = a
 
+complete_the_steps_to_start_earning :: Proxy "complete_the_steps_to_start_earning"
+complete_the_steps_to_start_earning = a
+
 complete :: Proxy "complete"
 complete = a
 
@@ -5115,6 +5233,9 @@ change_city = a
 
 lets_get_you_trip_ready :: Proxy "lets_get_you_trip_ready"
 lets_get_you_trip_ready = a
+
+welcome_lets_get_started :: Proxy "welcome_lets_get_started"
+welcome_lets_get_started = a
 
 got_an_otp :: Proxy "got_an_otp"
 got_an_otp = a

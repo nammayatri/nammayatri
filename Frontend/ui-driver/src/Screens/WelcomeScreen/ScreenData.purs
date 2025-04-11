@@ -7,8 +7,12 @@ import Prelude (map)
 import Common.Types.App (YoutubeData, CarouselData)
 import Language.Strings (getString)
 import Language.Types(STR(..))
+import ConfigProvider
 
 initData :: WelcomeScreenState
 initData = {
-  data : { logField : empty }
+  data : { 
+    logField : empty,
+    config : getAppConfig appConfig
+  }
 }

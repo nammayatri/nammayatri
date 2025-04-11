@@ -28,6 +28,9 @@ black9000 = "#CC2C2F3A"
 blueGrey :: Color
 blueGrey = "#9899a1"
 
+blue500 :: Color
+blue500 = "#F9FAFC"
+
 blue600 :: Color
 blue600 = "#f4F7FF"
 
@@ -43,6 +46,15 @@ blue900 = "#0066FF"
 blue9000 :: Color
 blue9000 = "#1A0066FF"
 
+grey100 :: Color 
+grey100 = "#F5F5F5"
+
+grey300 :: Color
+grey300 = "#E0E0E0"
+
+grey600 :: Color
+grey600 = "#A1A1A1"
+
 grey700 :: Color
 grey700 = "#F4F4F6"
 
@@ -51,6 +63,9 @@ grey800 = "#F1F1F1"
 
 grey900 :: Color
 grey900 = "#E5E7EB"
+
+darkGrey :: Color
+darkGrey = "#B9B8B8"
 
 green400 :: Color
 green400 = "#26A047"
@@ -248,6 +263,9 @@ red900Alpha16 = "#29E55454"
 
 yellow200 :: Color
 yellow200 = "#33FCC32C"
+
+yellow300 :: Color
+yellow300 = "#1FFAB105"
 
 black200 :: Color
 black200 = "#1A2C2F3A"

@@ -286,6 +286,8 @@ referralAppliedView state push =
 
 vehicleRegistrationNumber :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 vehicleRegistrationNumber state push = 
+  let appName = JB.getAppName unit
+  in 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -326,7 +328,8 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else Color.borderColorLight) 
+          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else state.data.config.themeColors.editTextNormalStroke) 
+          , background state.data.config.themeColors.radioInactiveBackground
           , cornerRadius 4.0
           ][  textView
               [ width $ V 20
@@ -342,7 +345,6 @@ vehicleRegistrationNumber state push =
               , weight 1.0
               , cornerRadius 4.0
               , pattern "[0-9a-zA-Z]*,10"
-              , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
               , inputTypeI 4097
@@ -399,7 +401,8 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
-                , stroke ("1," <> Color.borderColorLight) 
+                , stroke ("1," <> state.data.config.themeColors.editTextNormalStroke) 
+                , background state.data.config.themeColors.radioInactiveBackground
                 , cornerRadius 4.0
                 ][  textView
                     [ width $ V 20
@@ -415,7 +418,6 @@ vehicleRegistrationNumber state push =
                     , weight 1.0
                     , cornerRadius 4.0
                     , pattern "[0-9a-zA-Z]*,10"
-                    , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
                     , inputTypeI 4097
@@ -496,7 +498,7 @@ vehicleRegistrationNumber state push =
                     ]
                   , facilityListView state push
           ]
-        , checkACView state push
+        , if appName == "ONDC fleetX" then rcEligibilityCriteriaView state push else checkACView state push
         ]
       ]
   ]
@@ -619,6 +621,34 @@ checkACView state push =
             [ getString YES, getString NO ]
     ]
 
+rcEligibilityCriteriaView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+rcEligibilityCriteriaView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity LEFT
+    , margin $ MarginTop 16
+    ]
+    [ textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text "Eligibility criteria for RC"
+      , color Color.grey600
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text "-   Your car must be less than 3 years old"
+      , margin $ Margin 16 8 0 0
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text "-   Your car must be a sedan vehicle"
+      , margin $ Margin 16 8 0 0
+      ]
+    ]
 
 
 ----------------------------------------------------------------- uploadRC ------------------------------------------------------

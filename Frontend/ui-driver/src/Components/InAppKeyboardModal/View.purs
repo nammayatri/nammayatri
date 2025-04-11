@@ -16,7 +16,8 @@
 module Components.InAppKeyboardModal.View where
 
 import Common.Types.App
-import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, SingleElementTextBoxConfig, InputFieldConfig)
+import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, SingleElementTextBoxConfig, InputFieldConfig, primaryButtonConfig)
+import Components.PrimaryButton as PrimaryButton
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
 import Data.Array (mapWithIndex, insertAt)
@@ -27,7 +28,7 @@ import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=))
+import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=), (<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, singleLine, letterSpacing, onFocus)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder, layoutGravity)
@@ -124,7 +125,23 @@ view push state =
                     , layoutGravity "right"
                   ] <> FontStyle.body1 TypoGraphy
                 ]
+              , textView $
+                [ height state.bodyTextConfig.height
+                , width state.bodyTextConfig.width
+                , text state.bodyTextConfig.text
+                , gravity state.bodyTextConfig.gravity
+                , visibility state.bodyTextConfig.visibility
+                , margin $ state.bodyTextConfig.margin
+                , padding $ state.bodyTextConfig.padding
+                , color state.bodyTextConfig.color
+                ] <> (FontStyle.getFontStyle state.bodyTextConfig.textStyle LanguageStyle)
               , otpView push state
+              , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , visibility state.primaryButtonConfig.visibility
+                ][ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
+                ]
             ]
         ] <> if not state.enableDeviceKeyboard then [keyboard push state] else []
     ]
@@ -177,7 +194,7 @@ textBoxes push state =
       , text $ if ( take 1 (drop index state.inputTextConfig.text) ) == "-" then "" else ( take 1 (drop index state.inputTextConfig.text) )
       , gravity CENTER
       , cornerRadius 4.0
-      , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
+      , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then state.appConfig.themeColors.highlightedTextColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
       ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)

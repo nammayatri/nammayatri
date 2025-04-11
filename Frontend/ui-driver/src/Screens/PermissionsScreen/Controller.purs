@@ -54,10 +54,12 @@ instance loggableAction :: Loggable Action where
         UpdateOverlayPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_overlay_permission_state"
         UpdateBatteryPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_battery_permission_state"
         UpdateLocationPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
+        UpdateCameraPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "camera_permission_callback"
         NotificationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
         OverlayPermissionSwitchCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay_permission_switch_callback"
         BatteryUsagePermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_usage_permission_callback"
         LocationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
+        CameraPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "camera_permission_callback"
         UpdateAllChecks updatedState -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_all_checks"
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
         PopUpModalLogoutAction act -> case act of
@@ -88,7 +90,9 @@ data Action = BackPressed
             | OverlayPermissionSwitchCallBack Boolean
             | BatteryUsagePermissionCallBack Boolean
             | LocationPermissionCallBack Boolean
+            | CameraPermissionCallBack Boolean
             | UpdateLocationPermissionState
+            | UpdateCameraPermissionState
             | UpdateBatteryPermissionState
             | AfterRender
             | UpdateAllChecks PermissionsScreenState
@@ -114,7 +118,6 @@ eval UpdateNotificationPermissionState state = continue state {props {isNotifica
 eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermissionChecked = true}}
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 eval UpdateLocationPermissionState state = continue state {props {isLocationPermissionChecked = true}}
-
 
 eval (NotificationPermissionCallBack isNotificationPermissionEnabled) state = do
   if isNotificationPermissionEnabled then do

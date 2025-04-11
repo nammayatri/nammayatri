@@ -338,9 +338,6 @@ voiletBtn = "#6181F6"
 redRemoveBtn :: Color
 redRemoveBtn = "#FE858E"
 
-darkGrey :: Color
-darkGrey = "#B9B8B8"
-
 lightGreyShade :: Color
 lightGreyShade = "#DDDDDD"
 

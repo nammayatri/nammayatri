@@ -32,6 +32,7 @@ import Components.PopUpModal as PopUpModal
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Debug
 
 quizDoneButtonConfig :: String -> ST.LmsQuizScreenState -> Boolean -> PrimaryButton.Config
 quizDoneButtonConfig label state isRetryButtonVisible =
@@ -71,38 +72,36 @@ quizDoneButtonConfig label state isRetryButtonVisible =
   }
 
 exitPopupConfig :: ST.LmsQuizScreenState -> PopUpModal.Config
-exitPopupConfig state = 
-  PopUpModal.config
-  {   gravity = CENTER,
-      margin = (MarginHorizontal 16 16),
-      padding = PaddingHorizontal 16 16,
-      cornerRadius = (Corners 20.0 true true true true),
-      optionButtonOrientation = "VERTICAL",
-
-      primaryText {
-        text = (StringsV2.getString state.props.selectedLanguage EXIT_THE_QUIZ)
-      , margin = (Margin 0 20 0 20)
-      , accessibilityHint = "Do you wish to exit quiz?"
-        },
-      secondaryText {
-        visibility = GONE
-        },
-      option1 {
-        text = (StringsV2.getString state.props.selectedLanguage CANCEL)
-      , enableRipple = true
-      , color = Color.yellow900
-      , background = Color.black900
-      , strokeColor = Color.black900
-      , width = MATCH_PARENT
+exitPopupConfig state =
+  PopUpModal.config {   
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    padding = PaddingHorizontal 16 16,
+    cornerRadius = (Corners 20.0 true true true true),
+    optionButtonOrientation = "VERTICAL",
+    primaryText {
+      text = (StringsV2.getString state.props.selectedLanguage EXIT_THE_QUIZ)
+    , margin = (Margin 0 20 0 20)
       },
-      option2 {
-        text = (StringsV2.getString state.props.selectedLanguage EXIT_AND_START_AGAIN_LATER)
-      , enableRipple = true
-      , color = Color.black900
-      , background = Color.white900
-      , strokeColor = Color.white900
-      , height = WRAP_CONTENT
-      , width = MATCH_PARENT
-      , margin = MarginTop 16
-      }
-  }
+    secondaryText {
+      visibility = GONE
+      },
+    option1 {
+      text = (StringsV2.getString state.props.selectedLanguage CANCEL)
+    , enableRipple = true
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.black900
+    , width = MATCH_PARENT
+    },
+    option2 {
+      text = (StringsV2.getString state.props.selectedLanguage EXIT_AND_START_AGAIN_LATER)
+    , enableRipple = true
+    , color = Color.black900
+    , background = Color.white900
+    , strokeColor = Color.white900
+    , height = WRAP_CONTENT
+    , width = MATCH_PARENT
+    , margin = MarginTop 16
+    }
+}
