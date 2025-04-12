@@ -154,7 +154,7 @@ jobs:
   macos-build-for-cache:
     runs-on: ${{ matrix.host }}
     needs: [build, check-conditions]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-BAP'
     strategy:
       matrix:
         system: [aarch64-darwin]
