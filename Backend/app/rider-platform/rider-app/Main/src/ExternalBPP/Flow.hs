@@ -181,19 +181,10 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
   bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
   bankCode <- paymentDetails.bankCode & fromMaybeM (InternalError "Bank Code Not Found")
-  let quantity = booking.quantity
-  let quantityRational = fromIntegral quantity :: Rational
-  let totalPrice =
-        Price
-          { amount = HighPrecMoney $ getHighPrecMoney booking.price.amount * quantityRational,
-            amountInt = Money $ booking.price.amountInt.getMoney * quantity,
-            currency = booking.price.currency
-          }
-
   return $
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
-        totalPrice = totalPrice,
+        totalPrice = booking.price,
         fareBreakUp = [],
         bppItemId = CallAPI.getProviderName integratedBPPConfig,
         validTill = validTill,
