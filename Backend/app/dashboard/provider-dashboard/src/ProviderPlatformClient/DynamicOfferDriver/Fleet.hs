@@ -33,9 +33,9 @@ import Tools.Client
 import "lib-dashboard" Tools.Metrics
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
-  { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
+  { fleetOwnerLogin :: Maybe Bool -> Fleet.FleetOwnerLoginReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes,
     fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
+    fleetOwnerRegister :: Fleet.FleetOwnerRegisterReq -> Euler.EulerClient APISuccess
   }
 
 newtype FleetAPIs = FleetAPIs

@@ -10,7 +10,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -22,6 +21,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetOwnerInformation.FleetOwnerInformation] -> m ())
 createMany = traverse_ create
+
+updateBusinessLicenseImage :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateBusinessLicenseImage businessLicenseImageId fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.businessLicenseImageId businessLicenseImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 updateFleetOwnerEnabledStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFleetOwnerEnabledStatus enabled fleetOwnerPersonId = do
@@ -40,10 +44,12 @@ updateFleetOwnerVerifiedStatus verified fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verified verified, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
-updateGstImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateGstImageId gstImageId fleetOwnerPersonId = do
+updateGstImage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateGstImage gstNumber gstImageId fleetOwnerPersonId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.gstImageId gstImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+  updateWithKV [Se.Set Beam.gstNumber gstNumber, Se.Set Beam.gstImageId gstImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 updateReferredByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateReferredByOperatorId referredByOperatorId fleetOwnerPersonId = do
@@ -58,6 +64,8 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.blocked blocked,
+      Se.Set Beam.businessLicenseImageId businessLicenseImageId,
+      Se.Set Beam.businessLicenseNumber businessLicenseNumber,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.fleetType fleetType,
       Se.Set Beam.gstImageId gstImageId,
@@ -76,6 +84,8 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
       Just
         Domain.Types.FleetOwnerInformation.FleetOwnerInformation
           { blocked = blocked,
+            businessLicenseImageId = businessLicenseImageId,
+            businessLicenseNumber = businessLicenseNumber,
             enabled = enabled,
             fleetOwnerPersonId = Kernel.Types.Id.Id fleetOwnerPersonId,
             fleetType = fleetType,
@@ -92,6 +102,8 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
   toTType' (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..}) = do
     Beam.FleetOwnerInformationT
       { Beam.blocked = blocked,
+        Beam.businessLicenseImageId = businessLicenseImageId,
+        Beam.businessLicenseNumber = businessLicenseNumber,
         Beam.enabled = enabled,
         Beam.fleetOwnerPersonId = Kernel.Types.Id.getId fleetOwnerPersonId,
         Beam.fleetType = fleetType,

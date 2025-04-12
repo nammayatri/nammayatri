@@ -76,29 +76,29 @@ import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 import Tools.Notifications as Notify
 
-getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
-getDriverRegistrationDocumentsList merchantShortId city driverId = do
+getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
+getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   merchant <- findMerchantByShortId merchantShortId
-  pucImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePUC)
-  permitImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePermit)
-  dlImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
-  vInspectionImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInspectionForm)
-  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRegistrationCertificate)
-  uploadProfImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.UploadProfile)
-  vehicleFitnessCertImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFitnessCertificate)
-  vehicleInsImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInsurance)
-  profilePics <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.ProfilePhoto)
-  odometerImg <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.Odometer)
-  vehicleFrontImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFront)
-  vehicleBackImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBack)
-  vehicleRightImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRight)
-  vehicleLeftImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleLeft)
-  vehicleFrontInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleFrontInterior)
-  vehicleBackInteriorImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleBackInterior)
-  panImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.PanCard)
-  businessLicenseImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.BusinessLicense)
-  aadhaarImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.AadhaarCard)
-  vehicleNOCImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleNOC)
+  odometerImg <- getVehicleImages merchant.id Domain.Odometer
+  vehicleFrontImgs <- getVehicleImages merchant.id Domain.VehicleFront
+  vehicleBackImgs <- getVehicleImages merchant.id Domain.VehicleBack
+  vehicleRightImgs <- getVehicleImages merchant.id Domain.VehicleRight
+  vehicleLeftImgs <- getVehicleImages merchant.id Domain.VehicleLeft
+  vehicleFrontInteriorImgs <- getVehicleImages merchant.id Domain.VehicleFrontInterior
+  vehicleBackInteriorImgs <- getVehicleImages merchant.id Domain.VehicleBackInterior
+  pucImages <- getDriverImages merchant.id Domain.VehiclePUC
+  permitImages <- getDriverImages merchant.id Domain.VehiclePermit
+  dlImgs <- getDriverImages merchant.id Domain.DriverLicense
+  vInspectionImgs <- getDriverImages merchant.id Domain.VehicleInspectionForm
+  vehRegImgs <- getDriverImages merchant.id Domain.VehicleRegistrationCertificate
+  uploadProfImgs <- getDriverImages merchant.id Domain.UploadProfile
+  vehicleFitnessCertImgs <- getDriverImages merchant.id Domain.VehicleFitnessCertificate
+  vehicleInsImgs <- getDriverImages merchant.id Domain.VehicleInsurance
+  profilePics <- getDriverImages merchant.id Domain.ProfilePhoto
+  panImgs <- getDriverImages merchant.id Domain.PanCard
+  businessLicenseImgs <- getDriverImages merchant.id Domain.BusinessLicense
+  aadhaarImgs <- getDriverImages merchant.id Domain.AadhaarCard
+  vehicleNOCImgs <- getDriverImages merchant.id Domain.VehicleNOC
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
@@ -136,6 +136,12 @@ getDriverRegistrationDocumentsList merchantShortId city driverId = do
         odometer = odometerImg
       }
   where
+    getVehicleImages merchantId imageType = case mbRcId of
+      Just rcId -> map (.id.getId) <$> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType)
+      Nothing -> pure []
+
+    getDriverImages merchantId imageType = map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchantId (cast driverId) imageType)
+
     convertDLToDLDetails dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
       pure $

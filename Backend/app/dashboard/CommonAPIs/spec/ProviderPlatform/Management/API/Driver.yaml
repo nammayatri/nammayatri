@@ -509,7 +509,7 @@ apis:
               - fromDate: Day
               - toDate: Day
             mandatoryQuery:
-              - requestedEntityId: Text
+              - requestorId: Text
             response:
               type: DriverStatsRes
 

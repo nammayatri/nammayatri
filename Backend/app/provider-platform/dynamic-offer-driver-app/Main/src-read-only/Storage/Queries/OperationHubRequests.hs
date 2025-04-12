@@ -58,7 +58,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.OperationHubRequests.OperationHubRequests {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+    [ Se.Set Beam.creatorId (Kernel.Types.Id.getId creatorId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.fulfilledAt fulfilledAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

@@ -523,3 +523,6 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 --     atlas_driver_offer_bpp.document_verification_config
 -- WHERE
 --     vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') AND document_type in ('VehicleInspectionForm') ON CONFLICT DO NOTHING;
+
+
+-- update atlas_driver_offer_bpp.document_verification_config set document_category = 'Vehicle', description = 'Operation Hub Flow', title = 'Operation Hub Flow' where document_type = 'InspectionHub';

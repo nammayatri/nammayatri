@@ -30,9 +30,10 @@ OperationHubRequests:
   types:
     RequestType:
       enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
+      derive: "HttpInstance"
     RequestStatus:
       enum: "PENDING, APPROVED, REJECTED"
-
+      derive: "HttpInstance"
   fields:
     id : Id OperationHubRequests
     operationHubId : Id OperationHub
@@ -45,7 +46,10 @@ OperationHubRequests:
     operatorId: Maybe (Id Person)
     remarks: Maybe Text
     fulfilledAt: Maybe UTCTime
-
+    creatorId: Id Person
+  sqlType:
+    requestStatus: character varying(255)
+    requestType: character varying(255)
   constraints:
     id: PrimaryKey
 

@@ -59,7 +59,7 @@ handler =
     :<|> enable2fa
     :<|> switchMerchant
     :<|> switchMerchantAndCity
-    :<|> registerFleetOwner
+    :<|> registerFleetOwner -- don't use directly
 
 login :: BeamFlow' => DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI' . DReg.login

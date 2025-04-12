@@ -9,11 +9,12 @@ import qualified Domain.Types.FleetOwnerInformation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
   { blocked :: B.C f Kernel.Prelude.Bool,
+    businessLicenseImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetOwnerPersonId :: B.C f Kernel.Prelude.Text,
     fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,

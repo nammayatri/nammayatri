@@ -12,7 +12,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data OperationHubRequestsT f = OperationHubRequestsT
-  { driverId :: B.C f Kernel.Prelude.Text,
+  { creatorId :: B.C f Kernel.Prelude.Text,
+    driverId :: B.C f Kernel.Prelude.Text,
     fulfilledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,

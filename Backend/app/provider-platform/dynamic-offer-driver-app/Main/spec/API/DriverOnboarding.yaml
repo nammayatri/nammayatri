@@ -132,6 +132,14 @@ types:
     status : Maybe Text
     callbackResponse : Maybe Text
     failureReason : Maybe Text
+  VehiclePhotosResp:
+    left: [Text]
+    right: [Text]
+    front: [Text]
+    back: [Text]
+    frontInterior: [Text]
+    backInterior: [Text]
+    odometer: [Text]
 
 apis:
   - GET:
@@ -152,6 +160,11 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: '[RateCardResp]'
+  - GET:
+      endpoint: /driver/vehiclePhotos
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehiclePhotosResp
   - POST:
       endpoint: /driver/updateAirCondition
       auth: TokenAuth PROVIDER_TYPE

@@ -29,3 +29,6 @@ FleetOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [fleetOwnerId, operatorId, isActive]
+    findAllFleetAssociations:
+      kvFunction: findAllWithKV
+      where: fleetOwnerId
