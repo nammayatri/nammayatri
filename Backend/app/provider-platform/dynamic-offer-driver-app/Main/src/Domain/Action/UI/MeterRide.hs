@@ -125,7 +125,7 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId r
     (mbSender, message) <-
       MessageBuilder.buildSendReceiptMessage merchantOpCityId $
         MessageBuilder.BuildSendReceiptMessageReq
-          { totalFare = show ride.currency <> " " <> show ride.fare,
+          { totalFare = show ride.currency <> " " <> show (fromMaybe 0 ride.fare),
             totalDistance = show ride.chargeableDistance,
             referralCode = driverReferral.referralCode.getId,
             rideShortId = ride.shortId.getShortId

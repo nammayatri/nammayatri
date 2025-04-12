@@ -59,6 +59,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.Queries.MessageTranslation as MTQuery
 import Tools.Error
+import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
@@ -230,15 +231,18 @@ data BuildSendReceiptMessageReq = BuildSendReceiptMessageReq
     rideShortId :: Text
   }
 
-buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, Text)
+buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig, "meterRideReferralLink" ::: Text]) => Id DMOC.MerchantOperatingCity -> BuildSendReceiptMessageReq -> m (Maybe Text, Text)
 buildSendReceiptMessage merchantOperatingCityId req = do
+  meterRideReferralLink <- asks (.meterRideReferralLink)
+  let referralLink = T.replace "{referralCode}" meterRideReferralLink req.referralCode
+  shortReferralLink <- UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq referralLink Nothing Nothing Nothing UrlShortner.METER_RIDE_REFERRAL_LINK)
   merchantMessage <-
     QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.SEND_FARE_RECEIPT_MESSAGE Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_FARE_RECEIPT_MESSAGE))
   let msg =
         merchantMessage.message
-          & T.replace (templateText "rideIdAndFare") (req.rideShortId <> " Rs." <> req.totalFare)
-          & T.replace (templateText "referralLink") req.referralCode
+          & T.replace (templateText "rideIdAndFare") (req.rideShortId <> " " <> req.totalFare)
+          & T.replace (templateText "referralLink") shortReferralLink.shortUrl
 
   pure (merchantMessage.senderHeader, msg)
 
