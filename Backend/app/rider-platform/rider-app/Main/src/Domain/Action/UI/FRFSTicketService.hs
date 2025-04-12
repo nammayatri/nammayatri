@@ -556,7 +556,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
               (HighPrecMoney 0.0)
               selectedDiscounts
       let ticketQuantity' = fromMaybe quote.quantity ticketQuantity
-      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational quote.quantity)) - totalDiscount
+      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney) * (toRational ticketQuantity')) - totalDiscount
       let isFareChanged = isJust oldCacheDump
       let journeyRouteDetails' = maybe [] (.journeyRouteDetails) mbSearch
       let booking =
