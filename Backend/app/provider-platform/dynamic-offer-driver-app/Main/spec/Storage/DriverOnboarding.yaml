@@ -315,6 +315,10 @@ Image:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, personId, imageType]
+    findImagesByRCAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, rcId, imageType]
     findByMerchantId:
       kvFunction: findAllWithDb
       where: merchantId

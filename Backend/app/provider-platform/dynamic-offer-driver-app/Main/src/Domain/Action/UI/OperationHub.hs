@@ -1,6 +1,7 @@
-module Domain.Action.UI.OperationHub (getOperationGetAllHubs, postOperationCreateRequest) where
+module Domain.Action.UI.OperationHub (getOperationGetAllHubs, postOperationCreateRequest, getOperationGetRequests) where
 
 import API.Types.UI.OperationHub
+import Data.Time (UTCTime (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.OperationHub
@@ -18,6 +19,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
+import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
 import Tools.Error
 
 getOperationGetAllHubs :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> Flow [OperationHub]
@@ -44,10 +46,32 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
               fulfilledAt = Nothing,
               operatorId = Nothing,
               remarks = Nothing,
+              creatorId = Id $ fromMaybe driverId.getId req.creatorId,
               ..
             }
     void $ QOHR.create operationHubReq
   pure Success
+
+getOperationGetRequests ::
+  (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe RequestStatus ->
+  Maybe RequestType ->
+  Text ->
+  Flow OperationHubRequestsResp
+getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus mbType rcNo = do
+  driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  now <- getCurrentTime
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+      defaultFrom = UTCTime (utctDay now) 0
+      from = fromMaybe defaultFrom mbFrom
+      to = fromMaybe now mbTo
+  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing (Just rcNo)
+  pure (OperationHubRequestsResp requests)
 
 opsHubDriverLockKey :: Text -> Text
 opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId

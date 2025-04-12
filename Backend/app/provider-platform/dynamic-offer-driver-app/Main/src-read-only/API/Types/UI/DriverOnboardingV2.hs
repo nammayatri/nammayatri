@@ -175,3 +175,15 @@ data ValidationStatus
   | NEEDS_REVIEW
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehiclePhotosResp = VehiclePhotosResp
+  { back :: [Kernel.Prelude.Text],
+    backInterior :: [Kernel.Prelude.Text],
+    front :: [Kernel.Prelude.Text],
+    frontInterior :: [Kernel.Prelude.Text],
+    left :: [Kernel.Prelude.Text],
+    odometer :: [Kernel.Prelude.Text],
+    right :: [Kernel.Prelude.Text]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

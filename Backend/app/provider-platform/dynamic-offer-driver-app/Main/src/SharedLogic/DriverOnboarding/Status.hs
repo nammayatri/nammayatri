@@ -56,6 +56,7 @@ import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -166,7 +167,7 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
     let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` vehicleDocumentTypes && config.isMandatory) documentVerificationConfigs
     when (null mandatoryVehicleDocumentVerificationConfigs) $ do
       allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
-      when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True) $ do
+      when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
         enableDriver merchantOpCityId personId mDL
         whenJust onboardingVehicleCategory $ \category -> do
           DIIQuery.updateOnboardingVehicleCategory (Just category) personId
@@ -186,13 +187,19 @@ statusHandler' personId merchantOperatingCity transporterConfig makeSelfieAadhaa
         return (Just allDLDetails, Just allRCDetails)
       _ -> return (Nothing, Nothing)
 
-  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  enabled <- case person.role of
+    DP.FLEET_OWNER -> do
+      fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+      return fleetOwnerInfo.enabled
+    _ -> do
+      driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+      return driverInfo.enabled
 
   return $
     StatusRes'
       { driverDocuments,
         vehicleDocuments,
-        enabled = driverInfo.enabled,
+        enabled = enabled,
         manualVerificationRequired = transporterConfig.requiresOnboardingInspection,
         driverLicenseDetails = dlDetails,
         vehicleRegistrationCertificateDetails = rcDetails

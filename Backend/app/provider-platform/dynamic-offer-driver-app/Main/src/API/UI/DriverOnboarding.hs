@@ -81,7 +81,8 @@ type API =
       :> Get '[JSON] DriverOnboarding.GetReferredDriverRes
     :<|> "driver" :> "referral" :> "details"
       :> TokenAuth
-      :> ReqBody '[JSON] DriverOnboarding.ReferralReq
+      :> MandatoryQueryParam "value" Text
+      :> QueryParam "role" DP.Role
       :> Get '[JSON] DriverOnboarding.DriverReferralDetailsRes
     :<|> "rc"
       :> ( "setStatus"
@@ -154,5 +155,5 @@ deleteRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Dri
 getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler [DriverOnboarding.LinkedRC]
 getAllLinkedRCs (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId, merchantOpCityId)
 
-getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.DriverReferralDetailsRes
-getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) req
+getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Text -> Maybe DP.Role -> FlowHandler DriverOnboarding.DriverReferralDetailsRes
+getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole

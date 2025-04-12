@@ -1,9 +1,11 @@
-module Domain.Action.Dashboard.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest, opsHubRequestLockKey) where
+module Domain.Action.Dashboard.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest, opsHubRequestLockKey, postDriverOperatorCreateRequest) where
 
 import qualified API.Types.ProviderPlatform.Operator.Driver
+import qualified API.Types.UI.OperationHub as DomainT
 import qualified Dashboard.Common as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.Dashboard.RideBooking.Driver
+import qualified Domain.Action.UI.OperationHub as Domain
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
@@ -52,6 +54,16 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
   reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbRegistrationNo
   pure $ API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp {requests = map castHubRequests reqList}
+
+postDriverOperatorCreateRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> Environment.Flow APISuccess)
+postDriverOperatorCreateRequest merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let domainReq = castOpsHubReq req
+  Domain.postOperationCreateRequest (Just (Id req.driverId), merchant.id, merchantOpCity.id) domainReq
+  where
+    castOpsHubReq :: API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> DomainT.DriverOperationHubRequest
+    castOpsHubReq API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest {..} = DomainT.DriverOperationHubRequest {operationHubId = cast operationHubId, requestType = castReqTypeToDomain requestType, ..}
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
 postDriverOperatorRespondHubRequest merchantShortId opCity req = do

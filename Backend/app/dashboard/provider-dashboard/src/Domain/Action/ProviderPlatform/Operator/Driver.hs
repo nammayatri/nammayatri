@@ -1,4 +1,4 @@
-module Domain.Action.ProviderPlatform.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest) where
+module Domain.Action.ProviderPlatform.Operator.Driver (getDriverOperatorFetchHubRequests, postDriverOperatorRespondHubRequest, postDriverOperatorCreateRequest) where
 
 import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Driver
@@ -40,3 +40,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorRespondHubRequest) req{operatorId = apiTokenInfo.personId.getId}
+
+postDriverOperatorCreateRequest :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postDriverOperatorCreateRequest merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorCreateRequest) req{creatorId = Just apiTokenInfo.personId.getId}

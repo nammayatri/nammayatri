@@ -12,9 +12,14 @@ import Servant
 import Tools.Auth
 
 data DriverOperationHubRequest = DriverOperationHubRequest
-  { operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
+  { creatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
     registrationNo :: Kernel.Prelude.Text,
     requestType :: Domain.Types.OperationHubRequests.RequestType
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype OperationHubRequestsResp = OperationHubRequestsResp {requests :: [Domain.Types.OperationHubRequests.OperationHubRequests]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

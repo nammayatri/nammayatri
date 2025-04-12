@@ -554,7 +554,7 @@ type GetDriverStatsHelper =
       :> QueryParam
            "toDate"
            Data.Time.Calendar.Day
-      :> MandatoryQueryParam "requestedEntityId" Kernel.Prelude.Text
+      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Get '[JSON] DriverStatsRes
   )
 

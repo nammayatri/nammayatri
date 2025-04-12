@@ -57,6 +57,18 @@ findImagesByPersonAndType merchantId personId imageType = do
         ]
     ]
 
+findImagesByRCAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Image.Image])
+findImagesByRCAndType merchantId rcId imageType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.rcId $ Se.Eq rcId,
+          Se.Is Beam.imageType $ Se.Eq imageType
+        ]
+    ]
+
 updateDocumentExpiry :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateDocumentExpiry documentExpiry id = do
   _now <- getCurrentTime

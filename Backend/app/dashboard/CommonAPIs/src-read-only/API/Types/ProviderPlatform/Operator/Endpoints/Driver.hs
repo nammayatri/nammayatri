@@ -18,6 +18,19 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data DriverOperationHubRequest = DriverOperationHubRequest
+  { creatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Text,
+    operationHubId :: Kernel.Types.Id.Id Dashboard.Common.OperationHub,
+    registrationNo :: Kernel.Prelude.Text,
+    requestType :: RequestType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets DriverOperationHubRequest where
+  hideSecrets = Kernel.Prelude.identity
+
 data OperationHubDriverRequest = OperationHubDriverRequest
   { driverId :: Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
@@ -38,14 +51,14 @@ data RequestStatus
   = PENDING
   | APPROVED
   | REJECTED
-  deriving stock (Generic, Eq)
-  deriving anyclass (Kernel.Prelude.ToParamSchema, ToJSON, FromJSON, ToSchema)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data RequestType
   = ONBOARDING_INSPECTION
   | REGULAR_INSPECTION
-  deriving stock (Generic, Eq)
-  deriving anyclass (Kernel.Prelude.ToParamSchema, ToJSON, FromJSON, ToSchema)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prelude.Text, operatorId :: Kernel.Prelude.Text, registrationNo :: Kernel.Prelude.Text, remarks :: Kernel.Prelude.Text, status :: RequestStatus}
   deriving stock (Generic)
@@ -54,7 +67,7 @@ data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prel
 instance Kernel.Types.HideSecrets.HideSecrets RespondHubRequest where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> PostDriverOperatorRespondHubRequest))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest))
 
 type GetDriverOperatorFetchHubRequests =
   ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
@@ -87,19 +100,23 @@ type GetDriverOperatorFetchHubRequests =
 
 type PostDriverOperatorRespondHubRequest = ("operator" :> "respond" :> "hubRequest" :> ReqBody '[JSON] RespondHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostDriverOperatorCreateRequest = ("operator" :> "createRequest" :> ReqBody '[JSON] DriverOperationHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data DriverAPIs = DriverAPIs
   { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
-    postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverOperatorFetchHubRequests :<|> postDriverOperatorRespondHubRequest = driverClient
+    getDriverOperatorFetchHubRequests :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_OPERATOR_FETCH_HUB_REQUESTS
   | POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST
+  | POST_DRIVER_OPERATOR_CREATE_REQUEST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -7,12 +7,13 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.Prelude
-import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FleetOwnerInformation = FleetOwnerInformation
   { blocked :: Kernel.Prelude.Bool,
+    businessLicenseImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     fleetOwnerPersonId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetType :: Domain.Types.FleetOwnerInformation.FleetType,

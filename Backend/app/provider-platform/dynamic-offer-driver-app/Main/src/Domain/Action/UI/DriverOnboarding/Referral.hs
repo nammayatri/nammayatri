@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.DriverOperatorAssociation
@@ -92,11 +93,12 @@ validateReferralReq ReferralReq {..} =
 validateReferralCodeAndRole ::
   TransporterConfig ->
   Id Person.Person ->
-  ReferralReq ->
+  Text ->
+  Maybe Person.Role ->
   Flow DR.DriverReferral
-validateReferralCodeAndRole transporterConfig personId req = do
-  dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
-  let role = fromMaybe Person.DRIVER req.role
+validateReferralCodeAndRole transporterConfig personId value mbRole = do
+  dr <- B.runInReplica (QDR.findByRefferalCode $ Id value) >>= fromMaybeM (InvalidReferralCode value)
+  let role = fromMaybe Person.DRIVER mbRole
   unless (role == dr.role && personId /= dr.driverId) $ throwError (InvalidRequest "Invalid referral role")
   logTagInfo "validateReferralCodeAndRole" $ "transporterConfig allowedReferralEntities: " <> show transporterConfig.allowedReferralEntities
   unless (role `elem` transporterConfig.allowedReferralEntities) $ throwError (InvalidRequest "Referral not allowed for this merchant")
@@ -113,7 +115,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
     then return AlreadyReferred
     else do
       transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
-      dr <- validateReferralCodeAndRole transporterConfig personId req
+      dr <- validateReferralCodeAndRole transporterConfig personId req.value req.role
       case dr.role of
         Person.DRIVER -> do
           DriverInformation.addReferralCode (Just req.value) (Just dr.driverId) personId
@@ -165,12 +167,13 @@ checkDriverHasNoAssociation driverId = do
 
 getDriverDetailsByReferralCode ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  ReferralReq ->
+  Text ->
+  Maybe Person.Role ->
   Flow DriverReferralDetailsRes
-getDriverDetailsByReferralCode (personId, _, merchantOpCityId) req = do
-  runRequestValidation validateReferralReq req
+getDriverDetailsByReferralCode (personId, _, merchantOpCityId) value mbRole = do
+  when (T.length value < 6) $ throwError (InvalidRequest "Referral code should be at least 6 digits long")
   transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
-  dr <- validateReferralCodeAndRole transporterConfig personId req
+  dr <- validateReferralCodeAndRole transporterConfig personId value mbRole
   person <- B.runInReplica (QPerson.findById dr.driverId) >>= fromMaybeM (PersonNotFound dr.driverId.getId)
   return $
     DriverReferralDetailsRes

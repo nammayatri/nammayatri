@@ -29,13 +29,27 @@ apis:
       response:
         type: APISuccess
 
+  - POST:
+      endpoint: /operator/createRequest
+      auth: ApiAuthV2
+      request:
+        type: DriverOperationHubRequest
+      response:
+        type: APISuccess
 types:
+  DriverOperationHubRequest:
+    requestType: RequestType
+    operationHubId: Id OperationHub
+    registrationNo: Text
+    driverId: Text
+    creatorId: Maybe Text
+    derive: "'HideSecrets"
   RequestStatus:
     enum: "PENDING,APPROVED,REJECTED"
-    derive': "HttpInstance, ToJSON, FromJSON, Generic, ToSchema, Eq"
+    derive: "HttpInstance"
   RequestType:
     enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
-    derive': "HttpInstance, ToJSON, FromJSON, Generic, ToSchema, Eq"
+    derive: "HttpInstance"
   OperationHubReqResp:
     - recordType: NewType
     - requests: [OperationHubDriverRequest]

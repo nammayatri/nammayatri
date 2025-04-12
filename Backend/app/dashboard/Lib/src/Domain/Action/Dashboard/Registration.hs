@@ -314,7 +314,7 @@ registerFleetOwner ::
 registerFleetOwner req mbPersonId = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
   fleetOwner <- buildFleetOwner req mbPersonId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   merchant <-
     QMerchant.findByShortId req.merchantId

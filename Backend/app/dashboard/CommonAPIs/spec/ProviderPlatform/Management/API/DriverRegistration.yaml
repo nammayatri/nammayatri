@@ -18,6 +18,8 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        rcId: Text
       response:
         type: DocumentsListResponse
       migrate:
