@@ -140,21 +140,10 @@ jobs:
       - name: Create and push MultiArch manifest
         run: |
           echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-          # Check if both architecture-specific images exist
-          if docker manifest inspect "${BASE_IMAGE_NAME}-amd64" > /dev/null 2>&1 && \
-             docker manifest inspect "${BASE_IMAGE_NAME}-arm64" > /dev/null 2>&1; then
-            # Create the manifest
-            docker manifest create "$BASE_IMAGE_NAME" \
-                --amend "${BASE_IMAGE_NAME}-amd64" \
-                --amend "${BASE_IMAGE_NAME}-arm64"
-
-            # Push the manifest
-            docker manifest push "$BASE_IMAGE_NAME"
-          else
-            echo "One or more architecture-specific images are missing"
-            exit 1
-          fi
+          
+          # Push the manifest
+          docker manifest create "$BASE_IMAGE_NAME"
+          docker manifest push "$BASE_IMAGE_NAME"
 
           docker logout ghcr.io
 
