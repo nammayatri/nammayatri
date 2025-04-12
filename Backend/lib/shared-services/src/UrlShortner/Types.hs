@@ -28,13 +28,15 @@ import Prelude (show)
   So whenever adding new category,
   make sure to add corresponding enum to the url-shortner service as well.
 -}
-metroTicketBooking, mtbEnum, rtkEnum, rideTracking :: String
+metroTicketBooking, mtbEnum, rtkEnum, rideTracking, meterRideReferralLink, mrlEnum :: String
 metroTicketBooking = "mtb"
 mtbEnum = "METRO_TICKET_BOOKING"
 rideTracking = "rtk"
 rtkEnum = "RIDE_TRACKING"
+meterRideReferralLink = "mrl"
+mrlEnum = "METER_RIDE_REFERRAL_LINK"
 
-data UrlCategory = METRO_TICKET_BOOKING | RIDE_TRACKING
+data UrlCategory = METRO_TICKET_BOOKING | RIDE_TRACKING | METER_RIDE_REFERRAL_LINK
   deriving (Generic)
 
 fromString :: String -> Maybe UrlCategory
@@ -42,11 +44,13 @@ fromString str =
   if
       | str == mtbEnum || str == metroTicketBooking -> Just METRO_TICKET_BOOKING
       | str == rtkEnum || str == rideTracking -> Just RIDE_TRACKING
+      | str == mrlEnum || str == meterRideReferralLink -> Just METER_RIDE_REFERRAL_LINK
       | otherwise -> Nothing
 
 toString :: UrlCategory -> String
 toString METRO_TICKET_BOOKING = metroTicketBooking
 toString RIDE_TRACKING = rideTracking
+toString METER_RIDE_REFERRAL_LINK = meterRideReferralLink
 
 instance Read UrlCategory where
   readsPrec _ = maybe [] (\x -> [(x, "")]) . fromString
