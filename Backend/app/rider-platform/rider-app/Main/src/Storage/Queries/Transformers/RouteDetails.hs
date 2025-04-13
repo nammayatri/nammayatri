@@ -20,7 +20,7 @@ getTransformedRouteDetails routeDetails = do
           longName = RD.routeLongName rd,
           shortName = RD.routeShortName rd,
           color = RD.routeColorCode rd,
-          frequency = RD.frequency rd,
+          alternateShortNames = fromMaybe [] (RD.alternateShortNames rd),
           fromStopDetails =
             Just $
               MultiModalStopDetails
@@ -85,6 +85,7 @@ getTransformedJourneyRouteDetails routeDetails = do
         { platformNumber = JRD.platformNumber rd,
           lineColorCode = JRD.lineColorCode rd,
           lineColor = JRD.lineColor rd,
+          alternateShortNames = fromMaybe [] (JRD.alternateShortNames rd),
           journeyStatus = JRD.journeyStatus rd,
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,
@@ -105,6 +106,7 @@ getTransformedJourneyRouteDetailsT routeDetails = do
         { platformNumber = JRD.platformNumber rd,
           lineColorCode = JRD.lineColorCode rd,
           lineColor = JRD.lineColor rd,
+          alternateShortNames = fromMaybe [] (JRD.alternateShortNames rd),
           journeyStatus = JRD.journeyStatus rd,
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,

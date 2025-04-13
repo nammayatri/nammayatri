@@ -30,6 +30,7 @@ create frfsSearchReq = do
               lineColorCode = journeyRouteDetail.lineColorCode,
               journeyStatus = journeyRouteDetail.journeyStatus,
               frequency = journeyRouteDetail.frequency,
+              alternateShortNames = Just journeyRouteDetail.alternateShortNames,
               routeLongName = journeyRouteDetail.routeLongName,
               searchId = frfsSearchReq.id,
               platformNumber = journeyRouteDetail.platformNumber,

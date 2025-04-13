@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 data RouteDetails = RouteDetails
   { agencyGtfsId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     agencyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    alternateShortNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     endLocationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     endLocationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     frequency :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

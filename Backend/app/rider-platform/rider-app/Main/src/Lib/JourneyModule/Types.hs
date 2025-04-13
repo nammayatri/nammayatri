@@ -330,7 +330,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     routeName :: Maybe Text,
     providerName :: Maybe Text,
     selectedServiceTier :: Maybe LegServiceTier,
-    frequency :: Maybe Seconds
+    frequency :: Maybe Seconds,
+    alternateShortNames :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -690,6 +691,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   providerName = Just booking.providerName,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails',
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails',
+                  alternateShortNames = journeyRouteDetail.alternateShortNames,
                   selectedServiceTier = mbSelectedServiceTier
                 }
         Spec.SUBWAY -> do
@@ -839,6 +841,7 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   tickets = Nothing,
                   providerName = Nothing,
                   selectedServiceTier = mbSelectedServiceTier,
+                  alternateShortNames = journeyRouteDetail.alternateShortNames,
                   routeName = listToMaybe $ catMaybes $ map (.lineColor) journeyRouteDetails,
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails
                 }

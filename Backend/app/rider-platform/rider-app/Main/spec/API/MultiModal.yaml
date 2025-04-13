@@ -23,6 +23,7 @@ imports:
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
   AvailableRoutesByTier: Lib.JourneyModule.Utils
+  SDKPayloadDetails: Kernel.External.Payment.Juspay.Types
 
 module: MultimodalConfirm
 
@@ -164,6 +165,12 @@ types:
     rsm: [TransportRouteStopMapping]
     ptcv: Text
 
+  UpdatePaymentOrderReq:
+    amount: Maybe HighPrecMoney
+
+  UpdatePaymentOrderResp:
+    sdkPayload: Maybe SDKPayloadDetails
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -193,6 +200,15 @@ apis:
         journeyId: Id Journey
       response:
         type: JourneyBookingPaymentStatus
+  - POST:
+      endpoint : /multimodal/{journeyId}/payment/updateOrder
+      auth: TokenAuth
+      request:
+        type: UpdatePaymentOrderReq
+      params:
+        journeyId: Id Journey
+      response:
+        type: UpdatePaymentOrderResp
 
   - POST:
       endpoint: /multimodal/{journeyId}/switch # combine with other legs if they match

@@ -45,6 +45,7 @@ data JourneySearchData = JourneySearchData
 
 data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
   { frequency :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    alternateShortNames :: [Kernel.Prelude.Text],
     lineColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lineColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     journeyStatus :: Kernel.Prelude.Maybe JourneyLegStatus,

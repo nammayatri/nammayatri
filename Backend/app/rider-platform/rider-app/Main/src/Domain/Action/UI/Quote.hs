@@ -241,6 +241,7 @@ data RouteDetail = RouteDetail
   { routeCode :: Maybe Text,
     fromStationCode :: Maybe Text,
     toStationCode :: Maybe Text,
+    alternateShortNames :: [Text],
     color :: Maybe Text,
     colorCode :: Maybe Text,
     fromStationLatLong :: LatLong,
@@ -435,6 +436,7 @@ getJourneys searchRequest hasMultimodalSearch = do
           toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
           color = routeDetail.shortName,
           colorCode = routeDetail.shortName,
+          alternateShortNames = routeDetail.alternateShortNames,
           fromStationLatLong =
             LatLong
               { lat = routeDetail.startLocation.latLng.latitude,

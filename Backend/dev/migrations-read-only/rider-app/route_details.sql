@@ -37,3 +37,8 @@ ALTER TABLE atlas_app.route_details ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_details ADD COLUMN sub_leg_order integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_details ADD COLUMN alternate_short_names text[] ;

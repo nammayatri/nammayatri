@@ -386,6 +386,7 @@ RouteDetails:
     routeShortName: Maybe Text
     routeColorName: Maybe Text
     routeColorCode: Maybe Text
+    alternateShortNames: Maybe [Text]
     frequency: Maybe Seconds
     agencyGtfsId: Maybe Text
     agencyName: Maybe Text
@@ -415,6 +416,10 @@ RouteDetails:
     findAllByJourneyLegId:
       kvFunction: findAllWithKV
       where: journeyLegId
+
+  sqlType:
+    alternateShortNames: text[]
+
   constraints:
     id: PrimaryKey
     journeyLegId: "!SecondaryKey"
