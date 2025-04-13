@@ -38,6 +38,8 @@ data DriverPlanT f = DriverPlanT
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
     vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
     waiveOfMode :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPlan.WaiveOffMode)),
+    waiveOffEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    waiveOffValidTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     waiverOffPercentage :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney))
   }
   deriving (Generic, B.Beamable)
@@ -48,6 +50,6 @@ instance B.Table DriverPlanT where
 
 type DriverPlan = DriverPlanT Identity
 
-$(enableKVPG (''DriverPlanT) [('driverId)] [[('mandateId)]])
+$(enableKVPG ''DriverPlanT ['driverId] [['mandateId]])
 
-$(mkTableInstances (''DriverPlanT) "driver_plan")
+$(mkTableInstances ''DriverPlanT "driver_plan")

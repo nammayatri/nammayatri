@@ -41,12 +41,15 @@ data DriverPlan = DriverPlan
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode,
+    waiveOffEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    waiveOffValidTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     waiverOffPercentage :: Kernel.Types.Common.HighPrecMoney
   }
-  deriving (Generic, (Show), (Eq), (Ord))
+  deriving (Generic, Show, Eq, Ord)
 
 data WaiveOffEntity = WaiveOffEntity
-  { driverId :: Kernel.Prelude.Text,
+  { daysValidFor :: Kernel.Prelude.Integer,
+    driverId :: Kernel.Prelude.Text,
     percentage :: Kernel.Types.Common.HighPrecMoney,
     serviceName :: Domain.Types.Plan.ServiceNames,
     waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode
@@ -55,4 +58,4 @@ data WaiveOffEntity = WaiveOffEntity
 
 data WaiveOffMode = WITH_OFFER | WITHOUT_OFFER | NO_WAIVE_OFF deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''WaiveOffMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WaiveOffMode)

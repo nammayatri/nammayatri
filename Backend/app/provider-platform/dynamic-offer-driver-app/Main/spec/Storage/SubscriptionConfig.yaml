@@ -41,6 +41,10 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel: Bool
     enableCityBasedFeeSwitch: Bool
     partialDueClearanceMessageKey: Maybe Domain.Types.MerchantMessage.MessageKey
+    waiveOffOfferTitle : Text
+    waiveOffOfferDescription : Text
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -49,6 +53,8 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.fromMaybe False|I
     defaultCityVehicleCategory : Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY|I
     enableCityBasedFeeSwitch: Kernel.Prelude.fromMaybe False|I
+    waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
+    waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -56,7 +62,8 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.Just|I
     defaultCityVehicleCategory : Kernel.Prelude.Just|I
     enableCityBasedFeeSwitch: Kernel.Prelude.Just|I
-
+    waiveOffOfferTitle : Kernel.Prelude.Just|I
+    waiveOffOfferDescription : Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -64,7 +71,8 @@ SubscriptionConfig:
     isSubscriptionEnabledAtCategoryLevel: Maybe Bool
     defaultCityVehicleCategory : Maybe VehicleCategory
     enableCityBasedFeeSwitch : Maybe Bool
-
+    waiveOffOfferTitle : Maybe Text
+    waiveOffOfferDescription : Maybe Text
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
