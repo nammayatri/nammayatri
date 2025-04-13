@@ -2351,7 +2351,10 @@ currentRideFlow activeRideResp isActiveRide = do
             let isMeterRide = maybe false (\(API.TripCategory tripCategory) -> tripCategory.contents == Just "MeterRide" ) ride.tripCategory
             if isMeterRide then  do
               void $ liftFlowBT $ JB.requestBackgroundLocation unit
-              lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity (cb <<< Right) $> nonCanceler
+              void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+              void $ lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity (cb <<< Right) $> nonCanceler
+              void $ liftFlowBT $  HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
+              void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
             else do
               let decodedSource = decodeAddress ride.fromLocation true
                   decodedDestination = (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation
@@ -3054,7 +3057,10 @@ homeScreenFlow = do
     GO_TO_METER_RIDE_SCREEN -> do
       (GlobalState globalstate) <- getState
       when (globalstate.homeScreen.props.driverStatusSet == ST.Offline) $ changeDriverStatus ST.Online
-      lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
+      void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+      void $lift $ lift $ doAff $ makeAff \cb -> JB.startOpenMeterActivity  (cb <<< Right) $> nonCanceler
+      void $ liftFlowBT $HU.fetchAndUpdateLocationUpdateServiceVars "online" true "OneWay"
+      void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
   homeScreenFlow
 
 handleFcm :: String -> HomeScreenState -> NotificationBody -> FlowBT String Unit

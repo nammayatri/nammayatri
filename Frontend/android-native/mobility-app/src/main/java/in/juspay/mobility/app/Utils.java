@@ -124,7 +124,7 @@ public class Utils {
             Log.e(UTILS, "Error sending user data: " + e);
         }
     }
-    
+
     public static VariantType getVariantType(String variant) {
         if (variant.equals("Non AC Taxi")) {
             return VariantType.NON_AC;

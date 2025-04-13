@@ -3257,7 +3257,16 @@ export const startOpenMeterActivity = (cb) => {
         })
       }
     }
+    console.log("startOpenMeterActivity", callback);
     window.onResumeListeners.push(callback);
     JBridge.startOpenMeterActivity("callback");
+  }
+}
+
+
+export const startGActivity = (token) => {
+  return () => {
+    console.log("startGActivity...", token);
+    JBridge.startGActivity(token);
   }
 }

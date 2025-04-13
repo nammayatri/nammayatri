@@ -86,7 +86,9 @@ type LocationUpdateServiceConfig = {
   batchSize :: String,
   maxBatchAge :: String,
   locationRequestInterval :: String,
-  locationRequestIntervalWithFrequentUpdates :: String
+  locationRequestIntervalWithFrequentUpdates :: String,
+  maxTimeThreshold :: String,
+  priority :: String
 }
 
 type PerfConfig = {
@@ -146,7 +148,7 @@ type ProfileCompletionReminder = {
 }
 
 type RideAssignedAudioConfig = {
-  rideShare :: Maybe String 
+  rideShare :: Maybe String
 , intercity :: Maybe String
 , roundTrip :: Maybe String
 , oneWay :: Maybe String
