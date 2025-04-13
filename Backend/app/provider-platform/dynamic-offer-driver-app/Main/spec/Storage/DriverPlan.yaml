@@ -9,6 +9,9 @@ imports:
   ServiceNames: Domain.Types.Plan
   SubscriptionServiceRelatedData: Domain.Types.Extra.DriverPlan
   VehicleCategory: Domain.Types.VehicleCategory
+  Integer: Kernel.Prelude
+
+
 
 DriverPlan:
   tableName: driver_plan
@@ -20,6 +23,7 @@ DriverPlan:
       driverId : Text
       percentage : HighPrecMoney
       waiveOfMode: WaiveOffMode
+      daysValidFor : Integer
       serviceName : ServiceNames
   fields:
     driverId : Id Person
@@ -44,7 +48,8 @@ DriverPlan:
     isCategoryLevelSubscriptionEnabled : Maybe Bool
     waiverOffPercentage : HighPrecMoney
     waiveOfMode : WaiveOffMode
-
+    waiveOffEnabledOn : Maybe UTCTime
+    waiveOffValidTill : Maybe UTCTime
   beamFields:
     subscriptionServiceRelatedData:
       rentedVehicleNumber: Maybe Text

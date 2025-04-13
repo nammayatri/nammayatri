@@ -66,3 +66,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN partial_due_cl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_down boolean DEFAULT false;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_title text ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_description text ;
