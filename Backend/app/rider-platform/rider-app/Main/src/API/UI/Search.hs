@@ -278,7 +278,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                     duration = duration,
                     startTime = Just busRouteDetails.fromStop.stopArrivalTime,
                     endTime = Just busRouteDetails.toStop.stopArrivalTime,
-                    legs = [leg]
+                    legs = [leg],
+                    relevanceScore = Nothing
                   }
               ]
           }
@@ -299,7 +300,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                 minimumWalkDistance = riderConfig.minimumWalkDistance,
                 permissibleModes = permissibleModesToUse,
                 maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-                sortingType = convertSortingType sortingType
+                sortingType = JMU.convertSortingType sortingType
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
       otpResponse' <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
@@ -327,7 +328,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               startTime = firstRoute.startTime,
               endTime = firstRoute.endTime,
               maximumWalkDistance = riderConfig.maximumWalkDistance,
-              straightLineThreshold = riderConfig.straightLineThreshold
+              straightLineThreshold = riderConfig.straightLineThreshold,
+              relevanceScore = firstRoute.relevanceScore
             }
     void $ JM.init initReq
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
@@ -369,7 +371,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                   startTime = r'.startTime,
                   endTime = r'.endTime,
                   maximumWalkDistance = riderConfig.maximumWalkDistance,
-                  straightLineThreshold = riderConfig.straightLineThreshold
+                  straightLineThreshold = riderConfig.straightLineThreshold,
+                  relevanceScore = r'.relevanceScore
                 }
         JM.init initReq'
       QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
@@ -388,11 +391,6 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
       DTrip.Walk -> Just MultiModalTypes.Walk
       _ -> Nothing
 
-    convertSortingType :: DMP.JourneyOptionsSortingType -> SortingType
-    convertSortingType sortType = case sortType of
-      DMP.FASTEST -> Fastest
-      DMP.MINIMUM_TRANSITS -> Minimum_Transits
-      _ -> Fastest -- Default case for any other values
     mkAutoLeg now toLocation = do
       let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}
       let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
@@ -443,7 +441,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                     duration = duration,
                     startTime = Just startTime,
                     endTime = Just endTime,
-                    legs = [leg]
+                    legs = [leg],
+                    relevanceScore = Nothing
                   }
               ]
           }

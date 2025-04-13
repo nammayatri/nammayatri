@@ -19,6 +19,7 @@ import qualified Kernel.Types.Error as Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.Common as Utils
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRiderConfig
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PopularLocation as QPopularLocation
@@ -46,12 +47,6 @@ import qualified Tools.MultiModal as TMultiModal
 --           busAvailabilities <- forM busLegs $ \_ -> do
 --             return True
 --           pure (and busAvailabilities)
-
-convertSortingType :: DMP.JourneyOptionsSortingType -> MultiModal.SortingType
-convertSortingType sortType = case sortType of
-  DMP.FASTEST -> MultiModal.Fastest
-  DMP.MINIMUM_TRANSITS -> MultiModal.Minimum_Transits
-  _ -> MultiModal.Fastest -- Default case for any other values
 
 getMultiModalModes :: API.PlacesRequest -> DRecntLoc.RecentLocation -> Id.Id DMerchant.Merchant -> DPerson.Person -> Id.Id MerchantOperatingCity -> Env.Flow (Maybe API.MultiModalLocation)
 getMultiModalModes req recentLoc merchantId person merchantOperatingCityId = do
@@ -92,7 +87,7 @@ getMultiModalModes req recentLoc merchantId person merchantOperatingCityId = do
                 minimumWalkDistance = riderConfig.minimumWalkDistance,
                 permissibleModes = fromMaybe [] riderConfig.permissibleModes,
                 maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-                sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPref.journeyOptionsSortingType
+                sortingType = JMU.convertSortingType $ fromMaybe DMP.FASTEST userPref.journeyOptionsSortingType
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
       multimodalRoutes <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= Utils.fromMaybeM (Error.InternalError "routes dont exist")
@@ -191,7 +186,7 @@ postPlaces (mbPersonId, merchantId) req = do
               minimumWalkDistance = riderConfig.minimumWalkDistance,
               permissibleModes = fromMaybe [] riderConfig.permissibleModes,
               maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-              sortingType = convertSortingType DMP.FASTEST
+              sortingType = JMU.convertSortingType DMP.FASTEST
             }
     transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
     multimodalRoutes <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= Utils.fromMaybeM (Error.InternalError "routes dont exist")

@@ -25,6 +25,7 @@ data Journey = Journey
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
+    relevanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

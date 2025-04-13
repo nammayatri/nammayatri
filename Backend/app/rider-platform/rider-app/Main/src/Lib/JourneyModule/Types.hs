@@ -211,7 +211,8 @@ data JourneyInitData = JourneyInitData
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
     maximumWalkDistance :: Meters,
-    straightLineThreshold :: Meters
+    straightLineThreshold :: Meters,
+    relevanceScore :: Maybe Double
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -888,8 +889,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId relevanceScore = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
   now <- getCurrentTime
@@ -911,7 +912,8 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,
-        DJ.recentLocationId = mbRecentLocationId -- Fully qualify the field name
+        DJ.recentLocationId = mbRecentLocationId, -- Fully qualify the field name
+        relevanceScore
       }
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
