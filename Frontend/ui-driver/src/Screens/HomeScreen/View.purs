@@ -1037,6 +1037,7 @@ meterRideButtonView state push =
   , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
   , padding $ Padding 12 10 12 10
   , onClick push $ const $ GotoMeterRideScreen
+  , rippleColor Color.rippleShade
   , margin $ MarginLeft 10
   , gravity CENTER
   ][ imageView
