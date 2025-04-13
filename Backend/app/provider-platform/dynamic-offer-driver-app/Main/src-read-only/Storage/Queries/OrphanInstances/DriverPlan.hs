@@ -48,6 +48,8 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             updatedAt = updatedAt,
             vehicleCategory = vehicleCategory',
             waiveOfMode = Kernel.Prelude.fromMaybe Domain.Types.DriverPlan.NO_WAIVE_OFF waiveOfMode,
+            waiveOffEnabledOn = waiveOffEnabledOn,
+            waiveOffValidTill = waiveOffValidTill,
             waiverOffPercentage = Kernel.Prelude.fromMaybe 0 waiverOffPercentage
           }
 
@@ -77,5 +79,7 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory,
         Beam.waiveOfMode = Kernel.Prelude.Just waiveOfMode,
+        Beam.waiveOffEnabledOn = waiveOffEnabledOn,
+        Beam.waiveOffValidTill = waiveOffValidTill,
         Beam.waiverOffPercentage = Kernel.Prelude.Just waiverOffPercentage
       }

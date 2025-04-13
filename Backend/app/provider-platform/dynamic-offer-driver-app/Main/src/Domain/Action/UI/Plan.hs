@@ -21,6 +21,7 @@ import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
+import qualified Data.Time as DT
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
@@ -342,6 +343,8 @@ createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) pla
             totalAmountChargedForService = 0,
             waiveOfMode = NO_WAIVE_OFF,
             waiverOffPercentage = 0.0,
+            waiveOffEnabledOn = Nothing,
+            waiveOffValidTill = Nothing,
             ..
           }
   QDPlan.create dPlan
@@ -389,8 +392,8 @@ planList (driverId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
     mapM
       ( \plan' ->
           if driverInfo.autoPayStatus == Just DI.ACTIVE
-            then do convertPlanToPlanEntity driverId mandateSetupDate False plan'
-            else do convertPlanToPlanEntity driverId now False plan'
+            then do convertPlanToPlanEntity driverId mandateSetupDate False Nothing Nothing plan'
+            else do convertPlanToPlanEntity driverId now False Nothing Nothing plan'
       )
       $ sortOn (.listingPriority) plans
   return $
@@ -420,7 +423,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   now <- getCurrentTime
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus autoPayStatus then date else now) mbMandateSetupDate
-  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True >=> (pure . Just)) mPlan
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True mDriverPlan (Just subscriptionConfig) >=> (pure . Just)) mPlan
   mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId serviceName
   (orderId, lastPaymentType) <-
     case mbInvoice of
@@ -540,6 +543,8 @@ mkDriverPlan plan (driverId, merchantId, merchantOpCityId) = do
         totalAmountChargedForService = 0,
         waiveOfMode = NO_WAIVE_OFF,
         waiverOffPercentage = 0.0,
+        waiveOffEnabledOn = Nothing,
+        waiveOffValidTill = Nothing,
         ..
       }
 
@@ -773,8 +778,8 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       let intersectionOfDriverFeeIds = oldLinkedDriverFeeIds `intersect` newDriverFeeIds
       return $ length oldLinkedDriverFeeIds == length intersectionOfDriverFeeIds && length newDriverFeeIds == length intersectionOfDriverFeeIds
 
-convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Plan -> Flow PlanEntity
-convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {..} = do
+convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Maybe DriverPlan -> Maybe SubscriptionConfig -> Plan -> Flow PlanEntity
+convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan subscriptionConfig plan@Plan {..} = do
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
   pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverIdForServiceName driverId serviceName
   transporterConfig_ <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -787,7 +792,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
   mbDriverStat <- QDS.findById (cast driverId)
-  let planFareBreakup = mkPlanFareBreakup currency offers.offerResp
+  let planFareBreakup = mkPlanFareBreakup currency offers.offerResp now
       coinCashLeft = if plan.eligibleForCoinDiscount then Just $ max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else Nothing
       planChargeWithDiscount = find (\x -> x.component == "DISCOUNTED_FEE") planFareBreakup <&> (.amount)
       maxPlanCharge = find (\x -> x.component == "MAX_FEE_LIMIT") planFareBreakup <&> (.amount)
@@ -809,7 +814,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
   return
     PlanEntity
       { id = plan.id.getId,
-        offers = makeOfferEntity <$> offers.offerResp,
+        offers = (makeOfferEntity <$> offers.offerResp) <> (maybe [] (\res -> [res]) $ mkWaiveOfferEntity transporterConfig_ now),
         frequency = planBaseFrequcency,
         name = translatedName,
         description = translatedDescription,
@@ -854,13 +859,13 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
           }
-    mkPlanFareBreakup currency offers = do
+    mkPlanFareBreakup currency offers now = do
       let baseAmount = case plan.planBaseAmount of
             PERRIDE_BASE amount -> amount
             DAILY_BASE amount -> amount
             WEEKLY_BASE amount -> amount
             MONTHLY_BASE amount -> amount
-          (discountAmount, finalOrderAmount) =
+          (discountAmountOffers, finalOrderAmountOffers) =
             if null offers
               then (0.0, baseAmount)
               else do
@@ -868,6 +873,18 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
                 if plan.allowStrikeOff
                   then (bestOffer.discountAmount, bestOffer.finalOrderAmount)
                   else (0.0, baseAmount)
+          waiveOffPercentage = fromMaybe 0.0 $ driverPlan <&> (.waiverOffPercentage)
+          waiveOffEnabledOn = fromMaybe now $ driverPlan >>= (.waiveOffEnabledOn)
+          waiveOffValidTill = fromMaybe now $ driverPlan >>= (.waiveOffValidTill)
+          isWaiveoffValid = now >= waiveOffEnabledOn && now < waiveOffValidTill
+          (discountAmount, finalOrderAmount) =
+            if isWaiveoffValid
+              then do
+                case (driverPlan <&> (.waiveOfMode)) of
+                  Just WITH_OFFER -> (max 0.0 (discountAmountOffers * (waiveOffPercentage / 100.0)), max 0.0 (discountAmountOffers * (1 - (waiveOffPercentage / 100.0))))
+                  Just WITHOUT_OFFER -> (max 0.0 (baseAmount * (waiveOffPercentage / 100.0)), max 0.0 (baseAmount * (1 - (waiveOffPercentage / 100.0))))
+                  _ -> (discountAmountOffers, finalOrderAmountOffers)
+              else (discountAmountOffers, finalOrderAmountOffers)
       [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount, amountWithCurrency = PriceAPIEntity baseAmount currency},
         PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount, amountWithCurrency = PriceAPIEntity plan.registrationAmount currency},
         PlanFareBreakup {component = "MAX_FEE_LIMIT", amount = plan.maxAmount, amountWithCurrency = PriceAPIEntity plan.maxAmount currency},
@@ -893,6 +910,42 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
     calcBankError currency allPendingAndOverDueDriverfee transporterConfig_ now invoicesForDfee = do
       let mapDriverFeeByDriverFeeId = M.fromList (map (\df -> (df.id, df)) allPendingAndOverDueDriverfee)
       driverFeeAndInvoiceIdsWithValidError currency transporterConfig_ mapDriverFeeByDriverFeeId now (getLatestInvoice invoicesForDfee)
+    mkWaiveOfferEntity transporterConfig now = do
+      let waiveOffPercentage = fromMaybe 0.0 $ driverPlan <&> (.waiverOffPercentage)
+          waiveOffEnabledOn = fromMaybe now $ driverPlan >>= (.waiveOffEnabledOn)
+          waiveOffValidTill = fromMaybe now $ driverPlan >>= (.waiveOffValidTill)
+          isWaiveoffValid = now >= waiveOffEnabledOn && now < waiveOffValidTill
+          waiveoffTitle = fromMaybe "NAN" $ subscriptionConfig <&> (.waiveOffOfferTitle)
+          waiveoffDesc = fromMaybe "NAN" $ subscriptionConfig <&> (.waiveOffOfferDescription)
+      if isWaiveoffValid
+        then
+          Just $
+            OfferEntity
+              { title = buildWaiveOffTitle waiveoffTitle waiveOffPercentage,
+                description = buildWaiveOffDesc waiveoffDesc waiveOffPercentage waiveOffEnabledOn waiveOffValidTill transporterConfig,
+                tnc = Nothing,
+                offerId = "NAN"
+              }
+        else Nothing
+    buildWaiveOffTitle title waiveOffPercentage =
+      if title == "NAN"
+        then Nothing
+        else Just $ T.replace "{#percentage#}" (show $ waiveOffPercentage) title
+    buildWaiveOffDesc descp waiveOffPercentage waiveOffEnabledOn waiveOffValidTill transporterConfig = do
+      let nominalDiffTimeLocale = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+          waiveOffEnabledOnLocale = DT.addUTCTime nominalDiffTimeLocale waiveOffEnabledOn
+          waiveOffValidTillLocale = DT.addUTCTime nominalDiffTimeLocale waiveOffValidTill
+      if descp == "NAN"
+        then Nothing
+        else
+          Just $
+            T.replace "{#percentage#}" (show $ waiveOffPercentage)
+              . T.replace "{#waiveOffStartDate#}" (getDate waiveOffEnabledOnLocale)
+              . T.replace "{#waiveOffEndDate#}" (getDate waiveOffValidTillLocale)
+              $ descp
+    getDate utctime = do
+      let day = DT.utctDay utctime
+      show $ DT.formatTime DT.defaultTimeLocale "%d-%m-%Y" day
 
 getPlanBaseFrequency :: PlanBaseAmount -> Text
 getPlanBaseFrequency planBaseAmount = case planBaseAmount of

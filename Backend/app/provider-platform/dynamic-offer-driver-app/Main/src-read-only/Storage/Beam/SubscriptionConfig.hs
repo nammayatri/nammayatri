@@ -54,6 +54,8 @@ data SubscriptionConfigT f = SubscriptionConfigT
     subscriptionDown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     subscriptionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     useOverlayService :: B.C f Kernel.Prelude.Bool,
+    waiveOffOfferDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    waiveOffOfferTitle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     webhookConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

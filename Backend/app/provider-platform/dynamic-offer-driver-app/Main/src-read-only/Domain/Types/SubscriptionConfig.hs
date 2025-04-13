@@ -54,6 +54,8 @@ data SubscriptionConfig = SubscriptionConfig
     subscriptionDown :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     subscriptionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     useOverlayService :: Kernel.Prelude.Bool,
+    waiveOffOfferDescription :: Kernel.Prelude.Text,
+    waiveOffOfferTitle :: Kernel.Prelude.Text,
     webhookConfig :: Kernel.Prelude.Maybe Domain.Types.SubscriptionConfig.WebhookConfig,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
