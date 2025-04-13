@@ -116,7 +116,7 @@ public class Utils {
         payload.put("action", action);
         payload.put("logLevel",1);
         payload.put("isBootable",true);
-        payload.put(PaymentConstants.ENV, "prod");
+        payload.put(PaymentConstants.ENV, "master");
         int bundleTimeOut = Integer.parseInt(KeyValueStore.read(context,context.getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
         payload.put("bundleTimeOut",bundleTimeOut);
         payload.put("loadDynamicModule", loadDynamicModule);
@@ -201,7 +201,7 @@ public class Utils {
         CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
         if (BuildConfig.DEBUG) {
             SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
-        }        
+        }
         SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler(context,activity));
         SignedCallAPI.getInstance().setNetworkQualityCheckHandler(new SCNetworkQualityHandler() {
             @Override
@@ -217,7 +217,7 @@ public class Utils {
                 }
                 return score >= scoreThreshold;
             }
-        });  
+        });
     }
 
     private static boolean getBooleanWithFallback (SharedPreferences sharedPref, String key) {

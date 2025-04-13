@@ -132,7 +132,7 @@ public class PaymentPage {
             .put("clientId", context.getResources().getString(context.getResources().getIdentifier("client_id","string",context.getPackageName())))
             .put("merchantId", context.getResources().getString(context.getResources().getIdentifier("merchant_id","string",context.getPackageName())))
             .put("action", "initiate")
-            .put(PaymentConstants.ENV, "prod");
+            .put(PaymentConstants.ENV, "master");
         payload.put(PaymentConstants.PAYLOAD,innerPayload);
         return payload;
     }

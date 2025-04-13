@@ -83,7 +83,7 @@ public class RemoteAssetsDownloader extends Service {
                     payload.put("logLevel", 1);
                     payload.put("isBootable", false);
                     payload.put("bundleTimeOut", -1);
-                    payload.put(PaymentConstants.ENV, "prod");
+                    payload.put(PaymentConstants.ENV, "master");
                     outerPayload.put("requestId", UUID.randomUUID());
                     outerPayload.put("service", getService(merchantType));
                     outerPayload.put("betaAssets", false);

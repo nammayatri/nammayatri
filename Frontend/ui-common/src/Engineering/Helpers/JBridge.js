@@ -3248,16 +3248,24 @@ export const setupVoiceRecognitionView = function(id) {
 export const startOpenMeterActivity = (cb) => {
   return () => {
     const callback = () => {
-      const timeTaken = Date.now() - window.onPauseTime;
-      console.log("timeTaken", timeTaken);
-      if (timeTaken > 500) {
+      const isMeterRideActive = window.JBridge.getSharedPreferences('METER_RIDE_ACTIVE');
+      if (isMeterRideActive === "false") {
         cb()();
         window.onResumeListeners = window.onResumeListeners.filter(item => {
           return item !== callback;
         })
       }
     }
+    console.log("startOpenMeterActivity", callback);
     window.onResumeListeners.push(callback);
     JBridge.startOpenMeterActivity("callback");
+  }
+}
+
+
+export const startGActivity = (token) => {
+  return () => {
+    console.log("startGActivity...", token);
+    JBridge.startGActivity(token);
   }
 }
