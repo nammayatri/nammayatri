@@ -63,6 +63,8 @@ SubscriptionConfig:
     isFreeTrialDaysApplicable : Bool
     dataEntityToSend : "[CurrentPlanEntites]"
     enableServiceUsageChargeDefault : Bool
+    waiveOffOfferTitle : Text
+    waiveOffOfferDescription : Text
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -84,6 +86,8 @@ SubscriptionConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< webhookConfig | E
     dataEntityToSend :  Kernel.Prelude.fromMaybe []|I
     enableServiceUsageChargeDefault:  Kernel.Prelude.fromMaybe True|I
+    waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
+    waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -100,6 +104,8 @@ SubscriptionConfig:
     dataEntityToSend : Kernel.Prelude.Just|I
     enableServiceUsageChargeDefault : Kernel.Prelude.Just|I
     genericNextJobScheduleTimeThreshold :  Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    waiveOffOfferTitle : Kernel.Prelude.Just|I
+    waiveOffOfferDescription : Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -116,6 +122,8 @@ SubscriptionConfig:
     dataEntityToSend : Maybe [CurrentPlanEntites]
     enableServiceUsageChargeDefault : Maybe Bool
     genericNextJobScheduleTimeThreshold : Maybe Seconds
+    waiveOffOfferTitle : Maybe Text
+    waiveOffOfferDescription : Maybe Text
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey

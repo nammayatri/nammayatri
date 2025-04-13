@@ -99,3 +99,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN data_entity_to
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN generic_next_job_schedule_time_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_title text ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_description text ;

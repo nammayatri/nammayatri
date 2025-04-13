@@ -1,6 +1,7 @@
 module Storage.Queries.DriverPlanExtra where
 
 import qualified Data.Aeson as A
+import Data.Time (UTCTime (..), addDays)
 import Domain.Types.DriverInformation (DriverAutoPayStatus)
 import Domain.Types.DriverPlan as Domain
 import Domain.Types.Merchant
@@ -176,6 +177,10 @@ updateLastBillGeneratedAt driverId serviceName endTime = do
         ]
     ]
 
+addDaysToUTC :: Integer -> UTCTime -> UTCTime
+addDaysToUTC n (UTCTime day diffTime) =
+  UTCTime (addDays n day) diffTime
+
 updateAllWithWaiveOffPercantageAndType ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [WaiveOffEntity] ->
@@ -189,9 +194,12 @@ updateWaiveOffPercantageAndType ::
   m ()
 updateWaiveOffPercantageAndType waiveOffEntity = do
   now <- getCurrentTime
+  let validTill = addDaysToUTC waiveOffEntity.daysValidFor now
   updateOneWithKV
     [ Se.Set BeamDF.waiverOffPercentage $ Just waiveOffEntity.percentage,
       Se.Set BeamDF.waiveOfMode $ Just waiveOffEntity.waiveOfMode,
+      Se.Set BeamDF.waiveOffEnabledOn $ Just now,
+      Se.Set BeamDF.waiveOffValidTill $ Just validTill,
       Se.Set BeamDF.updatedAt now
     ]
     [ Se.And
