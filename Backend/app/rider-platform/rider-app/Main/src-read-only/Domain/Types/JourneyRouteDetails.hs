@@ -16,7 +16,8 @@ import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data JourneyRouteDetails = JourneyRouteDetails
-  { frequency :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+  { alternateShortNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    frequency :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     fromStationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Station.Station),
     id :: Kernel.Types.Id.Id Domain.Types.JourneyRouteDetails.JourneyRouteDetails,
     journeyStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,

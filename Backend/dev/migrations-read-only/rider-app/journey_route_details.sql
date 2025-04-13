@@ -30,3 +30,8 @@ ALTER TABLE atlas_app.journey_route_details ADD COLUMN route_id character varyin
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_route_details ADD COLUMN journey_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_route_details ADD COLUMN alternate_short_names text[] ;

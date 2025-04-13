@@ -318,7 +318,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         <$> mbFare
 
   -- Only return service tiers that have available routes
-  return $ filter (\r -> not (null $ availableRoutes r)) (catMaybes results)
+  return $ filter (\r -> not (null $ r.availableRoutes)) (catMaybes results)
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
@@ -401,7 +401,8 @@ data StopDetails = StopDetails
 data BusRouteDetails = BusRouteDetails
   { fromStop :: StopDetails,
     toStop :: StopDetails,
-    route :: Route
+    route :: Route,
+    availableRoutes :: [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -469,8 +470,8 @@ getBusRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopC
               mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
               fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
               toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
-
-          return $ Just $ BusRouteDetails fromStopDetails toStopDetails route
+          possibleRoutes <- findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId
+          return $ Just $ BusRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
         _ -> return Nothing
     _ -> return Nothing
 getBusRouteDetails _ _ _ _ = return Nothing

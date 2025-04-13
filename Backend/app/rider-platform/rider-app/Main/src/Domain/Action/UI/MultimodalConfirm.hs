@@ -65,6 +65,7 @@ import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
+import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
@@ -194,14 +195,22 @@ postMultimodalOrderSwitchFRFSTier ::
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchFRFSTier (_, _) journeyId legOrder req = do
+postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
   now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
+  alternateShortNames <- getAlternateShortNames
+  QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs now
+  where
+    getAlternateShortNames :: Flow (Maybe [Text])
+    getAlternateShortNames = do
+      options <- getMultimodalOrderGetBusTierOptions (mbPersonId, merchantId) journeyId legOrder
+      let mbSelectedOption = find (\option -> option.quoteId == Just req.quoteId) options.options
+      return $ mbSelectedOption <&> (.availableRoutes)
 
 getActiveJourneyIds ::
   ( CacheFlow m r,
