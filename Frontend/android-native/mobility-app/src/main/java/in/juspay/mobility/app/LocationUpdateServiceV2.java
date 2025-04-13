@@ -140,6 +140,8 @@ public class LocationUpdateServiceV2 extends Service {
     private static final String TAG_TIMER = "LocSvc:Timer";
     private static final String LAST_LOCATION_FETCH_TIME = "LAST_LOCATION_FETCH_TIME";
     private static final String LOCATION_FRESHNESS_THRESHOLD = "LOCATION_FRESHNESS_THRESHOLD";
+    private static final String LOCATION_MAX_TIME_THRESHOLD = "LOCATION_MAX_TIME_THRESHOLD";
+    private static final String LOCATION_PRIORITY = "LOCATION_PRIORITY";
     // Add these constants for the new settings
     private static final String LOCATION_MAX_BATCH_AGE_KEY = "LOCATION_MAX_BATCH_AGE";
     private static final String LAST_BATCH_SENT_TIME = "LAST_BATCH_SENT_TIME";
@@ -191,6 +193,8 @@ public class LocationUpdateServiceV2 extends Service {
     private int locationFreshnessThresholdMinutes = 5; // Default timeout for considering location stale
     private Location lastCachedLocation;
     private int locationRequestInterval = 10; // Default interval in seconds
+    private int locationMaxTimeThreshold = 4; // Default max waiting time to get location in seconds
+    private int locationPriority = 100; // Default value (HIGH_ACCURACY)
     // Add these state variables
     private int locationMaxBatchAgeSeconds = 10; // Default max age for a batch before sending regardless of size
     private SharedPreferences.OnSharedPreferenceChangeListener prefChangeListener;
@@ -277,7 +281,7 @@ public class LocationUpdateServiceV2 extends Service {
         // Start as foreground service
         startAsForegroundService();
 
-        // Register preference change listener 
+        // Register preference change listener
         setupPreferenceChangeListener();
 
         // Load configuration
@@ -504,6 +508,13 @@ public class LocationUpdateServiceV2 extends Service {
             String requestIntervalStr = sharedPrefs.getString(LOCATION_REQUEST_INTERVAL, null);
             locationRequestInterval = requestIntervalStr != null ? Integer.parseInt(requestIntervalStr) : 10;
 
+            String locationMaxTimeThresholdStr = sharedPrefs.getString(LOCATION_MAX_TIME_THRESHOLD, null);
+            locationMaxTimeThreshold = locationMaxTimeThresholdStr != null ? Integer.parseInt(locationMaxTimeThresholdStr) : 10;
+
+            // Fused location update priority
+            String locationPriorityStr = sharedPrefs.getString(LOCATION_PRIORITY, "PRIORITY_HIGH_ACCURACY");
+            locationPriority = Utils.getPriority(locationPriorityStr);
+
             loadWakeLockConfig();
 
             Log.d(TAG_CONFIG, String.format(Locale.US,
@@ -589,17 +600,16 @@ public class LocationUpdateServiceV2 extends Service {
         int intervalMs = locationRequestInterval * 1000;
 
         // Determine priority based on driver status
-        int priority = Utils.getLocationPriority("driver_fused_location_priority");
         Log.d(TAG_CONFIG, String.format(Locale.US,
-                "Creating location request: interval=%dms, minDisplacement=%.1fm, priority=%d",
-                intervalMs, locationMinDisplacement, priority));
+                "Creating location request: interval=%dms, minDisplacement=%.1fm, priority=%d, locationMaxTimeThreshold=%d",
+                intervalMs, locationMinDisplacement, locationPriority, locationMaxTimeThreshold));
 
         // Build the location request with both time and distance triggers
-        return new LocationRequest.Builder(priority)
+        return new LocationRequest.Builder(intervalMs)
                 // Time-based updates
                 .setIntervalMillis(intervalMs)                     // Target update interval
                 .setMinUpdateIntervalMillis(intervalMs / 2)        // Fastest allowed update rate
-                .setMaxUpdateDelayMillis(intervalMs * 2L)           // Maximum time without updates
+                .setMaxUpdateDelayMillis(locationMaxTimeThreshold)           // Maximum time without updates
 
                 // Distance-based updates - device will update when moved this far
                 .setMinUpdateDistanceMeters(locationMinDisplacement)
@@ -607,6 +617,7 @@ public class LocationUpdateServiceV2 extends Service {
                 // This ensures we get location updates EITHER when time passes OR when distance changes
                 // whichever happens first
                 .setWaitForAccurateLocation(driverRideStatus.equals("ON_RIDE"))
+                .setPriority(locationPriority)
                 .build();
     }
 
@@ -1492,7 +1503,7 @@ public class LocationUpdateServiceV2 extends Service {
      * @param data The data to log
      */
     private void appendToFile(String data) {
-        appendToFile("location_logs", data, "fusedLocationProvider");
+//        appendToFile("location_logs", data, "fusedLocationProvider");
     }
 
     /**
@@ -1845,6 +1856,34 @@ public class LocationUpdateServiceV2 extends Service {
                                 stopSelf();
                             }
                             break;
+                        case LOCATION_MAX_TIME_THRESHOLD:
+                            int newMaxTimeThreshold= Integer.parseInt(prefs.getString(key, "2"));
+                            Log.i(TAG_CONFIG, "LOCATION_MAX_TIME_THRESHOLD updated " + newMaxTimeThreshold + "sec");
+                            if(newMaxTimeThreshold != locationMaxTimeThreshold && isLocationUpdating){
+                                locationMaxTimeThreshold = newMaxTimeThreshold;
+                                stopLocationUpdates();
+                                startLocationUpdates();
+                            }
+                            break;
+                        case LOCATION_PRIORITY:
+                            String newLocationPriorityStr = prefs.getString("LOCATION_PRIORITY", "PRIORITY_HIGH_ACCURACY");
+                            int newLocationPriority = Utils.getPriority(newLocationPriorityStr);
+                            Log.i(TAG_CONFIG, "LOCATION_PRIORITY updated " + newLocationPriority + ". which is " +newLocationPriorityStr);
+                            if(newLocationPriority != locationPriority && isLocationUpdating){
+                                locationPriority =  newLocationPriority;
+                                stopLocationUpdates();
+                                startLocationUpdates();
+                            }
+                            break;
+                        case LOCATION_REQUEST_INTERVAL:
+                            int newLocationRequestInterval = Integer.parseInt(prefs.getString(key, "10"));
+                            if(newLocationRequestInterval != locationRequestInterval){
+                                locationRequestInterval = newLocationRequestInterval;
+                                stopLocationUpdates();
+                                startLocationUpdates();
+                            }
+                            break;
+
                     }
                 }
             } catch (Exception e) {
@@ -2097,6 +2136,14 @@ public class LocationUpdateServiceV2 extends Service {
                             LocationData locationData = (LocationData) msg.obj;
                             queue.add(locationData);
                             saveQueueToCache();
+
+                            // Emitte the location object to react application
+                            if(locationEmitter != null){
+                                String locationEmitterPayload = buildLocationEmitterPayload(locationData);
+
+                                emitReactEvent(locationEmitterPayload);
+                                Log.i(TAG_LOCATION, "Emitted locationPayload " + locationEmitterPayload);
+                            }
                             boolean sendDueToTime = shouldSendBatchDueToTime();
 
 
@@ -2104,6 +2151,7 @@ public class LocationUpdateServiceV2 extends Service {
                             if (((queue.size() >= locationBatchSize) || sendDueToTime) && isNetworkAvailable(context)) {
                                 processBatch();
                             }
+
                             break;
 
                         case MSG_BATCH_PROCESS:
@@ -2118,6 +2166,22 @@ public class LocationUpdateServiceV2 extends Service {
             };
         }
 
+        private String buildLocationEmitterPayload(LocationData locationData){
+//            JSONObject locationDataJSON = new JSONObject();
+//            locationDataJSON.put("speed", locationData.speed);
+//            locationDataJSON.put("latitude", locationData.latitude);
+//            locationDataJSON.put("longitude", locationData.longitude);
+//            locationDataJSON.put("accuracy", locationData.accuracy);
+//            locationDataJSON.put("source", locationData.source);
+//            locationDataJSON.put("latitude", locationData.);
+            try {
+                return locationData.toJsonObject().toString();
+            }catch (JSONException e){
+                Log.e(TAG_ERROR, "Can't convert LocationData to JSON: " + e);
+                return "";
+            }
+        }
+
         /**
          * Adds a location to the processing queue.
          * Thread-safe method that posts a message to the handler.
@@ -2125,7 +2189,6 @@ public class LocationUpdateServiceV2 extends Service {
          * @param locationData The location data to enqueue
          */
         void enqueueLocation(LocationData locationData) {
-
             Message msg = handler.obtainMessage(MSG_LOCATION_UPDATE, locationData);
             handler.sendMessage(msg);
         }
@@ -2403,6 +2466,22 @@ public class LocationUpdateServiceV2 extends Service {
          */
         public LocationUpdateServiceV2 getService() {
             return LocationUpdateServiceV2.this;
+        }
+    }
+
+    public interface ReactLocationEmitter {
+        void emitter(String payload);
+    }
+
+    public ReactLocationEmitter locationEmitter;
+
+    public void storeReactEmitter(ReactLocationEmitter reactLocationEmitter){
+        locationEmitter = reactLocationEmitter;
+    }
+
+    public void emitReactEvent(String payload) {
+        if(locationEmitter != null){
+            locationEmitter.emitter(payload);
         }
     }
 }

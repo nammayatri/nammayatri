@@ -1314,11 +1314,11 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
         if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
           continueWithCmd state [ do
             push <-  getPushFn Nothing "HomeScreen"
-            void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+            void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack
             void $ pure $ JB.checkAndAskMicrophonePermission unit
             pure NoAction
           ]
-        else 
+        else
           continueWithCmd state [ do
             push <-  getPushFn Nothing "HomeScreen"
             runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
@@ -1444,11 +1444,11 @@ eval (ChatViewActionController (ChatView.Call)) state = do
       if (getKeyInSharedPrefKeys "MIC_PERMISSION_ASKED" /= "true" && not isMicEnabled) then do
         continueWithCmd state [ do
           push <-  getPushFn Nothing "HomeScreen"
-          void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack 
+          void $ JB.storeCallBackMicrophonePermission push MicPermissionCallBack
           void $ pure $ JB.checkAndAskMicrophonePermission unit
           pure NoAction
         ]
-      else 
+      else
         continueWithCmd state [ do
           push <-  getPushFn Nothing "HomeScreen"
           runEffectFn6 JB.voipDialer customerCuid true exophoneNumber false push VOIPCallBack
@@ -1694,12 +1694,18 @@ eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state
 eval NotifyReachedDestination state = updateAndExit state $ NotifyDriverReachedDestination state
 
 eval (RideActiveAction activeRide mbAdvancedRide) state = do
-  let currActiveRideDetails = activeRideDetail state activeRide
+  let (RidesInfo activeRideInfo) = activeRide
+  let isMeterRide = maybe false (\(API.TripCategory tripCategory) -> tripCategory.contents == Just "MeterRide" ) activeRideInfo.tripCategory
+  if isMeterRide then do
+    exit $ MeterRideScreen state
+  else do
+    let
+      currActiveRideDetails = activeRideDetail state activeRide
       advancedRideDetails = activeRideDetail state <$> mbAdvancedRide
       isOdoReadingsReq = checkIfOdometerReadingsRequired currActiveRideDetails.tripType activeRide
       updatedState = state { data {activeRide = currActiveRideDetails, advancedRideData = advancedRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false, isOdometerReadingsRequired = isOdoReadingsReq}}
       stage = (if currActiveRideDetails.status == NEW then (if (Array.any (\c -> c == ST.ChatWithCustomer) [state.props.currentStage, state.props.advancedRideStage]) then ST.ChatWithCustomer else ST.RideAccepted) else ST.RideStarted)
-  updateAndExit updatedState $ UpdateStage stage updatedState
+    updateAndExit updatedState $ UpdateStage stage updatedState
   where
     checkIfOdometerReadingsRequired tripType (RidesInfo ride) = (tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)
 
