@@ -144,7 +144,7 @@ init journeyReq = do
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId)
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -286,12 +286,6 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
       { options = transitOptions
       }
   where
-    convertSortingType :: DMP.JourneyOptionsSortingType -> SortingType
-    convertSortingType sortType = case sortType of
-      DMP.FASTEST -> Fastest
-      DMP.MINIMUM_TRANSITS -> Minimum_Transits
-      _ -> Fastest -- Default case for any other values
-
     -- Process a route to convert walk legs that exceed maximum distance to taxi
     processRoute :: Meters -> MultiModalRoute -> MultiModalRoute
     processRoute maxWalkDistance route =

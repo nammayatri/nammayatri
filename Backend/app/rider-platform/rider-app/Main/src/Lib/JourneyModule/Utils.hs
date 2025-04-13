@@ -8,6 +8,7 @@ import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
+import qualified Domain.Types.MultimodalPreferences as DMP
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
@@ -475,3 +476,10 @@ getBusRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopC
         _ -> return Nothing
     _ -> return Nothing
 getBusRouteDetails _ _ _ _ = return Nothing
+
+convertSortingType :: DMP.JourneyOptionsSortingType -> MultiModal.SortingType
+convertSortingType sortType = case sortType of
+  DMP.FASTEST -> MultiModal.Fastest
+  DMP.MINIMUM_TRANSITS -> MultiModal.MinimumTransits
+  DMP.MOST_RELEVANT -> MultiModal.MostRelevant
+  _ -> MultiModal.Fastest -- Default case for any other values

@@ -40,6 +40,7 @@ Journey:
     totalLegs: Int
     isPaymentSuccess : Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
+    relevanceScore: Maybe Double
 
   beamType:
     status: Maybe JourneyStatus
@@ -225,7 +226,7 @@ MultimodalPreferences:
 
   types:
     JourneyOptionsSortingType:
-      enum: "FASTEST, CHEAPEST, MINIMUM_TRANSITS"
+      enum: "FASTEST, CHEAPEST, MINIMUM_TRANSITS, MOST_RELEVANT"
 
   fields:
     personId: Id Person
