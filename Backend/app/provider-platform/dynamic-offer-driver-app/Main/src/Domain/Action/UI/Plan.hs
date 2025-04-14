@@ -377,6 +377,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   (autoPayStatus, mDriverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentModeWithServiceName p.planId (maybe AUTOPAY (.planType) mDriverPlan) serviceName) mDriverPlan
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
   let isEligibleForCharge = mDriverPlan <&> (.enableServiceUsageCharge)
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
@@ -822,6 +823,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
                   then (bestOffer.discountAmount, bestOffer.finalOrderAmount)
                   else (0.0, baseAmount)
           waiveOffPercentage = fromMaybe 0.0 $ driverPlan <&> (.waiverOffPercentage)
+          waiveoffMultiplier = 1.0 - (waiveOffPercentage / 100.0)
           waiveOffEnabledOn = fromMaybe now $ driverPlan >>= (.waiveOffEnabledOn)
           waiveOffValidTill = fromMaybe now $ driverPlan >>= (.waiveOffValidTill)
           isWaiveoffValid = now >= waiveOffEnabledOn && now < waiveOffValidTill
@@ -829,8 +831,8 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             if isWaiveoffValid
               then do
                 case (driverPlan <&> (.waiveOfMode)) of
-                  Just WITH_OFFER -> (max 0.0 (discountAmountOffers * (waiveOffPercentage / 100.0)), max 0.0 (discountAmountOffers * (1 - (waiveOffPercentage / 100.0))))
-                  Just WITHOUT_OFFER -> (max 0.0 (baseAmount * (waiveOffPercentage / 100.0)), max 0.0 (baseAmount * (1 - (waiveOffPercentage / 100.0))))
+                  Just WITH_OFFER -> (max 0.0 (discountAmountOffers + (finalOrderAmountOffers * (waiveOffPercentage / 100.0))), max 0.0 (finalOrderAmountOffers * waiveoffMultiplier))
+                  Just WITHOUT_OFFER -> (max 0.0 (baseAmount * (waiveOffPercentage / 100.0)), max 0.0 (baseAmount * waiveoffMultiplier))
                   _ -> (discountAmountOffers, finalOrderAmountOffers)
               else (discountAmountOffers, finalOrderAmountOffers)
       [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount, amountWithCurrency = PriceAPIEntity baseAmount currency},
@@ -893,7 +895,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
               $ descp
     getDate utctime = do
       let day = DT.utctDay utctime
-      show $ DT.formatTime DT.defaultTimeLocale "%d-%m-%Y" day
+      T.pack $ DT.formatTime DT.defaultTimeLocale "%d-%m-%Y" day
 
 getPlanBaseFrequency :: PlanBaseAmount -> Text
 getPlanBaseFrequency planBaseAmount = case planBaseAmount of
