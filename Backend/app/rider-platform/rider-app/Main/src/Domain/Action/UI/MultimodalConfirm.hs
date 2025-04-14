@@ -88,8 +88,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
     journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId
-    now <- getCurrentTime
-    generateJourneyInfoResponse journey legs now
+    generateJourneyInfoResponse journey legs
   where
     lockKey = "infoLock-" <> journeyId.getId
 
@@ -123,9 +122,8 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  now <- getCurrentTime
   JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
-  generateJourneyInfoResponse journey legs now
+  generateJourneyInfoResponse journey legs
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -168,7 +166,6 @@ postMultimodalOrderSwitchTaxi ::
 postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   unless (journeyLegInfo.travelMode == DTrip.Taxi) $
     throwError (JourneyLegCannotBeCancelled (show journeyLegInfo.order))
@@ -184,7 +181,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
     when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
   updatedLegs <- JM.getAllLegsInfo journeyId
-  generateJourneyInfoResponse journey updatedLegs now
+  generateJourneyInfoResponse journey updatedLegs
 
 postMultimodalOrderSwitchFRFSTier ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -198,13 +195,12 @@ postMultimodalOrderSwitchFRFSTier ::
 postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId
-  now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
   alternateShortNames <- getAlternateShortNames
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId
-  generateJourneyInfoResponse journey updatedLegs now
+  generateJourneyInfoResponse journey updatedLegs
   where
     getAlternateShortNames :: Flow (Maybe [Text])
     getAlternateShortNames = do
@@ -224,15 +220,14 @@ getActiveJourneyIds riderId = do
   activeJourneys <- QJourney.findAllActiveByRiderId riderId
   return activeJourneys
 
-generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> UTCTime -> m ApiTypes.JourneyInfoResp
-generateJourneyInfoResponse journey legs now = do
+generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => Domain.Types.Journey.Journey -> [JMTypes.LegInfo] -> m ApiTypes.JourneyInfoResp
+generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR legs now
+  let unifiedQR = getUnifiedQR legs
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- maybe (pure Nothing) CQMOC.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
-
   pure $
     ApiTypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,

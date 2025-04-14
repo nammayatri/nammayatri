@@ -590,8 +590,8 @@ cancellableExtendStatus leg = if leg.travelMode == DTrip.Walk then not (leg.stat
 cancellableStatus :: JL.LegInfo -> Bool
 cancellableStatus leg = if leg.travelMode == DTrip.Walk then not (leg.status `elem` JL.cannotCancelWalkStatus) else not (leg.status `elem` JL.cannotCancelStatus)
 
-getUnifiedQR :: [JL.LegInfo] -> UTCTime -> Maybe JL.UnifiedTicketQR
-getUnifiedQR legs now = do
+getUnifiedQR :: [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
+getUnifiedQR legs = do
   let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
   let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL || provider == providerToText JL.DIRECT]
   let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC || provider == providerToText JL.DIRECT]
@@ -601,8 +601,6 @@ getUnifiedQR legs now = do
       Just $
         JL.UnifiedTicketQR
           { version = "1.0",
-            txnId = "nammayatri-test-N62dNNcFc8-1",
-            createdAt = now,
             cmrl = cmrlBookings,
             mtc = mtcBookings
           }
@@ -614,14 +612,14 @@ providerToText JL.DIRECT = "Direct Multimodal Services"
 
 getTickets :: JL.LegInfo -> Maybe (Text, JL.BookingData)
 getTickets leg =
-  leg.pricingId >>= \bookingId -> do
+  leg.pricingId >>= \_ -> do
     case leg.legExtraInfo of
-      JL.Metro info -> processTickets JL.CMRL info.tickets info.providerName bookingId
-      JL.Bus info -> processTickets JL.MTC info.tickets info.providerName bookingId
+      JL.Metro info -> processTickets JL.CMRL info.tickets info.providerName
+      JL.Bus info -> processTickets JL.MTC info.tickets info.providerName
       _ -> Nothing
   where
-    processTickets :: JL.Provider -> Maybe [Text] -> Maybe Text -> Text -> Maybe (Text, JL.BookingData)
-    processTickets expectedProvider mbTickets mbProviderName bookingId = do
+    processTickets :: JL.Provider -> Maybe [Text] -> Maybe Text -> Maybe (Text, JL.BookingData)
+    processTickets expectedProvider mbTickets mbProviderName = do
       tickets <- mbTickets
       provider <- mbProviderName
       if (provider == providerToText expectedProvider || provider == providerToText JL.DIRECT) && not (null tickets)
@@ -629,9 +627,7 @@ getTickets leg =
           Just
             ( provider,
               JL.BookingData
-                { bookingId = bookingId,
-                  isRoundTrip = False,
-                  ticketData = tickets
+                { ticketData = tickets
                 }
             )
         else Nothing

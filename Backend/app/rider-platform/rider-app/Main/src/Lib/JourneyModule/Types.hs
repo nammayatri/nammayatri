@@ -359,17 +359,13 @@ data UpdateJourneyReq = UpdateJourneyReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BookingData = BookingData
-  { bookingId :: Text,
-    isRoundTrip :: Bool,
-    ticketData :: [Text]
+  { ticketData :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UnifiedTicketQR = UnifiedTicketQR
   { version :: Text,
-    txnId :: Text,
-    createdAt :: UTCTime,
     cmrl :: [BookingData],
     mtc :: [BookingData]
   }

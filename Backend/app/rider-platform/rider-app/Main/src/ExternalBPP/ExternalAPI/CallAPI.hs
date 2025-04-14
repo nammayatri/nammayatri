@@ -77,12 +77,12 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
-          return $ -- Fallback to 0 fare
+          return $ -- Fallback to 5 fare
             [ FRFSUtils.FRFSFare
                 { price =
                     Price
-                      { amountInt = 0,
-                        amount = 0,
+                      { amountInt = 5, -- default fare
+                        amount = 5,
                         currency = INR
                       },
                   discounts = [],

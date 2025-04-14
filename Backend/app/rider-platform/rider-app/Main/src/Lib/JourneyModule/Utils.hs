@@ -205,9 +205,10 @@ calculateStageFare routeCode fromStopCode toStopCode serviceTierType integratedB
 
                   -- Find the fare for this number of stages
                   let mbStageFare = find (\sf -> sf.stage == stagesTraveled) stageFares
+                  let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
 
                   -- Return the price
-                  return $ fmap (\sf -> mkPriceAPIEntity (mkPrice (Just sf.currency) sf.amount)) mbStageFare
+                  return $ fmap (\sf -> mkPriceAPIEntity (mkPrice (Just sf.currency) (sf.amount + cessCharge))) mbStageFare
                 _ -> return Nothing -- Either of the stops doesn't have a stage mapping
             else return Nothing -- handle it later
 

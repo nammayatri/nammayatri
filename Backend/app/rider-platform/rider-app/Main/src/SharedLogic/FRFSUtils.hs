@@ -252,6 +252,7 @@ getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingC
     ( \fareProduct -> do
         vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
         farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+        let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
         price <-
           case farePolicy._type of
             DFRFSFarePolicy.MatrixBased -> do
@@ -268,10 +269,11 @@ getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingC
               endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
               let stage = max 1 (abs $ endStageFare.stage - startStageFare.stage) -- if stage is 0, then it is the same stage so we take 1 as the stage
               stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
+              let amount = stageFare.amount + cessCharge
               return $
                 Price
-                  { amountInt = round stageFare.amount,
-                    amount = stageFare.amount,
+                  { amountInt = round amount,
+                    amount = amount,
                     currency = stageFare.currency
                   }
         discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds

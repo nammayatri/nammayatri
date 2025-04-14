@@ -877,6 +877,7 @@ FRFSFarePolicy:
     applicableDiscountIds: "[Id FRFSTicketDiscount]"
     _type: FRFSFarePolicyType
     description: Text
+    cessCharge: Maybe HighPrecMoney
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   types:
