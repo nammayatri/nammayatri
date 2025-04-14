@@ -1186,8 +1186,9 @@ postDriverDashboardFleetWmbTripEnd ::
   Context.City ->
   Id Common.TripTransaction ->
   Text ->
+  Maybe Common.ActionSource ->
   Flow APISuccess
-postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
+postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId mbTerminationSource = do
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   mbCurrentDriverLocation <-
@@ -1200,8 +1201,18 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId = do
           let location = listToMaybe locations
           when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
           return location
-  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) Dashboard
+  void $ WMB.cancelTripTransaction fleetConfig tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) (castActionSource mbTerminationSource)
   pure Success
+
+castActionSource :: Maybe Common.ActionSource -> DTT.ActionSource
+castActionSource actionSource = case actionSource of
+  Just Common.DriverDirect -> DTT.DriverDirect
+  Just Common.DriverOnApproval -> DTT.DriverOnApproval
+  Just Common.AutoDetect -> DTT.AutoDetect
+  Just Common.Dashboard -> DTT.Dashboard
+  Just Common.ForceDashboard -> DTT.ForceDashboard
+  Just Common.CronJob -> DTT.CronJob
+  Nothing -> DTT.Dashboard
 
 ---------------------------------------------------------------------
 

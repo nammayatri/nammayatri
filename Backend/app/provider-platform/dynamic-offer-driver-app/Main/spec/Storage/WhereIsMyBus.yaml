@@ -42,7 +42,7 @@ TripTransaction:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
     ActionSource:
-      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard"
+      enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fields:
