@@ -166,7 +166,7 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
   routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCodes routeCodes integratedBPPConfigIds
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-      groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) serviceableStops
+      groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
       possibleRoutes =
         nub $
           catMaybes $
