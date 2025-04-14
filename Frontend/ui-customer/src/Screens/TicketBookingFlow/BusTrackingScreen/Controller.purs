@@ -321,7 +321,8 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
 
     calculateETAFromUpcomingStop lastReachedStop (API.UpcomingStop stop) = 
       let etaTimeStamp = stop.eta
-          delayInSeconds = DI.floor $ Mb.fromMaybe 0.0 $ lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
+          delayInSeconds = DI.floor $ Mb.fromMaybe 0.0 stop.delta
+            --DI.floor $ Mb.fromMaybe 0.0 $ lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
           etaInSeconds = EHC.compareUTCDate etaTimeStamp (EHC.getCurrentUTC "")
           _ = spy "UTC TimeStamp of ETA and currentTime " $ Tuple etaTimeStamp (EHC.getCurrentUTC "")
           _ = spy "ETA in seconds and the delat" $ Tuple etaInSeconds delayInSeconds

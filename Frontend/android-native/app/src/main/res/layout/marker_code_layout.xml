@@ -3,17 +3,18 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="#FFB900"
-    android:padding="8dp"
+    android:background="@drawable/rounded_yellow_background"
+    android:padding="4dp"
     android:gravity="center"
     android:elevation="2dp"
     android:layout_margin="2dp"
-    android:radius="8dp">
+    android:radius="8dp"
+    android:id="@+id/marker_code_layout">
 
     <ImageView
         android:id="@+id/bus_marker_image_id"
-        android:layout_width="16dp"
-        android:layout_height="15dp"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
         android:layout_marginEnd="4dp"
         android:src="@drawable/ny_ic_bus_skeleton" />
 
@@ -23,7 +24,6 @@
         android:layout_height="wrap_content"
         android:text="24H"
         android:textColor="#000000"
-        android:textSize="14sp"
-        android:textStyle="bold"/>
+        android:textSize="11sp"/>
 
 </LinearLayout>
