@@ -13,6 +13,7 @@ data AlertRequestData
   | MissedStop MissedStopData
   | WrongStartStop WrongStartStopData
   | RouteDeviation RouteDeviationData
+  | OppositeDirection OppositeDirectionData
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data EndRideData = EndRideData
@@ -67,5 +68,12 @@ data RouteDeviationData = RouteDeviationData
     driverName :: Text,
     location :: LatLong,
     distance :: Double
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data OppositeDirectionData = OppositeDirectionData
+  { driverMobileNumber :: Maybe Text,
+    driverName :: Text,
+    location :: LatLong
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

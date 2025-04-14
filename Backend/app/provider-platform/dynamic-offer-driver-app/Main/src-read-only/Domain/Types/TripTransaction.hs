@@ -48,7 +48,14 @@ data TripTransaction = TripTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ActionSource = DriverDirect | DriverOnApproval | AutoDetect | Dashboard | ForceDashboard deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data ActionSource
+  = DriverDirect
+  | DriverOnApproval
+  | AutoDetect
+  | Dashboard
+  | ForceDashboard
+  | CronJob
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

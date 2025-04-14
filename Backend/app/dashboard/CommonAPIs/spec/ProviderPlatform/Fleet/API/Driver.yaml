@@ -16,7 +16,7 @@ imports:
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
   LatLong: Kernel.External.Maps.Types
   TimeBound: Kernel.Types.TimeBound
-
+  ActionSource: Dashboard.Common
 module: Driver
 
 apis:
@@ -794,6 +794,7 @@ apis:
       auth: ApiAuthV2
       query:
         fleetOwnerId: Text
+        terminationSource: ActionSource
       params:
         tripTransactionId: Id TripTransaction
       response:
@@ -802,6 +803,8 @@ apis:
         - POST:
             endpoint: /dashboard/fleet/wmb/trip/{tripTransactionId}/{fleetOwnerId}/end
             auth: ApiAuthV2
+            query:
+              terminationSource: ActionSource
             params:
               tripTransactionId: Id TripTransaction
               fleetOwnerId: Text
