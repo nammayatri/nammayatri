@@ -129,7 +129,9 @@ eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
 eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
-  if state.data.ticketCount < 6
+  let (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+      ticketLimit = if state.data.ticketType == ST.ROUND_TRIP_TICKET then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
+  if state.data.ticketCount < ticketLimit
     then continueWithCmd state { data {ticketCount = state.data.ticketCount + 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}} [do pure UpdatePaymentOption]
     else continue state
 
