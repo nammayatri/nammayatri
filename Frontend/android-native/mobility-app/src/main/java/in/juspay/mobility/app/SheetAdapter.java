@@ -78,12 +78,13 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
         Context context;
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip, rateText, vehicleServiceTier, rideStartTime, rideStartDate, rideDuration, rideDistance, tollTag, thirdPartyTagText, stopsInfo, stopsTagText, pointsTagText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar, rateViewDot, acView, ventilator, nonAcView;
         MaterialCardView vcTierAndACView;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag;
+        LinearLayout tagsBlock, pointsTag, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag, acNonAcView, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, thirdPartyTag, isFavouriteTag, stopsTag , roundTripRideTypeTag;
+        
         CardView locationDestinationPinTag;
         
         public SheetViewHolder(@NonNull View itemView) {
@@ -109,6 +110,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             textIncPrice = itemView.findViewById(R.id.textIncPrice);
             tagsBlock = itemView.findViewById(R.id.tags_block);
             customerTipText = itemView.findViewById(R.id.tip_text);
+            pointsTag = itemView.findViewById(R.id.pointsTag);
+            pointsTagText = itemView.findViewById(R.id.pointsTagText);
             accessibilityTagText = itemView.findViewById(R.id.accessibilityTagText);
             textIncludesCharges = itemView.findViewById(R.id.textIncludesCharges);
             assetZoneDrop = itemView.findViewById(R.id.assetZoneDrop);

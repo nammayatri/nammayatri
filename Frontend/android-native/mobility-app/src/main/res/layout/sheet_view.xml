@@ -337,6 +337,36 @@
                                         android:textColor="@color/white"
                                         android:textSize="12dp" />
                                 </LinearLayout>
+                        
+                                <LinearLayout
+                                    android:id="@+id/pointsTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="10dp"
+                                    android:background="@drawable/ic_gold_tier_ride_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="20dp"
+                                        android:layout_height="20dp"
+                                        android:layout_marginLeft="8dp"
+                                        android:src="@drawable/ny_ic_yatri_coin" />
+
+                                    <TextView
+                                        android:id="@+id/pointsTagText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="6dp"
+                                        android:text="@string/points"
+                                        android:textColor="@color/Black900"
+                                        android:textSize="12dp" />
+                                </LinearLayout>
 
                                 <LinearLayout
                                     android:id="@+id/accessibilityTag"

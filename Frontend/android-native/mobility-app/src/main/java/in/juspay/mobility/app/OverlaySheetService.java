@@ -151,7 +151,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
 //            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip();
+            boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showSpecialLocationTag || model.isFavourite() || model.getStops() > 0 || model.getRoundTrip() || model.getCoinsForGoldTierRide() > 0;
             if (updateTags) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
@@ -160,6 +160,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " Points");
+                holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
@@ -634,6 +636,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String destinationPinCode = rideRequestBundle.getString("destinationPinCode");
                     DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
                     String requestedVehicleVariant = rideRequestBundle.getString("requestedVehicleVariant");
+                    int coinsRewardedOnGoldTierRide = rideRequestBundle.getInt("coinsRewardedOnGoldTierRide");
                     Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
                     Boolean isTranslated = rideRequestBundle.getBoolean("isTranslated");
                     int driverPickUpCharges = rideRequestBundle.getInt("driverPickUpCharges");
@@ -692,6 +695,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             sourcePinCode,
                             destinationPinCode,
                             requestedVehicleVariant,
+                            coinsRewardedOnGoldTierRide,
                             disabilityTag,
                             isTranslated,
                             gotoTag,

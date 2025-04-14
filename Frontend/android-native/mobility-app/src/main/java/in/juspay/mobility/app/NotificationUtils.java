@@ -272,6 +272,7 @@ public class NotificationUtils {
                     sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
                     sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? entity_payload.getString("requestedVehicleVariant") : NO_VARIANT);
+                    sheetData.putInt("coinsRewardedOnGoldTierRide", (entity_payload.has("coinsRewardedOnGoldTierRide") && !entity_payload.isNull("coinsRewardedOnGoldTierRide") ? entity_payload.getInt("coinsRewardedOnGoldTierRide") : 0));
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 0): 0);
