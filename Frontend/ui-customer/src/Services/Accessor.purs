@@ -428,3 +428,6 @@ _code = lens (unwrap >>> _.code) (\oldRec newVal -> wrap ((unwrap oldRec) { code
 
 _stopCode :: forall a b c. Newtype a { stopCode :: b | c } => Lens' a b
 _stopCode = lens (unwrap >>> _.stopCode) (\oldRec newVal -> wrap ((unwrap oldRec) { stopCode = newVal }))
+
+_routeCode :: forall a b c. Newtype a { routeCode :: b | c } => Lens' a b
+_routeCode = lens (unwrap >>> _.routeCode) (\oldRec newVal -> wrap ((unwrap oldRec) { routeCode = newVal }))

@@ -148,7 +148,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
     
     -- Nearest stop calculation from Current Location
     nearestStopFromCurrentLoc = 
-      getNearestStopFromLatLong (API.LatLong {lat : state.props.currentLat, lon: state.props.currentLon}) filteredResp
+      getNearestStopFromLatLong (API.LatLong {lat : state.props.srcLat, lon: state.props.srcLon}) filteredResp
   
   in continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse, nearestStopFromCurrentLoc = nearestStopFromCurrentLoc}, props { showShimmer = false, destinationSequenceNumber = destinationStationSeq } }
       [ do
@@ -247,12 +247,12 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
     
     extractTrackingInfo :: API.VehicleInfo -> Array ST.VehicleData
     extractTrackingInfo (API.VehicleInfo item) = do
-      let
+      let 
         (API.VehicleInfoForRoute vehicleInfoForRoute) = item.vehicleInfo
-        (API.RouteStopMapping nextStop) = item.nextStop
+        -- (API.RouteStopMapping nextStop) = item.nextStop
         lat = Mb.fromMaybe 0.0 vehicleInfoForRoute.latitude
         lon = Mb.fromMaybe 0.0 vehicleInfoForRoute.longitude
-        (API.LatLong nextStopPosition) = nextStop.stopPoint
+        -- (API.LatLong nextStopPosition) = nextStop.stopPoint
         currentWaypoint = API.LatLong { lat: lat, lon: lon }
         wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
         nearestWaypointConfig = calculateNearestWaypoint currentWaypoint state.data.routePts.points wmbFlowConfig.maxSnappingOnRouteDistance
@@ -279,33 +279,56 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
                         else nearestWaypointConfig.vehicleLocationOnRoute
                   Mb.Nothing -> nearestWaypointConfig.vehicleLocationOnRoute
               )
-            _ = spy "codex-upcomingStop" $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
             -- Proper calculation of eta from Upcoming Stops
-            upcomingStop = DA.find (\(API.UpcomingStop upcomingStop) ->
+            etaTillPickupStop = DA.find (\(API.UpcomingStop upcomingStop) ->
                 let (API.Stop stop) = upcomingStop.stop
                 in (mbPickupStop <#> (\(API.FRFSStationAPI frfsStop) -> frfsStop.code)) == (Mb.Just $ stop.stopCode)
               ) $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
+
+            -- Calculate last reached Delta
+            lastReachedStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Reached") $ DA.reverse $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
+
+            -- Extract first upcoming stop and next stop details
+            firstUpcomingStop = DA.find (\(API.UpcomingStop upcomingStop) -> upcomingStop.status == "Upcoming") $ Mb.fromMaybe [] vehicleInfoForRoute.upcomingStops
+            upcomingNextStop = firstUpcomingStop <#> (\(API.UpcomingStop upcomingStop) -> upcomingStop.stop)
+            nextStopLatLon = Mb.fromMaybe (API.LatLong {lat: 0.0, lon: 0.0}) $ upcomingNextStop <#> (\(API.Stop stop) -> stop.coordinate) -- (API.LatLong nextStopPosition)
+            nextStopSequenceNum = Mb.fromMaybe (0) $ upcomingNextStop <#> (\(API.Stop stop) -> stop.stopIdx + 1) -- nextStop.sequenceNum
+
+            -- deltaFinal =  firstUpcomingStop !! lastReachedDelta
           in 
             [ { vehicleId: item.vehicleId
-            , updatedAt: nextStop.updatedAt
-            , createdAt: nextStop.createdAt
+            -- , updatedAt: nextStop.updatedAt
+            -- , createdAt: nextStop.createdAt
             , timestamp: vehicleInfoForRoute.timestamp
-            , nextStop: nextStop.stopCode
-            , nextStopDistance: haversineDistance vehicleLatLong nextStop.stopPoint
+            , nextStop: Mb.fromMaybe "" $ upcomingNextStop <#> (\(API.Stop stop) -> stop.stopCode)
+            , nextStopDistance: haversineDistance vehicleLatLong $ nextStopLatLon
             , vehicleLat: vehicleLatLong ^._lat
             , vehicleLon: vehicleLatLong ^._lon
-            , nextStopLat: nextStopPosition.lat
-            , nextStopLon: nextStopPosition.lon
-            , nextStopTravelTime: item.nextStopTravelTime
-            , nextStopSequence: nextStop.sequenceNum
-            , nextStopTravelDistance: item.nextStopTravelDistance
+            , nextStopLat: nextStopLatLon ^._lat
+            , nextStopLon: nextStopLatLon ^._lon
+            -- , nextStopTravelTime: item.nextStopTravelTime
+            , nextStopSequence: nextStopSequenceNum
+            -- , nextStopTravelDistance: item.nextStopTravelDistance
             , nearestWaypointConfig: nearestWaypointConfig
-            , etaDistance: if nextStop.sequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
-            , eta: spy "codex-eta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.eta)
-            , delta : spy "codex-delta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.delta)
+            , etaDistance: if nextStopSequenceNum <= (Mb.fromMaybe 0 mbSequenceNum) then (Mb.Just $ haversineDistance vehicleLatLong pickupPoint) else Mb.Nothing
+            , eta: Mb.maybe Mb.Nothing (\stop -> calculateETAFromUpcomingStop lastReachedStop stop) etaTillPickupStop -- EHC.compareUTCDate  (EHC.getCurrentUTC "")
+            , delta : lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta) -- spy "codex-delta" $ upcomingStop <#> (\(API.UpcomingStop stop) -> stop.delta)
             } ]
     
-    
+    -- calLastReachedDelta (API.UpcomingStop upcomingStop) =
+    --   let (API.Stop stop) = upcomingStop.stop
+    --   in stop.stopIdx
+
+    calculateETAFromUpcomingStop lastReachedStop (API.UpcomingStop stop) = 
+      let etaTimeStamp = stop.eta
+          delayInSeconds = DI.floor $ Mb.fromMaybe 0.0 $ lastReachedStop <#> (\(API.UpcomingStop stop) -> Mb.fromMaybe 0.0 stop.delta)
+          etaInSeconds = EHC.compareUTCDate etaTimeStamp (EHC.getCurrentUTC "")
+          _ = spy "UTC TimeStamp of ETA and currentTime " $ Tuple etaTimeStamp (EHC.getCurrentUTC "")
+          _ = spy "ETA in seconds and the delat" $ Tuple etaInSeconds delayInSeconds
+      in if etaInSeconds + delayInSeconds > 0
+        then Mb.Just $ etaInSeconds + delayInSeconds
+        else Mb.Nothing 
+
     filterVehicleInfoLogic (API.VehicleInfo item) wmbFlowConfig =
       let (API.VehicleInfoForRoute m) = item.vehicleInfo
           -- Show Bus numbers whose rides haven't been ended even though last LTS update is > 30 mins ago
@@ -495,7 +518,6 @@ userBoardedActions state vehicles vehicle = do
       srcCode = Mb.maybe "" (_.stationCode) state.data.sourceStation
       destinationCode = Mb.maybe "" (_.stationCode) state.data.destinationStation
       destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) state.data.stopsList
-      _ = spy "codex-locationResp" locationResp
   -- filteredRoute <- case destinationStation, DS.null state.data.bookingId of
   --   Mb.Just (API.FRFSStationAPI dest), false -> do
   --     -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (Mb.fromMaybe 0.0 vehicle.vehicleLat) (Mb.fromMaybe 0.0 vehicle.vehicleLon) 1
@@ -535,3 +557,8 @@ userBoardedActions state vehicles vehicle = do
 calculateMinETADistance :: Array ST.VehicleData -> Mb.Maybe Int
 calculateMinETADistance trackingData =
   minimum $ DA.mapMaybe (\item -> item.etaDistance <#> DI.floor) trackingData
+
+
+calculateMinEtaTimeWithDelay :: Array ST.VehicleData -> Mb.Maybe Int
+calculateMinEtaTimeWithDelay trackingData =
+  minimum $ DA.mapMaybe (\item -> item.eta) trackingData

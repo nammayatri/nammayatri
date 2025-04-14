@@ -371,3 +371,6 @@ confirmMetroQuoteV2 quoteId = (getBaseUrl "50") <> "/frfs/quote/v2/" <> quoteId 
 
 postNearbyDrivers :: String -> String
 postNearbyDrivers _ = (getBaseUrl "62") <> "/nearbyDrivers"
+
+trackRouteVehicles :: String -> String
+trackRouteVehicles routeCode = (getBaseUrl "") <> "/track/" <> routeCode <> "/vehicles"

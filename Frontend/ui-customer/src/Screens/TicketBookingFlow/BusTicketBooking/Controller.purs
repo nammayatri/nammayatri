@@ -49,7 +49,7 @@ import Engineering.Helpers.Commons as EHC
 import Effect (Effect)
 import Effect.Uncurried (runEffectFn4)
 import Data.Lens ((^.))
-import Accessor (_lat, _lon)
+import Accessor (_lat, _lon, _routeCode)
 import Data.Foldable (for_)
 
 
@@ -166,7 +166,9 @@ eval (NearbyDriverRespAC (API.NearbyDriverRes resp)) state =
       case mbRideDetails of
         Just (API.RideDetails rideDetails) -> 
           case rideDetails.rideInfo of
-            Just (API.Bus (API.BusRideInfo busRideInfo)) -> Just busRideInfo.routeCode
+            Just (API.Bus (API.BusRideInfo busRideInfo)) -> 
+              let (API.BusContentType busContents) = busRideInfo.contents 
+              in Just $ busContents.routeCode
             _ -> Nothing
         _ -> Nothing
 

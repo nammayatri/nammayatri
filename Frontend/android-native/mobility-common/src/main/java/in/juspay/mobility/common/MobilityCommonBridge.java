@@ -5749,13 +5749,23 @@ public class MobilityCommonBridge extends HyperBridge {
 
                 String routeId = config.optString("routeId", "");
 
-                MarkerOptions markerOptions = new MarkerOptions()
-                        .position(latLngObj)
-                        .anchor(0.5f, 0.5f)
-                        .zIndex(2.0f)
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerForBusRouteId(routeId)));
-                if (gMap != null) {
-                    gMap.addMarker(markerOptions);
+                Marker marker = (Marker) markers.get(routeId);
+
+                if (marker != null) {
+                    marker.setPosition(latLngObj);
+                }
+                else {
+                    MarkerOptions markerOptions = new MarkerOptions()
+                            .position(latLngObj)
+                            .anchor(0.5f, 0.5f)
+                            .zIndex(2.0f)
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerForBusRouteId(routeId)));
+                    Marker markerObject;
+
+                    if (gMap != null) {
+                        markerObject = gMap.addMarker(markerOptions);
+                        markers.put(routeId, markerObject);
+                    }
                 }
             } catch (Exception e) {
                 Log.d("Error in showDynamicRouteMarker", e.toString());

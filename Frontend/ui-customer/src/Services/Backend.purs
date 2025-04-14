@@ -1672,3 +1672,11 @@ postNearbyDrivers nearbyDriverReqBody = do
   withAPIResult (EP.postNearbyDrivers "") unwrapResponse $ callAPI headers nearbyDriverReqBody
   where
     unwrapResponse x = x
+
+---------------------------------------- trackRouteVehicles ---------------------------------------------
+trackRouteVehicles :: BusTrackingRouteReq -> Flow GlobalState (Either ErrorResponse BusTrackingRouteResp)
+trackRouteVehicles (BusTrackingRouteReq routeCode) = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.trackRouteVehicles routeCode) unwrapResponse $ callAPI headers (BusTrackingRouteReq routeCode)
+  where
+    unwrapResponse x = x

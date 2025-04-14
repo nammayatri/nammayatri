@@ -485,7 +485,7 @@ stopListView push state showOnlyBullet =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
+        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) state.props.minimumEtaDistance (calculateMinEtaTimeWithDelay state.data.vehicleData)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
   where
   stopMarginTop = if state.props.showRouteDetailsTab then 36 else 12
@@ -558,22 +558,22 @@ stopsViewHeader push state showOnlyBullet =
         MP.noView
     ]
 
-stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
-stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaDistance =
+stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
+stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaDistance etaTime=
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     ]
     [ linearLayout
-        [ height $ if index /=0 && checkPreviousStopIsSource && Mb.isJust etaDistance then WRAP_CONTENT else V 36
+        [ height $ if index /=0 && checkPreviousStopIsSource then WRAP_CONTENT else V 36
         , width MATCH_PARENT
         , visibility $ boolToVisibility $ index /= 0
         ]
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
         -- , if stopType == SOURCE_STOP && index /=0 && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId)
         , if (index /=0 && checkPreviousStopIsSource && (showPreBookingTracking "BUS") && (Mb.isNothing state.props.vehicleTrackingId))
-            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance
+            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaDistance etaTime
             else 
               MP.noView
         ]
@@ -640,7 +640,7 @@ busLocationTracking duration id state push = do
     pure unit
   else do
     EHC.liftFlow $ JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 3500 true
-    resp <- HelpersAPI.callApi $ API.BusTrackingRouteReq routeCode
+    resp <- Remote.trackRouteVehicles $ API.BusTrackingRouteReq routeCode
     case resp of
       Right (API.BusTrackingRouteResp resp) -> do
         EHC.liftFlow $ push $ UpdateTracking $ API.BusTrackingRouteResp resp
@@ -651,8 +651,8 @@ busLocationTracking duration id state push = do
         busLocationTracking duration id state push
 
 
-showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
-showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStopDistance =
+showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
+showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADistance mbETATime =
   PrestoAnim.animationSet [fadeInWithDelay 0 true]
   $ linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
@@ -661,13 +661,13 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStop
   , stroke $ "1," <> Color.grey900
   , padding $ Padding 8 8 8 8
   , cornerRadius 12.0
-  , visibility $ boolToVisibility $ Mb.isJust mbNextStopDistance && not state.props.individualBusTracking
+  , visibility $ boolToVisibility $ not state.props.individualBusTracking
   , onAnimationEnd 
       ( \_ ->
           runEffectFn3 JB.scrollToChildInScrollView 
             (EHC.getNewIDWithTag "busStopsView") 
             (EHC.getNewIDWithTag ("verticalLineView1false17")) 
-            (show $ Mb.maybe 0 (\(API.FRFSStationAPI stop) -> (Mb.fromMaybe 0 stop.sequenceNum) - 1) state.data.nearestStopFromCurrentLoc)
+            (show $ Mb.maybe 0 (\(API.FRFSStationAPI stop) -> (Mb.fromMaybe 0 stop.sequenceNum) - 1) mbPickupStop)
       )
       (const NoAction)
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
@@ -675,7 +675,7 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStop
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
-    , visibility $ boolToVisibility $ Mb.isNothing state.data.rideType
+    , visibility $ boolToVisibility $ not state.props.individualBusTracking
     , margin $ MarginBottom 4
     ]
     [ imageView
@@ -685,16 +685,16 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStop
       , margin $ Margin 6 2 0 0
       ]
     , textView
-      $ [ text "Nearest Stop"
+      $ [ text $ if Mb.isJust state.data.sourceStation then "Pickup Stop" else "Nearest Stop"
         , margin $ MarginLeft 4
         , color Color.blue900
         ]
       <> FontStyle.body1 CTA.TypoGraphy
     ]
   , textView
-    $ [ text $ "Next bus is " <> (JB.fromMetersToKm (Mb.fromMaybe 0 mbNextStopDistance)) <> " away"
+    $ [ text etaTextInMinutesOrDistance
       , margin $ MarginLeft 8
-      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking
+      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && Mb.isJust mbETADistance
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   -- , linearLayout [weight 1.0] []
@@ -710,6 +710,19 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbNextStop
     extractTimeInHHMMA timeStr = EHC.convertUTCtoISC timeStr "hh" <> ":" <> EHC.convertUTCtoISC timeStr "mm" <> " " <> EHC.convertUTCtoISC timeStr "a"
     
     lb = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index
+
+    mbPickupStop = 
+      case state.data.sourceStation of
+        Mb.Just sourceStation -> DA.find (\(API.FRFSStationAPI item) -> item.code == sourceStation.stationCode) state.data.stopsList
+        Mb.Nothing -> state.data.nearestStopFromCurrentLoc
+    
+    etaTextInMinutesOrDistance = 
+      case mbETATime of
+        Mb.Just etaTimeInSeconds -> 
+          "Next bus in " <> (HU.secondsToHms etaTimeInSeconds)
+        Mb.Nothing ->
+          "Next bus is " <> (JB.fromMetersToKm (Mb.fromMaybe 0 mbETADistance)) <> " away"
+
     
     -- roundedNextStopDistance :: String
     -- roundedNextStopDistance = 

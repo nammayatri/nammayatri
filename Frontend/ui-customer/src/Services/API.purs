@@ -4342,58 +4342,55 @@ instance makeAutoCompleteReq :: RestEndpoint BusAutoCompleteReq where
 data BusTrackingRouteReq = BusTrackingRouteReq String 
 
 newtype BusTrackingRouteResp = BusTrackingRouteResp {
-    vehicleTrackingInfo :: Array VehicleInfo
+  vehicleTrackingInfo :: Array VehicleInfo
 }
 
 newtype VehicleInfo = VehicleInfo {
-  -- location:: LatLong,
-  nextStop:: RouteStopMapping,
-  vehicleId:: String,
-  vehicleInfo:: VehicleInfoForRoute,
-  nextStopTravelTime :: Maybe Int,
-  nextStopTravelDistance :: Maybe Int
+  -- nextStop :: Maybe RouteStopMapping,
+  vehicleId :: String,
+  vehicleInfo :: VehicleInfoForRoute
+  -- nextStopTravelTime :: Maybe Int,
+  -- nextStopTravelDistance :: Maybe Int
 }
 
 newtype VehicleInfoForRoute = VehicleInfoForRoute {
-    startTime :: Maybe String,
-    startDate :: Maybe String,
-    scheduleRelationship :: Maybe String,
-    tripId :: Maybe String,
-    latitude :: Maybe Number,
-    longitude :: Maybe Number,
-    speed :: Maybe Number,
-    timestamp :: String,
-    upcomingStops :: Maybe (Array UpcomingStop)
+  startTime :: Maybe String,
+  startDate :: Maybe String,
+  scheduleRelationship :: Maybe String,
+  tripId :: Maybe String,
+  latitude :: Maybe Number,
+  longitude :: Maybe Number,
+  speed :: Maybe Number,
+  timestamp :: String,
+  upcomingStops :: Maybe (Array UpcomingStop)
 }
 
-newtype Stop = Stop
-  { name :: String,
-    coordinate :: LatLong,
-    stopCode :: String,
-    distanceToUpcomingIntermediateStop :: Int,
-    durationToUpcomingIntermediateStop :: Int
-  }
+newtype Stop = Stop {
+  name :: String,
+  coordinate :: LatLong,
+  stopCode :: String,
+  stopIdx :: Int,
+  distanceToUpcomingIntermediateStop :: Int,
+  durationToUpcomingIntermediateStop :: Int
+}
 
-newtype UpcomingStop = UpcomingStop
-  { stop :: Stop,
-    eta :: String,
-    status :: String,
-    delta :: Number
-  }
+newtype UpcomingStop = UpcomingStop {
+  stop :: Stop,
+  eta :: String,
+  status :: String,
+  delta :: Maybe Number
+}
 
 newtype RouteStopMapping = RouteStopMapping { 
-    routeCode :: String,
-    sequenceNum :: Int,
-    stopCode :: String,
-    stopPoint :: LatLong,
-    stopName :: String,
-    -- timeBounds :: Kernel.Types.TimeBound.TimeBound,
-    vehicleType :: String,
-    -- merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    -- merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
-    createdAt :: String,
-    updatedAt :: String
-  }
+  routeCode :: String,
+  sequenceNum :: Int,
+  stopCode :: String,
+  stopPoint :: LatLong,
+  stopName :: String,
+  vehicleType :: String,
+  createdAt :: String,
+  updatedAt :: String
+}
 
 derive instance genericBusTrackingRouteReq :: Generic BusTrackingRouteReq _
 instance showBusTrackingRouteReq    :: Show BusTrackingRouteReq where show     = genericShow
@@ -4437,7 +4434,7 @@ instance decodeRouteStopMapping :: Decode RouteStopMapping where decode = defaul
 instance encodeRouteStopMapping :: Encode RouteStopMapping where encode = defaultEncode
 
 instance makeBusTrackingRouteReq :: RestEndpoint BusTrackingRouteReq where
-    makeRequest reqBody@(BusTrackingRouteReq code) headers = defaultMakeRequestWithoutLogs GET (EP.trackRouteBus code) headers reqBody Nothing
+    makeRequest reqBody@(BusTrackingRouteReq routeCode) headers = defaultMakeRequestWithoutLogs GET (EP.trackRouteBus routeCode) headers reqBody Nothing
     encodeRequest = standardEncode
     
 ------------------------------------------------- Aadhaar Verification API Types --------------------------------------------
@@ -4654,6 +4651,10 @@ data RideInfo = Bus BusRideInfo | Car CarRideInfo
 
 
 newtype BusRideInfo = BusRideInfo {
+  contents :: BusContentType
+}
+
+newtype BusContentType = BusContentType {
   routeCode :: String
   -- busNumber :: String
   -- destination :: LatLong,
@@ -4717,6 +4718,13 @@ instance standardCarRideInfo :: StandardEncode CarRideInfo where
 instance showCarRideInfo :: Show CarRideInfo where show = genericShow
 instance decodeCarRideInfo :: Decode CarRideInfo where decode = defaultDecode
 instance encodeCarRideInfo :: Encode CarRideInfo where encode = defaultEncode
+
+derive instance genericBusContentType :: Generic BusContentType _
+instance standardBusContentType :: StandardEncode BusContentType where
+    standardEncode (BusContentType body) = standardEncode body
+instance showBusContentType :: Show BusContentType where show = genericShow
+instance decodeBusContentType :: Decode BusContentType where decode = defaultDecode
+instance encodeBusContentType :: Encode BusContentType where encode = defaultEncode
 
 derive instance genericRideInfo :: Generic RideInfo _
 instance standardEncodeRideInfo :: StandardEncode RideInfo where

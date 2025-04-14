@@ -3367,14 +3367,14 @@ type VehicleData =
   , nextStopLat ::Number
   , nextStopLon ::Number
   , nextStopSequence :: Int
-  , nextStopTravelTime :: Maybe Int
-  , nextStopTravelDistance :: Maybe Int
-  , createdAt :: String
-  , updatedAt :: String
+  -- , nextStopTravelTime :: Maybe Int
+  -- , nextStopTravelDistance :: Maybe Int
+  -- , createdAt :: String
+  -- , updatedAt :: String
   , timestamp :: String
   , nearestWaypointConfig :: NearestWaypointConfig
   , etaDistance :: Maybe Number
-  , eta :: Maybe String
+  , eta ::  Maybe Int
   , delta :: Maybe Number
   }
 
