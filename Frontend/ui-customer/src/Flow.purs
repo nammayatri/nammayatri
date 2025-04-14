@@ -5365,10 +5365,10 @@ searchLocationFlow = do
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> searchPlaceFlow input state)    
      else do
         let rideType =
-              if null routeStopresponse.routes
-              then STOP
+              if null routeStopresponse.stops
+              then ROUTES
               -- else if null routeStopresponse.stops
-              else ROUTES
+              else STOP
               -- else state.data.rideType
             activeRideTypeIndex = if rideType == ROUTES then 0 else 1
         modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { activeRideIndex = activeRideTypeIndex, rideType = rideType ,srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
@@ -7545,7 +7545,40 @@ busTrackingScreenFlow = do
       let currentCity = getValueToLocalStore CUSTOMER_LOCATION
           busRouteSelected = state.data.busRouteCode
       pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""
-      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusStopSelectionAction ,canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSelected = busRouteSelected,isAutoComplete = false }, data { fromScreen =(Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN) , srcLoc = Nothing, destLoc = Nothing, stopsSearchedList = state.data.stopsList , updatedStopsSearchedList = DA.dropEnd 1 state.data.stopsList } })
+
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> 
+        slsState 
+          { props 
+              { actionType = BusStopSelectionAction
+              , canSelectFromFav = false
+              , focussedTextField = Just SearchLocPickup
+              , routeSelected = busRouteSelected
+              , isAutoComplete = false
+              }
+          , data 
+              { fromScreen = (Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN)
+              , srcLoc = 
+                  case state.data.nearestStopFromCurrentLoc of
+                    Just (API.FRFSStationAPI station) -> 
+                      Just ({ lat: Nothing
+                          , lon: Nothing
+                          , placeId: Nothing
+                          , address: station.name
+                          , addressComponents: HomeScreenData.dummyAddress
+                          , metroInfo: Nothing
+                          , busStopInfo: Just { stationName : station.name
+                                             , stationCode : station.code
+                                             }
+                          , stationCode: station.code
+                          , city: AnyCity
+                          })
+                    _ -> Nothing
+              , destLoc = Nothing
+              , stopsSearchedList = state.data.stopsList
+              , updatedStopsSearchedList = DA.dropEnd 1 state.data.stopsList
+              }
+          }
+      )      
       case state.data.rideType of
         Just STOP -> do
           -- modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { routeList = []}, props {routeName = busRouteName, isEmptyRoute = state.data.busRouteCode } })

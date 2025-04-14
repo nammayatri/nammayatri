@@ -237,7 +237,6 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
           let busStopInfo = {stationName : item.title , stationCode : item.tag}
               updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Nothing, busStopInfo : MB.Just busStopInfo , stationCode : item.tag}
               updatedStopsList = if state.props.focussedTextField == MB.Just SearchLocPickup then filterStopsBySequenceInc item.title state.data.stopsSearchedList else  filterStopsBySequenceDec item.title state.data.stopsSearchedList
-              _ = spy "Printing for check updatedStopsList" updatedStopsList
               newState = if (spy "focussedTextField is : " $ state.props.focussedTextField) == MB.Just SearchLocPickup then do
                           let _ = spy "Printing for check srcLoc" state.data.srcLoc 
                               _ = spy "Printing for check destLoc" state.data.destLoc
