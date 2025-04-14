@@ -13,3 +13,4 @@ castAlertRequestDataToRequestType = \case
   MissedStop _ -> MissedStopAlert
   WrongStartStop _ -> WrongStartStopAlert
   RouteDeviation _ -> RouteDeviationAlert
+  OppositeDirection _ -> OppositeDirectionAlert
