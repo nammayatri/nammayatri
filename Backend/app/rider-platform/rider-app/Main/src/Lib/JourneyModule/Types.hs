@@ -23,7 +23,6 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.RouteStopMapping as DRouteStopMappping
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Station as DTS
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
@@ -181,14 +180,27 @@ newtype SearchResponse = SearchResponse
 
 data JourneyLegState = Transit [JourneyLegStateData] | Single JourneyLegStateData
 
+data NextStopDetails = NextStopDetails
+  { stopCode :: Text,
+    sequenceNumber :: Int,
+    travelTime :: Maybe Seconds,
+    travelDistance :: Maybe Meters
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehiclePosition = VehiclePosition
+  { position :: LatLong,
+    nextStop :: Maybe NextStopDetails
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus,
     statusChanged :: Bool,
     userPosition :: Maybe LatLong,
-    vehiclePosition :: Maybe LatLong,
-    nextStop :: Maybe DRouteStopMappping.RouteStopMapping,
-    nextStopTravelTime :: Maybe Seconds,
-    nextStopTravelDistance :: Maybe Meters,
+    vehiclePositions :: [VehiclePosition],
     subLegOrder :: Int,
     legOrder :: Int,
     mode :: DTrip.MultimodalTravelMode

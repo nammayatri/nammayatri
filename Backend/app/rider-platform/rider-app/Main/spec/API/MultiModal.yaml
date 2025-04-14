@@ -23,6 +23,7 @@ imports:
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
   AvailableRoutesByTier: Lib.JourneyModule.Utils
+  VehiclePosition: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -43,11 +44,8 @@ types:
     legOrder: Int
     subLegOrder: Int
     status: JourneyLegStatus
-    vehiclePosition: Maybe LatLong
+    vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
-    nextStop: Maybe RouteStopMapping
-    nextStopTravelTime: Maybe Seconds
-    nextStopTravelDistance: Maybe Meters
     mode: MultimodalTravelMode
 
   JourneyStatusResp:

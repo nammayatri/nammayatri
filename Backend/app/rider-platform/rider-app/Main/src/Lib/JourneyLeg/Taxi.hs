@@ -206,10 +206,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             JT.JourneyLegStateData
               { status = journeyLegStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePosition,
-                nextStop = Nothing,
-                nextStopTravelDistance = Nothing,
-                nextStopTravelTime = Nothing,
+                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = latLong, nextStop = Nothing}]) vehiclePosition,
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,
@@ -225,10 +222,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             JT.JourneyLegStateData
               { status = journeyLegStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePosition = Nothing,
-                nextStop = Nothing,
-                nextStopTravelDistance = Nothing,
-                nextStopTravelTime = Nothing,
+                vehiclePositions = [],
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
                 statusChanged = False,

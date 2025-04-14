@@ -84,10 +84,7 @@ instance JT.JourneyLeg WalkLegRequest m where
         JT.JourneyLegStateData
           { status = newStatus,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-            vehiclePosition = Nothing,
-            nextStop = Nothing,
-            nextStopTravelDistance = Nothing,
-            nextStopTravelTime = Nothing,
+            vehiclePositions = [],
             legOrder = journeyLegInfo.journeyLegOrder,
             subLegOrder = 1,
             statusChanged,
