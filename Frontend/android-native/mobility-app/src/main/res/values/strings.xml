@@ -99,5 +99,5 @@
     <string name="voip_logo" translatable="false">https://raw.githubusercontent.com/nammayatri/asset-store/865e27035399a315dbeda13eabba9a2a851fae29/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
     <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
     <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
-    <string name="points">goldTierRideCoins</string>
+    <string name="points">Points</string>
 </resources>

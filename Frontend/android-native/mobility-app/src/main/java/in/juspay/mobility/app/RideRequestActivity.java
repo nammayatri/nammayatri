@@ -254,7 +254,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 }else {
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
-                holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " Points");
+                holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " " + getString(R.string.points));
                 holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
                 holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
