@@ -79,3 +79,9 @@ ALTER TABLE atlas_app.journey ADD COLUMN recent_location_id character varying(36
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN not_user_preferred_flag boolean ;

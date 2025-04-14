@@ -210,6 +210,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
 multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Flow MultimodalSearchResp
 multiModalSearch searchRequest riderConfig initateJourney req' = do
   now <- getCurrentTime
+  userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.BUS (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
@@ -283,7 +284,6 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               ]
           }
     _ -> do
-      userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
       let permissibleModesToUse = if null userPreferences.allowedTransitModes then fromMaybe [] riderConfig.permissibleModes else userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
       destination <- extractDest searchRequest.toLocation
@@ -329,7 +329,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               maximumWalkDistance = riderConfig.maximumWalkDistance,
               straightLineThreshold = riderConfig.straightLineThreshold
             }
-    void $ JM.init initReq
+    void $ JM.init initReq userPreferences
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
   journeys <- DQuote.getJourneys searchRequest (Just True)
   let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
@@ -343,7 +343,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
           Nothing -> return Nothing
       else return Nothing
 
-  fork "Rest of the routes InIt" $ processRestOfRoutes otpResponse.routes
+  fork "Rest of the routes InIt" $ processRestOfRoutes otpResponse.routes userPreferences
   return $
     MultimodalSearchResp
       { searchId = searchRequest.id,
@@ -353,8 +353,8 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
         firstJourneyInfo = firstJourneyInfo
       }
   where
-    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> Flow ()
-    processRestOfRoutes routes = do
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow ()
+    processRestOfRoutes routes userPrefs = do
       let restOfRoutes = drop 1 routes
       forM_ restOfRoutes $ \r' -> do
         let initReq' =
@@ -371,7 +371,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                   maximumWalkDistance = riderConfig.maximumWalkDistance,
                   straightLineThreshold = riderConfig.straightLineThreshold
                 }
-        JM.init initReq'
+        JM.init initReq' userPrefs
       QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
 
     extractDest Nothing = throwError $ InvalidRequest "Destination is required for multimodal search"

@@ -885,8 +885,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Bool -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId notUserPrefFlag = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
   now <- getCurrentTime
@@ -908,7 +908,8 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,
-        DJ.recentLocationId = mbRecentLocationId -- Fully qualify the field name
+        DJ.recentLocationId = mbRecentLocationId, -- Fully qualify the field name
+        notUserPreferredFlag = Just notUserPrefFlag
       }
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
@@ -917,6 +918,7 @@ mkJourneyLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Int 
 mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance straightLineThreshold fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
+  serviceTypesList <- mapM (getServiceTypeFromProviderCode merchantOpCityId) leg.serviceTypes
   return $
     DJL.JourneyLeg
       { agency = leg.agency,
@@ -936,7 +938,7 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = leg.toStopDetails,
-        serviceTypes = Nothing,
+        serviceTypes = Just serviceTypesList,
         estimatedMinFare = fare <&> (.estimatedMinFare),
         estimatedMaxFare = fare <&> (.estimatedMaxFare),
         merchantId = Just merchantId,
