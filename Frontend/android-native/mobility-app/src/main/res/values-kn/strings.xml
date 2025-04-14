@@ -85,4 +85,5 @@
     <string name="stops_info">%1$d ನಿಲ್ದಾಣಗಳು (ನಿಲ್ದಾಣ ಶುಲ್ಕ ಸೇರಿದಂತೆ)</string>
     <string name="stops">%1$d ನಿಲ್ದಾಣಗಳು</string>
     <string name="round_trip">ರೌಂಡ್ ಟ್ರಿಪ್</string>
+    <string name="points">ಪಾಯಿಂಟ್‌ಗಳು</string>
 </resources>

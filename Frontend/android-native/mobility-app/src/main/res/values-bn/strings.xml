@@ -80,4 +80,5 @@
     <string name="stops_info">%1$d স্টপস (স্টপ চার্জ সহ)</string>
     <string name="stops">%1$d স্টপস</string>
     <string name="round_trip">রাউন্ড ট্রিপ</string>
+    <string name="points">পয়েন্ট</string>
 </resources>

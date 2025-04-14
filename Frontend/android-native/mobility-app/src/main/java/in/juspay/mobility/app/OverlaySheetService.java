@@ -160,7 +160,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " Points");
+                holder.pointsTagText.setText(model.getCoinsForGoldTierRide() + " " + getString(R.string.points));
                 holder.pointsTag.setVisibility(model.getCoinsForGoldTierRide() > 0 ? View.VISIBLE : View.GONE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);

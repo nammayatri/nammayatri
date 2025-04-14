@@ -86,4 +86,5 @@
     <string name="stops_info">%1$d నిలిపి స్థానాలు (స్టాప్ ఛార్జ్ తో కలిపి)</string>
     <string name="stops">%1$d నిలిపి స్థానాలు</string>
     <string name="round_trip"> రౌండ్ ట్రిప్</string>
+    <string name="points">పాయింట్లు</string>
 </resources>
