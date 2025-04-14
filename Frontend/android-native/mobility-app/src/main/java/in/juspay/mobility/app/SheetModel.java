@@ -30,6 +30,7 @@ public class SheetModel {
     private final int negotiationUnit;
     private final int tollCharges;
     private final int stops;
+    private final int coinsRewardedOnGoldTierRide;
 
     private final Boolean disabilityTag, isFavourite;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
@@ -58,6 +59,7 @@ public class SheetModel {
                       String sourcePinCode,
                       String destinationPinCode,
                       String requestedVehicleVariant,
+                      int coinsRewardedOnGoldTierRide,
                       Boolean disabilityTag,
                       Boolean isTranslated,
                       Boolean gotoTag,
@@ -117,6 +119,7 @@ public class SheetModel {
         this.sourcePinCode = sourcePinCode;
         this.destinationPinCode = destinationPinCode;
         this.requestedVehicleVariant = requestedVehicleVariant;
+        this.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide;
         this.disabilityTag = disabilityTag;
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
@@ -210,6 +213,8 @@ public class SheetModel {
     public int getCustomerTip() {return customerExtraFee;}
 
     public Boolean isFavourite() {return isFavourite;}
+
+    public int getCoinsForGoldTierRide() {return coinsRewardedOnGoldTierRide;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
 
