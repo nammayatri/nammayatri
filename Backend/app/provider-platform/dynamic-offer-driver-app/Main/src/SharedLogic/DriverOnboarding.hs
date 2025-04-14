@@ -199,8 +199,8 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
     safeMaximum [] = Nothing
     safeMaximum xs = Just (maximum xs)
 
-makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
-makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
+makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Bool -> Maybe UTCTime -> m DriverRCAssociation
+makeRCAssociation merchantId merchantOperatingCityId driverId rcId rcActive end = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -212,7 +212,7 @@ makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
         associatedTill = end,
         consent = True,
         consentTimestamp = now,
-        isRcActive = False,
+        isRcActive = rcActive,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
