@@ -80,12 +80,42 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
-filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> m [MultiModalRoute]
-filterTransitRoutes routes mocid = do
+parseServiceTierType :: Text -> Spec.ServiceTierType
+parseServiceTierType txt =
+  case txt of
+    "ORDINARY" -> Spec.ORDINARY
+    "FIRST_CLASS" -> Spec.FIRST_CLASS
+    "AC" -> Spec.AC
+    "NON_AC" -> Spec.NON_AC
+    "EXPRESS" -> Spec.EXPRESS
+    "SPECIAL" -> Spec.SPECIAL
+    "EXECUTIVE" -> Spec.EXECUTIVE
+    "SECOND_CLASS" -> Spec.SECOND_CLASS
+    "THIRD_CLASS" -> Spec.THIRD_CLASS
+    _ -> error $ "parseServiceTierType: Unknown tier: "
+
+showServiceTierType :: Spec.ServiceTierType -> Text
+showServiceTierType tier = case tier of
+  Spec.ORDINARY -> "ORDINARY"
+  Spec.FIRST_CLASS -> "FIRST_CLASS"
+  Spec.AC -> "AC"
+  Spec.NON_AC -> "NON_AC"
+  Spec.EXPRESS -> "EXPRESS"
+  Spec.SPECIAL -> "SPECIAL"
+  Spec.EXECUTIVE -> "EXECUTIVE"
+  Spec.SECOND_CLASS -> "SECOND_CLASS"
+  Spec.THIRD_CLASS -> "THIRD_CLASS"
+
+filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> APITypes.MultimodalUserPreferences -> m [MultiModalRoute]
+filterTransitRoutes routes mocid userPrefs = do
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocid.getId)
-  if riderConfig.enableBusFiltering == Just True
-    then filterM filterBusRoutes routes
-    else return routes
+  baseRoutes <-
+    if riderConfig.enableBusFiltering == Just True
+      then filterM filterBusRoutes routes
+      else return routes
+  filteredRoutes <- filterM (filterRoutesByUserPreferences userPrefs) baseRoutes
+  let updatedRoutes = updateServiceTypesOnRoutes userPrefs filteredRoutes
+  return updatedRoutes
   where
     filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => MultiModalRoute -> m Bool
     filterBusRoutes route = do
@@ -115,6 +145,71 @@ filterTransitRoutes routes mocid = do
               _ -> return False
 
           return (all (\x -> x) busLegsValid)
+
+    --New helper that applies filtering based on user preferences.
+    filterRoutesByUserPreferences ::
+      ( MonadFlow m,
+        CacheFlow m r,
+        EsqDBFlow m r,
+        HasField "ltsHedisEnv" r Hedis.HedisEnv
+      ) =>
+      APITypes.MultimodalUserPreferences ->
+      MultiModalRoute ->
+      m Bool
+    filterRoutesByUserPreferences userPrefsForFilter route = do
+      let legs = route.legs
+          -- For now only considering Bus and Subway legs for preference filtering.
+          relevantLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus || leg.mode == MultiModalTypes.Subway) legs
+          checkLeg leg =
+            case leg.mode of
+              MultiModalTypes.Bus ->
+                case userPrefsForFilter.busTransitTypes of
+                  Nothing -> True
+                  Just allowed ->
+                    case leg.serviceTypes of
+                      [] -> False
+                      types -> any (`elem` (map showServiceTierType allowed)) types
+              MultiModalTypes.Subway ->
+                case userPrefsForFilter.subwayTransitTypes of
+                  Nothing -> True
+                  Just allowed ->
+                    case leg.serviceTypes of
+                      [] -> False
+                      types -> any (`elem` (map showServiceTierType allowed)) types
+              _ -> True
+          checks = map checkLeg relevantLegs
+      return (all (\x -> x) checks)
+
+    -- New function to update each transit leg's serviceTypes by filtering out non-allowed types.
+    updateServiceTypesOnRoutes ::
+      APITypes.MultimodalUserPreferences ->
+      [MultiModalTypes.MultiModalRoute] ->
+      [MultiModalTypes.MultiModalRoute]
+    updateServiceTypesOnRoutes userPrefsForUpdate = map updateRoute
+      where
+        updateRoute :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
+        updateRoute route@MultiModalRoute {legs = allLegs} =
+          route {legs = map updateLeg allLegs}
+        updateLeg :: MultiModalTypes.MultiModalLeg -> MultiModalTypes.MultiModalLeg
+        updateLeg leg@MultiModalLeg {mode = md, serviceTypes = ts} =
+          case md of
+            MultiModalTypes.Bus ->
+              case userPrefsForUpdate.busTransitTypes of
+                Nothing -> leg
+                Just allowed ->
+                  let parsed = map parseServiceTierType ts
+                      onlyAllowed = filter (`elem` allowed) parsed
+                      reencoded = map showServiceTierType onlyAllowed
+                   in leg {serviceTypes = reencoded}
+            MultiModalTypes.Subway ->
+              case userPrefsForUpdate.subwayTransitTypes of
+                Nothing -> leg
+                Just allowed ->
+                  let parsed = map parseServiceTierType ts
+                      onlyAllowed = filter (`elem` allowed) parsed
+                      reencoded = map showServiceTierType onlyAllowed
+                   in leg {serviceTypes = reencoded}
+            _ -> leg
 
 init ::
   JL.GetFareFlow m r =>
