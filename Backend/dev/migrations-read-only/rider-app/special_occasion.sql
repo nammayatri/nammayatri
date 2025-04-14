@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.special_occasion ADD COLUMN merchant_operating_city_id cha
 ALTER TABLE atlas_app.special_occasion ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.special_occasion ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.special_occasion ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.special_occasion ADD COLUMN place_id text ;
+ALTER TABLE atlas_app.special_occasion ADD COLUMN name text ;

@@ -1056,7 +1056,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           lon :: Maybe Double = readMaybeCSVField idx row.lon "Longitude"
           mapImageUrl :: Maybe Text = cleanMaybeCSVField idx row.mapImageUrl "Map Image URL"
           termsAndConditionsUrl :: Maybe Text = cleanMaybeCSVField idx row.termsAndConditionsUrl "Terms and conditions URL"
-          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ..}
+          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, ..}
 
       ------------- TicketService --------------------------------------------------
       service <- cleanCSVField idx row.svc "Service"
@@ -1100,7 +1100,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           bhSlotTime :: TimeOfDay <- readCSVField idx row.businessHourSlotTime "Business hour slot time"
           return (Slot bhSlotTime, Id (show bhSlotTime <> separator <> ticketServiceId))
       let bookingClosingTime :: Maybe TimeOfDay = readMaybeCSVField idx row.businessBookingClosingTime "Booking closing Time"
-      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, ..}
+      let businessHour = BusinessHour {id = bTypeId, categoryId = [], merchantOperatingCityId = Just merchantOperatingCityId, placeId = Nothing, name = Nothing, ..}
 
       --------------- Service Category ------------------------------------------------
       svcCategoryDescription <- cleanCSVField idx row.svcCategoryDescription "Service Category Description"
@@ -1115,6 +1115,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 description = svcCategoryDescription,
                 peopleCategory = [],
                 merchantOperatingCityId = Just merchantOperatingCityId,
+                placeId = Nothing,
                 ..
               }
 
@@ -1184,6 +1185,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 name = peopleCategoryName,
                 description = peopleCategoryDescription,
                 merchantOperatingCityId = Just merchantOperatingCityId,
+                placeId = Nothing,
                 ..
               }
       return (ticketPlace, ticketService, businessHour, serviceCategory, servicePeopleCategory)

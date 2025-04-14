@@ -13,6 +13,9 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     getTicketsTicketdashboardUserInfo,
     getTicketsTicketdashboardFile,
     postTicketsTicketdashboardSendverifyotp,
+    getTicketsTicketdashboardTicketplaceInfo,
+    postTicketsTicketdashboardTicketplaceUpdate,
+    getTicketsTicketdashboardTicketplaces,
   )
 where
 
@@ -25,6 +28,7 @@ import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.MerchantOnboarding
 import qualified "this" Domain.Types.TicketBooking
 import qualified "this" Domain.Types.TicketBookingService
+import qualified "this" Domain.Types.TicketDashboard
 import qualified "this" Domain.Types.TicketPlace
 import qualified "this" Domain.Types.TicketService
 import qualified Environment
@@ -36,6 +40,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 postTicketsVerify ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -167,3 +172,39 @@ postTicketsTicketdashboardSendverifyotp ::
 postTicketsTicketdashboardSendverifyotp merchantShortId _opCity req = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.postTicketDashboardSendVerifyOtp m req
+
+getTicketsTicketdashboardTicketplaceInfo ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
+  Environment.Flow Domain.Types.TicketDashboard.TicketPlaceDashboardDetails
+getTicketsTicketdashboardTicketplaceInfo _merchantShortId _opCity ticketPlaceId _requestorId' _requestorRole = do
+  Domain.Action.UI.TicketDashboard.getTicketPlaceDashboardDetails ticketPlaceId _requestorId' _requestorRole
+
+postTicketsTicketdashboardTicketplaceUpdate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
+  Domain.Types.TicketDashboard.TicketPlaceDashboardDetails ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketsTicketdashboardTicketplaceUpdate _merchantShortId _opCity _requestorId' _requestorRole req = do
+  m <- findMerchantByShortId _merchantShortId
+  moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
+  void $ Domain.Action.UI.TicketDashboard.postUpsertTicketPlaceDashboardDetails (m.id, moCity.id) req _requestorId' _requestorRole
+  return Kernel.Types.APISuccess.Success
+
+getTicketsTicketdashboardTicketplaces ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
+  Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
+getTicketsTicketdashboardTicketplaces _merchantShortId _opCity _status _requestorId _requestorRole = do
+  requestorId <- _requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
+  requestorRole <- _requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
+  status <- _status & fromMaybeM (InvalidRequest "Status query param is required")
+  Domain.Action.UI.TicketDashboard.getTicketPlaceDashboardList status requestorId requestorRole

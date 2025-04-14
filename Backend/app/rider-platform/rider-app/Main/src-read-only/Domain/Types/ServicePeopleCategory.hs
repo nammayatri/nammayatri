@@ -18,6 +18,7 @@ data ServicePeopleCategory = ServicePeopleCategory
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Kernel.Prelude.Text,
+    placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pricePerUnit :: Kernel.Types.Common.Price,
     pricingType :: Domain.Types.ServicePeopleCategory.PricingType,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,

@@ -19,6 +19,7 @@ data ServicePeopleCategoryT f = ServicePeopleCategoryT
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
     pricingType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServicePeopleCategory.PricingType),
