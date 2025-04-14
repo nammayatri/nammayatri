@@ -17,6 +17,7 @@ module BecknV2.FRFS.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types
+import Data.OpenApi
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
@@ -74,7 +75,13 @@ data VehicleCategory = METRO | SUBWAY | BUS
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
 data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToParamSchema)
+
+instance ToSchema ServiceTierType where
+  declareNamedSchema proxy = do
+    genericDeclareNamedSchema customSchemaOptions proxy
+    where
+      customSchemaOptions = defaultSchemaOptions {datatypeNameModifier = const "FRFSServiceTierType"}
 
 $(mkHttpInstancesForEnum ''ServiceTierType)
 
