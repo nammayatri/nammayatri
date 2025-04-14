@@ -239,7 +239,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
       let integratedBPPConfigIds = replicate (length routeCodes) (integratedBPPConfig.id)
       routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCodes routeCodes integratedBPPConfigIds
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) serviceableStops
+          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
           possibleStartStops =
             nubBy (\a b -> a.stopCode == b.stopCode) $
               concatMap
@@ -323,7 +323,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin _platformType 
       let integratedBPPConfigIds' = replicate (length routeCodes) (integratedBPPConfig.id)
       routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCodes routeCodes integratedBPPConfigIds'
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) serviceableStops
+          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
           possibleEndStops =
             nubBy (\a b -> a.stopCode == b.stopCode) $
               concatMap

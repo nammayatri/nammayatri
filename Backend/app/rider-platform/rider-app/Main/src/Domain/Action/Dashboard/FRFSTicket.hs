@@ -149,7 +149,7 @@ getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode vehicleType = do
   farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
   routeFares <- QRSF.findByRouteCode farePolicy.id routeCode
 
-  let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares
+  let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares -- TODO: Sort the fares by startStopCode
   let sortedGroupedFares = sortBy (comparing (negate . length)) groupedFares
   stopFares <- forM sortedGroupedFares $ \fares -> do
     let maybeFirstFare = listToMaybe fares
