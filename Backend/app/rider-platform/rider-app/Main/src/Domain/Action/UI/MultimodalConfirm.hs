@@ -473,7 +473,7 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
       return $
         ApiTypes.MultimodalUserPreferences
           { allowedTransitModes = convertedModes,
-            journeyOptionsSortingType = Just DMP.FASTEST
+            journeyOptionsSortingType = Just DMP.MOST_RELEVANT
           }
   where
     generalVehicleTypeToAllowedTransitMode :: GeneralVehicleType -> Maybe DTrip.MultimodalTravelMode
