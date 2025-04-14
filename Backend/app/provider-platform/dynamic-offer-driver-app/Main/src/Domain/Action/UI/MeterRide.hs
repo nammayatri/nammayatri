@@ -3,7 +3,6 @@
 module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideShareReceipt) where
 
 import qualified API.Types.UI.MeterRide
-import Data.Time (utctDay)
 import qualified Domain.Action.Internal.DriverReferee as DAIDR
 import qualified Domain.Action.UI.FareCalculator as AUF
 import Domain.Types
