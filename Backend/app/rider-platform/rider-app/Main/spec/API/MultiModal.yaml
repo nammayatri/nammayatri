@@ -23,6 +23,7 @@ imports:
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
   AvailableRoutesByTier: Lib.JourneyModule.Utils
+  ServiceTierType: BecknV2.FRFS.Enums
 
 module: MultimodalConfirm
 
@@ -116,6 +117,8 @@ types:
   MultimodalUserPreferences:
     allowedTransitModes: [MultimodalTravelMode]
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
+    busTransitTypes: Maybe [ServiceTierType]
+    subwayTransitTypes: Maybe [ServiceTierType]
 
   RateMultiModelTravelModes:
     travelMode: Maybe MultimodalTravelMode

@@ -455,7 +455,9 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
       return $
         ApiTypes.MultimodalUserPreferences
           { allowedTransitModes = multimodalUserPreferences'.allowedTransitModes,
-            journeyOptionsSortingType = Just multimodalUserPreferences'.journeyOptionsSortingType
+            journeyOptionsSortingType = Just multimodalUserPreferences'.journeyOptionsSortingType,
+            busTransitTypes = multimodalUserPreferences'.busTransitTypes,
+            subwayTransitTypes = multimodalUserPreferences'.subwayTransitTypes
           }
     Nothing -> do
       personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -464,7 +466,9 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
       return $
         ApiTypes.MultimodalUserPreferences
           { allowedTransitModes = convertedModes,
-            journeyOptionsSortingType = Just DMP.FASTEST
+            journeyOptionsSortingType = Just DMP.FASTEST,
+            busTransitTypes = Just [],
+            subwayTransitTypes = Just []
           }
   where
     generalVehicleTypeToAllowedTransitMode :: GeneralVehicleType -> Maybe DTrip.MultimodalTravelMode
@@ -491,14 +495,17 @@ postMultimodalUserPreferences (mbPersonId, merchantId) multimodalUserPreferences
           then multimodalUserPreferences.allowedTransitModes
           else DTrip.Walk : multimodalUserPreferences.allowedTransitModes
   case existingPreferences of
-    Just _ ->
+    Just _ -> do
       QMP.updateAllowedTransitModesAndJourneyOptionsSortingType updatedAllowedModes (fromMaybe DMP.FASTEST multimodalUserPreferences.journeyOptionsSortingType) personId
+      QMP.updateBusAndSubwayTransitTypes multimodalUserPreferences.busTransitTypes multimodalUserPreferences.subwayTransitTypes personId
     Nothing -> do
       now <- getCurrentTime
       let newPreferences =
             MultimodalPreferences
               { allowedTransitModes = updatedAllowedModes,
                 journeyOptionsSortingType = fromMaybe DMP.FASTEST multimodalUserPreferences.journeyOptionsSortingType,
+                busTransitTypes = multimodalUserPreferences.busTransitTypes,
+                subwayTransitTypes = multimodalUserPreferences.subwayTransitTypes,
                 personId = personId,
                 merchantId = Just merchantId,
                 merchantOperatingCityId = Just personCityInfo.merchantOperatingCityId,

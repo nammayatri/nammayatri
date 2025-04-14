@@ -231,6 +231,8 @@ MultimodalPreferences:
     personId: Id Person
     allowedTransitModes: "[MultimodalTravelMode]"
     journeyOptionsSortingType: JourneyOptionsSortingType
+    busTransitTypes: "Maybe [ServiceTierType]"
+    subwayTransitTypes: "Maybe [ServiceTierType]"
 
   queries:
     findByPersonId:
@@ -240,10 +242,16 @@ MultimodalPreferences:
       kvFunction: updateWithKV
       params: [allowedTransitModes, journeyOptionsSortingType]
       where: personId
+    updateBusAndSubwayTransitTypes:
+      kvFunction: updateWithKV
+      params: [busTransitTypes, subwayTransitTypes]
+      where: personId
 
   sqlType:
     allowedTransitModes: text
     journeyOptionsSortingType: text
+    busTransitTypes: text
+    subwayTransitTypes: text
 
   constraints:
     personId: PrimaryKey
