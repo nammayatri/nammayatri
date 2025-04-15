@@ -1,0 +1,32 @@
+.json-output {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 15px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.json-output.flashing {
+  background-color: var(--primary-color-light);
+  transition: background-color 0.5s ease;
+}
+
+.json-output::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.json-output::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+.json-output::-webkit-scrollbar-track {
+  background-color: var(--bg-secondary);
+  border-radius: 4px;
+}

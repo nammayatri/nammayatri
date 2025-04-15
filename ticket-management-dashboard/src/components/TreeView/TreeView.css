@@ -1,0 +1,292 @@
+.ticket-system-tree {
+  font-family: 'Roboto', sans-serif;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  height: 100%;
+  overflow-y: auto;
+  min-height: 400px;
+}
+
+.tree-node {
+  margin-bottom: 5px;
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.tree-node-content:hover {
+  background-color: #e9ecef;
+}
+
+.tree-node-content.selected {
+  background-color: #007bff;
+  color: white;
+}
+
+.toggle-btn {
+  padding: 0;
+  margin-right: 5px;
+  color: inherit;
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  position: relative;
+}
+
+.toggle-btn svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.node-icon {
+  margin-right: 8px;
+  width: 20px;
+  text-align: center;
+}
+
+.node-label {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-details {
+  font-size: 0.85em;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* Node type specific styling */
+.category-node > .tree-node-content {
+  border-left: 2px solid #28a745;
+}
+
+.service-node > .tree-node-content {
+  border-left: 2px solid #007bff;
+}
+
+.place-node > .tree-node-content {
+  border-left: 2px solid #dc3545;
+}
+
+.peopleCategory-node > .tree-node-content {
+  border-left: 2px solid #6f42c1;
+}
+
+.tree-node-children {
+  margin-left: 10px;
+  border-left: 1px dashed #ced4da;
+  padding-left: 10px;
+  position: relative;
+}
+
+/* Add connecting lines for better visualization */
+.tree-node-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 1px;
+  background-color: #ced4da;
+}
+
+/* Highlight business hour and category relationship */
+.tree-node-children .tree-node-children {
+  border-left-color: #fd7e14;
+}
+
+/* Highlight category and people category relationship */
+.tree-node-children .tree-node-children .tree-node-children {
+  border-left-color: #28a745;
+}
+
+/* Business hour specific styling */
+.business-hour-node > .tree-node-content {
+  background-color: rgba(253, 126, 20, 0.1);
+  border-left: 3px solid #fd7e14;
+}
+
+.business-hour-node > .tree-node-content:hover {
+  background-color: rgba(253, 126, 20, 0.2);
+}
+
+.business-hour-children {
+  border-left-color: #fd7e14;
+  border-left-width: 2px;
+}
+
+.categories-for-business-hour {
+  position: relative;
+}
+
+.categories-for-business-hour::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10px;
+  width: 10px;
+  height: 1px;
+  background-color: #fd7e14;
+}
+
+/* Category under business hour styling */
+.business-hour-children .tree-node > .tree-node-content {
+  background-color: rgba(40, 167, 69, 0.05);
+  border-left: 2px solid #28a745;
+}
+
+.business-hour-children .tree-node > .tree-node-content:hover {
+  background-color: rgba(40, 167, 69, 0.15);
+}
+
+/* Icons for different node types */
+.node-icon .fa-map-marker-alt {
+  color: #dc3545;
+}
+
+.node-icon .fa-ticket-alt {
+  color: #007bff;
+}
+
+.node-icon .fa-tag {
+  color: #28a745;
+}
+
+.node-icon .fa-users {
+  color: #6f42c1;
+}
+
+.node-icon .fa-clock {
+  color: #fd7e14;
+}
+
+.node-icon .fa-calendar-alt {
+  color: #20c997;
+}
+
+/* People Categories Horizontal Layout */
+.people-categories-container {
+  margin-top: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: rgba(111, 66, 193, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #6f42c1;
+  position: relative;
+  z-index: 1;
+}
+
+.people-categories-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #6f42c1;
+}
+
+.people-categories-label .node-icon {
+  margin-right: 8px;
+}
+
+.people-categories-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-left: 10px;
+  margin-top: 15px;
+}
+
+.people-category-card {
+  flex: 0 0 auto;
+  width: 160px;
+  padding: 12px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid #6f42c1;
+  position: relative;
+  z-index: 2;
+}
+
+.people-category-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  background-color: rgba(111, 66, 193, 0.1);
+}
+
+.people-category-card.selected {
+  background-color: #6f42c1;
+  color: white;
+  box-shadow: 0 4px 8px rgba(111, 66, 193, 0.4);
+}
+
+.people-category-card.selected .people-category-icon,
+.people-category-card.selected .people-category-name,
+.people-category-card.selected .people-category-price {
+  color: white;
+}
+
+.people-category-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  color: #6f42c1;
+  font-size: 1.5em;
+}
+
+.people-category-name {
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.1em;
+}
+
+.people-category-price {
+  text-align: center;
+  font-size: 0.95em;
+  color: #6c757d;
+  font-weight: 500;
+  background-color: rgba(111, 66, 193, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin: 0 auto;
+  width: auto;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* When selected, all icons should be white */
+.tree-node-content.selected .node-icon svg {
+  color: white !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ticket-system-tree {
+    min-height: 300px;
+  }
+}

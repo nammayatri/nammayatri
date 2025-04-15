@@ -1,0 +1,27 @@
+.place-name-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0;
+}
+
+.place-name-link:hover {
+  text-decoration: underline;
+  color: var(--primary-color-dark);
+}
+
+.table th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table td {
+  vertical-align: middle;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table tbody tr:hover {
+  background-color: var(--bg-hover);
+}

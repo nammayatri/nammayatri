@@ -1,0 +1,91 @@
+.entity-details-panel {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.entity-details-panel .card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.entity-details-panel .card-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.entity-details-panel .card-body {
+  padding: 1.25rem;
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.entity-details-panel .list-group-item {
+  border-left: none;
+  border-right: none;
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.entity-details-panel .list-group-item:first-child {
+  border-top: none;
+}
+
+.entity-details-panel .list-group-item:last-child {
+  border-bottom: none;
+}
+
+.entity-details-panel h6 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.entity-details-panel .badge {
+  font-weight: 500;
+}
+
+.entity-details-panel .text-purple {
+  color: var(--info-color);
+}
+
+.entity-details-panel .text-warning {
+  color: var(--warning-color);
+}
+
+.entity-details-panel .text-success {
+  color: var(--success-color);
+}
+
+/* Specific dark mode overrides for entity details panel */
+[data-bs-theme="dark"] .entity-details-panel .card-header {
+  background-color: var(--card-header-bg);
+  color: var(--text-primary);
+}
+
+[data-bs-theme="dark"] .entity-details-panel .card-title {
+  color: var(--text-primary);
+}
+
+[data-bs-theme="dark"] .entity-details-panel .list-group-item-action:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-bs-theme="dark"] .entity-details-panel .text-muted {
+  color: var(--text-secondary) !important;
+}
+
+.entity-details-panel .text-primary {
+  color: #007bff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .entity-details-panel {
+    margin-top: 1rem;
+  }
+}

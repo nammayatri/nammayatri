@@ -1,0 +1,147 @@
+/* Dashboard styles */
+
+/* List view container */
+.list-view-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 100px);
+}
+
+/* Horizontal Navigation Bar */
+.horizontal-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  transition: all 0.3s ease;
+}
+
+.navbar-header {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+
+.horizontal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.horizontal-nav .nav-link {
+  color: var(--text-primary);
+  padding: 8px 15px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.horizontal-nav .nav-link:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--primary-color);
+}
+
+.horizontal-nav .nav-link.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Navbar toggle button */
+.navbar-toggle-btn {
+  padding: 5px 10px;
+  border-radius: 4px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.navbar-toggle-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Main content wrapper */
+.main-content-wrapper {
+  flex: 1;
+  padding-top: 10px;
+}
+
+/* Navbar collapsed state */
+.navbar-collapsed .main-content-col {
+  margin: 0 auto;
+  max-width: 1000px;
+  transition: all 0.3s ease;
+}
+
+/* Transition effects */
+.main-content-col {
+  transition: all 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .horizontal-nav {
+    flex-direction: column;
+  }
+
+  .horizontal-nav .nav-link {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+/* Add some spacing to the main content */
+.main-content-col > div {
+  margin-bottom: 2rem;
+}
+
+/* Add a title to each section */
+.main-content-col > div {
+  position: relative;
+  padding-top: 1rem;
+}
+
+.main-content-col > div::before {
+  content: attr(id);
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+/* Fix the section titles */
+#ticketPlace::before {
+  content: "Ticket Place";
+}
+
+#services::before {
+  content: "Services";
+}
+
+#businessHours::before {
+  content: "Business Hours";
+}
+
+#serviceCategories::before {
+  content: "Service Categories";
+}
+
+#peopleCategories::before {
+  content: "People Categories";
+}
+
+#specialOccasions::before {
+  content: "Special Occasions";
+}
+
+#jsonPreview::before {
+  content: "API Preview";
+}

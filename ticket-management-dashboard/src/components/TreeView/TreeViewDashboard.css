@@ -1,0 +1,75 @@
+.tree-view-dashboard {
+  padding: 20px 0;
+}
+
+.tree-view-dashboard .card {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.tree-view-dashboard .btn-group .btn {
+  border-radius: 4px;
+  margin-left: 5px;
+}
+
+/* Make the tree and details panel the same height */
+@media (min-width: 768px) {
+  .tree-view-dashboard .row {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .tree-view-dashboard .row > [class*='col-'] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tree-view-dashboard .card {
+    flex: 1;
+  }
+}
+
+/* Ensure the tree view has a minimum height and scrolls properly */
+.ticket-system-tree {
+  min-height: 500px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+/* Ensure the details panel has a minimum height and scrolls properly */
+.entity-details-panel {
+  min-height: 500px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Full screen tree view */
+.full-screen-tree-col {
+  height: calc(100vh - 180px);
+}
+
+.full-screen-tree-card {
+  height: 100%;
+  overflow: hidden;
+}
+
+.full-screen-tree-card .card-body {
+  padding: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+.ticket-system-tree {
+  height: 100%;
+  padding: 20px;
+  overflow: auto;
+}
+
+
+
+

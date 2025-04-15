@@ -1,0 +1,156 @@
+/* Light Mode (Default) */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #fd7e14;
+  --info-color: #17a2b8;
+  --tree-node-hover: #e9ecef;
+  --tree-node-selected: #007bff;
+  --tree-node-selected-text: #ffffff;
+  --card-bg: #ffffff;
+  --card-border: #e9ecef;
+  --card-shadow: rgba(0, 0, 0, 0.05);
+  --json-preview-bg: #f8f9fa;
+  --json-preview-text: #212529;
+  --json-preview-key: #0066cc;
+  --json-preview-string: #008000;
+  --json-preview-number: #aa0000;
+  --json-preview-boolean: #7f00ff;
+  --json-preview-null: #808080;
+}
+
+/* Dark Mode */
+[data-bs-theme="dark"] {
+  --bg-primary: #212529;
+  --bg-secondary: #343a40;
+  --bg-tertiary: #495057;
+  --text-primary: #f8f9fa;
+  --text-secondary: #adb5bd;
+  --border-color: #495057;
+  --primary-color: #0d6efd;
+  --secondary-color: #6c757d;
+  --success-color: #198754;
+  --danger-color: #dc3545;
+  --warning-color: #fd7e14;
+  --info-color: #0dcaf0;
+  --tree-node-hover: #343a40;
+  --tree-node-selected: #0d6efd;
+  --tree-node-selected-text: #ffffff;
+  --card-bg: #2c3034;
+  --card-border: #343a40;
+  --card-shadow: rgba(0, 0, 0, 0.2);
+  --card-header-bg: #212529;
+  --json-preview-bg: #343a40;
+  --json-preview-text: #f8f9fa;
+  --json-preview-key: #79b8ff;
+  --json-preview-string: #85e89d;
+  --json-preview-number: #ff9b93;
+  --json-preview-boolean: #b392f0;
+  --json-preview-null: #959da5;
+}
+
+/* Apply theme variables to elements */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sidebar toggle button theming */
+.sidebar-toggle-btn {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: 0 2px 4px var(--card-shadow);
+}
+
+.card-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+.list-group-item {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Tree View Styling */
+.ticket-system-tree {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.tree-node-content:hover {
+  background-color: var(--tree-node-hover);
+}
+
+.tree-node-content.selected {
+  background-color: var(--tree-node-selected);
+  color: var(--tree-node-selected-text);
+}
+
+.tree-node-children {
+  border-left-color: var(--border-color);
+}
+
+/* JSON Preview Styling */
+.json-preview {
+  background-color: var(--json-preview-bg);
+  color: var(--json-preview-text);
+}
+
+.json-preview .json-key {
+  color: var(--json-preview-key);
+}
+
+.json-preview .json-string {
+  color: var(--json-preview-string);
+}
+
+.json-preview .json-number {
+  color: var(--json-preview-number);
+}
+
+.json-preview .json-boolean {
+  color: var(--json-preview-boolean);
+}
+
+.json-preview .json-null {
+  color: var(--json-preview-null);
+}
+
+/* Form Controls */
+.form-control, .form-select {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Transition for smooth theme switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}

@@ -1,0 +1,38 @@
+.entity-details-modal .modal-content {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.entity-details-modal .modal-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.entity-details-modal .modal-footer {
+  background-color: var(--bg-secondary);
+  border-top-color: var(--border-color);
+}
+
+.entity-details-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.entity-details-modal .list-group-item {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.entity-details-modal .modal-title {
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .entity-details-modal .modal-body {
+    max-height: 60vh;
+  }
+}
