@@ -130,6 +130,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
   where
     castAdditionalChargeCategoriesToEnum = \case
       DAC.SAFETY_PLUS_CHARGES -> Enums.SAFETY_PLUS_CHARGES
+      _ -> Enums.NO_CHARGES
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det

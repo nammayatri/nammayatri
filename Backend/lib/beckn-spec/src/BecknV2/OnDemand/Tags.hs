@@ -459,6 +459,7 @@ data BecknTag
   | PARCEL_QUANTITY
   | PREFER_SAFETY_PLUS
   | SAFETY_PLUS_CHARGES
+  | NO_CHARGES
   | IS_SAFETY_PLUS
   | IS_MULTIMODAL_SEARCH
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -507,6 +508,7 @@ instance CompleteTag BecknTag where
     PARCEL_QUANTITY -> (Just "Delivery Parcel Quantity", Nothing)
     SAFETY_PLUS_CHARGES -> (Just "safety plus charges", Nothing)
     IS_SAFETY_PLUS -> (Just "is safety plus", Nothing)
+    NO_CHARGES -> (Just "no conditional charges", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
