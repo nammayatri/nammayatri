@@ -322,7 +322,7 @@ data VehicleTracking = VehicleTracking
     nextStopTravelTime :: Maybe Seconds,
     nextStopTravelDistance :: Maybe Meters,
     upcomingStops :: [UpcomingStop],
-    vehicleId :: Maybe Text,
+    vehicleId :: Text,
     vehicleInfo :: Maybe VehicleInfo,
     delay :: Maybe Seconds
   }
@@ -379,7 +379,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       upcomingStops = [],
-                      vehicleId = Just vehicleId,
+                      vehicleId = vehicleId,
                       vehicleInfo = Just vehicleInfo,
                       delay = Nothing
                     }
@@ -402,7 +402,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                   nextStopTravelTime = (\t -> nominalDiffTimeToSeconds $ diffUTCTime t now) <$> (mbNextStop <&> (.arrivalTime)),
                   nextStopTravelDistance = Nothing,
                   upcomingStops = [], -- fix it later
-                  vehicleId = Just bus.vehicleNumber,
+                  vehicleId = bus.vehicleNumber,
                   vehicleInfo =
                     Just $
                       VehicleInfo
@@ -455,7 +455,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       upcomingStops = [],
-                      vehicleId = Nothing,
+                      vehicleId = show vehicleType,
                       vehicleInfo = Nothing,
                       delay = Nothing
                     }

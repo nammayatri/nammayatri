@@ -191,6 +191,7 @@ data NextStopDetails = NextStopDetails
 
 data VehiclePosition = VehiclePosition
   { position :: LatLong,
+    vehicleId :: Text,
     nextStop :: Maybe NextStopDetails
   }
   deriving stock (Show, Generic)

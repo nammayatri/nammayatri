@@ -82,6 +82,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   ( \(vehicleTracking, latLong) ->
                       JT.VehiclePosition
                         { position = latLong,
+                          vehicleId = vehicleTracking.vehicleId,
                           nextStop =
                             vehicleTracking.nextStop
                               <&> ( \nextStop ->
@@ -124,6 +125,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   ( \(vehicleTracking, latLong) ->
                       JT.VehiclePosition
                         { position = latLong,
+                          vehicleId = vehicleTracking.vehicleId,
                           nextStop =
                             vehicleTracking.nextStop
                               <&> ( \nextStop ->
@@ -172,6 +174,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   ( \(vehicleTracking, latLong) ->
                       JT.VehiclePosition
                         { position = latLong,
+                          vehicleId = vehicleTracking.vehicleId,
                           nextStop =
                             vehicleTracking.nextStop
                               <&> ( \nextStop ->
@@ -222,6 +225,7 @@ getState mode searchId riderLastPoints isLastCompleted = do
                   ( \(vehicleTracking, latLong) ->
                       JT.VehiclePosition
                         { position = latLong,
+                          vehicleId = vehicleTracking.vehicleId,
                           nextStop =
                             vehicleTracking.nextStop
                               <&> ( \nextStop ->

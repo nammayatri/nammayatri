@@ -32,7 +32,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbVehicleType = do
   where
     mkVehicleTrackingResponse VehicleTracking {..} =
       TrackRoute.VehicleInfo
-        { vehicleId = fromMaybe "" vehicleId,
+        { vehicleId = vehicleId,
           nextStop = nextStop,
           nextStopTravelTime = nextStopTravelTime,
           nextStopTravelDistance = nextStopTravelDistance,
