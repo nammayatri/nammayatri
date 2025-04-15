@@ -6845,6 +6845,10 @@ fcmHandler notification state notificationBody= do
     "STOP_REACHED" -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { driverInfoCardState {destination = "" , destinationLat = 0.0, destinationLng =0.0, destinationAddress = getAddressFromBooking dummyBookingDetails} } })
       homeScreenFlow
+    "PAYOUT_REWARD" -> do
+      response <- Remote.getProfileBT ""
+      modifyScreenState $ GlobalFlowCacheType (\globaFlowCache -> globaFlowCache{profileResp = Just response})
+      homeScreenFlow
     _ -> homeScreenFlow
 
 
