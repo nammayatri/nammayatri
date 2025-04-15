@@ -214,7 +214,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   integratedBPPConfig <- QIntegratedBPPConfig.findByDomainAndCityAndVehicleCategory "FRFS" merchantOperatingCityId BecknV2.OnDemand.Enums.BUS (fromMaybe DIBC.MULTIMODAL req.platformType) >>= fromMaybeM (InternalError "No integrated bpp config found")
 
-  mbBusRouteDetails <- JMU.getBusRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig.id
+  mbBusRouteDetails <- JMU.measureLatency (JMU.getBusRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode integratedBPPConfig.id) "getBusRouteDetails"
   otpResponse <- case mbBusRouteDetails of
     Just busRouteDetails -> do
       let fromStopDetails =
@@ -303,7 +303,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
                 sortingType = JMU.convertSortingType sortingType
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
-      otpResponse' <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+      otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
       otpResponse'' <- MInterface.MultiModalResponse <$> JM.filterTransitRoutes otpResponse'.routes merchantOperatingCityId
       logDebug $ "[Multimodal - OTP Response]" <> show otpResponse''
       -- Add default auto leg if no routes are found
@@ -331,7 +331,7 @@ multiModalSearch searchRequest riderConfig initateJourney req' = do
               straightLineThreshold = riderConfig.straightLineThreshold,
               relevanceScore = firstRoute.relevanceScore
             }
-    void $ JM.init initReq
+    JMU.measureLatency (void $ JM.init initReq) "Multimodal Init Time"
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
   journeys <- DQuote.getJourneys searchRequest (Just True)
   let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
