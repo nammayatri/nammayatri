@@ -511,7 +511,6 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             integratedBppConfigId = Just integratedBPPConfig.id,
             journeyRouteDetails = [],
             recentLocationId = Nothing,
-            crisSearchData = Nothing,
             ..
           }
 
@@ -619,6 +618,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.bppDelayedInterest = Nothing,
                 DFRFSQuote.discountedTickets = Nothing,
                 DFRFSQuote.eventDiscountAmount = Nothing,
+                DFRFSQuote.fareDetails = Nothing,
                 DFRFSQuote.oldCacheDump = Nothing
               }
       return $ Just quote
@@ -691,7 +691,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
           (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id Nothing DIBC.PARTNERORG
+      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id Nothing DIBC.PARTNERORG Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

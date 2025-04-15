@@ -24,6 +24,7 @@ import qualified Data.Time as Time
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
+import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
@@ -240,6 +241,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
 data FRFSFare = FRFSFare
   { price :: Price,
     discounts :: [FRFSDiscount],
+    fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier
   }
 
@@ -281,6 +283,7 @@ getFares riderId vehicleType integratedBPPConfigId merchantId merchantOperatingC
           FRFSFare
             { price = price,
               discounts = map (mkDiscount price) discountsWithEligibility,
+              fareDetails = Nothing,
               vehicleServiceTier =
                 FRFSVehicleServiceTier
                   { serviceTierType = vehicleServiceTier._type,

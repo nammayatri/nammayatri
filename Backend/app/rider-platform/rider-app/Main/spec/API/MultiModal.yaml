@@ -122,19 +122,18 @@ types:
 
   JourneyConfirmReq:
     journeyConfirmReqElements: "[JourneyConfirmReqElement]"
+
   JourneyConfirmReqElement:
     journeyLegOrder: Int
     skipBooking: Bool
     ticketQuantity: Maybe Int
-    crisData: Maybe CrisData
-  CrisData:
+    crisSdkResponse: Maybe CrisSdkResponse
+
+  CrisSdkResponse:
     osType: Text
     osBuildVersion: Text
     deviceId: Text
     bookAuthCode: Text
-    trainTypeCode: Text
-    distance: Int
-    via: Text
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"

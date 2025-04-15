@@ -301,7 +301,6 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
       ExternalBPP.ExternalAPI.Subway.CRIS.Error
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
-      ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV1
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
       Lib.JourneyLeg.Bus

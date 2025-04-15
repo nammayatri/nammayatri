@@ -4,6 +4,7 @@ module Lib.JourneyLeg.Bus where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.Trip as DTrip
+import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Common.FRFS as CFRFS
@@ -14,7 +15,7 @@ instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId
   search _ = throwError (InternalError "Not supported")
 
-  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId searchId quoteId quantity skipBooking bookingAllowed
+  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId searchId quoteId quantity skipBooking bookingAllowed Nothing
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do

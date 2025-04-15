@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
@@ -23,11 +24,9 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant.API
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Station as QStation
-import Text.Read
 
 -- Encrypted request/response types for API
 data EncryptedRequest = EncryptedRequest
@@ -69,7 +68,7 @@ data CRISBookingRequest = CRISBookingRequest
     source :: Text,
     destination :: Text,
     via :: Text,
-    routeID :: Int,
+    routeID :: Text,
     classCode :: Text,
     trainType :: Text,
     tktType :: Text,
@@ -80,7 +79,7 @@ data CRISBookingRequest = CRISBookingRequest
     senoirWoman :: Int,
     fare :: Int,
     paymentCode :: Text,
-    osBuildVersion :: Int,
+    osBuildVersion :: Text,
     bookingMode :: Int,
     paymentStatus :: Int,
     registrationID :: Text,
@@ -219,27 +218,19 @@ createOrder config booking = do
   mbMobileNumber <- decrypt `mapM` person.mobileNumber
   fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "From station not found")
   toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError "To station not found")
-  frfsSearch <- QFRFSSearch.findById booking.searchId >>= fromMaybeM (SearchRequestNotFound booking.searchId.getId)
+  quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
 
-  -- Handle crisSearchData properly based on its actual type
-  crisSearchData <- fromMaybeM (InternalError "CRIS search data not found") frfsSearch.crisSearchData
-  osBuildVersionText <- fromMaybeM (InternalError "OS build version not found") crisSearchData.osBuildVersion
-  osBuildVersion <- case readMaybe (T.unpack osBuildVersionText) of
-    Nothing -> throwError $ InternalError $ "Invalid OS build version: " <> osBuildVersionText
-    Just ver -> pure ver
+  (osBuildVersion, osType, deviceId, bookAuthCode) <- case (booking.osBuildVersion, booking.osType, booking.deviceId, booking.bookingAuthCode) of
+    (Just osBuildVersion, Just osType, Just deviceId, Just bookingAuthCode) -> return (osBuildVersion, osType, deviceId, bookingAuthCode)
+    _ -> throwError $ InternalError ("Invalid booking data: " <> show booking.osBuildVersion <> " " <> show booking.osType <> " " <> show booking.deviceId <> " " <> show booking.bookingAuthCode)
 
-  osType <- fromMaybeM (InternalError "OS type not found") crisSearchData.osType
-  deviceId <- fromMaybeM (InternalError "Device ID not found") crisSearchData.deviceId
-  bookAuthCode <- fromMaybeM (InternalError "Booking auth code not found") crisSearchData.bookAuthCode
-  trainTypeCode <- fromMaybeM (InternalError "trainTypeCode not found") crisSearchData.trainType
-  via <- fromMaybeM (InternalError "via not found") crisSearchData.via
-  distance <- fromMaybeM (InternalError "distance not found") crisSearchData.distance
-  crisRouteId <- fromMaybeM (InternalError "crisRouteId not found") crisSearchData.crisRouteId
-  appSession <- fromMaybeM (InternalError "appSession not found") crisSearchData.crisAppSession
+  (trainTypeCode, via, distance, crisRouteId, appSession) <-
+    case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.via), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession)) of
+      (Just trainTypeCode, Just via, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, via, distance, crisRouteId, appSession)
+      _ -> throwError $ InternalError ("Invalid quote data: " <> show quote.fareDetails)
 
   frfsTicketBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InternalError "FRFS ticket booking payment not found")
-  classCode <- getFRFSVehicleServiceTier booking
-
+  classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (InternalError "Start time not found") booking.startTime
 
   let bookJourneyReq =
@@ -271,7 +262,7 @@ createOrder config booking = do
             destinationStationName = toStation.name,
             zone = config.sourceZone,
             osType = osType,
-            distance,
+            distance = distance.getMeters,
             chargeableAmount = round booking.price.amount.getHighPrecMoney,
             tktTypeID = 1,
             agentAppTxnID = show frfsTicketBookingPayment.paymentOrderId,
@@ -314,7 +305,7 @@ constructBookingJson request = do
             "source" .= request.source,
             "destination" .= request.destination,
             "via" .= request.via,
-            "routeID" .= (request.routeID :: Int), -- Explicitly mark as Int
+            "routeID" .= request.routeID,
             "classCode" .= request.classCode,
             "trainType" .= request.trainType,
             "tktType" .= request.tktType,
@@ -325,7 +316,7 @@ constructBookingJson request = do
             "senoirWoman" .= (request.senoirWoman :: Int),
             "fare" .= (request.fare :: Int),
             "paymentCode" .= request.paymentCode,
-            "osBuildVersion" .= (request.osBuildVersion :: Int),
+            "osBuildVersion" .= request.osBuildVersion,
             "bookingMode" .= (request.bookingMode :: Int),
             "paymentStatus" .= (request.paymentStatus :: Int),
             "registrationID" .= request.registrationID,
@@ -344,10 +335,9 @@ constructBookingJson request = do
 
 getFRFSVehicleServiceTier ::
   (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
-  DFRFSTicketBooking.FRFSTicketBooking ->
+  DFRFSQuote.FRFSQuote ->
   m Text
-getFRFSVehicleServiceTier booking = do
-  quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (InternalError "Quote not found")
+getFRFSVehicleServiceTier quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
   let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
   serviceTier <- mbServiceTier & fromMaybeM (InternalError "serviceTier not found")

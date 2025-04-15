@@ -1,12 +1,18 @@
-module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
+module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
+  ( getRouteFare,
+    CRISFareRequest (..),
+    CRISFareResponse (..),
+  )
+where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.MerchantOperatingCity
-import EulerHS.Prelude hiding (find, readMaybe)
+import EulerHS.Prelude hiding (find, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -27,90 +33,67 @@ data EncryptedResponse = EncryptedResponse
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
+-- Request type with updated fields
 data CRISFareRequest = CRISFareRequest
   { mobileNo :: Text,
     imeiNo :: Text,
     appSession :: Int,
     sourceCode :: Text,
     changeOver :: Text,
-    -- | "1 blank space"
     destCode :: Text,
-    ticketType :: Text,
-    via :: Text,
-    trainType :: Maybe Text,
-    routeId :: Text
+    via :: Text
   }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
-data RouteFareRes = RouteFareRes
-  { fare :: Double,
-    distance :: Double,
-    currency :: Text
+-- Response types
+data CRISFareResponse = CRISFareResponse
+  { routeFareDetailsList :: [RouteFareDetails],
+    sdkData :: Text -- Added sdkData field
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
+data RouteFareDetails = RouteFareDetails
+  { routeId :: Int,
+    fareDtlsList :: [FareDetails],
+    maximumValuesList :: [MaximumValues],
+    allowedValuesList :: [AllowedValues]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data FareDetails = FareDetails
+  { ticketFare :: Text,
+    distance :: Int,
+    via :: Text, -- Added via field
+    ticketTypeCode :: Text,
+    trainTypeCode :: Text,
+    classCode :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data MaximumValues = MaximumValues
+  { item :: Text,
+    value :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data AllowedValues = AllowedValues
+  { ticketTypeCode :: Text,
+    ticketTypeName :: Text,
+    trainTypeCode :: Text,
+    trainTypeDescription :: Text,
+    classCode :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+-- API type with updated endpoint
 type RouteFareAPI =
-  "t" :> "uts.cris.in" :> "tputs" :> "V" :> "get_route_fare_details"
+  "t" :> "uts.cris.in" :> "tputs" :> "V" :> "get_route_fare_details_v1"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
     :> ReqBody '[PlainText] Text
     :> Post '[JSON] EncryptedResponse
 
-routeFareAPI :: Proxy RouteFareAPI
-routeFareAPI = Proxy
-
--- Helper function to transform numbers to strings in JSON
-transformNumbers :: Value -> Value
-transformNumbers (Object obj) = Object $ fmap transformNumbers obj
-transformNumbers (Array array) = Array $ fmap transformNumbers array
-transformNumbers (Number n) = String $ T.pack $ show n -- Convert numbers to strings
-transformNumbers other = other
-
--- Update CRISFareResponse to match the exact format
-data CRISFareResponse = CRISFareResponse
-  { routeFareDetailsList :: [RouteFareDetails]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
--- RouteFareDetails is already correct with its fields
-data RouteFareDetails = RouteFareDetails
-  { routeId :: Int,
-    fareDtlsList :: [FareDetails],
-    maximumValuesList :: Maybe [MaximumValues],
-    allowedValuesList :: Maybe [AllowedValues]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-data FareDetails = FareDetails
-  { ticketFare :: Text,
-    distance :: Maybe Int,
-    ticketTypeCode :: Maybe Text,
-    trainTypeCode :: Maybe Text,
-    classCode :: Maybe Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-data MaximumValues = MaximumValues
-  { item :: Maybe Text,
-    value :: Maybe Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-data AllowedValues = AllowedValues
-  { ticketTypeCode :: Maybe Text,
-    ticketTypeName :: Maybe Text,
-    trainTypeCode :: Maybe Text,
-    trainTypeDescription :: Maybe Text,
-    classCode :: Maybe Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-data DecryptedResponse = DecryptedResponse
-  { routeFareDetailsList :: [RouteFareDetails]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
--- Update getRouteFare to handle this format
+-- Main function
 getRouteFare ::
   ( CoreMetrics m,
     MonadFlow m,
@@ -124,67 +107,25 @@ getRouteFare ::
   m [FRFSUtils.FRFSFare]
 getRouteFare config merchantOperatingCityId request = do
   logInfo $ "Request object: " <> show request
-  let clusterId :: Int = -1
-      suburbanFlag :: Int = 0
-      comboFlag :: Int = 0
-      cacheFlag :: Int = 0
-      modeOfBook :: Int = 2
-  let jsonStr =
-        "{"
-          <> "\"tpAccountId\":\""
-          <> show config.tpAccountId
-          <> "\","
-          <> "\"mobileNo\":\""
-          <> mobileNo request
-          <> "\","
-          <> "\"imeiNo\":\""
-          <> imeiNo request
-          <> "\","
-          <> "\"appCode\":\""
-          <> config.appCode
-          <> "\","
-          <> "\"appSession\":\""
-          <> show (appSession request)
-          <> "\","
-          <> "\"sourceCode\":\""
-          <> sourceCode request
-          <> "\","
-          <> "\"changeOver\":\""
-          <> changeOver request
-          <> "\","
-          <> "\"destCode\":\""
-          <> destCode request
-          <> "\","
-          <> "\"ticketType\":\""
-          <> ticketType request
-          <> "\","
-          <> "\"sourceZone\":\""
-          <> config.sourceZone
-          <> "\","
-          <> "\"via\":\""
-          <> via request
-          <> "\","
-          <> "\"trainType\":"
-          <> maybe "null" (\t -> "\"" <> t <> "\"") (trainType request)
-          <> ","
-          <> "\"routeId\":"
-          <> request.routeId
-          <> ","
-          <> "\"clusterId\":"
-          <> show clusterId
-          <> ","
-          <> "\"suburbanFlag\":"
-          <> show suburbanFlag
-          <> ","
-          <> "\"comboFlag\":"
-          <> show comboFlag
-          <> ","
-          <> "\"cacheFlag\":"
-          <> show cacheFlag
-          <> ","
-          <> "\"modeOfBook\":"
-          <> show modeOfBook
-          <> "}"
+  let typeOfBooking :: Int = 0
+  let fareRequest =
+        object
+          [ "tpAccountId" .= (config.tpAccountId :: Int), -- Explicitly mark as Int
+            "mobileNo" .= mobileNo request,
+            "imeiNo" .= imeiNo request,
+            "appCode" .= config.appCode,
+            "appSession" .= appSession request,
+            "sourceZone" .= config.sourceZone,
+            "sourceCode" .= sourceCode request,
+            "changeOver" .= changeOver request,
+            "destCode" .= destCode request,
+            "ticketType" .= config.ticketType,
+            "via" .= request.via,
+            "typeOfBooking" .= typeOfBooking
+          ]
+  let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
+
+  logInfo $ "JSON string: " <> jsonStr
 
   clientKey <- decrypt config.clientKey
   payload <- encryptPayload jsonStr clientKey
@@ -207,13 +148,16 @@ getRouteFare config merchantOperatingCityId request = do
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
             Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
             Right fareResponse -> pure fareResponse
+
   let firstRouteFareDetails = listToMaybe decryptedResponse.routeFareDetailsList
+
   logInfo $ "FRFS Subway Fare: " <> show firstRouteFareDetails
   let fares = maybe [] (.fareDtlsList) firstRouteFareDetails
+  let routeId = maybe 0 (.routeId) firstRouteFareDetails
   fares `forM` \fare -> do
     let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.ticketFare
     fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.ticketFare)
-    classCode <- fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
+    classCode <- pure fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
     serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
     serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)
     return $
@@ -225,6 +169,17 @@ getRouteFare config merchantOperatingCityId request = do
                 currency = INR
               },
           discounts = [],
+          fareDetails =
+            Just
+              Quote.FRFSFareDetails
+                { providerRouteId = show routeId,
+                  distance = Meters fare.distance,
+                  via = fare.via,
+                  ticketTypeCode = fare.ticketTypeCode,
+                  trainTypeCode = fare.trainTypeCode,
+                  sdkToken = decryptedResponse.sdkData,
+                  appSession = request.appSession
+                },
           vehicleServiceTier =
             FRFSUtils.FRFSVehicleServiceTier
               { serviceTierType = serviceTier._type,
@@ -239,17 +194,5 @@ getRouteFare config merchantOperatingCityId request = do
       let client = ET.client routeFareAPI
        in client (Just $ "Bearer " <> token) (Just "application/json") payload
 
--- sampleRequest :: CRISFareRequest
--- sampleRequest =
---   CRISFareRequest
---     { mobileNo = "9962013253",
---       imeiNo = "ed409d8d764c04f7",
---       appSession = "10",
---       sourceCode = "PER",
---       changeOver = " ",
---       destCode = "TBM",
---       ticketType = "J",
---       via = " ",
---       trainType = Nothing,
---       routeId = "0"
---     }
+routeFareAPI :: Proxy RouteFareAPI
+routeFareAPI = Proxy

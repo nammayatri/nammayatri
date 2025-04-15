@@ -156,6 +156,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
+      Se.Set Beam.bookingAuthCode bookingAuthCode,
       Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
       Se.Set Beam.bppBankCode bppBankCode,
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
@@ -167,6 +168,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
       Se.Set Beam.customerCancelled customerCancelled,
+      Se.Set Beam.deviceId deviceId,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
@@ -185,6 +187,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.osBuildVersion osBuildVersion,
+      Se.Set Beam.osType osType,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.payerVpa payerVpa,

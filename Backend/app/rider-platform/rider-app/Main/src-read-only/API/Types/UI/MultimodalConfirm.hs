@@ -25,15 +25,7 @@ import qualified Lib.JourneyModule.Utils
 import Servant
 import Tools.Auth
 
-data CrisData = CrisData
-  { bookAuthCode :: Kernel.Prelude.Text,
-    deviceId :: Kernel.Prelude.Text,
-    distance :: Kernel.Prelude.Int,
-    osBuildVersion :: Kernel.Prelude.Text,
-    osType :: Kernel.Prelude.Text,
-    trainTypeCode :: Kernel.Prelude.Text,
-    via :: Kernel.Prelude.Text
-  }
+data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, deviceId :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -70,7 +62,7 @@ data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [Journe
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyConfirmReqElement = JourneyConfirmReqElement
-  { crisData :: Kernel.Prelude.Maybe CrisData,
+  { crisSdkResponse :: Kernel.Prelude.Maybe CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
     skipBooking :: Kernel.Prelude.Bool,
     ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int

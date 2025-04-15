@@ -19,8 +19,7 @@ import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
-  { crisSearchData :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.CrisSearchData,
-    fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+  { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     integratedBppConfigId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig),
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

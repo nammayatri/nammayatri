@@ -63,6 +63,7 @@ getFareByOriginDest config fareReq = do
                     currency = INR
                   },
               discounts = [],
+              fareDetails = Nothing,
               vehicleServiceTier =
                 FRFSUtils.FRFSVehicleServiceTier
                   { serviceTierType = Spec.ORDINARY,

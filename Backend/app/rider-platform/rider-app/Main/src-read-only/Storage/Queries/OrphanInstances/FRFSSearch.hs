@@ -22,8 +22,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
-          { crisSearchData = mkCrisSearchData bookAuthCode crisAppSession crisRouteId crisSdkToken deviceId distance osBuildVersion osType trainType via,
-            fromStationId = Kernel.Types.Id.Id fromStationId,
+          { fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id <$> integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
@@ -47,17 +46,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
 instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     Beam.FRFSSearchT
-      { Beam.bookAuthCode = crisSearchData >>= (.bookAuthCode),
-        Beam.crisAppSession = crisSearchData >>= (.crisAppSession),
-        Beam.crisRouteId = crisSearchData >>= (.crisRouteId),
-        Beam.crisSdkToken = crisSearchData >>= (.crisSdkToken),
-        Beam.deviceId = crisSearchData >>= (.deviceId),
-        Beam.distance = crisSearchData >>= (.distance),
-        Beam.osBuildVersion = crisSearchData >>= (.osBuildVersion),
-        Beam.osType = crisSearchData >>= (.osType),
-        Beam.trainType = crisSearchData >>= (.trainType),
-        Beam.via = crisSearchData >>= (.via),
-        Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
+      { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId <$> integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,

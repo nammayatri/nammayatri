@@ -23,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    bookingAuthCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -34,6 +35,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     cashbackPayoutOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cashbackStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus,
     customerCancelled :: Kernel.Prelude.Bool,
+    deviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedPrice :: Kernel.Types.Common.Price,
@@ -54,6 +56,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     journeyRouteDetails :: [Lib.JourneyLeg.Types.MultiModalJourneyRouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    osBuildVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    osType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -76,6 +76,7 @@ data DQuote = DQuote
     routeStations :: [DRouteStation],
     stations :: [DStation],
     discounts :: [DDiscount],
+    fareDetails :: Maybe Quote.FRFSFareDetails,
     _type :: Quote.FRFSQuoteType
   }
 
@@ -320,6 +321,7 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.updatedAt = quotesFromCache.updatedAt,
       Quote.bppDelayedInterest = quotesFromOnSearch.bppDelayedInterest,
       Quote.oldCacheDump,
+      Quote.fareDetails = quotesFromOnSearch.fareDetails,
       Quote.eventDiscountAmount = quotesFromOnSearch.eventDiscountAmount,
       Quote.discountedTickets = quotesFromOnSearch.discountedTickets
     }

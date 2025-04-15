@@ -25,6 +25,7 @@ data FRFSQuote = FRFSQuote
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    fareDetails :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSFareDetails,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -48,6 +49,17 @@ data FRFSQuote = FRFSQuote
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+data FRFSFareDetails = FRFSFareDetails
+  { appSession :: Kernel.Prelude.Int,
+    distance :: Kernel.Types.Common.Meters,
+    providerRouteId :: Kernel.Prelude.Text,
+    sdkToken :: Kernel.Prelude.Text,
+    ticketTypeCode :: Kernel.Prelude.Text,
+    trainTypeCode :: Kernel.Prelude.Text,
+    via :: Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

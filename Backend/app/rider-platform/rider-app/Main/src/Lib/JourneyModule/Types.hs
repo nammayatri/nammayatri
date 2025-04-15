@@ -56,7 +56,6 @@ import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Route as QRoute
@@ -318,7 +317,10 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     availableServiceTiers :: [LegServiceTier],
     tickets :: Maybe [Text],
     providerName :: Maybe Text,
-    crisSdkToken :: Maybe Text
+    sdkToken :: Maybe Text,
+    providerRouteId :: Maybe Text,
+    deviceId :: Maybe Text,
+    ticketTypeCode :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -707,10 +709,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   selectedServiceTier = mbSelectedServiceTier
                 }
         Spec.SUBWAY -> do
-          frfsSearch <- QFRFSSearch.findById booking.searchId >>= fromMaybeM (InternalError $ "frfs search not found for id: " <> show booking.searchId)
-          let crisSdkToken = case frfsSearch.crisSearchData of
-                Nothing -> Nothing
-                Just searchData -> searchData.crisSdkToken
+          mbQuote <- QFRFSQuote.findById booking.quoteId
           return $
             Subway $
               SubwayLegExtraInfo
@@ -718,7 +717,10 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   tickets = Just qrDataList,
                   providerName = Just booking.providerName,
                   availableServiceTiers = [], -- TODO: add available service tiers once we option to upgrade service tier
-                  crisSdkToken = crisSdkToken
+                  sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
+                  deviceId = booking.deviceId, -- required for show cris ticket
+                  providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
+                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode) -- not required for show cris ticket but still sending for future use
                 }
 
 getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
@@ -872,7 +874,10 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                   availableServiceTiers = catMaybes availableServiceTiers,
                   tickets = Nothing,
                   providerName = Nothing,
-                  crisSdkToken = crisSearchData >>= (.crisSdkToken)
+                  sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for cris sdk initiation
+                  deviceId = Nothing, -- not required for cris sdk initiation
+                  providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- required for cris sdk initiation
+                  ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode) -- required for cris sdk initiation
                 }
 
 getServiceTierFromQuote :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSQuote.FRFSQuote -> m (Maybe LegServiceTier)

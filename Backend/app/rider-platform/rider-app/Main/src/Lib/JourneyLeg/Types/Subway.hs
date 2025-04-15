@@ -34,6 +34,7 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    crisSdkResponse :: Maybe ApiTypes.CrisSdkResponse,
     quantity :: Maybe Int
   }
 

@@ -3,7 +3,6 @@ module ExternalBPP.ExternalAPI.CallAPI where
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types
 import Domain.Types.BecknConfig
-import Domain.Types.FRFSSearch as DFRFSSearch
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
@@ -23,7 +22,7 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus as CMRLP
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
-import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV1 as CRISRouteFareV1
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -45,8 +44,8 @@ getProviderName integrationBPPConfig =
     Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
     CRIS _ -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> Maybe (Id DFRFSSearch.FRFSSearch) -> m [FRFSUtils.FRFSFare]
-getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory mbFrfsSearchId = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
   case integrationBPPConfig.providerConfig of
     CMRL config' ->
       CMRLFareByOriginDest.getFareByOriginDest config' $
@@ -64,7 +63,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       mbImeiNumber <- decrypt `mapM` person.imeiNumber
       sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
       let request =
-            CRISRouteFareV1.CRISFareRequestV1
+            CRISRouteFare.CRISFareRequest
               { mobileNo = fromMaybe "9999999999" mbMobileNumber,
                 imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
                 appSession = sessionId,
@@ -73,7 +72,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                 destCode = endStopCode,
                 via = " "
               }
-      resp <- try @_ @SomeException $ CRISRouteFareV1.getRouteFareV1 config' merchanOperatingCity.id request mbFrfsSearchId
+      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
@@ -86,6 +85,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                         currency = INR
                       },
                   discounts = [],
+                  fareDetails = Nothing,
                   vehicleServiceTier =
                     FRFSUtils.FRFSVehicleServiceTier
                       { serviceTierType = Spec.ORDINARY,

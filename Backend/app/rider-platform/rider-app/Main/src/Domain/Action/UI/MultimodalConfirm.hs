@@ -29,7 +29,6 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
-import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
@@ -64,7 +63,6 @@ import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
-import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
@@ -105,15 +103,9 @@ postMultimodalConfirm ::
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
-  let ticketQuantityMap = Map.fromList [(element.journeyLegOrder, fromMaybe 1 element.ticketQuantity) | element <- confirmElements]
   forM_ confirmElements $ \element -> do
     when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder
-
-    whenJust element.crisData $ \crisData -> do
-      requiredJourneyLeg <- QJL.findByJourneyIdAndSequenceNumber journeyId element.journeyLegOrder >>= fromMaybeM (InvalidRequest "Journey leg not found")
-      legSearchId <- requiredJourneyLeg.legSearchId & fromMaybeM (InvalidRequest "Journey leg search not found")
-      QFRFSSearch.updateCrisDataAfterFare (Id legSearchId) (Just crisData.bookAuthCode) (Just crisData.deviceId) (Just crisData.osBuildVersion) (Just crisData.osType) (Just crisData.via) (Just crisData.trainTypeCode) (Just crisData.distance)
-  void $ JM.startJourney forcedBookLegOrder (Just ticketQuantityMap) journey.id
+  void $ JM.startJourney confirmElements forcedBookLegOrder journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   pure Kernel.Types.APISuccess.Success
 
@@ -184,7 +176,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   whenJust mbEstimate $ \estimate -> do
     when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
       throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId}
+    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ JLI.confirm True Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs
 
@@ -270,7 +262,7 @@ postMultimodalRiderLocation personOrMerchantId journeyId req = do
   journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
   forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
     when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
-      void $ JM.startJourney (Just nextLeg.legOrder) Nothing journeyId
+      void $ JM.startJourney [] (Just nextLeg.legOrder) journeyId
   return journeyStatus
 
 postMultimodalJourneyCancel ::

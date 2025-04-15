@@ -23,6 +23,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
+            bookingAuthCode = bookingAuthCode,
             bppBankAccountNumber = bppBankAccountNumber,
             bppBankCode = bppBankCode,
             bppDelayedInterest = bppDelayedInterest,
@@ -34,6 +35,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             cashbackPayoutOrderId = cashbackPayoutOrderId,
             cashbackStatus = cashbackStatus,
             customerCancelled = customerCancelled,
+            deviceId = deviceId,
             discountedTickets = discountedTickets,
             discountsJson = discountsJson,
             estimatedPrice = Kernel.Types.Common.mkPrice currency estimatedPrice,
@@ -54,6 +56,8 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             journeyRouteDetails = Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            osBuildVersion = osBuildVersion,
+            osType = osType,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             payerVpa = payerVpa,
@@ -83,6 +87,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
   toTType' (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
+        Beam.bookingAuthCode = bookingAuthCode,
         Beam.bppBankAccountNumber = bppBankAccountNumber,
         Beam.bppBankCode = bppBankCode,
         Beam.bppDelayedInterest = bppDelayedInterest,
@@ -94,6 +99,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.cashbackPayoutOrderId = cashbackPayoutOrderId,
         Beam.cashbackStatus = cashbackStatus,
         Beam.customerCancelled = customerCancelled,
+        Beam.deviceId = deviceId,
         Beam.discountedTickets = discountedTickets,
         Beam.discountsJson = discountsJson,
         Beam.estimatedPrice = (.amount) estimatedPrice,
@@ -113,6 +119,8 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.journeyOnInitDone = journeyOnInitDone,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.osBuildVersion = osBuildVersion,
+        Beam.osType = osType,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.payerVpa = payerVpa,
