@@ -76,6 +76,7 @@ initData =
         , currentLat : 0.0
         , currentLon : 0.0
         , minimumEtaDistance : Nothing
+        , isMinimumEtaDistanceAvailable : Nothing
         }
     }
 
