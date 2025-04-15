@@ -178,3 +178,11 @@ data TransportStation = TransportStation
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdatePaymentOrderReq = UpdatePaymentOrderReq {amount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdatePaymentOrderResp = UpdatePaymentOrderResp {sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.SDKPayloadDetails}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
