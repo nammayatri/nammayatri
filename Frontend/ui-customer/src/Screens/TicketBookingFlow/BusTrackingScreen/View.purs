@@ -694,7 +694,7 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
   , textView
     $ [ text etaTextInMinutesOrDistance
       , margin $ MarginLeft 8
-      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && Mb.isJust mbETADistance
+      , visibility $ boolToVisibility $ not showOnlyHeight && not state.props.individualBusTracking && (Mb.isJust state.props.isMinimumEtaDistanceAvailable)
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   -- , linearLayout [weight 1.0] []
@@ -717,12 +717,14 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight mbETADista
         Mb.Nothing -> state.data.nearestStopFromCurrentLoc
     
     etaTextInMinutesOrDistance = 
-      case mbETATime of
-        Mb.Just etaTimeInSeconds -> 
-          "Next bus in " <> (HU.secondsToHms etaTimeInSeconds)
-        Mb.Nothing ->
-          "Next bus is " <> (JB.fromMetersToKm (Mb.fromMaybe 0 mbETADistance)) <> " away"
-
+        case mbETATime of
+          Mb.Just etaTimeInSeconds -> 
+            "Next bus in " <> (HU.secondsToHms etaTimeInSeconds)
+          Mb.Nothing ->
+            case mbETADistance of
+              Mb.Just distance ->
+                "Next bus is " <> (JB.fromMetersToKm distance) <> " away"
+              Mb.Nothing ->  "No bus is coming towards your stop"
     
     -- roundedNextStopDistance :: String
     -- roundedNextStopDistance = 

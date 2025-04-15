@@ -224,6 +224,9 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp)) state =
             , props
               { busNearSourceData = DT.snd finalMap
               , minimumEtaDistance = calculateMinETADistance trackingData
+              , isMinimumEtaDistanceAvailable = case calculateMinETADistance trackingData of
+                  Mb.Just _ ->  Mb.Just true
+                  Mb.Nothing -> Mb.Just false
               }
             }
           [ do

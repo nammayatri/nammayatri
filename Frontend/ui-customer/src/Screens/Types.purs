@@ -3394,7 +3394,8 @@ type BusTrackingScreenProps = {
   destinationSequenceNumber :: Maybe Int,
   currentLat :: Number,
   currentLon :: Number,
-  minimumEtaDistance :: Maybe Int
+  minimumEtaDistance :: Maybe Int,
+  isMinimumEtaDistanceAvailable :: Maybe Boolean
 }
 
 data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen
