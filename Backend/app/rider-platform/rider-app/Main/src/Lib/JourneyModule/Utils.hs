@@ -408,6 +408,15 @@ data BusRouteDetails = BusRouteDetails
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
+measureLatency :: MonadFlow m => m a -> Text -> m a
+measureLatency action label = do
+  startTime <- getCurrentTime
+  result <- action
+  endTime <- getCurrentTime
+  let latency = diffUTCTime endTime startTime
+  logDebug $ label <> " Latency: " <> show latency <> " seconds"
+  return result
+
 getBusRouteDetails ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -472,7 +481,7 @@ getBusRouteDetails (Just routeCode) (Just originStopCode) (Just destinationStopC
               mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
               fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
               toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
-          possibleRoutes <- findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId
+          possibleRoutes <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfigId) "findPossibleRoutes"
           return $ Just $ BusRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
         _ -> return Nothing
     _ -> return Nothing
