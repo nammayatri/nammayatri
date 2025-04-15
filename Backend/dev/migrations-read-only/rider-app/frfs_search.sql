@@ -140,3 +140,15 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN book_auth_code text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN via text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN train_type text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN distance integer ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN cris_route_id integer ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN cris_app_session integer ;
+
+

@@ -334,6 +334,10 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [duration, distance, endLocation]
       where: id
+    findByJourneyIdAndSequenceNumber:
+      kvFunction: findOneWithKV
+      where:
+        and: [journeyId, sequenceNumber]
 
   intermediateTransformers:
     fromTType:

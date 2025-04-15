@@ -64,6 +64,7 @@ import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
+import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
@@ -105,9 +106,13 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
   let ticketQuantityMap = Map.fromList [(element.journeyLegOrder, fromMaybe 1 element.ticketQuantity) | element <- confirmElements]
-  forM_ confirmElements $ \element ->
-    when element.skipBooking $
-      JM.skipLeg journeyId element.journeyLegOrder
+  forM_ confirmElements $ \element -> do
+    when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder
+
+    whenJust element.crisData $ \crisData -> do
+      requiredJourneyLeg <- QJL.findByJourneyIdAndSequenceNumber journeyId element.journeyLegOrder >>= fromMaybeM (InvalidRequest "Journey leg not found")
+      legSearchId <- requiredJourneyLeg.legSearchId & fromMaybeM (InvalidRequest "Journey leg search not found")
+      QFRFSSearch.updateCrisDataAfterFare (Id legSearchId) (Just crisData.bookAuthCode) (Just crisData.deviceId) (Just crisData.osBuildVersion) (Just crisData.osType) (Just crisData.via) (Just crisData.trainTypeCode) (Just crisData.distance)
   void $ JM.startJourney forcedBookLegOrder (Just ticketQuantityMap) journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   pure Kernel.Types.APISuccess.Success

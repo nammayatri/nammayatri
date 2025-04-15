@@ -71,14 +71,24 @@ updateIsCancelled (Id reqId) isDeleted = do
     [Se.Set Beam.isDeleted isDeleted]
     [Se.Is Beam.id (Se.Eq reqId)]
 
-updateSdkTokenById :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> m ()
-updateSdkTokenById (Id reqId) crisSdkToken = do
+updateSdkTokenById :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> Maybe Int -> Maybe Int -> m ()
+updateSdkTokenById (Id reqId) crisSdkToken crisRouteId crisAppSession = do
   updateOneWithKV
-    [Se.Set Beam.crisSdkToken crisSdkToken]
+    [ Se.Set Beam.crisSdkToken crisSdkToken,
+      Se.Set Beam.crisRouteId crisRouteId,
+      Se.Set Beam.crisAppSession crisAppSession
+    ]
     [Se.Is Beam.id (Se.Eq reqId)]
 
-updateEncryptedTicketDataById :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> m ()
-updateEncryptedTicketDataById (Id reqId) crisEncryptedTicketData = do
+updateCrisDataAfterFare :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int -> m ()
+updateCrisDataAfterFare (Id reqId) bookAuthCode deviceId osBuildVersion osType via trainType distance = do
   updateOneWithKV
-    [Se.Set Beam.crisEncryptedTicketData crisEncryptedTicketData]
+    [ Se.Set Beam.bookAuthCode bookAuthCode,
+      Se.Set Beam.deviceId deviceId,
+      Se.Set Beam.osBuildVersion osBuildVersion,
+      Se.Set Beam.osType osType,
+      Se.Set Beam.via via,
+      Se.Set Beam.trainType trainType,
+      Se.Set Beam.distance distance
+    ]
     [Se.Is Beam.id (Se.Eq reqId)]
