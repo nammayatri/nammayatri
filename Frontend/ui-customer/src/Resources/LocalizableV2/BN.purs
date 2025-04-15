@@ -1765,7 +1765,7 @@ getBn = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI আইডি অবৈধ। দয়া করে পরীক্ষা করে আবার প্রবেশ করুন"
     , go_back: "ফিরে যান"
     , yay_you_have_referral_earnings: "ইয়ে! আপনার রেফারেল উপার্জন রয়েছে"
-    , your_earnings_n_: "আপনার উপার্জন \n ₹"
+    , your_earnings_n_: "আপনার উপার্জন "
     , collect_now: "এখন সংগ্রহ করুন"
     , submitted: "জমা দেওয়া হয়েছে"
     , updated: "আপডেট হয়েছে!"

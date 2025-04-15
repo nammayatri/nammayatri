@@ -1765,7 +1765,7 @@ getHi = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI आईडी अमान्य है। कृपया जांचें और पुनः दर्ज करें"
     , go_back: "वापस जाएं"
     , yay_you_have_referral_earnings: "ये! आपके पास रेफरल कमाई है"
-    , your_earnings_n_: "आपकी कमाई \n ₹"
+    , your_earnings_n_: "आपकी कमाई "
     , collect_now: "अभी प्राप्त करें"
     , submitted: "प्रस्तुत किया गया"
     , updated: "अद्यतन किया गया!"

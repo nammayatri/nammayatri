@@ -1765,7 +1765,7 @@ getTa = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI ஐடி தவறானது. தயவுசெய்து சரிபார்த்து மீண்டும் உள்ளிடவும்"
     , go_back: "திரும்பிச் செல்லவும்"
     , yay_you_have_referral_earnings: "யே! உங்களுக்குப் பரிந்துரை வருமானம் உள்ளது"
-    , your_earnings_n_: "உங்கள் வருமானம் \n ₹"
+    , your_earnings_n_: "உங்கள் வருமானம் "
     , collect_now: "இப்போது சேகரிக்கவும்"
     , submitted: "சமர்ப்பிக்கப்பட்டது"
     , updated: "புதுப்பிக்கப்பட்டது!"
