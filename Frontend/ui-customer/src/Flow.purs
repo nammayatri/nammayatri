@@ -7505,6 +7505,10 @@ fcmHandler notification state notificationBody= do
     "DRIVER_HAS_REACHED_DESTINATION" -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { driverInfoCardState { destinationReached = true} } })
       homeScreenFlow
+    "PAYOUT_REWARD" -> do
+      response <- Remote.getProfileBT ""
+      modifyScreenState $ GlobalFlowCacheType (\globaFlowCache -> globaFlowCache{profileResp = Just response})
+      homeScreenFlow
     _ -> homeScreenFlow
 
 
