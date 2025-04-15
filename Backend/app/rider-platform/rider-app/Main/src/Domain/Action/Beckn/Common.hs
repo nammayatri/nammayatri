@@ -1160,7 +1160,8 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
           QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
 
           referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
-          sendPNToReferredByPerson referredByPerson
+          sendPNToPerson referredByPerson True
+          sendPNToPerson person_ False
           handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD dailyPayoutCount
           handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE dailyPayoutCount
     Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found for cityId: " <> merchantOperatingCityId.getId <> " and category: " <> show vehicleCategory
@@ -1238,8 +1239,11 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
       let dailyPayoutCountKey = getDailyPayoutCountKey personId
       Redis.setExp dailyPayoutCountKey (dailyPayoutCount + 1) expirationPeriodForDay
 
-    sendPNToReferredByPerson person = do
-      let pnKey :: Text = maybe "REFERRAL_REWARD_ADD_VPA" (const "REFERRAL_REWARD") (person.payoutVpa)
+    sendPNToPerson person oldCustomer = do
+      let pnKey =
+            if oldCustomer
+              then maybe "REFERRAL_REWARD_ADD_VPA" (const "REFERRAL_REWARD") (person.payoutVpa)
+              else maybe "REFERRED_BY_REWARD_ADD_VPA" (const "REFERRED_BY_REWARD") (person.payoutVpa)
       mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}

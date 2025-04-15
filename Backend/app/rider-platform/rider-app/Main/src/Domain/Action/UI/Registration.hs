@@ -551,7 +551,7 @@ verify tokenId req = do
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
-  when (isNothing person.referralCode) $ do
+  when (isNothing person.customerReferralCode) $ do
     newCustomerReferralCode <- generateCustomerReferralCode
     checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
     when (isNothing checkIfReferralCodeExists) $

@@ -3,11 +3,11 @@ INSERT INTO atlas_app.merchant_push_notification (
 )
 SELECT
     'PAYOUT_REWARD',
-    'REFERRAL_REWARD_ADD_VPA',
+    'REFERRED_BY_REWARD_ADD_VPA',
     moc.merchant_id,
     moc.id,
     '💸 Ka-ching! You Just Earned a Reward',
-    'Your friend''s first ride is complete! Add UPI ID and earn referral reward.',
+    'Add UPI ID and earn the reward. Thanks for using Namma Yatri, Keep supporting our drivers !!',
     'ENGLISH',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
@@ -19,11 +19,11 @@ INSERT INTO atlas_app.merchant_push_notification (
 )
 SELECT
     'PAYOUT_REWARD',
-    'REFERRAL_REWARD',
+    'REFERRED_BY_REWARD',
     moc.merchant_id,
     moc.id,
     '💸 Ka-ching! You Just Earned a Reward',
-    'Your friend''s first ride is complete! Keep the buzz going—refer more friends and earn for every new rider.',
+    'Thanks for using Namma Yatri, Keep supporting our drivers !!',
     'ENGLISH',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
