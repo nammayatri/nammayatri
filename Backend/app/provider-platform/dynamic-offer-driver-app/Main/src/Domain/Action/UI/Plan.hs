@@ -496,7 +496,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
     let mbMandateId = (.mandateId) =<< driverPlan
     whenJust mbMandateId $ \mandateId -> do
       fork "Cancelling paused Mandate" $ do
-        void $ Payment.mandateRevoke merchantId merchantOpCityId paymentServiceName (Payment.MandateRevokeReq {mandateId = mandateId.getId})
+        void $ Payment.mandateRevoke merchantId merchantOpCityId paymentServiceName (Payment.MandateRevokeReq {mandateId = mandateId.getId, personId = Just $ getId driverId})
   unless (autoPayStatus == Just DI.PENDING) $ do
     updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (Just DI.PENDING) Nothing
   when (isNothing driverPlan) $ do
