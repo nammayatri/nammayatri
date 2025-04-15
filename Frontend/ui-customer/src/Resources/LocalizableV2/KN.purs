@@ -1762,7 +1762,7 @@ getKn = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI ID ಅಮಾನ್ಯವಾಗಿದೆ. ದಯವಿಟ್ಟು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮರುನಮೂದಿಸಿ"
     , go_back: "ಹಿಂದಿರುಗಿ"
     , yay_you_have_referral_earnings: "ಯೇ! ನಿಮಗೆ ರೆಫರಲ್ ಆದಾಯವಿದೆ"
-    , your_earnings_n_: "ನಿಮ್ಮ ಆದಾಯ \n ₹"
+    , your_earnings_n_: "ನಿಮ್ಮ ಆದಾಯ "
     , collect_now: "ಈಗ ಸಂಗ್ರಹಿಸಿ"
     , submitted: "ಸಲ್ಲಿಸಲಾಗಿದೆ"
     , updated: "ನವೀಕರಿಸಲಾಗಿದೆ!"

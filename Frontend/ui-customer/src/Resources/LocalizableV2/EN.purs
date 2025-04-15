@@ -1762,7 +1762,7 @@ getEn = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI ID is invalid. Please check and re-enter"
     , go_back: "Go Back"
     , yay_you_have_referral_earnings: "Yay! You have referral earnings"
-    , your_earnings_n_: "Your Earnings \n ₹"
+    , your_earnings_n_: "Your Earnings "
     , collect_now: "Collect Now"
     , submitted: "Submitted"
     , updated: "Updated!"

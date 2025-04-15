@@ -87,7 +87,7 @@ type State
     }
 
 initialState :: State
-initialState = { isEdit:false, isSkipable: false, verificationStatus: UpiNotVerified, vpa: "", existingVpa: Nothing, title: getString COLLECT_REFERRAL_EARNINGS, subTitle: getString VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS, coverImage: fetchImage COMMON_ASSET "ny_ic_referral_r2r_cover_2" }
+initialState = { isEdit: false, isSkipable: false, verificationStatus: UpiNotVerified, vpa: "", existingVpa: Nothing, title: getString COLLECT_REFERRAL_EARNINGS, subTitle: getString VERIFY_YOUR_UPI_ID_TO_RECEIVE_YOUR_REFERRAL_EARNINGS, coverImage: fetchImage COMMON_ASSET "ny_ic_referral_r2r_cover_2" }
 
 -- View -> The main screen call initializing initial actin and state with the screen
 screen :: State -> Screen Action State ScreenOutput
@@ -109,43 +109,58 @@ view push state =
     , padding $ Padding 24 24 24 24
     , onClick push $ const CloseUPI
     ]
-    [ scrollView
-        [ height WRAP_CONTENT
+    [ linearLayout
+        [ height if EHC.os == "IOS" then MATCH_PARENT else WRAP_CONTENT
         , width MATCH_PARENT
+        , onClick push $ const CloseUPI
+        , gravity CENTER
         ]
-        [ linearLayout
-            [ height WRAP_CONTENT
+        [ scrollView
+            [ height if EHC.os == "IOS" then MATCH_PARENT else WRAP_CONTENT
             , width MATCH_PARENT
-            , orientation VERTICAL
-            , padding $ Padding 16 0 16 16
-            , background Colors.white900
-            , gravity CENTER
-            , cornerRadius 10.0
-            , clipChildren true
+            , onClick push $ const CloseUPI
             ]
-            $ [ imageView
-                  [ imageWithFallback $ state.coverImage
-                  , height $ V $ if state.isSkipable then 144 else (EHC.screenWidth unit) - 150
-                  , width $ V $ if state.isSkipable then 144 else (EHC.screenWidth unit) - 80
-                  , margin $ if state.isSkipable then MarginVertical 16 16 else MarginTop 0
-                  ]
-              , textView
-                  $ [ text $ state.title
-                    , color Colors.black800
+            [ linearLayout
+                [ height $ if EHC.os == "IOS" then V $ ((EHC.screenHeight unit) / 100) * 90 else WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                , onClick push $ const CloseUPI
+                ]
+                [ linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    , padding $ Padding 16 0 16 16
+                    , background Colors.white900
                     , gravity CENTER
+                    , cornerRadius 10.0
+                    , clipChildren true
                     ]
-                  <> FontStyle.h2 TypoGraphy
-              , textView
-                  $ [ text $ state.subTitle
-                    , margin $ MarginTop 8
-                    , color Colors.black700
-                    , gravity CENTER
-                    ]
-                  <> FontStyle.body1 TypoGraphy
-              , referralView push state
-              , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-              ]
-            <> if state.isSkipable then [ PrimaryButton.view (push <<< MaybeLaterPrimaryButtonAC) (maybeLaterPrimaryButtonConfig state) ] else []
+                    $ [ imageView
+                          [ imageWithFallback $ state.coverImage
+                          , height $ V $ if state.isSkipable then 144 else (EHC.screenWidth unit) - 150
+                          , width $ V $ if state.isSkipable then 144 else (EHC.screenWidth unit) - 80
+                          , margin $ if state.isSkipable then MarginVertical 16 16 else MarginTop 0
+                          ]
+                      , textView
+                          $ [ text $ state.title
+                            , color Colors.black800
+                            , gravity CENTER
+                            ]
+                          <> FontStyle.h2 TypoGraphy
+                      , textView
+                          $ [ text $ state.subTitle
+                            , margin $ MarginTop 8
+                            , color Colors.black700
+                            , gravity CENTER
+                            ]
+                          <> FontStyle.body1 TypoGraphy
+                      , referralView push state
+                      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
+                      ]
+                    <> if state.isSkipable then [ PrimaryButton.view (push <<< MaybeLaterPrimaryButtonAC) (maybeLaterPrimaryButtonConfig state) ] else []
+                ]
+            ]
         ]
     ]
 
@@ -317,7 +332,7 @@ maybeLaterPrimaryButtonConfig state =
     , id = "ReferralPayoutScreenMaybeLaterPB"
     , background = Colors.white900
     , enableRipple = true
-    , stroke = "0," <>  Colors.white900
+    , stroke = "0," <> Colors.white900
     , rippleColor = Colors.rippleShade
     }
 
@@ -338,7 +353,6 @@ data Action
   | PrimaryButtonActionController PrimaryButton.Action
   | MaybeLaterPrimaryButtonAC PrimaryButton.Action
 
-
 instance showAction :: Show Action where
   show VerifyVPA = "VerifyVPA"
   show (VpaTextChanged _) = "VpaTextChanged"
@@ -356,14 +370,13 @@ eval (VpaTextChanged upi) state = continue state { vpa = upi, verificationStatus
 
 eval VerifyVPA state = updateAndExit state { verificationStatus = UpiVerifying } $ VerifyVPAOut state
 
-eval (PrimaryButtonActionController act) state =
-  case act of
-    PrimaryButton.OnClick -> exit $ AddVpa state
-    _ -> continue state
-eval (MaybeLaterPrimaryButtonAC act) state =
-  case act of
-    PrimaryButton.OnClick -> exit $ Close state
-    _ -> continue state
+eval (PrimaryButtonActionController act) state = case act of
+  PrimaryButton.OnClick -> exit $ AddVpa state
+  _ -> continue state
+
+eval (MaybeLaterPrimaryButtonAC act) state = case act of
+  PrimaryButton.OnClick -> exit $ Close state
+  _ -> continue state
 
 eval _ state = continue state
 
@@ -374,25 +387,25 @@ upiNotVerificationScreen state = do
     VerifyVPAOut updatedState -> do
       resp <- lift $ lift $ Remote.verifyVpa updatedState.vpa
       case resp of
-        Right (VerifyVPAResp respData) -> do 
-          upiNotVerificationScreen $ updatedState{verificationStatus = if fromMaybe false respData.isValid then UpiVerified else UpiFailed, vpa = fromMaybe state.vpa respData.vpa}
+        Right (VerifyVPAResp respData) -> do
+          upiNotVerificationScreen $ updatedState { verificationStatus = if fromMaybe false respData.isValid then UpiVerified else UpiFailed, vpa = fromMaybe state.vpa respData.vpa }
         Left resp -> do
-          upiNotVerificationScreen $ updatedState{verificationStatus = UpiFailed}
+          upiNotVerificationScreen $ updatedState { verificationStatus = UpiFailed }
     Close _ -> pure Nothing
     AddVpa updatedState -> do
       resp <- lift $ lift $ Remote.updateVpa updatedState.vpa
-      let _ = JB.hideKeyboardOnNavigation true
+      let
+        _ = JB.hideKeyboardOnNavigation true
       case resp of
-        Right _ -> do 
-          void $ lift $ lift $ fork $ do
-            resp <- Remote.getProfile ""
-            case resp of
-              Right respData -> void $ modifyState $ \(GlobalState state) -> GlobalState $ state{globalFlowCache{profileResp = Just respData} }
-              Left _ -> pure unit
-            pure unit
+        Right _ -> do
+          void $ lift $ lift $ fork
+            $ do
+                resp <- Remote.getProfile ""
+                case resp of
+                  Right respData -> void $ modifyState $ \(GlobalState state) -> GlobalState $ state { globalFlowCache { profileResp = Just respData } }
+                  Left _ -> pure unit
+                pure unit
           pure $ Just updatedState.vpa
-          -- modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUpiSuccess = true, showUPIPopUp = false}, data{ existingVpa = Just updatedState.vpa}})
-        Left resp -> upiNotVerificationScreen $ updatedState{verificationStatus = UpiFailed}
-
+        -- modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUpiSuccess = true, showUPIPopUp = false}, data{ existingVpa = Just updatedState.vpa}})
+        Left resp -> upiNotVerificationScreen $ updatedState { verificationStatus = UpiFailed }
     _ -> upiNotVerificationScreen state
-

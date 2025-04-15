@@ -166,6 +166,7 @@ earningsView push state =
             , cornerRadius 24.0
             , height WRAP_CONTENT
             , width MATCH_PARENT
+            , gravity CENTER
             , padding $ Padding 16 16 16 16
             ]
             [ linearLayout
@@ -187,8 +188,8 @@ earningsView push state =
                     <> FontStyle.body3 TypoGraphy
                 ]
             , linearLayout
-                [ width WRAP_CONTENT
-                , gravity CENTER
+                [ width $ if EHC.os == "IOS" then V $ ((EHC.screenWidth unit) / 100) * 18 else WRAP_CONTENT
+                , gravity RIGHT
                 , height MATCH_PARENT
                 ]
                 [ linearLayout
@@ -283,7 +284,7 @@ transactionView push state =
                                     , orientation VERTICAL
                                     ]
                                     [ linearLayout
-                                        [ width WRAP_CONTENT
+                                        [ width MATCH_PARENT
                                         , height WRAP_CONTENT
                                         , gravity CENTER
                                         , rippleColor Colors.rippleShade
@@ -325,7 +326,7 @@ transactionView push state =
                                         <> FontStyle.body1 TypoGraphy
                                     ]
                                 , linearLayout
-                                    [ width WRAP_CONTENT
+                                    [ width $ if EHC.os == "IOS" then V $ ((EHC.screenWidth unit) / 100) * 23 else WRAP_CONTENT
                                     , height WRAP_CONTENT
                                     , orientation VERTICAL
                                     , gravity RIGHT
@@ -794,15 +795,28 @@ collectEarningView push state =
       , gravity CENTER
       , visibility $ boolToVisibility $ (isJust state.data.existingVpa || isPayoutPending)
       ]
-      [ textView
-          $ [ text if isPayoutPending then getString YAY_YOU_HAVE_REFERRAL_EARNINGS else getString YOUR_EARNINGS_N_ <> show totalEarning
-            , color if isPayoutPending then Colors.blue900 else Colors.black800
-            , ellipsize true
-            , padding $ PaddingBottom 3
-            , margin $ MarginRight 10
-            , weight 2.0
-            ]
-          <> FontStyle.h2 TypoGraphy
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , weight 2.0
+          , orientation VERTICAL
+          ]
+          [ textView
+              $ [ text if isPayoutPending then getString YAY_YOU_HAVE_REFERRAL_EARNINGS else getString YOUR_EARNINGS_N_
+                , color if isPayoutPending then Colors.blue900 else Colors.black800
+                , padding $ PaddingBottom 3
+                , margin $ MarginRight 10
+                , height WRAP_CONTENT
+                ]
+              <> FontStyle.h2 TypoGraphy
+          , textView
+              $ [ text if isPayoutPending then "" else "₹ " <> show totalEarning
+                , color if isPayoutPending then Colors.blue900 else Colors.black800
+                , padding $ PaddingBottom 3
+                , margin $ MarginRight 10
+                , height WRAP_CONTENT
+                ]
+              <> FontStyle.h2 TypoGraphy
+          ]
       , if isPayoutPending then collectNowView push state else detailsView push state
       ]
 
@@ -820,7 +834,7 @@ collectNowView push state =
         <> if (getLanguageLocale languageKey) == "TA_IN" then
             [ weight 1.0 ]
           else
-            []
+            [ weight 1.0 ]
     )
     [ textView
         $ [ text $ getString COLLECT_NOW

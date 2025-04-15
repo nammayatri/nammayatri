@@ -1762,7 +1762,7 @@ getOd = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI ID ଅବୈଧ। ଦୟାକରି ଯାଞ୍ଚ କରି ପୁନଃ ଭରଣ କରନ୍ତୁ"
     , go_back: "ପଛକୁ ଯାଆନ୍ତୁ"
     , yay_you_have_referral_earnings: "ଯେ! ଆପଣଙ୍କ ପାଖରେ ରେଫେରେଲ୍ ଆର୍ଜନ ଅଛି"
-    , your_earnings_n_: "ଆପଣଙ୍କ ଆୟ \n ₹"
+    , your_earnings_n_: "ଆପଣଙ୍କ ଆୟ "
     , collect_now: "ଏବେ ସଂଗ୍ରହ କରନ୍ତୁ"
     , submitted: "ଦାଖଲ ହୋଇଛି"
     , updated: "ଅଦ୍ୟତିତ ହୋଇଛି!"
