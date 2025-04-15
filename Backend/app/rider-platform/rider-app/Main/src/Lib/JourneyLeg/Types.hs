@@ -60,10 +60,14 @@ data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
 
 data CrisSearchData = CrisSearchData
   { crisSdkToken :: Maybe Text,
-    crisEncryptedTicketData :: Maybe Text,
     bookAuthCode :: Maybe Text,
     deviceId :: Maybe Text,
-    osBuildVersion :: Maybe Int,
-    osType :: Maybe Text
+    osBuildVersion :: Maybe Text,
+    osType :: Maybe Text,
+    distance :: Maybe Int,
+    trainType :: Maybe Text,
+    crisAppSession :: Maybe Int,
+    via :: Maybe Text,
+    crisRouteId :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

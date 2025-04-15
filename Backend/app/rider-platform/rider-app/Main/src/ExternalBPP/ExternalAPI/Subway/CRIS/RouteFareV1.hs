@@ -151,9 +151,9 @@ getRouteFareV1 config merchantOperatingCityId request mbFrfsSearchId = do
             Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
             Right fareResponse -> pure fareResponse
 
-  whenJust mbFrfsSearchId $ \frfsSeacrhId -> QFRFSSearch.updateSdkTokenById frfsSeacrhId (Just decryptedResponse.sdkData)
-
   let firstRouteFareDetails = listToMaybe decryptedResponse.routeFareDetailsList
+  whenJust firstRouteFareDetails $ \fareDetails ->
+    whenJust mbFrfsSearchId $ \frfsSeacrhId -> QFRFSSearch.updateSdkTokenById frfsSeacrhId (Just decryptedResponse.sdkData) (Just fareDetails.routeId) (Just request.appSession)
   logInfo $ "FRFS Subway Fare: " <> show firstRouteFareDetails
   let fares = maybe [] (.fareDtlsList) firstRouteFareDetails
   fares `forM` \fare -> do

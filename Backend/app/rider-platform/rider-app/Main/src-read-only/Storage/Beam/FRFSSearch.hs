@@ -14,11 +14,15 @@ import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
   { bookAuthCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    crisEncryptedTicketData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    crisAppSession :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    crisRouteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     crisSdkToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    osBuildVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    distance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    osBuildVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     osType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    trainType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    via :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

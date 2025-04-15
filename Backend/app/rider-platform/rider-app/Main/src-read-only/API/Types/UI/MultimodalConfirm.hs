@@ -25,7 +25,15 @@ import qualified Lib.JourneyModule.Utils
 import Servant
 import Tools.Auth
 
-data CrisData = CrisData {bookAuthCode :: Kernel.Prelude.Text, deviceId :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
+data CrisData = CrisData
+  { bookAuthCode :: Kernel.Prelude.Text,
+    deviceId :: Kernel.Prelude.Text,
+    distance :: Kernel.Prelude.Int,
+    osBuildVersion :: Kernel.Prelude.Text,
+    osType :: Kernel.Prelude.Text,
+    trainTypeCode :: Kernel.Prelude.Text,
+    via :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -5,6 +5,7 @@ import BecknV2.FRFS.Enums as Enums
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
+import Data.Text
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format
@@ -26,6 +27,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Station as QStation
+import Text.Read
 
 -- Encrypted request/response types for API
 data EncryptedRequest = EncryptedRequest
@@ -157,6 +159,10 @@ getBookJourney config request = do
   let jsonStr = constructBookingJson request
   decryptedKey <- decrypt config.clientKey -- Decrypt the key first
   encryptedPayload <- encryptPayload jsonStr decryptedKey
+  let mobilePrefix = T.take 5 request.mob
+  let mobileSuffix = T.takeEnd 5 request.mob
+  agentKey <- (decrypt config.agentDataDecryptionKey)
+  let decryptedAgentDataKey = mobileSuffix <> agentKey <> mobilePrefix
 
   -- 2. Make API call with encrypted request
   let encReq =
@@ -170,7 +176,7 @@ getBookJourney config request = do
   -- 3. Handle the encrypted response
   if respCode encResponse == "0"
     then do
-      case decryptResponseData encResponse.agentTicketData decryptedKey of
+      case decryptResponseData encResponse.agentTicketData decryptedAgentDataKey of
         Left err -> throwError $ InternalError $ "Failed to decrypt ticket data: " <> T.pack err
         Right decryptedJson -> do
           logInfo $ "Decrypted ticket data: " <> decryptedJson
@@ -211,17 +217,25 @@ createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlo
 createOrder config booking = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbMobileNumber <- decrypt `mapM` person.mobileNumber
-  let sessionId = 10 -- TODO: correct this
   fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "From station not found")
   toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError "To station not found")
   frfsSearch <- QFRFSSearch.findById booking.searchId >>= fromMaybeM (SearchRequestNotFound booking.searchId.getId)
 
   -- Handle crisSearchData properly based on its actual type
   crisSearchData <- fromMaybeM (InternalError "CRIS search data not found") frfsSearch.crisSearchData
-  osBuildVersion <- fromMaybeM (InternalError "OS build version not found") crisSearchData.osBuildVersion
+  osBuildVersionText <- fromMaybeM (InternalError "OS build version not found") crisSearchData.osBuildVersion
+  osBuildVersion <- case readMaybe (T.unpack osBuildVersionText) of
+    Nothing -> throwError $ InternalError $ "Invalid OS build version: " <> osBuildVersionText
+    Just ver -> pure ver
+
   osType <- fromMaybeM (InternalError "OS type not found") crisSearchData.osType
   deviceId <- fromMaybeM (InternalError "Device ID not found") crisSearchData.deviceId
   bookAuthCode <- fromMaybeM (InternalError "Booking auth code not found") crisSearchData.bookAuthCode
+  trainTypeCode <- fromMaybeM (InternalError "trainTypeCode not found") crisSearchData.trainType
+  via <- fromMaybeM (InternalError "via not found") crisSearchData.via
+  distance <- fromMaybeM (InternalError "distance not found") crisSearchData.distance
+  crisRouteId <- fromMaybeM (InternalError "crisRouteId not found") crisSearchData.crisRouteId
+  appSession <- fromMaybeM (InternalError "appSession not found") crisSearchData.crisAppSession
 
   frfsTicketBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InternalError "FRFS ticket booking payment not found")
   classCode <- getFRFSVehicleServiceTier booking
@@ -230,34 +244,34 @@ createOrder config booking = do
 
   let bookJourneyReq =
         CRISBookingRequest
-          { agentAccountId = "3700001",
+          { agentAccountId = show config.tpAccountId,
             mob = fromMaybe "9999999999" mbMobileNumber,
             imei = deviceId,
-            appCode = "CUMTA",
-            sessionID = sessionId,
+            appCode = config.appCode,
+            sessionID = appSession,
             source = fromStation.code,
             destination = toStation.code,
-            via = " ",
-            routeID = 2012009481,
+            via,
+            routeID = crisRouteId,
             classCode = classCode,
-            trainType = "O",
-            tktType = "J",
+            trainType = trainTypeCode,
+            tktType = config.ticketType,
             journeyDate = T.pack $ formatTime defaultTimeLocale "%d_%m_%y" startTime,
             adult = booking.quantity,
             child = 0,
             senoirMen = 0,
             senoirWoman = 0,
             fare = round booking.price.amount.getHighPrecMoney,
-            paymentCode = "CUMTA",
-            osBuildVersion = osBuildVersion, -- Convert Text to Int
+            paymentCode = config.appCode,
+            osBuildVersion = osBuildVersion,
             bookingMode = 2,
             paymentStatus = 1,
-            registrationID = "3700001",
+            registrationID = show config.tpAccountId,
             sourceStationName = fromStation.name,
             destinationStationName = toStation.name,
-            zone = "SR",
+            zone = config.sourceZone,
             osType = osType,
-            distance = 10,
+            distance,
             chargeableAmount = round booking.price.amount.getHighPrecMoney,
             tktTypeID = 1,
             agentAppTxnID = show frfsTicketBookingPayment.paymentOrderId,
@@ -280,7 +294,7 @@ createOrder config booking = do
                 vehicleNumber = Nothing,
                 description = Just bookJourneyResp.journeyComment,
                 qrData = bookJourneyResp.encryptedTicketData,
-                qrStatus = "",
+                qrStatus = "UNCLAIMED",
                 qrValidity = qrValidityTime,
                 qrRefreshAt = Nothing
               }
@@ -289,108 +303,44 @@ createOrder config booking = do
 
 -- Helper function to construct JSON string
 constructBookingJson :: CRISBookingRequest -> Text
-constructBookingJson req =
-  "{"
-    <> "\"agentAccountId\":\""
-    <> req.agentAccountId
-    <> "\","
-    <> "\"mob\":\""
-    <> req.mob
-    <> "\","
-    <> "\"imei\":\""
-    <> req.imei
-    <> "\","
-    <> "\"appCode\":\""
-    <> req.appCode
-    <> "\","
-    <> "\"sessionID\":"
-    <> show req.sessionID
-    <> ","
-    <> "\"source\":\""
-    <> req.source
-    <> "\","
-    <> "\"destination\":\""
-    <> req.destination
-    <> "\","
-    <> "\"via\":\""
-    <> req.via
-    <> "\","
-    <> "\"routeID\":"
-    <> show req.routeID
-    <> ","
-    <> "\"classCode\":\""
-    <> req.classCode
-    <> "\","
-    <> "\"trainType\":\""
-    <> req.trainType
-    <> "\","
-    <> "\"tktType\":\""
-    <> req.tktType
-    <> "\","
-    <> "\"journeyDate\":\""
-    <> req.journeyDate
-    <> "\","
-    <> "\"adult\":"
-    <> show req.adult
-    <> ","
-    <> "\"child\":"
-    <> show req.child
-    <> ","
-    <> "\"senoirMen\":"
-    <> show req.senoirMen
-    <> ","
-    <> "\"senoirWoman\":"
-    <> show req.senoirWoman
-    <> ","
-    <> "\"fare\":"
-    <> show req.fare
-    <> ","
-    <> "\"paymentCode\":\""
-    <> req.paymentCode
-    <> "\","
-    <> "\"osBuildVersion\":"
-    <> show req.osBuildVersion
-    <> ","
-    <> "\"bookingMode\":"
-    <> show req.bookingMode
-    <> ","
-    <> "\"paymentStatus\":"
-    <> show req.paymentStatus
-    <> ","
-    <> "\"registrationID\":\""
-    <> req.registrationID
-    <> "\","
-    <> "\"sourceStationName\":\""
-    <> req.sourceStationName
-    <> "\","
-    <> "\"destinationStationName\":\""
-    <> req.destinationStationName
-    <> "\","
-    <> "\"zone\":\""
-    <> req.zone
-    <> "\","
-    <> "\"osType\":\""
-    <> req.osType
-    <> "\","
-    <> "\"distance\":"
-    <> show req.distance
-    <> ","
-    <> "\"chargeableAmount\":"
-    <> show req.chargeableAmount
-    <> ","
-    <> "\"tktTypeID\":"
-    <> show req.tktTypeID
-    <> ","
-    <> "\"agentAppTxnID\":\""
-    <> req.agentAppTxnID
-    <> "\","
-    <> "\"bankDeductedAmount\":"
-    <> show req.bankDeductedAmount
-    <> ","
-    <> "\"bookAuthCode\":\""
-    <> req.bookAuthCode
-    <> "\""
-    <> "}"
+constructBookingJson request = do
+  let bookingRequest =
+        object
+          [ "agentAccountId" .= request.agentAccountId,
+            "mob" .= request.mob,
+            "imei" .= request.imei,
+            "appCode" .= request.appCode,
+            "sessionID" .= request.sessionID,
+            "source" .= request.source,
+            "destination" .= request.destination,
+            "via" .= request.via,
+            "routeID" .= (request.routeID :: Int), -- Explicitly mark as Int
+            "classCode" .= request.classCode,
+            "trainType" .= request.trainType,
+            "tktType" .= request.tktType,
+            "journeyDate" .= request.journeyDate,
+            "adult" .= (request.adult :: Int),
+            "child" .= (request.child :: Int),
+            "senoirMen" .= (request.senoirMen :: Int),
+            "senoirWoman" .= (request.senoirWoman :: Int),
+            "fare" .= (request.fare :: Int),
+            "paymentCode" .= request.paymentCode,
+            "osBuildVersion" .= (request.osBuildVersion :: Int),
+            "bookingMode" .= (request.bookingMode :: Int),
+            "paymentStatus" .= (request.paymentStatus :: Int),
+            "registrationID" .= request.registrationID,
+            "sourceStationName" .= request.sourceStationName,
+            "destinationStationName" .= request.destinationStationName,
+            "zone" .= request.zone,
+            "osType" .= request.osType,
+            "distance" .= (request.distance :: Int),
+            "chargeableAmount" .= (request.chargeableAmount :: Int),
+            "tktTypeID" .= (request.tktTypeID :: Int),
+            "agentAppTxnID" .= request.agentAppTxnID,
+            "bookAuthCode" .= request.bookAuthCode,
+            "bankDeductedAmount" .= (request.bankDeductedAmount :: Int)
+          ]
+  decodeUtf8 $ LBS.toStrict $ encode bookingRequest
 
 getFRFSVehicleServiceTier ::
   (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>

@@ -72,11 +72,15 @@ FRFSSearch:
     journeyRouteDetails: {}
     crisSearchData:
       crisSdkToken: Maybe Text
-      crisEncryptedTicketData: Maybe Text
       bookAuthCode: Maybe Text
       deviceId: Maybe Text
       osBuildVersion: Maybe Int
       osType: Maybe Text
+      crisRouteId: Maybe Int
+      distance: Maybe Int
+      trainType: Maybe Text
+      via: Maybe Text
+      crisAppSession: Maybe Int
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -87,11 +91,15 @@ FRFSSearch:
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
     crisSdkToken: (crisSearchData >>= (.crisSdkToken))|E
-    crisEncryptedTicketData: (crisSearchData >>= (.crisEncryptedTicketData))|E
     bookAuthCode: (crisSearchData >>= (.bookAuthCode))|E
     deviceId: (crisSearchData >>= (.deviceId))|E
     osBuildVersion: (crisSearchData >>= (.osBuildVersion))|E
     osType: (crisSearchData >>= (.osType))|E
+    crisRouteId: (crisSearchData >>= (.crisRouteId))|E
+    distance: (crisSearchData >>= (.distance))|E
+    trainType: (crisSearchData >>= (.trainType))|E
+    via: (crisSearchData >>= (.via))|E
+    crisAppSession: (crisSearchData >>= (.crisAppSession))|E
 
   intermediateTransformers:
     fromTType:

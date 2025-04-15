@@ -132,6 +132,9 @@ types:
     osBuildVersion: Text
     deviceId: Text
     bookAuthCode: Text
+    trainTypeCode: Text
+    distance: Int
+    via: Text
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"

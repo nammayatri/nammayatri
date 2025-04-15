@@ -56,6 +56,7 @@ import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Route as QRoute
@@ -316,7 +317,8 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
   { routeInfo :: [SubwayLegRouteInfo],
     availableServiceTiers :: [LegServiceTier],
     tickets :: Maybe [Text],
-    providerName :: Maybe Text
+    providerName :: Maybe Text,
+    crisSdkToken :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -705,13 +707,18 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   selectedServiceTier = mbSelectedServiceTier
                 }
         Spec.SUBWAY -> do
+          frfsSearch <- QFRFSSearch.findById booking.searchId >>= fromMaybeM (InternalError $ "frfs search not found for id: " <> show booking.searchId)
+          let crisSdkToken = case frfsSearch.crisSearchData of
+                Nothing -> Nothing
+                Just searchData -> searchData.crisSdkToken
           return $
             Subway $
               SubwayLegExtraInfo
                 { routeInfo = subwayRouteInfo',
                   tickets = Just qrDataList,
                   providerName = Just booking.providerName,
-                  availableServiceTiers = [] -- TODO: add available service tiers once we option to upgrade service tier
+                  availableServiceTiers = [], -- TODO: add available service tiers once we option to upgrade service tier
+                  crisSdkToken = crisSdkToken
                 }
 
 getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [MultiModalJourneyRouteDetails] -> m [MetroLegRouteInfo]
@@ -864,7 +871,8 @@ mkLegInfoFromFrfsSearchRequest FRFSSR.FRFSSearch {..} fallbackFare distance dura
                 { routeInfo = subwayRouteInfo',
                   availableServiceTiers = catMaybes availableServiceTiers,
                   tickets = Nothing,
-                  providerName = Nothing
+                  providerName = Nothing,
+                  crisSdkToken = crisSearchData >>= (.crisSdkToken)
                 }
 
 getServiceTierFromQuote :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSQuote.FRFSQuote -> m (Maybe LegServiceTier)

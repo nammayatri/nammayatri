@@ -45,7 +45,8 @@ data CRISConfig = CRISConfig
     appCode :: Text,
     tpAccountId :: Int,
     sourceZone :: Text,
-    ticketType :: Text
+    ticketType :: Text,
+    agentDataDecryptionKey :: EncryptedField 'AsEncrypted Text
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
