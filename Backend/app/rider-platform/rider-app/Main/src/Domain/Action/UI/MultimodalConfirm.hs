@@ -21,6 +21,8 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
     getMultimodalOrderGetLegTierOptions,
+    getMultimodalOrderGetBusTierOptions,
+    postMultimodalPaymentUpdateOrder,
   )
 where
 
@@ -30,9 +32,11 @@ import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
+import Domain.Types.FRFSTicketBookingPayment (FRFSTicketBookingPayment (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -42,7 +46,10 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import qualified Kernel.External.Payment.Interface.Types as KT
+import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
@@ -55,11 +62,14 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
@@ -72,6 +82,7 @@ import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
+import qualified Tools.Payment as TPayment
 
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -150,6 +161,81 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
           { journeyId,
             paymentOrder = Nothing
           }
+
+postMultimodalPaymentUpdateOrder ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    API.Types.UI.MultimodalConfirm.UpdatePaymentOrderReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.UpdatePaymentOrderResp
+  )
+postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
+  frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingsArr
+  let flattenedPayments = concat frfsBookingsPaymentArr
+  let mbPaymentOrderId = show . paymentOrderId <$> listToMaybe flattenedPayments
+  case mbPaymentOrderId of
+    Nothing ->
+      return $
+        ApiTypes.UpdatePaymentOrderResp
+          { sdkPayload = Nothing
+          }
+    Just paymentOrderId -> do
+      let updateReq =
+            KT.OrderUpdateReq
+              { amount = req.amount,
+                orderShortId = show paymentOrderId
+              }
+      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking updateReq
+      mbUpdatedOrder <- QOrder.updateAmount (Id paymentOrderId) req.amount
+      logInfo $ "mbUpdatedOrder: " <> show mbUpdatedOrder
+      case mbUpdatedOrder of
+        Nothing ->
+          return $
+            ApiTypes.UpdatePaymentOrderResp
+              { sdkPayload = Nothing
+              }
+        Just updatedOrder -> do
+          sdkPayload <- buildUpdateOrderSDKPayload req.amount updatedOrder
+          return $
+            ApiTypes.UpdatePaymentOrderResp
+              { sdkPayload = sdkPayload
+              }
+
+buildUpdateOrderSDKPayload :: EncFlow m r => HighPrecMoney -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayloadDetails)
+buildUpdateOrderSDKPayload amount order = do
+  case (order.clientAuthToken, order.clientAuthTokenExpiry) of
+    (Just token, Just clientAuthTokenExpiry) -> do
+      clientAuthToken <- decrypt token
+      return $
+        Just
+          Juspay.SDKPayloadDetails
+            { clientId = order.clientId,
+              amount = show amount,
+              merchantId = order.paymentMerchantId,
+              clientAuthToken,
+              clientAuthTokenExpiry = clientAuthTokenExpiry,
+              environment = order.environment,
+              options_getUpiDeepLinks = order.getUpiDeepLinksOption,
+              lastName = Nothing,
+              action = Just "updateOrder",
+              customerId = Just order.personId.getId,
+              returnUrl = order.returnUrl,
+              currency = order.currency,
+              firstName = Nothing,
+              customerPhone = Nothing,
+              customerEmail = Nothing,
+              orderId = Just order.shortId.getShortId,
+              description = order.description,
+              createMandate = order.createMandate,
+              mandateMaxAmount = show <$> order.mandateMaxAmount,
+              mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
+              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
+            }
+    (_, _) -> return Nothing
 
 postMultimodalOrderSwitchTaxi ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -335,7 +421,7 @@ getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
     if journey.isPaymentSuccess /= Just True
       then do
         personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-        allJourneyFrfsBookings <- QFRFSTicketBooking.findAByJourneyIdCond (Just journeyId)
+        allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
         frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId)) allJourneyFrfsBookings
         let anyFirstBooking = listToMaybe frfsBookingStatusArr
             paymentOrder =

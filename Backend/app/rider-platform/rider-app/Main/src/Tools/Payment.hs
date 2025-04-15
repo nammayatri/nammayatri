@@ -16,6 +16,7 @@
 module Tools.Payment
   ( module Reexport,
     createOrder,
+    updateOrder,
     orderStatus,
     refundOrder,
     PaymentServiceType (..),
@@ -66,6 +67,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     isSplitEnabled,
     orderStatus,
     updateAmountInPaymentIntent,
+    updateOrder,
     updatePaymentMethodInIntent,
   )
 import qualified Kernel.External.Payment.Interface as Payment
@@ -81,6 +83,9 @@ import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
+
+updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
+updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
