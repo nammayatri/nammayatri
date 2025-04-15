@@ -65,6 +65,18 @@ findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
 findByMobileNumberAndMerchantAndRole :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
 findByMobileNumberAndMerchantAndRole mobileNumberHash (Id merchantId) role = findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In role]]
 
+updateImeiNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Kernel.Prelude.Text) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateImeiNumber imeiNumber id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.imeiNumberEncrypted (imeiNumber <&> unEncrypted . (.encrypted)),
+      Se.Set BeamP.imeiNumberHash (imeiNumber <&> (.hash)),
+      Se.Set BeamP.updatedAt _now
+    ]
+    [Se.Is BeamP.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
   when

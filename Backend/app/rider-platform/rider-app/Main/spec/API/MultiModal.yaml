@@ -132,7 +132,6 @@ types:
   CrisSdkResponse:
     osType: Text
     osBuildVersion: Text
-    deviceId: Text
     bookAuthCode: Text
 
   LegServiceTierOptionsResp:

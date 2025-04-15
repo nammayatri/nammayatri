@@ -351,11 +351,6 @@ Person:
       params: [liveActivityToken]
       where: id
 
-    updateImeiNumber:
-      kvFunction: updateWithKV
-      params: [imeiNumber]
-      where: id
-
   extraOperations:
     - EXTRA_QUERY_FILE
 

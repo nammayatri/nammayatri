@@ -363,7 +363,6 @@ FRFSTicketBooking:
     integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
     recentLocationId: Maybe (Id RecentLocation)
     bookingAuthCode: Maybe Text
-    deviceId: Maybe Text
     osType: Maybe Text
     osBuildVersion: Maybe Text
 

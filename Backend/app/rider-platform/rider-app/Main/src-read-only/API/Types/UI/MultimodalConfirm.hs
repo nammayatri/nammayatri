@@ -25,7 +25,7 @@ import qualified Lib.JourneyModule.Utils
 import Servant
 import Tools.Auth
 
-data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, deviceId :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
+data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

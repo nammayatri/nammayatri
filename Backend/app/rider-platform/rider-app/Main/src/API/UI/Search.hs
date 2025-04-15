@@ -52,6 +52,7 @@ import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
@@ -112,6 +113,7 @@ type API =
       :> Header "client-id" (Id DC.Client)
       :> Header "x-device" Text
       :> Header "is-dashboard-request" Bool
+      :> Header "imei-number" Text
       :> Post '[JSON] MultimodalSearchResp
 
 type SearchAPI =
@@ -197,11 +199,14 @@ handleBookingCancellation merchantId _personId sReqId = do
       void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
     _ -> pure ()
 
-multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler MultimodalSearchResp
-multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI $
+multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> FlowHandler MultimodalSearchResp
+multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber = withFlowHandlerAPI $
   withPersonIdLogTag personId $ do
     checkSearchRateLimit personId
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+    whenJust mbImeiNumber $ \imeiNumber -> do
+      encryptedImeiNumber <- encrypt imeiNumber
+      Person.updateImeiNumber (Just encryptedImeiNumber) personId
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initateJourney = fromMaybe False mbInitateJourney

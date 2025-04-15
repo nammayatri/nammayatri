@@ -28,6 +28,7 @@ import Domain.Types.Station as DTS
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
 import EulerHS.Prelude (safeHead)
+import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
@@ -58,6 +59,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
 import qualified Storage.Queries.Transformers.Booking as QTB
@@ -710,6 +712,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
+          mbPerson <- QPerson.findById booking.riderId
+          imeiNumber <- decrypt `mapM` (mbPerson >>= (.imeiNumber))
           return $
             Subway $
               SubwayLegExtraInfo
@@ -718,7 +722,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   providerName = Just booking.providerName,
                   availableServiceTiers = [], -- TODO: add available service tiers once we option to upgrade service tier
                   sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
-                  deviceId = booking.deviceId, -- required for show cris ticket
+                  deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
                   ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode) -- not required for show cris ticket but still sending for future use
                 }

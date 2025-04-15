@@ -596,7 +596,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req ticketQuantity 
                 isSkipped = Just False,
                 quantity = ticketQuantity',
                 bookingAuthCode = crisSdkResponse <&> (.bookAuthCode),
-                deviceId = crisSdkResponse <&> (.deviceId),
                 osType = crisSdkResponse <&> (.osType),
                 osBuildVersion = crisSdkResponse <&> (.osBuildVersion),
                 recentLocationId = mbSearch >>= (.recentLocationId),

@@ -160,13 +160,13 @@ getBookJourney config request = do
   encryptedPayload <- encryptPayload jsonStr decryptedKey
   let mobilePrefix = T.take 5 request.mob
   let mobileSuffix = T.takeEnd 5 request.mob
-  agentKey <- (decrypt config.agentDataDecryptionKey)
+  agentKey <- decrypt config.agentDataDecryptionKey
   let decryptedAgentDataKey = mobileSuffix <> agentKey <> mobilePrefix
 
   -- 2. Make API call with encrypted request
   let encReq =
         EncryptedRequest
-          { app = "CUMTA",
+          { app = config.appCode,
             data_ = encryptedPayload
           }
 
@@ -220,10 +220,12 @@ createOrder config booking = do
   toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError "To station not found")
   quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
 
-  (osBuildVersion, osType, deviceId, bookAuthCode) <- case (booking.osBuildVersion, booking.osType, booking.deviceId, booking.bookingAuthCode) of
-    (Just osBuildVersion, Just osType, Just deviceId, Just bookingAuthCode) -> return (osBuildVersion, osType, deviceId, bookingAuthCode)
-    _ -> throwError $ InternalError ("Invalid booking data: " <> show booking.osBuildVersion <> " " <> show booking.osType <> " " <> show booking.deviceId <> " " <> show booking.bookingAuthCode)
+  (osBuildVersion, osType, bookAuthCode) <- case (booking.osBuildVersion, booking.osType, booking.bookingAuthCode) of
+    (Just osBuildVersion, Just osType, Just bookingAuthCode) -> return (osBuildVersion, osType, bookingAuthCode)
+    _ -> throwError $ InternalError ("Invalid booking data: " <> show booking.osBuildVersion <> " " <> show booking.osType <> " " <> show booking.bookingAuthCode)
 
+  mbImeiNumber <- decrypt `mapM` person.imeiNumber
+  let deviceId = fromMaybe "ed409d8d764c04f7" mbImeiNumber
   (trainTypeCode, via, distance, crisRouteId, appSession) <-
     case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.via), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession)) of
       (Just trainTypeCode, Just via, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, via, distance, crisRouteId, appSession)
@@ -269,7 +271,7 @@ createOrder config booking = do
             bookAuthCode = bookAuthCode,
             bankDeductedAmount = round booking.price.amount.getHighPrecMoney
           }
-
+  logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
 
   qrValidityTime <- case parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S" (T.unpack bookJourneyResp.validUntil) of
