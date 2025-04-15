@@ -10,7 +10,7 @@ import Kernel.Prelude
 import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnumAndList)
 
-data ConditionalChargesCategories = SAFETY_PLUS_CHARGES
+data ConditionalChargesCategories = SAFETY_PLUS_CHARGES | NO_CHARGES
   deriving (Eq, Ord, ToJSON, FromJSON, ToSchema, Generic, Show, Read)
   deriving (PrettyShow) via Showable ConditionalChargesCategories
 
