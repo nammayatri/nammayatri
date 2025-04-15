@@ -398,13 +398,13 @@ upiNotVerificationScreen state = do
         _ = JB.hideKeyboardOnNavigation true
       case resp of
         Right _ -> do
-          void $ lift $ lift $ fork
-            $ do
-                resp <- Remote.getProfile ""
-                case resp of
-                  Right respData -> void $ modifyState $ \(GlobalState state) -> GlobalState $ state { globalFlowCache { profileResp = Just respData } }
-                  Left _ -> pure unit
-                pure unit
+          void $ lift $ lift do
+            resp <- Remote.getProfile ""
+            case resp of
+              Right respData -> void $ modifyState $ \(GlobalState state) -> GlobalState $ state { globalFlowCache { profileResp = Just respData } }
+              Left _ -> pure unit
+            pure unit
+          let _ = EHC.setText (EHC.getNewIDWithTag "VpaEditText") ""
           pure $ Just updatedState.vpa
         -- modifyScreenState $ ReferralPayoutScreenStateType (\referralPayoutScreen -> referralPayoutScreen{props{showUpiSuccess = true, showUPIPopUp = false}, data{ existingVpa = Just updatedState.vpa}})
         Left resp -> upiNotVerificationScreen $ updatedState { verificationStatus = UpiFailed }
