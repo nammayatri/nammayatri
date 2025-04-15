@@ -64,7 +64,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
       let request =
             CRISRouteFare.CRISFareRequest
-              { mobileNo = fromMaybe "9999999999" mbMobileNumber,
+              { mobileNo = mbMobileNumber,
                 imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
                 appSession = sessionId,
                 sourceCode = startStopCode,

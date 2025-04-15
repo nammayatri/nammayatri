@@ -35,7 +35,7 @@ data EncryptedResponse = EncryptedResponse
 
 -- Request type with updated fields
 data CRISFareRequest = CRISFareRequest
-  { mobileNo :: Text,
+  { mobileNo :: Maybe Text,
     imeiNo :: Text,
     appSession :: Int,
     sourceCode :: Text,
@@ -108,10 +108,11 @@ getRouteFare ::
 getRouteFare config merchantOperatingCityId request = do
   logInfo $ "Request object: " <> show request
   let typeOfBooking :: Int = 0
+  let mobileNo = request.mobileNo >>= (readMaybe @Int . T.unpack)
   let fareRequest =
         object
           [ "tpAccountId" .= (config.tpAccountId :: Int), -- Explicitly mark as Int
-            "mobileNo" .= mobileNo request,
+            "mobileNo" .= (fromMaybe 9999999999 mobileNo),
             "imeiNo" .= imeiNo request,
             "appCode" .= config.appCode,
             "appSession" .= appSession request,
