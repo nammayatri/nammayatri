@@ -1765,7 +1765,7 @@ getTe = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI ID చెల్లదు. దయచేసి తనిఖీ చేసి మళ్లీ నమోదు చేయండి"
     , go_back: "తిరిగి వెళ్లండి"
     , yay_you_have_referral_earnings: "యే! మీకు రిఫరల్ సంపాదన ఉంది"
-    , your_earnings_n_: "మీ ఆదాయం \n ₹"
+    , your_earnings_n_: "మీ ఆదాయం "
     , collect_now: "ఇప్పుడే సేకరించండి"
     , submitted: "సమర్పించబడింది"
     , updated: "నవీకరించబడింది!"

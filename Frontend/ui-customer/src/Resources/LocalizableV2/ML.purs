@@ -1766,7 +1766,7 @@ getMl = Keymap {
     , upi_id_is_invalid_please_check_and_reenter: "UPI ഐഡി അസാധുവാണ്. ദയവായി പരിശോധിച്ച് വീണ്ടും നൽകുക"
     , go_back: "തിരികെ പോകുക"
     , yay_you_have_referral_earnings: "യേ! നിങ്ങൾക്ക് റഫറൽ വരുമാനം ലഭിച്ചിട്ടുണ്ട്"
-    , your_earnings_n_: "നിങ്ങളുടെ വരുമാനം \n ₹"
+    , your_earnings_n_: "നിങ്ങളുടെ വരുമാനം "
     , collect_now: "ഇപ്പോൾ ശേഖരിക്കുക"
     , submitted: "സമർപ്പിച്ചു"
     , updated: "അപ്ഡേറ്റ് ചെയ്തു!"
