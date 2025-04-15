@@ -110,7 +110,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     callPayoutService payoutOrder payoutConfig = do
       let personId = Id payoutOrder.customerId
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
+      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand, personId = Just $ getId personId}
           serviceName = DEMSC.PayoutService TPayout.Juspay
           createPayoutOrderStatusCall = Payout.payoutOrderStatus person.merchantId person.merchantOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) createPayoutOrderStatusReq createPayoutOrderStatusCall

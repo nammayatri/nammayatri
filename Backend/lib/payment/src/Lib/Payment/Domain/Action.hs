@@ -523,7 +523,7 @@ orderStatusService personId orderId orderStatusCall = do
   -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   unless (personId == order.personId) $ throwError NotAnExecutor
-  let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
+  let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId, personId = Just $ getId order.personId}
   now <- getCurrentTime
   orderStatusResp <- orderStatusCall orderStatusReq -- api call
   case orderStatusResp of
@@ -921,7 +921,7 @@ payoutStatusService ::
   m PayoutPaymentStatus
 payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayoutOrderStatusCall = do
   _ <- QPayoutOrder.findByOrderId createPayoutOrderStatusReq.orderId >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId)) -- validation
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId, mbExpand = createPayoutOrderStatusReq.mbExpand}
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId, mbExpand = createPayoutOrderStatusReq.mbExpand, personId = Just $ getId _personId}
   statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
   payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
   pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
