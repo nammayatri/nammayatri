@@ -32,6 +32,7 @@ data DetectionData
   | MissedStopDetection MissedStopDetectionData
   | RouteDeviationDetection RouteDeviationDetectionData
   | OppositeDirectionDetection OppositeDirectionDetectionData
+  | TripNotStartedDetection TripNotStartedDetectionData
   deriving (Show, Eq, Ord, Read, Generic, ToSchema)
 
 data OverSpeedingDetectionData = OverSpeedingDetectionData {location :: LatLong, speed :: Double}
@@ -71,6 +72,11 @@ data OppositeDirectionDetectionData = OppositeDirectionDetectionData
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data TripNotStartedDetectionData = TripNotStartedDetectionData
+  { location :: LatLong
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 instance FromJSON DetectionData where
   parseJSON = withObject "DetectionData" $ \obj ->
     ( OverSpeedingDetection <$> obj .: "overSpeedingDetection"
@@ -84,6 +90,8 @@ instance FromJSON DetectionData where
       <|> ( RouteDeviationDetection <$> obj .: "routeDeviationDetection"
           )
       <|> ( OppositeDirectionDetection <$> obj .: "oppositeDirectionDetection"
+          )
+      <|> ( TripNotStartedDetection <$> obj .: "tripNotStartedDetection"
           )
 
 instance ToJSON DetectionData where
@@ -100,6 +108,8 @@ instance ToJSON DetectionData where
       object ["routeDeviationDetection" .= data']
     OppositeDirectionDetection data' ->
       object ["oppositeDirectionDetection" .= data']
+    TripNotStartedDetection data' ->
+      object ["tripNotStartedDetection" .= data']
 
 violationDetection :: ViolationDetectionReq -> Flow APISuccess
 violationDetection ViolationDetectionReq {..} = do
@@ -142,4 +152,9 @@ violationDetection ViolationDetectionReq {..} = do
         let requestTitle = "Opposite Direction"
         let requestBody = "Opposite Direction Detected"
         let requestData = OppositeDirection OppositeDirectionData {..}
+        return (requestTitle, requestBody, requestData)
+      TripNotStartedDetection TripNotStartedDetectionData {..} -> do
+        let requestTitle = "Trip Not Started"
+        let requestBody = "Trip Not Started Detected"
+        let requestData = TripNotStarted TripNotStartedData {..}
         return (requestTitle, requestBody, requestData)
