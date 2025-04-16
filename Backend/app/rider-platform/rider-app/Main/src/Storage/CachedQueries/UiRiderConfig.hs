@@ -46,7 +46,7 @@ findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId = do
         cacheAllTollsByMerchantOperatingCity merchantOperatingCityId os platform /=<< Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId
   case config' of
     Just config -> do
-      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.UI_RIDER os platform) localTime Nothing toss
+      (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.RIDER_CONFIG (LYT.UiConfig os platform)) localTime Nothing toss
       resp <- LYTU.runLogics allLogics config
       case (fromJSON resp.result :: Result UiRiderConfig) of
         Success dpc'' -> pure (Just dpc'', version)
@@ -68,3 +68,10 @@ makeRiderUiConfigKey mocid os plt = "CachedQueries:UiRiderConfig:moc:" <> getId 
 --------- Queries Reuqiring No Caching --------------------
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UiRiderConfig -> m ()
 create = Queries.create
+
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UiRiderConfig -> m ()
+updateByPrimaryKey = Queries.updateByPrimaryKey
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> DeviceType -> YType.PlatformType -> m ()
+clearCache mocid dt pt =
+  Hedis.withCrossAppRedis $ Hedis.del (makeRiderUiConfigKey mocid dt pt)
