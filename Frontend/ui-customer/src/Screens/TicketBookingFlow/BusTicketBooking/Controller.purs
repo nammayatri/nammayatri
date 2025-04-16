@@ -51,10 +51,10 @@ import Effect.Uncurried (runEffectFn4)
 import Data.Lens ((^.))
 import Accessor (_lat, _lon, _routeCode)
 import Data.Foldable (for_)
-import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe (unsafePerformEffect)
-
-
+import Control.Monad.Except.Trans (lift)
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Engineering.Helpers.LogEvent (logEvent)
 
 
 instance showAction :: Show Action where
@@ -101,8 +101,7 @@ eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTic
 eval GoBack state = exit $ GoToHomeScreen state
 
 eval SearchButtonClick state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_clicked_search_Location_bus"
-      _ = spy "ny_user_clicked_search_Location_bus" "ny_user_clicked_search_Location_bus"
+  void $ pure $ JB.firebaseLogEvent "ny_user_clicked_search_Location_bus"
   updateAndExit state $ GoToSearchLocationScreenForRoutes state ST.Src
 
 eval (BusTicketBookingListRespAC bookingList) state =

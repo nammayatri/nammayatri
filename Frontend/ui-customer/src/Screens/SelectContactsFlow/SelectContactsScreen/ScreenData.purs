@@ -18,6 +18,12 @@ module Screens.SelectContactsFlow.SelectContactsScreen.ScreenData where
 import Prelude (Unit)
 import Data.Maybe (Maybe(..))
 import Screens.Types (NewContacts, NewContactsProp)
+import Foreign.Object (empty)
+import Foreign.Object (Object)
+import Foreign (Foreign,unsafeFromForeign)
+import Foreign.Class (class Decode, class Encode)
+
+
 
 initData :: SelectContactsScreenState
 initData =
@@ -28,6 +34,7 @@ initData =
       selectedContacts : [],
       alreadySelectedContacts : [],
       contactSelectionLimit : 3
+    , logField : empty
     },
     props : {
       showContacts : false
@@ -45,7 +52,8 @@ type SelectContactsScreenData = {
   prestoListContacts :: Array NewContactsProp,
   selectedContacts :: Array NewContacts,
   alreadySelectedContacts :: Array NewContacts,
-  contactSelectionLimit :: Int
+  contactSelectionLimit :: Int,
+  logField :: Object Foreign
 }
 
 type SelectContactsScreenProps = {

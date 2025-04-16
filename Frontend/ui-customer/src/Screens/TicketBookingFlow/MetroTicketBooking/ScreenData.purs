@@ -22,6 +22,7 @@ import Data.Maybe as Mb
 import Data.Array 
 import Services.API as API
 import Data.Maybe (Maybe(..))
+import Foreign.Object (empty)
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -45,6 +46,7 @@ initData = {
   , eventDiscountAmount : Mb.Nothing
   , discounts : []
   , applyDiscounts : Nothing
+  , logField : empty
   },
   props: {
     isLimitExceeded : false

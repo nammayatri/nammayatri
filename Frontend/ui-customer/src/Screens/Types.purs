@@ -59,6 +59,8 @@ import Common.Types.App (FeedbackAnswer)
 import Styles.Types
 import Control.Monad.Except (runExcept, except)
 import Data.Either (Either(..))
+import Effect.Unsafe (unsafePerformEffect)
+import Foreign.Object (empty)
 
 type Contacts = {
   name :: String,
@@ -2285,6 +2287,7 @@ type MetroTicketDetailsScreenData = {
 , vehicleType :: String
 , route :: Maybe (Array FRFSRouteAPI)
 , transactionId :: String
+, logField :: Object Foreign
 }
 
 type MetroTicketInfo = {
@@ -2881,6 +2884,7 @@ type MetroTicketBookingScreenData = {
   , searchRideType :: API.SearchRideType
   , discounts :: Array API.FRFSDiscountRes
   , applyDiscounts :: Maybe (Array API.FRFSDiscountReq)
+  , logField :: Object Foreign
 }
 
 type MetroTicketBookingScreenProps = {
@@ -3403,7 +3407,7 @@ type BusTrackingScreenProps = {
   isMinimumEtaDistanceAvailable :: Maybe Boolean
 }
 
-data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen
+data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen | StopSelection | NoStopsFound
 
 derive instance genericPreviousScreenForTracking :: Generic PreviousScreenForTracking _
 instance eqPreviousScreenForTracking :: Eq PreviousScreenForTracking where eq = genericEq

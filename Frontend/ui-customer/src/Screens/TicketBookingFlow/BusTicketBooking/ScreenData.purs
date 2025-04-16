@@ -28,7 +28,7 @@ initData =
     , ticketServiceType : API.METRO
     , ticketDetailsState : Nothing
     , busDetailsArray : []
-    , logField : empty
+    , logField : empty    
     }
   , props: {
     srcLat :  0.0,

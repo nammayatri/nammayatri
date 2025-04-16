@@ -7447,6 +7447,7 @@ busTicketBookingFlow = do
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
       let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
       -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
+      void $ pure $ JB.firebaseLogEvent "ys_user_entered_tracking_screen"
       ----------------------------
       void $ lift $ lift $ toggleLoader true
       res <- lift $ lift $ Remote.getMetroStatus bookingId
