@@ -10,11 +10,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetMemberAssociationT f = FleetMemberAssociationT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    fleetMemberId :: (B.C f Kernel.Prelude.Text),
-    fleetOwnerId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    fleetMemberId :: B.C f Kernel.Prelude.Text,
+    fleetOwnerId :: B.C f Kernel.Prelude.Text,
+    isFleetOwner :: B.C f Kernel.Prelude.Bool,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -24,6 +25,6 @@ instance B.Table FleetMemberAssociationT where
 
 type FleetMemberAssociation = FleetMemberAssociationT Identity
 
-$(enableKVPG (''FleetMemberAssociationT) [('fleetMemberId)] [[('fleetOwnerId)]])
+$(enableKVPG ''FleetMemberAssociationT ['fleetMemberId] [['fleetOwnerId]])
 
-$(mkTableInstances (''FleetMemberAssociationT) "fleet_member_association")
+$(mkTableInstances ''FleetMemberAssociationT "fleet_member_association")

@@ -20,6 +20,7 @@ instance FromTType' Beam.FleetMemberAssociation Domain.Types.FleetMemberAssociat
             enabled = enabled,
             fleetMemberId = fleetMemberId,
             fleetOwnerId = fleetOwnerId,
+            isFleetOwner = isFleetOwner,
             updatedAt = updatedAt
           }
 
@@ -30,5 +31,6 @@ instance ToTType' Beam.FleetMemberAssociation Domain.Types.FleetMemberAssociatio
         Beam.enabled = enabled,
         Beam.fleetMemberId = fleetMemberId,
         Beam.fleetOwnerId = fleetOwnerId,
+        Beam.isFleetOwner = isFleetOwner,
         Beam.updatedAt = updatedAt
       }
