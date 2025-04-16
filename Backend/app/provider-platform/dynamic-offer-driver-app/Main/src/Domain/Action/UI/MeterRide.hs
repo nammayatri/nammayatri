@@ -131,7 +131,7 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId r
 
   let phoneNumber = customerMobileCountryCode <> customerMobileNumber
   withLogTag ("sending_communication_to_download_app" <> phoneNumber) $ do
-    (mbSender, message) <-
+    (mbSender, message, templateId) <-
       MessageBuilder.buildSendReceiptMessage merchantOpCityId $
         MessageBuilder.BuildSendReceiptMessageReq
           { totalFare = show ride.currency <> " " <> show (fromMaybe 0 ride.fare),
@@ -141,6 +141,6 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId r
           }
     smsCfg <- asks (.smsCfg)
     let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender (Just templateId))
       >>= Sms.checkSmsResult
   pure Kernel.Types.APISuccess.Success
